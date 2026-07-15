@@ -1,14 +1,20 @@
 # northstarprime-always-on
-Always-on static resilience shell for northstarprime.net.
+Always-on NorthStar Prime mirror for northstarprime.net.
 
-The canonical site currently runs independently of Andre's PC on Render. This
-repository is the static disaster-recovery mirror. Its /idc-programming/ route
-contains the complete Season One catalogue, nine verified YouTube players,
-direct MP4 backups, and sixteen direct-hosted channel bumpers.
+The apex and www hostnames are served by GitHub Pages and do not depend on
+Andre's computer. The homepage is a frozen copy of the full NSP experience with
+all 22 referenced media assets stored here. Links to features that still need a
+server route to app.northstarprime.net, the verified Render service.
+
+The /idc-programming/ route contains the complete Season One catalogue, nine
+verified YouTube players, direct MP4 backups, and sixteen direct-hosted channel
+bumpers.
 
 Run the zero-dependency release check before publishing:
 
+    python tools/verify_home_static.py
     python tools/verify_idc_static.py
 
-Add --network to verify every YouTube oEmbed endpoint as well. See
-ROUTE_MANIFEST.md for routing and failover details.
+Add --network to the IDC verifier to test every YouTube oEmbed endpoint as
+well. See ROUTE_MANIFEST.md and HOME_FREEZE_MANIFEST.json for routing,
+provenance, hashes, and failover details.

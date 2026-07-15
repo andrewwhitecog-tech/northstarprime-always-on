@@ -2103,5 +2103,39 @@ function filterBrand(brand, btn) {
   });
 }
 </script>
+
+<script>
+/* YouTube layer (2026-07-15): direct-hosted MP4s stay primary; each broadcast
+   gets a YT link, and a YT embed replaces any video that fails to load. */
+const IDC_YT = {
+"idc_anthology_s1_teaser": "https://youtu.be/5KYJeTGdU3Y",
+"idc_anthology_e01_arrival": "https://youtu.be/Q2SfrtT798Q",
+"idc_anthology_e02_misread_signal": "https://youtu.be/BhOevGXmoew",
+"idc_anthology_e03_local_conflict": "https://youtu.be/wYdv_NIoHro",
+"idc_anthology_e04_artifact_cost": "https://youtu.be/1PxQcZ9rVc0",
+"idc_anthology_e05_cross_dimensional_pressure": "https://youtu.be/ESk1-bjmmQc",
+"idc_anthology_e06_season_fracture": "https://youtu.be/eYScTQQAdEo",
+"idc_anthology_e07_false_repair": "https://youtu.be/4YDcRHyXGSs",
+"idc_anthology_e08_final_transmission": "https://youtu.be/OXP651PN7r4"
+};
+document.querySelectorAll('video[src*="/static/idc_video/"]').forEach(v => {
+  const stem = (v.getAttribute('src')||'').split('/').pop().replace('.mp4','');
+  const url = IDC_YT[stem];
+  if (!url) return;
+  const a = document.createElement('a');
+  a.href = url; a.target = '_blank'; a.rel = 'noopener';
+  a.textContent = '▶ Watch on YouTube';
+  a.style.cssText = 'display:inline-block;margin:8px 0 0;font-size:.78rem;letter-spacing:.06em;color:#ff6b6b;text-decoration:none;border:1px solid rgba(255,107,107,.45);padding:3px 12px;border-radius:999px';
+  v.insertAdjacentElement('afterend', a);
+  v.addEventListener('error', () => {
+    const f = document.createElement('iframe');
+    f.src = 'https://www.youtube-nocookie.com/embed/' + url.split('/').pop();
+    f.setAttribute('allowfullscreen','');
+    f.style.cssText = 'width:100%;aspect-ratio:16/9;border:0;border-radius:10px';
+    v.replaceWith(f);
+  }, {once: true});
+});
+</script>
+
 </body>
 </html>

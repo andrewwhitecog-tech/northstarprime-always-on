@@ -4,10 +4,23 @@ Verified 2026-07-15.
 
 ## Canonical service
 
-- https://northstarprime.net is currently served by Render and does not depend
-  on Andre's computer.
-- Render's Flask routes omit trailing slashes: /idc-programming returns 200;
-  /idc-programming/ currently returns 404.
+- https://northstarprime.net is served by GitHub Pages and does not depend on
+  Andre's computer.
+- https://www.northstarprime.net points to GitHub Pages and redirects to the
+  canonical apex.
+- https://app.northstarprime.net is the verified Render-backed dynamic service.
+- The apex uses all four official GitHub Pages IPv4 targets. Web routing is DNS
+  only; mail and domain-authentication records are independent and unchanged.
+
+## Full homepage
+
+- Source: index.html
+- The page is a frozen copy of the full public NSP homepage, not the original
+  minimal resilience shell.
+- All 22 referenced image/video assets are direct-hosted in this repository.
+- Fifty links for non-mirrored server routes are sent to app.northstarprime.net.
+- The home-freeze manifest records source, timestamp, byte sizes, and SHA-256
+  hashes for the page and every referenced asset.
 
 ## Static recovery route
 
@@ -18,22 +31,20 @@ Verified 2026-07-15.
 - YouTube IDs are mirrored in static/idc_video/yt_manifest.json.
 - All 25 MP4 files are below GitHub's 100 MB per-file limit.
 
-## Independent fallback caveat
+## Failover boundary
 
-GitHub Pages still has northstarprime.net configured as its custom domain, but
-Cloudflare now sends that domain to Render. GitHub therefore redirects its
-project Pages URL back to the canonical domain instead of exposing a second
-independent URL.
-
-The no-cost fix is to assign this Pages site a dedicated DNS-only hostname such
-as fallback.northstarprime.net, leaving the apex on Render. That DNS/custom
-domain change is deliberately not included in this repository commit.
+The homepage, founders surface, mystery-school route, health marker, Season One
+catalogue, YouTube players, MP4 backups, and direct static assets survive a
+Render outage. Dynamic features still require app.northstarprime.net and
+degrade to ordinary links when that service is unavailable.
 
 ## Verification
 
+    python tools/verify_home_static.py
     python tools/verify_idc_static.py
     python tools/verify_idc_static.py --network
 
-The verifier checks the HTML/manifest mapping, tracked MP4 inventory and sizes,
-broken local Windows paths, embed code, and optionally all nine YouTube oEmbed
-endpoints.
+The home verifier checks the full-page guard, manifest hashes, all 22 media
+assets, local filesystem leakage, and dangling local routes. The IDC verifier
+checks the HTML/manifest mapping, tracked MP4 inventory and sizes, broken local
+Windows paths, embed code, and optionally all nine YouTube oEmbed endpoints.

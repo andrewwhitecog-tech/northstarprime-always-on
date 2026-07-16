@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Precinct 404 - Dispatch Queue</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #071013;
+    --panel: #10191d;
+    --panel-2: #172226;
+    --line: #2b3b41;
+    --text: #edf2f4;
+    --muted: #9fb2b9;
+    --blue: #3b82f6;
+    --teal: #14b8a6;
+    --amber: #f59e0b;
+    --red: #ef4444;
+    --green: #22c55e;
+    --pink: #ec4899;
+    --purple: #a855f7;
+    --gold: #f5c542;
+  }
+  @keyframes sweep {
+    0% { transform: translateX(-140%) skewX(-18deg); opacity: 0; }
+    25% { opacity: 0.55; }
+    55% { opacity: 0; }
+    100% { transform: translateX(140%) skewX(-18deg); opacity: 0; }
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    min-height: 100%;
+    background: #03050a;
+    color: var(--text);
+    font-family: "Segoe UI", Arial, sans-serif;
+  }
+  body {
+    overflow: hidden;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+      repeating-linear-gradient(115deg, rgba(34,211,238,0.11) 0 1px, transparent 1px 42px),
+      repeating-linear-gradient(64deg, rgba(236,72,153,0.11) 0 1px, transparent 1px 48px),
+      linear-gradient(90deg, transparent, rgba(245,197,66,0.07), transparent);
+    mix-blend-mode: screen;
+    opacity: 0.8;
+    z-index: 3;
+  }
+  button {
+    font: inherit;
+  }
+  .app {
+    height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    background:
+      linear-gradient(90deg, rgba(34,211,238,0.14) 1px, transparent 1px),
+      linear-gradient(rgba(236,72,153,0.09) 1px, transparent 1px),
+      linear-gradient(135deg, #03050a, #101021 48%, #080011 74%, #03050a);
+    background-size: 42px 42px;
+  }
+  header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    align-items: center;
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(34, 211, 238, 0.36);
+    background: linear-gradient(90deg, rgba(7,16,28,0.94), rgba(25,5,35,0.92), rgba(7,16,28,0.94));
+    box-shadow: 0 0 28px rgba(34,211,238,0.22), 0 0 46px rgba(236,72,153,0.16);
+  }
+  h1 {
+    margin: 0;
+    font-size: clamp(1.2rem, 2.2vw, 2rem);
+    letter-spacing: 0;
+    color: #fff;
+    text-shadow: 0 0 8px rgba(255,255,255,0.45), 0 0 22px rgba(34,211,238,0.72), 0 0 34px rgba(236,72,153,0.54);
+  }
+  .subline {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+  .header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .btn {
+    border: 1px solid rgba(34,211,238,0.34);
+    background: linear-gradient(135deg, rgba(34,211,238,0.15), rgba(236,72,153,0.12), rgba(245,197,66,0.1));
+    color: var(--text);
+    border-radius: 8px;
+    padding: 9px 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, transform 0.15s;
+  }
+  .btn:hover {
+    border-color: var(--pink);
+    background: linear-gradient(90deg, rgba(34,211,238,0.28), rgba(236,72,153,0.3), rgba(245,197,66,0.22));
+    box-shadow: 0 0 18px rgba(236,72,153,0.42), 0 0 28px rgba(34,211,238,0.3);
+  }
+  .btn:active {
+    transform: translateY(1px);
+  }
+  .btn.primary {
+    background: linear-gradient(90deg, #22d3ee, #a855f7, #ec4899, #f5c542);
+    border-color: rgba(255,255,255,0.45);
+    color: white;
+    font-weight: 700;
+    text-shadow: 0 0 10px rgba(0,0,0,0.7);
+    box-shadow: 0 0 18px rgba(236,72,153,0.35);
+  }
+  .btn.primary:disabled,
+  .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+  }
+  main {
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 270px minmax(360px, 1fr) 370px;
+    gap: 14px;
+    padding: 14px;
+  }
+  .panel {
+    min-height: 0;
+    position: relative;
+    background: linear-gradient(180deg, rgba(14,18,30,0.94), rgba(6,9,16,0.96)) padding-box,
+      conic-gradient(from 120deg, #22d3ee, #a855f7, #ec4899, #f5c542, #22d3ee) border-box;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 0 22px rgba(34,211,238,0.16), 0 0 34px rgba(236,72,153,0.13);
+  }
+  .panel::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+    transform: translateX(-140%) skewX(-18deg);
+    animation: sweep 6s ease-in-out infinite;
+    pointer-events: none;
+  }
+  .panel-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.11);
+    background: linear-gradient(90deg, rgba(34,211,238,0.12), rgba(236,72,153,0.12));
+  }
+  .panel-title {
+    font-weight: 800;
+    color: var(--text);
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    border: 1px solid rgba(34,211,238,0.28);
+    border-radius: 999px;
+    padding: 2px 9px;
+    color: var(--muted);
+    font-size: 0.76rem;
+    background: rgba(5,8,16,0.78);
+    box-shadow: 0 0 12px rgba(34,211,238,0.16);
+  }
+  .metrics {
+    padding: 12px;
+    display: grid;
+    gap: 14px;
+  }
+  .metric-label {
+    display: flex;
+    justify-content: space-between;
+    color: var(--muted);
+    font-size: 0.82rem;
+    margin-bottom: 7px;
+  }
+  .meter {
+    height: 12px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: #071013;
+    overflow: hidden;
+  }
+  .fill {
+    height: 100%;
+    width: 50%;
+    transition: width 0.25s;
+  }
+  .trust { background: linear-gradient(90deg, #1d4ed8, #22d3ee, #a855f7); box-shadow: 0 0 12px rgba(34,211,238,0.62); }
+  .chaos { background: linear-gradient(90deg, #7f1d1d, #ec4899, #f97316); box-shadow: 0 0 12px rgba(236,72,153,0.62); }
+  .budget { background: linear-gradient(90deg, #854d0e, #f5c542, #10b981); box-shadow: 0 0 12px rgba(245,197,66,0.58); }
+  .shift-list {
+    border-top: 1px solid var(--line);
+    padding: 12px;
+  }
+  .shift-row {
+    display: flex;
+    justify-content: space-between;
+    color: var(--muted);
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(43, 59, 65, 0.45);
+    font-size: 0.86rem;
+  }
+  .memory-board {
+    border-top: 1px solid rgba(34,211,238,0.24);
+    padding: 12px;
+    display: grid;
+    gap: 10px;
+    max-height: 42vh;
+    overflow: auto;
+  }
+  .memory-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    color: var(--gold);
+    font-size: 0.75rem;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+  .memory-card {
+    border: 1px solid rgba(255,255,255,0.11);
+    border-radius: 8px;
+    padding: 10px;
+    background: linear-gradient(135deg, rgba(34,211,238,0.08), rgba(236,72,153,0.08), rgba(245,197,66,0.05));
+  }
+  .memory-title {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+    color: #fff;
+    font-weight: 900;
+  }
+  .memory-title span {
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+  .memory-line {
+    color: #cfdae0;
+    font-size: 0.78rem;
+    line-height: 1.45;
+  }
+  .heat-bar {
+    height: 7px;
+    margin-top: 8px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.1);
+    overflow: hidden;
+  }
+  .heat-bar span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, #22d3ee, #ec4899, #f5c542);
+    box-shadow: 0 0 12px rgba(236,72,153,0.5);
+  }
+  .case-panel {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+  }
+  .case-body {
+    padding: 18px;
+    min-height: 0;
+    display: grid;
+    align-content: start;
+    gap: 16px;
+  }
+  .case-type {
+    color: var(--teal);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    font-weight: 800;
+  }
+  .case-title {
+    margin: 0;
+    font-size: clamp(1.6rem, 4vw, 3.2rem);
+    line-height: 1;
+    letter-spacing: 0;
+    color: #fff;
+    text-shadow: 0 0 12px rgba(255,255,255,0.32), 0 0 28px rgba(236,72,153,0.44);
+  }
+  .case-copy {
+    color: #d6e2e6;
+    line-height: 1.55;
+    max-width: 760px;
+  }
+  .memory-note {
+    border-left: 3px solid var(--pink);
+    background: linear-gradient(90deg, rgba(236,72,153,0.13), rgba(34,211,238,0.07));
+    padding: 10px 12px;
+    color: #f0e8ff;
+    font-size: 0.9rem;
+    line-height: 1.45;
+    box-shadow: inset 0 0 18px rgba(236,72,153,0.08);
+  }
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .tag {
+    border: 1px solid rgba(34,211,238,0.24);
+    background: linear-gradient(90deg, rgba(34,211,238,0.1), rgba(236,72,153,0.08));
+    color: var(--muted);
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-size: 0.78rem;
+  }
+  .forecast {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .forecast-item {
+    background: linear-gradient(135deg, rgba(34,211,238,0.08), rgba(236,72,153,0.08), rgba(245,197,66,0.06));
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: 11px;
+  }
+  .forecast-item b {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 5px;
+  }
+  .forecast-item span {
+    font-size: 1.18rem;
+    font-weight: 800;
+  }
+  .director {
+    display: grid;
+    gap: 10px;
+    border: 1px solid rgba(34,211,238,0.22);
+    border-radius: 8px;
+    padding: 12px;
+    background: linear-gradient(135deg, rgba(34,211,238,0.09), rgba(236,72,153,0.08), rgba(245,197,66,0.06));
+    box-shadow: inset 0 0 26px rgba(34,211,238,0.08), 0 0 18px rgba(236,72,153,0.12);
+  }
+  .director-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    color: var(--gold);
+    font-size: 0.76rem;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+  .director-copy {
+    color: #d6e2e6;
+    font-size: 0.88rem;
+    line-height: 1.5;
+  }
+  .director-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .director-stat {
+    min-height: 58px;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 7px;
+    padding: 8px;
+    background: rgba(3,5,10,0.48);
+  }
+  .director-stat b {
+    display: block;
+    color: var(--muted);
+    font-size: 0.68rem;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+  .director-stat span {
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 800;
+  }
+  .case-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 14px 18px;
+    border-top: 1px solid var(--line);
+    background: rgba(11, 20, 24, 0.84);
+  }
+  .officers {
+    min-height: 0;
+    overflow: auto;
+    padding: 12px;
+    display: grid;
+    gap: 10px;
+  }
+  .officer {
+    width: 100%;
+    text-align: left;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: linear-gradient(135deg, rgba(9,13,24,0.96), rgba(20,8,30,0.95));
+    color: var(--text);
+    border-radius: 8px;
+    padding: 12px;
+    cursor: pointer;
+  }
+  .officer:hover {
+    border-color: var(--pink);
+    box-shadow: 0 0 16px rgba(236,72,153,0.34), 0 0 24px rgba(34,211,238,0.2);
+  }
+  .officer.selected {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px rgba(245,197,66,0.2) inset, 0 0 22px rgba(245,197,66,0.36), 0 0 34px rgba(236,72,153,0.22);
+  }
+  .officer.busy {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .officer-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: start;
+    margin-bottom: 6px;
+  }
+  .officer-name {
+    font-weight: 900;
+  }
+  .officer-role {
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+  .bars {
+    display: grid;
+    gap: 5px;
+    margin-top: 10px;
+  }
+  .mini {
+    display: grid;
+    grid-template-columns: 74px 1fr;
+    gap: 7px;
+    align-items: center;
+    color: var(--muted);
+    font-size: 0.75rem;
+  }
+  .mini-bar {
+    height: 6px;
+    background: #061014;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .mini-bar span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, #22d3ee, #ec4899, #f5c542);
+    box-shadow: 0 0 10px rgba(34,211,238,0.42);
+  }
+  .log {
+    height: 128px;
+    border-top: 1px solid var(--line);
+    background: linear-gradient(90deg, rgba(4,7,12,0.96), rgba(19,4,28,0.94));
+    box-shadow: inset 0 1px 0 rgba(34,211,238,0.2);
+    padding: 10px 14px;
+    overflow: auto;
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+  .log-entry {
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(43, 59, 65, 0.35);
+  }
+  .delta-good { color: var(--green); }
+  .delta-bad { color: var(--red); }
+  .modal-wrap {
+    position: fixed;
+    inset: 0;
+    display: none;
+    place-items: center;
+    background: rgba(0, 0, 0, 0.62);
+    padding: 18px;
+  }
+  .modal-wrap.active { display: grid; }
+  .modal {
+    max-width: 680px;
+    background: linear-gradient(180deg, rgba(13,17,29,0.98), rgba(8,4,18,0.98));
+    border: 1px solid rgba(236,72,153,0.36);
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 28px 80px rgba(0,0,0,0.5), 0 0 36px rgba(236,72,153,0.32), 0 0 52px rgba(34,211,238,0.18);
+  }
+  .modal h2 {
+    margin: 0 0 10px;
+    font-size: clamp(1.7rem, 4vw, 3rem);
+  }
+  .modal p {
+    color: #d6e2e6;
+    line-height: 1.55;
+  }
+  footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 9px 14px;
+    color: var(--muted);
+    border-top: 1px solid rgba(34,211,238,0.3);
+    background: linear-gradient(90deg, rgba(7,16,19,0.94), rgba(25,5,35,0.88), rgba(7,16,19,0.94));
+    font-size: 0.78rem;
+  }
+  @media (max-width: 980px) {
+    body { overflow: auto; }
+    .app { height: auto; min-height: 100vh; }
+    main {
+      grid-template-columns: 1fr;
+    }
+    .forecast {
+      grid-template-columns: 1fr;
+    }
+    .log { height: 170px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Precinct 404: Dispatch Queue</h1>
+      <div class="subline">Shift triage prototype // Buckman pilot program</div>
+    </div>
+    <div class="header-actions">
+      <button class="btn" id="adviceBtn">Ask Mags</button>
+      <button class="btn" id="overrideBtn">Derek Override</button>
+      <button class="btn" id="resetBtn">New Shift</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <div class="panel-head">
+        <div class="panel-title">Precinct Status</div>
+        <span class="chip" id="shiftChip">Shift 1</span>
+      </div>
+      <div class="metrics">
+        <div>
+          <div class="metric-label"><span>Public Trust</span><strong id="trustVal">55</strong></div>
+          <div class="meter"><div class="fill trust" id="trustFill"></div></div>
+        </div>
+        <div>
+          <div class="metric-label"><span>Chaos</span><strong id="chaosVal">20</strong></div>
+          <div class="meter"><div class="fill chaos" id="chaosFill"></div></div>
+        </div>
+        <div>
+          <div class="metric-label"><span>Budget</span><strong id="budgetVal">75</strong></div>
+          <div class="meter"><div class="fill budget" id="budgetFill"></div></div>
+        </div>
+      </div>
+      <div class="shift-list" id="shiftList"></div>
+      <div class="memory-board">
+        <div class="memory-head">
+          <span>City Memory</span>
+          <span id="memoryTurn">Cold start</span>
+        </div>
+        <div id="cityMemory"></div>
+      </div>
+    </section>
+
+    <section class="panel case-panel">
+      <div class="panel-head">
+        <div class="panel-title" id="caseCount">Call 1 of 12</div>
+        <span class="chip" id="caseSeverity">Routine</span>
+      </div>
+      <div class="case-body">
+        <div class="case-type" id="caseType">Noise Complaint</div>
+        <h2 class="case-title" id="caseTitle">Loading</h2>
+        <div class="case-copy" id="caseCopy"></div>
+        <div class="memory-note" id="cityHook"></div>
+        <div class="tags" id="tags"></div>
+        <div class="forecast">
+          <div class="forecast-item"><b>Best Fit</b><span id="bestFit">Unknown</span></div>
+          <div class="forecast-item"><b>Risk</b><span id="riskText">Unknown</span></div>
+          <div class="forecast-item"><b>Rival</b><span id="rivalText">Unknown</span></div>
+          <div class="forecast-item"><b>Selected</b><span id="selectedText">None</span></div>
+        </div>
+        <div class="director">
+          <div class="director-head">
+            <span>Local AI Director</span>
+            <span id="directorMode">Pilot script</span>
+          </div>
+          <div class="director-copy" id="directorCopy">Calibrating city pressure model.</div>
+          <div class="director-grid">
+            <div class="director-stat"><b>Pressure</b><span id="pressureText">Stable</span></div>
+            <div class="director-stat"><b>Prediction</b><span id="predictionText">Select a unit</span></div>
+            <div class="director-stat"><b>Learning</b><span id="learningText">No adaptation</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="case-actions">
+        <button class="btn" id="holdBtn">Hold Call</button>
+        <button class="btn primary" id="dispatchBtn" disabled>Dispatch</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div class="panel-title">Robot Officers</div>
+        <span class="chip" id="unitChip">5 units</span>
+      </div>
+      <div class="officers" id="officers"></div>
+    </section>
+  </main>
+
+  <div class="log" id="log"></div>
+
+  <footer>
+    <span id="footerState">Pilot active</span>
+    <span>Prototype state: playable_prototype</span>
+  </footer>
+</div>
+
+<div class="modal-wrap" id="modal">
+  <div class="modal">
+    <h2 id="modalTitle"></h2>
+    <p id="modalBody"></p>
+    <button class="btn primary" id="modalBtn">Continue</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const officers = [
+    {
+      id: "process",
+      name: "Captain Process",
+      role: "Commander",
+      stats: { procedure: 92, empathy: 30, analysis: 68, force: 42 },
+      flaw: "Boot-loops on ambiguity",
+      good: "turns chaos into paperwork",
+      busy: 0
+    },
+    {
+      id: "badge",
+      name: "Detective Badge",
+      role: "Investigation",
+      stats: { procedure: 54, empathy: 44, analysis: 86, force: 38 },
+      flaw: "finds conspiracies in receipts",
+      good: "spots hidden motives",
+      busy: 0
+    },
+    {
+      id: "friendly",
+      name: "Officer Friendly",
+      role: "Community",
+      stats: { procedure: 46, empathy: 90, analysis: 34, force: 28 },
+      flaw: "takes idioms literally",
+      good: "defuses human panic",
+      busy: 0
+    },
+    {
+      id: "logic",
+      name: "Officer Logic",
+      role: "Forensics",
+      stats: { procedure: 70, empathy: 22, analysis: 96, force: 24 },
+      flaw: "cannot model nonsense",
+      good: "debugs crime scenes",
+      busy: 0
+    },
+    {
+      id: "tank",
+      name: "Officer Tank",
+      role: "Heavy Response",
+      stats: { procedure: 38, empathy: 62, analysis: 26, force: 96 },
+      flaw: "does not fit through doors",
+      good: "absorbs disasters",
+      busy: 0
+    }
+  ];
+
+  const cases = [
+    {
+      type: "Noise Complaint",
+      title: "The Stereo Is a Witness",
+      copy: "A third-floor tenant reports a stereo playing the same 14 seconds of jazz. Badge thinks the loop is a confession. The landlord wants speed, not cinema.",
+      tags: ["apartment", "ambiguity", "neighbors"],
+      traits: { procedure: 35, empathy: 70, analysis: 48, force: 5 },
+      best: "friendly",
+      secondary: "badge",
+      severity: "Routine",
+      risk: "Low"
+    },
+    {
+      type: "Shoplifting",
+      title: "Candy Bar Felony Matrix",
+      copy: "A grocery owner caught a hungry kid with a candy bar. Process has opened an anti-shoplifting task force. Mags is already making sandwiches.",
+      tags: ["minor", "mercy", "community"],
+      traits: { procedure: 42, empathy: 96, analysis: 32, force: 0 },
+      best: "friendly",
+      secondary: "process",
+      severity: "Sensitive",
+      risk: "Reputation"
+    },
+    {
+      type: "Public Order",
+      title: "Protest With Incorrect Statistics",
+      copy: "A march turns onto Burnside. Logic wants to cite factual inaccuracies. Process is concerned about guillotines despite no evidence of guillotines.",
+      tags: ["crowd", "rights", "press"],
+      traits: { procedure: 64, empathy: 86, analysis: 58, force: 8 },
+      best: "friendly",
+      secondary: "process",
+      severity: "Public",
+      risk: "High"
+    },
+    {
+      type: "Traffic",
+      title: "Cone-Based Urban Planning",
+      copy: "A DUI checkpoint has become a maze. Tank deployed 200 cones and accidentally annexed a bus stop. The mayor's nephew is live-streaming.",
+      tags: ["traffic", "mayor", "budget"],
+      traits: { procedure: 78, empathy: 24, analysis: 64, force: 20 },
+      best: "process",
+      secondary: "logic",
+      severity: "Operational",
+      risk: "Medium"
+    },
+    {
+      type: "Missing Person",
+      title: "Gerald Was in Beaverton",
+      copy: "A missing-person board covers the precinct wall. Logic says Gerald is likely at his sister's house. Badge refuses a case this clean.",
+      tags: ["investigation", "cat", "routine"],
+      traits: { procedure: 48, empathy: 54, analysis: 92, force: 3 },
+      best: "logic",
+      secondary: "badge",
+      severity: "Investigation",
+      risk: "Medium"
+    },
+    {
+      type: "Animal Call",
+      title: "Bird in the Evidence Room",
+      copy: "A pigeon entered evidence through the old RadioShack vent. Tank has named it Deputy Breadcrumb. Evidence integrity is declining.",
+      tags: ["animal", "evidence", "doorway"],
+      traits: { procedure: 62, empathy: 76, analysis: 36, force: 18 },
+      best: "tank",
+      secondary: "friendly",
+      severity: "Absurd",
+      risk: "Low"
+    },
+    {
+      type: "Startup Visit",
+      title: "Involuntary Customer Retention",
+      copy: "Tessa Vale arrives with investors and a new rebrand for arrests. Every robot wants to demonstrate a feature. Derek wants a fire exit.",
+      tags: ["corporate", "press", "budget"],
+      traits: { procedure: 84, empathy: 44, analysis: 66, force: 12 },
+      best: "process",
+      secondary: "badge",
+      severity: "Political",
+      risk: "High"
+    },
+    {
+      type: "Forensics",
+      title: "The Donut Powder Pattern",
+      copy: "White powder on the counter is either evidence or powdered sugar. Mags says it is Tuesday. Logic demands a chain of custody.",
+      tags: ["forensics", "donuts", "false alarm"],
+      traits: { procedure: 52, empathy: 36, analysis: 88, force: 0 },
+      best: "logic",
+      secondary: "badge",
+      severity: "Routine",
+      risk: "Low"
+    },
+    {
+      type: "Disturbance",
+      title: "Bluetooth Speaker Standoff",
+      copy: "A cyclist refuses to lower a speaker because it is playing whale sounds for emotional support. Friendly has already joined the support group.",
+      tags: ["street", "empathy", "noise"],
+      traits: { procedure: 40, empathy: 82, analysis: 34, force: 12 },
+      best: "friendly",
+      secondary: "tank",
+      severity: "Street",
+      risk: "Medium"
+    },
+    {
+      type: "Break-In",
+      title: "Door Too Narrow",
+      copy: "A store alarm is active. Tank can breach the door but cannot fit through it. Badge is convinced the register framed itself.",
+      tags: ["alarm", "force", "property"],
+      traits: { procedure: 58, empathy: 22, analysis: 62, force: 80 },
+      best: "tank",
+      secondary: "badge",
+      severity: "Urgent",
+      risk: "Medium"
+    },
+    {
+      type: "Data Error",
+      title: "Jaywalking Statute Ends at J",
+      copy: "The bots' legal database corrupted mid-citation. Process needs procedure. Logic needs a checksum. The citizen needs to cross the street.",
+      tags: ["database", "procedure", "logic"],
+      traits: { procedure: 88, empathy: 36, analysis: 94, force: 0 },
+      best: "logic",
+      secondary: "process",
+      severity: "Technical",
+      risk: "Medium"
+    },
+    {
+      type: "Final Call",
+      title: "The Mayor Wants Results",
+      copy: "Mayor Reyes arrives for a success photo while every unresolved incident collapses into the lobby. The pilot program survives one clean decision.",
+      tags: ["final", "press", "all units"],
+      traits: { procedure: 76, empathy: 74, analysis: 70, force: 38 },
+      best: "process",
+      secondary: "friendly",
+      severity: "Critical",
+      risk: "Extreme"
+    }
+  ];
+
+  const CITY_MEMORY_KEY = "precinct404CityMemory";
+  const CITY_FACTIONS = [
+    { id: "velvet", name: "Velvet Relay", tag: "nightlife", angle: "casino logistics, limo permits, and velvet-rope favors", color: "#ec4899" },
+    { id: "ghost", name: "Civic Ghosts", tag: "network", angle: "leaked civic data, spoofed warrants, and public-service hacks", color: "#22d3ee" },
+    { id: "nexa", name: "NexaForce PR", tag: "corporate", angle: "pilot optics, investor pressure, and rebrand emergencies", color: "#a855f7" },
+    { id: "underpass", name: "Underpass Choir", tag: "street", angle: "mutual aid, protest logistics, and neighborhood rumors", color: "#22c55e" },
+    { id: "taxi", name: "Chromeline Taxi Guild", tag: "traffic", angle: "autocab strikes, curb wars, and routing sabotage", color: "#f5c542" }
+  ];
+  const CITY_RIVALS = [
+    { id: "vanta", faction: "velvet", name: "Vanta Luxe", rank: "Floor Captain", signature: "neon alibi chains", tool: "club cameras and receipt ghosts", trait: "flashy", heat: 46 },
+    { id: "kernel", faction: "ghost", name: "Kernel Pique", rank: "Signal Broker", signature: "spoofed evidence", tool: "public kiosks and doorbell cams", trait: "slippery", heat: 52 },
+    { id: "tessa", faction: "nexa", name: "Tessa Vale", rank: "Crisis Evangelist", signature: "pilot spin", tool: "investor decks and live demos", trait: "polished", heat: 58 },
+    { id: "mural", faction: "underpass", name: "Mural Saint", rank: "Block Caller", signature: "crowd shields", tool: "scanner chats and mural codes", trait: "beloved", heat: 41 },
+    { id: "meter", faction: "taxi", name: "Meter Saint", rank: "Route Baron", signature: "traffic traps", tool: "autocab swarms and curb sensors", trait: "patient", heat: 49 }
+  ];
+  const PILOT_CITY_MAP = [
+    ["velvet", "vanta"], ["underpass", "mural"], ["underpass", "mural"], ["taxi", "meter"],
+    ["ghost", "kernel"], ["ghost", "kernel"], ["nexa", "tessa"], ["ghost", "kernel"],
+    ["velvet", "vanta"], ["velvet", "vanta"], ["ghost", "kernel"], ["nexa", "tessa"]
+  ];
+
+  function freshCityMemory() {
+    return {
+      turn: 0,
+      lastEvent: "No rival has learned the precinct yet.",
+      factions: CITY_FACTIONS.map((f, i) => ({
+        ...f,
+        heat: 34 + i * 6,
+        leverage: 28 + i * 5
+      })),
+      rivals: CITY_RIVALS.map(r => ({
+        ...r,
+        wins: 0,
+        defeats: 0,
+        scars: [],
+        memory: "First contact pending."
+      }))
+    };
+  }
+
+  function loadCityMemory() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(CITY_MEMORY_KEY));
+      if (!raw || !Array.isArray(raw.factions) || !Array.isArray(raw.rivals)) return freshCityMemory();
+      if (raw.factions.length < CITY_FACTIONS.length || raw.rivals.length < CITY_RIVALS.length) return freshCityMemory();
+      return raw;
+    } catch (error) {
+      return freshCityMemory();
+    }
+  }
+
+  let cityMemory = loadCityMemory();
+
+  function saveCityMemory() {
+    localStorage.setItem(CITY_MEMORY_KEY, JSON.stringify(cityMemory));
+  }
+
+  function escapeHtml(text) {
+    return String(text).replace(/[&<>"']/g, ch => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      "\"": "&quot;",
+      "'": "&#39;"
+    })[ch]);
+  }
+
+  function factionById(id) {
+    return cityMemory.factions.find(f => f.id === id) || cityMemory.factions[0];
+  }
+
+  function rivalById(id) {
+    return cityMemory.rivals.find(r => r.id === id) || cityMemory.rivals[0];
+  }
+
+  function chooseFaction(slot) {
+    return cityMemory.factions
+      .slice()
+      .sort((a, b) => (b.heat + b.leverage) - (a.heat + a.leverage))[slot % cityMemory.factions.length].id;
+  }
+
+  function chooseRival(factionId, slot) {
+    const pool = cityMemory.rivals.filter(r => r.faction === factionId);
+    const list = pool.length ? pool : cityMemory.rivals;
+    return list.slice().sort((a, b) => (b.heat + b.wins * 8) - (a.heat + a.wins * 8))[slot % list.length].id;
+  }
+
+  function attachCityContext(call, slot) {
+    if (call.cityMemoryAttached) return call;
+    const mapped = PILOT_CITY_MAP[slot % PILOT_CITY_MAP.length] || [];
+    call.factionId = call.factionId || mapped[0] || chooseFaction(slot);
+    call.rivalId = call.rivalId || mapped[1] || chooseRival(call.factionId, slot);
+    const faction = factionById(call.factionId);
+    const rival = rivalById(call.rivalId);
+    call.tags = Array.from(new Set([...(call.tags || []), faction.tag, rival.trait]));
+    call.traits = { ...call.traits };
+    if (rival.trait === "slippery") call.traits.analysis = Math.min(100, call.traits.analysis + 10);
+    if (rival.trait === "flashy") call.traits.procedure = Math.min(100, call.traits.procedure + 8);
+    if (rival.trait === "polished") call.traits.empathy = Math.min(100, call.traits.empathy + 6);
+    if (rival.trait === "beloved") call.traits.empathy = Math.min(100, call.traits.empathy + 12);
+    if (rival.trait === "patient") call.traits.procedure = Math.min(100, call.traits.procedure + 6);
+    const ranked = rankedOfficers(call);
+    call.best = ranked[0].officer.id;
+    call.secondary = ranked[1].officer.id;
+    call.cityHook = rival.name + " (" + rival.rank + ", " + faction.name + ") is connected through " + rival.signature + ". Toolset: " + rival.tool + ". Memory: " + rival.memory;
+    call.cityMemoryAttached = true;
+    return call;
+  }
+
+  function promoteRival(rival) {
+    const ladder = ["Floor Captain", "Signal Broker", "Crisis Evangelist", "Block Caller", "Route Baron", "District Fixer", "Network Boss", "City Myth"];
+    const current = Math.max(0, ladder.indexOf(rival.rank));
+    if (rival.wins > rival.defeats && rival.wins % 2 === 0) {
+      rival.rank = ladder[Math.min(ladder.length - 1, current + 1)];
+    }
+  }
+
+  function resolveCityMemory(call, officer, score) {
+    if (!call.rivalId || !call.factionId) return "";
+    const faction = factionById(call.factionId);
+    const rival = rivalById(call.rivalId);
+    officer.memory = officer.memory || {};
+    officer.memory[rival.id] = (officer.memory[rival.id] || 0) + 1;
+    let note = "";
+    if (score >= 82) {
+      rival.defeats += 1;
+      rival.heat = clamp(rival.heat - 9);
+      faction.heat = clamp(faction.heat - 6);
+      faction.leverage = clamp(faction.leverage - 4);
+      const scar = officer.name.replace("Officer ", "").replace("Captain ", "") + " file";
+      if (!rival.scars.includes(scar)) rival.scars.push(scar);
+      rival.memory = officer.name + " broke the " + call.title + " play cleanly.";
+      note = rival.name + " loses heat and keeps a scar from " + officer.name + ".";
+    } else if (score >= 68) {
+      rival.heat = clamp(rival.heat - 3);
+      faction.heat = clamp(faction.heat - 2);
+      rival.memory = officer.name + " contained the damage but left usable ambiguity.";
+      note = rival.name + " backs off without disappearing.";
+    } else if (score >= 48) {
+      rival.heat = clamp(rival.heat + 7);
+      faction.heat = clamp(faction.heat + 4);
+      faction.leverage = clamp(faction.leverage + 3);
+      rival.memory = officer.name + " gave the network a new angle.";
+      note = rival.name + " adapts around the precinct response.";
+    } else {
+      rival.wins += 1;
+      rival.heat = clamp(rival.heat + 13);
+      faction.heat = clamp(faction.heat + 8);
+      faction.leverage = clamp(faction.leverage + 7);
+      rival.memory = officer.name + " became part of the rival playbook.";
+      promoteRival(rival);
+      note = rival.name + " promotes to " + rival.rank + " after exploiting the call.";
+    }
+    cityMemory.turn += 1;
+    cityMemory.lastEvent = note;
+    saveCityMemory();
+    return note;
+  }
+
+  const els = {
+    trustVal: document.getElementById("trustVal"),
+    chaosVal: document.getElementById("chaosVal"),
+    budgetVal: document.getElementById("budgetVal"),
+    trustFill: document.getElementById("trustFill"),
+    chaosFill: document.getElementById("chaosFill"),
+    budgetFill: document.getElementById("budgetFill"),
+    shiftChip: document.getElementById("shiftChip"),
+    shiftList: document.getElementById("shiftList"),
+    memoryTurn: document.getElementById("memoryTurn"),
+    cityMemory: document.getElementById("cityMemory"),
+    caseCount: document.getElementById("caseCount"),
+    caseSeverity: document.getElementById("caseSeverity"),
+    caseType: document.getElementById("caseType"),
+    caseTitle: document.getElementById("caseTitle"),
+    caseCopy: document.getElementById("caseCopy"),
+    cityHook: document.getElementById("cityHook"),
+    tags: document.getElementById("tags"),
+    bestFit: document.getElementById("bestFit"),
+    riskText: document.getElementById("riskText"),
+    rivalText: document.getElementById("rivalText"),
+    selectedText: document.getElementById("selectedText"),
+    directorMode: document.getElementById("directorMode"),
+    directorCopy: document.getElementById("directorCopy"),
+    pressureText: document.getElementById("pressureText"),
+    predictionText: document.getElementById("predictionText"),
+    learningText: document.getElementById("learningText"),
+    officers: document.getElementById("officers"),
+    log: document.getElementById("log"),
+    dispatchBtn: document.getElementById("dispatchBtn"),
+    holdBtn: document.getElementById("holdBtn"),
+    adviceBtn: document.getElementById("adviceBtn"),
+    overrideBtn: document.getElementById("overrideBtn"),
+    resetBtn: document.getElementById("resetBtn"),
+    footerState: document.getElementById("footerState"),
+    modal: document.getElementById("modal"),
+    modalTitle: document.getElementById("modalTitle"),
+    modalBody: document.getElementById("modalBody"),
+    modalBtn: document.getElementById("modalBtn")
+  };
+
+  const state = {
+    trust: 55,
+    chaos: 20,
+    budget: 75,
+    index: 0,
+    selected: null,
+    adviceLeft: 3,
+    overridesLeft: 3,
+    heldThisCall: false,
+    finished: false,
+    endless: false,
+    generatedCases: [],
+    canContinue: false,
+    log: []
+  };
+
+  function clamp(n) {
+    return Math.max(0, Math.min(100, Math.round(n)));
+  }
+
+  function shiftNo() {
+    return Math.floor(state.index / 4) + 1;
+  }
+
+  function cityPressure() {
+    if (state.chaos >= 72) return "Volatile";
+    if (state.trust <= 32) return "Hostile";
+    if (state.budget <= 28) return "Broke";
+    if (state.trust >= 78 && state.chaos <= 26) return "Confident";
+    return "Stable";
+  }
+
+  function baseFitScore(officer, call) {
+    let total = 0;
+    let weight = 0;
+    for (const key of Object.keys(call.traits)) {
+      total += officer.stats[key] * call.traits[key];
+      weight += call.traits[key];
+    }
+    return weight ? total / weight : 50;
+  }
+
+  function rankedOfficers(call) {
+    return officers
+      .map(officer => ({ officer, score: baseFitScore(officer, call) }))
+      .sort((a, b) => b.score - a.score);
+  }
+
+  function makeProceduralCase(slot) {
+    const pressure = cityPressure();
+    const templates = [
+      {
+        type: "Night Market",
+        title: "Drone Food Cart Turf War",
+        copy: "Two autonomous carts are price-matching each other into bankruptcy while customers livestream the condiment negotiations.",
+        tags: ["economy", "crowd", "machines"],
+        traits: { procedure: 48, empathy: 62, analysis: 76, force: 8 }
+      },
+      {
+        type: "Synthetic Witness",
+        title: "The Doorbell Camera Recants",
+        copy: "A smart doorbell submitted testimony, deleted it, and now claims it was doing improv. Badge wants a warrant for the cloud.",
+        tags: ["ai", "evidence", "privacy"],
+        traits: { procedure: 66, empathy: 28, analysis: 96, force: 2 }
+      },
+      {
+        type: "Casino Spillover",
+        title: "Neon Limo Blocks the Bike Lane",
+        copy: "A party bus, a bicycle courier, and three influencers have all declared legal victory. Someone gave Tank a velvet rope.",
+        tags: ["nightlife", "traffic", "press"],
+        traits: { procedure: 72, empathy: 58, analysis: 42, force: 24 }
+      },
+      {
+        type: "Civic Ritual",
+        title: "Mayor's Hologram Has Demands",
+        copy: "A campaign hologram escaped its projector and is promising tax cuts to a vending machine. Process says this is technically a hearing.",
+        tags: ["politics", "absurd", "public"],
+        traits: { procedure: 84, empathy: 46, analysis: 62, force: 4 }
+      },
+      {
+        type: "Containment",
+        title: "Museum Robot Requests Asylum",
+        copy: "A docent bot rolled into the precinct with a forged passport and three school groups chanting for due process.",
+        tags: ["robot", "rights", "crowd"],
+        traits: { procedure: 58, empathy: 92, analysis: 54, force: 0 }
+      }
+    ];
+    const template = templates[(slot + state.trust + state.chaos + state.budget) % templates.length];
+    const traits = { ...template.traits };
+    if (pressure === "Volatile") traits.force += 22;
+    if (pressure === "Hostile") traits.empathy += 22;
+    if (pressure === "Broke") traits.procedure += 18;
+    if (pressure === "Confident") traits.analysis += 14;
+    for (const key of Object.keys(traits)) traits[key] = Math.max(0, Math.min(100, traits[key]));
+    const call = {
+      ...template,
+      title: template.title + " #" + (slot + 1),
+      traits,
+      severity: pressure === "Stable" ? "Night Shift" : pressure,
+      risk: pressure === "Volatile" || pressure === "Hostile" ? "High" : pressure === "Broke" ? "Budget" : "Medium",
+      procedural: true
+    };
+    const ranked = rankedOfficers(call);
+    call.best = ranked[0].officer.id;
+    call.secondary = ranked[1].officer.id;
+    return call;
+  }
+
+  function currentCase() {
+    if (state.index < cases.length) return attachCityContext(cases[state.index], state.index);
+    if (!state.endless) return attachCityContext(cases[cases.length - 1], cases.length - 1);
+    const generatedIndex = state.index - cases.length;
+    while (state.generatedCases.length <= generatedIndex) {
+      state.generatedCases.push(makeProceduralCase(state.generatedCases.length));
+    }
+    return attachCityContext(state.generatedCases[generatedIndex], state.index);
+  }
+
+  function officerById(id) {
+    return officers.find(o => o.id === id);
+  }
+
+  function fitScore(officer, call) {
+    const score = baseFitScore(officer, call);
+    const busyPenalty = officer.busy * 16;
+    const fatiguePenalty = (officer.fatigue || 0) * 5;
+    const learningBonus = Math.min(8, officer.xp || 0);
+    const rivalMemory = call.rivalId && officer.memory ? (officer.memory[call.rivalId] || 0) : 0;
+    const rivalBonus = Math.min(10, rivalMemory * 3);
+    return Math.max(0, Math.round(score - busyPenalty - fatiguePenalty + learningBonus + rivalBonus));
+  }
+
+  function bestOfficerName(call) {
+    return officerById(call.best).name.replace("Officer ", "").replace("Captain ", "");
+  }
+
+  function addLog(text) {
+    state.log.unshift(text);
+    state.log = state.log.slice(0, 9);
+  }
+
+  function deltaText(label, n) {
+    const klass = n >= 0 ? "delta-good" : "delta-bad";
+    const sign = n >= 0 ? "+" : "";
+    return `<span class="${klass}">${label} ${sign}${n}</span>`;
+  }
+
+  function likelyOutcome(score) {
+    if (score >= 82) return "Clean win";
+    if (score >= 68) return "Workable";
+    if (score >= 48) return "Messy";
+    return "Escalation";
+  }
+
+  function learningSummary() {
+    const learner = officers
+      .slice()
+      .sort((a, b) => (b.xp || 0) - (a.xp || 0))[0];
+    const hottest = cityMemory.rivals.slice().sort((a, b) => b.heat - a.heat)[0];
+    if (!learner || !learner.xp) return hottest ? hottest.name + " heat " + hottest.heat : "No adaptation";
+    return learner.name.replace("Officer ", "").replace("Captain ", "") + " +" + learner.xp + " field data // " + hottest.name + " heat " + hottest.heat;
+  }
+
+  function renderDirector(call) {
+    const selected = state.selected ? officerById(state.selected) : null;
+    const selectedScore = selected ? fitScore(selected, call) : 0;
+    const best = officerById(call.best);
+    const rival = rivalById(call.rivalId);
+    const faction = factionById(call.factionId);
+    const pressure = cityPressure();
+    els.directorMode.textContent = state.endless ? "Adaptive night shift" : "Pilot script";
+    els.pressureText.textContent = pressure;
+    els.predictionText.textContent = selected ? likelyOutcome(selectedScore) + " // " + selectedScore : "Select a unit";
+    els.learningText.textContent = learningSummary();
+    if (selected) {
+      els.directorCopy.textContent = "Director model prefers " + best.name + ". " + selected.name + " is projected at " + selectedScore + "https://app.northstarprime.net/100 under " + pressure.toLowerCase() + " city pressure. Active memory: " + rival.name + " / " + faction.name + ".";
+    } else {
+      els.directorCopy.textContent = "Director model is weighing public trust, chaos, budget, officer fatigue, rival heat, and recent field learning. Best baseline match: " + best.name + ". Active memory: " + rival.name + ".";
+    }
+  }
+
+  function renderMemoryPanel(call) {
+    const activeRival = rivalById(call.rivalId);
+    const activeFaction = factionById(call.factionId);
+    const factions = cityMemory.factions
+      .slice()
+      .sort((a, b) => b.heat - a.heat)
+      .slice(0, 3);
+    const rivals = cityMemory.rivals
+      .slice()
+      .sort((a, b) => b.heat - a.heat)
+      .slice(0, 3);
+    els.memoryTurn.textContent = "Memory " + cityMemory.turn;
+    els.cityMemory.innerHTML = `
+      <div class="memory-card">
+        <div class="memory-title">${escapeHtml(activeRival.name)} <span>${escapeHtml(activeRival.rank)}</span></div>
+        <div class="memory-line">${escapeHtml(activeFaction.name)} // ${escapeHtml(activeRival.signature)} // heat ${activeRival.heat}</div>
+        <div class="memory-line">${escapeHtml(activeRival.memory)}</div>
+        <div class="heat-bar"><span style="width:${activeRival.heat}%"></span></div>
+      </div>
+      <div class="memory-card">
+        <div class="memory-title">Faction Heat <span>top networks</span></div>
+        ${factions.map(f => `
+          <div class="memory-line">${escapeHtml(f.name)} // heat ${f.heat} // leverage ${f.leverage}</div>
+          <div class="heat-bar"><span style="width:${f.heat}%"></span></div>
+        `).join("")}
+      </div>
+      <div class="memory-card">
+        <div class="memory-title">Rival Board <span>recurring actors</span></div>
+        ${rivals.map(r => `
+          <div class="memory-line">${escapeHtml(r.name)} // ${escapeHtml(r.rank)} // W${r.wins} D${r.defeats}${r.scars.length ? " // " + escapeHtml(r.scars.join(", ")) : ""}</div>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  function render() {
+    const call = currentCase();
+    state.trust = clamp(state.trust);
+    state.chaos = clamp(state.chaos);
+    state.budget = clamp(state.budget);
+    els.trustVal.textContent = state.trust;
+    els.chaosVal.textContent = state.chaos;
+    els.budgetVal.textContent = state.budget;
+    els.trustFill.style.width = state.trust + "%";
+    els.chaosFill.style.width = state.chaos + "%";
+    els.budgetFill.style.width = state.budget + "%";
+    els.shiftChip.textContent = state.endless ? "Night Shift+" : "Shift " + Math.min(3, shiftNo());
+    els.caseCount.textContent = state.endless
+      ? "Night Call " + (state.index - cases.length + 1)
+      : "Call " + Math.min(state.index + 1, cases.length) + " of " + cases.length;
+    els.caseSeverity.textContent = call.severity;
+    els.caseType.textContent = call.type;
+    els.caseTitle.textContent = call.title;
+    els.caseCopy.textContent = call.copy;
+    els.cityHook.textContent = call.cityHook || cityMemory.lastEvent;
+    els.tags.innerHTML = call.tags.map(t => `<span class="tag">${t}</span>`).join("");
+    els.bestFit.textContent = state.adviceLeft < 3 || state.finished ? bestOfficerName(call) : "Ask Mags";
+    els.riskText.textContent = call.risk;
+    els.rivalText.textContent = rivalById(call.rivalId).name;
+    els.selectedText.textContent = state.selected ? officerById(state.selected).name.replace("Officer ", "").replace("Captain ", "") : "None";
+    els.dispatchBtn.disabled = !state.selected || state.finished;
+    els.holdBtn.disabled = state.heldThisCall || state.finished;
+    els.adviceBtn.disabled = state.adviceLeft <= 0 || state.finished;
+    els.adviceBtn.textContent = "Ask Mags (" + state.adviceLeft + ")";
+    els.overrideBtn.disabled = state.overridesLeft <= 0 || state.finished;
+    els.overrideBtn.textContent = "Derek Override (" + state.overridesLeft + ")";
+    els.footerState.textContent = state.finished ? "Pilot closed" : state.endless ? "Adaptive night shift active" : "Pilot active";
+    renderDirector(call);
+    renderMemoryPanel(call);
+    renderOfficers(call);
+    renderShiftList();
+    els.log.innerHTML = state.log.map(row => `<div class="log-entry">${row}</div>`).join("");
+  }
+
+  function renderOfficers(call) {
+    els.officers.innerHTML = officers.map(officer => {
+      const selected = state.selected === officer.id ? " selected" : "";
+      const busy = officer.busy > 0 ? " busy" : "";
+      const score = fitScore(officer, call);
+      const rivalMemory = call.rivalId && officer.memory ? (officer.memory[call.rivalId] || 0) : 0;
+      return `
+        <button class="officer${selected}${busy}" data-id="${officer.id}" ${state.finished ? "disabled" : ""}>
+          <div class="officer-top">
+            <div>
+              <div class="officer-name">${officer.name}</div>
+              <div class="officer-role">${officer.role} // ${officer.good}</div>
+            </div>
+            <span class="chip">${score}</span>
+          </div>
+          <div class="officer-role">${officer.flaw}${officer.busy ? " // cooldown " + officer.busy : ""}${officer.fatigue ? " // fatigue " + officer.fatigue : ""}${officer.xp ? " // learned +" + officer.xp : ""}${rivalMemory ? " // rival memory +" + rivalMemory : ""}</div>
+          <div class="bars">
+            ${miniBar("Procedure", officer.stats.procedure)}
+            ${miniBar("Empathy", officer.stats.empathy)}
+            ${miniBar("Analysis", officer.stats.analysis)}
+            ${miniBar("Force", officer.stats.force)}
+            ${miniBar("Fatigue", Math.min(100, (officer.fatigue || 0) * 20))}
+          </div>
+        </button>`;
+    }).join("");
+    for (const btn of els.officers.querySelectorAll(".officer")) {
+      btn.addEventListener("click", () => {
+        if (state.finished) return;
+        state.selected = btn.dataset.id;
+        render();
+      });
+    }
+  }
+
+  function miniBar(label, value) {
+    return `<div class="mini"><span>${label}</span><div class="mini-bar"><span style="width:${value}%"></span></div></div>`;
+  }
+
+  function renderShiftList() {
+    const rows = [];
+    if (state.endless) {
+      rows.push(`<div class="shift-row"><span>Pilot Program</span><strong>12/12 calls</strong></div>`);
+      rows.push(`<div class="shift-row"><span>Night Shift+</span><strong>${Math.max(0, state.index - cases.length)}/∞ calls</strong></div>`);
+      rows.push(`<div class="shift-row"><span>City Pressure</span><strong>${cityPressure()}</strong></div>`);
+      els.shiftList.innerHTML = rows.join("");
+      return;
+    }
+    for (let i = 0; i < 3; i++) {
+      const start = i * 4;
+      const done = Math.max(0, Math.min(4, state.index - start));
+      rows.push(`<div class="shift-row"><span>Shift ${i + 1}</span><strong>${done}/4 calls</strong></div>`);
+    }
+    els.shiftList.innerHTML = rows.join("");
+  }
+
+  function dispatch() {
+    if (!state.selected || state.finished) return;
+    const call = currentCase();
+    const officer = officerById(state.selected);
+    const score = fitScore(officer, call);
+    let trust = 0;
+    let chaos = 0;
+    let budget = -2;
+    let outcome;
+
+    if (officer.id === call.best) {
+      trust = 9;
+      chaos = -9;
+      budget = call.risk === "Extreme" ? -3 : -1;
+      outcome = `${officer.name} handles ${call.title}.`;
+    } else if (officer.id === call.secondary || score >= 68) {
+      trust = 4;
+      chaos = -4;
+      budget = -2;
+      outcome = `${officer.name} gets a workable result on ${call.title}.`;
+    } else if (score >= 48) {
+      trust = -2;
+      chaos = 7;
+      budget = -4;
+      outcome = `${officer.name} resolves the call, but the incident report needs a glossary.`;
+    } else {
+      trust = -8;
+      chaos = 14;
+      budget = -7;
+      outcome = `${officer.name} escalates ${call.title} into a mayoral briefing.`;
+    }
+
+    if (state.heldThisCall) {
+      chaos += 3;
+      trust -= 1;
+    }
+
+    if (state.endless) {
+      const pressure = cityPressure();
+      if (pressure === "Volatile") chaos += 2;
+      if (pressure === "Hostile") trust -= 2;
+      if (pressure === "Broke") budget -= 2;
+      if (score >= 82) {
+        trust += 2;
+        chaos -= 2;
+      }
+    }
+
+    state.trust += trust;
+    state.chaos += chaos;
+    state.budget += budget;
+    const memoryScore = officer.id === call.best ? Math.max(score, 82) : officer.id === call.secondary ? Math.max(score, 68) : score;
+    const cityNote = resolveCityMemory(call, officer, memoryScore);
+    officer.xp = (officer.xp || 0) + (score >= 68 ? 1 : 0);
+    officer.fatigue = Math.min(5, (officer.fatigue || 0) + 1);
+    if (officer.xp && officer.xp % 3 === 0) {
+      const trait = Object.keys(call.traits).sort((a, b) => call.traits[b] - call.traits[a])[0];
+      officer.stats[trait] = Math.min(99, officer.stats[trait] + 1);
+      addLog(`${officer.name} adapts: ${trait} model improves from field data.`);
+    }
+    officer.busy = 1;
+    advanceCooldowns(officer.id);
+    if (cityNote) addLog(cityNote);
+    addLog(`${outcome} ${deltaText("Trust", trust)} ${deltaText("Chaos", -chaos)} ${deltaText("Budget", budget)}`);
+    nextCall();
+  }
+
+  function advanceCooldowns(exemptId) {
+    for (const officer of officers) {
+      if (officer.id !== exemptId) officer.busy = Math.max(0, officer.busy - 1);
+      if (officer.id !== exemptId) officer.fatigue = Math.max(0, (officer.fatigue || 0) - 1);
+    }
+  }
+
+  function holdCall() {
+    if (state.finished || state.heldThisCall) return;
+    state.heldThisCall = true;
+    state.chaos += 5;
+    state.trust -= 2;
+    addLog(`Dispatch held for more context. ${deltaText("Trust", -2)} ${deltaText("Chaos", -5)}`);
+    render();
+  }
+
+  function askMags() {
+    if (state.adviceLeft <= 0 || state.finished) return;
+    const call = currentCase();
+    state.adviceLeft -= 1;
+    state.selected = call.best;
+    addLog(`Mags points at ${bestOfficerName(call)} and says the obvious thing nobody automated.`);
+    render();
+  }
+
+  function derekOverride() {
+    if (state.overridesLeft <= 0 || state.finished) return;
+    state.overridesLeft -= 1;
+    state.chaos -= 10;
+    state.budget -= 4;
+    addLog(`Derek translates robot logic into human terms. ${deltaText("Chaos", 10)} ${deltaText("Budget", -4)}`);
+    render();
+  }
+
+  function nextCall() {
+    state.index += 1;
+    state.selected = null;
+    state.heldThisCall = false;
+
+    if (state.trust <= 0 || state.chaos >= 100 || state.budget <= 0) {
+      endGame(false);
+      return;
+    }
+    if (state.index >= cases.length && !state.endless) {
+      endGame(true);
+      return;
+    }
+    render();
+  }
+
+  function endGame(won) {
+    state.finished = true;
+    state.canContinue = won && !state.endless;
+    const score = Math.max(0, state.trust + state.budget - state.chaos);
+    const best = Number(localStorage.getItem("precinct404Best") || 0);
+    if (score > best) localStorage.setItem("precinct404Best", String(score));
+    const title = won ? "Pilot Survived" : "Pilot Suspended";
+    const body = won
+      ? `Final score ${score}. Trust ${clamp(state.trust)}, chaos ${clamp(state.chaos)}, budget ${clamp(state.budget)}. The mayor calls this a success because no one corrected her.`
+      : `Final score ${score}. Trust ${clamp(state.trust)}, chaos ${clamp(state.chaos)}, budget ${clamp(state.budget)}. NexaForce schedules a postmortem and calls it a pivot.`;
+    showModal(title, body);
+    render();
+  }
+
+  function showModal(title, body) {
+    els.modalTitle.textContent = title;
+    els.modalBody.textContent = body;
+    els.modalBtn.textContent = state.canContinue ? "Start Night Shift+" : "New Shift";
+    els.modal.classList.add("active");
+  }
+
+  function startNightShift() {
+    state.finished = false;
+    state.canContinue = false;
+    state.endless = true;
+    state.index = cases.length;
+    state.selected = null;
+    state.heldThisCall = false;
+    state.generatedCases = [];
+    state.adviceLeft = Math.max(state.adviceLeft, 1);
+    state.overridesLeft = Math.max(state.overridesLeft, 1);
+    els.modal.classList.remove("active");
+    addLog("Night Shift+ activated. Local director will synthesize calls from city pressure.");
+    render();
+  }
+
+  function reset() {
+    state.trust = 55;
+    state.chaos = 20;
+    state.budget = 75;
+    state.index = 0;
+    state.selected = null;
+    state.adviceLeft = 3;
+    state.overridesLeft = 3;
+    state.heldThisCall = false;
+    state.finished = false;
+    state.endless = false;
+    state.generatedCases = [];
+    state.canContinue = false;
+    state.log = ["Boot sequence complete. Derek has requested coffee and a lawyer."];
+    for (const officer of officers) {
+      officer.busy = 0;
+      officer.xp = 0;
+      officer.fatigue = 0;
+      officer.memory = {};
+    }
+    els.modal.classList.remove("active");
+    els.modalBtn.textContent = "New Shift";
+    render();
+  }
+
+  els.dispatchBtn.addEventListener("click", dispatch);
+  els.holdBtn.addEventListener("click", holdCall);
+  els.adviceBtn.addEventListener("click", askMags);
+  els.overrideBtn.addEventListener("click", derekOverride);
+  els.resetBtn.addEventListener("click", reset);
+  els.modalBtn.addEventListener("click", () => state.canContinue ? startNightShift() : reset());
+  addEventListener("keydown", event => {
+    if (event.key === "Enter" && !els.dispatchBtn.disabled) dispatch();
+    if (event.key === "r" || event.key === "R") reset();
+  });
+
+  reset();
+})();
+</script>
+</body>
+</html>

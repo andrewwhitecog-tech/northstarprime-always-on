@@ -1,0 +1,638 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tai Chi Flow // Moving Meditation</title>
+<style>
+  :root{
+    --void:#07040d; --panel:#12101c; --paper:#f3ecd8; --muted:#9d97a8; --gold:#e9c86a;
+    --jade:#4ade80; --cyan:#2fe6ff; --violet:#a78bfa; --crimson:#ff5b45; --line:rgba(233,200,106,.18);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;background:var(--void);color:var(--paper);
+    font-family:"Segoe UI",system-ui,sans-serif}
+  body{background:
+    radial-gradient(circle at 22% 12%, rgba(167,139,250,.07), transparent 34%),
+    radial-gradient(circle at 78% 88%, rgba(233,200,106,.06), transparent 40%), #07040d}
+  .shell{width:min(100%,1180px);margin:0 auto;padding:18px;display:grid;gap:12px}
+  header{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+  .kicker{font-size:11px;letter-spacing:4px;text-transform:uppercase;color:var(--gold)}
+  h1{margin:2px 0 0;font-size:38px;line-height:1;color:var(--paper)}
+  h1 em{font-style:normal;background:linear-gradient(90deg,#ff5b45,#facc15,#4ade80,#2fe6ff,#a78bfa,#ec4899,#ff5b45);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:prismText 6s linear infinite}
+  @keyframes prismText{to{background-position:300% 0}}
+  .sub{color:var(--muted);font-size:13px;max-width:64ch}
+  .hud{display:grid;grid-template-columns:repeat(6,minmax(90px,1fr));gap:8px}
+  .metric{border:1px solid var(--line);border-radius:8px;background:rgba(18,16,28,.82);padding:8px 10px;min-height:56px}
+  .metric small{display:block;font-size:9.5px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+  .metric strong{font-size:21px;line-height:1.25}
+  .stage-wrap{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#050309}
+  canvas{display:block;width:100%;height:auto;touch-action:none;cursor:crosshair}
+  .overlay{position:absolute;inset:0;display:grid;place-items:center;background:rgba(5,3,9,.8);
+    backdrop-filter:blur(4px);z-index:10;padding:18px}
+  .overlay[hidden]{display:none}
+  .card{width:min(560px,100%);border:1px solid var(--line);border-radius:12px;background:rgba(13,10,20,.95);
+    padding:24px;text-align:center;box-shadow:0 0 60px rgba(233,200,106,.08)}
+  .card h2{margin:0 0 6px;font-size:30px}
+  .card p{margin:0 0 16px;color:var(--muted);font-size:13.5px;line-height:1.55}
+  .tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+  .tier{border:1px solid var(--line);border-radius:9px;background:rgba(18,16,28,.8);padding:12px 8px;cursor:pointer;transition:.25s}
+  .tier b{display:block;font-size:15px;margin-bottom:2px}
+  .tier small{display:block;color:var(--muted);font-size:10.5px;line-height:1.4}
+  .tier:hover{transform:translateY(-2px)}
+  .tier[data-tier="monastery"]:hover,.tier[data-tier="monastery"].on{border-color:var(--jade);box-shadow:0 0 24px rgba(74,222,128,.22)}
+  .tier[data-tier="flow"]:hover,.tier[data-tier="flow"].on{border-color:var(--violet);box-shadow:0 0 24px rgba(167,139,250,.25)}
+  .tier[data-tier="storm"]:hover,.tier[data-tier="storm"].on{border-color:var(--crimson);box-shadow:0 0 24px rgba(255,91,69,.25)}
+  .actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  button{font:inherit;font-weight:800;letter-spacing:1px;padding:11px 20px;border-radius:8px;border:1px solid var(--line);
+    background:rgba(233,200,106,.08);color:var(--paper);cursor:pointer;min-height:42px}
+  button:hover{border-color:var(--gold);box-shadow:0 0 20px rgba(233,200,106,.18)}
+  button.primary{background:linear-gradient(180deg,#f3d98b,#c09a3e);color:#171022;border-color:transparent}
+  .filebtn{position:relative;overflow:hidden}
+  .filebtn input{position:absolute;inset:0;opacity:0;cursor:pointer}
+  .foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:11.5px}
+  .foot b{color:var(--gold)}
+  @media(max-width:760px){.hud{grid-template-columns:repeat(3,1fr)}h1{font-size:28px}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div>
+      <div class="kicker">NorthStar Prime // Moving Meditation</div>
+      <h1>TAI CHI <em>FLOW</em></h1>
+      <p class="sub">Trace the brush stroke. Stay with the chi orb. Breathe on the holds. Flow, don't hit &mdash; and the deeper your chi runs, the harder the prism storm rages. At 100% the whole temple goes full rainbow crystal.</p>
+    </div>
+  </header>
+
+  <div class="hud">
+    <div class="metric"><small>Flow Score</small><strong id="hudScore">0</strong></div>
+    <div class="metric"><small>Chi</small><strong id="hudChi">0%</strong></div>
+    <div class="metric"><small>Streak</small><strong id="hudCombo">&times;1.0</strong></div>
+    <div class="metric"><small>Form</small><strong id="hudForm" style="font-size:13px;line-height:1.3">&mdash;</strong></div>
+    <div class="metric"><small>Tier</small><strong id="hudTier" style="font-size:15px">&mdash;</strong></div>
+    <div class="metric"><small>Time</small><strong id="hudTime">0:00</strong></div>
+  </div>
+
+  <div class="stage-wrap">
+    <canvas id="stage" width="1140" height="620"></canvas>
+    <script src="/static/games/juice.js"></script>
+    <script src="/static/games/chiptune.js"></script>
+    <div class="overlay" id="overlay">
+      <div class="card">
+        <h2 id="ovTitle">Choose Your Practice</h2>
+        <p id="ovBody">Three intensities, one discipline. The guide orb travels the stroke in time with the music &mdash; keep your pointer inside its aura. Between forms, hold still inside the breath circle.</p>
+        <div class="tiers" id="tierRow">
+          <div class="tier on" data-tier="monastery"><b>Monastery</b><small>66 BPM &middot; singing bowls &amp; drone &middot; wide, slow strokes</small></div>
+          <div class="tier" data-tier="flow"><b>Flow</b><small>108 BPM &middot; bright pentatonic pulse &middot; longer combos</small></div>
+          <div class="tier" data-tier="storm"><b>Storm</b><small>142 BPM &middot; heavy low end &middot; tight, fast calligraphy</small></div>
+        </div>
+        <div class="actions">
+          <button class="primary" id="btnStart" type="button">Begin Practice</button>
+          <button class="filebtn" type="button">Use My Music<input id="fileTrack" type="file" accept="audio/*"></button>
+        </div>
+        <p style="margin-top:14px;font-size:11px;color:var(--muted)">Load any song you own &mdash; the beat detector choreographs the forms to it. Nothing is uploaded; it plays locally.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span>Forms: <b>Cloud Hands</b> &middot; <b>White Crane</b> &middot; <b>Grasp the Sparrow's Tail</b> &middot; <b>Snake Creeps Down</b> &middot; <b>Golden Rooster</b> &middot; <b>Repulse the Monkey</b></span>
+    <span id="footRight">Mouse or touch &middot; Esc to end practice</span>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const canvas = document.getElementById("stage"), ctx = canvas.getContext("2d");
+  const W = canvas.width, H = canvas.height;
+  if (window.Juice) Juice.attachFX(canvas, { vignette: 0.5, scanlines: 0.035, glow: 0.06 });
+
+  // ---------- chiptune SFX (additive; game keeps its own meditative music) ----------
+  const SFX = (name) => { try { if (window.Chiptune && Chiptune.SFX && Chiptune.SFX[name]) Chiptune.SFX[name](); } catch (e) {} };
+  const chipResume = () => { try { if (window.Chiptune && Chiptune.resume) Chiptune.resume(); } catch (e) {} };
+  window.addEventListener("pointerdown", chipResume, { once: false });
+  window.addEventListener("keydown", chipResume, { once: false });
+
+  // ---------- hero chi-orb sprite (procedural glow kept as fallback) ----------
+  const orbImg = new Image(); let orbReady = false;
+  orbImg.onload = () => { orbReady = true; };
+  orbImg.onerror = () => { orbReady = false; };
+  orbImg.src = "/static/games/roster/tai_orb.png";
+
+  // psychedelic prism plate - reveals itself as chi rises
+  const motionPlate = document.createElement("video");
+  let motionPlateReady = false;
+  {
+    const still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!still) {
+      motionPlate.muted = true; motionPlate.loop = true; motionPlate.playsInline = true; motionPlate.preload = "auto";
+      motionPlate.src = "/static/games/imagegen_quality_pass_20260625/tai_chi_flow_plate_motion.mp4";
+      const go = () => { if (motionPlateReady) return; motionPlate.play().then(() => { motionPlateReady = true; }).catch(() => {}); };
+      motionPlate.addEventListener("canplaythrough", go, { once: true });
+      motionPlate.addEventListener("error", () => { motionPlateReady = false; });
+      window.addEventListener("pointerdown", go, { once: true });
+      window.addEventListener("keydown", go, { once: true });
+    }
+  }
+  let hueBase = 0, beatRings = [];
+  const prismColor = (offset, sat, lit, alpha) =>
+    "hsla(" + ((hueBase + offset) % 360) + "," + (sat || 95) + "%," + (lit || 60) + "%," + (alpha == null ? 1 : alpha) + ")";
+
+  // ---------- founding patrons nod (shared arcade convention) ----------
+  fetch("https://app.northstarprime.net/api/founders").then(r => r.json()).then(d => {
+    const names = (d.founders || []).map(f => f.name).filter(Boolean);
+    if (names.length) document.getElementById("footRight").textContent = "Founding Patrons: " + names.join(" · ");
+  }).catch(() => {});
+
+  // ---------- tiers ----------
+  const TIERS = {
+    monastery: { bpm: 66,  tol: 78, beatsPerForm: 16, accent: "#4ade80", accent2: "#2fe6ff", label: "Monastery", holdBeats: 8 },
+    flow:      { bpm: 108, tol: 62, beatsPerForm: 12, accent: "#a78bfa", accent2: "#ec4899", label: "Flow",      holdBeats: 4 },
+    storm:     { bpm: 142, tol: 48, beatsPerForm: 8,  accent: "#ff5b45", accent2: "#facc15", label: "Storm",     holdBeats: 2 },
+  };
+  let tierKey = "monastery";
+
+  // ---------- forms: each returns control points for a smooth path ----------
+  const FORMS = [
+    ["Cloud Hands", t => wavePath(3, 0.32)],
+    ["White Crane Spreads Wings", t => arcPath()],
+    ["Grasp the Sparrow's Tail", t => sPath()],
+    ["Snake Creeps Down", t => diagonalWeave()],
+    ["Golden Rooster Stands", t => spiralPath()],
+    ["Repulse the Monkey", t => wavePath(2, 0.42, true)],
+    ["Wave Hands Like Clouds", t => figureEight()],
+    ["Part the Wild Horse's Mane", t => sPath(true)],
+  ];
+  const M = 110; // margin
+  const rx = () => M + Math.random() * (W - 2 * M);
+  const ry = () => M + Math.random() * (H - 2 * M);
+  function wavePath(waves, amp, flip) {
+    const pts = [], y0 = H * (0.3 + Math.random() * 0.4), a = H * amp * (flip ? -1 : 1);
+    const dir = Math.random() < 0.5 ? 1 : -1;
+    for (let i = 0; i <= waves * 8; i++) {
+      const k = i / (waves * 8);
+      const x = dir > 0 ? M + k * (W - 2 * M) : W - M - k * (W - 2 * M);
+      pts.push({ x, y: y0 + Math.sin(k * Math.PI * waves) * a * 0.5 });
+    }
+    return pts;
+  }
+  function arcPath() {
+    const cx = W / 2, cy = H * 0.78, r = Math.min(W, H) * 0.42;
+    const a0 = Math.PI * (1.05 + Math.random() * 0.1), a1 = -Math.PI * (0.05 + Math.random() * 0.1);
+    const pts = [];
+    for (let i = 0; i <= 26; i++) {
+      const a = a0 + (a1 - a0) * (i / 26);
+      pts.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r * 0.85 });
+    }
+    return pts;
+  }
+  function sPath(flip) {
+    const pts = [], x0 = flip ? W - M : M, x1 = flip ? M : W - M;
+    for (let i = 0; i <= 30; i++) {
+      const k = i / 30;
+      pts.push({ x: x0 + (x1 - x0) * k, y: H * 0.5 + Math.sin(k * Math.PI * 2) * H * 0.3 * (k < 0.5 ? 1 : -1) * (flip ? -1 : 1) });
+    }
+    return smooth(pts);
+  }
+  function diagonalWeave() {
+    const pts = [{ x: M, y: M }], steps = 5;
+    for (let i = 1; i <= steps; i++) {
+      pts.push({ x: M + (W - 2 * M) * (i / steps), y: i % 2 ? H - M : M + H * 0.12 });
+    }
+    return smooth(pts, 3);
+  }
+  function spiralPath() {
+    const cx = W / 2 + (Math.random() - 0.5) * 160, cy = H / 2, pts = [];
+    for (let i = 0; i <= 40; i++) {
+      const k = i / 40, a = k * Math.PI * 3.2, r = 40 + k * Math.min(W, H) * 0.36;
+      pts.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r * 0.8 });
+    }
+    return pts;
+  }
+  function figureEight() {
+    const cx = W / 2, cy = H / 2, rxr = W * 0.32, ryr = H * 0.3, pts = [];
+    for (let i = 0; i <= 44; i++) {
+      const t = (i / 44) * Math.PI * 2;
+      pts.push({ x: cx + Math.sin(t) * rxr, y: cy + Math.sin(t * 2) * ryr * 0.5 });
+    }
+    return pts;
+  }
+  function smooth(pts, passes = 2) {
+    let p = pts;
+    for (let n = 0; n < passes; n++) {
+      const q = [p[0]];
+      for (let i = 0; i < p.length - 1; i++) {
+        q.push({ x: p[i].x * 0.75 + p[i + 1].x * 0.25, y: p[i].y * 0.75 + p[i + 1].y * 0.25 });
+        q.push({ x: p[i].x * 0.25 + p[i + 1].x * 0.75, y: p[i].y * 0.25 + p[i + 1].y * 0.75 });
+      }
+      q.push(p[p.length - 1]);
+      p = q;
+    }
+    return p;
+  }
+  function pathLength(pts) {
+    let L = 0;
+    for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+    return L;
+  }
+  function pointAt(pts, k) { // k in [0,1] by arc length
+    const total = pathLength(pts); let target = k * total, acc = 0;
+    for (let i = 1; i < pts.length; i++) {
+      const seg = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+      if (acc + seg >= target) {
+        const f = seg ? (target - acc) / seg : 0;
+        return { x: pts[i - 1].x + (pts[i].x - pts[i - 1].x) * f, y: pts[i - 1].y + (pts[i].y - pts[i - 1].y) * f };
+      }
+      acc += seg;
+    }
+    return pts[pts.length - 1];
+  }
+
+  // ---------- audio: procedural tracks + user music + tier soundtracks ----------
+  let actx = null, masterGain = null, musicNodes = [], userBuffer = null, userSource = null, beatTimes = null;
+  const TIER_TRACKS = { monastery: "taichi_monastery", flow: "taichi_flow", storm: "taichi_storm" };
+  const tierBuffers = {}; let tierSource = null;
+  async function loadTierTracks() {
+    for (const [k, name] of Object.entries(TIER_TRACKS)) {
+      try { const r = await fetch("/static/games/audio/" + name + ".mp3"); if (!r.ok) continue;
+        tierBuffers[k] = await actx.decodeAudioData(await r.arrayBuffer()); } catch (e) {}
+    }
+  }
+  function ensureAudio() {
+    if (!actx) { actx = new (window.AudioContext || window.webkitAudioContext)(); masterGain = actx.createGain(); masterGain.gain.value = 0.8; masterGain.connect(actx.destination); }
+    if (actx.state === "suspended") actx.resume();
+    if (!actx.__tierLoaded) { actx.__tierLoaded = true; loadTierTracks(); }
+  }
+  function tone(freq, t0, dur, type, vol, glideTo) {
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t0);
+    if (glideTo) o.frequency.exponentialRampToValueAtTime(glideTo, t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol, t0 + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(masterGain); o.start(t0); o.stop(t0 + dur + 0.05);
+    musicNodes.push(o);
+  }
+  function noiseHit(t0, dur, vol, low) {
+    const buf = actx.createBuffer(1, actx.sampleRate * dur, actx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+    const src = actx.createBufferSource(); src.buffer = buf;
+    const g = actx.createGain(); g.gain.value = vol;
+    if (low) { const f = actx.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 900; src.connect(f); f.connect(g); }
+    else src.connect(g);
+    g.connect(masterGain); src.start(t0); musicNodes.push(src);
+  }
+  const PENTA = [220, 261.6, 293.7, 349.2, 392, 440, 523.3];
+  function scheduleBar(t0, beatDur, barIndex) {
+    const tier = TIERS[tierKey];
+    if (tierKey === "monastery") {
+      if (barIndex % 2 === 0) tone(55, t0, beatDur * 8, "sine", 0.10);           // drone
+      if (barIndex % 2 === 0) tone(110.5, t0, beatDur * 8, "sine", 0.045);       // beat drone
+      tone(PENTA[barIndex % 5] * 2, t0 + beatDur * (barIndex % 3), beatDur * 3, "sine", 0.05); // bowl
+      if (barIndex % 4 === 3) tone(523.3, t0, beatDur * 4, "triangle", 0.03, 520); // bell shimmer
+    } else if (tierKey === "flow") {
+      for (let b = 0; b < 4; b++) {
+        noiseHit(t0 + b * beatDur, 0.05, b % 2 ? 0.05 : 0.09, b % 2 === 0);      // kick/hat
+        tone(PENTA[(barIndex * 4 + b * 2) % 7] * 2, t0 + b * beatDur, beatDur * 0.9, "triangle", 0.05);
+      }
+      tone(PENTA[barIndex % 7] / 2, t0, beatDur * 4, "sine", 0.07);              // bass
+    } else {
+      for (let b = 0; b < 4; b++) {
+        noiseHit(t0 + b * beatDur, 0.06, b % 2 ? 0.06 : 0.13, true);             // heavy kick
+        if (b % 2) noiseHit(t0 + b * beatDur, 0.03, 0.05, false);                // snare tick
+        noiseHit(t0 + (b + 0.5) * beatDur, 0.02, 0.03, false);                   // hats
+      }
+      const root = [55, 55, 65.4, 49][barIndex % 4];
+      tone(root, t0, beatDur * 2, "square", 0.06, root * 0.75);                  // bass riff
+      tone(root * 2, t0 + beatDur * 2, beatDur, "square", 0.04);
+      if (barIndex % 2) tone(root * 4, t0 + beatDur * 3, beatDur * 0.5, "sawtooth", 0.03);
+    }
+  }
+  function stopMusic() {
+    musicNodes.forEach(n => { try { n.stop(); } catch (e) {} });
+    musicNodes = [];
+    if (userSource) { try { userSource.stop(); } catch (e) {} userSource = null; }
+    if (tierSource) { try { tierSource.stop(); } catch (e) {} tierSource = null; }
+  }
+
+  // user track: decode + onset detection -> beat grid
+  document.getElementById("fileTrack").addEventListener("change", async ev => {
+    const file = ev.target.files[0]; if (!file) return;
+    ensureAudio();
+    document.getElementById("ovBody").textContent = "Reading the pulse of “" + file.name + "”…";
+    const buf = await file.arrayBuffer();
+    userBuffer = await actx.decodeAudioData(buf);
+    // energy-based onset detection on mono mix
+    const ch = userBuffer.getChannelData(0), sr = userBuffer.sampleRate, win = 2048;
+    const energies = [];
+    for (let i = 0; i + win < ch.length; i += win) {
+      let e = 0; for (let j = 0; j < win; j += 4) e += ch[i + j] * ch[i + j];
+      energies.push(e);
+    }
+    const beats = []; const winDur = win / sr;
+    for (let i = 4; i < energies.length - 1; i++) {
+      const local = (energies[i-4]+energies[i-3]+energies[i-2]+energies[i-1]) / 4;
+      if (energies[i] > local * 1.55 && energies[i] > energies[i+1] && (!beats.length || i * winDur - beats[beats.length-1] > 0.28)) {
+        beats.push(i * winDur);
+      }
+    }
+    beatTimes = beats.length > 12 ? beats : null;
+    const est = beatTimes ? Math.round(60 / (beatTimes.slice(1).reduce((a, t, i) => a + (t - beatTimes[i]), 0) / (beatTimes.length - 1))) : 0;
+    document.getElementById("ovBody").innerHTML = beatTimes
+      ? "Loaded <b>" + file.name.replace(/</g,"&lt;") + "</b> — " + beatTimes.length + " beats found (~" + est + " BPM). Pick an intensity for the stroke style, then begin."
+      : "Couldn't find a steady pulse in that track — the built-in music will play instead.";
+  });
+
+  // ---------- game state ----------
+  const S = {
+    running: false, score: 0, chi: 0, combo: 1, comboT: 0,
+    formIdx: -1, formName: "—", path: null, orb: { x: W/2, y: H/2 },
+    phase: "idle", phaseT0: 0, phaseDur: 0, hold: null,
+    pointer: { x: W/2, y: H/2, down: false }, trail: [], sparks: [],
+    startT: 0, beatDur: 0.6, nextBarT: 0, barIndex: 0, ratings: { perfect: 0, good: 0, drift: 0 },
+    grade: null, elapsedMusical: 0,
+  };
+
+  function beginPractice() {
+    chipResume(); SFX("gate");
+    ensureAudio(); stopMusic();
+    const tier = TIERS[tierKey];
+    S.running = true; S.score = 0; S.chi = 0; S.combo = 1; S.comboT = 0;
+    S.formIdx = -1; S.trail = []; S.sparks = []; S.ratings = { perfect: 0, good: 0, drift: 0 }; S.grade = null;
+    S.beatDur = 60 / tier.bpm;
+    S.startT = actx.currentTime + 0.25;
+    S.nextBarT = S.startT; S.barIndex = 0;
+    S.useTierTrack = false;
+    if (userBuffer && beatTimes) {
+      userSource = actx.createBufferSource(); userSource.buffer = userBuffer;
+      userSource.connect(masterGain); userSource.start(S.startT);
+      const gaps = beatTimes.slice(1).map((t, i) => t - beatTimes[i]).sort((a, b) => a - b);
+      S.beatDur = gaps[Math.floor(gaps.length / 2)] || S.beatDur;
+      userSource.onended = () => { if (S.running) endPractice(); };
+    } else if (tierBuffers[tierKey]) {
+      tierSource = actx.createBufferSource(); tierSource.buffer = tierBuffers[tierKey];
+      const tg = actx.createGain(); tg.gain.value = 0.85;
+      tierSource.connect(tg); tg.connect(masterGain); tierSource.start(S.startT);
+      S.useTierTrack = true;
+    }
+    document.getElementById("overlay").hidden = true;
+    document.getElementById("hudTier").textContent = tier.label;
+    nextForm();
+  }
+
+  function nextForm() {
+    const tier = TIERS[tierKey];
+    S.formIdx += 1;
+    if (!userBuffer && S.formIdx >= 12) return endPractice();   // built-in session: 12 forms
+    const [name, gen] = FORMS[Math.floor(Math.random() * FORMS.length)];
+    S.formName = name; S.path = gen();
+    S.phase = "form"; S.phaseT0 = performance.now() / 1000;
+    S.phaseDur = tier.beatsPerForm * S.beatDur;
+    document.getElementById("hudForm").textContent = name;
+  }
+  function beginHold() {
+    const tier = TIERS[tierKey];
+    S.phase = "hold"; S.phaseT0 = performance.now() / 1000;
+    S.phaseDur = tier.holdBeats * S.beatDur;
+    S.hold = { x: S.orb.x, y: S.orb.y, r: tier.tol * 1.15 };
+    document.getElementById("hudForm").textContent = "Breathe — hold";
+  }
+
+  function endPractice() {
+    S.running = false; stopMusic();
+    const total = S.ratings.perfect + S.ratings.good + S.ratings.drift || 1;
+    const pct = (S.ratings.perfect * 1 + S.ratings.good * 0.6) / total;
+    S.grade = pct > 0.85 ? "JADE MASTER" : pct > 0.65 ? "GOLD PRACTITIONER" : pct > 0.4 ? "STUDENT OF THE FORM" : "BEGIN AGAIN, BREATHE";
+    const ov = document.getElementById("overlay");
+    document.getElementById("ovTitle").textContent = S.grade;
+    document.getElementById("ovBody").innerHTML =
+      "Flow score <b style='color:var(--gold)'>" + Math.round(S.score).toLocaleString() + "</b> &middot; " +
+      "perfect flow " + Math.round(100 * S.ratings.perfect / total) + "% &middot; chi peak " + Math.round(S.chiPeak || 0) + "%<br>" +
+      "The stroke remembers the hand. Practice again.";
+    document.getElementById("btnStart").textContent = "Practice Again";
+    ov.hidden = false;
+    SFX(pct > 0.65 ? "oneUp" : pct > 0.4 ? "gate" : "ko");
+    if (window.Juice) Juice.flash("rgba(233,200,106,.14)", 500);
+  }
+
+  // ---------- input ----------
+  function localXY(ev) {
+    const r = canvas.getBoundingClientRect();
+    const cx = (ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left;
+    const cy = (ev.touches ? ev.touches[0].clientY : ev.clientY) - r.top;
+    return { x: cx * (W / r.width), y: cy * (H / r.height) };
+  }
+  canvas.addEventListener("pointermove", ev => { const p = localXY(ev); S.pointer.x = p.x; S.pointer.y = p.y; });
+  canvas.addEventListener("touchmove", ev => { ev.preventDefault(); const p = localXY(ev); S.pointer.x = p.x; S.pointer.y = p.y; }, { passive: false });
+  window.addEventListener("keydown", ev => { if (ev.key === "Escape" && S.running) endPractice(); });
+
+  document.querySelectorAll(".tier").forEach(el => el.addEventListener("click", () => {
+    document.querySelectorAll(".tier").forEach(x => x.classList.remove("on"));
+    el.classList.add("on"); tierKey = el.dataset.tier; chipResume(); SFX("blip");
+  }));
+  document.getElementById("btnStart").addEventListener("click", beginPractice);
+
+  // ---------- loop ----------
+  function update(nowS) {
+    const tier = TIERS[tierKey];
+    // schedule procedural music a bar ahead
+    if (S.running && !userBuffer && !S.useTierTrack && actx && actx.currentTime + 1.2 > S.nextBarT) {
+      scheduleBar(S.nextBarT, S.beatDur, S.barIndex);
+      S.nextBarT += S.beatDur * 4; S.barIndex += 1;
+    }
+    if (!S.running) return;
+    const prism = S.chi / 100;
+    hueBase = (hueBase + 0.4 + prism * 3.2) % 360;
+    if (actx) {
+      const beatK = ((actx.currentTime - S.startT) / S.beatDur) % 1;
+      if (beatK < (S._lastBeatK || 0)) beatRings.push({ x: S.orb.x, y: S.orb.y, r: 12, life: 1 });
+      S._lastBeatK = beatK;
+    }
+    beatRings.forEach(r => { r.r += 4 + prism * 9; r.life -= 0.018; });
+    beatRings = beatRings.filter(r => r.life > 0);
+    const k = Math.min(1, (nowS - S.phaseT0) / S.phaseDur);
+    if (S.phase === "form" && S.path) {
+      const eased = k < 0.08 ? k / 0.08 * k : k;   // gentle start
+      const p = pointAt(S.path, Math.min(1, eased));
+      S.orb.x = p.x; S.orb.y = p.y;
+      const d = Math.hypot(S.pointer.x - S.orb.x, S.pointer.y - S.orb.y);
+      const acc = Math.max(0, 1 - d / tier.tol);
+      if (acc > 0.66) { S.ratings.perfect++; S.comboT = nowS; }
+      else if (acc > 0.25) { S.ratings.good++; S.comboT = nowS; }
+      else S.ratings.drift++;
+      if (acc > 0.25) {
+        S.combo = Math.min(8, S.combo + 0.004 * (tierKey === "storm" ? 2 : 1));
+        S.chi = Math.min(100, S.chi + acc * 0.22);
+        S.score += acc * S.combo * (tierKey === "storm" ? 2.2 : tierKey === "flow" ? 1.5 : 1);
+        S.trail.push({ x: S.pointer.x, y: S.pointer.y, life: 1, acc });
+      } else if (nowS - S.comboT > 0.5) {
+        if (S.combo > 1.5 && window.Juice) { Juice.shake(canvas.parentElement, 4, 160); SFX("hurt"); }
+        S.combo = 1; S.chi = Math.max(0, S.chi - 0.35);
+      }
+      S.chiPeak = Math.max(S.chiPeak || 0, S.chi);
+      // chi milestones: rising through 50% and hitting full prism storm
+      const ms = S.chi >= 100 ? 2 : S.chi >= 50 ? 1 : 0;
+      if (ms > (S._chiMs || 0)) { SFX(ms === 2 ? "oneUp" : "powerUp"); if (ms === 2 && window.Juice) Juice.flash("rgba(167,139,250,.18)", 320); }
+      S._chiMs = ms;
+      if (k >= 1) beginHold();
+    } else if (S.phase === "hold" && S.hold) {
+      const d = Math.hypot(S.pointer.x - S.hold.x, S.pointer.y - S.hold.y);
+      if (d < S.hold.r) { S.chi = Math.min(100, S.chi + 0.1); S.score += 0.6 * S.combo; }
+      else S.chi = Math.max(0, S.chi - 0.2);
+      if (k >= 1) {
+        if (window.Juice && S.chi > 60) Juice.pop("+FLOW", canvas.getBoundingClientRect().left + S.hold.x * canvas.getBoundingClientRect().width / W, canvas.getBoundingClientRect().top + S.hold.y * canvas.getBoundingClientRect().height / H, tier.accent);
+        SFX(S.chi > 60 ? "powerUp" : "coin");
+        nextForm();
+      }
+    }
+    if (S.trail.length > 220) S.trail.splice(0, S.trail.length - 220);
+    S.trail.forEach(t => t.life -= 0.012);
+    while (S.trail.length && S.trail[0].life <= 0) S.trail.shift();
+  }
+
+  function draw(nowS) {
+    const tier = TIERS[tierKey];
+    ctx.clearRect(0, 0, W, H);
+    // marble void backdrop
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, "#0a0714"); bg.addColorStop(0.55, "#080510"); bg.addColorStop(1, "#05030a");
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    const prism = S.chi / 100;
+    if (motionPlateReady && motionPlate.readyState >= 2) {
+      const vw = motionPlate.videoWidth, vh = motionPlate.videoHeight;
+      if (vw && vh) {
+        const sc = Math.max(W / vw, H / vh);
+        ctx.save(); ctx.globalAlpha = 0.16 + prism * 0.55;
+        ctx.drawImage(motionPlate, (W - vw * sc) / 2, (H - vh * sc) / 2, vw * sc, vh * sc);
+        ctx.restore();
+      }
+    }
+    ctx.globalCompositeOperation = "screen";
+    for (let i = 0; i < 3; i++) {
+      const bx = W * (0.5 + 0.42 * Math.sin(nowS * 0.13 + i * 2.1));
+      const by = H * (0.5 + 0.4 * Math.cos(nowS * 0.11 + i * 1.7));
+      const rg = ctx.createRadialGradient(bx, by, 10, bx, by, 200 + prism * 260);
+      rg.addColorStop(0, prismColor(i * 120, 95, 55, 0.05 + prism * 0.16));
+      rg.addColorStop(1, "transparent");
+      ctx.fillStyle = rg; ctx.fillRect(0, 0, W, H);
+    }
+    ctx.globalCompositeOperation = "source-over";
+    // faint gold veins
+    ctx.globalAlpha = 0.05; ctx.strokeStyle = "#e9c86a"; ctx.lineWidth = 1;
+    for (let i = 0; i < 5; i++) {
+      ctx.beginPath(); ctx.moveTo((i * 293) % W, 0);
+      ctx.bezierCurveTo(W * 0.3, H * 0.4 + i * 30, W * 0.7, H * 0.5 - i * 40, ((i * 431) % W), H);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    // aurora breath synced to beat
+    if (actx && S.running) {
+      const pulse = 0.5 + 0.5 * Math.sin(((actx.currentTime - S.startT) / S.beatDur) * Math.PI);
+      const au = ctx.createRadialGradient(W / 2, H * 0.15, 40, W / 2, H * 0.15, W * 0.7);
+      au.addColorStop(0, tier.accent + Math.round(14 + pulse * 20).toString(16).padStart(2, "0"));
+      au.addColorStop(1, "transparent");
+      ctx.fillStyle = au; ctx.fillRect(0, 0, W, H);
+    }
+    if (S.phase === "form" && S.path) {
+      // the brush stroke
+      ctx.lineCap = "round"; ctx.lineJoin = "round";
+      const strokePasses = [[15, "#000", 0.4], [11, prismColor(0, 95, 55, 1), 0.16 + prism * 0.3],
+        [8, prismColor(120, 95, 60, 1), 0.14 + prism * 0.26], [6, prismColor(240, 95, 65, 1), 0.12 + prism * 0.24],
+        [3.8, "#e9c86a", 0.9]];
+      for (const [w, col, alpha] of strokePasses) {
+        ctx.beginPath();
+        S.path.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
+        ctx.strokeStyle = col; ctx.globalAlpha = alpha; ctx.lineWidth = w; ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "screen";
+      for (const r of beatRings) {
+        ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, Math.PI * 2);
+        ctx.strokeStyle = prismColor(r.r * 2, 95, 60, r.life * (0.25 + prism * 0.45));
+        ctx.lineWidth = 2 + prism * 2.5; ctx.stroke();
+      }
+      ctx.globalCompositeOperation = "source-over";
+      // start marker
+      const st = S.path[0];
+      ctx.beginPath(); ctx.arc(st.x, st.y, 7, 0, Math.PI * 2); ctx.fillStyle = tier.accent2; ctx.fill();
+      // guide orb + tolerance aura
+      ctx.beginPath(); ctx.arc(S.orb.x, S.orb.y, tier.tol, 0, Math.PI * 2);
+      ctx.strokeStyle = tier.accent; ctx.globalAlpha = 0.35; ctx.lineWidth = 2; ctx.stroke(); ctx.globalAlpha = 1;
+      if (prism > 0.35) {
+        ctx.globalCompositeOperation = "screen";
+        const off = 2 + prism * 5;
+        for (const [dx, dy, hue] of [[-off, 0, 0], [off, 0, 130], [0, off, 260]]) {
+          ctx.beginPath(); ctx.arc(S.orb.x + dx, S.orb.y + dy, 20 + prism * 14, 0, Math.PI * 2);
+          ctx.fillStyle = prismColor(hue, 100, 60, 0.16 + prism * 0.2); ctx.fill();
+        }
+        ctx.globalCompositeOperation = "source-over";
+      }
+      const og = ctx.createRadialGradient(S.orb.x, S.orb.y, 2, S.orb.x, S.orb.y, 26);
+      og.addColorStop(0, "#fff"); og.addColorStop(0.35, tier.accent); og.addColorStop(1, "transparent");
+      ctx.fillStyle = og; ctx.beginPath(); ctx.arc(S.orb.x, S.orb.y, 26, 0, Math.PI * 2); ctx.fill();
+      // AI chi-orb sprite overlay (additive) with beat-synced squash/stretch; procedural glow above is the fallback
+      if (orbReady && orbImg.width) {
+        const beat = (actx && S.running) ? (0.5 + 0.5 * Math.sin(((actx.currentTime - S.startT) / S.beatDur) * Math.PI)) : 0.5;
+        const base = 30 + prism * 10, sq = 1 + 0.12 * beat, st = 1 - 0.08 * beat;
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        ctx.globalAlpha = 0.55 + prism * 0.35;
+        ctx.translate(S.orb.x, S.orb.y); ctx.rotate(hueBase * Math.PI / 180 * 0.15);
+        ctx.drawImage(orbImg, -base * sq, -base * st, base * 2 * sq, base * 2 * st);
+        ctx.restore();
+      }
+    } else if (S.phase === "hold" && S.hold) {
+      const k = Math.min(1, (nowS - S.phaseT0) / S.phaseDur);
+      ctx.beginPath(); ctx.arc(S.hold.x, S.hold.y, S.hold.r, 0, Math.PI * 2);
+      ctx.strokeStyle = tier.accent; ctx.globalAlpha = 0.5; ctx.lineWidth = 2.5; ctx.stroke();
+      ctx.beginPath(); ctx.arc(S.hold.x, S.hold.y, S.hold.r * (1 - k), 0, Math.PI * 2);
+      ctx.strokeStyle = "#e9c86a"; ctx.globalAlpha = 0.8; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = "rgba(243,236,216,.72)"; ctx.font = "600 15px 'Segoe UI'"; ctx.textAlign = "center";
+      ctx.fillText("breathe", S.hold.x, S.hold.y + 5);
+    }
+    // player ink trail - rainbow ink, kaleidoscope mirrors as chi rises
+    const mirrors = prism > 0.75 ? 4 : prism > 0.4 ? 2 : 1;
+    ctx.globalCompositeOperation = mirrors > 1 ? "screen" : "source-over";
+    for (let m = 0; m < mirrors; m++) {
+      for (let i = 1; i < S.trail.length; i++) {
+        const a = S.trail[i - 1], b = S.trail[i];
+        let ax = a.x, ay = a.y, bx = b.x, by = b.y;
+        if (m === 1) { ax = W - ax; bx = W - bx; }
+        if (m === 2) { ay = H - ay; by = H - by; }
+        if (m === 3) { ax = W - ax; ay = H - ay; bx = W - bx; by = H - by; }
+        ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by);
+        ctx.strokeStyle = prismColor(i * 3 + m * 90, 96, 62, 1);
+        ctx.globalAlpha = Math.max(0, b.life) * (m ? 0.3 : 0.75);
+        ctx.lineWidth = 2 + b.acc * (5 + prism * 4) * b.life; ctx.stroke();
+      }
+    }
+    ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+    // chi meter bottom
+    ctx.fillStyle = "rgba(243,236,216,.12)"; ctx.fillRect(W * 0.2, H - 18, W * 0.6, 6);
+    const cg = ctx.createLinearGradient(W * 0.2, 0, W * 0.8, 0);
+    for (let i = 0; i <= 6; i++) cg.addColorStop(i / 6, prismColor(i * 60, 95, 58, 1));
+    ctx.fillStyle = cg; ctx.fillRect(W * 0.2, H - 18, W * 0.6 * (S.chi / 100), 6);
+  }
+
+  let last = 0;
+  function frame(ms) {
+    const nowS = ms / 1000;
+    update(nowS); draw(nowS);
+    if (S.running) {
+      document.getElementById("hudScore").textContent = Math.round(S.score).toLocaleString();
+      document.getElementById("hudChi").textContent = Math.round(S.chi) + "%";
+      document.getElementById("hudCombo").textContent = "×" + S.combo.toFixed(1);
+      const el = actx ? Math.max(0, actx.currentTime - S.startT) : 0;
+      document.getElementById("hudTime").textContent = Math.floor(el / 60) + ":" + String(Math.floor(el % 60)).padStart(2, "0");
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

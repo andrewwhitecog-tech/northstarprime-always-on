@@ -1,0 +1,1019 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Signal Cartographer Prime</title>
+  <style>
+    :root {
+      --void: #0c0f0e;
+      --ink: #121816;
+      --panel: #17201d;
+      --panel-2: #1f241c;
+      --paper: #f4f0df;
+      --muted: #b8b19a;
+      --line: rgba(244, 240, 223, 0.18);
+      --green: #64c87a;
+      --cyan: #56b9cf;
+      --amber: #e0ad45;
+      --red: #d95d4c;
+      --violet: #9b78d8;
+      --shadow: rgba(0, 0, 0, 0.42);
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--void);
+      color: var(--paper);
+      font-family: "Segoe UI", system-ui, sans-serif;
+      letter-spacing: 0;
+    }
+
+    body {
+      background:
+        radial-gradient(circle at 18% 16%, rgba(100, 200, 122, 0.12), transparent 28%),
+        radial-gradient(circle at 82% 10%, rgba(224, 173, 69, 0.1), transparent 26%),
+        linear-gradient(90deg, rgba(244, 240, 223, 0.035) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(244, 240, 223, 0.035) 1px, transparent 1px),
+        var(--void);
+      background-size: auto, auto, 30px 30px, 30px 30px, auto;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--paper);
+      background: rgba(244, 240, 223, 0.06);
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+    }
+
+    button:hover:not(:disabled),
+    button:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(244, 240, 223, 0.44);
+      background: rgba(244, 240, 223, 0.1);
+      outline: none;
+    }
+
+    button:disabled {
+      cursor: wait;
+      opacity: 0.55;
+    }
+
+    .shell {
+      width: min(100%, 1260px);
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 22px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 14px;
+    }
+
+    .topbar,
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .brand {
+      display: grid;
+      gap: 4px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(32px, 5vw, 64px);
+      line-height: 0.95;
+      letter-spacing: 0;
+    }
+
+    .kicker {
+      color: var(--amber);
+      font-size: 12px;
+      text-transform: uppercase;
+      font-weight: 800;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(320px, 1fr) minmax(300px, 410px);
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .board-wrap,
+    .console {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(18, 24, 22, 0.88);
+      box-shadow: 0 18px 44px var(--shadow);
+    }
+
+    .board-wrap {
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(86px, 1fr));
+      gap: 10px;
+    }
+
+    .metric {
+      min-height: 76px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px;
+      background: rgba(244, 240, 223, 0.045);
+      display: grid;
+      align-content: center;
+      gap: 4px;
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 800;
+    }
+
+    .metric-value {
+      font-size: 26px;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .board {
+      width: min(100%, 700px);
+      aspect-ratio: 1;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      grid-template-rows: repeat(6, 1fr);
+      gap: 8px;
+      touch-action: manipulation;
+    }
+
+    .cell {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      aspect-ratio: 1;
+      border-radius: 6px;
+      border: 1px solid rgba(244, 240, 223, 0.18);
+      background:
+        radial-gradient(circle at 28% 18%, rgba(244, 240, 223, 0.12), transparent 28%),
+        linear-gradient(135deg, rgba(86, 185, 207, 0.08), transparent 42%),
+        repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 9px),
+        rgba(244, 240, 223, 0.045);
+      color: var(--muted);
+      display: grid;
+      place-items: center;
+      font-size: clamp(11px, 1.5vw, 17px);
+      font-weight: 900;
+      overflow: hidden;
+      isolation: isolate;
+      box-shadow:
+        inset 0 0 18px rgba(0, 0, 0, 0.34),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      text-shadow: 0 0 10px currentColor;
+      transition: transform 130ms ease, border-color 130ms ease, box-shadow 130ms ease, background 130ms ease;
+    }
+
+    .cell::before,
+    .cell::after {
+      content: "";
+      position: absolute;
+      pointer-events: none;
+      z-index: 1;
+      opacity: 0;
+    }
+
+    .cell::before {
+      inset: 8%;
+      border: 1px solid rgba(244, 240, 223, 0.08);
+      border-radius: 5px;
+      background:
+        linear-gradient(90deg, transparent 47%, rgba(86,185,207,0.18) 48% 52%, transparent 53%),
+        linear-gradient(0deg, transparent 47%, rgba(224,173,69,0.12) 48% 52%, transparent 53%);
+      opacity: 0.44;
+    }
+
+    .cell::after {
+      inset: 22%;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle, rgba(244,240,223,0.22), transparent 48%),
+        conic-gradient(from 0deg, rgba(86,185,207,0.24), rgba(224,173,69,0.18), rgba(100,200,122,0.2), rgba(86,185,207,0.24));
+      transform: scale(0.76);
+    }
+
+    .cell .cell-mark {
+      position: relative;
+      z-index: 3;
+      display: grid;
+      place-items: center;
+      min-width: 2.15em;
+      min-height: 2.15em;
+      border-radius: 999px;
+      padding: 0 0.2em;
+      background: rgba(5, 12, 15, 0.62);
+      border: 1px solid rgba(244, 240, 223, 0.16);
+      box-shadow: 0 0 12px rgba(0, 0, 0, 0.28), inset 0 0 14px rgba(255,255,255,0.04);
+      line-height: 1;
+    }
+
+    .cell.scanned {
+      color: var(--paper);
+      border-color: rgba(86, 185, 207, 0.42);
+      background:
+        radial-gradient(circle at 32% 24%, rgba(244, 240, 223, 0.18), transparent 32%),
+        linear-gradient(135deg, rgba(86, 185, 207, 0.18), transparent),
+        repeating-linear-gradient(90deg, rgba(86,185,207,0.05) 0 1px, transparent 1px 8px),
+        rgba(244, 240, 223, 0.07);
+      box-shadow: inset 0 0 24px rgba(86, 185, 207, 0.08), 0 0 18px rgba(86, 185, 207, 0.06);
+    }
+
+    .cell.scanned::after {
+      opacity: 0.36;
+    }
+
+    .cell.focus {
+      border-color: var(--paper);
+      box-shadow: 0 0 0 2px rgba(244, 240, 223, 0.16), 0 0 28px rgba(244, 240, 223, 0.16);
+      transform: translateY(-1px);
+    }
+
+    .cell.focus::before {
+      opacity: 0.92;
+      border-color: rgba(244, 240, 223, 0.42);
+    }
+
+    .cell.source {
+      color: #0c0f0e;
+      background:
+        radial-gradient(circle at 50% 50%, rgba(244, 240, 223, 0.96), rgba(224, 173, 69, 0.76) 36%, rgba(100, 200, 122, 0.3) 72%),
+        conic-gradient(from 20deg, rgba(86,185,207,0.34), rgba(224,173,69,0.44), rgba(100,200,122,0.34), rgba(86,185,207,0.34)),
+        var(--amber);
+      border-color: rgba(244, 240, 223, 0.72);
+      box-shadow: inset 0 0 20px rgba(5, 12, 15, 0.25), 0 0 28px rgba(224, 173, 69, 0.34);
+    }
+
+    .cell.source::after {
+      opacity: 0.92;
+      inset: 18%;
+      clip-path: polygon(50% 0, 90% 28%, 70% 100%, 30% 100%, 10% 28%);
+      border-radius: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,.92), rgba(86,185,207,.78), rgba(224,173,69,.74));
+    }
+
+    .cell.source .cell-mark,
+    .cell.resolved .cell-mark {
+      background: rgba(244, 240, 223, 0.78);
+      color: #07110d;
+      border-color: rgba(5, 12, 15, 0.24);
+    }
+
+    .cell.beacon {
+      border-color: rgba(100, 200, 122, 0.78);
+      box-shadow: inset 0 0 0 3px rgba(100, 200, 122, 0.22), 0 0 24px rgba(100, 200, 122, 0.18);
+    }
+
+    .cell.beacon::before {
+      opacity: 1;
+      inset: 17%;
+      border-radius: 50%;
+      border-color: rgba(100, 200, 122, 0.72);
+      background:
+        radial-gradient(circle, rgba(100,200,122,0.38), transparent 38%),
+        conic-gradient(from 0deg, transparent 0 12%, rgba(100,200,122,0.58) 12% 16%, transparent 16% 28%, rgba(86,185,207,0.52) 28% 32%, transparent 32%);
+    }
+
+    .cell.resolved {
+      color: #07110d;
+      background:
+        radial-gradient(circle, rgba(244,240,223,0.84), rgba(100,200,122,0.72) 44%, rgba(5,12,15,0.2) 72%),
+        var(--green);
+      border-color: rgba(244, 240, 223, 0.64);
+      box-shadow: inset 0 0 20px rgba(5, 12, 15, 0.2), 0 0 24px rgba(100, 200, 122, 0.32);
+    }
+
+    .cell.resolved::after {
+      opacity: 0.9;
+      inset: 20%;
+      clip-path: polygon(50% 0, 86% 34%, 68% 100%, 32% 100%, 14% 34%);
+      border-radius: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,.9), rgba(100,200,122,.86), rgba(86,185,207,.72));
+    }
+
+    .cell.scan-pulse::before {
+      border-color: rgba(86, 185, 207, 0.86);
+      animation: scanPulse 0.72s ease-out;
+    }
+
+    .cell.resolve-pulse::after {
+      border-color: rgba(100, 200, 122, 0.92);
+      animation: resolvePulse 0.86s ease-out;
+    }
+
+    .cell.noise-critical {
+      animation: noiseWarning 0.42s ease-in-out 2;
+    }
+
+    .cell.attract {
+      animation: attractPulse 1.15s ease-in-out infinite;
+    }
+
+    .console {
+      padding: 16px;
+      display: grid;
+      grid-template-rows: auto auto auto 1fr auto;
+      gap: 14px;
+      min-height: 100%;
+    }
+
+    .difficulty-row,
+    .control-grid,
+    .move-grid {
+      display: grid;
+      gap: 8px;
+    }
+
+    .difficulty-row {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .control-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .move-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .move-grid .spacer {
+      min-height: 44px;
+    }
+
+    .active-mode {
+      border-color: rgba(224, 173, 69, 0.86);
+      background: rgba(224, 173, 69, 0.16);
+    }
+
+    .primary {
+      background: rgba(100, 200, 122, 0.14);
+      border-color: rgba(100, 200, 122, 0.55);
+    }
+
+    .danger {
+      background: rgba(217, 93, 76, 0.12);
+      border-color: rgba(217, 93, 76, 0.48);
+    }
+
+    .panel-title {
+      margin: 0;
+      color: var(--paper);
+      font-size: 17px;
+      line-height: 1.2;
+    }
+
+    .brief {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .log {
+      min-height: 220px;
+      max-height: 340px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.22);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-family: Consolas, "SFMono-Regular", monospace;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .log-line {
+      color: var(--muted);
+    }
+
+    .log-line strong {
+      color: var(--paper);
+    }
+
+    .playtest-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .playtest-row input {
+      min-width: 0;
+      height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0 10px;
+      color: var(--paper);
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    .note {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    @keyframes scanPulse {
+      0% { opacity: 0.82; transform: scale(0.45); }
+      100% { opacity: 0; transform: scale(1.9); }
+    }
+
+    @keyframes resolvePulse {
+      0% { opacity: 0.92; transform: scale(0.35); }
+      100% { opacity: 0; transform: scale(2.1); }
+    }
+
+    @keyframes noiseWarning {
+      0%, 100% { border-color: rgba(244, 240, 223, 0.16); }
+      50% { border-color: rgba(217, 93, 76, 0.96); background: rgba(217, 93, 76, 0.16); }
+    }
+
+    @keyframes attractPulse {
+      0%, 100% { transform: translateY(0); box-shadow: none; }
+      50% { transform: translateY(-2px); box-shadow: 0 0 22px rgba(224, 173, 69, 0.32); }
+    }
+
+    @media (max-width: 920px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .status-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 560px) {
+      .shell {
+        padding: 14px;
+      }
+
+      .board {
+        gap: 5px;
+      }
+
+      .difficulty-row,
+      .control-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .metric {
+        min-height: 66px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="kicker">NorthStar Prime / IDG / local playable</div>
+        <h1>Signal Cartographer Prime</h1>
+      </div>
+      <div class="note">Original prototype. No external assets. Local playtest exports only.</div>
+    </header>
+
+    <section class="layout" aria-label="Signal Cartographer Prime game">
+      <div class="board-wrap">
+        <div class="status-grid" aria-label="Run status">
+          <div class="metric">
+            <div class="metric-label">Signal</div>
+            <div class="metric-value" id="signalValue">0</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Noise</div>
+            <div class="metric-value" id="noiseValue">0</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Charge</div>
+            <div class="metric-value" id="chargeValue">0</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Nodes</div>
+            <div class="metric-value" id="nodeValue">0/4</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Score</div>
+            <div class="metric-value" id="scoreValue">0</div>
+          </div>
+        </div>
+        <div class="board" id="board" aria-label="Signal map grid"></div>
+      </div>
+
+      <aside class="console" aria-label="Signal controls">
+        <div>
+          <h2 class="panel-title">Map the carrier before collapse</h2>
+          <p class="brief">Scan cells, move the receiver, drop beacons, and resolve four source nodes. High noise hides the pattern. Low signal ends the run.</p>
+        </div>
+
+        <div class="difficulty-row" aria-label="Difficulty">
+          <button id="modeSurvey" data-difficulty="survey" class="active-mode">Survey</button>
+          <button id="modeStorm" data-difficulty="storm">Storm</button>
+          <button id="modeDeadline" data-difficulty="deadline">Deadline</button>
+        </div>
+
+        <div class="control-grid">
+          <button class="primary" id="scanButton">Scan Cell</button>
+          <button id="beaconButton">Drop Beacon</button>
+          <button id="resolveButton">Resolve Node</button>
+          <button id="shiftButton">Shift Map</button>
+        </div>
+
+        <div class="move-grid" aria-label="Receiver movement">
+          <span class="spacer"></span>
+          <button id="moveUp" aria-label="Move up">Up</button>
+          <span class="spacer"></span>
+          <button id="moveLeft" aria-label="Move left">Left</button>
+          <button id="moveDown" aria-label="Move down">Down</button>
+          <button id="moveRight" aria-label="Move right">Right</button>
+        </div>
+
+        <div class="log" id="log" aria-live="polite"></div>
+
+        <div>
+          <div class="playtest-row">
+            <input id="playtestId" value="" aria-label="Playtest ID">
+            <button id="exportSession">Export</button>
+          </div>
+          <div class="control-grid" style="margin-top:8px">
+            <button id="guidedDemo">Run Guided Demo</button>
+            <button class="danger" id="restartRun">Restart</button>
+          </div>
+          <div class="note" id="signal-cartographer-prime-playtest-note">Exports are local JSON for balance notes, not telemetry. Prime Gaming asset and marketing requirements are tracked in the production doc.</div>
+        </div>
+      </aside>
+    </section>
+
+    <footer class="footer">
+      <div>Signal Cartographer Prime / IDG prototype / IDR theme companion</div>
+      <div id="outcomeLabel">Outcome: open</div>
+    </footer>
+  </main>
+
+  <script>
+    const mapSize = 6;
+    const sourceNodes = [7, 16, 25, 34];
+    const cellLabels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".split("");
+    const storageKey = "signalCartographerPrimeBest:";
+    const playtestStorageKey = "signalCartographerPrimePlaytestId";
+    const difficulties = {
+      survey: { signal: 92, noise: 10, charge: 4, focus: 21, scanCost: 5, shiftCost: 3, noiseGain: 4, scoreBonus: 140 },
+      storm: { signal: 78, noise: 18, charge: 3, focus: 20, scanCost: 7, shiftCost: 4, noiseGain: 6, scoreBonus: 220 },
+      deadline: { signal: 66, noise: 26, charge: 2, focus: 14, scanCost: 8, shiftCost: 5, noiseGain: 8, scoreBonus: 320 }
+    };
+    const guidedDemoSteps = [
+      { action: "scan", message: "Demo: scan the highlighted cell." },
+      { action: "move", dx: -1, dy: -1, message: "Demo: move toward the first source node." },
+      { action: "scan", message: "Demo: scan after each move to reveal carrier drift." },
+      { action: "beacon", message: "Demo: beacons reduce noise and hold the map steady." },
+      { action: "resolve", message: "Demo: resolve when the receiver sits on a revealed source." }
+    ];
+
+    const board = document.getElementById("board");
+    const logEl = document.getElementById("log");
+    const playtestInput = document.getElementById("playtestId");
+    let state = {};
+    let pulseTimer = null;
+    let demoTimer = null;
+    let activeDifficulty = "survey";
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function xy(index) {
+      return { x: index % mapSize, y: Math.floor(index / mapSize) };
+    }
+
+    function indexAt(x, y) {
+      return y * mapSize + x;
+    }
+
+    function distance(a, b) {
+      const aa = xy(a);
+      const bb = xy(b);
+      return Math.abs(aa.x - bb.x) + Math.abs(aa.y - bb.y);
+    }
+
+    function neighbors(index) {
+      const pos = xy(index);
+      const cells = [];
+      for (let yy = pos.y - 1; yy <= pos.y + 1; yy += 1) {
+        for (let xx = pos.x - 1; xx <= pos.x + 1; xx += 1) {
+          if (xx >= 0 && xx < mapSize && yy >= 0 && yy < mapSize) {
+            cells.push(indexAt(xx, yy));
+          }
+        }
+      }
+      return cells;
+    }
+
+    function nowId() {
+      const stamp = new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
+      return "scp-local-" + stamp;
+    }
+
+    function readBest(difficulty) {
+      return Number(localStorage.getItem(storageKey + difficulty) || 0);
+    }
+
+    function writeBest(difficulty, score) {
+      const current = readBest(difficulty);
+      if (score > current) {
+        localStorage.setItem(storageKey + difficulty, String(score));
+      }
+    }
+
+    function log(message, strong) {
+      state.log.unshift({ message, strong: Boolean(strong), turn: state.turn });
+      state.log = state.log.slice(0, 12);
+    }
+
+    function score() {
+      const cfg = difficulties[state.difficulty];
+      const nodeScore = state.cleared.length * 260;
+      const signalScore = Math.max(0, state.signal) * 5;
+      const noisePenalty = state.noise * 4;
+      const turnPenalty = state.turn * 9;
+      return Math.max(0, nodeScore + signalScore + cfg.scoreBonus - noisePenalty - turnPenalty);
+    }
+
+    function checkOutcome() {
+      if (state.cleared.length === sourceNodes.length) {
+        state.outcome = "win";
+        writeBest(state.difficulty, score());
+        log("LOCK // four source nodes resolved. Prime carrier stable.", true);
+      } else if (state.signal <= 0 || state.noise >= 100) {
+        state.outcome = "fail";
+        log("COLLAPSE // carrier lost before map completion.", true);
+      }
+    }
+
+    function setDifficulty(difficulty) {
+      activeDifficulty = difficulty;
+      startRun({ difficulty });
+    }
+
+    function startRun(options = {}) {
+      const difficulty = options.difficulty || activeDifficulty || "survey";
+      const cfg = difficulties[difficulty];
+      const storedId = localStorage.getItem(playtestStorageKey);
+      state = {
+        difficulty,
+        signal: cfg.signal,
+        noise: cfg.noise,
+        charge: cfg.charge,
+        focus: cfg.focus,
+        turn: 0,
+        scanned: new Set([cfg.focus]),
+        beacons: new Set(),
+        cleared: [],
+        drift: 0,
+        outcome: "open",
+        log: [],
+        playtestId: options.playtestId || storedId || nowId()
+      };
+      playtestInput.value = state.playtestId;
+      log("RUN // Signal Cartographer Prime initialized.", true);
+      log("TASK // Resolve four source nodes before signal collapse.");
+      render();
+    }
+
+    function render() {
+      document.getElementById("signalValue").textContent = state.signal;
+      document.getElementById("noiseValue").textContent = state.noise;
+      document.getElementById("chargeValue").textContent = state.charge;
+      document.getElementById("nodeValue").textContent = state.cleared.length + "/" + sourceNodes.length;
+      document.getElementById("scoreValue").textContent = score();
+      document.getElementById("outcomeLabel").textContent = "Outcome: " + state.outcome;
+
+      for (const key of Object.keys(difficulties)) {
+        document.querySelector("[data-difficulty='" + key + "']").classList.toggle("active-mode", state.difficulty === key);
+      }
+
+      board.innerHTML = "";
+      for (let i = 0; i < mapSize * mapSize; i += 1) {
+        const cell = document.createElement("button");
+        cell.className = "cell";
+        cell.type = "button";
+        cell.dataset.index = String(i);
+        const mark = cellText(i);
+        cell.dataset.mark = mark;
+        cell.innerHTML = "<span class='cell-mark'>" + escapeHtml(mark) + "</span>";
+        cell.setAttribute("aria-label", "Map cell " + cellLabels[i] + " " + mark);
+        if (state.scanned.has(i)) cell.classList.add("scanned");
+        if (state.focus === i) cell.classList.add("focus");
+        if (state.beacons.has(i)) cell.classList.add("beacon");
+        if (sourceNodes.includes(i) && state.scanned.has(i) && !state.cleared.includes(i)) cell.classList.add("source");
+        if (state.cleared.includes(i)) cell.classList.add("resolved");
+        if (state.noise >= 82 && distance(state.focus, i) <= 1) cell.classList.add("noise-critical");
+        cell.addEventListener("click", () => {
+          state.focus = i;
+          if (!state.scanned.has(i) && state.noise < 72) state.scanned.add(i);
+          render();
+        });
+        board.appendChild(cell);
+      }
+
+      logEl.innerHTML = state.log.map((line) => {
+        const prefix = "<strong>T+" + String(line.turn).padStart(2, "0") + "</strong> ";
+        return "<div class='log-line'>" + prefix + escapeHtml(line.message) + "</div>";
+      }).join("");
+
+      const locked = state.outcome !== "open";
+      for (const id of ["scanButton", "beaconButton", "resolveButton", "shiftButton", "moveUp", "moveLeft", "moveDown", "moveRight"]) {
+        document.getElementById(id).disabled = locked;
+      }
+    }
+
+    function cellText(index) {
+      if (state.cleared.includes(index)) return "OK";
+      if (state.beacons.has(index) && state.focus === index) return "B*";
+      if (state.beacons.has(index)) return "B";
+      if (sourceNodes.includes(index) && state.scanned.has(index)) return "SRC";
+      if (state.scanned.has(index)) {
+        const nearest = Math.min(...sourceNodes.filter((node) => !state.cleared.includes(node)).map((node) => distance(index, node)));
+        return nearest === 0 ? "SRC" : String(nearest);
+      }
+      return cellLabels[index];
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function pulseCells(indexes, className) {
+      window.clearTimeout(pulseTimer);
+      for (const cell of board.querySelectorAll(".cell")) {
+        cell.classList.remove("scan-pulse", "resolve-pulse", "attract");
+      }
+      for (const index of indexes) {
+        const cell = board.querySelector("[data-index='" + index + "']");
+        if (cell) cell.classList.add(className);
+      }
+      pulseTimer = window.setTimeout(() => {
+        for (const cell of board.querySelectorAll(".cell")) {
+          cell.classList.remove(className);
+        }
+      }, 900);
+    }
+
+    function scan() {
+      if (state.outcome !== "open") return;
+      const cfg = difficulties[state.difficulty];
+      const indexes = neighbors(state.focus);
+      for (const index of indexes) state.scanned.add(index);
+      state.turn += 1;
+      state.signal = clamp(state.signal - cfg.scanCost, 0, 120);
+      state.noise = clamp(state.noise + cfg.noiseGain - state.beacons.size, 0, 100);
+      if (indexes.some((index) => sourceNodes.includes(index) && !state.cleared.includes(index))) {
+        state.charge = clamp(state.charge + 1, 0, 6);
+        log("SCAN // source harmonics detected inside receiver radius.", true);
+      } else {
+        log("SCAN // no source found, but the contour tightened.");
+      }
+      checkOutcome();
+      render();
+      pulseCells(indexes, "scan-pulse");
+    }
+
+    function moveFocus(dx, dy) {
+      if (state.outcome !== "open") return;
+      const pos = xy(state.focus);
+      const nextX = clamp(pos.x + dx, 0, mapSize - 1);
+      const nextY = clamp(pos.y + dy, 0, mapSize - 1);
+      const next = indexAt(nextX, nextY);
+      if (next === state.focus) return;
+      state.focus = next;
+      state.scanned.add(next);
+      state.turn += 1;
+      state.signal = clamp(state.signal - 2, 0, 120);
+      state.noise = clamp(state.noise + (state.difficulty === "deadline" ? 2 : 1), 0, 100);
+      log("MOVE // receiver advanced to cell " + cellLabels[next] + ".");
+      checkOutcome();
+      render();
+    }
+
+    function shiftMap() {
+      if (state.outcome !== "open") return;
+      const cfg = difficulties[state.difficulty];
+      state.turn += 1;
+      state.drift = (state.drift + 1) % sourceNodes.length;
+      state.signal = clamp(state.signal - cfg.shiftCost, 0, 120);
+      state.noise = clamp(state.noise - 7, 0, 100);
+      state.charge = clamp(state.charge + 1, 0, 6);
+      const target = nearestOpenAnomaly();
+      log("SHIFT // carrier drift reduced. Nearest unresolved node is " + distance(state.focus, target) + " steps out.");
+      checkOutcome();
+      render();
+      pulseCells([target], "attract");
+    }
+
+    function dropBeacon() {
+      if (state.outcome !== "open") return;
+      if (state.charge <= 0) {
+        log("BEACON // no charge available. Scan or shift to rebuild charge.");
+        return;
+      }
+      state.turn += 1;
+      state.charge -= 1;
+      state.beacons.add(state.focus);
+      state.noise = clamp(state.noise - 12, 0, 100);
+      state.signal = clamp(state.signal - 3, 0, 120);
+      log("BEACON // carrier pinned at cell " + cellLabels[state.focus] + ".");
+      checkOutcome();
+      render();
+      pulseCells([state.focus], "resolve-pulse");
+    }
+
+    function resolveNode() {
+      if (state.outcome !== "open") return;
+      const here = state.focus;
+      if (sourceNodes.includes(here) && state.scanned.has(here) && !state.cleared.includes(here)) {
+        state.turn += 1;
+        state.cleared.push(here);
+        state.signal = clamp(state.signal + 14, 0, 120);
+        state.noise = clamp(state.noise - 18, 0, 100);
+        state.charge = clamp(state.charge + 1, 0, 6);
+        log("RESOLVE // source node " + cellLabels[here] + " stabilized.", true);
+        checkOutcome();
+        render();
+        pulseCells([here], "resolve-pulse");
+      } else {
+        state.turn += 1;
+        state.signal = clamp(state.signal - 6, 0, 120);
+        state.noise = clamp(state.noise + 9, 0, 100);
+        log(failedResolveHint());
+        checkOutcome();
+        render();
+      }
+    }
+
+    function nearestOpenAnomaly() {
+      const unresolved = sourceNodes.filter((node) => !state.cleared.includes(node));
+      let best = unresolved[0];
+      let bestDistance = Infinity;
+      for (const node of unresolved) {
+        const d = distance(state.focus, node);
+        if (d < bestDistance) {
+          best = node;
+          bestDistance = d;
+        }
+      }
+      return best;
+    }
+
+    function failedResolveHint() {
+      const target = nearestOpenAnomaly();
+      if (!state.scanned.has(target)) return "RESOLVE // failed. Source node is still unrevealed; scan the contour first.";
+      return "RESOLVE // failed. Move " + distance(state.focus, target) + " steps toward the revealed source.";
+    }
+
+    function playtestPayload() {
+      return {
+        exported_at: new Date().toISOString(),
+        title: "Signal Cartographer Prime",
+        playtest_id: state.playtestId,
+        difficulty: state.difficulty,
+        outcome: state.outcome,
+        turn: state.turn,
+        score: score(),
+        best: readBest(state.difficulty),
+        signal: state.signal,
+        noise: state.noise,
+        charge: state.charge,
+        focus: state.focus,
+        cleared: state.cleared.slice(),
+        scanned: Array.from(state.scanned).sort((a, b) => a - b),
+        beacons: Array.from(state.beacons).sort((a, b) => a - b),
+        source_nodes: sourceNodes.slice(),
+        log: state.log.map((line) => line.message)
+      };
+    }
+
+    function exportSession() {
+      state.playtestId = playtestInput.value.trim() || nowId();
+      localStorage.setItem(playtestStorageKey, state.playtestId);
+      const payload = playtestPayload();
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "signal-cartographer-prime-" + payload.difficulty + "-" + payload.playtest_id + ".json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      log("EXPORT // local playtest JSON prepared.");
+      render();
+    }
+
+    function runGuidedDemo() {
+      window.clearTimeout(demoTimer);
+      startRun({ difficulty: "survey", playtestId: "guided-demo-local" });
+      log("DEMO // guided route started.", true);
+      render();
+      let stepIndex = 0;
+      function nextStep() {
+        const step = guidedDemoSteps[stepIndex];
+        if (!step) {
+          log("DEMO // guided route complete. Continue manually from here.", true);
+          render();
+          return;
+        }
+        log(step.message, true);
+        if (step.action === "scan") scan();
+        if (step.action === "move") moveFocus(step.dx, step.dy);
+        if (step.action === "beacon") dropBeacon();
+        if (step.action === "resolve") resolveNode();
+        stepIndex += 1;
+        demoTimer = window.setTimeout(nextStep, 650);
+      }
+      demoTimer = window.setTimeout(nextStep, 450);
+    }
+
+    document.getElementById("scanButton").addEventListener("click", scan);
+    document.getElementById("beaconButton").addEventListener("click", dropBeacon);
+    document.getElementById("resolveButton").addEventListener("click", resolveNode);
+    document.getElementById("shiftButton").addEventListener("click", shiftMap);
+    document.getElementById("moveUp").addEventListener("click", () => moveFocus(0, -1));
+    document.getElementById("moveLeft").addEventListener("click", () => moveFocus(-1, 0));
+    document.getElementById("moveDown").addEventListener("click", () => moveFocus(0, 1));
+    document.getElementById("moveRight").addEventListener("click", () => moveFocus(1, 0));
+    document.getElementById("restartRun").addEventListener("click", () => startRun());
+    document.getElementById("guidedDemo").addEventListener("click", runGuidedDemo);
+    document.getElementById("exportSession").addEventListener("click", exportSession);
+    document.getElementById("modeSurvey").addEventListener("click", () => setDifficulty("survey"));
+    document.getElementById("modeStorm").addEventListener("click", () => setDifficulty("storm"));
+    document.getElementById("modeDeadline").addEventListener("click", () => setDifficulty("deadline"));
+
+    playtestInput.addEventListener("change", () => {
+      state.playtestId = playtestInput.value.trim() || nowId();
+      playtestInput.value = state.playtestId;
+      localStorage.setItem(playtestStorageKey, state.playtestId);
+    });
+
+    board.addEventListener("touchmove", (event) => {
+      event.preventDefault();
+    }, { passive: false });
+
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowUp") moveFocus(0, -1);
+      if (event.key === "ArrowDown") moveFocus(0, 1);
+      if (event.key === "ArrowLeft") moveFocus(-1, 0);
+      if (event.key === "ArrowRight") moveFocus(1, 0);
+      if (event.key.toLowerCase() === "s") scan();
+      if (event.key.toLowerCase() === "b") dropBeacon();
+      if (event.key.toLowerCase() === "r") resolveNode();
+      if (event.key.toLowerCase() === "x") shiftMap();
+    });
+
+    startRun();
+  </script>
+</body>
+</html>

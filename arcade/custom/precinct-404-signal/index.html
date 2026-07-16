@@ -1,0 +1,1441 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Precinct 404: Signal Board</title>
+  <style>
+    :root {
+      --bg: #08090d;
+      --panel: #11151d;
+      --panel-2: #171b24;
+      --line: #2b3442;
+      --gold: #e0b65a;
+      --cyan: #65d7ef;
+      --red: #e65d6b;
+      --green: #6de0a4;
+      --text: #f3efe6;
+      --muted: #9ea7b7;
+      --cell: clamp(42px, 11vw, 78px);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background:
+        linear-gradient(180deg, rgba(8, 9, 13, 0.88), rgba(8, 9, 13, 0.98)),
+        radial-gradient(circle at 50% 0%, rgba(101, 215, 239, 0.16), transparent 42%),
+        #08090d;
+      color: var(--text);
+      letter-spacing: 0;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::before {
+      background:
+        repeating-linear-gradient(0deg, rgba(101, 215, 239, 0.045) 0 1px, transparent 1px 5px),
+        repeating-linear-gradient(90deg, rgba(224, 182, 90, 0.028) 0 1px, transparent 1px 37px),
+        radial-gradient(circle at 72% 14%, rgba(101, 215, 239, 0.14), transparent 24%);
+      mix-blend-mode: screen;
+      opacity: 0.72;
+    }
+
+    body::after {
+      background:
+        radial-gradient(ellipse at 50% 50%, transparent 0 46%, rgba(0, 0, 0, 0.52) 100%),
+        linear-gradient(110deg, transparent 0 38%, rgba(255,255,255,0.04) 39%, transparent 44% 100%);
+      opacity: 0.86;
+    }
+
+    main {
+      position: relative;
+      isolation: isolate;
+      z-index: 1;
+      width: min(1180px, 100%);
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 18px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 14px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(24px, 5vw, 44px);
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .badge {
+      color: var(--cyan);
+      border: 1px solid rgba(101, 215, 239, 0.55);
+      padding: 7px 10px;
+      font-size: 12px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .game {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .stage, .side, .footer {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: rgba(17, 21, 29, 0.92);
+      box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
+    }
+
+    .stage::before,
+    .side::before,
+    .footer::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(125deg, rgba(255,255,255,0.07), transparent 26%, transparent 70%, rgba(101,215,239,0.06)),
+        repeating-linear-gradient(0deg, rgba(101,215,239,0.05) 0 1px, transparent 1px 11px),
+        radial-gradient(circle at 84% 20%, rgba(230,93,107,0.12), transparent 24%);
+      mix-blend-mode: screen;
+      opacity: 0.64;
+    }
+
+    .stage {
+      padding: 16px;
+      min-width: 0;
+    }
+
+    .board-wrap {
+      position: relative;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      min-height: min(72vh, 640px);
+      border: 1px solid rgba(101, 215, 239, 0.14);
+      background:
+        linear-gradient(rgba(101, 215, 239, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(101, 215, 239, 0.04) 1px, transparent 1px),
+        radial-gradient(circle at 50% 50%, rgba(224, 182, 90, 0.08), rgba(8, 9, 13, 0.3) 60%);
+      background-size: 26px 26px, 26px 26px, 100% 100%;
+      padding: 14px;
+      transition: border-color 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+    }
+
+    .board-wrap::before,
+    .board-wrap::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .board-wrap::before {
+      background:
+        radial-gradient(circle at 50% 50%, rgba(224, 182, 90, 0.14), transparent 28%),
+        repeating-conic-gradient(from 0deg at 50% 50%, rgba(101, 215, 239, 0.06) 0 4deg, transparent 4deg 16deg);
+      opacity: 0.66;
+    }
+
+    .board-wrap::after {
+      inset: 10px;
+      border: 1px solid rgba(101, 215, 239, 0.16);
+      box-shadow: inset 0 0 44px rgba(101, 215, 239, 0.07), 0 0 22px rgba(224, 182, 90, 0.08);
+    }
+
+    main.noise-caution .board-wrap {
+      border-color: rgba(224, 182, 90, 0.42);
+      box-shadow: inset 0 0 32px rgba(224, 182, 90, 0.1);
+    }
+
+    main.noise-danger .board-wrap {
+      border-color: rgba(230, 93, 107, 0.55);
+      box-shadow: inset 0 0 46px rgba(230, 93, 107, 0.14), 0 0 24px rgba(230, 93, 107, 0.08);
+      filter: saturate(1.1);
+    }
+
+    main.noise-critical .board-wrap {
+      animation: noiseWarning 900ms ease-in-out infinite;
+      border-color: rgba(230, 93, 107, 0.86);
+      box-shadow: inset 0 0 62px rgba(230, 93, 107, 0.22), 0 0 34px rgba(230, 93, 107, 0.16);
+      filter: saturate(1.24) contrast(1.05);
+    }
+
+    .board {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(5, var(--cell));
+      grid-template-rows: repeat(5, var(--cell));
+      gap: 7px;
+      width: calc(var(--cell) * 5 + 28px);
+      height: calc(var(--cell) * 5 + 28px);
+    }
+
+    .cell {
+      border: 1px solid rgba(101, 215, 239, 0.18);
+      background:
+        radial-gradient(circle at 30% 22%, rgba(101, 215, 239, 0.09), transparent 34%),
+        linear-gradient(145deg, rgba(255,255,255,0.03), rgba(0,0,0,0.3)),
+        #101620;
+      color: var(--text);
+      cursor: pointer;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      position: relative;
+      overflow: hidden;
+      isolation: isolate;
+      min-width: var(--cell);
+      min-height: var(--cell);
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: clamp(18px, 5vw, 30px);
+      text-shadow: 0 0 10px currentColor, 0 0 18px rgba(255,255,255,0.22);
+      transition: transform 120ms ease, border-color 120ms ease, background 120ms ease, box-shadow 120ms ease;
+    }
+
+    .cell:hover, .cell:focus-visible {
+      outline: none;
+      transform: translateY(-1px);
+      border-color: rgba(224, 182, 90, 0.8);
+    }
+
+    .cell.focused {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 2px rgba(224, 182, 90, 0.18), 0 0 24px rgba(224, 182, 90, 0.2);
+    }
+
+    .cell.revealed { background: #172231; }
+    .cell.player { color: var(--cyan); }
+    .cell.anomaly { color: var(--red); }
+    .cell.cleared { color: var(--green); background: #10231d; }
+    .cell.noise { color: #8d96a8; }
+    .cell.scan-hit { animation: scanPulse 420ms ease; }
+    .cell.resolve-hit { animation: resolvePulse 520ms ease; }
+
+    .cell::before,
+    .cell::after {
+      content: "";
+      position: absolute;
+      inset: 12%;
+      pointer-events: none;
+      opacity: 0;
+      z-index: 1;
+      transition: opacity 140ms ease, transform 140ms ease;
+    }
+
+    .cell .cell-mark {
+      position: relative;
+      z-index: 3;
+      display: grid;
+      place-items: center;
+      min-width: 1.8em;
+      min-height: 1.8em;
+      border-radius: 999px;
+      background: rgba(5, 10, 18, 0.66);
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      font-size: 0.58em;
+      line-height: 1;
+      box-shadow: 0 0 14px rgba(255, 255, 255, 0.12);
+    }
+
+    .cell.revealed:not(.player):not(.anomaly):not(.cleared):not(.noise)::before {
+      opacity: 0.82;
+      inset: 34%;
+      clip-path: polygon(50% 0, 90% 28%, 70% 100%, 30% 100%, 10% 28%);
+      background: linear-gradient(135deg, rgba(255,255,255,.9), rgba(101,215,239,.78), rgba(224,182,90,.58));
+      box-shadow: 0 0 22px rgba(101,215,239,.34);
+    }
+
+    .cell.player {
+      background:
+        radial-gradient(circle at 50% 45%, rgba(101, 215, 239, 0.28), transparent 50%),
+        linear-gradient(145deg, rgba(101,215,239,0.13), rgba(255,74,165,0.12)),
+        #101620;
+      box-shadow: inset 0 0 24px rgba(101, 215, 239, 0.16), 0 0 26px rgba(101, 215, 239, 0.22);
+    }
+
+    .cell.player::before {
+      opacity: 1;
+      inset: 17%;
+      clip-path: polygon(50% 0, 85% 19%, 78% 76%, 50% 100%, 22% 76%, 15% 19%);
+      background: conic-gradient(from 30deg, #65d7ef, #ff4fd8, #e0b65a, #6de0a4, #65d7ef);
+      box-shadow: 0 0 18px rgba(101, 215, 239, 0.72), inset 0 0 14px rgba(255,255,255,0.5);
+    }
+
+    .cell.player::after {
+      opacity: 0.96;
+      inset: 22% 28% 54%;
+      border-top: 3px solid rgba(255, 244, 216, 0.92);
+      border-left: 2px solid rgba(255, 244, 216, 0.6);
+      border-right: 2px solid rgba(255, 244, 216, 0.6);
+      transform: translateY(-10%) rotate(-10deg);
+      box-shadow: 0 -8px 16px rgba(255, 244, 216, 0.38);
+    }
+
+    .cell.anomaly {
+      background:
+        radial-gradient(circle at 50% 50%, rgba(255, 79, 216, 0.24), transparent 54%),
+        linear-gradient(145deg, rgba(255,97,72,0.16), rgba(101,215,239,0.08)),
+        #1c1018;
+      box-shadow: inset 0 0 22px rgba(255, 97, 72, 0.24), 0 0 26px rgba(255, 79, 216, 0.24);
+    }
+
+    .cell.anomaly::before {
+      opacity: 1;
+      inset: 14%;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 50% 50%, rgba(255,255,255,.88) 0 8%, rgba(255,23,68,.82) 9% 18%, transparent 20%),
+        conic-gradient(from 0deg, #ff6148, #ff4fd8, #65d7ef, #e0b65a, #ff6148);
+      box-shadow: 0 0 24px rgba(255, 79, 216, 0.68), inset 0 0 16px rgba(0,0,0,0.44);
+      animation: anomalySpin 1.8s linear infinite;
+    }
+
+    .cell.anomaly::after {
+      opacity: 1;
+      inset: 30% 18%;
+      background:
+        linear-gradient(90deg, transparent 0 18%, rgba(5,10,18,.84) 18% 24%, transparent 24% 40%, rgba(5,10,18,.84) 40% 46%, transparent 46% 62%, rgba(5,10,18,.84) 62% 68%, transparent 68%),
+        radial-gradient(ellipse at 50% 50%, rgba(255,244,216,.8), transparent 64%);
+      transform: skewX(-10deg);
+      mix-blend-mode: screen;
+    }
+
+    .cell.cleared {
+      background:
+        radial-gradient(circle at 50% 50%, rgba(109,224,164,.22), transparent 56%),
+        #10231d;
+      box-shadow: inset 0 0 20px rgba(109,224,164,.2), 0 0 22px rgba(109,224,164,.2);
+    }
+
+    .cell.cleared::before {
+      opacity: 1;
+      inset: 19%;
+      clip-path: polygon(50% 0, 86% 32%, 68% 100%, 32% 100%, 14% 32%);
+      background: linear-gradient(135deg, rgba(255,255,255,.88), #6de0a4, #65d7ef);
+      box-shadow: 0 0 22px rgba(109,224,164,.6);
+    }
+
+    .cell.noise {
+      background:
+        repeating-linear-gradient(0deg, rgba(255,255,255,0.12) 0 1px, transparent 1px 5px),
+        repeating-linear-gradient(90deg, rgba(101,215,239,0.08) 0 2px, transparent 2px 8px),
+        #151820;
+    }
+
+    .cell.noise::before {
+      opacity: 0.84;
+      inset: 18%;
+      background:
+        linear-gradient(90deg, transparent, rgba(255,255,255,.65), transparent),
+        repeating-linear-gradient(135deg, rgba(255,255,255,.16) 0 4px, transparent 4px 8px);
+      transform: skewX(-18deg);
+      filter: blur(.2px);
+    }
+
+    @keyframes anomalySpin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes scanPulse {
+      0% { box-shadow: 0 0 0 rgba(101, 215, 239, 0); }
+      40% { box-shadow: 0 0 24px rgba(101, 215, 239, 0.5); border-color: var(--cyan); }
+      100% { box-shadow: 0 0 0 rgba(101, 215, 239, 0); }
+    }
+
+    @keyframes resolvePulse {
+      0% { box-shadow: 0 0 0 rgba(109, 224, 164, 0); transform: scale(1); }
+      45% { box-shadow: 0 0 32px rgba(109, 224, 164, 0.62); border-color: var(--green); transform: scale(1.04); }
+      100% { box-shadow: 0 0 0 rgba(109, 224, 164, 0); transform: scale(1); }
+    }
+
+    @keyframes noiseWarning {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.88; }
+    }
+
+    .side {
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .stat {
+      border: 1px solid var(--line);
+      background: var(--panel-2);
+      padding: 10px;
+      min-height: 70px;
+    }
+
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .stat strong {
+      font-size: 28px;
+      color: var(--text);
+    }
+
+    .stat.wide { grid-column: 1 / -1; }
+
+    .actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .mode {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .mode button {
+      border: 1px solid var(--line);
+      background: #0f141c;
+      color: var(--muted);
+      min-height: 42px;
+      padding: 8px 6px;
+      cursor: pointer;
+      font-weight: 800;
+      letter-spacing: 0;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .mode button.active {
+      color: var(--text);
+      border-color: rgba(101, 215, 239, 0.72);
+      background: #14212a;
+    }
+
+    .playtest-meta {
+      display: grid;
+      gap: 6px;
+    }
+
+    .playtest-meta label {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    .playtest-meta input {
+      width: 100%;
+      min-height: 40px;
+      border: 1px solid var(--line);
+      background: #0d1118;
+      color: var(--text);
+      padding: 9px 10px;
+      font: 700 13px "Segoe UI", system-ui, sans-serif;
+      letter-spacing: 0;
+    }
+
+    .playtest-meta input:focus {
+      outline: none;
+      border-color: rgba(101, 215, 239, 0.72);
+      box-shadow: 0 0 0 2px rgba(101, 215, 239, 0.12);
+    }
+
+    button.action {
+      border: 1px solid rgba(224, 182, 90, 0.35);
+      background: #201a14;
+      color: var(--text);
+      padding: 12px 10px;
+      min-height: 48px;
+      cursor: pointer;
+      font-weight: 800;
+      letter-spacing: 0;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button.action.primary {
+      background: #283329;
+      border-color: rgba(109, 224, 164, 0.55);
+    }
+
+    button.action.warn {
+      background: #34202a;
+      border-color: rgba(230, 93, 107, 0.55);
+    }
+
+    button.action.utility {
+      grid-column: 1 / -1;
+      background: #151f2c;
+      border-color: rgba(101, 215, 239, 0.42);
+    }
+
+    button.action.demo {
+      background: #122833;
+      border-color: rgba(101, 215, 239, 0.62);
+      color: var(--cyan);
+    }
+
+    button.action:disabled {
+      cursor: wait;
+      opacity: 0.68;
+    }
+
+    button.action:hover, button.action:focus-visible {
+      outline: none;
+      border-color: var(--gold);
+    }
+
+    .tutorial-link {
+      display: grid;
+      place-items: center;
+      min-height: 42px;
+      border: 1px solid rgba(101, 215, 239, 0.42);
+      background: #151f2c;
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 800;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .tutorial-link:hover, .tutorial-link:focus-visible {
+      outline: none;
+      border-color: var(--gold);
+    }
+
+    .message {
+      border: 1px solid var(--line);
+      background: #0d1118;
+      min-height: 96px;
+      padding: 12px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .summary {
+      border: 1px solid rgba(224, 182, 90, 0.45);
+      background: #17140f;
+      padding: 12px;
+      line-height: 1.4;
+    }
+
+    .summary[hidden] { display: none; }
+
+    .summary span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .summary strong {
+      display: block;
+      color: var(--gold);
+      font-size: 22px;
+      margin-bottom: 6px;
+    }
+
+    .summary p {
+      margin: 0;
+      color: #d7cfbf;
+    }
+
+    .log {
+      height: 154px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      background: #080b10;
+      color: #c2ccda;
+      padding: 10px;
+      font-family: Consolas, "Cascadia Mono", monospace;
+      font-size: 12px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+    }
+
+    .footer {
+      padding: 10px 14px;
+      color: var(--muted);
+      font-size: 13px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .attract {
+      position: absolute;
+      inset: 18px;
+      z-index: 20;
+      display: grid;
+      place-items: center;
+      min-height: calc(100vh - 36px);
+      padding: 18px;
+      background:
+        linear-gradient(180deg, rgba(5, 7, 12, 0.82), rgba(5, 7, 12, 0.96)),
+        radial-gradient(circle at 50% 40%, rgba(101, 215, 239, 0.16), transparent 46%),
+        #05070c;
+      border: 1px solid rgba(101, 215, 239, 0.34);
+    }
+
+    .attract[hidden] { display: none; }
+
+    .attract-inner {
+      width: min(760px, 100%);
+      display: grid;
+      gap: 22px;
+      justify-items: center;
+      text-align: center;
+    }
+
+    .attract-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(22px, 48px));
+      gap: 8px;
+      padding: 14px;
+      border: 1px solid rgba(224, 182, 90, 0.26);
+      background: rgba(8, 12, 18, 0.84);
+      box-shadow: 0 0 54px rgba(101, 215, 239, 0.16);
+    }
+
+    .attract-grid span {
+      width: clamp(22px, 7vw, 48px);
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(101, 215, 239, 0.22);
+      background: #101620;
+      color: var(--muted);
+      font: 800 18px Consolas, "Cascadia Mono", monospace;
+      animation: attractPulse 2.6s ease-in-out infinite;
+    }
+
+    .attract-grid span:nth-child(7),
+    .attract-grid span:nth-child(14),
+    .attract-grid span:nth-child(20) {
+      color: var(--red);
+      border-color: rgba(230, 93, 107, 0.44);
+      animation-delay: 380ms;
+    }
+
+    .attract-grid span:nth-child(13) {
+      color: var(--cyan);
+      border-color: rgba(101, 215, 239, 0.72);
+      box-shadow: 0 0 24px rgba(101, 215, 239, 0.22);
+      animation-delay: 180ms;
+    }
+
+    .attract-kicker {
+      color: var(--cyan);
+      font: 700 13px Consolas, "Cascadia Mono", monospace;
+      text-transform: uppercase;
+      letter-spacing: 4px;
+    }
+
+    .attract-title {
+      margin: 0;
+      color: var(--text);
+      font-size: clamp(34px, 9vw, 74px);
+      line-height: 0.95;
+      font-weight: 900;
+    }
+
+    .attract-start {
+      border: 1px solid rgba(109, 224, 164, 0.58);
+      background: #15251d;
+      color: var(--text);
+      min-height: 54px;
+      min-width: 180px;
+      padding: 13px 22px;
+      cursor: pointer;
+      font-weight: 900;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .attract-start:hover, .attract-start:focus-visible {
+      outline: none;
+      border-color: var(--gold);
+    }
+
+    @keyframes attractPulse {
+      0%, 100% { opacity: 0.62; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.04); }
+    }
+
+    @media (max-width: 820px) {
+      main { padding: 12px; }
+      .attract { inset: 12px; min-height: calc(100vh - 24px); padding: 12px; }
+      .game { grid-template-columns: 1fr; }
+      .board-wrap { min-height: auto; }
+      .side { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 520px) {
+      :root { --cell: clamp(34px, 9vw, 46px); }
+      main { padding: 8px; gap: 10px; }
+      header { padding-bottom: 8px; }
+      h1 { font-size: clamp(22px, 7vw, 30px); }
+      .badge { padding: 6px 8px; font-size: 11px; }
+      .stage { padding: 10px; }
+      .board-wrap { padding: 10px; }
+      .board {
+        gap: 5px;
+        width: calc(var(--cell) * 5 + 20px);
+        height: calc(var(--cell) * 5 + 20px);
+      }
+      .side { padding: 10px; gap: 10px; }
+      .stats { gap: 6px; }
+      .stat { min-height: 56px; padding: 8px; }
+      .stat span { font-size: 11px; margin-bottom: 4px; }
+      .stat strong { font-size: 24px; }
+      .mode { gap: 6px; }
+      .mode button { min-height: 38px; font-size: 13px; }
+      .playtest-meta input { min-height: 36px; padding: 7px 9px; }
+      button.action { min-height: 42px; padding: 9px 8px; }
+      .message { min-height: 72px; padding: 10px; line-height: 1.35; }
+      .log { height: 116px; }
+      .footer { padding: 8px 10px; font-size: 12px; }
+    }
+
+    @media (hover: none) {
+      .cell:hover { transform: none; border-color: rgba(101, 215, 239, 0.18); }
+      .cell:active,
+      button.action:active,
+      .mode button:active,
+      .attract-start:active { transform: scale(0.98); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .cell.scan-hit,
+      .cell.resolve-hit,
+      main.noise-critical .board-wrap,
+      .attract-grid span { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <main id="shell">
+    <header>
+      <h1>Precinct 404: Signal Board</h1>
+      <div class="badge" id="statusBadge">local signal</div>
+    </header>
+
+    <section class="attract" id="attract" aria-label="Precinct 404 attract screen">
+      <div class="attract-inner">
+        <div class="attract-grid" aria-hidden="true">
+          <span>.</span><span>.</span><span>~</span><span>!</span><span>.</span>
+          <span>.</span><span>!</span><span>.</span><span>~</span><span>.</span>
+          <span>.</span><span>.</span><span>R</span><span>!</span><span>.</span>
+          <span>~</span><span>.</span><span>.</span><span>.</span><span>!</span>
+          <span>.</span><span>OK</span><span>.</span><span>~</span><span>.</span>
+        </div>
+        <div class="attract-kicker">Local Case File</div>
+        <h2 class="attract-title">Precinct 404</h2>
+        <button class="attract-start" id="attractStart" type="button">Start Case</button>
+      </div>
+    </section>
+
+    <section class="game" aria-label="Precinct 404 game">
+      <div class="stage">
+        <div class="board-wrap">
+          <div class="board" id="board" aria-label="Signal grid"></div>
+        </div>
+      </div>
+
+      <aside class="side">
+        <div class="stats">
+          <div class="stat"><span>Signal</span><strong id="signal">40</strong></div>
+          <div class="stat"><span>Noise</span><strong id="noise">18</strong></div>
+          <div class="stat"><span>Cleared</span><strong id="cleared">0/3</strong></div>
+          <div class="stat"><span>Charge</span><strong id="charge">3</strong></div>
+          <div class="stat wide"><span>Best</span><strong id="best">0</strong></div>
+        </div>
+
+        <div class="mode" role="group" aria-label="Case load">
+          <button type="button" data-difficulty="night">Night</button>
+          <button type="button" data-difficulty="standard">Standard</button>
+          <button type="button" data-difficulty="pressure">Pressure</button>
+        </div>
+
+        <div class="playtest-meta">
+          <label for="playtestId">Playtest ID</label>
+          <input id="playtestId" type="text" maxlength="48" placeholder="manual-001" autocomplete="off">
+        </div>
+
+        <a class="tutorial-link" href="/static/videos/precinct_404_signal_tutorial_2026-06-05.mp4" target="_blank" rel="noopener">Watch Tutorial Video</a>
+
+        <div class="actions">
+          <button class="action" id="scan">Scan</button>
+          <button class="action" id="shift">Shift</button>
+          <button class="action primary" id="resolve">Resolve</button>
+          <button class="action warn" id="reset">Reset</button>
+          <button class="action utility demo" id="guidedDemo">Run Guided Demo</button>
+          <button class="action utility" id="exportSession">Export Playtest Note</button>
+        </div>
+
+        <div class="message" id="message"></div>
+        <div class="summary" id="summary" hidden>
+          <span>Case summary</span>
+          <strong id="summaryTitle"></strong>
+          <p id="summaryDetails"></p>
+        </div>
+        <div class="log" id="log"></div>
+      </aside>
+    </section>
+
+    <footer class="footer">
+      <span>Win: stabilize three anomalies.</span>
+      <span>Fail: noise reaches 100.</span>
+    </footer>
+  </main>
+
+  <script>
+    const width = 5;
+    const total = width * width;
+    const layouts = {
+      night: {
+        label: "Night",
+        start: 12,
+        signal: 48,
+        noise: 12,
+        charge: 3,
+        anomalies: [3, 16, 22],
+        static: [8, 14, 19]
+      },
+      standard: {
+        label: "Standard",
+        start: 12,
+        signal: 40,
+        noise: 18,
+        charge: 3,
+        anomalies: [6, 13, 18],
+        static: [2, 9, 21]
+      },
+      pressure: {
+        label: "Pressure",
+        start: 12,
+        signal: 44,
+        noise: 24,
+        charge: 2,
+        anomalies: [4, 11, 19],
+        static: [1, 7, 15, 23]
+      }
+    };
+    const dispatchCalls = [
+      "A payphone rings from an address the map refuses to draw.",
+      "Two patrol cars report the same alley from different decades.",
+      "A caller whispers badge numbers that have not been issued yet.",
+      "The switchboard records a voice under every open line.",
+      "A missing-person file prints itself with tomorrow's timestamp."
+    ];
+    const board = document.querySelector("#board");
+    const els = {
+      shell: document.querySelector("#shell"),
+      attract: document.querySelector("#attract"),
+      attractStart: document.querySelector("#attractStart"),
+      signal: document.querySelector("#signal"),
+      noise: document.querySelector("#noise"),
+      cleared: document.querySelector("#cleared"),
+      charge: document.querySelector("#charge"),
+      best: document.querySelector("#best"),
+      message: document.querySelector("#message"),
+      log: document.querySelector("#log"),
+      badge: document.querySelector("#statusBadge"),
+      scan: document.querySelector("#scan"),
+      shift: document.querySelector("#shift"),
+      resolve: document.querySelector("#resolve"),
+      reset: document.querySelector("#reset"),
+      guidedDemo: document.querySelector("#guidedDemo"),
+      exportSession: document.querySelector("#exportSession"),
+      playtestId: document.querySelector("#playtestId"),
+      summary: document.querySelector("#summary"),
+      summaryTitle: document.querySelector("#summaryTitle"),
+      summaryDetails: document.querySelector("#summaryDetails"),
+      difficulty: document.querySelectorAll("[data-difficulty]")
+    };
+
+    let state;
+    let selectedDifficulty = "standard";
+    let callCursor = 0;
+    let attractActive = true;
+    let demoRunning = false;
+    let demoStepActive = false;
+    let demoTimer = null;
+    const playtestIdKey = "precinct404SignalPlaytestId";
+    const guidedDemoSteps = [
+      { focus: 13, action: "scan", before: "Demo: scan the highlighted cell to reveal a nearby anomaly.", after: "Demo: ! marks a real anomaly. Now move R onto it." },
+      { focus: 13, action: "shift", before: "Demo: shift one block right. R can only move one square at a time.", after: "Demo: R is standing on !, so Resolve is now valid." },
+      { action: "resolve", before: "Demo: resolve the anomaly. This spends charge and signal, then turns it stable.", after: "Demo: first incident stable. Two more to go." },
+      { focus: 18, action: "shift", before: "Demo: shift down to the next anomaly.", after: "Demo: R is on the second anomaly." },
+      { action: "resolve", before: "Demo: resolve again when R is on !.", after: "Demo: second incident stable. One remains." },
+      { focus: 13, action: "shift", before: "Demo: move back up one block.", after: "Demo: keep stepping one square at a time." },
+      { focus: 8, action: "shift", before: "Demo: move up again.", after: "Demo: now move left toward the final anomaly." },
+      { focus: 7, action: "shift", before: "Demo: move left.", after: "Demo: one more left reaches the final anomaly." },
+      { focus: 6, action: "shift", before: "Demo: move left onto the last !.", after: "Demo: R is on the final anomaly." },
+      { action: "resolve", before: "Demo: resolve the last anomaly to win.", after: "Demo complete: scan to find !, shift R onto it, then resolve." }
+    ];
+
+    function start(options = {}) {
+      if (!options.keepDemo) cancelGuidedDemo(false);
+      const layout = layouts[selectedDifficulty];
+      const call = nextDispatchCall(layout);
+      state = {
+        difficulty: selectedDifficulty,
+        position: layout.start,
+        focus: layout.start,
+        signal: layout.signal,
+        noise: layout.noise,
+        charge: layout.charge,
+        turn: 1,
+        over: false,
+        outcome: "open",
+        call,
+        score: 0,
+        best: readBest(selectedDifficulty),
+        bestUpdated: false,
+        failedResolveStreak: 0,
+        cells: Array.from({ length: total }, (_, index) => ({
+          anomaly: layout.anomalies.includes(index),
+          revealed: index === layout.start,
+          cleared: false,
+          static: layout.static.includes(index)
+        }))
+      };
+      els.summary.hidden = true;
+      els.summaryTitle.textContent = "";
+      els.summaryDetails.textContent = "";
+      els.log.textContent = "";
+      board.innerHTML = "";
+      for (let i = 0; i < total; i += 1) {
+        const button = document.createElement("button");
+        button.className = "cell";
+        button.type = "button";
+        button.dataset.index = String(i);
+        button.addEventListener("pointerdown", () => focusCell(i));
+        button.addEventListener("click", () => focusCell(i));
+        board.appendChild(button);
+      }
+      say(`${call} Find the anomalies, hold enough signal, and resolve three incidents before the precinct drowns in noise.`);
+      log(`CASE 404-A // ${layout.label.toLowerCase()} board initialized`);
+      render();
+    }
+
+    function xy(index) {
+      return { x: index % width, y: Math.floor(index / width) };
+    }
+
+    function distance(a, b) {
+      const pa = xy(a);
+      const pb = xy(b);
+      return Math.abs(pa.x - pb.x) + Math.abs(pa.y - pb.y);
+    }
+
+    function neighbors(index) {
+      return [...Array(total).keys()].filter((candidate) => distance(index, candidate) === 1);
+    }
+
+    function focusCell(index) {
+      if (state.over) return;
+      if (demoRunning && !demoStepActive) return;
+      state.focus = index;
+      render();
+    }
+
+    function moveFocus(dx, dy) {
+      if (state.over) return;
+      if (demoRunning && !demoStepActive) return;
+      const current = xy(state.focus);
+      const nextX = Math.max(0, Math.min(width - 1, current.x + dx));
+      const nextY = Math.max(0, Math.min(width - 1, current.y + dy));
+      focusCell((nextY * width) + nextX);
+    }
+
+    function enterCase() {
+      if (!attractActive) return;
+      attractActive = false;
+      els.attract.hidden = true;
+      els.shell.classList.add("case-live");
+      els.scan.focus({ preventScroll: true });
+    }
+
+    function nearestOpenAnomaly() {
+      return state.cells
+        .map((cell, index) => ({ cell, index, distance: distance(state.position, index) }))
+        .filter((item) => item.cell.anomaly && !item.cell.cleared)
+        .sort((a, b) => a.distance - b.distance)[0];
+    }
+
+    function failedResolveHint() {
+      const nearest = nearestOpenAnomaly();
+      if (!nearest) return "All active anomalies are already quiet.";
+      if (nearest.distance === 1) return "Hint: the nearest unresolved anomaly is one block away.";
+      return `Hint: the nearest unresolved anomaly is ${nearest.distance} blocks from the receiver.`;
+    }
+
+    function nextDispatchCall(layout) {
+      const offset = Object.keys(layouts).indexOf(selectedDifficulty);
+      const text = dispatchCalls[(callCursor + offset + dispatchCalls.length) % dispatchCalls.length];
+      callCursor += 1;
+      return `${layout.label} call: ${text}`;
+    }
+
+    function bestKey(difficulty) {
+      return `precinct404SignalBest:${difficulty}`;
+    }
+
+    function readBest(difficulty) {
+      try {
+        return Number(window.localStorage.getItem(bestKey(difficulty))) || 0;
+      } catch (error) {
+        return 0;
+      }
+    }
+
+    function writeBest(difficulty, score) {
+      try {
+        window.localStorage.setItem(bestKey(difficulty), String(score));
+      } catch (error) {
+        return;
+      }
+    }
+
+    function readPlaytestId() {
+      const value = els.playtestId.value.trim();
+      return value || "manual-local";
+    }
+
+    function savePlaytestId() {
+      try {
+        window.localStorage.setItem(playtestIdKey, readPlaytestId());
+      } catch (error) {
+        return;
+      }
+    }
+
+    function restorePlaytestId() {
+      try {
+        els.playtestId.value = window.localStorage.getItem(playtestIdKey) || "manual-local";
+      } catch (error) {
+        els.playtestId.value = "manual-local";
+      }
+    }
+
+    function filenamePart(value) {
+      return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48) || "manual-local";
+    }
+
+    function endCase(outcome, badge, message, logLine) {
+      state.over = true;
+      state.outcome = outcome;
+      els.badge.textContent = badge;
+      say(message);
+      log(logLine);
+      showSummary();
+      render();
+    }
+
+    function showSummary() {
+      const score = currentScore();
+      const previousBest = readBest(state.difficulty);
+      state.score = score;
+      state.bestUpdated = score > previousBest;
+      state.best = state.bestUpdated ? score : previousBest;
+      if (state.bestUpdated) writeBest(state.difficulty, score);
+      els.summary.hidden = false;
+      els.summaryTitle.textContent = state.outcome === "win" ? "Signal restored" : "Case dropped";
+      els.summaryDetails.textContent = `${layouts[state.difficulty].label} // score ${score} // best ${state.best}${state.bestUpdated ? " new" : ""} // turn ${state.turn} // signal ${state.signal} // noise ${state.noise}`;
+    }
+
+    function currentScore() {
+      const cleared = state.cells.filter((item) => item.cleared).length;
+      const quiet = Math.max(0, 100 - state.noise);
+      return Math.max(0, (cleared * 250) + (state.signal * 4) + quiet - ((state.turn - 1) * 5));
+    }
+
+    function pulseCells(indexes, className) {
+      indexes.forEach((index) => {
+        const cell = board.children[index];
+        if (!cell) return;
+        cell.classList.remove(className);
+        void cell.offsetWidth;
+        cell.classList.add(className);
+        window.setTimeout(() => cell.classList.remove(className), 560);
+      });
+    }
+
+    function spendNoise(amount) {
+      state.noise = Math.min(100, state.noise + amount);
+      if (state.noise >= 100) {
+        endCase("fail", "signal lost", "The board whites out. Precinct 404 loses the call.", "FAIL // noise reached 100");
+      }
+    }
+
+    function useTurn() {
+      state.turn += 1;
+      if (state.turn % 2 === 0) state.charge = Math.min(5, state.charge + 1);
+      if (!state.over && state.signal <= 0) {
+        endCase("fail", "battery dead", "The receiver stays warm, but there is no signal left to spend.", "FAIL // signal depleted");
+      }
+      render();
+    }
+
+    function scan() {
+      if (state.over) return;
+      if (demoRunning && !demoStepActive) return;
+      state.failedResolveStreak = 0;
+      const targets = [state.focus, ...neighbors(state.focus)];
+      let found = 0;
+      targets.forEach((index) => {
+        if (!state.cells[index].revealed) {
+          state.cells[index].revealed = true;
+          if (state.cells[index].anomaly && !state.cells[index].cleared) found += 1;
+        }
+      });
+      state.signal = Math.max(0, state.signal - 4);
+      spendNoise(found ? 3 : 7);
+      if (state.over) return;
+      say(found ? "A real anomaly answers under the static." : "Static expands across the board.");
+      log(`T${state.turn} SCAN cell ${state.focus + 1} // found ${found}`);
+      useTurn();
+      pulseCells(targets, "scan-hit");
+    }
+
+    function shift() {
+      if (state.over) return;
+      if (demoRunning && !demoStepActive) return;
+      state.failedResolveStreak = 0;
+      if (distance(state.position, state.focus) > 1) {
+        say("The receiver can only shift one block at a time.");
+        log(`T${state.turn} SHIFT denied // cell ${state.focus + 1} out of range`);
+        render();
+        return;
+      }
+      state.position = state.focus;
+      state.cells[state.position].revealed = true;
+      state.signal = Math.max(0, state.signal - 2);
+      spendNoise(state.cells[state.position].static ? 9 : 4);
+      if (state.over) return;
+      say(state.cells[state.position].static ? "A bad frequency bites the line." : "The receiver moves cleanly.");
+      log(`T${state.turn} SHIFT // receiver to ${state.position + 1}`);
+      useTurn();
+    }
+
+    function resolve() {
+      if (state.over) return;
+      if (demoRunning && !demoStepActive) return;
+      const cell = state.cells[state.position];
+      if (!cell.anomaly || cell.cleared) {
+        state.failedResolveStreak += 1;
+        const hint = state.failedResolveStreak >= 2 ? ` ${failedResolveHint()}` : "";
+        say(`No active anomaly at the receiver.${hint}`);
+        log(`T${state.turn} RESOLVE failed // no anomaly${hint ? " // hint issued" : ""}`);
+        spendNoise(8);
+        if (!state.over) useTurn();
+        return;
+      }
+      if (state.charge < 2 || state.signal < 8) {
+        say("The anomaly needs two charge and eight signal.");
+        log(`T${state.turn} RESOLVE held // charge ${state.charge}, signal ${state.signal}`);
+        render();
+        return;
+      }
+      cell.cleared = true;
+      state.failedResolveStreak = 0;
+      const resolvedIndex = state.position;
+      state.charge -= 2;
+      state.signal = Math.max(0, state.signal - 8);
+      state.noise = Math.max(0, state.noise - 12);
+      const cleared = state.cells.filter((item) => item.cleared).length;
+      say("An incident stabilizes. The board gets quieter.");
+      log(`T${state.turn} RESOLVE // ${cleared}/3 stable`);
+      if (cleared >= 3) {
+        endCase("win", "case stable", "Three incidents are stable. Precinct 404 keeps the line open.", "WIN // local signal restored");
+        pulseCells([resolvedIndex], "resolve-hit");
+        return;
+      }
+      useTurn();
+      pulseCells([resolvedIndex], "resolve-hit");
+    }
+
+    function say(text) {
+      els.message.textContent = text;
+    }
+
+    function log(text) {
+      els.log.textContent = `${text}\n${els.log.textContent}`.trim();
+    }
+
+    function playtestPayload() {
+      return {
+        exported_at: new Date().toISOString(),
+        title: "Precinct 404: Signal Board",
+        playtest_id: readPlaytestId(),
+        difficulty: state.difficulty,
+        outcome: state.outcome,
+        call: state.call,
+        turn: state.turn,
+        score: state.score || currentScore(),
+        best: state.best,
+        signal: state.signal,
+        noise: state.noise,
+        charge: state.charge,
+        cleared: state.cells.filter((item) => item.cleared).length,
+        focus: state.focus + 1,
+        receiver: state.position + 1,
+        failed_resolve_streak: state.failedResolveStreak,
+        log: els.log.textContent.split("\n").filter(Boolean)
+      };
+    }
+
+    function exportSession() {
+      savePlaytestId();
+      const payload = playtestPayload();
+      const stamp = payload.exported_at.replace(/[:.]/g, "-");
+      const playtestId = filenamePart(payload.playtest_id);
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `precinct-404-signal-playtest-note-${payload.difficulty}-${playtestId}-${stamp}.json`;
+      document.body.appendChild(link);
+      link.click();
+      URL.revokeObjectURL(link.href);
+      link.remove();
+      log(`EXPORT // playtest note ${payload.difficulty} ${payload.playtest_id} turn ${payload.turn}`);
+    }
+
+    function setDemoControls(running) {
+      els.guidedDemo.disabled = running;
+      els.guidedDemo.textContent = running ? "Demo Running" : "Run Guided Demo";
+      els.scan.disabled = running;
+      els.shift.disabled = running;
+      els.resolve.disabled = running;
+      els.difficulty.forEach((button) => {
+        button.disabled = running;
+      });
+    }
+
+    function withDemoStep(callback) {
+      demoStepActive = true;
+      callback();
+      demoStepActive = false;
+    }
+
+    function cancelGuidedDemo(showMessage = true) {
+      if (demoTimer) {
+        window.clearTimeout(demoTimer);
+        demoTimer = null;
+      }
+      if (!demoRunning) return;
+      demoRunning = false;
+      demoStepActive = false;
+      setDemoControls(false);
+      if (showMessage && state && !state.over) say("Guided demo stopped. Start a fresh case or choose a case load.");
+    }
+
+    function finishGuidedDemo() {
+      demoTimer = null;
+      demoRunning = false;
+      demoStepActive = false;
+      setDemoControls(false);
+      say("Demo complete: scan to reveal !, shift R onto it, then resolve. Try Night for your first solo run.");
+      log("DEMO // guided route complete");
+    }
+
+    function runGuidedDemo() {
+      if (demoRunning) return;
+      if (attractActive) enterCase();
+      selectedDifficulty = "standard";
+      demoRunning = true;
+      setDemoControls(true);
+      start({ keepDemo: true });
+      log("DEMO // guided route started");
+
+      let index = 0;
+      function nextStep() {
+        if (!demoRunning || index >= guidedDemoSteps.length) {
+          finishGuidedDemo();
+          return;
+        }
+        const step = guidedDemoSteps[index];
+        withDemoStep(() => {
+          if (typeof step.focus === "number") focusCell(step.focus);
+        });
+        say(step.before);
+        demoTimer = window.setTimeout(() => {
+          withDemoStep(() => {
+            if (step.action === "scan") scan();
+            if (step.action === "shift") shift();
+            if (step.action === "resolve") resolve();
+          });
+          say(step.after);
+          index += 1;
+          if (index >= guidedDemoSteps.length) {
+            finishGuidedDemo();
+            return;
+          }
+          demoTimer = window.setTimeout(nextStep, 1450);
+        }, 850);
+      }
+      demoTimer = window.setTimeout(nextStep, 450);
+    }
+
+    function render() {
+      els.signal.textContent = state.signal;
+      els.noise.textContent = state.noise;
+      els.cleared.textContent = `${state.cells.filter((item) => item.cleared).length}/3`;
+      els.charge.textContent = state.charge;
+      els.best.textContent = state.best;
+      els.shell.classList.toggle("noise-caution", state.noise >= 35 && state.noise < 55);
+      els.shell.classList.toggle("noise-danger", state.noise >= 55 && state.noise < 80);
+      els.shell.classList.toggle("noise-critical", state.noise >= 80);
+      if (!state.over) els.badge.textContent = `turn ${state.turn}`;
+      els.difficulty.forEach((button) => {
+        const active = button.dataset.difficulty === selectedDifficulty;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", String(active));
+      });
+
+      [...board.children].forEach((button, index) => {
+        const cell = state.cells[index];
+        button.className = "cell";
+        button.innerHTML = "";
+        const setCellMark = (mark) => {
+          button.innerHTML = `<span class="cell-mark">${mark}</span>`;
+          button.dataset.mark = mark;
+        };
+        if (index === state.focus) button.classList.add("focused");
+        if (cell.revealed) button.classList.add("revealed");
+        if (index === state.position) {
+          button.classList.add("player");
+          setCellMark("R");
+        } else if (cell.cleared) {
+          button.classList.add("cleared");
+          setCellMark("OK");
+        } else if (cell.revealed && cell.anomaly) {
+          button.classList.add("anomaly");
+          setCellMark("!");
+        } else if (cell.revealed && cell.static) {
+          button.classList.add("noise");
+          setCellMark("~");
+        } else if (cell.revealed) {
+          setCellMark(".");
+        }
+        button.setAttribute("aria-label", `cell ${index + 1}`);
+      });
+    }
+
+    els.scan.addEventListener("click", scan);
+    els.shift.addEventListener("click", shift);
+    els.resolve.addEventListener("click", resolve);
+    els.reset.addEventListener("click", () => {
+      cancelGuidedDemo(false);
+      start();
+    });
+    els.guidedDemo.addEventListener("click", runGuidedDemo);
+    els.exportSession.addEventListener("click", exportSession);
+    els.playtestId.addEventListener("change", savePlaytestId);
+    els.attractStart.addEventListener("click", enterCase);
+    board.addEventListener("touchmove", (event) => {
+      if (event.target.closest(".cell")) event.preventDefault();
+    }, { passive: false });
+    els.difficulty.forEach((button) => {
+      button.addEventListener("click", () => {
+        selectedDifficulty = button.dataset.difficulty;
+        start();
+      });
+    });
+    document.addEventListener("keydown", (event) => {
+      const key = event.key.toLowerCase();
+      const typingTarget = event.target && ["INPUT", "TEXTAREA"].includes(event.target.tagName);
+      if (typingTarget) return;
+      if (attractActive) {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          enterCase();
+        }
+        return;
+      }
+      const moves = {
+        arrowup: [0, -1],
+        w: [0, -1],
+        arrowright: [1, 0],
+        d: [1, 0],
+        arrowdown: [0, 1],
+        s: [0, 1],
+        arrowleft: [-1, 0],
+        a: [-1, 0]
+      };
+      if (moves[key]) {
+        event.preventDefault();
+        moveFocus(moves[key][0], moves[key][1]);
+        return;
+      }
+      if (event.key === "Enter") scan();
+      if (event.key === " ") {
+        event.preventDefault();
+        shift();
+      }
+      if (key === "r") resolve();
+    });
+    restorePlaytestId();
+    start();
+    if (new URLSearchParams(window.location.search).has("playtest")) {
+      enterCase();
+      state.cells.forEach((cell, index) => {
+        if (cell.anomaly || cell.static || index === state.position || index === state.focus || index % 5 === 0) cell.revealed = true;
+      });
+      state.cells.forEach((cell, index) => {
+        if (cell.anomaly && index !== state.position) cell.cleared = index % 2 === 0;
+      });
+      state.noise = 47;
+      state.signal = Math.max(state.signal, 18);
+      state.charge = Math.max(state.charge, 4);
+      say("PLAYTEST VISUAL STATE // receiver avatar, anomaly portals, static cells, and cleared crystals exposed.");
+      log("PLAYTEST // high-definition board inspection state");
+      render();
+    }
+    els.attractStart.focus({ preventScroll: true });
+  </script>
+</body>
+</html>

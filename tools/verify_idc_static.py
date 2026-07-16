@@ -53,6 +53,13 @@ def main() -> int:
         fail("owner-review IDC packet is still present in the public tree")
     if "Season file withheld pending owner review" not in html:
         fail("public page is missing the owner-review withholding notice")
+    if "/idc-cover/" in html or "/card-art?" in html:
+        fail("dynamic-only IDC cover routes remain in the static page")
+    fallback = "/static/cards/idc_anthology/season_poster.svg"
+    if not (ROOT / fallback.lstrip("/")).is_file():
+        fail("static IDC cover fallback is missing")
+    if html.count(f"this.onerror=null;this.src='{fallback}'") != 16:
+        fail("expected 16 one-shot static IDC cover fallbacks")
 
     tracked = set(git_output("ls-tree", "-r", "--name-only", "HEAD").splitlines())
     for stem, url in manifest.items():
@@ -127,7 +134,7 @@ def main() -> int:
         )
     else:
         print("SKIP: video size check needs a full clone or --network")
-    print("OK: no frozen Windows asset paths or owner-review IDC packet")
+    print("OK: no dynamic-only cover routes, frozen Windows paths, or owner-review IDC packet")
     return 0
 
 

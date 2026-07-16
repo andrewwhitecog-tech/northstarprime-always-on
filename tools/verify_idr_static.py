@@ -13,7 +13,8 @@ from pathlib import Path
 
 
 def sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest().upper()
+    payload = path.read_bytes().replace(b"\r\n", b"\n")
+    return hashlib.sha256(payload).hexdigest().upper()
 
 
 def check_url(url: str) -> tuple[bool, str]:

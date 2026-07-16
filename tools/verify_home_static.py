@@ -23,6 +23,7 @@ ALLOWED_LOCAL = (
     "/founders",
     "/mystery-school",
     "/services",
+    "/links/",
     "/site.webmanifest",
     "/health",
 )
@@ -67,6 +68,8 @@ def main() -> None:
     for route in ('href="/arcade/"', 'href="/idr/"', 'href="/services/"'):
         if route not in html:
             raise SystemExit(f"Homepage does not expose the always-on route: {route}")
+    if 'href="/links/"' not in html:
+        raise SystemExit("Homepage does not expose the verified links directory")
 
     bad_routes = []
     for match in HREF_RE.finditer(html):

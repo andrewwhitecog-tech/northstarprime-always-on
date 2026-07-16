@@ -17,7 +17,8 @@ when the dynamic service or Andre's computer is offline.
 
 The `/contact/` route and `/.well-known/security.txt` provide an always-on
 branded mail fallback and security contact policy without exposing the private
-forwarding destination.
+forwarding destination. The root `.nojekyll` marker ensures GitHub Pages
+publishes the `.well-known` directory verbatim.
 
 Run the zero-dependency release check before publishing:
 

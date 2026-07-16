@@ -1,0 +1,1335 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vorath Reliquary Gacha Shrine</title>
+  <script src="/static/games/chiptune.js"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #04040b;
+      --panel: rgba(6, 8, 18, 0.86);
+      --line: rgba(136, 246, 255, 0.28);
+      --text: #f8fbff;
+      --muted: #a9b6ca;
+      --ruby: #ff2e6d;
+      --emerald: #3dffad;
+      --cyan: #38e9ff;
+      --gold: #ffd75e;
+      --violet: #b760ff;
+      --orange: #ff9f43;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      min-height: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 18% 12%, rgba(255, 46, 109, 0.26), transparent 30rem),
+        radial-gradient(circle at 78% 18%, rgba(61, 255, 173, 0.22), transparent 29rem),
+        radial-gradient(circle at 52% 84%, rgba(255, 215, 94, 0.17), transparent 27rem),
+        linear-gradient(135deg, #03040a 0%, #071527 36%, #1a0a24 68%, #05050c 100%);
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        repeating-linear-gradient(90deg, rgba(255,255,255,0.032) 0 1px, transparent 1px 46px),
+        repeating-linear-gradient(0deg, rgba(255,255,255,0.026) 0 1px, transparent 1px 44px),
+        repeating-conic-gradient(from 18deg at 50% 22%, rgba(255,215,94,0.055) 0 7deg, transparent 7deg 18deg);
+      mask-image: radial-gradient(circle at center, black, transparent 84%);
+    }
+
+    .shell {
+      width: min(1460px, calc(100vw - 24px));
+      margin: 0 auto;
+      padding: 18px 0 28px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: end;
+      gap: 16px;
+      padding: 8px 2px 16px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 5rem);
+      line-height: 0.9;
+      letter-spacing: 0;
+      text-transform: uppercase;
+      text-shadow: 0 0 18px rgba(255,215,94,0.66), 0 0 38px rgba(56,233,255,0.34);
+    }
+
+    .subtitle {
+      max-width: 980px;
+      margin: 10px 0 0;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(620px, 1fr) 360px;
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .machine-wrap,
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(6,8,18,0.84), rgba(7,4,14,0.96));
+      box-shadow: 0 0 42px rgba(56,233,255,0.12), inset 0 0 46px rgba(255,215,94,0.08);
+    }
+
+    .machine-wrap {
+      overflow: hidden;
+      min-height: 720px;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: min(78vh, 850px);
+      min-height: 680px;
+      background: #04040b;
+      touch-action: none;
+    }
+
+    .panel {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .meters {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .meter,
+    .controls,
+    .blessing,
+    .archive,
+    .note {
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px;
+      background: rgba(3,5,12,0.66);
+      padding: 10px;
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .value {
+      margin-top: 4px;
+      color: var(--text);
+      font-size: 1.28rem;
+      font-weight: 900;
+      text-shadow: 0 0 14px rgba(61,255,173,0.42);
+      overflow-wrap: anywhere;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    button {
+      appearance: none;
+      min-height: 42px;
+      border: 1px solid rgba(136,246,255,0.36);
+      border-radius: 8px;
+      color: var(--text);
+      background: linear-gradient(180deg, rgba(20,34,54,0.95), rgba(6,8,18,0.96));
+      box-shadow: inset 0 0 16px rgba(56,233,255,0.1), 0 0 14px rgba(56,233,255,0.08);
+      font-weight: 850;
+      cursor: pointer;
+    }
+
+    button:active,
+    button.is-down {
+      transform: translateY(1px);
+      border-color: rgba(61,255,173,0.82);
+      box-shadow: 0 0 22px rgba(61,255,173,0.24), inset 0 0 18px rgba(255,46,109,0.2);
+    }
+
+    .wide { grid-column: 1 / -1; }
+
+    .blessing {
+      min-height: 154px;
+      color: var(--muted);
+      line-height: 1.44;
+    }
+
+    .blessing strong {
+      display: block;
+      color: var(--gold);
+      margin-bottom: 6px;
+      font-size: 0.92rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .archive {
+      min-height: 160px;
+      max-height: 250px;
+      overflow: auto;
+      display: grid;
+      gap: 8px;
+    }
+
+    .relic-row {
+      display: grid;
+      grid-template-columns: 22px minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .swatch {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      box-shadow: 0 0 12px currentColor;
+    }
+
+    .note {
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 1050px) {
+      .layout { grid-template-columns: 1fr; }
+      .machine-wrap { min-height: 640px; }
+      canvas { height: 660px; min-height: 620px; }
+      header { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 620px) {
+      .shell { width: min(100vw - 14px, 1460px); padding-top: 8px; }
+      .meters { grid-template-columns: 1fr; }
+      .controls { grid-template-columns: 1fr 1fr; }
+      canvas { height: 610px; min-height: 570px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div>
+        <h1>Vorath Reliquary Gacha Shrine</h1>
+        <p class="subtitle">A coin-op altar machine: insert tokens, drop glowing beads through a pachinko-style shrine, open relic capsules, build a local collection, and print blessing receipts.</p>
+      </div>
+      <button id="exportTop">Export Receipt</button>
+    </header>
+
+    <section class="layout" aria-label="Vorath Reliquary Gacha Shrine playable cabinet">
+      <div class="machine-wrap">
+        <canvas id="game" width="1080" height="1480"></canvas>
+<script src="/static/games/juice.js"></script>
+<script>addEventListener("DOMContentLoaded",function(){if(window.Juice){var c=document.getElementById("game");if(c)Juice.attachFX(c,{vignette:0.5,scanlines:0.03,glow:0.06});}});</script>
+      </div>
+
+      <aside class="panel">
+        <div class="meters">
+          <div class="meter">
+            <div class="label">Tokens</div>
+            <div class="value" id="tokens">7</div>
+          </div>
+          <div class="meter">
+            <div class="label">Relics</div>
+            <div class="value" id="relicCount">0</div>
+          </div>
+          <div class="meter">
+            <div class="label">Rarity</div>
+            <div class="value" id="rarity">None</div>
+          </div>
+          <div class="meter">
+            <div class="label">Gate</div>
+            <div class="value" id="gate">RELIQUARY</div>
+          </div>
+          <div class="meter">
+            <div class="label">Charge</div>
+            <div class="value" id="charge">0</div>
+          </div>
+          <div class="meter">
+            <div class="label">Archive</div>
+            <div class="value" id="archiveCount">0</div>
+          </div>
+        </div>
+
+        <div class="controls" aria-label="Reliquary machine controls">
+          <button id="tokenBtn">Insert Token</button>
+          <button id="dropBtn">Drop Relic</button>
+          <button id="leftBtn">Left Gate A</button>
+          <button id="rightBtn">Right Gate D</button>
+          <button id="blessBtn" class="wide">Print Blessing</button>
+          <button id="exportBtn" class="wide">Export Receipt</button>
+        </div>
+
+        <div class="blessing" id="blessing">
+          <strong>Awaiting Relic</strong>
+          Insert a token, drop a bead, and let the shrine choose a capsule.
+        </div>
+
+        <div class="archive" id="archive" aria-live="polite"></div>
+
+        <div class="note">
+          No commercial machine assets, capsules, licensed characters, arcade art, sounds, logos, or prize tables are used. This is an original VORATH reliquary using public pachinko and capsule-toy grammar only.
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const canvas = document.querySelector("#game");
+    const ctx = canvas.getContext("2d");
+    const els = {
+      tokens: document.querySelector("#tokens"),
+      relicCount: document.querySelector("#relicCount"),
+      rarity: document.querySelector("#rarity"),
+      gate: document.querySelector("#gate"),
+      charge: document.querySelector("#charge"),
+      archiveCount: document.querySelector("#archiveCount"),
+      blessing: document.querySelector("#blessing"),
+      archive: document.querySelector("#archive"),
+      tokenBtn: document.querySelector("#tokenBtn"),
+      dropBtn: document.querySelector("#dropBtn"),
+      leftBtn: document.querySelector("#leftBtn"),
+      rightBtn: document.querySelector("#rightBtn"),
+      blessBtn: document.querySelector("#blessBtn"),
+      exportBtn: document.querySelector("#exportBtn"),
+      exportTop: document.querySelector("#exportTop")
+    };
+
+    const keys = new Set();
+    const view = { w: 760, h: 920, dpr: 1 };
+    const state = {
+      tokens: 7,
+      charge: 0,
+      gate: "RELIQUARY",
+      lastRarity: "None",
+      receipts: 0,
+      leftGate: 0,
+      rightGate: 0,
+      shake: 0,
+      last: 0,
+      bead: null,
+      pegs: [],
+      slots: [],
+      particles: [],
+      trails: [],
+      archive: [],
+      lastRelic: null,
+      blessing: null
+    };
+
+    const relicPool = {
+      common: [
+        { name: "Glass Seed", color: "#38e9ff", symbol: "seed", maxim: "Begin small; the gate honors motion more than noise." },
+        { name: "Copper Halo", color: "#ff9f43", symbol: "halo", maxim: "Discipline turns repetition into a ritual." },
+        { name: "Emerald Thread", color: "#3dffad", symbol: "thread", maxim: "Bind the scattered parts before asking for a sign." }
+      ],
+      rare: [
+        { name: "Ruby Heart Lens", color: "#ff2e6d", symbol: "heart", maxim: "Desire is not the enemy; unexamined desire is." },
+        { name: "Aurora Mantis Wing", color: "#b760ff", symbol: "wing", maxim: "A guarded mind can still remain luminous." },
+        { name: "Sapphire Wormhole Bead", color: "#38e9ff", symbol: "orb", maxim: "Choose the path that increases your capacity to tell the truth." }
+      ],
+      epic: [
+        { name: "Tribunal Crown Shard", color: "#ffd75e", symbol: "crown", maxim: "Power is clean only when it can survive being questioned." },
+        { name: "Holographic Seraph Gear", color: "#ffffff", symbol: "gear", maxim: "The machine becomes sacred when it serves attention." }
+      ],
+      mythic: [
+        { name: "Vorath Reliquary Core", color: "#ff2e6d", symbol: "core", maxim: "At the limit, the answer is not possession but participation." }
+      ]
+    };
+
+    const rarityOrder = ["common", "rare", "epic", "mythic"];
+    const rarityLabels = { common: "Common", rare: "Rare", epic: "Epic", mythic: "Mythic" };
+    const rarityColors = { common: "#38e9ff", rare: "#3dffad", epic: "#ffd75e", mythic: "#ff2e6d" };
+
+    // --- Chiptune audio (guarded; never breaks the game) ---
+    function sfx(name) {
+      try { if (window.Chiptune && Chiptune.SFX && Chiptune.SFX[name]) Chiptune.SFX[name](); } catch (e) {}
+    }
+    let music = null;
+    let audioStarted = false;
+    function startAudio() {
+      if (audioStarted) return;
+      audioStarted = true;
+      try {
+        if (window.Chiptune) {
+          Chiptune.resume();
+          music = Chiptune.Music({ bpm: 120, mel: [69, 72, 76, 79, 76, 72, 69, 64], bass: [33, 33, 40, 40, 38, 38, 36, 36], melType: 'square' });
+        }
+      } catch (e) { music = null; }
+    }
+
+    // --- AI sprite (procedural fallback always kept) ---
+    const orbImg = new Image();
+    let orbReady = false;
+    orbImg.onload = () => { orbReady = true; };
+    orbImg.onerror = () => { orbReady = false; };
+    orbImg.src = "/static/games/roster/rel_orb.png";
+
+    const bgImg = new Image();
+    let bgReady = false;
+    bgImg.onload = () => { bgReady = true; };
+    bgImg.onerror = () => { bgReady = false; };
+    bgImg.src = "/static/games/roster/rel_bg.png";
+
+    function resize() {
+      const rect = canvas.getBoundingClientRect();
+      view.dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      view.w = Math.max(540, rect.width);
+      view.h = Math.max(600, rect.height);
+      canvas.width = Math.floor(view.w * view.dpr);
+      canvas.height = Math.floor(view.h * view.dpr);
+      ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+      buildMachine();
+    }
+
+    function buildMachine() {
+      state.pegs = [];
+      const rows = 10;
+      const top = view.h * 0.18;
+      const rowGap = view.h * 0.056;
+      const colGap = view.w * 0.083;
+      for (let row = 0; row < rows; row++) {
+        const cols = row % 2 ? 8 : 9;
+        const start = (view.w - (cols - 1) * colGap) / 2;
+        for (let col = 0; col < cols; col++) {
+          const hue = (row * 38 + col * 29) % 360;
+          state.pegs.push({
+            x: start + col * colGap,
+            y: top + row * rowGap,
+            r: Math.max(6, Math.min(10, view.w * 0.011)),
+            hue
+          });
+        }
+      }
+      const slotY = view.h - 96;
+      const slotW = view.w / 5.8;
+      state.slots = [
+        { x: view.w * 0.12, y: slotY, w: slotW, rarity: "common", label: "Seed" },
+        { x: view.w * 0.30, y: slotY, w: slotW, rarity: "rare", label: "Wing" },
+        { x: view.w * 0.48, y: slotY, w: slotW, rarity: "epic", label: "Crown" },
+        { x: view.w * 0.66, y: slotY, w: slotW, rarity: "rare", label: "Lens" },
+        { x: view.w * 0.84, y: slotY, w: slotW, rarity: "mythic", label: "Core" }
+      ];
+    }
+
+    const sfxThrottle = {};
+    function sfxOnce(name, ms) {
+      const now = performance.now();
+      if (sfxThrottle[name] && now - sfxThrottle[name] < ms) return;
+      sfxThrottle[name] = now;
+      sfx(name);
+    }
+
+    function insertToken() {
+      startAudio();
+      state.tokens += 1;
+      state.charge = Math.min(100, state.charge + 9);
+      state.gate = "TOKEN";
+      sfx("coin");
+      burst(view.w * 0.5, view.h * 0.1, 20, "#ffd75e", 5);
+      updateHud();
+    }
+
+    function releaseToken() {
+      startAudio();
+      if (state.bead) return;
+      if (state.tokens <= 0) {
+        insertToken();
+      }
+      state.tokens -= 1;
+      state.gate = "DROP";
+      sfx("pop");
+      state.charge = Math.min(100, state.charge + 14);
+      state.bead = {
+        x: view.w * 0.5 + (Math.random() - 0.5) * view.w * 0.16,
+        y: view.h * 0.11,
+        vx: (Math.random() - 0.5) * 2,
+        vy: 0,
+        r: Math.max(9, Math.min(14, view.w * 0.015)),
+        hue: Math.floor(Math.random() * 360),
+        spin: 0,
+        hits: 0,
+        age: 0
+      };
+      burst(state.bead.x, state.bead.y, 22, "#38e9ff", 5);
+      updateHud();
+    }
+
+    function nudgeGate(side) {
+      startAudio();
+      state.shake = 12;
+      sfxOnce("blip", 110);
+      if (side < 0) state.leftGate = Math.min(1, state.leftGate + 0.25);
+      if (side > 0) state.rightGate = Math.min(1, state.rightGate + 0.25);
+      if (state.bead) state.bead.vx += side * 2.6;
+      state.charge = Math.min(100, state.charge + 3);
+      burst(view.w * (side < 0 ? 0.24 : 0.76), view.h * 0.7, 12, side < 0 ? "#3dffad" : "#ff2e6d", 4);
+    }
+
+    function updateGame(now = performance.now()) {
+      if (!state.last) state.last = now;
+      const dt = Math.min(32, Math.max(0.25, (now - state.last) / 16.667));
+      state.last = now;
+
+      const left = keys.has("a") || keys.has("arrowleft") || els.leftBtn.classList.contains("is-down");
+      const right = keys.has("d") || keys.has("arrowright") || els.rightBtn.classList.contains("is-down");
+      if (left) nudgeGate(-1);
+      if (right) nudgeGate(1);
+      state.leftGate = Math.max(0, state.leftGate - 0.04 * dt);
+      state.rightGate = Math.max(0, state.rightGate - 0.04 * dt);
+      state.shake = Math.max(0, state.shake - dt);
+      state.charge = Math.max(0, state.charge - 0.025 * dt);
+
+      for (const peg of state.pegs) {
+        if (peg.flash) peg.flash = Math.max(0, peg.flash - 0.08 * dt);
+      }
+      // Real canvas screen shake on big hits, decays to nothing.
+      if (state.shake > 0.5) {
+        const s = Math.min(14, state.shake);
+        canvas.style.transform = `translate(${(Math.random() - 0.5) * s}px, ${(Math.random() - 0.5) * s}px)`;
+      } else if (canvas.style.transform) {
+        canvas.style.transform = "";
+      }
+
+      if (state.bead) updateBead(state.bead, dt);
+      state.particles.forEach(p => {
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 0.08 * dt;
+        p.life -= dt;
+      });
+      state.particles = state.particles.filter(p => p.life > 0);
+      state.trails.forEach(t => t.life -= dt);
+      state.trails = state.trails.filter(t => t.life > 0).slice(-90);
+
+      draw();
+      updateHud();
+    }
+
+    function updateBead(bead, dt) {
+      bead.age += dt;
+      bead.vy += 0.42 * dt;
+      bead.vx *= 0.995;
+      bead.x += bead.vx * dt;
+      bead.y += bead.vy * dt * 1.2;
+      bead.spin += (bead.vx + bead.vy) * 0.02;
+
+      const leftWall = 46;
+      const rightWall = view.w - 46;
+      if (bead.x < leftWall + bead.r) {
+        bead.x = leftWall + bead.r;
+        bead.vx = Math.abs(bead.vx) * 0.82;
+      }
+      if (bead.x > rightWall - bead.r) {
+        bead.x = rightWall - bead.r;
+        bead.vx = -Math.abs(bead.vx) * 0.82;
+      }
+
+      const gateY = view.h * 0.72;
+      if (bead.y > gateY - 18 && bead.y < gateY + 34) {
+        if (bead.x < view.w * 0.42 && state.leftGate > 0) {
+          bead.vx += 0.12 * state.leftGate * dt;
+          bead.vy -= 0.03 * dt;
+        }
+        if (bead.x > view.w * 0.58 && state.rightGate > 0) {
+          bead.vx -= 0.12 * state.rightGate * dt;
+          bead.vy -= 0.03 * dt;
+        }
+      }
+
+      for (const peg of state.pegs) {
+        const dx = bead.x - peg.x;
+        const dy = bead.y - peg.y;
+        const dist = Math.hypot(dx, dy) || 1;
+        if (dist < bead.r + peg.r) {
+          const nx = dx / dist;
+          const ny = dy / dist;
+          const overlap = bead.r + peg.r - dist;
+          bead.x += nx * overlap;
+          bead.y += ny * overlap;
+          const dot = bead.vx * nx + bead.vy * ny;
+          bead.vx -= 1.7 * dot * nx;
+          bead.vy -= 1.7 * dot * ny;
+          bead.vx += nx * 1.1 + (Math.random() - 0.5) * 0.9;
+          bead.vy += ny * 0.6;
+          bead.hits += 1;
+          state.charge = Math.min(100, state.charge + 0.9);
+          peg.flash = 1;
+          sfxOnce("pop", 55);
+          burst(peg.x, peg.y, 6, `hsl(${peg.hue}, 100%, 64%)`, 2.8);
+        }
+      }
+
+      state.trails.push({ x: bead.x, y: bead.y, r: bead.r, hue: bead.hue, life: 22 });
+
+      if (bead.y > view.h - 124 || bead.age > 120) {
+        const slot = chooseSlot(bead);
+        unlockRelic(slot, bead);
+        state.bead = null;
+      }
+    }
+
+    function chooseSlot(bead) {
+      let nearest = state.slots[0];
+      let best = Infinity;
+      for (const slot of state.slots) {
+        const dx = Math.abs(bead.x - slot.x);
+        if (dx < best) {
+          best = dx;
+          nearest = slot;
+        }
+      }
+      if (bead.hits > 18 && nearest.rarity === "common") return state.slots[2];
+      if (state.charge > 92 && nearest.rarity === "rare") return state.slots[4];
+      return nearest;
+    }
+
+    function unlockRelic(slot, bead) {
+      const pool = relicPool[slot.rarity];
+      const relic = { ...pool[Math.floor(Math.random() * pool.length)] };
+      relic.rarity = slot.rarity;
+      relic.slot = slot.label;
+      relic.hits = bead.hits;
+      relic.id = `${slot.rarity}-${Date.now()}-${Math.floor(Math.random() * 9999)}`;
+      relic.time = new Date().toISOString();
+      state.lastRelic = relic;
+      state.lastRarity = rarityLabels[slot.rarity];
+      state.archive.unshift(relic);
+      state.archive = state.archive.slice(0, 18);
+      state.charge = slot.rarity === "mythic" ? 100 : Math.min(100, state.charge + rarityOrder.indexOf(slot.rarity) * 12 + 6);
+      state.gate = slot.rarity.toUpperCase();
+      if (slot.rarity === "mythic") { sfx("oneUp"); state.shake = 26; }
+      else if (slot.rarity === "epic") { sfx("powerUp"); state.shake = 18; }
+      else if (slot.rarity === "rare") { sfx("powerUp"); state.shake = 12; }
+      else sfx("gate");
+      printBlessing(false);
+      burst(slot.x, slot.y, slot.rarity === "mythic" ? 58 : 34, relic.color, slot.rarity === "mythic" ? 9 : 6);
+      saveArchive();
+      renderArchive();
+    }
+
+    function printBlessing(force = true) {
+      if (!state.lastRelic) {
+        state.blessing = {
+          title: "Awaiting Relic",
+          text: "Insert a token, drop a bead, and let the shrine choose a capsule.",
+          rarity: "None"
+        };
+      } else {
+        const relic = state.lastRelic;
+        const lines = [
+          relic.maxim,
+          `Relic: ${relic.name}.`,
+          `Rarity: ${rarityLabels[relic.rarity]}. Peg impacts: ${relic.hits}.`,
+          force ? "The receipt printer warms; carry the symbol into the next gate." : "The capsule opens inside the holographic reliquary."
+        ];
+        state.blessing = {
+          title: `${rarityLabels[relic.rarity]} Blessing - ${relic.symbol}`,
+          text: lines.join(" "),
+          rarity: rarityLabels[relic.rarity],
+          relic
+        };
+      }
+      els.blessing.innerHTML = `<strong>${state.blessing.title}</strong>${state.blessing.text}`;
+      if (force) sfx("gate");
+      state.charge = Math.min(100, state.charge + (force ? 5 : 0));
+    }
+
+    function renderArchive() {
+      if (!state.archive.length) {
+        els.archive.innerHTML = `<div class="relic-row"><span class="swatch" style="color:#38e9ff;background:#38e9ff"></span><span>No relics unlocked yet.</span><b>0</b></div>`;
+        return;
+      }
+      els.archive.innerHTML = state.archive.map((relic, index) => {
+        return `<div class="relic-row"><span class="swatch" style="color:${relic.color};background:${relic.color}"></span><span>${relic.name}<br><small>${rarityLabels[relic.rarity]} - ${relic.symbol}</small></span><b>${index + 1}</b></div>`;
+      }).join("");
+    }
+
+    function saveArchive() {
+      try {
+        localStorage.setItem("vorathReliquaryArchive", JSON.stringify(state.archive));
+      } catch (error) {
+        // localStorage is optional in private browser contexts.
+      }
+    }
+
+    function loadArchive() {
+      try {
+        const raw = localStorage.getItem("vorathReliquaryArchive");
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) state.archive = parsed.slice(0, 18);
+        state.lastRelic = state.archive[0] || null;
+      } catch (error) {
+        state.archive = [];
+      }
+    }
+
+    function burst(x, y, count, color, power) {
+      for (let i = 0; i < count; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const s = (Math.random() * 1.7 + 0.8) * power;
+        state.particles.push({
+          x, y,
+          vx: Math.cos(a) * s,
+          vy: Math.sin(a) * s,
+          life: 30 + Math.random() * 30,
+          color,
+          size: 2 + Math.random() * 4
+        });
+      }
+    }
+
+    function updateHud() {
+      els.tokens.textContent = String(state.tokens);
+      els.relicCount.textContent = String(state.archive.length);
+      els.rarity.textContent = state.lastRarity;
+      els.gate.textContent = state.gate;
+      els.charge.textContent = Math.round(state.charge);
+      els.archiveCount.textContent = String(state.archive.length);
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, view.w, view.h);
+      drawMachine();
+      drawPegs();
+      drawGates();
+      drawSlots();
+      drawTrails();
+      if (state.bead) drawBead(state.bead);
+      drawParticles();
+      drawDisplay();
+    }
+
+    function drawMachine() {
+      const grad = ctx.createLinearGradient(0, 0, view.w, view.h);
+      grad.addColorStop(0, "#071326");
+      grad.addColorStop(0.4, "#170821");
+      grad.addColorStop(0.72, "#071b17");
+      grad.addColorStop(1, "#05050b");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, view.w, view.h);
+      // AI altar-scenery backdrop blended over the gradient (gradient is the fallback)
+      if (bgReady && bgImg.naturalWidth) {
+        ctx.save();
+        ctx.globalAlpha = 0.34;
+        ctx.drawImage(bgImg, 0, 0, view.w, view.h);
+        ctx.restore();
+      }
+      drawCausticField(0, 0, view.w, view.h, performance.now() * 0.00048);
+
+      ctx.save();
+      ctx.translate((Math.random() - 0.5) * state.shake, 0);
+      const cabinet = ctx.createLinearGradient(0, 24, view.w, view.h);
+      cabinet.addColorStop(0, "rgba(156,91,42,0.36)");
+      cabinet.addColorStop(0.32, "rgba(30,12,20,0.84)");
+      cabinet.addColorStop(0.68, "rgba(11,39,36,0.74)");
+      cabinet.addColorStop(1, "rgba(4,2,8,0.92)");
+      ctx.fillStyle = cabinet;
+      roundRect(26, 18, view.w - 52, view.h - 34, 36);
+      ctx.fill();
+
+      ctx.save();
+      ctx.globalAlpha = 0.22;
+      ctx.strokeStyle = "rgba(255,225,175,0.35)";
+      ctx.lineWidth = 1;
+      for (let y = 40; y < view.h - 24; y += 15) {
+        ctx.beginPath();
+        ctx.moveTo(38, y + Math.sin(y * 0.07) * 4);
+        ctx.bezierCurveTo(view.w * 0.25, y - 10, view.w * 0.75, y + 10, view.w - 38, y + Math.cos(y * 0.05) * 4);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      const glass = ctx.createLinearGradient(58, 44, view.w - 58, view.h - 88);
+      glass.addColorStop(0, "rgba(255,255,255,0.14)");
+      glass.addColorStop(0.36, "rgba(56,233,255,0.055)");
+      glass.addColorStop(0.76, "rgba(183,96,255,0.09)");
+      glass.addColorStop(1, "rgba(255,255,255,0.045)");
+      ctx.fillStyle = glass;
+      roundRect(58, 44, view.w - 116, view.h - 122, 26);
+      ctx.fill();
+
+      for (let i = 0; i < 22; i++) {
+        ctx.strokeStyle = `hsla(${i * 19}, 100%, 62%, 0.105)`;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.ellipse(view.w / 2, view.h * 0.48, view.w * (0.16 + i * 0.018), view.h * (0.12 + i * 0.014), 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = "rgba(143,255,231,0.7)";
+      ctx.shadowBlur = 18;
+      ctx.shadowColor = "#38e9ff";
+      roundRect(40, 30, view.w - 80, view.h - 54, 34);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      for (const x of [58, view.w - 58]) {
+        const rail = ctx.createLinearGradient(x - 18, 50, x + 18, view.h - 44);
+        rail.addColorStop(0, "rgba(255,255,255,0.58)");
+        rail.addColorStop(0.22, "rgba(255,215,94,0.36)");
+        rail.addColorStop(0.64, "rgba(64,18,32,0.76)");
+        rail.addColorStop(1, "rgba(0,0,0,0.72)");
+        ctx.fillStyle = rail;
+        roundRect(x - 11, 58, 22, view.h - 126, 9);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255,255,255,0.38)";
+        ctx.stroke();
+        for (let y = 86; y < view.h - 90; y += 54) {
+          drawScrewHead(x, y, 6, y * 0.02);
+        }
+      }
+
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      ctx.globalAlpha = 0.42;
+      const sheen = ctx.createLinearGradient(view.w * 0.22, 46, view.w * 0.72, view.h * 0.62);
+      sheen.addColorStop(0, "rgba(255,255,255,0)");
+      sheen.addColorStop(0.42, "rgba(255,255,255,0.34)");
+      sheen.addColorStop(0.5, "rgba(255,255,255,0.04)");
+      sheen.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = sheen;
+      ctx.beginPath();
+      ctx.moveTo(view.w * 0.18, 46);
+      ctx.lineTo(view.w * 0.36, 46);
+      ctx.lineTo(view.w * 0.73, view.h - 86);
+      ctx.lineTo(view.w * 0.57, view.h - 86);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      for (let side = 0; side < 2; side++) {
+        const x = side === 0 ? view.w * 0.085 : view.w * 0.915;
+        for (let i = 0; i < 14; i++) {
+          const y = view.h * 0.15 + i * view.h * 0.05;
+          const hue = (i * 27 + side * 150 + performance.now() * 0.02) % 360;
+          drawFacetGem(x, y, 7 + (i % 3), `hsl(${hue}, 100%, 64%)`, i * 0.25);
+        }
+      }
+
+      ctx.strokeStyle = "rgba(255,255,255,0.15)";
+      ctx.lineWidth = 5;
+      for (let i = 0; i < 5; i++) {
+        ctx.beginPath();
+        ctx.moveTo(view.w * (0.18 + i * 0.16), view.h * 0.16);
+        ctx.quadraticCurveTo(view.w * 0.5, view.h * (0.2 + i * 0.045), view.w * (0.82 - i * 0.05), view.h * 0.68);
+        ctx.stroke();
+      }
+
+      drawCrystal(view.w * 0.5, view.h * 0.1, 48, "#ff2e6d", "#ffd75e");
+      drawCrystal(view.w * 0.17, view.h * 0.68, 40, "#38e9ff", "#3dffad");
+      drawCrystal(view.w * 0.83, view.h * 0.68, 40, "#b760ff", "#ff2e6d");
+      ctx.restore();
+    }
+
+    function drawPegs() {
+      for (const peg of state.pegs) {
+        ctx.save();
+        const color = `hsl(${peg.hue}, 100%, 62%)`;
+        const metal = ctx.createRadialGradient(peg.x - peg.r * 0.55, peg.y - peg.r * 0.72, 1, peg.x, peg.y, peg.r * 2.2);
+        metal.addColorStop(0, "rgba(255,255,255,0.92)");
+        metal.addColorStop(0.3, "rgba(255,215,160,0.78)");
+        metal.addColorStop(0.68, "rgba(44,31,52,0.88)");
+        metal.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = metal;
+        ctx.beginPath();
+        ctx.arc(peg.x + 2, peg.y + 4, peg.r * 1.9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255,235,190,0.34)";
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.arc(peg.x, peg.y, peg.r * 1.62, 0, Math.PI * 2);
+        ctx.stroke();
+        const g = ctx.createRadialGradient(peg.x - peg.r * 0.45, peg.y - peg.r * 0.45, 1, peg.x, peg.y, peg.r * 1.8);
+        g.addColorStop(0, "#ffffff");
+        g.addColorStop(0.24, color);
+        g.addColorStop(0.72, "rgba(183,96,255,0.62)");
+        g.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = g;
+        ctx.shadowBlur = 18;
+        ctx.shadowColor = color;
+        ctx.beginPath();
+        ctx.arc(peg.x, peg.y, peg.r * 1.35, 0, Math.PI * 2);
+        ctx.fill();
+        drawFacetGem(peg.x, peg.y, peg.r * 0.92, color, (peg.x + peg.y + performance.now() * 0.01) * 0.02);
+        ctx.strokeStyle = "rgba(255,255,255,0.58)";
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.arc(peg.x, peg.y, peg.r * 1.35, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(255,255,255,0.26)";
+        ctx.lineWidth = 1;
+        for (let spoke = 0; spoke < 4; spoke++) {
+          const a = spoke * Math.PI / 2 + peg.x * 0.01;
+          ctx.beginPath();
+          ctx.moveTo(peg.x + Math.cos(a) * peg.r * 0.42, peg.y + Math.sin(a) * peg.r * 0.42);
+          ctx.lineTo(peg.x + Math.cos(a) * peg.r * 1.38, peg.y + Math.sin(a) * peg.r * 1.38);
+          ctx.stroke();
+        }
+        if (peg.flash) {
+          ctx.globalCompositeOperation = "lighter";
+          ctx.globalAlpha = peg.flash;
+          ctx.fillStyle = "#ffffff";
+          ctx.shadowBlur = 22;
+          ctx.shadowColor = "#ffffff";
+          ctx.beginPath();
+          ctx.arc(peg.x, peg.y, peg.r * 1.3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+    }
+
+    function drawGates() {
+      const y = view.h * 0.72;
+      drawGate(view.w * 0.34, y, -1, state.leftGate, "#3dffad");
+      drawGate(view.w * 0.66, y, 1, state.rightGate, "#ff2e6d");
+    }
+
+    function drawGate(x, y, side, active, color) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(side * (-0.42 + active * 0.62));
+      ctx.lineCap = "round";
+      ctx.lineWidth = 17;
+      ctx.strokeStyle = color;
+      ctx.shadowBlur = active ? 28 : 14;
+      ctx.shadowColor = color;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(side * 120, 28);
+      ctx.stroke();
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = "rgba(255,255,255,0.78)";
+      ctx.stroke();
+      drawFacetGem(0, 0, 13, active ? "#ffffff" : color, 0.2);
+      drawFacetGem(side * 112, 27, 9, color, -0.2);
+      ctx.restore();
+    }
+
+    function drawSlots() {
+      for (const slot of state.slots) {
+        const color = rarityColors[slot.rarity];
+        ctx.save();
+        ctx.fillStyle = "rgba(0,0,0,0.45)";
+        ctx.shadowBlur = 18;
+        ctx.shadowColor = color;
+        roundRect(slot.x - slot.w / 2, slot.y - 32, slot.w, 64, 10);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255,235,190,0.38)";
+        ctx.lineWidth = 5;
+        roundRect(slot.x - slot.w / 2 - 5, slot.y - 38, slot.w + 10, 76, 13);
+        ctx.stroke();
+        const prism = ctx.createLinearGradient(slot.x - slot.w / 2, slot.y - 32, slot.x + slot.w / 2, slot.y + 32);
+        prism.addColorStop(0, "rgba(255,255,255,0.34)");
+        prism.addColorStop(0.34, "rgba(255,255,255,0)");
+        prism.addColorStop(0.66, color);
+        prism.addColorStop(1, "rgba(0,0,0,0.52)");
+        ctx.fillStyle = prism;
+        roundRect(slot.x - slot.w / 2 + 5, slot.y - 27, slot.w - 10, 54, 8);
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = color;
+        ctx.stroke();
+        ctx.fillStyle = "rgba(255,255,255,0.16)";
+        ctx.beginPath();
+        ctx.ellipse(slot.x, slot.y + 25, slot.w * 0.34, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+        drawFacetGem(slot.x - slot.w * 0.35, slot.y - 18, 7, color, -0.35);
+        drawFacetGem(slot.x + slot.w * 0.35, slot.y - 18, 7, color, 0.35);
+        ctx.fillStyle = color;
+        ctx.font = "900 12px ui-sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(slot.label.toUpperCase(), slot.x, slot.y - 4);
+        ctx.fillStyle = "rgba(248,251,255,0.8)";
+        ctx.font = "800 10px ui-sans-serif";
+        ctx.fillText(rarityLabels[slot.rarity].toUpperCase(), slot.x, slot.y + 16);
+        ctx.restore();
+      }
+    }
+
+    function drawTrails() {
+      for (const trail of state.trails) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, trail.life / 22) * 0.58;
+        ctx.fillStyle = `hsl(${trail.hue}, 100%, 62%)`;
+        ctx.shadowBlur = 16;
+        ctx.shadowColor = ctx.fillStyle;
+        ctx.beginPath();
+        ctx.arc(trail.x, trail.y, trail.r * (1 + (22 - trail.life) / 20), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    function drawBead(bead) {
+      ctx.save();
+      const g = ctx.createRadialGradient(bead.x - bead.r * 0.35, bead.y - bead.r * 0.35, 1, bead.x, bead.y, bead.r * 1.35);
+      g.addColorStop(0, "#ffffff");
+      g.addColorStop(0.25, `hsl(${bead.hue}, 100%, 68%)`);
+      g.addColorStop(0.72, "#2d0b46");
+      g.addColorStop(1, "#05030a");
+      ctx.shadowBlur = 28;
+      ctx.shadowColor = `hsl(${bead.hue}, 100%, 62%)`;
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(bead.x, bead.y, bead.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(bead.x, bead.y, bead.r * 0.92, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.strokeStyle = "rgba(255,255,255,0.42)";
+      ctx.lineWidth = Math.max(1, bead.r * 0.12);
+      for (let i = -2; i <= 2; i++) {
+        ctx.beginPath();
+        ctx.ellipse(bead.x + i * bead.r * 0.1, bead.y, bead.r * (0.32 + Math.abs(i) * 0.08), bead.r * 1.04, i * 0.35, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.fillStyle = "rgba(255,255,255,0.74)";
+      ctx.beginPath();
+      ctx.ellipse(bead.x - bead.r * 0.36, bead.y - bead.r * 0.42, bead.r * 0.28, bead.r * 0.16, -0.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle = "rgba(255,255,255,0.78)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      // AI relic-orb sprite overlay (procedural bead above is the fallback)
+      if (orbReady && orbImg.naturalWidth) {
+        const asp = orbImg.naturalWidth / orbImg.naturalHeight;
+        const bh = bead.r * 2.5;
+        const bw = bh * asp;
+        ctx.globalCompositeOperation = "lighter";
+        ctx.globalAlpha = 0.9;
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = `hsl(${bead.hue}, 100%, 62%)`;
+        ctx.save();
+        ctx.translate(bead.x, bead.y);
+        ctx.rotate(bead.spin * 0.4);
+        ctx.drawImage(orbImg, -bw / 2, -bh / 2, bw, bh);
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+
+    function drawScrewHead(x, y, r, rot) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rot);
+      const g = ctx.createRadialGradient(-r * 0.35, -r * 0.35, 1, 0, 0, r * 1.2);
+      g.addColorStop(0, "rgba(255,255,255,0.92)");
+      g.addColorStop(0.48, "rgba(184,150,95,0.78)");
+      g.addColorStop(1, "rgba(28,18,18,0.9)");
+      ctx.fillStyle = g;
+      ctx.strokeStyle = "rgba(255,255,255,0.35)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(5,4,10,0.75)";
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.62, 0);
+      ctx.lineTo(r * 0.62, 0);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawParticles() {
+      for (const p of state.particles) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.life / 60);
+        ctx.fillStyle = p.color;
+        ctx.shadowBlur = 18;
+        ctx.shadowColor = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    function drawDisplay() {
+      ctx.save();
+      ctx.fillStyle = "rgba(248,251,255,0.8)";
+      ctx.shadowBlur = 18;
+      ctx.shadowColor = "#ffd75e";
+      ctx.font = `900 ${Math.max(18, view.w * 0.03)}px ui-sans-serif`;
+      ctx.textAlign = "center";
+      ctx.fillText("VORATH RELIQUARY", view.w / 2, view.h - 42);
+      ctx.font = `800 ${Math.max(12, view.w * 0.017)}px ui-sans-serif`;
+      ctx.fillStyle = "rgba(248,251,255,0.72)";
+      const line = state.lastRelic ? `${state.lastRarity}: ${state.lastRelic.name}` : "INSERT TOKEN - DROP RELIC";
+      ctx.fillText(line, view.w / 2, 84);
+      if (state.bead) {
+        ctx.fillStyle = "#3dffad";
+        ctx.fillText(`PEG IMPACTS ${state.bead.hits}`, view.w / 2, 112);
+      }
+      ctx.restore();
+    }
+
+    function drawCrystal(x, y, size, top, bottom) {
+      ctx.save();
+      const g = ctx.createLinearGradient(x, y - size, x, y + size);
+      g.addColorStop(0, top);
+      g.addColorStop(1, bottom);
+      ctx.fillStyle = g;
+      ctx.shadowBlur = 30;
+      ctx.shadowColor = top;
+      ctx.beginPath();
+      ctx.moveTo(x, y - size);
+      ctx.lineTo(x + size * 0.58, y - size * 0.08);
+      ctx.lineTo(x + size * 0.28, y + size);
+      ctx.lineTo(x - size * 0.28, y + size);
+      ctx.lineTo(x - size * 0.58, y - size * 0.08);
+      ctx.closePath();
+      ctx.fill();
+      ctx.save();
+      ctx.clip();
+      ctx.strokeStyle = "rgba(255,255,255,0.7)";
+      ctx.lineWidth = Math.max(1.2, size * 0.035);
+      for (const dx of [-0.42, -0.16, 0.16, 0.42]) {
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.92);
+        ctx.lineTo(x + size * dx, y + size * 0.82);
+        ctx.stroke();
+      }
+      ctx.fillStyle = "rgba(255,255,255,0.18)";
+      ctx.beginPath();
+      ctx.moveTo(x - size * 0.34, y - size * 0.14);
+      ctx.lineTo(x, y - size * 0.82);
+      ctx.lineTo(x + size * 0.18, y - size * 0.08);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle = "rgba(255,255,255,0.62)";
+      ctx.beginPath();
+      ctx.moveTo(x, y - size);
+      ctx.lineTo(x + size * 0.58, y - size * 0.08);
+      ctx.lineTo(x + size * 0.28, y + size);
+      ctx.lineTo(x - size * 0.28, y + size);
+      ctx.lineTo(x - size * 0.58, y - size * 0.08);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawCausticField(x, y, w, h, phase) {
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      ctx.globalAlpha = 0.31;
+      for (let i = 0; i < 32; i++) {
+        const hue = (i * 19 + phase * 130) % 360;
+        ctx.strokeStyle = `hsla(${hue}, 100%, 65%, ${0.06 + (i % 5) * 0.018})`;
+        ctx.lineWidth = 0.8 + (i % 4) * 0.35;
+        const yy = y + ((i * 49 + phase * 96) % (h + 150)) - 75;
+        ctx.beginPath();
+        ctx.moveTo(x - 30, yy);
+        for (let px = x - 30; px <= x + w + 50; px += 55) {
+          ctx.lineTo(px, yy + Math.sin(px * 0.014 + i * 1.6 + phase * 6) * 23);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawFacetGem(x, y, size, color, rotation = 0) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rotation);
+      ctx.shadowBlur = size * 1.75;
+      ctx.shadowColor = color;
+      const g = ctx.createLinearGradient(-size, -size, size, size);
+      g.addColorStop(0, "#ffffff");
+      g.addColorStop(0.24, color);
+      g.addColorStop(1, "rgba(12,4,26,0.96)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      for (let i = 0; i < 8; i++) {
+        const a = -Math.PI / 2 + i * Math.PI / 4;
+        const r = i % 2 ? size * 0.7 : size;
+        ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.62)";
+      ctx.lineWidth = Math.max(1, size * 0.08);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(255,255,255,0.32)";
+      for (let i = 0; i < 4; i++) {
+        const a = -Math.PI / 2 + i * Math.PI / 2;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(a) * size * 0.86, Math.sin(a) * size * 0.86);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function roundRect(x, y, w, h, r) {
+      const radius = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.arcTo(x + w, y, x + w, y + h, radius);
+      ctx.arcTo(x + w, y + h, x, y + h, radius);
+      ctx.arcTo(x, y + h, x, y, radius);
+      ctx.arcTo(x, y, x + w, y, radius);
+      ctx.closePath();
+    }
+
+    function makeReceipt(reason = "manual_export") {
+      return {
+        cabinet: "Vorath Reliquary Gacha Shrine",
+        route: "/arcade/custom/vorath-reliquary-gacha-shrine",
+        reason,
+        tokens: state.tokens,
+        charge: Math.round(state.charge),
+        gate: state.gate,
+        relicCount: state.archive.length,
+        activeBead: state.bead ? {
+          x: Math.round(state.bead.x),
+          y: Math.round(state.bead.y),
+          vx: Number(state.bead.vx.toFixed(2)),
+          vy: Number(state.bead.vy.toFixed(2)),
+          age: Math.round(state.bead.age),
+          hits: state.bead.hits
+        } : null,
+        lastRelic: state.lastRelic,
+        blessing: state.blessing,
+        archive: state.archive.slice(0, 10),
+        visual_directive: "rainbows neon maximalism holographic gems jewels crystals alien insects glow pachinko bead trails",
+        noCommercialAssets: "No commercial machine assets, capsules, licensed characters, arcade art, sounds, logos, or prize tables are used.",
+        generatedAt: new Date().toISOString()
+      };
+    }
+
+    function exportReceipt() {
+      sfx("blip");
+      state.receipts += 1;
+      const receipt = makeReceipt("player_export");
+      const blob = new Blob([JSON.stringify(receipt, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `vorath-reliquary-gacha-shrine-receipt-${String(state.receipts).padStart(2, "0")}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function bindHold(button, onDown, onUp) {
+      button.addEventListener("pointerdown", event => {
+        event.preventDefault();
+        try { button.setPointerCapture(event.pointerId); } catch (e) {}
+        button.classList.add("is-down");
+        onDown();
+      });
+      button.addEventListener("pointerup", event => {
+        button.releasePointerCapture(event.pointerId);
+        button.classList.remove("is-down");
+        onUp();
+      });
+      button.addEventListener("pointercancel", () => {
+        button.classList.remove("is-down");
+        onUp();
+      });
+      button.addEventListener("pointerleave", () => {
+        button.classList.remove("is-down");
+        onUp();
+      });
+    }
+
+    window.addEventListener("keydown", event => {
+      const key = event.key.toLowerCase();
+      if ([" ", "arrowleft", "arrowright"].includes(key)) event.preventDefault();
+      keys.add(key);
+      if (key === "i") {
+        insertToken();
+        keys.delete("i");
+      }
+      if (key === " " || key === "enter") {
+        releaseToken();
+        keys.delete(key);
+      }
+      if (key === "p") {
+        printBlessing(true);
+        keys.delete("p");
+      }
+    });
+
+    window.addEventListener("keyup", event => {
+      keys.delete(event.key.toLowerCase());
+    });
+
+    els.tokenBtn.addEventListener("click", insertToken);
+    els.dropBtn.addEventListener("click", releaseToken);
+    els.blessBtn.addEventListener("click", () => printBlessing(true));
+    els.exportBtn.addEventListener("click", exportReceipt);
+    els.exportTop.addEventListener("click", exportReceipt);
+    bindHold(els.leftBtn, () => nudgeGate(-1), () => {});
+    bindHold(els.rightBtn, () => nudgeGate(1), () => {});
+    canvas.addEventListener("pointerdown", event => {
+      const rect = canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      if (x < rect.width * 0.5) nudgeGate(-1);
+      else nudgeGate(1);
+    });
+    window.addEventListener("resize", resize);
+
+    loadArchive();
+    resize();
+    renderArchive();
+    printBlessing(false);
+    updateHud();
+    draw();
+    window.setInterval(() => updateGame(performance.now()), 16);
+
+    window.vorathReliquaryGachaShrine = { insertToken, releaseToken, printBlessing, updateGame, exportReceipt, makeReceipt };
+    if (new URLSearchParams(window.location.search).has("playtest")) {
+      window.setTimeout(() => {
+        insertToken();
+        releaseToken();
+        nudgeGate(1);
+      }, 100);
+      window.setTimeout(() => nudgeGate(-1), 620);
+      window.setTimeout(() => nudgeGate(1), 980);
+    }
+  </script>
+</body>
+</html>

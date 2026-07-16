@@ -1,0 +1,1673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VORATH CIRCUS — Radioactive Rainbow Clown Shooter</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;overflow:hidden;cursor:none;user-select:none}
+canvas{display:block;position:fixed;top:0;left:0}
+
+#hud{position:fixed;top:0;left:0;right:0;z-index:20;pointer-events:none;padding:15px 25px;display:flex;justify-content:space-between;align-items:flex-start}
+.hud-left,.hud-right,.hud-center{display:flex;flex-direction:column;gap:4px}
+.hud-center{align-items:center;position:absolute;left:50%;transform:translateX(-50%);top:10px}
+.hud-label{font-family:'Space Grotesk',sans-serif;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:rgba(201,168,76,0.5)}
+.hud-value{font-family:'Creepster',cursive;font-size:28px;color:#fff;text-shadow:0 0 10px rgba(255,0,110,0.5),0 0 20px rgba(155,93,229,0.3)}
+.hud-combo{font-family:'Creepster',cursive;font-size:42px;background:linear-gradient(90deg,#ff006e,#fb5607,#ffbe0b,#06d6a0,#118ab2,#9b5de5);background-size:300% 100%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:rainbow 2s linear infinite;opacity:0;transition:opacity 0.3s}
+.hud-combo.active{opacity:1}
+@keyframes rainbow{0%{background-position:0% 50%}100%{background-position:300% 50%}}
+.hud-ammo{display:flex;gap:3px}
+.ammo-pip{width:6px;height:18px;background:#ffbe0b;border-radius:2px;transition:background 0.15s}
+.ammo-pip.empty{background:rgba(255,190,11,0.15)}
+.hud-hp{display:flex;gap:3px}
+.hp-pip{width:22px;height:8px;background:#06d6a0;border-radius:2px;transition:background 0.3s}
+.hp-pip.lost{background:rgba(255,0,110,0.3)}
+
+#crosshair{position:fixed;z-index:30;pointer-events:none;width:40px;height:40px;transform:translate(-50%,-50%)}
+
+#title-screen{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,#1a0030 0%,#050510 70%)}
+#title-screen h1{font-family:'Creepster',cursive;font-size:clamp(40px,10vw,80px);background:linear-gradient(90deg,#ff006e,#fb5607,#ffbe0b,#06d6a0,#118ab2,#9b5de5,#ff006e);background-size:400% 100%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:rainbow 3s linear infinite;filter:drop-shadow(0 0 30px rgba(155,93,229,0.5))}
+#title-screen h2{font-family:'Space Grotesk',sans-serif;font-size:14px;letter-spacing:6px;text-transform:uppercase;color:rgba(201,168,76,0.5);margin-top:10px}
+#title-screen .start-btn{margin-top:40px;padding:14px 40px;border:2px solid rgba(255,0,110,0.4);background:transparent;color:#fff;font-family:'Creepster',cursive;font-size:22px;letter-spacing:4px;cursor:pointer;transition:all 0.3s;animation:pulse-border 2s infinite}
+#title-screen .start-btn:hover{background:rgba(255,0,110,0.15);border-color:#ff006e;box-shadow:0 0 30px rgba(255,0,110,0.3)}
+@keyframes pulse-border{0%,100%{border-color:rgba(255,0,110,0.4)}50%{border-color:rgba(155,93,229,0.6)}}
+#title-screen .controls{margin-top:30px;font-family:'Space Grotesk';font-size:11px;color:rgba(255,255,255,0.3);letter-spacing:2px;text-align:center;line-height:2}
+
+#game-over{position:fixed;inset:0;z-index:50;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(5,5,16,0.9)}
+#game-over h1{font-family:'Creepster',cursive;font-size:50px;color:#ff006e;text-shadow:0 0 20px rgba(255,0,110,0.5)}
+#game-over .final-score{font-family:'Creepster',cursive;font-size:36px;color:#ffbe0b;margin-top:15px}
+#game-over .restart-btn{margin-top:30px;padding:12px 35px;border:2px solid rgba(6,214,160,0.4);background:transparent;color:#fff;font-family:'Creepster',cursive;font-size:20px;cursor:pointer;transition:all 0.3s}
+#game-over .restart-btn:hover{background:rgba(6,214,160,0.15);border-color:#06d6a0}
+
+.kill-text{position:fixed;z-index:25;pointer-events:none;font-family:'Creepster',cursive;font-size:24px;color:#ffbe0b;text-shadow:0 0 10px rgba(255,190,11,0.5);animation:kill-float 0.8s ease-out forwards}
+@keyframes kill-float{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-60px) scale(1.3)}}
+</style>
+</head>
+<body>
+
+<div id="title-screen">
+  <h1>VORATH CIRCUS</h1>
+  <h2>Radioactive Rainbow Clown Arcade Shooter</h2>
+  <button class="start-btn" onclick="startGame()">STEP RIGHT UP</button>
+  <div class="controls">
+    CLICK TO SHOOT &middot; R TO RELOAD &middot; MOVE MOUSE TO AIM<br>
+    SHOOT MUTANT CLOWNS &middot; DON'T MISS &middot; SURVIVE
+  </div>
+</div>
+
+<div id="game-over">
+  <h1>GAME OVER</h1>
+  <div class="final-score" id="final-score">0</div>
+  <div style="font-family:'Space Grotesk';color:rgba(255,255,255,0.4);font-size:11px;letter-spacing:3px;margin-top:8px">TICKETS EARNED</div>
+  <button class="restart-btn" onclick="startGame()">TRY AGAIN</button>
+</div>
+
+<canvas id="game"></canvas>
+<script src="/static/games/juice.js"></script>
+<script>addEventListener("DOMContentLoaded",function(){if(window.Juice){var c=document.getElementById("game");if(c)Juice.attachFX(c,{vignette:0.48,scanlines:0.035,glow:0.06});}});</script>
+<div id="crosshair"></div>
+
+<div id="hud" style="display:none">
+  <div class="hud-left">
+    <div class="hud-label">Score</div>
+    <div class="hud-value" id="score-val">0</div>
+    <div class="hud-label" style="margin-top:8px">Ammo</div>
+    <div class="hud-ammo" id="ammo-display"></div>
+  </div>
+  <div class="hud-center">
+    <div class="hud-combo" id="combo-display">x1</div>
+    <div class="hud-label" id="combo-label" style="opacity:0">COMBO</div>
+  </div>
+  <div class="hud-right" style="align-items:flex-end">
+    <div class="hud-label">Health</div>
+    <div class="hud-hp" id="hp-display"></div>
+    <div class="hud-label" style="margin-top:8px">Wave</div>
+    <div class="hud-value" id="wave-val">1</div>
+  </div>
+</div>
+
+<script>
+// === VORATH CIRCUS - Radioactive Rainbow Clown Arcade Shooter ===
+const C = document.getElementById('game');
+const X = C.getContext('2d');
+const TAU = Math.PI * 2;
+let W, H;
+
+function resize() { W = C.width = innerWidth; H = C.height = innerHeight; }
+resize();
+addEventListener('resize', resize);
+
+// === GAME STATE ===
+let gameActive = false;
+let score = 0;
+let combo = 0;
+let comboTimer = 0;
+let maxCombo = 0;
+let hp = 5;
+let maxHp = 5;
+let ammo = 6;
+let maxAmmo = 6;
+let reloading = false;
+let reloadTimer = 0;
+let wave = 1;
+let waveTimer = 0;
+let waveDelay = 180; // frames between waves
+let enemies = [];
+let particles = [];
+let confetti = [];
+let balloons = [];
+// AI-art enemy sprite (Vorath DNA) — overlays the procedural clown when loaded
+const CIRC_CLOWN = new Image(); let CIRC_CLOWN_OK = false;
+CIRC_CLOWN.onload = () => { CIRC_CLOWN_OK = true; };
+CIRC_CLOWN.src = '/static/games/roster/circ_clown.png';
+// ===== Audio: procedural WebAudio SFX + eerie carnival music bed (Circus had NO sound) =====
+let _cactx = null;
+function cAC(){ if(!_cactx){ try{ _cactx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } return _cactx; }
+function _noise(a, dur, gain){ const n=a.createBuffer(1,Math.max(1,(a.sampleRate*dur)|0),a.sampleRate), d=n.getChannelData(0);
+  for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2);
+  const ns=a.createBufferSource(), ng=a.createGain(); ns.buffer=n; ng.gain.value=gain; ns.connect(ng); ng.connect(a.destination); ns.start(a.currentTime); }
+function csfx(kind){ const a=cAC(); if(!a) return; const t=a.currentTime; const o=a.createOscillator(), g=a.createGain(); o.connect(g); g.connect(a.destination);
+  if(kind==='shoot'){ o.type='square'; o.frequency.setValueAtTime(880,t); o.frequency.exponentialRampToValueAtTime(180,t+0.12); g.gain.setValueAtTime(0.13,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.14); o.start(t); o.stop(t+0.16); }
+  else if(kind==='hit'){ o.type='sawtooth'; o.frequency.setValueAtTime(240,t); o.frequency.exponentialRampToValueAtTime(90,t+0.1); g.gain.setValueAtTime(0.17,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.12); o.start(t); o.stop(t+0.14); }
+  else if(kind==='pop'){ o.type='triangle'; o.frequency.setValueAtTime(1200,t); o.frequency.exponentialRampToValueAtTime(420,t+0.08); g.gain.setValueAtTime(0.2,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.1); o.start(t); o.stop(t+0.12); _noise(a,0.06,0.16); }
+  else if(kind==='kill'){ o.type='sawtooth'; o.frequency.setValueAtTime(320,t); o.frequency.exponentialRampToValueAtTime(60,t+0.28); g.gain.setValueAtTime(0.22,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.3); o.start(t); o.stop(t+0.32); _noise(a,0.2,0.2); }
+  else if(kind==='trap'){ o.type='sawtooth'; o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(48,t+0.35); g.gain.setValueAtTime(0.22,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.38); o.start(t); o.stop(t+0.4); }
+  else if(kind==='reload'){ o.type='triangle'; o.frequency.setValueAtTime(300,t); o.frequency.linearRampToValueAtTime(620,t+0.14); g.gain.setValueAtTime(0.1,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.16); o.start(t); o.stop(t+0.18); }
+}
+let _cmusic = null;
+function startCircusMusic(){ const a=cAC(); if(!a || _cmusic) return;
+  const master=a.createGain(); master.gain.value=0.0001; master.connect(a.destination); master.gain.exponentialRampToValueAtTime(0.055, a.currentTime+2);
+  const scale=[196,233.08,293.66,349.23,392,466.16]; let step=0;   // eerie minor waltz
+  const timer=setInterval(()=>{ const tt=a.currentTime; const f=scale[step%scale.length]*(step%6<3?1:0.5); step++;
+    const o=a.createOscillator(), g=a.createGain(); o.type='triangle'; o.frequency.value=f; o.connect(g); g.connect(master);
+    g.gain.setValueAtTime(0.0001,tt); g.gain.exponentialRampToValueAtTime(0.5,tt+0.02); g.gain.exponentialRampToValueAtTime(0.0001,tt+0.4); o.start(tt); o.stop(tt+0.45);
+  }, 300);
+  _cmusic={ master, timer };
+}
+function stopCircusMusic(){ if(!_cmusic) return; const a=cAC(); try{ _cmusic.master.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+1);}catch(e){} clearInterval(_cmusic.timer); _cmusic=null; }
+let beamTrails = [];
+let floatTexts = [];
+let muzzleFlash = 0;
+let screenShake = 0;
+let t = 0;
+let mouseX = W/2, mouseY = H/2;
+let bgStars = [];
+let neonSigns = [];
+
+// === CROSSHAIR ===
+const crosshair = document.getElementById('crosshair');
+document.addEventListener('mousemove', e => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+  crosshair.style.left = mouseX + 'px';
+  crosshair.style.top = mouseY + 'px';
+});
+
+// === INPUT ===
+document.addEventListener('click', e => {
+  if (e.target && e.target.closest && e.target.closest('#northstar-playtest-kit, [data-northstar-receipt-download]')) return;
+  if (!gameActive) return;
+  e.preventDefault();
+  shoot();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'r' || e.key === 'R') startReload();
+});
+document.addEventListener('contextmenu', e => e.preventDefault());
+
+// === INIT ===
+function initBgStars() {
+  bgStars = [];
+  for (let i = 0; i < 120; i++) {
+    bgStars.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      size: 0.5 + Math.random() * 1.5,
+      twinkle: Math.random() * TAU,
+      hue: Math.random() * 360
+    });
+  }
+}
+
+function initNeonSigns() {
+  neonSigns = [
+    { text: 'VORATH CIRCUS', x: W * 0.5, y: H * 0.08, size: 30, hue: 320 },
+    { text: 'RAD CLOWNS', x: W * 0.2, y: H * 0.15, size: 14, hue: 92 },
+    { text: 'CRYSTAL LASERS', x: W * 0.8, y: H * 0.12, size: 16, hue: 185 },
+  ];
+}
+
+function initBalloons() {
+  balloons = [];
+  for (let i = 0; i < 8; i++) spawnBalloon();
+}
+
+function spawnBalloon() {
+  balloons.push({
+    x: Math.random() * W,
+    y: H + 50 + Math.random() * 200,
+    vx: (Math.random() - 0.5) * 0.5,
+    vy: -0.5 - Math.random() * 1,
+    size: 18 + Math.random() * 14,
+    hue: Math.random() * 360,
+    wobble: Math.random() * TAU,
+    string: 30 + Math.random() * 20,
+    alive: true,
+    isTrap: Math.random() < 0.12
+  });
+}
+
+// === ENEMY SYSTEM ===
+function spawnEnemy() {
+  const side = Math.random() < 0.5 ? -1 : 1;
+  const type = Math.random();
+  let e;
+
+  if (type < 0.5) {
+    // Basic radioactive clown mutant
+    e = {
+      x: side > 0 ? W + 40 : -40,
+      y: H * 0.3 + Math.random() * H * 0.5,
+      vx: side > 0 ? -(1 + Math.random() * 1.5 + wave * 0.15) : (1 + Math.random() * 1.5 + wave * 0.15),
+      vy: (Math.random() - 0.5) * 0.5,
+      size: 28 + Math.random() * 12,
+      hp: 1,
+      maxHp: 1,
+      type: 'zombie',
+      hue: 120 + Math.random() * 40,
+      attackTimer: 0,
+      frame: Math.random() * TAU,
+      points: 10,
+    };
+  } else if (type < 0.8) {
+    // Rainbow clown - faster, smaller, zigzags
+    e = {
+      x: side > 0 ? W + 30 : -30,
+      y: H * 0.2 + Math.random() * H * 0.4,
+      vx: side > 0 ? -(2 + Math.random() * 2 + wave * 0.2) : (2 + Math.random() * 2 + wave * 0.2),
+      vy: 0,
+      size: 22 + Math.random() * 8,
+      hp: 1,
+      maxHp: 1,
+      type: 'clown',
+      hue: 300 + Math.random() * 60,
+      attackTimer: 0,
+      frame: Math.random() * TAU,
+      points: 25,
+      zigFreq: 2 + Math.random() * 3,
+      zigAmp: 30 + Math.random() * 40,
+    };
+  } else {
+    // Heavy clown reactor - big, slow, takes hits
+    const tankHp = 2 + Math.floor(wave / 3);
+    e = {
+      x: side > 0 ? W + 60 : -60,
+      y: H * 0.35 + Math.random() * H * 0.3,
+      vx: side > 0 ? -(0.5 + Math.random() * 0.8) : (0.5 + Math.random() * 0.8),
+      vy: 0,
+      size: 40 + Math.random() * 15,
+      hp: tankHp,
+      maxHp: tankHp,
+      type: 'tank',
+      hue: 0 + Math.random() * 30,
+      attackTimer: 0,
+      frame: Math.random() * TAU,
+      points: 50,
+    };
+  }
+
+  enemies.push(e);
+}
+
+function spawnWave() {
+  const count = 3 + wave * 2;
+  for (let i = 0; i < count; i++) {
+    setTimeout(() => { if (gameActive) spawnEnemy(); }, i * (300 - Math.min(wave * 15, 200)));
+  }
+}
+
+// === SHOOTING ===
+function shoot() {
+  if (reloading) return;
+  if (ammo <= 0) { startReload(); return; }
+
+  ammo--;
+  muzzleFlash = 6;
+  screenShake = 4;
+  csfx('shoot');
+  updateAmmoDisplay();
+
+  // Muzzle particles
+  for (let i = 0; i < 8; i++) {
+    particles.push({
+      x: mouseX, y: mouseY,
+      vx: (Math.random() - 0.5) * 8,
+      vy: (Math.random() - 0.5) * 8,
+      life: 0.5 + Math.random() * 0.3,
+      size: 2 + Math.random() * 3,
+      hue: 40 + Math.random() * 20,
+      type: 'spark'
+    });
+  }
+
+  beamTrails.push({
+    x0: W * 0.5 + (Math.random() - 0.5) * 18,
+    y0: H + 18,
+    x1: mouseX,
+    y1: mouseY,
+    life: 1,
+    width: 10 + Math.random() * 5,
+    hue: (t * 55 + Math.random() * 70) % 360,
+    crystal: true,
+    twist: Math.random() * TAU
+  });
+
+  // Check balloon hits
+  for (let i = balloons.length - 1; i >= 0; i--) {
+    const b = balloons[i];
+    if (!b.alive) continue;
+    const dx = mouseX - b.x, dy = mouseY - b.y;
+    if (Math.sqrt(dx*dx + dy*dy) < b.size) {
+      b.alive = false;
+      popBalloon(b);
+      if (b.isTrap) {
+        // Trap balloon — flash screen, minor penalty
+        screenShake = 10;
+        csfx('trap');
+        addFloatText(b.x, b.y, 'TRAP!', '#ff006e');
+      } else {
+        score += 5;
+        csfx('pop');
+        addFloatText(b.x, b.y, '+5', '#ffbe0b');
+      }
+    }
+  }
+
+  // Check enemy hits (front to back)
+  let hitSomething = false;
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    const e = enemies[i];
+    if (e.hp <= 0) continue;
+    const dx = mouseX - e.x, dy = mouseY - e.y;
+    if (Math.sqrt(dx*dx + dy*dy) < e.size) {
+      e.hp--;
+      hitSomething = true;
+
+      if (e.hp <= 0) {
+        // Kill!
+        csfx('kill');
+        killEnemy(e, i);
+      } else {
+        // Hit but not dead
+        screenShake = 3;
+        e.hitFlash = 6;
+        csfx('hit');
+        addFloatText(e.x, e.y - e.size, 'HIT', '#fb5607');
+        // Blood particles
+        for (let p = 0; p < 5; p++) {
+          particles.push({
+            x: e.x, y: e.y,
+            vx: (Math.random()-0.5)*6, vy: (Math.random()-0.5)*6,
+            life: 0.4, size: 3, hue: e.hue, type: 'blood'
+          });
+        }
+      }
+      break; // Only hit one enemy per shot
+    }
+  }
+
+  if (!hitSomething) {
+    combo = 0;
+    comboTimer = 0;
+  }
+
+  if (ammo <= 0) startReload();
+}
+
+function killEnemy(e, idx) {
+  // Combo
+  combo++;
+  comboTimer = 120; // 2 seconds at 60fps
+  if (combo > maxCombo) maxCombo = combo;
+
+  const comboMult = combo >= 100 ? 50 : combo >= 50 ? 25 : combo >= 25 ? 10 : combo >= 10 ? 5 : combo >= 5 ? 3 : combo >= 3 ? 2 : 1;
+  const pts = e.points * comboMult;
+  score += pts;
+
+  screenShake = 6;
+
+  // Float text
+  const label = combo >= 10 ? `+${pts} x${combo}!!` : combo >= 3 ? `+${pts} x${combo}` : `+${pts}`;
+  const color = combo >= 25 ? '#ff006e' : combo >= 10 ? '#fb5607' : combo >= 5 ? '#ffbe0b' : '#06d6a0';
+  addFloatText(e.x, e.y - e.size, label, color);
+
+  // CONFETTI EXPLOSION (scales with combo)
+  const confettiCount = Math.min(5 + combo * 2, 80);
+  for (let i = 0; i < confettiCount; i++) {
+    confetti.push({
+      x: e.x, y: e.y,
+      vx: (Math.random()-0.5) * (6 + combo * 0.3),
+      vy: (Math.random()-0.5) * (6 + combo * 0.3) - 2,
+      life: 1 + Math.random() * 0.5,
+      size: 3 + Math.random() * 4,
+      hue: Math.random() * 360,
+      rot: Math.random() * TAU,
+      rotV: (Math.random()-0.5) * 0.3,
+    });
+  }
+
+  // Neon blood explosion
+  for (let i = 0; i < 12; i++) {
+    particles.push({
+      x: e.x, y: e.y,
+      vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10,
+      life: 0.6 + Math.random()*0.4, size: 3 + Math.random()*5,
+      hue: e.hue, type: 'blood'
+    });
+  }
+
+  enemies.splice(idx, 1);
+  updateScoreDisplay();
+}
+
+function popBalloon(b) {
+  for (let i = 0; i < 15; i++) {
+    particles.push({
+      x: b.x, y: b.y,
+      vx: (Math.random()-0.5)*8, vy: (Math.random()-0.5)*8 - 2,
+      life: 0.5, size: 2+Math.random()*3, hue: b.hue, type: 'spark'
+    });
+  }
+}
+
+function startReload() {
+  if (reloading) return;
+  reloading = true;
+  reloadTimer = 45; // ~0.75 seconds
+  csfx('reload');
+}
+
+function addFloatText(x, y, text, color) {
+  const el = document.createElement('div');
+  el.className = 'kill-text';
+  el.textContent = text;
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
+  el.style.color = color;
+  el.style.textShadow = `0 0 10px ${color}`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 800);
+}
+
+// === HUD ===
+function updateAmmoDisplay() {
+  const el = document.getElementById('ammo-display');
+  el.innerHTML = '';
+  for (let i = 0; i < maxAmmo; i++) {
+    const pip = document.createElement('div');
+    pip.className = 'ammo-pip' + (i >= ammo ? ' empty' : '');
+    el.appendChild(pip);
+  }
+}
+
+function updateHpDisplay() {
+  const el = document.getElementById('hp-display');
+  el.innerHTML = '';
+  for (let i = 0; i < maxHp; i++) {
+    const pip = document.createElement('div');
+    pip.className = 'hp-pip' + (i >= hp ? ' lost' : '');
+    el.appendChild(pip);
+  }
+}
+
+function updateScoreDisplay() {
+  document.getElementById('score-val').textContent = score.toLocaleString();
+}
+
+function updateComboDisplay() {
+  const el = document.getElementById('combo-display');
+  const label = document.getElementById('combo-label');
+  if (combo >= 3) {
+    el.textContent = `x${combo}`;
+    el.classList.add('active');
+    label.style.opacity = '1';
+  } else {
+    el.classList.remove('active');
+    label.style.opacity = '0';
+  }
+}
+
+// === RENDERING ===
+function drawCrosshair() {
+  const s = 20;
+  const hue = (t * 3) % 360;
+  X.save();
+  X.translate(mouseX, mouseY);
+  X.strokeStyle = `hsla(${hue}, 100%, 65%, 0.8)`;
+  X.lineWidth = 2;
+  X.shadowColor = `hsla(${hue}, 100%, 65%, 0.6)`;
+  X.shadowBlur = 10;
+
+  // Outer ring
+  X.beginPath();
+  X.arc(0, 0, s, 0, TAU);
+  X.stroke();
+
+  // Cross lines with gap
+  const gap = 6;
+  X.beginPath();
+  X.moveTo(0, -s); X.lineTo(0, -gap);
+  X.moveTo(0, gap); X.lineTo(0, s);
+  X.moveTo(-s, 0); X.lineTo(-gap, 0);
+  X.moveTo(gap, 0); X.lineTo(s, 0);
+  X.stroke();
+
+  // Center dot
+  X.beginPath();
+  X.arc(0, 0, 2, 0, TAU);
+  X.fillStyle = `hsla(${hue}, 100%, 80%, 0.9)`;
+  X.fill();
+
+  X.shadowBlur = 0;
+  X.restore();
+}
+
+function drawBg() {
+  // Deep void
+  const voidGrad = X.createLinearGradient(0, 0, 0, H);
+  voidGrad.addColorStop(0, '#090214');
+  voidGrad.addColorStop(0.46, '#11051f');
+  voidGrad.addColorStop(0.72, '#070712');
+  voidGrad.addColorStop(1, '#020207');
+  X.fillStyle = voidGrad;
+  X.fillRect(0, 0, W, H);
+
+  // Stars
+  bgStars.forEach(s => {
+    s.twinkle += 0.03;
+    const alpha = 0.3 + Math.sin(s.twinkle) * 0.2;
+    X.beginPath();
+    X.arc(s.x, s.y, s.size, 0, TAU);
+    X.fillStyle = `hsla(${s.hue}, 50%, 70%, ${alpha})`;
+    X.fill();
+  });
+
+  // Ground plane — neon grid
+  X.save();
+  const horizon = H * 0.7;
+  const gridHue = (t * 2) % 360;
+  X.strokeStyle = `hsla(${gridHue}, 80%, 40%, 0.1)`;
+  X.lineWidth = 1;
+
+  // Horizontal lines (perspective)
+  for (let i = 0; i < 15; i++) {
+    const y = horizon + Math.pow(i / 15, 2) * (H - horizon);
+    X.beginPath();
+    X.moveTo(0, y);
+    X.lineTo(W, y);
+    X.stroke();
+  }
+  // Vertical lines (converging to center)
+  for (let i = -10; i <= 10; i++) {
+    const topX = W/2 + i * 20;
+    const botX = W/2 + i * (W * 0.15);
+    X.beginPath();
+    X.moveTo(topX, horizon);
+    X.lineTo(botX, H);
+    X.stroke();
+  }
+  X.restore();
+
+  // Stage curtains, rigging, and ring floor make the playfield read as a circus.
+  X.save();
+  const curtainLeft = X.createLinearGradient(0, 0, W * 0.22, H);
+  curtainLeft.addColorStop(0, 'rgba(255,0,110,0.55)');
+  curtainLeft.addColorStop(0.45, 'rgba(81,8,54,0.72)');
+  curtainLeft.addColorStop(1, 'rgba(8,2,12,0.92)');
+  X.fillStyle = curtainLeft;
+  X.beginPath();
+  X.moveTo(0, 0);
+  X.bezierCurveTo(W * 0.18, H * 0.1, W * 0.12, H * 0.48, W * 0.07, H);
+  X.lineTo(0, H);
+  X.closePath();
+  X.fill();
+  const curtainRight = X.createLinearGradient(W, 0, W * 0.78, H);
+  curtainRight.addColorStop(0, 'rgba(255,214,10,0.38)');
+  curtainRight.addColorStop(0.34, 'rgba(117,16,87,0.72)');
+  curtainRight.addColorStop(1, 'rgba(8,2,12,0.92)');
+  X.fillStyle = curtainRight;
+  X.beginPath();
+  X.moveTo(W, 0);
+  X.bezierCurveTo(W * 0.82, H * 0.12, W * 0.9, H * 0.48, W * 0.93, H);
+  X.lineTo(W, H);
+  X.closePath();
+  X.fill();
+  X.strokeStyle = 'rgba(255,255,255,0.16)';
+  X.lineWidth = 2;
+  for (let i = 0; i < 9; i++) {
+    const lx = W * (0.025 + i * 0.018);
+    const rx = W * (0.975 - i * 0.018);
+    X.beginPath();
+    X.moveTo(lx, 0);
+    X.bezierCurveTo(lx + 30, H * 0.25, lx - 18, H * 0.6, lx + 12, H);
+    X.moveTo(rx, 0);
+    X.bezierCurveTo(rx - 30, H * 0.25, rx + 18, H * 0.6, rx - 12, H);
+    X.stroke();
+  }
+
+  X.strokeStyle = `hsla(${(t * 8 + 42) % 360}, 100%, 64%, 0.38)`;
+  X.lineWidth = 5;
+  X.shadowColor = X.strokeStyle;
+  X.shadowBlur = 14;
+  X.beginPath();
+  X.moveTo(W * 0.08, H * 0.12);
+  X.quadraticCurveTo(W * 0.5, H * 0.02, W * 0.92, H * 0.12);
+  X.stroke();
+  X.shadowBlur = 0;
+  for (let i = 0; i < 13; i++) {
+    const x = W * (0.12 + i * 0.064);
+    const hue = (i * 33 + t * 18) % 360;
+    X.fillStyle = `hsla(${hue},100%,62%,0.58)`;
+    X.beginPath();
+    X.ellipse(x, H * 0.125 + Math.sin(i + t * 2) * 4, 7, 11, 0, 0, TAU);
+    X.fill();
+  }
+
+  const ring = X.createRadialGradient(W / 2, H * 0.88, W * 0.08, W / 2, H * 0.88, W * 0.58);
+  ring.addColorStop(0, 'rgba(255,214,10,0.22)');
+  ring.addColorStop(0.38, 'rgba(255,0,110,0.12)');
+  ring.addColorStop(1, 'rgba(0,0,0,0)');
+  X.fillStyle = ring;
+  X.beginPath();
+  X.ellipse(W / 2, H * 0.9, W * 0.48, H * 0.14, 0, 0, TAU);
+  X.fill();
+  X.strokeStyle = 'rgba(255,255,255,0.22)';
+  X.lineWidth = 2;
+  for (let i = 0; i < 5; i++) {
+    X.beginPath();
+    X.ellipse(W / 2, H * 0.9, W * (0.19 + i * 0.07), H * (0.05 + i * 0.018), 0, 0, TAU);
+    X.stroke();
+  }
+
+  // Painted plywood, sawdust, and cabinet props keep the arena from reading as flat vector rings.
+  X.save();
+  X.globalCompositeOperation = 'screen';
+  for (let i = 0; i < 18; i++) {
+    const y = H * (0.72 + i * 0.018);
+    const pinch = i / 18;
+    X.strokeStyle = i % 3 === 0 ? 'rgba(245,197,66,0.16)' : 'rgba(255,255,255,0.075)';
+    X.lineWidth = i % 3 === 0 ? 1.5 : 0.8;
+    X.beginPath();
+    X.moveTo(W * (0.05 + pinch * 0.24), y);
+    X.quadraticCurveTo(W * 0.5, y + Math.sin(t * 0.8 + i) * 9, W * (0.95 - pinch * 0.24), y + Math.cos(t + i) * 6);
+    X.stroke();
+  }
+  for (let i = 0; i < 90; i++) {
+    const x = (i * 97 + Math.floor(t * 24) * 11) % W;
+    const y = H * 0.72 + ((i * 41 + Math.floor(t * 18) * 7) % Math.max(1, H * 0.24));
+    const hue = (30 + i * 11) % 360;
+    X.fillStyle = `hsla(${hue},85%,68%,${0.045 + (i % 5) * 0.012})`;
+    X.fillRect(x, y, 1 + (i % 4), 1);
+  }
+  X.restore();
+
+  for (const side of [-1, 1]) {
+    const boothX = side < 0 ? W * 0.08 : W * 0.92;
+    const boothY = H * 0.58;
+    X.save();
+    X.translate(boothX, boothY);
+    X.scale(side, 1);
+    X.globalAlpha = 0.86;
+    const booth = X.createLinearGradient(-130, -70, 130, 110);
+    booth.addColorStop(0, 'rgba(255,255,255,0.2)');
+    booth.addColorStop(0.2, 'rgba(236,72,153,0.24)');
+    booth.addColorStop(0.62, 'rgba(34,211,238,0.14)');
+    booth.addColorStop(1, 'rgba(0,0,0,0.62)');
+    X.fillStyle = booth;
+    X.strokeStyle = 'rgba(255,255,255,0.18)';
+    X.lineWidth = 1.5;
+    X.beginPath();
+    X.moveTo(-88, -56);
+    X.lineTo(78, -38);
+    X.lineTo(104, 82);
+    X.lineTo(-118, 92);
+    X.closePath();
+    X.fill();
+    X.stroke();
+    for (let stripe = 0; stripe < 5; stripe++) {
+      X.fillStyle = stripe % 2 ? 'rgba(255,214,10,0.12)' : 'rgba(236,72,153,0.14)';
+      X.beginPath();
+      X.moveTo(-88 + stripe * 35, -56 + stripe * 4);
+      X.lineTo(-62 + stripe * 35, -53 + stripe * 4);
+      X.lineTo(-40 + stripe * 30, 86);
+      X.lineTo(-72 + stripe * 30, 88);
+      X.closePath();
+      X.fill();
+    }
+    for (let target = 0; target < 4; target++) {
+      const tx = -54 + target * 42;
+      const ty = 6 + Math.sin(t * 1.2 + target) * 5;
+      X.strokeStyle = `hsla(${(target * 62 + t * 32) % 360},100%,66%,0.48)`;
+      X.lineWidth = 2;
+      X.beginPath();
+      X.ellipse(tx, ty, 13, 18, 0.2, 0, TAU);
+      X.stroke();
+      drawFacetCrystal(tx, ty, 5, target * 72 + 30, t + target);
+    }
+    X.restore();
+  }
+  X.restore();
+
+  // Neon tent silhouette
+  X.save();
+  X.strokeStyle = `hsla(${(t*1.5+270)%360}, 80%, 50%, 0.08)`;
+  X.lineWidth = 2;
+  X.beginPath();
+  X.moveTo(W*0.15, horizon);
+  X.lineTo(W*0.35, horizon - 120);
+  X.lineTo(W*0.5, horizon - 180);
+  X.lineTo(W*0.65, horizon - 120);
+  X.lineTo(W*0.85, horizon);
+  X.stroke();
+
+  // Tent peak flag
+  X.beginPath();
+  X.moveTo(W*0.5, horizon - 180);
+  X.lineTo(W*0.5 + 15, horizon - 195);
+  X.lineTo(W*0.5, horizon - 190);
+  X.strokeStyle = `hsla(${(t*3)%360}, 100%, 60%, 0.15)`;
+  X.stroke();
+  X.restore();
+}
+
+function drawNeonSigns() {
+  neonSigns.forEach(s => {
+    const flicker = Math.sin(t * 5 + s.hue) > -0.8 ? 1 : 0.3;
+    X.font = `${s.size}px 'Creepster', cursive`;
+    X.textAlign = 'center';
+    X.fillStyle = `hsla(${s.hue}, 100%, 65%, ${0.3 * flicker})`;
+    X.shadowColor = `hsla(${s.hue}, 100%, 60%, ${0.5 * flicker})`;
+    X.shadowBlur = 15;
+    X.fillText(s.text, s.x, s.y);
+    X.shadowBlur = 0;
+  });
+}
+
+function drawFacetCrystal(x, y, r, hue, spin = 0) {
+  X.save();
+  X.translate(x, y);
+  X.rotate(spin);
+  X.shadowColor = `hsla(${hue},100%,64%,0.9)`;
+  X.shadowBlur = r * 1.8;
+  const grad = X.createLinearGradient(-r, -r, r, r);
+  grad.addColorStop(0, 'rgba(255,255,255,0.96)');
+  grad.addColorStop(0.24, `hsla(${hue},100%,62%,0.9)`);
+  grad.addColorStop(0.62, `hsla(${(hue + 84) % 360},100%,56%,0.72)`);
+  grad.addColorStop(1, 'rgba(6,2,16,0.4)');
+  X.fillStyle = grad;
+  X.strokeStyle = 'rgba(255,255,255,0.78)';
+  X.lineWidth = Math.max(1, r * 0.08);
+  X.beginPath();
+  X.moveTo(0, -r);
+  X.lineTo(r * 0.72, 0);
+  X.lineTo(0, r);
+  X.lineTo(-r * 0.72, 0);
+  X.closePath();
+  X.fill();
+  X.stroke();
+  X.shadowBlur = 0;
+  X.strokeStyle = 'rgba(255,255,255,0.34)';
+  X.beginPath();
+  X.moveTo(0, -r);
+  X.lineTo(0, r);
+  X.moveTo(-r * 0.72, 0);
+  X.lineTo(r * 0.72, 0);
+  X.stroke();
+  X.restore();
+}
+
+function drawRadioactiveGlyph(size, hue) {
+  X.save();
+  X.globalCompositeOperation = 'screen';
+  X.strokeStyle = `hsla(${hue},100%,64%,0.72)`;
+  X.fillStyle = `hsla(${hue},100%,54%,0.22)`;
+  X.lineWidth = Math.max(1, size * 0.035);
+  X.beginPath();
+  X.arc(0, 0, size * 0.26, 0, TAU);
+  X.stroke();
+  for (let i = 0; i < 3; i++) {
+    X.save();
+    X.rotate(i * TAU / 3 + t * 0.5);
+    X.beginPath();
+    X.moveTo(0, -size * 0.08);
+    X.lineTo(size * 0.12, -size * 0.46);
+    X.lineTo(-size * 0.12, -size * 0.46);
+    X.closePath();
+    X.fill();
+    X.restore();
+  }
+  X.restore();
+}
+
+function drawEnemyCrystalLaserGun(e, side, hue) {
+  const s = e.size;
+  X.save();
+  X.translate(side * s * 0.72, s * 0.14);
+  X.rotate(side * (0.22 + Math.sin(e.frame * 1.4) * 0.05));
+  X.strokeStyle = `hsla(${hue},100%,66%,0.74)`;
+  X.lineWidth = Math.max(2, s * 0.06);
+  X.shadowColor = X.strokeStyle;
+  X.shadowBlur = 12;
+  X.beginPath();
+  X.moveTo(-side * s * 0.18, -s * 0.1);
+  X.lineTo(side * s * 0.2, s * 0.08);
+  X.stroke();
+
+  const gun = X.createLinearGradient(-s * 0.12, -s * 0.11, side * s * 0.92, s * 0.12);
+  gun.addColorStop(0, 'rgba(255,255,255,0.88)');
+  gun.addColorStop(0.3, `hsla(${hue},100%,58%,0.86)`);
+  gun.addColorStop(0.72, `hsla(${(hue + 96) % 360},100%,54%,0.78)`);
+  gun.addColorStop(1, 'rgba(6,4,16,0.82)');
+  X.fillStyle = gun;
+  X.strokeStyle = 'rgba(255,255,255,0.62)';
+  X.lineWidth = Math.max(1, s * 0.035);
+  X.beginPath();
+  X.moveTo(side * s * 0.02, -s * 0.18);
+  X.lineTo(side * s * 0.82, -s * 0.08);
+  X.lineTo(side * s * 1.02, s * 0.08);
+  X.lineTo(side * s * 0.16, s * 0.22);
+  X.closePath();
+  X.fill();
+  X.stroke();
+  drawFacetCrystal(side * s * 0.98, s * 0.02, Math.max(5, s * 0.17), hue + 40, t + side);
+  X.globalCompositeOperation = 'screen';
+  X.strokeStyle = `hsla(${(hue + t * 80) % 360},100%,65%,0.32)`;
+  X.lineWidth = Math.max(1.2, s * 0.035);
+  X.beginPath();
+  X.moveTo(side * s * 1.05, s * 0.02);
+  X.lineTo(side * s * 1.7, s * (0.02 + Math.sin(t * 3 + hue) * 0.06));
+  X.stroke();
+  X.restore();
+}
+
+function drawEnemySurfaceDetails(e, suitHue, reactorHue) {
+  const s = e.size;
+  X.save();
+
+  // Faceted translucent face shield over the round core.
+  X.beginPath();
+  X.ellipse(0, -s * 0.05, s * 0.78, s * 0.68, 0, 0, TAU);
+  X.clip();
+  const mask = X.createLinearGradient(-s * 0.7, -s * 0.78, s * 0.72, s * 0.72);
+  mask.addColorStop(0, 'rgba(255,255,255,0.24)');
+  mask.addColorStop(0.26, `hsla(${(suitHue + 170) % 360},100%,72%,0.18)`);
+  mask.addColorStop(0.7, 'rgba(0,0,0,0.28)');
+  mask.addColorStop(1, 'rgba(255,255,255,0.12)');
+  X.fillStyle = mask;
+  X.fillRect(-s, -s, s * 2, s * 2);
+  X.strokeStyle = 'rgba(255,255,255,0.26)';
+  X.lineWidth = Math.max(1, s * 0.028);
+  for (let i = -2; i <= 2; i++) {
+    X.beginPath();
+    X.moveTo(i * s * 0.18, -s * 0.72);
+    X.lineTo(i * s * 0.08, s * 0.55);
+    X.stroke();
+  }
+  X.strokeStyle = `hsla(${reactorHue},100%,70%,0.34)`;
+  for (let i = 0; i < 4; i++) {
+    X.beginPath();
+    X.arc(0, -s * 0.02, s * (0.24 + i * 0.14), -0.2, Math.PI * 1.12 + i * 0.04);
+    X.stroke();
+  }
+  X.restore();
+
+  // Cheek plates, stitches, and jaw hardware give each target a readable material surface.
+  X.save();
+  X.globalCompositeOperation = 'screen';
+  for (const side of [-1, 1]) {
+    X.fillStyle = `hsla(${(suitHue + side * 70 + 360) % 360},100%,62%,0.24)`;
+    X.strokeStyle = 'rgba(255,255,255,0.34)';
+    X.lineWidth = Math.max(1, s * 0.028);
+    X.beginPath();
+    X.moveTo(side * s * 0.18, -s * 0.02);
+    X.lineTo(side * s * 0.58, s * 0.08);
+    X.lineTo(side * s * 0.36, s * 0.38);
+    X.lineTo(side * s * 0.08, s * 0.24);
+    X.closePath();
+    X.fill();
+    X.stroke();
+    for (let stitch = 0; stitch < 4; stitch++) {
+      const yy = -s * 0.52 + stitch * s * 0.22;
+      X.strokeStyle = stitch % 2 ? 'rgba(255,255,255,0.36)' : `hsla(${reactorHue},100%,66%,0.42)`;
+      X.beginPath();
+      X.moveTo(side * s * 0.58, yy);
+      X.lineTo(side * s * 0.73, yy + side * s * 0.02);
+      X.stroke();
+    }
+  }
+  X.strokeStyle = `hsla(${reactorHue},100%,62%,0.42)`;
+  X.lineWidth = Math.max(1.2, s * 0.035);
+  X.beginPath();
+  X.moveTo(-s * 0.36, s * 0.44);
+  X.quadraticCurveTo(0, s * 0.62, s * 0.36, s * 0.44);
+  X.stroke();
+  for (let tooth = -2; tooth <= 2; tooth++) {
+    X.fillStyle = tooth % 2 ? 'rgba(255,244,214,0.82)' : 'rgba(210,255,86,0.78)';
+    X.beginPath();
+    X.moveTo(tooth * s * 0.1 - s * 0.04, s * 0.42);
+    X.lineTo(tooth * s * 0.1 + s * 0.04, s * 0.42);
+    X.lineTo(tooth * s * 0.1, s * 0.56);
+    X.closePath();
+    X.fill();
+  }
+  X.restore();
+
+  // Physical collar and shoulder plates sit outside the face so the silhouette is no longer a simple ball.
+  X.save();
+  X.strokeStyle = 'rgba(255,255,255,0.3)';
+  X.lineWidth = Math.max(1, s * 0.024);
+  for (let i = -3; i <= 3; i++) {
+    const x = i * s * 0.22;
+    const hue = (reactorHue + i * 27 + 360) % 360;
+    X.fillStyle = `hsla(${hue},100%,58%,0.34)`;
+    X.beginPath();
+    X.moveTo(x, s * 0.64);
+    X.lineTo(x + s * 0.16, s * 0.94);
+    X.lineTo(x - s * 0.16, s * 0.94);
+    X.closePath();
+    X.fill();
+    X.stroke();
+  }
+  for (const side of [-1, 1]) {
+    const armor = X.createLinearGradient(side * s * 0.44, -s * 0.26, side * s * 1.04, s * 0.48);
+    armor.addColorStop(0, 'rgba(255,255,255,0.5)');
+    armor.addColorStop(0.36, `hsla(${(suitHue + side * 54 + 360) % 360},100%,56%,0.56)`);
+    armor.addColorStop(1, 'rgba(0,0,0,0.48)');
+    X.fillStyle = armor;
+    X.strokeStyle = 'rgba(255,255,255,0.32)';
+    X.beginPath();
+    X.ellipse(side * s * 0.84, -s * 0.18, s * 0.3, s * 0.18, side * 0.35, 0, TAU);
+    X.fill();
+    X.stroke();
+  }
+  X.restore();
+}
+
+function drawEnemy(e) {
+  const wobble = Math.sin(e.frame) * 3;
+
+  X.save();
+  X.translate(e.x, e.y + wobble);
+
+  // Glow
+  const glowGrad = X.createRadialGradient(0, 0, 0, 0, 0, e.size * 2);
+  glowGrad.addColorStop(0, `hsla(${e.hue}, 100%, 50%, 0.1)`);
+  glowGrad.addColorStop(1, 'transparent');
+  X.fillStyle = glowGrad;
+  X.fillRect(-e.size*2, -e.size*2, e.size*4, e.size*4);
+
+  X.fillStyle = 'rgba(0,0,0,0.34)';
+  X.beginPath();
+  X.ellipse(0, e.size * 1.12, e.size * 1.18, e.size * 0.18, 0, 0, TAU);
+  X.fill();
+
+  // AI-art clown sprite (Vorath DNA) — drawn in place of the procedural figure when loaded.
+  // Per-type hue-rotate keeps the tank/clown/mutant variants visually distinct; a light
+  // breathing bob + squash gives it life until full articulation lands.
+  if (CIRC_CLOWN_OK) {
+    const suitHue2 = e.type === 'tank' ? 18 : e.type === 'clown' ? 318 : 112;
+    const breathe = 1 + Math.sin(e.frame * 0.9) * 0.03;
+    const iw = CIRC_CLOWN.naturalWidth, ih = CIRC_CLOWN.naturalHeight;
+    const hitPunch = (e.hitFlash > 0) ? 1.08 : 1;          // recoil pop on hit
+    const dh = e.size * 2.95 * breathe * hitPunch, dw = dh * (iw / ih);
+    X.save();
+    X.filter = `hue-rotate(${(suitHue2 - 300)}deg) saturate(1.15)`;
+    X.drawImage(CIRC_CLOWN, -dw / 2, -e.size * 1.42, dw, dh);
+    X.filter = 'none';
+    if (e.hitFlash > 0) {                                   // white damage flash
+      X.globalAlpha = Math.min(0.8, e.hitFlash / 6 * 0.8);
+      X.globalCompositeOperation = 'lighter';
+      X.drawImage(CIRC_CLOWN, -dw / 2, -e.size * 1.42, dw, dh);
+      X.globalAlpha = 1; X.globalCompositeOperation = 'source-over';
+      e.hitFlash -= 1;
+    }
+    X.restore();
+    X.restore();
+    return;
+  }
+
+  const suitHue = e.type === 'tank' ? 18 : e.type === 'clown' ? 318 : 112;
+  const suit = X.createLinearGradient(-e.size, -e.size * 0.2, e.size, e.size * 1.1);
+  suit.addColorStop(0, `hsla(${suitHue},100%,70%,0.86)`);
+  suit.addColorStop(0.36, `hsla(${(suitHue + 58) % 360},100%,54%,0.78)`);
+  suit.addColorStop(1, 'rgba(12,4,18,0.92)');
+  X.fillStyle = suit;
+  X.strokeStyle = 'rgba(255,255,255,0.38)';
+  X.lineWidth = Math.max(1.5, e.size * 0.04);
+  X.beginPath();
+  X.moveTo(-e.size * 0.55, e.size * 0.14);
+  X.lineTo(-e.size * 0.82, e.size * 0.9);
+  X.lineTo(0, e.size * 1.28);
+  X.lineTo(e.size * 0.82, e.size * 0.9);
+  X.lineTo(e.size * 0.55, e.size * 0.14);
+  X.closePath();
+  X.fill();
+  X.stroke();
+  X.save();
+  X.clip();
+  X.strokeStyle = 'rgba(255,255,255,0.28)';
+  X.lineWidth = Math.max(1, e.size * 0.04);
+  for (let stripe = -4; stripe <= 4; stripe++) {
+    X.beginPath();
+    X.moveTo(stripe * e.size * 0.24, e.size * 0.08);
+    X.lineTo(stripe * e.size * 0.08, e.size * 1.18);
+    X.stroke();
+  }
+  X.restore();
+
+  for (const side of [-1, 1]) {
+    X.strokeStyle = `hsla(${(suitHue + side * 86 + 360) % 360},100%,66%,0.78)`;
+    X.lineWidth = Math.max(4, e.size * 0.16);
+    X.lineCap = 'round';
+    X.shadowColor = X.strokeStyle;
+    X.shadowBlur = 10;
+    X.beginPath();
+    X.moveTo(side * e.size * 0.56, e.size * 0.24);
+    X.quadraticCurveTo(side * e.size * 1.0, e.size * 0.46, side * e.size * 1.16, e.size * 0.9);
+    X.stroke();
+    X.fillStyle = 'rgba(255,255,255,0.86)';
+    X.beginPath();
+    X.ellipse(side * e.size * 1.2, e.size * 0.94, e.size * 0.18, e.size * 0.13, side * 0.25, 0, TAU);
+    X.fill();
+    X.strokeStyle = `hsla(${suitHue},100%,64%,0.72)`;
+    X.lineWidth = Math.max(2, e.size * 0.07);
+    X.beginPath();
+    X.moveTo(side * e.size * 0.28, e.size * 1.08);
+    X.lineTo(side * e.size * 0.42, e.size * 1.46);
+    X.stroke();
+    X.fillStyle = '#05050a';
+    X.beginPath();
+    X.ellipse(side * e.size * 0.5, e.size * 1.52, e.size * 0.32, e.size * 0.12, side * 0.12, 0, TAU);
+    X.fill();
+  }
+  X.shadowBlur = 0;
+
+  // Body
+  X.beginPath();
+  X.arc(0, 0, e.size, 0, TAU);
+  const bodyGrad = X.createRadialGradient(-e.size*0.2, -e.size*0.2, 0, 0, 0, e.size);
+  bodyGrad.addColorStop(0, `hsla(${e.hue}, 70%, 45%, 0.9)`);
+  bodyGrad.addColorStop(0.7, `hsla(${e.hue}, 80%, 25%, 0.85)`);
+  bodyGrad.addColorStop(1, `hsla(${e.hue}, 90%, 15%, 0.8)`);
+  X.fillStyle = bodyGrad;
+  X.fill();
+
+  // Neon outline
+  X.strokeStyle = `hsla(${e.hue}, 100%, 65%, 0.6)`;
+  X.lineWidth = 2;
+  X.shadowColor = `hsla(${e.hue}, 100%, 60%, 0.5)`;
+  X.shadowBlur = 8;
+  X.stroke();
+  X.shadowBlur = 0;
+  drawEnemySurfaceDetails(e, suitHue, (suitHue + t * 90 + e.frame * 18) % 360);
+
+  // Radioactive carnival mutation: every enemy gets a clown silhouette pass.
+  const clownHue = e.type === 'tank' ? 26 : e.type === 'clown' ? 318 : 126;
+  const reactorHue = (clownHue + t * 90 + e.frame * 18) % 360;
+  drawRadioactiveGlyph(e.size, reactorHue);
+  X.save();
+  X.globalCompositeOperation = 'screen';
+  for (let stripe = -2; stripe <= 2; stripe++) {
+    const hue = (reactorHue + stripe * 38 + 160) % 360;
+    X.strokeStyle = `hsla(${hue},100%,64%,0.5)`;
+    X.lineWidth = Math.max(1.3, e.size * 0.038);
+    X.shadowColor = X.strokeStyle;
+    X.shadowBlur = 8;
+    X.beginPath();
+    X.moveTo(stripe * e.size * 0.15, -e.size * 0.72);
+    X.quadraticCurveTo(stripe * e.size * 0.06, 0, stripe * e.size * 0.18, e.size * 0.7);
+    X.stroke();
+  }
+  drawFacetCrystal(0, e.size * 0.48, Math.max(5, e.size * 0.16), reactorHue + 60, -t);
+  X.restore();
+  X.save();
+  X.globalCompositeOperation = 'screen';
+  X.strokeStyle = `hsla(${clownHue}, 100%, 66%, 0.72)`;
+  X.fillStyle = `hsla(${clownHue}, 100%, 58%, 0.34)`;
+  X.shadowColor = `hsla(${clownHue}, 100%, 62%, 0.75)`;
+  X.shadowBlur = 14;
+  for (let i = 0; i < 7; i++) {
+    const a = -Math.PI * 0.92 + i * Math.PI * 0.31;
+    const rx = Math.cos(a) * e.size * 0.78;
+    const ry = Math.sin(a) * e.size * 0.72 - e.size * 0.1;
+    X.beginPath();
+    X.arc(rx, ry, e.size * (e.type === 'tank' ? 0.14 : 0.18), 0, TAU);
+    X.fill();
+  }
+  X.restore();
+
+  // Toxic collar spikes and carnival face stripes.
+  X.save();
+  X.strokeStyle = `hsla(${(clownHue + 90) % 360}, 100%, 68%, 0.72)`;
+  X.lineWidth = Math.max(1.5, e.size * 0.045);
+  X.shadowColor = X.strokeStyle;
+  X.shadowBlur = 9;
+  for (const side of [-1, 1]) {
+    X.beginPath();
+    X.moveTo(side * e.size * 0.18, e.size * 0.12);
+    X.lineTo(side * e.size * 0.78, e.size * 0.42);
+    X.stroke();
+    X.beginPath();
+    X.moveTo(side * e.size * 0.12, -e.size * 0.36);
+    X.quadraticCurveTo(side * e.size * 0.46, -e.size * 0.58, side * e.size * 0.82, -e.size * 0.36);
+    X.stroke();
+  }
+  X.shadowBlur = 0;
+  X.restore();
+
+  // Rainbow neon crystal laser guns make the enemy silhouette read at arcade distance.
+  drawEnemyCrystalLaserGun(e, -1, (clownHue + 96) % 360);
+  drawEnemyCrystalLaserGun(e, 1, (clownHue + 190) % 360);
+
+  // Eyes (glowing)
+  const eyeOff = e.size * 0.25;
+  const eyeSize = e.size * 0.15;
+  for (let ex of [-eyeOff, eyeOff]) {
+    X.beginPath();
+    X.arc(ex, -e.size * 0.15, eyeSize, 0, TAU);
+    X.fillStyle = e.type === 'clown' ? '#ff006e' : e.type === 'tank' ? '#ff3300' : '#06d6a0';
+    X.shadowColor = X.fillStyle;
+    X.shadowBlur = 10;
+    X.fill();
+    X.shadowBlur = 0;
+    // Pupil
+    X.beginPath();
+    X.arc(ex, -e.size * 0.15, eyeSize * 0.4, 0, TAU);
+    X.fillStyle = '#000';
+    X.fill();
+  }
+
+  // Mouth
+  X.beginPath();
+  if (e.type === 'clown') {
+    // Big clown grin
+    X.arc(0, e.size * 0.15, e.size * 0.35, 0, Math.PI);
+    X.strokeStyle = '#ff006e';
+    X.lineWidth = 2;
+    X.stroke();
+  } else {
+    // Zombie groan mouth
+    X.ellipse(0, e.size * 0.2, e.size * 0.15, e.size * 0.1, 0, 0, TAU);
+    X.fillStyle = '#1a0020';
+    X.fill();
+  }
+
+  // Health bar for tanks
+  if (e.maxHp > 1) {
+    const barW = e.size * 1.5;
+    const barH = 4;
+    const barY = -e.size - 10;
+    X.fillStyle = 'rgba(255,0,0,0.3)';
+    X.fillRect(-barW/2, barY, barW, barH);
+    X.fillStyle = '#ff006e';
+    X.fillRect(-barW/2, barY, barW * (e.hp / e.maxHp), barH);
+  }
+
+  // Type-specific decorations
+  if (e.type === 'clown') {
+    // Clown nose
+    X.beginPath();
+    X.arc(0, 0, e.size * 0.12, 0, TAU);
+    X.fillStyle = '#ff006e';
+    X.fill();
+    // Split radioactive smile teeth
+    X.strokeStyle = '#eaff00';
+    X.lineWidth = 1;
+    for (let tx = -2; tx <= 2; tx++) {
+      X.beginPath();
+      X.moveTo(tx * e.size * 0.08, e.size * 0.15);
+      X.lineTo(tx * e.size * 0.08, e.size * 0.38);
+      X.stroke();
+    }
+    // Hat
+    X.beginPath();
+    X.moveTo(-e.size*0.4, -e.size*0.8);
+    X.lineTo(0, -e.size*1.3);
+    X.lineTo(e.size*0.4, -e.size*0.8);
+    X.fillStyle = `hsla(${e.hue}, 100%, 50%, 0.7)`;
+    X.fill();
+  } else if (e.type === 'zombie') {
+    // Mutant clown nose and leaking reactor cheek.
+    X.beginPath();
+    X.arc(0, 0, e.size * 0.1, 0, TAU);
+    X.fillStyle = '#eaff00';
+    X.shadowColor = '#eaff00';
+    X.shadowBlur = 9;
+    X.fill();
+    X.shadowBlur = 0;
+    X.fillStyle = 'rgba(57,255,20,0.48)';
+    X.beginPath();
+    X.arc(e.size * 0.28, e.size * 0.18, e.size * 0.08, 0, TAU);
+    X.fill();
+  }
+  if (e.type === 'tank') {
+    // Armor lines
+    X.strokeStyle = `hsla(${e.hue}, 60%, 40%, 0.5)`;
+    X.lineWidth = 3;
+    X.beginPath();
+    X.moveTo(-e.size * 0.6, -e.size * 0.4);
+    X.lineTo(e.size * 0.6, -e.size * 0.4);
+    X.moveTo(-e.size * 0.5, e.size * 0.3);
+    X.lineTo(e.size * 0.5, e.size * 0.3);
+    X.stroke();
+    X.beginPath();
+    X.arc(0, 0, e.size * 0.11, 0, TAU);
+    X.fillStyle = '#ff006e';
+    X.shadowColor = '#ff006e';
+    X.shadowBlur = 12;
+    X.fill();
+    X.shadowBlur = 0;
+  }
+
+  X.restore();
+}
+
+function drawBalloon(b) {
+  if (!b.alive) return;
+  const wobbleX = Math.sin(b.wobble) * 8;
+
+  X.save();
+  X.translate(b.x + wobbleX, b.y);
+
+  // String
+  X.beginPath();
+  X.moveTo(0, b.size);
+  X.quadraticCurveTo(wobbleX * 0.5, b.size + b.string * 0.5, -wobbleX * 0.3, b.size + b.string);
+  X.strokeStyle = `hsla(${b.hue}, 90%, 76%, 0.42)`;
+  X.lineWidth = 1.5;
+  X.stroke();
+  X.strokeStyle = 'rgba(255,255,255,0.22)';
+  for (let knot = 0; knot < 3; knot++) {
+    X.beginPath();
+    X.moveTo(-4 + knot * 4, b.size + 2);
+    X.lineTo(4 - knot * 2, b.size + 10);
+    X.stroke();
+  }
+
+  // Balloon body
+  X.beginPath();
+  X.ellipse(0, 0, b.size * 0.8, b.size, 0, 0, TAU);
+  const bGrad = X.createRadialGradient(-b.size*0.2, -b.size*0.3, 0, 0, 0, b.size);
+  bGrad.addColorStop(0, `hsla(${b.hue}, 95%, 84%, 0.9)`);
+  bGrad.addColorStop(0.38, `hsla(${b.hue}, 90%, 52%, 0.78)`);
+  bGrad.addColorStop(1, `hsla(${(b.hue + 70) % 360}, 90%, 22%, 0.78)`);
+  X.fillStyle = bGrad;
+  X.fill();
+  X.strokeStyle = `hsla(${b.hue}, 100%, 74%, 0.7)`;
+  X.lineWidth = 2;
+  X.stroke();
+  X.save();
+  X.beginPath();
+  X.ellipse(0, 0, b.size * 0.76, b.size * 0.96, 0, 0, TAU);
+  X.clip();
+  X.strokeStyle = 'rgba(255,255,255,0.22)';
+  X.lineWidth = Math.max(1, b.size * 0.055);
+  for (let rib = -2; rib <= 2; rib++) {
+    X.beginPath();
+    X.ellipse(rib * b.size * 0.08, 0, b.size * (0.22 + Math.abs(rib) * 0.06), b.size * 0.96, rib * 0.22, 0, TAU);
+    X.stroke();
+  }
+  X.restore();
+
+  // Highlight
+  X.beginPath();
+  X.ellipse(-b.size*0.2, -b.size*0.3, b.size*0.15, b.size*0.25, -0.3, 0, TAU);
+  X.fillStyle = `hsla(0, 0%, 100%, 0.42)`;
+  X.fill();
+
+  // Trap indicator (subtle skull)
+  if (b.isTrap) {
+    X.fillStyle = 'rgba(0,0,0,0.3)';
+    X.beginPath();
+    X.ellipse(0, b.size * 0.05, b.size * 0.5, b.size * 0.36, 0, 0, TAU);
+    X.fill();
+    X.font = `${b.size*0.48}px serif`;
+    X.textAlign = 'center';
+    X.fillStyle = `hsla(0, 0%, 100%, 0.72)`;
+    X.fillText('\u2620', 0, 5);
+  } else {
+    X.fillStyle = 'rgba(255,255,255,0.34)';
+    X.beginPath();
+    X.arc(0, b.size * 0.08, b.size * 0.28, 0, TAU);
+    X.fill();
+    X.strokeStyle = `hsla(${(b.hue + 120) % 360}, 100%, 68%, 0.72)`;
+    X.lineWidth = Math.max(1, b.size * 0.08);
+    X.beginPath();
+    X.arc(0, b.size * 0.08, b.size * 0.44, 0, TAU);
+    X.moveTo(-b.size * 0.44, b.size * 0.08);
+    X.lineTo(b.size * 0.44, b.size * 0.08);
+    X.moveTo(0, -b.size * 0.36);
+    X.lineTo(0, b.size * 0.52);
+    X.stroke();
+  }
+
+  X.restore();
+}
+
+function drawParticles() {
+  particles.forEach(p => {
+    X.beginPath();
+    X.arc(p.x, p.y, p.size * p.life, 0, TAU);
+    X.fillStyle = `hsla(${p.hue}, 100%, 65%, ${p.life})`;
+    X.shadowColor = `hsla(${p.hue}, 100%, 65%, ${p.life * 0.5})`;
+    X.shadowBlur = 6;
+    X.fill();
+    X.shadowBlur = 0;
+  });
+}
+
+function drawConfetti() {
+  confetti.forEach(c => {
+    X.save();
+    X.translate(c.x, c.y);
+    X.rotate(c.rot);
+    X.fillStyle = `hsla(${c.hue}, 100%, 65%, ${c.life})`;
+    X.fillRect(-c.size/2, -c.size/4, c.size, c.size/2);
+    X.restore();
+  });
+}
+
+function drawPlasmaBeams() {
+  beamTrails.forEach(b => {
+    const a = Math.max(0, b.life);
+    X.save();
+    X.globalCompositeOperation = 'screen';
+    X.lineCap = 'round';
+    X.shadowColor = `hsla(${b.hue},100%,65%,${a})`;
+    X.shadowBlur = 26 * a;
+    X.strokeStyle = `hsla(${b.hue},100%,64%,${0.72 * a})`;
+    X.lineWidth = b.width * a;
+    X.beginPath();
+    X.moveTo(b.x0, b.y0);
+    X.lineTo(b.x1, b.y1);
+    X.stroke();
+    X.strokeStyle = `rgba(255,255,255,${0.82 * a})`;
+    X.lineWidth = Math.max(1.5, b.width * 0.22 * a);
+    X.beginPath();
+    X.moveTo(b.x0, b.y0);
+    X.lineTo(b.x1, b.y1);
+    X.stroke();
+    for (let i = 0; i < 3; i++) {
+      const f = i / 2;
+      const px = b.x0 + (b.x1 - b.x0) * f;
+      const py = b.y0 + (b.y1 - b.y0) * f;
+      X.beginPath();
+      X.arc(px, py, (6 + i * 4) * a, 0, TAU);
+      X.fillStyle = `hsla(${(b.hue + i * 42) % 360},100%,62%,${0.22 * a})`;
+      X.fill();
+    }
+    if (b.crystal) {
+      const dx = b.x1 - b.x0;
+      const dy = b.y1 - b.y0;
+      const len = Math.hypot(dx, dy) || 1;
+      const nx = -dy / len;
+      const ny = dx / len;
+      for (let i = 0; i < 8; i++) {
+        const f = (i + 1) / 9;
+        const wave = Math.sin(t * 6 + i + b.twist) * 8;
+        drawFacetCrystal(
+          b.x0 + dx * f + nx * wave,
+          b.y0 + dy * f + ny * wave,
+          Math.max(4, b.width * (0.26 + i * 0.025) * a),
+          b.hue + i * 38,
+          t + i
+        );
+      }
+    }
+    X.restore();
+  });
+}
+
+function drawPlayerLaserCannon() {
+  const baseX = W * 0.5;
+  const baseY = H + 18;
+  const aim = Math.atan2(mouseY - baseY, mouseX - baseX);
+  X.save();
+  X.translate(baseX, baseY);
+  X.rotate(aim + Math.PI / 2);
+  X.globalCompositeOperation = 'screen';
+  X.shadowColor = `hsla(${(t * 80) % 360},100%,64%,0.9)`;
+  X.shadowBlur = 30;
+  const cannon = X.createLinearGradient(-20, -96, 20, 10);
+  cannon.addColorStop(0, 'rgba(255,255,255,0.96)');
+  cannon.addColorStop(0.24, 'rgba(34,211,238,0.9)');
+  cannon.addColorStop(0.52, 'rgba(236,72,153,0.82)');
+  cannon.addColorStop(0.78, 'rgba(245,197,66,0.74)');
+  cannon.addColorStop(1, 'rgba(5,8,18,0.94)');
+  X.fillStyle = cannon;
+  X.strokeStyle = 'rgba(255,255,255,0.7)';
+  X.lineWidth = 2;
+  X.beginPath();
+  X.moveTo(0, -118);
+  X.lineTo(21, -54);
+  X.lineTo(36, 2);
+  X.lineTo(10, -8);
+  X.lineTo(0, 10);
+  X.lineTo(-10, -8);
+  X.lineTo(-36, 2);
+  X.lineTo(-21, -54);
+  X.closePath();
+  X.fill();
+  X.stroke();
+  drawFacetCrystal(0, -88, 18, (t * 96) % 360, t * 2);
+  drawFacetCrystal(-23, -35, 10, 146, -t);
+  drawFacetCrystal(23, -35, 10, 310, t);
+  for (let i = 0; i < 5; i++) {
+    X.strokeStyle = `hsla(${(t * 90 + i * 42) % 360},100%,64%,0.42)`;
+    X.lineWidth = 1.2;
+    X.beginPath();
+    X.moveTo(-18 + i * 9, -8);
+    X.lineTo(-28 + i * 14, 48);
+    X.stroke();
+  }
+  X.restore();
+}
+
+function drawMuzzleFlash() {
+  if (muzzleFlash <= 0) return;
+  const alpha = muzzleFlash / 6;
+  const flashGrad = X.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 60);
+  flashGrad.addColorStop(0, `hsla(40, 100%, 90%, ${alpha * 0.4})`);
+  flashGrad.addColorStop(0.3, `hsla(30, 100%, 70%, ${alpha * 0.2})`);
+  flashGrad.addColorStop(1, 'transparent');
+  X.fillStyle = flashGrad;
+  X.fillRect(mouseX - 60, mouseY - 60, 120, 120);
+}
+
+// === UPDATE ===
+function update() {
+  t += 0.05;
+
+  // Combo decay
+  if (comboTimer > 0) {
+    comboTimer--;
+    if (comboTimer <= 0) combo = 0;
+  }
+  updateComboDisplay();
+
+  // Reload
+  if (reloading) {
+    reloadTimer--;
+    if (reloadTimer <= 0) {
+      reloading = false;
+      ammo = maxAmmo;
+      updateAmmoDisplay();
+    }
+  }
+
+  // Muzzle flash decay
+  if (muzzleFlash > 0) muzzleFlash--;
+  if (screenShake > 0) screenShake *= 0.85;
+
+  // Wave management
+  if (enemies.length === 0 && waveTimer <= 0) {
+    waveTimer = waveDelay;
+  }
+  if (waveTimer > 0) {
+    waveTimer--;
+    if (waveTimer <= 0) {
+      wave++;
+      document.getElementById('wave-val').textContent = wave;
+      spawnWave();
+    }
+  }
+
+  // Update enemies
+  enemies.forEach(e => {
+    e.x += e.vx;
+    e.frame += 0.08;
+
+    if (e.type === 'clown') {
+      e.y += Math.sin(t * e.zigFreq) * e.zigAmp * 0.03;
+    } else {
+      e.y += e.vy;
+    }
+
+    // Enemy reaches center = damage player
+    if (e.x > W * 0.3 && e.x < W * 0.7 && e.vx !== 0) {
+      e.attackTimer++;
+      if (e.attackTimer > 120) { // ~2 seconds in kill zone
+        hp--;
+        e.attackTimer = 0;
+        screenShake = 12;
+        updateHpDisplay();
+
+        // Damage flash
+        X.fillStyle = 'rgba(255, 0, 50, 0.2)';
+        X.fillRect(0, 0, W, H);
+
+        if (hp <= 0) gameOver();
+      }
+    }
+  });
+
+  // Remove off-screen enemies
+  enemies = enemies.filter(e => e.x > -100 && e.x < W + 100);
+
+  // Update particles
+  particles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.15;
+    p.life -= 0.02;
+  });
+  particles = particles.filter(p => p.life > 0);
+
+  // Update confetti
+  confetti.forEach(c => {
+    c.x += c.vx;
+    c.y += c.vy;
+    c.vy += 0.08;
+    c.vx *= 0.99;
+    c.rot += c.rotV;
+    c.life -= 0.012;
+  });
+  confetti = confetti.filter(c => c.life > 0);
+
+  // Update plasma trails
+  beamTrails.forEach(b => { b.life -= 0.16; });
+  beamTrails = beamTrails.filter(b => b.life > 0);
+
+  // Update balloons
+  balloons.forEach(b => {
+    if (!b.alive) return;
+    b.y += b.vy;
+    b.x += b.vx + Math.sin(t + b.wobble) * 0.3;
+    b.wobble += 0.02;
+  });
+  balloons = balloons.filter(b => b.alive && b.y > -80);
+  if (balloons.length < 6 && Math.random() < 0.02) spawnBalloon();
+}
+
+// === GAME FLOW ===
+function startGame() {
+  document.getElementById('title-screen').style.display = 'none';
+  document.getElementById('game-over').style.display = 'none';
+  document.getElementById('hud').style.display = 'flex';
+
+  try { const a = cAC(); if (a && a.state === 'suspended') a.resume(); } catch(e){}
+  startCircusMusic();
+  gameActive = true;
+  score = 0; combo = 0; maxCombo = 0; hp = maxHp; ammo = maxAmmo;
+  wave = 0; waveTimer = 60;
+  enemies = []; particles = []; confetti = []; beamTrails = [];
+  t = 0;
+
+  initBgStars();
+  initNeonSigns();
+  initBalloons();
+  updateAmmoDisplay();
+  updateHpDisplay();
+  updateScoreDisplay();
+  document.getElementById('wave-val').textContent = '1';
+}
+
+function runPlaytestAttract() {
+  mouseX = W * 0.52;
+  mouseY = H * 0.46;
+  crosshair.style.left = mouseX + 'px';
+  crosshair.style.top = mouseY + 'px';
+  startGame();
+  wave = 1;
+  waveTimer = 0;
+  document.getElementById('wave-val').textContent = '1';
+  for (let i = 0; i < 10; i++) {
+    spawnEnemy();
+  }
+  enemies.forEach((e, i) => {
+    e.x = W * (0.12 + (i % 5) * 0.19);
+    e.y = H * (0.24 + Math.floor(i / 5) * 0.24);
+    e.vx = (i % 2 ? -0.45 : 0.45);
+    e.vy = Math.sin(i) * 0.12;
+    e.type = i % 3 === 0 ? 'tank' : i % 3 === 1 ? 'clown' : 'zombie';
+    e.hue = (i * 47 + 88) % 360;
+    e.frame = i * 0.7;
+    e.attackTimer = 0;
+  });
+  for (let i = 0; i < 4; i++) {
+    beamTrails.push({
+      x0: W * 0.5 + (i - 1.5) * 10,
+      y0: H + 18,
+      x1: W * (0.22 + i * 0.16),
+      y1: H * (0.32 + (i % 2) * 0.18),
+      life: 1,
+      width: 12 + i * 2,
+      hue: i * 72,
+      crystal: true,
+      twist: i
+    });
+  }
+}
+
+function gameOver() {
+  gameActive = false;
+  stopCircusMusic();
+  document.getElementById('hud').style.display = 'none';
+  document.getElementById('game-over').style.display = 'flex';
+  document.getElementById('final-score').textContent = score.toLocaleString() + ' TICKETS';
+}
+
+// === MAIN LOOP ===
+initBgStars();
+initNeonSigns();
+
+function loop() {
+  if (gameActive) {
+    update();
+
+    // Screen shake
+    X.save();
+    if (screenShake > 0.5) {
+      X.translate((Math.random()-0.5)*screenShake, (Math.random()-0.5)*screenShake);
+    }
+
+    drawBg();
+    drawNeonSigns();
+    balloons.forEach(b => drawBalloon(b));
+    enemies.forEach(e => drawEnemy(e));
+    drawParticles();
+    drawConfetti();
+    drawPlasmaBeams();
+    drawPlayerLaserCannon();
+    drawMuzzleFlash();
+    drawCrosshair();
+
+    // Combo border glow
+    if (combo >= 10) {
+      const borderAlpha = Math.min(combo / 100, 0.4);
+      const borderHue = (t * 8) % 360;
+      X.strokeStyle = `hsla(${borderHue}, 100%, 60%, ${borderAlpha})`;
+      X.lineWidth = 4;
+      X.shadowColor = `hsla(${borderHue}, 100%, 60%, ${borderAlpha})`;
+      X.shadowBlur = 20;
+      X.strokeRect(2, 2, W-4, H-4);
+      X.shadowBlur = 0;
+    }
+
+    X.restore();
+  } else {
+    // Title screen background animation
+    drawBg();
+    drawNeonSigns();
+  }
+
+  requestAnimationFrame(loop);
+}
+if (new URLSearchParams(location.search).has('playtest')) {
+  setTimeout(runPlaytestAttract, 80);
+}
+loop();
+</script>
+</body>
+</html>

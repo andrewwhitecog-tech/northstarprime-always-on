@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<title>Vorathic Reef Tank — Living Periodic Table</title>
+<style>
+* { margin: 0; padding: 0; }
+body { overflow: hidden; background: #000; }
+canvas { display: block; width: 100vw; height: 100vh; }
+#info {
+  position: fixed; bottom: 10px; left: 10px; color: #c9a84c44;
+  font: 10px monospace; pointer-events: none; z-index: 10;
+}
+</style>
+</head><body>
+<canvas id="c"></canvas>
+<div id="info">VORATHIC REEF TANK — Living Periodic Table — Each organism is an element</div>
+<script>
+const c = document.getElementById('c');
+const gl = c.getContext('webgl2') || c.getContext('webgl');
+function resize() { c.width = innerWidth; c.height = innerHeight; gl.viewport(0,0,c.width,c.height); }
+addEventListener('resize', resize); resize();
+
+const vs = `attribute vec2 p; void main(){gl_Position=vec4(p,0,1);}`;
+const fs = `
+precision highp float;
+uniform float t;
+uniform vec2 r;
+
+#define PI 3.14159265359
+#define TAU 6.28318530718
+#define PHI 1.61803398875
+
+// ════════════════════════════════════════════
+// UTILITY
+// ════════════════════════════════════════════
+float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float noise(vec2 p){
+    vec2 i=floor(p),f=fract(p); f=f*f*(3.-2.*f);
+    return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);
+}
+float fbm(vec2 p){
+    float v=0.,a=.5; mat2 rot=mat2(.8,.6,-.6,.8);
+    for(int i=0;i<6;i++){v+=a*noise(p);p=rot*p*2.;a*=.5;} return v;
+}
+vec3 rainbow(float t){return .5+.5*cos(TAU*(t+vec3(0,.33,.67)));}
+
+// ════════════════════════════════════════════
+// REAL ELEMENTS — Mundane Substrates
+// ════════════════════════════════════════════
+
+// Element: JELLYFISH (bioluminescent — surreal_alien_art reference)
+vec3 jellyfish(vec2 uv, float time, float id) {
+    float cycle = 80. + id * 25.;
+    float phase = mod(time + id * 30., cycle) / cycle;
+    float vis = smoothstep(0.,.1,phase) * smoothstep(1.,.85,phase);
+    if(vis < .001) return vec3(0);
+
+    vec2 pos = vec2(mix(-.8,.8,phase), sin(time*.12+id*3.)*.15 + .1 - id*.25);
+    vec2 p = (uv - pos) * (.7 + id*.3);
+
+    // Bell dome
+    vec2 bell = p * vec2(1., 1.3);
+    bell.y -= abs(bell.x) * .3;
+    float pulse = sin(time * 1.5 + id * PI) * .02;
+    float dome = smoothstep(.12+pulse,.11+pulse, length(bell*(1.-pulse*3.)));
+    dome *= smoothstep(-.01,.01,-p.y+.05);
+
+    // Tendrils — 9 threads (the Nine Threads)
+    float tendrils = 0.;
+    for(int i=0;i<9;i++){
+        float fi=float(i);
+        float xo = (fi-4.)*.018;
+        float wave = sin(p.y*15.+time*.8+fi*1.3+id*2.)*.01*(1.+fi*.3);
+        float tend = smoothstep(.003,0.,abs(p.x-xo-wave));
+        tend *= smoothstep(0.,.02,p.y)* smoothstep(.35,.05,p.y);
+        tendrils += tend;
+    }
+
+    // Rainbow tendril color (each tendril a different thread color)
+    vec3 tCol = rainbow(p.y*2.+time*.1+p.x*3.+id);
+
+    // Bioluminescent glow (cyan-magenta pulse)
+    vec3 glow = mix(vec3(.1,.8,.9), vec3(.7,.2,.9), sin(time*.3+id)*.5+.5);
+    float halo = smoothstep(.25,0.,length(p-vec2(0,.03)))*.15;
+
+    vec3 col = dome * glow * .8 + tendrils * tCol * .4 + glow * halo;
+    return col * vis;
+}
+
+// Element: CORAL (branching fractal — roots/neural network)
+vec3 coral(vec2 uv, float time) {
+    vec3 col = vec3(0);
+    // Multiple coral branches from bottom
+    for(int b=0; b<5; b++){
+        float fb = float(b);
+        float baseX = (fb-2.)*.25;
+        vec2 base = vec2(baseX, -.5);
+
+        // Branch upward with swaying
+        for(int seg=0; seg<12; seg++){
+            float fs = float(seg);
+            float sway = sin(time*.3+fb*2.+fs*.5)*.02;
+            vec2 branch = base + vec2(sway, fs*.04);
+            float d = length(uv - branch);
+            float thick = .008 - fs*.0005;
+            float glow = smoothstep(thick+.005, thick, d);
+
+            // Branch color: warm coral shifting to cool tips
+            vec3 bCol = mix(
+                vec3(.9,.3,.2),  // warm coral base
+                vec3(.9,.5,.8),  // pink tips
+                fs/12.
+            );
+            // Add subtle rainbow on tips
+            bCol = mix(bCol, rainbow(fs/12.+time*.02), .2);
+            col += glow * bCol * .3;
+
+            // Sub-branches (fractal-ish)
+            if(seg > 3 && mod(float(seg), 2.0) == 0.0){
+                float dir = (mod(float(seg), 4.0) == 0.0) ? 1. : -1.;
+                for(int sub=0; sub<4; sub++){
+                    float fsub = float(sub);
+                    vec2 subBranch = branch + vec2(dir*fsub*.015+sway*.5, fsub*.02);
+                    float sd = length(uv - subBranch);
+                    float sGlow = smoothstep(.005,.003, sd);
+                    col += sGlow * bCol * .15;
+                }
+            }
+        }
+    }
+    return col;
+}
+
+// Element: ANEMONE (sacred geometry — flower of life breathing)
+vec3 anemone(vec2 uv, float time) {
+    vec2 pos = vec2(.3, -.35);
+    vec2 p = uv - pos;
+    float r = length(p);
+    float a = atan(p.y, p.x);
+
+    // Tentacles radiating outward (flower of life arrangement)
+    float tentacles = 0.;
+    for(int i=0; i<12; i++){
+        float fi = float(i);
+        float angle = fi * TAU / 12.;
+        float sway = sin(time*.5+fi*1.1)*.08;
+        vec2 dir = vec2(cos(angle+sway), sin(angle+sway));
+        // Line from center outward
+        float proj = dot(p, dir);
+        float perp = length(p - dir * clamp(proj, 0., .15));
+        float tend = smoothstep(.006, .002, perp) * smoothstep(0.,.02,proj) * smoothstep(.15,.05,proj);
+        tentacles += tend;
+    }
+
+    // Central disc (guilloché rosette)
+    float disc = smoothstep(.03,.025, r);
+    float guill = sin(a*12.+r*80.-time*.5)*.5+.5;
+    guill *= sin(a*8.-r*60.+time*.3)*.5+.5;
+    disc *= guill;
+
+    // Color: neon green tips, golden center
+    vec3 col = vec3(0);
+    col += tentacles * vec3(.1,.9,.3) * .5;
+    col += disc * vec3(.9,.7,.2) * .4;
+    // Breathing glow
+    float breathe = sin(time*.4)*.15+.85;
+    col *= breathe;
+
+    return col;
+}
+
+// ════════════════════════════════════════════
+// IMAGINARY ELEMENTS — Magical Transforms
+// ════════════════════════════════════════════
+
+// Flower of Life (floating, ghostly)
+float flowerOfLife(vec2 uv, float scale, float rot) {
+    float c2=cos(rot),s2=sin(rot);
+    uv = mat2(c2,-s2,s2,c2) * uv * scale;
+    float d = smoothstep(.006,0.,abs(length(uv)-.3));
+    for(int i=0;i<6;i++){
+        float a = float(i)*TAU/6.;
+        vec2 p = vec2(cos(a),sin(a))*.3;
+        d += smoothstep(.005,0.,abs(length(uv-p)-.3));
+    }
+    return clamp(d,0.,1.);
+}
+
+// Eye (the chromatic eye — central consciousness)
+vec3 centralEye(vec2 uv, float time) {
+    vec2 pos = vec2(0., .15);
+    vec2 p = uv - pos;
+    float r = length(p);
+    float a = atan(p.y, p.x);
+
+    // Visibility: fades in and out slowly
+    float vis = sin(time*.15)*.3+.5;
+    if(vis < .05) return vec3(0);
+
+    // Iris region
+    float irisR = smoothstep(.08,.07,r) * smoothstep(.02,.03,r);
+    // Rainbow spiral in iris (chromatic_eye reference)
+    float spiral = sin(a*3. - log(max(r,.001))*15. + time*.5);
+    spiral = spiral*.5+.5;
+    vec3 irisCol = rainbow(spiral + a/TAU + time*.05);
+
+    // Pupil
+    float breathe = sin(time*.5)*.005+.025;
+    float pupil = smoothstep(breathe+.005, breathe, r);
+
+    // Eye shape (almond)
+    float eyeShape = smoothstep(.015,0., abs(length(p*vec2(1.,2.5))-.09));
+
+    // Outer glow
+    float glow = smoothstep(.15,0., r) * .1;
+    vec3 glowCol = rainbow(time*.02) * glow;
+
+    vec3 col = vec3(0);
+    col += irisCol * irisR * vis;
+    col += pupil * vec3(.01) * vis; // dark pupil
+    col += eyeShape * vec3(.8,.7,.5) * .3 * vis;
+    col += glowCol * vis;
+
+    return col;
+}
+
+// ════════════════════════════════════════════
+// FORCES — Color/Effect Transforms
+// ════════════════════════════════════════════
+
+// Caustics (underwater light patterns)
+float caustics(vec2 uv, float time) {
+    vec2 p = uv * 3.;
+    float c = 0.;
+    for(int i=0; i<3; i++){
+        float fi = float(i);
+        p += vec2(sin(p.y+time*.2+fi), cos(p.x+time*.15+fi*1.3));
+        c += sin(p.x*2.+time*.3) * sin(p.y*2.+time*.25);
+    }
+    return c * .5 + .5;
+}
+
+// Particle field (plankton/sacred dust)
+vec3 particles(vec2 uv, float time) {
+    vec3 col = vec3(0);
+    for(int i=0; i<18; i++){
+        float fi = float(i);
+        float seed = fi * 7.31;
+        vec2 pos = vec2(
+            sin(time*.05+seed*2.3)*.7 + cos(time*.03+seed)*.3,
+            sin(time*.04+seed*1.7)*.4 + cos(time*.06+seed*3.1)*.2
+        );
+        float d = length(uv - pos);
+        float glow = smoothstep(.008,0.,d);
+        float halo = smoothstep(.025,0.,d)*.2;
+        vec3 pCol = rainbow(fi/18. + time*.02);
+        float flicker = sin(time*3.+seed*5.)*.2+.8;
+        col += (glow+halo) * pCol * flicker * .25;
+    }
+    return col;
+}
+
+// ════════════════════════════════════════════
+// MAIN — The Reef Ecosystem
+// ════════════════════════════════════════════
+void main() {
+    vec2 uv = (gl_FragCoord.xy - r*.5) / min(r.x, r.y);
+    vec3 col = vec3(0);
+
+    // Deep ocean gradient (force: black_void -> deep blue)
+    float depth = uv.y*.5+.5;
+    col += mix(vec3(.01,.02,.05), vec3(.02,.05,.12), depth);
+
+    // Caustic light from above
+    float caust = caustics(uv, t);
+    col += vec3(.05,.08,.12) * caust * smoothstep(-.2,.5,uv.y) * .3;
+
+    // Nebula-like water color (fbm clouds)
+    float n1 = fbm(uv*2.+t*.015);
+    float n2 = fbm(uv*3.-t*.01+5.);
+    col += rainbow(n1*.5+t*.008) * n1 * .04;
+    col += vec3(.05,.1,.15) * n2 * .06;
+
+    // ── REAL ELEMENTS ──
+
+    // Coral reef (bottom, branching fractals = roots/neural network)
+    col += coral(uv, t);
+
+    // Anemone (sacred geometry flower of life, breathing)
+    col += anemone(uv, t);
+
+    // Jellyfish x3 (bioluminescence, Nine Thread tendrils)
+    col += jellyfish(uv, t, 0.);
+    col += jellyfish(uv, t, 1.) * .7;
+    col += jellyfish(uv, t, 2.) * .5;
+
+    // ── IMAGINARY ELEMENTS ──
+
+    // Flower of Life (ghostly, floating, rotating)
+    float fol = flowerOfLife(uv - vec2(-.25, .0), 3., t*.03);
+    col += fol * rainbow(t*.01+.3) * .12 * (sin(t*.2)*.15+.85);
+
+    // Metatron's Cube (deeper, subtle)
+    float fol2 = flowerOfLife(uv - vec2(.25, -.1), 4., -t*.02);
+    col += fol2 * vec3(.8,.7,.3) * .06;
+
+    // ── DOUBLY MAGIC ──
+
+    // The Central Eye (where mundane becomes magical)
+    col += centralEye(uv, t);
+
+    // Sacred dust particles (the Nine Thread colors)
+    col += particles(uv, t);
+
+    // ── FORCES ──
+
+    // Vignette (depth/pressure)
+    col *= 1. - .3*length(uv*.7);
+
+    // Subtle film grain (organic texture)
+    col += (hash(uv*t)-.5)*.01;
+
+    // Gold authority accent (faint border shimmer)
+    float border = smoothstep(.01,0., abs(abs(uv.x)-.48)) + smoothstep(.01,0., abs(abs(uv.y)-.48));
+    col += border * vec3(.8,.7,.3) * .03 * (sin(t*.5)*.3+.7);
+
+    gl_FragColor = vec4(col, 1.);
+}`;
+
+function compile(src,type){
+    const s=gl.createShader(type); gl.shaderSource(s,src); gl.compileShader(s);
+    if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(s));
+    return s;
+}
+const prog=gl.createProgram();
+gl.attachShader(prog,compile(vs,gl.VERTEX_SHADER));
+gl.attachShader(prog,compile(fs,gl.FRAGMENT_SHADER));
+gl.linkProgram(prog); gl.useProgram(prog);
+
+const buf=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+const p=gl.getAttribLocation(prog,'p');
+gl.enableVertexAttribArray(p); gl.vertexAttribPointer(p,2,gl.FLOAT,false,0,0);
+
+const tLoc=gl.getUniformLocation(prog,'t');
+const rLoc=gl.getUniformLocation(prog,'r');
+
+function render(time){
+    gl.uniform1f(tLoc,time*.001);
+    gl.uniform2f(rLoc,c.width,c.height);
+    gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+    requestAnimationFrame(render);
+}
+requestAnimationFrame(render);
+</script>
+</body></html>

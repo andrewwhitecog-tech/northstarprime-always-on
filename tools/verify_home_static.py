@@ -15,11 +15,15 @@ LOCAL_REF_RE = re.compile(r"file://|[A-Z]:\\", re.IGNORECASE)
 HREF_RE = re.compile(r"href=['\"](?P<path>/[^'\"]*)['\"]", re.IGNORECASE)
 ALLOWED_LOCAL = (
     "/static/",
+    "/arcade",
     "/idc-programming",
+    "/idr",
     "/continuity-atlas/",
     "/contact/",
     "/founders",
     "/mystery-school",
+    "/services",
+    "/site.webmanifest",
     "/health",
 )
 
@@ -49,10 +53,20 @@ def main() -> None:
         raise SystemExit("Homepage is not the full frozen NSP home")
     if LOCAL_REF_RE.search(html):
         raise SystemExit("Homepage contains a local filesystem reference")
+    if "fetch('/api/pulse')" in html:
+        raise SystemExit("Homepage still depends on the server pulse API")
+    snapshot_url = "/services/idr_now_playing_snapshot.json"
+    if html.count(f"fetch('{snapshot_url}')") < 3:
+        raise SystemExit("Homepage pulse consumers do not use the frozen snapshot")
+    if not (ROOT / snapshot_url.lstrip("/")).is_file():
+        raise SystemExit("Homepage pulse snapshot is missing")
     if 'href="/continuity-atlas/"' not in html:
         raise SystemExit("Homepage does not expose the always-on Continuity Atlas")
     if 'href="/contact/"' not in html:
         raise SystemExit("Homepage does not expose the always-on contact desk")
+    for route in ('href="/arcade/"', 'href="/idr/"', 'href="/services/"'):
+        if route not in html:
+            raise SystemExit(f"Homepage does not expose the always-on route: {route}")
 
     bad_routes = []
     for match in HREF_RE.finditer(html):

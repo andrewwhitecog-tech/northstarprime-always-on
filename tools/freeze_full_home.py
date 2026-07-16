@@ -23,12 +23,28 @@ ASSET_RE = re.compile(
 HREF_RE = re.compile(r"href=(?P<quote>['\"])(?P<path>/[^'\"]*)(?P=quote)", re.IGNORECASE)
 MIRRORED_PREFIXES = (
     "/static/",
+    "/arcade",
+    "/contact",
     "/idc-programming",
+    "/idr",
     "/continuity-atlas/",
     "/founders",
     "/mystery-school",
+    "/services",
+    "/site.webmanifest",
     "/health",
 )
+CANONICAL_STATIC_ROUTES = {
+    "/arcade": "/arcade/",
+    "/contact": "/contact/",
+    "/continuity-atlas": "/continuity-atlas/",
+    "/founders": "/founders/",
+    "/idc-programming": "/idc-programming/",
+    "/idr": "/idr/",
+    "/mystery-school": "/mystery-school/",
+    "/services": "/services/",
+    "/site.webmanifest": "/site.webmanifest",
+}
 
 
 def digest(path: Path) -> str:
@@ -64,12 +80,21 @@ def main() -> None:
         nonlocal rewritten_route_count
         quote = match.group("quote")
         path = match.group("path")
+        if path in CANONICAL_STATIC_ROUTES:
+            return f"href={quote}{CANONICAL_STATIC_ROUTES[path]}{quote}"
         if path == "/" or path.startswith(MIRRORED_PREFIXES):
             return match.group(0)
         rewritten_route_count += 1
         return f"href={quote}https://app.northstarprime.net{path}{quote}"
 
     html = HREF_RE.sub(route_target, html)
+    pulse_rewrite_count = html.count("fetch('/api/pulse')")
+    if pulse_rewrite_count < 3:
+        raise SystemExit("Captured homepage is missing the expected pulse consumers")
+    html = html.replace(
+        "fetch('/api/pulse')",
+        "fetch('/services/idr_now_playing_snapshot.json')",
+    )
 
     built = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     header = (
@@ -111,11 +136,14 @@ def main() -> None:
         "referenced_asset_count": len(assets),
         "referenced_asset_bytes": sum(int(row["bytes"]) for row in assets),
         "dynamic_route_links_rewritten": rewritten_route_count,
+        "same_origin_pulse_rewrites": pulse_rewrite_count,
         "assets": assets,
         "invariants": [
             "No local filesystem paths in the frozen homepage",
             "Every referenced static media asset exists in this repository",
             "The Continuity Atlas remains on the always-on apex",
+            "Arcade, IDR, services, and contact remain on the always-on apex",
+            "Homepage pulse consumers use the frozen same-origin services snapshot",
             "Dynamic features are enhancements; core identity remains visible without them",
         ],
     }

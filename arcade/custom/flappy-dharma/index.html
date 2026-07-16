@@ -1,0 +1,2187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SKY DRAGON DHARMA</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#06060f;overflow:hidden;font-family:'Courier New',monospace;display:flex;align-items:center;justify-content:center;height:100vh}
+canvas{display:block;image-rendering:pixelated;aspect-ratio:480/640;height:96vh;width:auto;max-width:98vw;box-shadow:0 0 60px rgba(0,255,255,.12),0 0 120px rgba(180,0,255,.08);border-radius:10px}
+#touchControls{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);display:flex;gap:10px;z-index:5;pointer-events:auto}
+#touchControls button{background:rgba(6,6,15,.72);color:#0ff;border:1px solid rgba(0,255,255,.55);border-radius:999px;padding:10px 14px;font:bold 12px 'Courier New',monospace;box-shadow:0 0 16px rgba(0,255,255,.25);min-width:72px}
+#touchControls button:nth-child(2){color:#fd0;border-color:rgba(253,208,0,.65)}
+#touchControls button:nth-child(3){color:#f60;border-color:rgba(255,124,24,.65)}
+#touchControls button:nth-child(4){color:#0f8;border-color:rgba(0,255,128,.65)}
+@media (pointer:fine){#touchControls{opacity:.62}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script src="/static/games/juice.js"></script>
+<script src="/static/games/chiptune.js"></script>
+<div id="touchControls" aria-label="Sky Dragon Dharma touch controls">
+  <button id="flapBtn" type="button">FLAP</button>
+  <button id="boostBtn" type="button">BOOST</button>
+  <button id="flameBtn" type="button">FLAME</button>
+  <button id="assistBtn" type="button">ASSIST</button>
+</div>
+<script>
+const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
+if(window.Juice)Juice.attachFX(canvas,{vignette:.45,scanlines:.04,glow:.06});
+const flapBtn=document.getElementById('flapBtn'),boostBtn=document.getElementById('boostBtn'),flameBtn=document.getElementById('flameBtn'),assistBtn=document.getElementById('assistBtn');
+const W=canvas.width=480,H=canvas.height=640;
+
+// living background: seedance motion plate (portrait), falls back to procedural sky
+const PLATE_MOTION_SRC='/static/games/imagegen_quality_pass_20260625/sky_dragon_dharma_plate_motion.mp4';
+const platePrefersStill=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const motionPlate=document.createElement('video');
+let motionPlateReady=false;
+if(!platePrefersStill){
+  motionPlate.muted=true;motionPlate.loop=true;motionPlate.playsInline=true;motionPlate.preload='auto';
+  motionPlate.src=PLATE_MOTION_SRC;
+  const startMotionPlate=()=>{if(motionPlateReady)return;motionPlate.play().then(()=>{motionPlateReady=true;}).catch(()=>{});};
+  motionPlate.addEventListener('canplaythrough',startMotionPlate,{once:true});
+  motionPlate.addEventListener('error',()=>{motionPlateReady=false;});
+  window.addEventListener('keydown',startMotionPlate,{once:true});
+  window.addEventListener('pointerdown',startMotionPlate,{once:true});
+}
+function drawMotionPlate(){
+  if(!(motionPlateReady&&motionPlate.readyState>=2&&!motionPlate.paused))return;
+  const vw=motionPlate.videoWidth,vh=motionPlate.videoHeight;
+  if(!vw||!vh)return;
+  const scale=Math.max(W/vw,H/vh),dw=vw*scale,dh=vh*scale;
+  ctx.save();ctx.globalAlpha=0.85;
+  ctx.drawImage(motionPlate,(W-dw)/2,(H-dh)/2,dw,dh);
+  ctx.globalAlpha=1;
+  const veil=ctx.createLinearGradient(0,0,0,H);
+  veil.addColorStop(0,'rgba(6,6,15,0.42)');
+  veil.addColorStop(0.3,'rgba(6,6,15,0.10)');
+  veil.addColorStop(0.7,'rgba(6,6,15,0.10)');
+  veil.addColorStop(1,'rgba(6,6,15,0.38)');
+  ctx.fillStyle=veil;ctx.fillRect(0,0,W,H);
+  ctx.restore();
+}
+
+// sampled SFX layer (ElevenLabs dharma set) — procedural tones remain the fallback
+const SFX_CUES={};
+['flap','boost','flame','collect','split','medal','fail'].forEach(name=>{
+  const clip=new Audio('/static/games/sfx/dharma_'+name+'.mp3');
+  clip.preload='auto';SFX_CUES[name]=clip;
+});
+function playSfxSample(name,volume=0.4){
+  const base=SFX_CUES[name];
+  if(!base||base.readyState<2)return false;
+  const inst=base.cloneNode();inst.volume=volume;
+  const attempt=inst.play();if(attempt&&attempt.catch)attempt.catch(()=>{});
+  return true;
+}
+// AI sprite + background (Vorath DNA, luminance-keyed) — procedural art stays the fallback
+const flapDragonImg=new Image();let flapDragonReady=false;
+flapDragonImg.onload=()=>{flapDragonReady=true;};flapDragonImg.onerror=()=>{flapDragonReady=false;};
+flapDragonImg.src='/static/games/roster/flap_dragon.png';
+const flapBgImg=new Image();let flapBgReady=false;
+flapBgImg.onload=()=>{flapBgReady=true;};flapBgImg.onerror=()=>{flapBgReady=false;};
+flapBgImg.src='/static/games/roster/flap_bg.png';
+
+// Shared chiptune layer — additive over the existing sampled/procedural cues; never throws
+let chiptuneMusic=null,chiptuneStarted=false;
+function chip(fn){try{if(window.Chiptune&&Chiptune.SFX&&Chiptune.SFX[fn])Chiptune.SFX[fn]();}catch(e){}}
+function chipResume(){try{if(window.Chiptune&&Chiptune.resume)Chiptune.resume();}catch(e){}}
+function startChiptuneMusic(){
+  try{
+    chipResume();
+    if(chiptuneStarted&&chiptuneMusic)return;
+    if(window.Chiptune&&Chiptune.Music){
+      chiptuneMusic=Chiptune.Music({bpm:132,mel:[72,76,79,84,79,76,72,67],bass:[36,36,43,43,41,41,38,38],melType:'square'});
+      if(chiptuneMusic&&chiptuneMusic.start)chiptuneMusic.start();
+      chiptuneStarted=true;
+    }
+  }catch(e){}
+}
+function stopChiptuneMusic(){try{if(chiptuneMusic&&chiptuneMusic.stop)chiptuneMusic.stop();}catch(e){}chiptuneStarted=false;chiptuneMusic=null;}
+// map internal cue names -> chiptune SFX so every existing event also fires a chiptune blip
+const CHIP_CUE_MAP={flap:'jump',boost:'powerUp',flame:'shoot',collect:'coin',split:'blip',medal:'oneUp',fail:'hurt'};
+
+// juice: short DOM screen-shake, self-decaying (independent of game loop)
+let _shakeMag=0,_shakeRAF=0;
+function triggerScreenShake(mag=6){
+  _shakeMag=Math.min(16,Math.max(_shakeMag,mag));
+  if(_shakeRAF)return;
+  const step=()=>{
+    if(_shakeMag<=0.4){canvas.style.transform='';_shakeRAF=0;return;}
+    const dx=(Math.random()*2-1)*_shakeMag,dy=(Math.random()*2-1)*_shakeMag;
+    canvas.style.transform='translate('+dx.toFixed(1)+'px,'+dy.toFixed(1)+'px)';
+    _shakeMag*=0.86;
+    _shakeRAF=requestAnimationFrame(step);
+  };
+  _shakeRAF=requestAnimationFrame(step);
+}
+
+let highScore=parseInt(localStorage.getItem('flappyDharma_hi'))||0;
+
+// Game states
+const STATE={MENU:0,PLAY:1,DEAD:2};
+let state=STATE.MENU;
+let bird,pipes,particles,stars,score,frameCount,pipeTimer,baseSpeed,speedMult,rings,ringTimer,combo,charge,lastReceipt,routeTier,nearMisses,bestCombo,announcer,paused,assistMode,assistCooldown,runBadges,missionStatus,flightLog,runRecorded,crystals,drones,crystalTimer,droneTimer,targetStats,timeLeft,runComplete,routeStreak,lastRouteKind,courseIndex,flameBursts,hitLabels,flameShots,targetLock,perfectLineHits,routeSplits,bestSpeedwayMedal,bestRouteSplits,paceDelta,audioCtx,audioEnabled,audioEvents,routeCoach,routeMistakes,headOnHits,sectorMastery,landmarkTimer,timeAttackMode,bestTimeAttack,routeCorridor,corridorScore,corridorBreaks,bestCorridorScore,routeFlow,bestRouteFlow,apexTurns,apexChain,bestApexChain,checkpointBeacons,bestCheckpointScore,bankedTurns,bankedChain,bestBankedChain,windLanes,windLaneHits,bestWindLaneHits,speedRings,speedRingChain,bestSpeedRingChain,diveHold,diveSurge,diveSurges,bestDiveSurges,speedStreaks,speedFxLevel,bestSpeedFxLevel,cameraShake,altitudeBandTicks,altitudeBandHolds,bestAltitudeBandHolds,splitGhostRival,splitGhostStreak,bestSplitGhostStreak,rollHold,rollBankTicks,speedChain,speedChainTimer,bestSpeedChain,sectorTransition,lastSectorFocus,sectorPortals,sectorPortalHits,bestSectorPortalHits,portalWake,portalWakeScore,bestPortalWakeScore;
+const IS_PLAYTEST=new URLSearchParams(location.search).has('playtest');
+let bgStars=[];
+for(let i=0;i<120;i++)bgStars.push({x:Math.random()*W,y:Math.random()*H,s:Math.random()*1.5+0.5,b:Math.random()*Math.PI*2});
+const ROUTE_TIERS=[
+  {name:'Hatchling Wake',score:0,color:'#0ff',wind:1},
+  {name:'Glide Gate',score:8,color:'#0f8',wind:1.08},
+  {name:'Ringstorm Run',score:18,color:'#fd0',wind:1.16},
+  {name:'Eclipse Ascent',score:34,color:'#f0f',wind:1.24}
+];
+const FLIGHT_MISSIONS=[
+  {id:'ring-runner',label:'Ring Runner',goal:'Collect 3 rings',done:()=>missionStatus.rings>=3},
+  {id:'edge-dancer',label:'Edge Dancer',goal:'Score 2 near misses',done:()=>nearMisses>=2},
+  {id:'combo-flame',label:'Combo Flame',goal:'Reach combo x4',done:()=>bestCombo>=4},
+  {id:'tier-climber',label:'Tier Climber',goal:'Reach Ringstorm Run',done:()=>score>=18}
+];
+const SPEEDWAY_TARGETS={rings:8,gates:8,crystals:8,drones:8};
+const NORMAL_SPEEDWAY_START=30;
+const TIME_ATTACK_START=60;
+const SPEEDWAY_TIME_BONUSES={rings:1,gates:2,crystals:2,drones:3};
+const ROUTE_CORRIDOR_WIDTH=64;
+const ROUTE_FLOW_MAX=100;
+const WIND_LANE_WIDTH=46;
+const SPEED_RING_RADIUS=30;
+const SECTOR_PORTAL_RADIUS=42;
+const PORTAL_WAKE_MAX=180;
+const PORTAL_WAKE_WIDTH=70;
+const DIVE_SURGE_MAX=100;
+const SPEED_CHAIN_MAX=180;
+const SPEEDWAY_LABELS={rings:'Rings',gates:'Gates',crystals:'Crystals',drones:'Drones'};
+const SPEEDWAY_ROUTE=['rings','gates','crystals','drones'];
+const CHECKPOINT_GRADES={perfect:{label:'Perfect',score:4,color:'#fd0'},clean:{label:'Clean',score:2,color:'#0f8'},rough:{label:'Rough',score:1,color:'#f66'}};
+const SPEEDWAY_SECTORS={
+  rings:{name:'Ring Chain',tactic:'hold the gold line',minY:190,maxY:395,color:'#fd0'},
+  gates:{name:'Gate Tunnel',tactic:'thread center gaps',minY:155,maxY:375,color:'#0ff'},
+  crystals:{name:'Crystal Lowline',tactic:'dip, flame, recover',minY:185,maxY:385,color:'#0ff'},
+  drones:{name:'Drone Intercept',tactic:'meet drones head-on',minY:205,maxY:390,color:'#f0f'}
+};
+const ROUTE_LANDMARKS=[
+  {id:'sun-obelisk',label:'Sun Obelisk',kind:'rings',x:140,y:122,color:'#fd0'},
+  {id:'glass-viaduct',label:'Glass Viaduct',kind:'gates',x:300,y:178,color:'#0ff'},
+  {id:'low-crystal-basin',label:'Crystal Basin',kind:'crystals',x:214,y:472,color:'#0ff'},
+  {id:'drone-moon',label:'Drone Moon',kind:'drones',x:374,y:118,color:'#f0f'}
+];
+const SPEEDWAY_MEDALS=[
+  {id:'platinum',label:'Platinum',time:36,color:'#e5e7eb'},
+  {id:'gold',label:'Gold',time:26,color:'#fd0'},
+  {id:'silver',label:'Silver',time:16,color:'#cfd8dc'},
+  {id:'bronze',label:'Bronze',time:1,color:'#cd7f32'}
+];
+const SPEEDWAY_COURSE={
+  rings:[210,255,300,345,390,330,270,220],
+  gates:[170,225,280,335,245,190,310,260],
+  crystals:[360,310,250,190,235,295,355,280],
+  drones:[230,285,340,250,305,215,365,275]
+};
+let unlockedBadges=loadUnlockedBadges();
+let persistedFlightLog=loadFlightLog();
+bestSpeedwayMedal=localStorage.getItem('skyDragonDharmaBestMedal')||'';
+bestRouteSplits=loadBestRouteSplits();
+audioEnabled=localStorage.getItem('skyDragonDharmaAudioMuted')!=='1';
+timeAttackMode=localStorage.getItem('skyDragonDharmaTimeAttack')==='1';
+bestTimeAttack=loadBestTimeAttack();
+bestCorridorScore=parseInt(localStorage.getItem('skyDragonDharmaBestCorridor')||'0')||0;
+bestRouteFlow=parseInt(localStorage.getItem('skyDragonDharmaBestFlow')||'0')||0;
+bestApexChain=parseInt(localStorage.getItem('skyDragonDharmaBestApex')||'0')||0;
+bestCheckpointScore=parseInt(localStorage.getItem('skyDragonDharmaBestCheckpoints')||'0')||0;
+bestBankedChain=parseInt(localStorage.getItem('skyDragonDharmaBestBanked')||'0')||0;
+bestWindLaneHits=parseInt(localStorage.getItem('skyDragonDharmaBestWindLanes')||'0')||0;
+bestSpeedRingChain=parseInt(localStorage.getItem('skyDragonDharmaBestSpeedRings')||'0')||0;
+bestDiveSurges=parseInt(localStorage.getItem('skyDragonDharmaBestDiveSurges')||'0')||0;
+bestSpeedFxLevel=parseInt(localStorage.getItem('skyDragonDharmaBestSpeedFx')||'0')||0;
+bestAltitudeBandHolds=parseInt(localStorage.getItem('skyDragonDharmaBestAltitudeBand')||'0')||0;
+bestSplitGhostStreak=parseInt(localStorage.getItem('skyDragonDharmaBestSplitGhostStreak')||'0')||0;
+bestSpeedChain=parseInt(localStorage.getItem('skyDragonDharmaBestSpeedChain')||'0')||0;
+bestSectorPortalHits=parseInt(localStorage.getItem('skyDragonDharmaBestSectorPortals')||'0')||0;
+bestPortalWakeScore=parseInt(localStorage.getItem('skyDragonDharmaBestPortalWake')||'0')||0;
+audioEvents=0;
+
+function currentRouteTier(){
+  let tier=ROUTE_TIERS[0];
+  for(const candidate of ROUTE_TIERS)if(score>=candidate.score)tier=candidate;
+  return tier;
+}
+
+function routeTierProgress(){
+  const tier=currentRouteTier();
+  const next=ROUTE_TIERS[ROUTE_TIERS.indexOf(tier)+1]||null;
+  return {tier,next,remaining:next?Math.max(0,next.score-score):0};
+}
+
+function setAnnouncer(text,color='#0ff'){
+  announcer={text,color,ttl:120};
+}
+
+function ensureAudio(){
+  if(!audioEnabled)return null;
+  const AudioClass=window.AudioContext||window.webkitAudioContext;
+  if(!AudioClass)return null;
+  if(!audioCtx)audioCtx=new AudioClass();
+  if(audioCtx.state==='suspended')audioCtx.resume();
+  return audioCtx;
+}
+
+function playTone(freq=440,duration=0.08,type='sine',gain=0.045,delay=0){
+  const ctx=ensureAudio();
+  if(!ctx)return false;
+  const osc=ctx.createOscillator(),amp=ctx.createGain();
+  const start=ctx.currentTime+delay;
+  osc.type=type;osc.frequency.setValueAtTime(freq,start);
+  amp.gain.setValueAtTime(0.0001,start);
+  amp.gain.exponentialRampToValueAtTime(gain,start+0.012);
+  amp.gain.exponentialRampToValueAtTime(0.0001,start+duration);
+  osc.connect(amp);amp.connect(ctx.destination);osc.start(start);osc.stop(start+duration+0.025);audioEvents++;return true;
+}
+
+function playCue(name){
+  if(audioEnabled&&CHIP_CUE_MAP[name])chip(CHIP_CUE_MAP[name]);
+  if(playSfxSample(name,name==='flap'?0.3:0.45)){audioEvents++;return true;}
+  if(name==='flap')return playTone(520,0.05,'triangle',0.025);
+  if(name==='boost'){playTone(220,0.12,'sawtooth',0.035);return playTone(660,0.08,'triangle',0.028,0.035);}
+  if(name==='flame'){playTone(120,0.11,'sawtooth',0.045);return playTone(480,0.06,'square',0.025,0.025);}
+  if(name==='collect'){playTone(740,0.07,'triangle',0.026);return playTone(980,0.06,'triangle',0.02,0.045);}
+  if(name==='split'){playTone(660,0.08,'sine',0.026);playTone(880,0.08,'sine',0.024,0.055);return playTone(1180,0.1,'sine',0.022,0.11);}
+  if(name==='medal'){playTone(523,0.1,'triangle',0.03);playTone(659,0.1,'triangle',0.03,0.08);return playTone(784,0.16,'triangle',0.035,0.16);}
+  if(name==='fail')return playTone(150,0.18,'sawtooth',0.035);
+  return false;
+}
+
+function toggleAudio(){
+  audioEnabled=!audioEnabled;
+  localStorage.setItem('skyDragonDharmaAudioMuted',audioEnabled?'0':'1');
+  setAnnouncer(audioEnabled?'AUDIO ON':'AUDIO MUTED',audioEnabled?'#0f8':'#888');
+  if(audioEnabled)playCue('collect');
+}
+
+function loadUnlockedBadges(){
+  try{return JSON.parse(localStorage.getItem('skyDragonDharmaBadges')||'[]');}
+  catch{return [];}
+}
+
+function saveUnlockedBadges(){
+  localStorage.setItem('skyDragonDharmaBadges',JSON.stringify(unlockedBadges));
+}
+
+function loadFlightLog(){
+  try{return JSON.parse(localStorage.getItem('skyDragonDharmaFlightLog')||'[]');}
+  catch{return [];}
+}
+
+function saveFlightLog(){
+  localStorage.setItem('skyDragonDharmaFlightLog',JSON.stringify(persistedFlightLog.slice(0,8)));
+}
+
+function loadBestRouteSplits(){
+  try{return JSON.parse(localStorage.getItem('skyDragonDharmaBestSplits')||'{}');}
+  catch{return {};}
+}
+
+function saveBestRouteSplits(){
+  localStorage.setItem('skyDragonDharmaBestSplits',JSON.stringify(bestRouteSplits||{}));
+}
+
+function loadBestTimeAttack(){
+  try{return JSON.parse(localStorage.getItem('skyDragonDharmaBestTimeAttack')||'null');}
+  catch{return null;}
+}
+
+function timeAttackElapsed(){
+  return Number(((timeAttackMode?TIME_ATTACK_START:NORMAL_SPEEDWAY_START)-timeLeft).toFixed(1));
+}
+
+function saveTimeAttackRecord(){
+  if(!timeAttackMode||!runComplete)return null;
+  const elapsed=timeAttackElapsed();
+  const record={elapsed,score,medal:speedwayMedal().id,discipline:routeDiscipline(),at:new Date().toISOString()};
+  if(!bestTimeAttack||elapsed<bestTimeAttack.elapsed){
+    bestTimeAttack=record;localStorage.setItem('skyDragonDharmaBestTimeAttack',JSON.stringify(bestTimeAttack));
+    awardBadge('time-attack-record','Time Attack Record');addHitLabel('TIME ATTACK RECORD',bird.x+80,bird.y-84,'#0f8');playCue('medal');
+  }
+  return record;
+}
+
+function toggleTimeAttackMode(){
+  timeAttackMode=!timeAttackMode;localStorage.setItem('skyDragonDharmaTimeAttack',timeAttackMode?'1':'0');
+  setAnnouncer(timeAttackMode?'TIME ATTACK ON':'TIME ATTACK OFF',timeAttackMode?'#0f8':'#888');
+  if(state!==STATE.PLAY)restartRun();
+}
+
+function saveBestCorridorScore(){
+  if(corridorScore<=bestCorridorScore)return false;
+  bestCorridorScore=corridorScore;
+  localStorage.setItem('skyDragonDharmaBestCorridor',String(bestCorridorScore));
+  awardBadge('route-corridor-ace','Route Corridor Ace');
+  addHitLabel('BEST LINE SAVED',bird.x+82,bird.y-92,'#0f8');
+  return true;
+}
+
+function saveBestRouteFlow(){
+  if(routeFlow<=bestRouteFlow)return false;
+  bestRouteFlow=routeFlow;
+  localStorage.setItem('skyDragonDharmaBestFlow',String(bestRouteFlow));
+  if(bestRouteFlow>=90)awardBadge('aero-flow-master','Aero Flow Master');
+  addHitLabel('BEST FLOW '+bestRouteFlow,bird.x+86,bird.y-104,'#0ff');
+  return true;
+}
+
+function routeFlowSnapshot(){
+  return {flow:Math.round(routeFlow),best:bestRouteFlow,boost_bonus:Number((routeFlow/100*0.42).toFixed(2)),charge_bonus:Number((routeFlow/100*0.09).toFixed(3)),status:routeFlow>=80?'surge':routeFlow>=45?'clean':'building'};
+}
+
+function speedFxSnapshot(){
+  return {level:Math.round(speedFxLevel||0),best_level:bestSpeedFxLevel,active_streaks:(speedStreaks||[]).length,camera_shake:Number((cameraShake||0).toFixed(2)),status:speedFxLevel>=80?'warp':speedFxLevel>=45?'surge':speedFxLevel>0?'trail':'idle'};
+}
+
+function saveBestSpeedFxLevel(){
+  const level=Math.round(speedFxLevel||0);
+  if(level<=bestSpeedFxLevel)return false;
+  bestSpeedFxLevel=level;
+  localStorage.setItem('skyDragonDharmaBestSpeedFx',String(bestSpeedFxLevel));
+  if(bestSpeedFxLevel>=90)awardBadge('speed-streak-warp','Speed Streak Warp');
+  addHitLabel('BEST SPEED FX '+bestSpeedFxLevel,bird.x+88,bird.y-200,'#0ff');
+  return true;
+}
+
+function triggerSpeedFx(power=20,color='#0ff',count=6){
+  speedFxLevel=Math.min(100,(speedFxLevel||0)+power);
+  cameraShake=Math.min(9,(cameraShake||0)+power/14);
+  for(let i=0;i<count;i++)speedStreaks.push({x:W+Math.random()*80,y:Math.random()*H,len:55+Math.random()*95,v:8+power*0.12+Math.random()*6,life:0.45+Math.random()*0.5,color});
+  saveBestSpeedFxLevel();
+}
+
+function updateSpeedFx(){
+  speedFxLevel=Math.max(0,(speedFxLevel||0)-1.6);
+  cameraShake=Math.max(0,(cameraShake||0)*0.86-0.05);
+  speedStreaks=(speedStreaks||[]).map(streak=>({...streak,x:streak.x-streak.v,life:streak.life-0.045})).filter(streak=>streak.life>0&&streak.x>-streak.len-80);
+}
+
+function drawSpeedFx(){
+  if(!(speedStreaks&&speedStreaks.length))return;
+  ctx.save();ctx.globalCompositeOperation='screen';ctx.lineWidth=2;
+  for(const streak of speedStreaks){
+    ctx.globalAlpha=Math.max(0,Math.min(0.72,streak.life));ctx.strokeStyle=streak.color;ctx.shadowColor=streak.color;ctx.shadowBlur=10;ctx.beginPath();ctx.moveTo(streak.x,streak.y);ctx.lineTo(streak.x-streak.len,streak.y+streak.len*0.08);ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function routeApexSnapshot(){
+  return {turns:apexTurns,chain:apexChain,best_chain:bestApexChain,ready:!!(routeCorridor&&routeCorridor.inside&&targetLock&&targetLock.locked&&routeFlow>=35)};
+}
+
+function checkpointScore(){
+  return (checkpointBeacons||[]).reduce((total,beacon)=>total+(beacon.score||0),0);
+}
+
+function checkpointSnapshot(){
+  return {score:checkpointScore(),best_score:bestCheckpointScore,beacons:(checkpointBeacons||[]).slice(-4)};
+}
+
+function rollBankSnapshot(){
+  const cue=turnCueSnapshot();
+  const expected=cue.direction.includes('climb')?-1:cue.direction.includes('dive')?1:0;
+  const aligned=!!(rollHold&&expected&&rollHold===expected&&cue.urgency!=='clear');
+  return {roll:rollHold<0?'left':rollHold>0?'right':'center',expected:expected<0?'left':expected>0?'right':'center',aligned,cue:cue.cue,urgency:cue.urgency,ticks:rollBankTicks||0};
+}
+
+function bankedTurnSnapshot(){
+  const corridor=routeCorridor||routeCorridorSnapshot();
+  const roll=rollBankSnapshot();
+  const steeringTowardLine=!!(bird&&corridor&&corridor.active&&Math.abs(corridor.delta)>16&&Math.sign(corridor.delta)===Math.sign(bird.vy));
+  return {turns:bankedTurns,chain:bankedChain,best_chain:bestBankedChain,steering_toward_line:steeringTowardLine,roll_bank:roll,ready:(steeringTowardLine||roll.aligned)&&routeFlow>=25&&Math.abs(corridor.delta)<=ROUTE_CORRIDOR_WIDTH*1.85};
+}
+
+function windLaneSnapshot(){
+  return {hits:windLaneHits,best_hits:bestWindLaneHits,active:(windLanes||[]).filter(lane=>!lane.hit).map(lane=>({kind:lane.kind,x:Math.round(lane.x),y:Math.round(lane.y),hit:lane.hit}))};
+}
+
+function altitudeBandSnapshot(){
+  const plan=activeSectorPlan();
+  const inside=!!(bird&&plan&&bird.y>=plan.minY&&bird.y<=plan.maxY);
+  const targetY=plan?Math.round((plan.minY+plan.maxY)/2):0;
+  const delta=bird?Math.round(targetY-bird.y):0;
+  return {holds:altitudeBandHolds,best_holds:bestAltitudeBandHolds,ticks:altitudeBandTicks||0,inside,sector:plan.name,band:[plan.minY,plan.maxY],target_y:targetY,delta};
+}
+
+function saveBestAltitudeBandHolds(){
+  if(altitudeBandHolds<=bestAltitudeBandHolds)return false;
+  bestAltitudeBandHolds=altitudeBandHolds;
+  localStorage.setItem('skyDragonDharmaBestAltitudeBand',String(bestAltitudeBandHolds));
+  if(bestAltitudeBandHolds>=8)awardBadge('altitude-band-master','Altitude Band Master');
+  addHitLabel('BEST ALT BAND '+bestAltitudeBandHolds,bird.x+88,bird.y-212,'#fd0');
+  return true;
+}
+
+function updateAltitudeBand(){
+  const band=altitudeBandSnapshot();
+  if(!band.inside){altitudeBandTicks=0;return band;}
+  altitudeBandTicks++;
+  if(altitudeBandTicks>0&&altitudeBandTicks%45===0){
+    altitudeBandHolds++;score++;routeFlow=Math.min(ROUTE_FLOW_MAX,routeFlow+6);charge=Math.min(100,charge+4);
+    addHitLabel('ALTITUDE BAND +1',bird.x+82,bird.y-74,'#fd0');setAnnouncer('ALTITUDE BAND HOLD','#fd0');playCue('split');saveBestAltitudeBandHolds();
+  }
+  return altitudeBandSnapshot();
+}
+
+function diveSurgeSnapshot(){
+  const corridor=routeCorridor||routeCorridorSnapshot();
+  const divingTowardLine=!!(diveHold&&corridor&&corridor.active&&corridor.delta>10);
+  return {surges:diveSurges,best_surges:bestDiveSurges,charge:Math.round(diveSurge||0),active:!!diveHold,toward_line:divingTowardLine,ready:divingTowardLine&&corridor.inside&&diveSurge>=35};
+}
+
+function saveBestDiveSurges(){
+  if(diveSurges<=bestDiveSurges)return false;
+  bestDiveSurges=diveSurges;
+  localStorage.setItem('skyDragonDharmaBestDiveSurges',String(bestDiveSurges));
+  if(bestDiveSurges>=6)awardBadge('dive-surge-ace','Dive Surge Ace');
+  addHitLabel('BEST DIVE '+bestDiveSurges,bird.x+88,bird.y-188,'#0ff');
+  return true;
+}
+
+function updateDiveSurge(){
+  const dive=diveSurgeSnapshot();
+  if(dive.toward_line){diveSurge=Math.min(DIVE_SURGE_MAX,diveSurge+3.4);routeFlow=Math.min(ROUTE_FLOW_MAX,routeFlow+1.2);}
+  else diveSurge=Math.max(0,diveSurge-(diveHold?1.2:3.8));
+  if(dive.ready&&frameCount%30===0){
+    diveSurges++;score++;bird.boost=Math.max(bird.boost||0,18);charge=Math.min(100,charge+5);
+    addHitLabel('DIVE SURGE +1',bird.x+78,bird.y-68,'#0ff');setAnnouncer('DIVE SURGE','#0ff');playCue('boost');triggerSpeedFx(18,'#0ff',5);saveBestDiveSurges();
+  }
+  return diveSurgeSnapshot();
+}
+
+function speedRingSnapshot(){
+  return {chain:speedRingChain,best_chain:bestSpeedRingChain,active:(speedRings||[]).filter(ring=>!ring.hit).map(ring=>({kind:ring.kind,x:Math.round(ring.x),y:Math.round(ring.y),hit:ring.hit}))};
+}
+
+function speedChainSnapshot(){
+  const frames=Math.max(0,Math.round(speedChainTimer||0));
+  return {chain:speedChain||0,best_chain:bestSpeedChain||0,frames,timer:Number((frames/60).toFixed(1)),window_frames:SPEED_CHAIN_MAX,active:frames>0};
+}
+
+function saveBestSpeedChain(){
+  if((speedChain||0)<=bestSpeedChain)return false;
+  bestSpeedChain=speedChain;
+  localStorage.setItem('skyDragonDharmaBestSpeedChain',String(bestSpeedChain));
+  if(bestSpeedChain>=6)awardBadge('speed-chain-master','Speed Chain Master');
+  if(bird)addHitLabel('BEST SPEED CHAIN x'+bestSpeedChain,bird.x+92,bird.y-224,'#fd0');
+  return true;
+}
+
+function awardSpeedChain(kind){
+  speedChain=speedChainTimer>0?(speedChain||0)+1:1;
+  speedChainTimer=SPEED_CHAIN_MAX;
+  const color=kind==='drones'?'#f0f':kind==='crystals'?'#0ff':kind==='gates'?'#0ff':'#fd0';
+  if(speedChain>=3){
+    score++;routeFlow=Math.min(ROUTE_FLOW_MAX,routeFlow+7);charge=Math.min(100,charge+5);
+    if(!timeAttackMode)timeLeft=Math.min(99,timeLeft+Math.min(1.2,speedChain*0.15));
+    addHitLabel('SPEED CHAIN x'+speedChain,bird.x+86,bird.y-92,color);setAnnouncer('SPEED CHAIN x'+speedChain,color);playCue('split');triggerSpeedFx(14,color,4);
+  }
+  saveBestSpeedChain();
+  return speedChainSnapshot();
+}
+
+function updateSpeedChain(){
+  if(speedChainTimer>0)speedChainTimer=Math.max(0,speedChainTimer-1);
+  else if(speedChain>0)speedChain=0;
+  return speedChainSnapshot();
+}
+
+function sectorTransitionSnapshot(){
+  if(!sectorTransition)return {active:false,from_kind:null,from_label:'Start',to_kind:activeSpeedwayKind(),to_label:SPEEDWAY_LABELS[activeSpeedwayKind()]||'Finish Line',ttl:0,progress:1,color:'#fd0'};
+  const ttl=Math.max(0,Math.round(sectorTransition.ttl||0));
+  return {active:ttl>0,from_kind:sectorTransition.from_kind,from_label:sectorTransition.from_label,to_kind:sectorTransition.to_kind,to_label:sectorTransition.to_label,ttl,progress:Number((1-ttl/150).toFixed(2)),color:sectorTransition.color};
+}
+
+function triggerSectorTransition(fromKind,toKind){
+  const sector=(SPEEDWAY_SECTORS[toKind]||SPEEDWAY_SECTORS[fromKind]||{});
+  const color=sector.color||'#fd0';
+  const toLabel=toKind==='complete'?'Finish Line':SPEEDWAY_LABELS[toKind]||'Finish Line';
+  sectorTransition={from_kind:fromKind,from_label:SPEEDWAY_LABELS[fromKind]||'Start',to_kind:toKind,to_label:toLabel,ttl:150,color};
+  lastSectorFocus=toKind;
+  addHitLabel((SPEEDWAY_LABELS[fromKind]||fromKind).toUpperCase()+' SECTOR CLEAR',bird.x+88,bird.y-112,color);
+  setAnnouncer(toKind==='complete'?'FINAL RUNWAY':'NEXT SECTOR: '+toLabel.toUpperCase(),color);
+  triggerSpeedFx(24,color,8);
+  if(toKind!=='complete')spawnSectorPortal(toKind);
+  playCue('split');
+  return sectorTransitionSnapshot();
+}
+
+function updateSectorTransition(){
+  if(sectorTransition){sectorTransition.ttl=Math.max(0,sectorTransition.ttl-1);if(sectorTransition.ttl<=0)sectorTransition=null;}
+  return sectorTransitionSnapshot();
+}
+
+function drawSectorTransition(){
+  if(state!==STATE.PLAY||paused)return;
+  const sector=sectorTransitionSnapshot();
+  if(!sector.active)return;
+  const alpha=Math.min(1,sector.ttl/38);
+  const slide=(1-sector.progress)*34;
+  ctx.save();ctx.globalCompositeOperation='screen';ctx.globalAlpha=0.18+alpha*0.68;
+  const y=104+slide;
+  const grd=ctx.createLinearGradient(W/2-230,y,W/2+230,y);grd.addColorStop(0,'rgba(0,255,255,0)');grd.addColorStop(0.5,sector.color);grd.addColorStop(1,'rgba(255,0,255,0)');
+  ctx.fillStyle=grd;ctx.fillRect(W/2-250,y-28,500,56);
+  ctx.strokeStyle=sector.color;ctx.lineWidth=2;ctx.shadowColor=sector.color;ctx.shadowBlur=24;ctx.strokeRect(W/2-210,y-24,420,48);
+  ctx.textAlign='center';ctx.font='bold 14px Courier New';ctx.fillStyle='#fff';ctx.fillText('SECTOR CLEAR · '+sector.from_label.toUpperCase(),W/2,y-4);
+  ctx.font='bold 18px Courier New';ctx.fillStyle=sector.color;ctx.fillText('NEXT: '+sector.to_label.toUpperCase(),W/2,y+18);
+  ctx.restore();
+}
+
+function drawSpeedChainGauge(){
+  if(state!==STATE.PLAY||paused)return;
+  const chain=speedChainSnapshot();
+  const pct=Math.max(0,Math.min(1,chain.frames/SPEED_CHAIN_MAX));
+  const x=W/2-92,y=38,w=184,h=9;
+  ctx.save();ctx.globalCompositeOperation='screen';ctx.fillStyle='rgba(6,6,15,.72)';ctx.strokeStyle=chain.active?'#fd0':'rgba(255,255,255,.18)';ctx.lineWidth=1.5;ctx.shadowColor=chain.active?'#fd0':'#000';ctx.shadowBlur=chain.active?16:0;
+  ctx.fillRect(x,y,w,h);ctx.strokeRect(x,y,w,h);
+  const grd=ctx.createLinearGradient(x,y,x+w,y);grd.addColorStop(0,'#0ff');grd.addColorStop(0.58,'#fd0');grd.addColorStop(1,'#f0f');
+  ctx.fillStyle=grd;ctx.globalAlpha=chain.active?0.9:0.22;ctx.fillRect(x,y,w*pct,h);
+  ctx.globalAlpha=chain.active?0.95:0.42;ctx.font='bold 10px Courier New';ctx.textAlign='center';ctx.fillStyle=chain.chain>=3?'#fd0':'#888';ctx.fillText('SPEED CHAIN x'+chain.chain+' · '+chain.timer.toFixed(1)+'s WINDOW',W/2,y-6);
+  ctx.restore();
+}
+
+function saveBestSpeedRingChain(){
+  if(speedRingChain<=bestSpeedRingChain)return false;
+  bestSpeedRingChain=speedRingChain;
+  localStorage.setItem('skyDragonDharmaBestSpeedRings',String(bestSpeedRingChain));
+  if(bestSpeedRingChain>=5)awardBadge('turbo-ring-chain','Turbo Ring Chain');
+  addHitLabel('BEST TURBO x'+bestSpeedRingChain,bird.x+88,bird.y-176,'#fd0');
+  return true;
+}
+
+function spawnSpeedRing(kind=activeSpeedwayKind()){
+  if(kind==='complete')return null;
+  const pattern=SPEEDWAY_COURSE[kind]||[H/2];
+  const y=pattern[((courseIndex[kind]||0)+1)%pattern.length];
+  const ring={kind,x:W+300+Math.random()*110,y,r:SPEED_RING_RADIUS,hit:false};
+  speedRings.push(ring);
+  return ring;
+}
+
+function collectSpeedRing(ring){
+  if(ring.hit)return false;
+  ring.hit=true;speedRingChain++;score+=1;bird.boost=Math.max(bird.boost||0,36);routeFlow=Math.min(ROUTE_FLOW_MAX,routeFlow+14);charge=Math.min(100,charge+10);
+  if(!timeAttackMode)timeLeft=Math.min(99,timeLeft+0.35);
+  addHitLabel(timeAttackMode?'TURBO RING +1':'TURBO RING +0.35s',ring.x,ring.y,'#fd0');setAnnouncer('TURBO RING x'+speedRingChain,'#fd0');playCue('boost');triggerSpeedFx(26,'#fd0',9);saveBestSpeedRingChain();
+  return true;
+}
+
+function sectorPortalSnapshot(){
+  return {hits:sectorPortalHits||0,best_hits:bestSectorPortalHits||0,radius:SECTOR_PORTAL_RADIUS,active:(sectorPortals||[]).filter(portal=>!portal.hit).map(portal=>({kind:portal.kind,label:portal.label,x:Math.round(portal.x),y:Math.round(portal.y),hit:portal.hit,color:portal.color}))};
+}
+
+function portalWakeSnapshot(){
+  if(!portalWake)return {active:false,kind:activeSpeedwayKind(),label:SPEEDWAY_LABELS[activeSpeedwayKind()]||'Route',score:portalWakeScore||0,best_score:bestPortalWakeScore||0,ttl:0,width:PORTAL_WAKE_WIDTH,inside:false,progress:1};
+  const ttl=Math.max(0,Math.round(portalWake.ttl||0));
+  const inside=!!(bird&&Math.abs(bird.y-portalWake.y)<=PORTAL_WAKE_WIDTH);
+  return {active:ttl>0,kind:portalWake.kind,label:portalWake.label,score:portalWakeScore||0,best_score:bestPortalWakeScore||0,ttl,width:PORTAL_WAKE_WIDTH,inside,progress:Number((1-ttl/PORTAL_WAKE_MAX).toFixed(2)),y:Math.round(portalWake.y),color:portalWake.color};
+}
+
+function saveBestPortalWakeScore(){
+  if((portalWakeScore||0)<=bestPortalWakeScore)return false;
+  bestPortalWakeScore=portalWakeScore;
+  localStorage.setItem('skyDragonDharmaBestPortalWake',String(bestPortalWakeScore));
+  if(bestPortalWakeScore>=5)awardBadge('portal-wake-surfer','Portal Wake Surfer');
+  if(bird)addHitLabel('BEST WAKE '+bestPortalWakeScore,bird.x+88,bird.y-248,'#0ff');
+  return true;
+}
+
+function startPortalWake(portal){
+  portalWake={kind:portal.kind,label:portal.label,y:portal.y,ttl:PORTAL_WAKE_MAX,color:portal.color};
+  return portalWakeSnapshot();
+}
+
+function updatePortalWake(){
+  if(!portalWake)return portalWakeSnapshot();
+  const wake=portalWakeSnapshot();
+  if(wake.inside){
+    routeFlow=Math.min(ROUTE_FLOW_MAX,routeFlow+0.75);charge=Math.min(100,charge+0.08);
+    if(frameCount%28===0){portalWakeScore++;score++;bird.boost=Math.max(bird.boost||0,18);addHitLabel('PORTAL WAKE +1',bird.x+78,bird.y-90,portalWake.color);playCue('split');triggerSpeedFx(10,portalWake.color,3);}
+  } else {routeFlow=Math.max(0,routeFlow-1.2);}
+  portalWake.ttl=Math.max(0,portalWake.ttl-1);
+  if(portalWake.ttl<=0){saveBestPortalWakeScore();portalWake=null;}
+  return portalWakeSnapshot();
+}
+
+function drawPortalWake(){
+  const wake=portalWakeSnapshot();
+  if(state!==STATE.PLAY||paused||!wake.active)return;
+  ctx.save();ctx.globalCompositeOperation='screen';ctx.lineWidth=2;ctx.strokeStyle=wake.color;ctx.fillStyle=wake.color;ctx.shadowColor=wake.color;ctx.shadowBlur=20;
+  const alpha=wake.inside?0.46:0.22;
+  for(let i=0;i<6;i++){
+    const x=W-(i*96+frameCount*3)%620;
+    const scale=1+i*0.08;
+    ctx.globalAlpha=alpha*(1-i*0.1);
+    ctx.beginPath();ctx.ellipse(x,wake.y,PORTAL_WAKE_WIDTH*scale,PORTAL_WAKE_WIDTH*0.38*scale,0,0,Math.PI*2);ctx.stroke();
+  }
+  ctx.globalAlpha=wake.inside?0.18:0.08;ctx.fillRect(0,wake.y-PORTAL_WAKE_WIDTH,W,PORTAL_WAKE_WIDTH*2);
+  ctx.globalAlpha=0.88;ctx.font='bold 10px Courier New';ctx.textAlign='center';ctx.fillText('PORTAL WAKE · HOLD THE ENTRY LINE',W/2,wake.y-PORTAL_WAKE_WIDTH-12);
+  ctx.restore();
+}
+
+function saveBestSectorPortalHits(){
+  if((sectorPortalHits||0)<=bestSectorPortalHits)return false;
+  bestSectorPortalHits=sectorPortalHits;
+  localStorage.setItem('skyDragonDharmaBestSectorPortals',String(bestSectorPortalHits));
+  if(bestSectorPortalHits>=3)awardBadge('sector-portal-pilot','Sector Portal Pilot');
+  if(bird)addHitLabel('BEST PORTALS '+bestSectorPortalHits,bird.x+88,bird.y-236,'#0ff');
+  return true;
+}
+
+function spawnSectorPortal(kind=activeSpeedwayKind()){
+  if(kind==='complete')return null;
+  const pattern=SPEEDWAY_COURSE[kind]||[H/2];
+  const y=pattern[(courseIndex[kind]||0)%pattern.length];
+  const color=(SPEEDWAY_SECTORS[kind]||{}).color||'#0ff';
+  const portal={kind,label:SPEEDWAY_LABELS[kind]||kind,x:W+250,y,r:SECTOR_PORTAL_RADIUS,color,hit:false};
+  sectorPortals.push(portal);
+  return portal;
+}
+
+function collectSectorPortal(portal){
+  if(portal.hit)return false;
+  portal.hit=true;sectorPortalHits++;score+=2;bird.boost=Math.max(bird.boost||0,42);routeFlow=Math.min(ROUTE_FLOW_MAX,routeFlow+18);charge=Math.min(100,charge+12);startPortalWake(portal);
+  if(!timeAttackMode)timeLeft=Math.min(99,timeLeft+0.45);
+  addHitLabel('SECTOR PORTAL BOOST +'+sectorPortalHits,portal.x,portal.y-18,portal.color);setAnnouncer('PORTAL ENTRY: '+portal.label.toUpperCase(),portal.color);playCue('boost');triggerSpeedFx(26,portal.color,9);saveBestSectorPortalHits();
+  return true;
+}
+
+function drawSectorPortals(){
+  if(state!==STATE.PLAY)return;
+  ctx.save();ctx.textAlign='center';ctx.font='bold 10px Courier New';
+  for(const portal of sectorPortals||[]){
+    if(portal.hit)continue;
+    const pulse=Math.sin(frameCount*0.16+portal.x*0.01)*6;
+    ctx.globalCompositeOperation='screen';ctx.globalAlpha=0.42;ctx.fillStyle=portal.color;ctx.beginPath();ctx.ellipse(portal.x,portal.y,portal.r+18+pulse,portal.r*1.35+10,0,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=0.88;ctx.strokeStyle=portal.color;ctx.shadowColor=portal.color;ctx.shadowBlur=26;ctx.lineWidth=3;
+    ctx.beginPath();ctx.ellipse(portal.x,portal.y,portal.r+8+pulse*0.25,portal.r*1.18,0,0,Math.PI*2);ctx.stroke();
+    drawOctagon(portal.x,portal.y,portal.r*0.72,frameCount*0.025,portal.color,2);
+    ctx.fillStyle=portal.color;ctx.fillText('NEXT '+portal.label.toUpperCase(),portal.x,portal.y-portal.r-24);
+  }
+  ctx.restore();
+}
+
+function saveBestSplitGhostStreak(){
+  if(splitGhostStreak<=bestSplitGhostStreak)return false;
+  bestSplitGhostStreak=splitGhostStreak;
+  localStorage.setItem('skyDragonDharmaBestSplitGhostStreak',String(bestSplitGhostStreak));
+  if(bestSplitGhostStreak>=3)awardBadge('split-ghost-chaser','Split Ghost Chaser');
+  addHitLabel('BEST GHOST x'+bestSplitGhostStreak,bird.x+88,bird.y-164,'#0f8');
+  return true;
+}
+
+function saveBestWindLaneHits(){
+  if(windLaneHits<=bestWindLaneHits)return false;
+  bestWindLaneHits=windLaneHits;
+  localStorage.setItem('skyDragonDharmaBestWindLanes',String(bestWindLaneHits));
+  if(bestWindLaneHits>=6)awardBadge('wind-lane-rider','Wind Lane Rider');
+  addHitLabel('BEST WIND '+bestWindLaneHits,bird.x+88,bird.y-152,'#0ff');
+  return true;
+}
+
+function spawnWindLane(kind=activeSpeedwayKind()){
+  if(kind==='complete')return null;
+  const pattern=SPEEDWAY_COURSE[kind]||[H/2];
+  const y=pattern[(courseIndex[kind]||0)%pattern.length];
+  const lane={kind,x:W+360+Math.random()*120,y,width:WIND_LANE_WIDTH,hit:false};
+  windLanes.push(lane);
+  return lane;
+}
+
+function collectWindLane(lane){
+  if(lane.hit)return false;
+  lane.hit=true;windLaneHits++;score+=1;charge=Math.min(100,charge+9);routeFlow=Math.min(ROUTE_FLOW_MAX,routeFlow+12);bird.boost=Math.max(bird.boost||0,28);
+  addHitLabel('WIND LANE BOOST +1',bird.x+82,bird.y-82,'#0ff');setAnnouncer('WIND LANE BOOST','#0ff');playCue('boost');triggerSpeedFx(22,'#0ff',7);saveBestWindLaneHits();
+  return true;
+}
+
+function saveBestBankedChain(){
+  if(bankedChain<=bestBankedChain)return false;
+  bestBankedChain=bankedChain;
+  localStorage.setItem('skyDragonDharmaBestBanked',String(bestBankedChain));
+  if(bestBankedChain>=5)awardBadge('banked-turn-ace','Banked Turn Ace');
+  addHitLabel('BEST BANK x'+bestBankedChain,bird.x+86,bird.y-140,'#0ff');
+  return true;
+}
+
+function updateBankedTurn(){
+  const bank=bankedTurnSnapshot();
+  if(bank.roll_bank.aligned){rollBankTicks++;bird.vy+=bank.roll_bank.expected==='right'?0.05:-0.05;routeFlow=Math.min(ROUTE_FLOW_MAX,routeFlow+0.35);}
+  else rollBankTicks=0;
+  if(!bank.ready){if(routeCorridor&&Math.abs(routeCorridor.delta)>ROUTE_CORRIDOR_WIDTH*1.75)bankedChain=0;return bank;}
+  if(frameCount%24!==0)return bank;
+  bankedTurns++;bankedChain++;bestBankedChain=Math.max(bestBankedChain,bankedChain);
+  routeFlow=Math.min(ROUTE_FLOW_MAX,routeFlow+(bank.roll_bank.aligned?7:5));charge=Math.min(100,charge+(bank.roll_bank.aligned?6:4));
+  if(bankedChain%3===0)score++;
+  addHitLabel(bank.roll_bank.aligned?(bankedChain%3===0?'ROLL BANK +1':'ROLL BANK'):(bankedChain%3===0?'BANKED TURN +1':'BANKED TURN'),bird.x+72,bird.y-64,bank.roll_bank.aligned?'#fd0':'#0ff');
+  playCue('split');saveBestBankedChain();
+  return bankedTurnSnapshot();
+}
+
+function saveBestCheckpointScore(){
+  const value=checkpointScore();
+  if(value<=bestCheckpointScore)return false;
+  bestCheckpointScore=value;
+  localStorage.setItem('skyDragonDharmaBestCheckpoints',String(bestCheckpointScore));
+  if(bestCheckpointScore>=12)awardBadge('checkpoint-master','Checkpoint Master');
+  addHitLabel('BEST CHECKPOINTS '+bestCheckpointScore,bird.x+92,bird.y-128,'#0ff');
+  return true;
+}
+
+function saveBestApexChain(){
+  if(apexChain<=bestApexChain)return false;
+  bestApexChain=apexChain;
+  localStorage.setItem('skyDragonDharmaBestApex',String(bestApexChain));
+  if(bestApexChain>=4)awardBadge('apex-chain-pilot','Apex Chain Pilot');
+  addHitLabel('BEST APEX x'+bestApexChain,bird.x+84,bird.y-116,'#fd0');
+  return true;
+}
+
+function flightLogSnapshot(){
+  return persistedFlightLog.slice(0,5);
+}
+
+function recordFlightLogEntry(reason='completed'){
+  if(runRecorded||score<=0)return null;
+  const entry={
+    at:new Date().toISOString(),reason,score,best_combo:bestCombo,near_misses:nearMisses,
+    route_tier:routeTier.name,badges:runBadges.map(b=>b.id),assist_mode:assistMode,
+    time_left:Number(timeLeft.toFixed(1)),time_attack_mode:timeAttackMode,time_attack_elapsed:timeAttackElapsed(),best_time_attack:bestTimeAttack,all_in_one_complete:runComplete,targets:{...targetStats},route_streak:routeStreak,speed_chain:speedChainSnapshot(),sector_transition:sectorTransitionSnapshot(),sector_portals:sectorPortalSnapshot(),portal_wake:portalWakeSnapshot(),route_focus:activeSpeedwayKind(),route_preview:routePreview(),route_line:routeLineSnapshot(),depth_gates:depthGateSnapshot(),turn_cue:turnCueSnapshot(),roll_bank:rollBankSnapshot(),route_compass:routeCompassSnapshot(),speed_fx:speedFxSnapshot(),altitude_band:altitudeBandSnapshot(),route_discipline:routeDiscipline(),sector_plan:sectorPlanSnapshot(),sector_mastery:sectorMastery,route_landmarks:routeLandmarkSnapshot(),next_landmark:nextLandmark(),course_map:courseMapSnapshot(),route_coach:routeCoach,route_mistakes:routeMistakes,head_on_hits:headOnHits,route_splits:routeSplits,best_route_splits:bestRouteSplits,pace_delta:paceDelta,speed_rings:speedRingSnapshot(),dive_surge:diveSurgeSnapshot(),split_ghost_rival:splitGhostRival||splitGhostRivalSnapshot(),split_ghost_streak:splitGhostStreak,best_split_ghost_streak:bestSplitGhostStreak,speedway_report:speedwayReportCard(),speedway_medal:speedwayMedal(),best_speedway_medal:bestSpeedwayMedal,target_lock:targetLock,perfect_line_hits:perfectLineHits,flame_shots:flameShots
+  };
+  persistedFlightLog=[entry,...persistedFlightLog]
+    .sort((a,b)=>b.score-a.score||b.best_combo-a.best_combo||b.near_misses-a.near_misses)
+    .slice(0,8);
+  runRecorded=true;flightLog=flightLogSnapshot();saveFlightLog();
+  return entry;
+}
+
+function awardBadge(id,label){
+  if(unlockedBadges.includes(id))return false;
+  unlockedBadges.push(id);saveUnlockedBadges();
+  runBadges.push({id,label});setAnnouncer('BADGE UNLOCKED: '+label,'#fd0');
+  return true;
+}
+
+function evaluateMissions(){
+  missionStatus.rings=missionStatus.ringsCollected;
+  for(const mission of FLIGHT_MISSIONS){
+    if(mission.done())awardBadge(mission.id,mission.label);
+  }
+}
+
+function missionSnapshot(){
+  return FLIGHT_MISSIONS.map(mission=>({id:mission.id,label:mission.label,goal:mission.goal,complete:mission.done()}));
+}
+
+function resetSpeedwayRun(){
+  crystals=[];drones=[];flameBursts=[];hitLabels=[];crystalTimer=0;droneTimer=0;landmarkTimer=0;timeLeft=timeAttackMode?TIME_ATTACK_START:NORMAL_SPEEDWAY_START;runComplete=false;routeStreak=0;lastRouteKind=null;flameShots=0;perfectLineHits=0;routeMistakes=0;headOnHits=0;corridorScore=0;corridorBreaks=0;routeFlow=0;apexTurns=0;apexChain=0;bankedTurns=0;bankedChain=0;windLaneHits=0;windLanes=[];speedRings=[];speedRingChain=0;diveHold=false;diveSurge=0;diveSurges=0;speedStreaks=[];speedFxLevel=0;cameraShake=0;altitudeBandTicks=0;altitudeBandHolds=0;splitGhostStreak=0;rollHold=0;rollBankTicks=0;speedChain=0;speedChainTimer=0;sectorTransition=null;lastSectorFocus='rings';sectorPortals=[];sectorPortalHits=0;portalWake=null;portalWakeScore=0;checkpointBeacons=[];sectorMastery={};routeSplits={};paceDelta={kind:'start',delta:null,ahead:false,behind:false};splitGhostRival=splitGhostRivalSnapshot('rings');targetLock={kind:'rings',strength:0,dy:0,distance:0,locked:false};routeCoach={cue:'FOLLOW RINGS',kind:'rings',dy:0,distance:0};routeCorridor={kind:'rings',label:'Rings',line_y:0,dragon_y:0,delta:0,width:ROUTE_CORRIDOR_WIDTH,inside:false,strength:0,active:true};
+  targetStats={rings:0,gates:0,crystals:0,drones:0};courseIndex={rings:0,gates:0,crystals:0,drones:0};seedCourseOpening();
+}
+
+function nextCourseY(kind){
+  const pattern=SPEEDWAY_COURSE[kind]||[H/2];
+  const index=courseIndex[kind]||0;
+  courseIndex[kind]=index+1;
+  return pattern[index%pattern.length];
+}
+
+function routePreview(){
+  return SPEEDWAY_ROUTE.map(kind=>({kind,label:SPEEDWAY_LABELS[kind],next_y:(SPEEDWAY_COURSE[kind]||[])[(courseIndex[kind]||0)%SPEEDWAY_COURSE[kind].length]}));
+}
+
+function depthGateSnapshot(kind=activeSpeedwayKind(),count=5){
+  return routeLineSnapshot(kind,count).map(point=>{
+    const depth=Math.max(0.22,Math.min(1.35,point.screen_x/W));
+    return {...point,depth:Number(depth.toFixed(2)),radius:Math.round(12+depth*22),alpha:Number((0.28+depth*0.42).toFixed(2))};
+  });
+}
+
+function drawDepthGates(){
+  if(state!==STATE.PLAY||paused)return;
+  const gates=depthGateSnapshot();
+  if(!gates.length)return;
+  const sector=activeSectorPlan();
+  ctx.save();ctx.globalCompositeOperation='screen';ctx.strokeStyle=sector.color;ctx.fillStyle=sector.color;ctx.shadowColor=sector.color;ctx.shadowBlur=14;ctx.font='bold 10px Courier New';ctx.textAlign='center';
+  gates.forEach(gate=>{
+    ctx.globalAlpha=gate.alpha;ctx.lineWidth=gate.order===1?3:1.5;ctx.beginPath();ctx.ellipse(gate.screen_x,gate.y,gate.radius*1.25,gate.radius,0,0,Math.PI*2);ctx.stroke();
+    ctx.globalAlpha=Math.min(0.9,gate.alpha+0.16);ctx.fillText('DEPTH '+gate.order,gate.screen_x,gate.y-gate.radius-8);
+  });
+  ctx.globalAlpha=0.74;ctx.fillText('DEPTH GATES · FORWARD ROUTE TELEGRAPH',W/2,166);ctx.restore();
+}
+
+function turnCueSnapshot(){
+  const gates=depthGateSnapshot(activeSpeedwayKind(),4);
+  if(!gates.length||!bird)return {cue:'CLEAR',direction:'hold',delta:0,slope:0,urgency:'clear',gates:[]};
+  const next=gates[0];
+  const later=gates[1]||next;
+  const delta=Math.round(next.y-bird.y);
+  const slope=Math.round(later.y-next.y);
+  const direction=delta>34?'dive':delta<-34?'climb':Math.abs(slope)>34?(slope>0?'prepare dive':'prepare climb'):'hold';
+  const urgency=Math.abs(delta)>90?'urgent':Math.abs(delta)>42?'setup':'clean';
+  return {cue:direction.toUpperCase(),direction,delta,slope,urgency,gates:gates.slice(0,3)};
+}
+
+function drawTurnCues(){
+  if(state!==STATE.PLAY||paused)return;
+  const cue=turnCueSnapshot();
+  if(!cue.gates.length||(cue.direction==='hold'&&cue.urgency==='clean'))return;
+  const color=cue.direction.includes('dive')?'#0ff':cue.direction.includes('climb')?'#fd0':'#fff';
+  const arrow=cue.direction.includes('dive')?'▼':cue.direction.includes('climb')?'▲':'◆';
+  const y=cue.direction.includes('dive')?H-132:112;
+  ctx.save();ctx.globalCompositeOperation='screen';ctx.textAlign='center';ctx.font='bold 14px Courier New';ctx.shadowColor=color;ctx.shadowBlur=18;ctx.fillStyle=color;ctx.globalAlpha=cue.urgency==='urgent'?0.96:0.72;
+  ctx.fillText('TURN CUE '+cue.cue+' · '+Math.abs(cue.delta)+'px',W/2,y);
+  ctx.font='bold 30px Courier New';ctx.fillText(arrow,W/2,y+(cue.direction.includes('dive')?34:-20));
+  ctx.strokeStyle=color;ctx.lineWidth=2;ctx.globalAlpha=0.42;ctx.beginPath();ctx.moveTo(W/2-86,bird.y);ctx.lineTo(cue.gates[0].screen_x,cue.gates[0].y);ctx.stroke();ctx.restore();
+}
+
+function routeLineSnapshot(kind=activeSpeedwayKind(),count=5){
+  const pattern=SPEEDWAY_COURSE[kind]||[];
+  if(!pattern.length)return [];
+  const start=courseIndex[kind]||0;
+  return Array.from({length:count},(_,i)=>({
+    kind,
+    label:SPEEDWAY_LABELS[kind],
+    order:i+1,
+    y:pattern[(start+i)%pattern.length],
+    screen_x:Math.round(bird?bird.x+88+i*72:120+i*72)
+  }));
+}
+
+function routeDiscipline(){
+  const scoreValue=Math.max(0,routeStreak*10+(speedChain||0)*7+perfectLineHits*8+headOnHits*5+corridorScore*3+bankedTurns*2+altitudeBandHolds*3+splitGhostStreak*6- corridorBreaks*5- routeMistakes*14);
+  const grade=scoreValue>=140?'S':scoreValue>=95?'A':scoreValue>=55?'B':scoreValue>=24?'C':'D';
+  return {score:scoreValue,grade,sector_transition:sectorTransitionSnapshot(),sector_portals:sectorPortalSnapshot(),portal_wake:portalWakeSnapshot(),depth_gates:depthGateSnapshot(),turn_cue:turnCueSnapshot(),roll_bank:rollBankSnapshot(),speed_chain:speedChainSnapshot(),route_streak:routeStreak,perfect_line_hits:perfectLineHits,head_on_hits:headOnHits,route_mistakes:routeMistakes,corridor_score:corridorScore,corridor_breaks:corridorBreaks,best_corridor_score:bestCorridorScore,route_flow:routeFlowSnapshot(),route_compass:routeCompassSnapshot(),route_apex:routeApexSnapshot(),checkpoints:checkpointSnapshot(),banked_turns:bankedTurnSnapshot(),wind_lanes:windLaneSnapshot(),speed_rings:speedRingSnapshot(),dive_surge:diveSurgeSnapshot(),split_ghost_rival:splitGhostRivalSnapshot(),split_ghost_streak:splitGhostStreak,best_split_ghost_streak:bestSplitGhostStreak};
+}
+
+function seedCourseOpening(){
+  rings=[];pipes=[];crystals=[];drones=[];
+  for(let i=0;i<3;i++)rings.push({x:W+130+i*130,y:nextCourseY('rings'),r:24,hit:false});
+  for(let i=0;i<2;i++){const gapY=nextCourseY('gates');pipes.push({x:W+570+i*190,gapY,gapH:170,scored:false});}
+  crystals.push({x:W+1040,y:nextCourseY('crystals'),r:17,hit:false});
+  drones.push({x:W+1280,y:nextCourseY('drones'),r:18,hit:false,wobble:0.3});
+}
+
+function activeSpeedwayKind(){
+  return SPEEDWAY_ROUTE.find(kind=>targetStats[kind]<SPEEDWAY_TARGETS[kind])||'complete';
+}
+
+function routeGuideLabel(){
+  const kind=activeSpeedwayKind();
+  return kind==='complete'?'All targets clear':('Next: '+SPEEDWAY_LABELS[kind]+' '+targetStats[kind]+'/'+SPEEDWAY_TARGETS[kind]);
+}
+
+function nearestByKind(kind){
+  const sources={rings,crystals,drones,gates:pipes};
+  const list=(sources[kind]||[]).filter(item=>!item.hit&&!item.scored&&item.x>bird.x-20);
+  if(!list.length)return null;
+  return list.sort((a,b)=>Math.abs(a.x-bird.x)-Math.abs(b.x-bird.x))[0];
+}
+
+function nextRouteTarget(){
+  const kind=activeSpeedwayKind();
+  const target=nearestByKind(kind)||nearestByKind('rings')||nearestByKind('gates')||nearestByKind('crystals')||nearestByKind('drones');
+  if(!target)return null;
+  const y=kind==='gates'||target.gapY!==undefined?target.gapY+target.gapH/2:target.y;
+  return {kind,x:target.x+(kind==='gates'?35:0),y};
+}
+
+function routeCompassSnapshot(){
+  const target=nextRouteTarget();
+  if(!target||!bird)return {kind:'none',label:'Clear',dx:0,dy:0,distance:0,angle:0,on_screen:false,urgency:'clear'};
+  const dx=target.x-bird.x,dy=target.y-bird.y;
+  const distance=Math.round(Math.sqrt(dx*dx+dy*dy));
+  const onScreen=target.x>=0&&target.x<=W&&target.y>=0&&target.y<=H;
+  const urgency=distance<120?'commit':distance<260?'line-up':'seek';
+  return {kind:target.kind,label:SPEEDWAY_LABELS[target.kind]||'Target',dx:Math.round(dx),dy:Math.round(dy),distance,angle:Number(Math.atan2(dy,dx).toFixed(3)),on_screen:onScreen,urgency};
+}
+
+function drawRouteCompass(){
+  if(state!==STATE.PLAY||paused)return;
+  const compass=routeCompassSnapshot();
+  if(compass.kind==='none')return;
+  const color=compass.kind==='drones'?'#f0f':compass.kind==='crystals'?'#0ff':compass.kind==='gates'?'#0ff':'#fd0';
+  const cx=W-56,cy=H-88;
+  ctx.save();ctx.translate(cx,cy);ctx.rotate(compass.angle);ctx.globalAlpha=compass.urgency==='commit'?0.95:0.72;ctx.strokeStyle=color;ctx.fillStyle=color;ctx.shadowColor=color;ctx.shadowBlur=16;ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(26,0);ctx.lineTo(-14,-12);ctx.lineTo(-6,0);ctx.lineTo(-14,12);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.restore();
+  ctx.save();ctx.font='bold 10px Courier New';ctx.textAlign='center';ctx.fillStyle=color;ctx.shadowColor=color;ctx.shadowBlur=10;ctx.fillText('COMPASS '+compass.label.toUpperCase(),cx,cy+30);ctx.fillText(compass.distance+'px · '+compass.urgency.toUpperCase(),cx,cy+43);ctx.restore();
+}
+
+function routeTargetLock(){
+  const target=nextRouteTarget();
+  if(!target)return {kind:'none',strength:0,dy:0,distance:0,locked:false};
+  const verticalDelta=target.y-bird.y;
+  const distance=Math.max(0,target.x-bird.x);
+  const alignment=Math.max(0,1-Math.abs(verticalDelta)/120);
+  const approach=Math.max(0,1-Math.abs(distance-160)/260);
+  const strength=Math.min(1,alignment*0.75+approach*0.25);
+  return {kind:target.kind,strength:Number(strength.toFixed(2)),dy:Math.round(verticalDelta),distance:Math.round(distance),locked:strength>=0.72&&distance>25&&distance<340};
+}
+
+function activeSectorPlan(){
+  const kind=activeSpeedwayKind();
+  return SPEEDWAY_SECTORS[kind]||{name:'Clear',tactic:'all targets clear',minY:0,maxY:H,color:'#0f8'};
+}
+
+function nextLandmark(){
+  const kind=activeSpeedwayKind();
+  return ROUTE_LANDMARKS.find(mark=>mark.kind===kind)||ROUTE_LANDMARKS[0];
+}
+
+function routeLandmarkSnapshot(){
+  const focus=activeSpeedwayKind();
+  return ROUTE_LANDMARKS.map(mark=>({...mark,active:mark.kind===focus,complete:targetStats[mark.kind]>=SPEEDWAY_TARGETS[mark.kind]}));
+}
+
+function sectorPlanSnapshot(){
+  return SPEEDWAY_ROUTE.map(kind=>({kind,label:SPEEDWAY_LABELS[kind],...SPEEDWAY_SECTORS[kind],count:targetStats[kind],target:SPEEDWAY_TARGETS[kind],complete:targetStats[kind]>=SPEEDWAY_TARGETS[kind],mastery:sectorMastery[kind]||null}));
+}
+
+function captureSectorMastery(kind){
+  if(!SPEEDWAY_SECTORS[kind]||sectorMastery[kind]||targetStats[kind]<SPEEDWAY_TARGETS[kind])return false;
+  const plan=SPEEDWAY_SECTORS[kind];
+  const clean=routeMistakes===0;
+  const grade=clean&&routeStreak>=SPEEDWAY_TARGETS[kind]?'perfect':routeStreak>=4?'stable':'messy';
+  sectorMastery[kind]={name:plan.name,tactic:plan.tactic,grade,clean,time_left:Number(timeLeft.toFixed(1)),route_streak:routeStreak,head_on_hits:headOnHits};
+  addHitLabel(plan.name.toUpperCase()+' MASTERED',bird.x+88,bird.y-66,plan.color);
+  return true;
+}
+
+function routeCoachCue(){
+  const lock=targetLock||routeTargetLock();
+  if(!lock||lock.kind==='none')return {cue:'FIND ROUTE',kind:'none',dy:0,distance:0,sector:activeSectorPlan().name};
+  const plan=SPEEDWAY_SECTORS[lock.kind]||activeSectorPlan();
+  let cue='HOLD LINE';
+  if(bird.y<plan.minY)cue='DIVE TO '+plan.name.toUpperCase();
+  else if(bird.y>plan.maxY)cue='CLIMB TO '+plan.name.toUpperCase();
+  else if(lock.kind==='drones'&&lock.distance<260)cue='INTERCEPT HEAD-ON';
+  else if(lock.dy<-42)cue='CLIMB';
+  else if(lock.dy>42)cue='DIVE';
+  else if(lock.distance>300)cue='SET UP '+SPEEDWAY_LABELS[lock.kind].toUpperCase();
+  else if(lock.locked)cue='COMMIT';
+  const landmark=nextLandmark();
+  return {cue,kind:lock.kind,sector:plan.name,tactic:plan.tactic,landmark:landmark.label,band:[plan.minY,plan.maxY],dy:lock.dy,distance:lock.distance,locked:lock.locked};
+}
+
+function updateTargetLock(){
+  targetLock=routeTargetLock();
+  routeCoach=routeCoachCue();
+  return targetLock;
+}
+
+function routeCorridorSnapshot(){
+  if(!bird)return {kind:'none',label:'None',line_y:0,dragon_y:0,delta:0,width:ROUTE_CORRIDOR_WIDTH,inside:false,strength:0,active:false};
+  const kind=activeSpeedwayKind();
+  const plan=activeSectorPlan();
+  const target=nextRouteTarget();
+  const lineY=target?target.y:Math.round((plan.minY+plan.maxY)/2);
+  const delta=Math.round(lineY-bird.y);
+  const strength=Math.max(0,Math.min(1,1-Math.abs(delta)/(ROUTE_CORRIDOR_WIDTH*1.75)));
+  return {kind,label:SPEEDWAY_LABELS[kind]||'Clear',line_y:Math.round(lineY),dragon_y:Math.round(bird.y),delta,width:ROUTE_CORRIDOR_WIDTH,inside:Math.abs(delta)<=ROUTE_CORRIDOR_WIDTH,strength:Number(strength.toFixed(2)),active:kind!=='complete'};
+}
+
+function updateRouteCorridor(){
+  routeCorridor=routeCorridorSnapshot();
+  if(!routeCorridor.active||paused)return routeCorridor;
+  if(frameCount%18===0){
+    if(routeCorridor.inside){
+      corridorScore++;
+      routeFlow=Math.min(ROUTE_FLOW_MAX,routeFlow+4+(routeCorridor.strength>0.8?2:0));
+      if(corridorScore%5===0){score++;addHitLabel(routeFlow>=80?'AERO FLOW +1':'LINE HELD +1',bird.x+72,bird.y-76,'#0f8');playCue('split');}
+    }else{
+      corridorBreaks++;
+      routeFlow=Math.max(0,routeFlow-9);apexChain=0;
+      if(corridorBreaks%3===1)addHitLabel(routeCorridor.delta>0?'DIVE TO LINE':'CLIMB TO LINE',bird.x+74,bird.y-72,'#f66');
+    }
+  }
+  return routeCorridor;
+}
+
+function awardPerfectLine(kind){
+  if(!targetLock||!targetLock.locked||targetLock.kind!==kind)return false;
+  perfectLineHits++;score+=2;
+  if(!timeAttackMode)timeLeft=Math.min(99,timeLeft+1);
+  addHitLabel(timeAttackMode?'PERFECT LINE +2':'PERFECT LINE +1s',bird.x+70,bird.y-34,'#0f8');
+  setAnnouncer('PERFECT LINE','#0f8');
+  return true;
+}
+
+function awardApexTurn(kind){
+  const apexReady=kind===activeSpeedwayKind()&&routeCorridor&&routeCorridor.inside&&targetLock&&targetLock.locked&&targetLock.kind===kind&&routeFlow>=35;
+  if(!apexReady)return false;
+  apexTurns++;apexChain++;bestApexChain=Math.max(bestApexChain,apexChain);
+  score+=1;charge=Math.min(100,charge+6);routeFlow=Math.min(ROUTE_FLOW_MAX,routeFlow+8);
+  if(apexChain>=3&&!timeAttackMode)timeLeft=Math.min(99,timeLeft+0.5);
+  addHitLabel((timeAttackMode||apexChain<3)?'APEX TURN +1':'APEX CHAIN +0.5s',bird.x+82,bird.y-46,'#fd0');
+  setAnnouncer('APEX TURN x'+apexChain,'#fd0');playCue('split');
+  saveBestApexChain();
+  return true;
+}
+
+function drawRouteCorridor(){
+  if(state!==STATE.PLAY||paused)return;
+  const corridor=routeCorridor||routeCorridorSnapshot();
+  if(!corridor.active)return;
+  const line=routeLineSnapshot(corridor.kind,6);
+  if(line.length<2)return;
+  const sector=activeSectorPlan();
+  ctx.save();
+  ctx.globalAlpha=corridor.inside?0.18:0.11;ctx.fillStyle=sector.color;ctx.strokeStyle=corridor.inside?'#0f8':'#f66';ctx.shadowColor=ctx.strokeStyle;ctx.shadowBlur=corridor.inside?12:6;
+  ctx.beginPath();
+  line.forEach((point,i)=>{const x=point.screen_x,y=point.y-ROUTE_CORRIDOR_WIDTH;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+  [...line].reverse().forEach(point=>ctx.lineTo(point.screen_x,point.y+ROUTE_CORRIDOR_WIDTH));
+  ctx.closePath();ctx.fill();
+  ctx.globalAlpha=0.62;ctx.lineWidth=1.5;ctx.setLineDash([6,10]);
+  ctx.beginPath();line.forEach((point,i)=>{if(i===0)ctx.moveTo(point.screen_x,point.y);else ctx.lineTo(point.screen_x,point.y);});ctx.stroke();ctx.setLineDash([]);
+  ctx.font='bold 10px Courier New';ctx.textAlign='center';ctx.fillStyle=ctx.strokeStyle;ctx.fillText((corridor.inside?'ON LINE':'OFF LINE')+' · CORRIDOR '+corridor.label.toUpperCase(),W/2,151);
+  ctx.restore();
+}
+
+function drawGhostRouteRibbon(){
+  if(state!==STATE.PLAY||paused)return;
+  const line=routeLineSnapshot();
+  if(line.length<2)return;
+  const sector=activeSectorPlan();
+  ctx.save();
+  ctx.globalAlpha=0.55;ctx.strokeStyle=sector.color;ctx.fillStyle=sector.color;ctx.shadowColor=sector.color;ctx.shadowBlur=12;ctx.lineWidth=3;ctx.setLineDash([10,7]);
+  ctx.beginPath();
+  line.forEach((point,i)=>{const x=point.screen_x,y=point.y;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+  ctx.stroke();ctx.setLineDash([]);
+  line.forEach(point=>{ctx.beginPath();ctx.arc(point.screen_x,point.y,7,0,Math.PI*2);ctx.fill();ctx.font='bold 10px Courier New';ctx.textAlign='center';ctx.fillText(String(point.order),point.screen_x,point.y-12);});
+  ctx.font='bold 11px Courier New';ctx.textAlign='center';ctx.fillText('GHOST ROUTE RIBBON · '+sector.name.toUpperCase(),W/2,136);
+  ctx.restore();
+}
+
+function drawRouteGuide(){
+  if(state!==STATE.PLAY||paused)return;
+  const target=nextRouteTarget();
+  if(!target)return;
+  ctx.save();
+  ctx.globalAlpha=0.78;ctx.strokeStyle=target.kind==='drones'?'#f0f':target.kind==='crystals'?'#0ff':'#fd0';ctx.fillStyle=ctx.strokeStyle;ctx.lineWidth=2;ctx.setLineDash([8,8]);
+  ctx.beginPath();ctx.moveTo(bird.x+24,bird.y);ctx.lineTo(target.x,target.y);ctx.stroke();ctx.setLineDash([]);
+  const a=Math.atan2(target.y-bird.y,target.x-bird.x);
+  ctx.beginPath();ctx.moveTo(target.x,target.y);ctx.lineTo(target.x-Math.cos(a-.45)*18,target.y-Math.sin(a-.45)*18);ctx.lineTo(target.x-Math.cos(a+.45)*18,target.y-Math.sin(a+.45)*18);ctx.closePath();ctx.fill();
+  const lock=targetLock||routeTargetLock();
+  ctx.setLineDash([]);ctx.globalAlpha=lock.locked?0.95:0.45;ctx.lineWidth=lock.locked?4:2;
+  ctx.beginPath();ctx.arc(target.x,target.y,lock.locked?30:24,0,Math.PI*2);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(target.x-36,target.y);ctx.lineTo(target.x-18,target.y);ctx.moveTo(target.x+18,target.y);ctx.lineTo(target.x+36,target.y);ctx.moveTo(target.x,target.y-36);ctx.lineTo(target.x,target.y-18);ctx.moveTo(target.x,target.y+18);ctx.lineTo(target.x,target.y+36);ctx.stroke();
+  ctx.font='bold 12px Courier New';ctx.textAlign='center';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=10;ctx.fillText((lock.locked?'TARGET LOCK · ':'')+routeGuideLabel().toUpperCase(),W/2,112);
+  ctx.restore();
+}
+
+function speedwayMedal(){
+  return SPEEDWAY_MEDALS.find(medal=>timeLeft>=medal.time)||SPEEDWAY_MEDALS[SPEEDWAY_MEDALS.length-1];
+}
+
+function medalRank(id){
+  const index=SPEEDWAY_MEDALS.findIndex(medal=>medal.id===id);
+  return index<0?999:index;
+}
+
+function saveSpeedwayMedal(){
+  const medal=speedwayMedal();
+  if(!bestSpeedwayMedal||medalRank(medal.id)<medalRank(bestSpeedwayMedal)){
+    bestSpeedwayMedal=medal.id;
+    localStorage.setItem('skyDragonDharmaBestMedal',bestSpeedwayMedal);
+    awardBadge('medal-'+medal.id,medal.label+' Speedway');
+    playCue('medal');
+  }
+  maybeSaveBestSplits();
+  return medal;
+}
+
+function captureRouteSplit(kind){
+  if(!targetStats||targetStats[kind]<SPEEDWAY_TARGETS[kind]||routeSplits[kind])return false;
+  routeSplits[kind]={time_left:Number(timeLeft.toFixed(1)),score,route_streak:routeStreak,perfect_line_hits:perfectLineHits};
+  captureSectorMastery(kind);
+  playCue('split');
+  updatePaceDelta(kind);
+  updateSplitGhostRival(kind);
+  if(splitGhostRival&&splitGhostRival.ahead){
+    splitGhostStreak++;score++;routeFlow=Math.min(ROUTE_FLOW_MAX,routeFlow+10);charge=Math.min(100,charge+8);
+    addHitLabel('GHOST BEAT +1',bird.x+86,bird.y-104,'#0f8');saveBestSplitGhostStreak();
+  }else if(splitGhostRival&&splitGhostRival.best_time_left!==null){splitGhostStreak=0;}
+  captureCheckpointBeacon(kind);
+  addHitLabel(SPEEDWAY_LABELS[kind].toUpperCase()+' SPLIT '+paceDeltaLabel(),bird.x+76,bird.y-52,paceDelta.ahead?'#0f8':'#fd0');
+  return true;
+}
+
+function captureCheckpointBeacon(kind){
+  const clean=routeMistakes===0&&corridorBreaks<2;
+  const perfect=clean&&routeFlow>=70&&apexChain>=2;
+  const grade=perfect?'perfect':clean?'clean':'rough';
+  const meta=CHECKPOINT_GRADES[grade];
+  const beacon={kind,label:SPEEDWAY_LABELS[kind],grade,score:meta.score,time_left:Number(timeLeft.toFixed(1)),flow:Math.round(routeFlow),apex_chain:apexChain,pace:paceDeltaLabel()};
+  checkpointBeacons.push(beacon);
+  if(perfect){score+=2;charge=Math.min(100,charge+10);addHitLabel('PERFECT CHECKPOINT +2',bird.x+92,bird.y-88,meta.color);}
+  else addHitLabel(meta.label.toUpperCase()+' CHECKPOINT',bird.x+92,bird.y-88,meta.color);
+  return beacon;
+}
+
+function routeSplitScore(splits=routeSplits){
+  return SPEEDWAY_ROUTE.reduce((total,kind)=>total+((splits&&splits[kind]&&splits[kind].time_left)||0),0);
+}
+
+function maybeSaveBestSplits(){
+  if(!speedwayComplete())return false;
+  if(routeSplitScore(routeSplits)<=routeSplitScore(bestRouteSplits))return false;
+  bestRouteSplits=JSON.parse(JSON.stringify(routeSplits));
+  saveBestRouteSplits();
+  addHitLabel('BEST SPLITS SAVED',bird.x+72,bird.y-72,'#0f8');
+  return true;
+}
+
+function updatePaceDelta(kind=activeSpeedwayKind()){
+  const current=routeSplits&&routeSplits[kind];
+  const best=bestRouteSplits&&bestRouteSplits[kind];
+  if(!current||!best){paceDelta={kind,delta:null,ahead:false,behind:false};return paceDelta;}
+  const delta=Number((current.time_left-best.time_left).toFixed(1));
+  paceDelta={kind,delta,ahead:delta>0,behind:delta<0};
+  return paceDelta;
+}
+
+function paceDeltaLabel(){
+  if(!paceDelta||paceDelta.delta===null)return '--';
+  return (paceDelta.delta>=0?'+':'')+paceDelta.delta.toFixed(1)+'s';
+}
+
+function splitGhostRivalSnapshot(kind=activeSpeedwayKind()){
+  const best=bestRouteSplits&&bestRouteSplits[kind];
+  const current=routeSplits&&routeSplits[kind];
+  const currentTime=current?current.time_left:Number((timeLeft||0).toFixed(1));
+  if(!best)return {kind,label:SPEEDWAY_LABELS[kind]||'Clear',best_time_left:null,current_time_left:currentTime,delta:null,ahead:false,behind:false,pressure:'no-ghost',streak:splitGhostStreak||0,best_streak:bestSplitGhostStreak||0};
+  const delta=Number((currentTime-best.time_left).toFixed(1));
+  const pressure=delta>=3?'ahead':delta>=0?'tight':delta>-3?'chasing':'behind';
+  return {kind,label:SPEEDWAY_LABELS[kind]||'Clear',best_time_left:best.time_left,current_time_left:currentTime,delta,ahead:delta>=0,behind:delta<0,pressure,streak:splitGhostStreak||0,best_streak:bestSplitGhostStreak||0};
+}
+
+function updateSplitGhostRival(kind=activeSpeedwayKind()){
+  splitGhostRival=splitGhostRivalSnapshot(kind);
+  return splitGhostRival;
+}
+
+function splitGhostLabel(){
+  const ghost=splitGhostRival||splitGhostRivalSnapshot();
+  if(!ghost||ghost.delta===null)return 'NO GHOST';
+  return (ghost.delta>=0?'+':'')+ghost.delta.toFixed(1)+'s '+ghost.pressure.toUpperCase();
+}
+
+function splitComparison(kind){
+  const current=routeSplits&&routeSplits[kind];
+  const best=bestRouteSplits&&bestRouteSplits[kind];
+  if(!current)return 'pending';
+  if(!best)return current.time_left.toFixed(1)+'s';
+  const delta=Number((current.time_left-best.time_left).toFixed(1));
+  return current.time_left.toFixed(1)+'s '+(delta>=0?'+':'')+delta.toFixed(1);
+}
+
+function speedwayReportCard(){
+  const medal=speedwayMedal();
+  return {
+    medal:medal.label,
+    medal_id:medal.id,
+    medal_color:medal.color,
+    time_left:Number(timeLeft.toFixed(1)),
+    pace_delta:paceDeltaLabel(),
+    route_corridor:routeCorridor||routeCorridorSnapshot(),
+    corridor_score:corridorScore,
+    corridor_breaks:corridorBreaks,
+    best_corridor_score:bestCorridorScore,
+    route_flow:routeFlowSnapshot(),
+    speed_fx:speedFxSnapshot(),
+    altitude_band:altitudeBandSnapshot(),
+    sector_transition:sectorTransitionSnapshot(),
+    sector_portals:sectorPortalSnapshot(),
+    portal_wake:portalWakeSnapshot(),
+    depth_gates:depthGateSnapshot(),
+    turn_cue:turnCueSnapshot(),
+    roll_bank:rollBankSnapshot(),
+    route_apex:routeApexSnapshot(),
+    checkpoints:checkpointSnapshot(),
+    banked_turns:bankedTurnSnapshot(),
+    wind_lanes:windLaneSnapshot(),
+    speed_rings:speedRingSnapshot(),
+    dive_surge:diveSurgeSnapshot(),
+    split_ghost_rival:splitGhostRival||splitGhostRivalSnapshot(),
+    split_ghost_streak:splitGhostStreak,
+    best_split_ghost_streak:bestSplitGhostStreak,
+    split_count:Object.keys(routeSplits||{}).length,
+    splits:SPEEDWAY_ROUTE.map(kind=>({kind,label:SPEEDWAY_LABELS[kind],current:routeSplits[kind]||null,best:(bestRouteSplits||{})[kind]||null,comparison:splitComparison(kind)}))
+  };
+}
+
+function speedwaySnapshot(){
+  return Object.keys(SPEEDWAY_TARGETS).map(id=>({id,label:SPEEDWAY_LABELS[id],count:targetStats[id],target:SPEEDWAY_TARGETS[id],complete:targetStats[id]>=SPEEDWAY_TARGETS[id]}));
+}
+
+function courseMapSnapshot(){
+  const focus=activeSpeedwayKind();
+  return SPEEDWAY_ROUTE.map((kind,index)=>({
+    kind,
+    label:SPEEDWAY_LABELS[kind],
+    index,
+    count:targetStats[kind],
+    target:SPEEDWAY_TARGETS[kind],
+    complete:targetStats[kind]>=SPEEDWAY_TARGETS[kind],
+    active:kind===focus,
+    split:routeSplits[kind]||null,
+    best_split:(bestRouteSplits||{})[kind]||null,
+    checkpoint:(checkpointBeacons||[]).find(beacon=>beacon.kind===kind)||null
+  }));
+}
+
+function drawRouteLandmarks(){
+  const marks=routeLandmarkSnapshot();
+  ctx.save();
+  ctx.font='bold 10px Courier New';ctx.textAlign='center';
+  for(const mark of marks){
+    const drift=(frameCount*0.36+mark.x)%W;
+    const x=(mark.x-drift*0.18+W)%W;
+    const y=mark.y+Math.sin(frameCount*0.02+mark.x)*8;
+    ctx.globalAlpha=mark.active?0.82:0.24;ctx.strokeStyle=mark.color;ctx.fillStyle=mark.color;ctx.shadowColor=mark.color;ctx.shadowBlur=mark.active?18:6;
+    drawOctagon(x,y,mark.active?22:15,frameCount*0.012,mark.color,2);
+    ctx.fillText(mark.active?'NEXT '+mark.label.toUpperCase():mark.label.toUpperCase(),x,y+34);
+    if(mark.active){ctx.beginPath();ctx.moveTo(bird.x+22,bird.y);ctx.lineTo(x,y);ctx.stroke();}
+  }
+  ctx.restore();
+}
+
+function drawCourseMap(){
+  const map=courseMapSnapshot();
+  const y=H-42,startX=78,gap=108;
+  ctx.save();
+  ctx.font='bold 10px Courier New';ctx.textAlign='center';ctx.lineWidth=2;
+  ctx.strokeStyle='rgba(255,255,255,.18)';ctx.beginPath();ctx.moveTo(startX,y);ctx.lineTo(startX+gap*(map.length-1),y);ctx.stroke();
+  map.forEach((sector,i)=>{
+    const x=startX+i*gap;
+    const pulse=sector.active?Math.sin(frameCount*0.12)*4+5:0;
+    const color=sector.complete?'#0f8':sector.active?'#fd0':'#555';
+    ctx.fillStyle='rgba(6,6,15,.72)';ctx.strokeStyle=color;ctx.shadowColor=color;ctx.shadowBlur=sector.active?16:6;
+    ctx.beginPath();ctx.arc(x,y,sector.active?15+pulse:13,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.fillStyle=color;ctx.fillText(sector.label.toUpperCase().slice(0,3),x,y-23);
+    ctx.fillText(sector.count+'/'+sector.target,x,y+4);
+  });
+  ctx.textAlign='center';ctx.fillStyle='#888';ctx.shadowBlur=0;ctx.fillText('COURSE MAP · ACTIVE SECTOR PULSE',W/2,H-12);
+  ctx.restore();
+}
+
+function speedwayComplete(){
+  return speedwaySnapshot().every(target=>target.complete);
+}
+
+function awardTimeBonus(kind){
+  const bonus=SPEEDWAY_TIME_BONUSES[kind]||1;
+  if(timeAttackMode){addHitLabel('NO TIME BONUS',bird.x+72,bird.y-62,'#0f8');setAnnouncer(SPEEDWAY_LABELS[kind].toUpperCase()+' SPLIT',kind==='drones'?'#f0f':kind==='crystals'?'#fd0':'#0ff');return;}
+  timeLeft=Math.min(99,timeLeft+bonus);
+  setAnnouncer(SPEEDWAY_LABELS[kind].toUpperCase()+' +'+bonus+'s',kind==='drones'?'#f0f':kind==='crystals'?'#fd0':'#0ff');
+}
+
+function markSpeedwayTarget(kind,points=0){
+  if(!targetStats||targetStats[kind]>=SPEEDWAY_TARGETS[kind])return false;
+  const expected=activeSpeedwayKind();
+  targetStats[kind]++;score+=points;
+  if(kind===expected){
+    routeStreak++;lastRouteKind=kind;if(routeStreak>1&&!timeAttackMode)timeLeft=Math.min(99,timeLeft+0.5);awardSpeedChain(kind);
+    if(targetStats[kind]>=SPEEDWAY_TARGETS[kind])triggerSectorTransition(kind,activeSpeedwayKind());
+  }
+  else {routeStreak=0;speedChain=0;speedChainTimer=0;sectorTransition=null;routeMistakes++;apexChain=0;addHitLabel('OFF ROUTE',bird.x+68,bird.y-48,'#f66');playCue('fail');}
+  awardTimeBonus(kind);
+  if(kind===expected){awardPerfectLine(kind);awardApexTurn(kind);}
+  captureRouteSplit(kind);
+  if(speedwayComplete())completeSpeedwayRun();
+  return true;
+}
+
+function completeSpeedwayRun(){
+  if(runComplete)return;
+  runComplete=true;score+=50;const medal=saveSpeedwayMedal();saveTimeAttackRecord();saveBestCorridorScore();saveBestRouteFlow();saveBestApexChain();saveBestCheckpointScore();saveBestBankedChain();saveBestWindLaneHits();saveBestSpeedRingChain();saveBestDiveSurges();saveBestSpeedFxLevel();saveBestAltitudeBandHolds();spawnParticles(bird.x,bird.y,'#fd0',40);setAnnouncer((timeAttackMode?'TIME ATTACK CLEAR ':'ALL TARGETS COMPLETE · ')+medal.label.toUpperCase(),medal.color);
+  if(score>highScore){highScore=score;localStorage.setItem('flappyDharma_hi',highScore);}
+  state=STATE.DEAD;chip('oneUp');stopChiptuneMusic();recordFlightLogEntry('all-in-one');
+}
+
+function refreshRouteTier(){
+  const nextTier=currentRouteTier();
+  if(routeTier&&nextTier.name!==routeTier.name)setAnnouncer('ROUTE TIER: '+nextTier.name,nextTier.color);
+  routeTier=nextTier;
+  return routeTier;
+}
+
+function init(){
+  bird={x:120,y:H/2,vy:0,rot:0,trail:[],glide:false,boost:0};
+  pipes=[];particles=[];rings=[];score=0;frameCount=0;pipeTimer=0;ringTimer=0;combo=0;charge=100;lastReceipt=null;nearMisses=0;bestCombo=0;announcer=null;paused=false;assistMode=false;assistCooldown=0;runBadges=[];missionStatus={rings:0,ringsCollected:0};flightLog=flightLogSnapshot();runRecorded=false;resetSpeedwayRun();
+  baseSpeed=2.5;speedMult=1;
+  routeTier=currentRouteTier();
+}
+init();
+function applyPlaytestState(){
+  if(!new URLSearchParams(location.search).has('playtest'))return;
+  state=STATE.PLAY;
+  score=9;
+  frameCount=140;
+  pipeTimer=120;
+  bird.x=120;
+  bird.y=H*0.42;
+  bird.vy=-1.8;
+  bird.rot=-0.18;
+  bird.trail=[];
+  for(let i=0;i<18;i++)bird.trail.push({x:bird.x-i*8,y:bird.y+Math.sin(i*0.8)*18,life:1-i*0.035});
+  pipes=[
+    {x:255,gapY:170,gapH:190,scored:false},
+    {x:410,gapY:250,gapH:165,scored:false},
+    {x:565,gapY:125,gapH:180,scored:false}
+  ];
+  rings=[
+    {x:340,y:225,r:24,hit:false},
+    {x:500,y:330,r:24,hit:false}
+  ];
+  crystals=[{x:300,y:300,r:16,hit:false},{x:455,y:180,r:16,hit:false}];
+  drones=[{x:575,y:250,r:18,hit:false,wobble:0.4}];
+  targetStats={rings:2,gates:3,crystals:2,drones:1};timeLeft=41;runComplete=false;
+  combo=2;charge=88;nearMisses=3;bestCombo=4;runBadges=[];missionStatus={rings:2,ringsCollected:2};routeTier=currentRouteTier();evaluateMissions();setAnnouncer('ROUTE TIER: '+routeTier.name,routeTier.color);
+  particles=[];
+  for(let i=0;i<36;i++)spawnParticles(bird.x+Math.random()*40-20,bird.y+Math.random()*40-20,i%3===0?'#fd0':i%3===1?'#0ff':'#f0f',1);
+}
+applyPlaytestState();
+
+// Input
+let flap=false;
+function doFlap(){
+  chipResume();
+  if(IS_PLAYTEST){flap=true;return;}
+  if(state===STATE.MENU){state=STATE.PLAY;init();startChiptuneMusic();}
+  else if(paused){paused=false;setAnnouncer('FLIGHT RESUMED','#0f8');}
+  else if(state===STATE.DEAD){state=STATE.MENU;init();}
+  else if(state===STATE.PLAY){flap=true;playCue('flap');}
+}
+function setGlide(active){
+  if(state===STATE.PLAY)bird.glide=!!active;
+}
+function setDive(active){
+  diveHold=state===STATE.PLAY&&!!active;
+  if(diveHold)bird.glide=false;
+}
+function setRoll(direction){
+  rollHold=state===STATE.PLAY?direction:0;
+}
+function doBoost(){
+  if(state!==STATE.PLAY||paused||charge<35)return;
+  bird.boost=18;charge-=35;spawnParticles(bird.x+10,bird.y,'#fd0',14);triggerSpeedFx(20,'#fd0',8);triggerScreenShake(5);playCue('boost');
+}
+function addHitLabel(text,x,y,color='#fd0'){
+  hitLabels.push({text,x,y,color,life:1});
+}
+function doFlame(){
+  if(state!==STATE.PLAY||paused||charge<12)return;
+  charge-=12;flameShots++;flameBursts.push({x:bird.x+18,y:bird.y,life:12});spawnParticles(bird.x+28,bird.y,'#f60',10);playCue('flame');
+  let hit=false;
+  for(const c of crystals){if(!c.hit&&c.x>bird.x&&c.x<bird.x+125&&Math.abs(c.y-bird.y)<58){collectCrystal(c);addHitLabel(timeAttackMode?'FLAME CRYSTAL':'FLAME CRYSTAL +2s',c.x,c.y,'#0ff');hit=true;break;}}
+  if(!hit){for(const d of drones){if(!d.hit&&d.x>bird.x&&d.x<bird.x+145&&Math.abs(d.y-bird.y)<66){destroyDrone(d);addHitLabel(timeAttackMode?'FLAME DRONE':'FLAME DRONE +3s',d.x,d.y,'#f0f');hit=true;break;}}}
+  setAnnouncer(hit?'FLAME HIT':'FLAME WHIFF',hit?'#fd0':'#888');
+}
+function togglePause(){
+  if(IS_PLAYTEST||state!==STATE.PLAY)return;
+  paused=!paused;setGlide(false);setAnnouncer(paused?'FLIGHT PAUSED':'FLIGHT RESUMED',paused?'#fd0':'#0f8');playCue(paused?'fail':'collect');
+}
+function toggleAssistMode(){
+  assistMode=!assistMode;
+  if(assistBtn)assistBtn.textContent=assistMode?'ASSIST ON':'ASSIST';
+  setAnnouncer(assistMode?'ASSIST MODE ON':'ASSIST MODE OFF',assistMode?'#0f8':'#888');
+}
+function restartRun(){
+  state=STATE.PLAY;init();setAnnouncer('NEW FLIGHT ROUTE','#0ff');startChiptuneMusic();
+}
+function runAssistPilot(){
+  if(!assistMode||state!==STATE.PLAY||paused)return;
+  assistCooldown=Math.max(0,assistCooldown-1);
+  const upcoming=pipes.filter(p=>p.x+70>bird.x).sort((a,b)=>a.x-b.x)[0];
+  const target=upcoming?upcoming.gapY+upcoming.gapH*0.5:H*0.45;
+  const nearestRing=rings.filter(r=>!r.hit&&r.x>bird.x&&r.x<bird.x+190).sort((a,b)=>a.x-b.x)[0];
+  const targetY=nearestRing?nearestRing.y:target;
+  if(bird.y>targetY+34&&assistCooldown===0){flap=true;assistCooldown=16;}
+  bird.glide=bird.y<targetY-28&&bird.vy<1.8;
+}
+function bindHoldButton(btn,onDown,onUp){
+  if(!btn)return;
+  btn.addEventListener('pointerdown',e=>{e.preventDefault();onDown();});
+  btn.addEventListener('pointerup',e=>{e.preventDefault();if(onUp)onUp();});
+  btn.addEventListener('pointerleave',e=>{if(onUp)onUp();});
+}
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();doFlap();}
+  if(e.code==='ShiftLeft'||e.code==='ShiftRight'){e.preventDefault();setGlide(true);}
+  if(e.code==='ArrowDown'||e.code==='KeyS'){e.preventDefault();setDive(true);}
+  if(e.code==='KeyQ'||e.code==='ArrowLeft'){e.preventDefault();setRoll(-1);}
+  if(e.code==='KeyE'||e.code==='ArrowRight'){e.preventDefault();setRoll(1);}
+  if(e.code==='KeyZ'||e.code==='KeyX'){e.preventDefault();doBoost();}
+  if(e.code==='KeyF'){e.preventDefault();doFlame();}
+  if(e.code==='KeyP'){e.preventDefault();togglePause();}
+  if(e.code==='KeyM'){e.preventDefault();toggleAudio();}
+  if(e.code==='KeyT'){e.preventDefault();toggleTimeAttackMode();}
+  if(e.code==='KeyA'){e.preventDefault();toggleAssistMode();}
+  if(e.code==='KeyR'){e.preventDefault();restartRun();}
+  if(e.code==='KeyO'){e.preventDefault();exportFlightReceipt();}
+});
+document.addEventListener('keyup',e=>{
+  if(e.code==='ShiftLeft'||e.code==='ShiftRight')setGlide(false);
+  if(e.code==='ArrowDown'||e.code==='KeyS')setDive(false);
+  if(e.code==='KeyQ'||e.code==='KeyE'||e.code==='ArrowLeft'||e.code==='ArrowRight')setRoll(0);
+});
+canvas.addEventListener('click',doFlap);
+canvas.addEventListener('touchstart',e=>{e.preventDefault();doFlap();setGlide(true);},{passive:false});
+canvas.addEventListener('touchend',e=>{e.preventDefault();setGlide(false);},{passive:false});
+bindHoldButton(flapBtn,()=>{doFlap();setGlide(true);},()=>setGlide(false));
+bindHoldButton(boostBtn,doBoost);
+bindHoldButton(flameBtn,doFlame);
+bindHoldButton(assistBtn,toggleAssistMode);
+
+// Sacred geometry helpers
+function drawOctagon(x,y,r,rot){
+  ctx.beginPath();
+  for(let i=0;i<8;i++){const a=i*Math.PI/4+rot;ctx.lineTo(x+Math.cos(a)*r,y+Math.sin(a)*r);}
+  ctx.closePath();
+}
+
+function drawTriangle(x,y,size,rot){
+  ctx.beginPath();
+  for(let i=0;i<3;i++){const a=i*Math.PI*2/3+rot;ctx.lineTo(x+Math.cos(a)*size,y+Math.sin(a)*size);}
+  ctx.closePath();
+}
+
+function drawFacetGem(x,y,r,hue,rot=0,alpha=1){
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.rotate(rot);
+  ctx.globalAlpha=alpha;
+  ctx.shadowColor=`hsla(${hue},100%,70%,${alpha})`;
+  ctx.shadowBlur=20*r/10;
+  const g=ctx.createRadialGradient(-r*0.3,-r*0.35,r*0.1,0,0,r*1.2);
+  g.addColorStop(0,'rgba(255,255,255,0.94)');
+  g.addColorStop(0.22,`hsla(${hue+60},100%,76%,0.9)`);
+  g.addColorStop(0.58,`hsla(${hue},100%,54%,0.78)`);
+  g.addColorStop(1,`hsla(${hue+145},100%,34%,0.34)`);
+  ctx.fillStyle=g;
+  ctx.beginPath();
+  for(let i=0;i<8;i++){
+    const a=i*Math.PI/4;
+    const rr=i%2?r*0.7:r;
+    ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle=`hsla(${hue+70},100%,84%,${0.82*alpha})`;
+  ctx.lineWidth=Math.max(1,r*0.09);
+  ctx.stroke();
+  ctx.strokeStyle=`rgba(255,255,255,${0.42*alpha})`;
+  ctx.lineWidth=1;
+  for(let i=0;i<4;i++){
+    const a=i*Math.PI/2+Math.PI/4;
+    ctx.beginPath();
+    ctx.moveTo(0,0);
+    ctx.lineTo(Math.cos(a)*r*0.9,Math.sin(a)*r*0.9);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawCausticSky(){
+  ctx.save();
+  ctx.globalCompositeOperation='screen';
+  for(let i=0;i<18;i++){
+    const hue=(frameCount*0.9+i*34)%360;
+    const x=(i*W/5+Math.sin(frameCount*0.012+i)*65)%W;
+    const y=(i*H/8+Math.cos(frameCount*0.01+i)*90)%H;
+    const r=70+Math.sin(frameCount*0.018+i)*28;
+    const g=ctx.createRadialGradient(x,y,0,x,y,r);
+    g.addColorStop(0,`hsla(${hue},100%,58%,0.15)`);
+    g.addColorStop(0.45,`hsla(${hue+80},100%,58%,0.045)`);
+    g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=g;
+    ctx.beginPath();
+    ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawSacredPillar(x,gapY,gapH){
+  // Top pillar
+  const topH=gapY;
+  const botY=gapY+gapH;
+  const botH=H-botY;
+  const pw=70;
+
+  // Draw interlocking triangles pattern
+  const triSize=20;
+  const colors=['#0ff','#f0f','#fd0','#0f8'];
+
+  // Top and bottom crystal bodies
+  const topG=ctx.createLinearGradient(x,0,x+pw,0);
+  topG.addColorStop(0,'rgba(0,255,255,0.08)');
+  topG.addColorStop(0.45,'rgba(255,255,255,0.18)');
+  topG.addColorStop(1,'rgba(255,0,255,0.08)');
+  ctx.fillStyle=topG;
+  ctx.beginPath();
+  ctx.moveTo(x+6,0);ctx.lineTo(x+pw-6,0);ctx.lineTo(x+pw,gapY-18);ctx.lineTo(x+pw/2,gapY+8);ctx.lineTo(x,gapY-18);ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle='rgba(0,255,255,0.45)';ctx.lineWidth=2;ctx.stroke();
+
+  const botG=ctx.createLinearGradient(x,botY,x+pw,H);
+  botG.addColorStop(0,'rgba(255,0,255,0.1)');
+  botG.addColorStop(0.45,'rgba(255,255,255,0.16)');
+  botG.addColorStop(1,'rgba(0,255,128,0.08)');
+  ctx.fillStyle=botG;
+  ctx.beginPath();
+  ctx.moveTo(x+pw/2,botY-8);ctx.lineTo(x+pw,botY+18);ctx.lineTo(x+pw-6,H);ctx.lineTo(x+6,H);ctx.lineTo(x,botY+18);ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle='rgba(255,0,255,0.45)';ctx.lineWidth=2;ctx.stroke();
+
+  // Triangle decorations on top pillar
+  for(let ty=triSize;ty<topH;ty+=triSize*1.8){
+    const col=colors[Math.floor(ty/triSize)%colors.length];
+    ctx.strokeStyle=col;ctx.lineWidth=1;
+    ctx.globalAlpha=0.5;
+    drawTriangle(x+pw/2,ty,triSize*0.7,0);ctx.stroke();
+    drawTriangle(x+pw/2,ty,triSize*0.7,Math.PI);ctx.stroke();
+    drawFacetGem(x+pw/2,ty,7,(ty*2+frameCount)%360,frameCount*0.02+ty,0.55);
+    ctx.globalAlpha=1;
+  }
+
+  // Triangle decorations on bottom pillar
+  for(let ty=botY+triSize;ty<H;ty+=triSize*1.8){
+    const col=colors[Math.floor(ty/triSize)%colors.length];
+    ctx.strokeStyle=col;ctx.lineWidth=1;
+    ctx.globalAlpha=0.5;
+    drawTriangle(x+pw/2,ty,triSize*0.7,0);ctx.stroke();
+    drawTriangle(x+pw/2,ty,triSize*0.7,Math.PI);ctx.stroke();
+    drawFacetGem(x+pw/2,ty,7,(ty*2+180+frameCount)%360,-frameCount*0.02+ty,0.55);
+    ctx.globalAlpha=1;
+  }
+
+  // Glowing edges at gap
+  const glow=ctx.createLinearGradient(x,gapY-20,x,gapY+5);
+  glow.addColorStop(0,'transparent');glow.addColorStop(1,'rgba(0,255,255,0.6)');
+  ctx.fillStyle=glow;ctx.fillRect(x,gapY-20,pw,25);
+
+  const glow2=ctx.createLinearGradient(x,botY-5,x,botY+20);
+  glow2.addColorStop(0,'rgba(255,0,255,0.6)');glow2.addColorStop(1,'transparent');
+  ctx.fillStyle=glow2;ctx.fillRect(x,botY-5,pw,25);
+}
+
+function spawnPipe(){
+  const minGap=145,maxGap=195;
+  const gap=maxGap-Math.min(score*1.4,maxGap-minGap);
+  const gapY=Math.max(70,Math.min(H-gap-85,nextCourseY('gates')-gap*0.5));
+  pipes.push({x:W+10,gapY,gapH:gap,scored:false});
+}
+
+function spawnRing(){
+  const y=nextCourseY('rings');
+  rings.push({x:W+40,y,r:24,hit:false});
+}
+
+function spawnCrystal(){
+  const y=nextCourseY('crystals');
+  crystals.push({x:W+50,y,r:17,hit:false});
+}
+
+function spawnDrone(){
+  const y=nextCourseY('drones');
+  drones.push({x:W+70,y,r:18,hit:false,wobble:(courseIndex.drones%8)*0.7});
+}
+
+function collectCrystal(c){
+  if(c.hit)return;
+  c.hit=true;charge=Math.min(100,charge+12);markSpeedwayTarget('crystals',3);evaluateMissions();spawnParticles(c.x,c.y,'#0ff',12);playCue('collect');
+}
+
+function destroyDrone(d){
+  if(d.hit)return;
+  const headOn=activeSpeedwayKind()==='drones'&&d.x>bird.x&&d.x-bird.x<210&&Math.abs(d.y-bird.y)<76;
+  d.hit=true;charge=Math.min(100,charge+20);markSpeedwayTarget('drones',5);
+  if(headOn){headOnHits++;score+=2;if(!timeAttackMode)timeLeft=Math.min(99,timeLeft+1);addHitLabel(timeAttackMode?'HEAD-ON INTERCEPT +2':'HEAD-ON INTERCEPT +1s',d.x,d.y-22,'#0f8');playCue('split');}
+  evaluateMissions();spawnParticles(d.x,d.y,'#f0f',18);playCue('collect');
+}
+
+function collectRing(r){
+  if(r.hit)return;
+  r.hit=true;combo++;bestCombo=Math.max(bestCombo,combo);missionStatus.ringsCollected++;charge=Math.min(100,charge+18);
+  score+=Math.max(1,combo);
+  markSpeedwayTarget('rings',0);
+  if(combo>1)setAnnouncer('RING COMBO x'+combo,'#fd0');
+  refreshRouteTier();
+  evaluateMissions();
+  spawnParticles(r.x,r.y,'#fd0',16);playCue('collect');
+}
+
+function flightReceiptPayload(){
+  const progress=routeTierProgress();
+  return {
+    exported_at:new Date().toISOString(),
+    title:'Sky Dragon Dharma',
+    playtest_id:IS_PLAYTEST?'scripted-dragon-flight-v1':'manual-dragon-flight',
+    score,
+    high_score:highScore,
+    combo,
+    best_combo:bestCombo,
+    near_misses:nearMisses,
+    route_tier:progress.tier.name,
+    next_tier:progress.next?progress.next.name:null,
+    next_tier_remaining:progress.remaining,
+    charge:Math.round(charge),
+    time_left:Number(timeLeft.toFixed(1)),
+    time_attack_mode:timeAttackMode,
+    time_attack_elapsed:timeAttackElapsed(),
+    best_time_attack:bestTimeAttack,
+    route_corridor:routeCorridor||routeCorridorSnapshot(),
+    corridor_score:corridorScore,
+    corridor_breaks:corridorBreaks,
+    best_corridor_score:bestCorridorScore,
+    route_flow:routeFlowSnapshot(),
+    speed_fx:speedFxSnapshot(),
+    altitude_band:altitudeBandSnapshot(),
+    route_apex:routeApexSnapshot(),
+    checkpoints:checkpointSnapshot(),
+    banked_turns:bankedTurnSnapshot(),
+    wind_lanes:windLaneSnapshot(),
+    speed_rings:speedRingSnapshot(),
+    dive_surge:diveSurgeSnapshot(),
+    split_ghost_rival:splitGhostRival||splitGhostRivalSnapshot(),
+    split_ghost_streak:splitGhostStreak,
+    best_split_ghost_streak:bestSplitGhostStreak,
+    speedway_targets:speedwaySnapshot(),
+    route_focus:activeSpeedwayKind(),
+    route_streak:routeStreak,
+    speed_chain:speedChainSnapshot(),
+    route_preview:routePreview(),
+    route_line:routeLineSnapshot(),
+    depth_gates:depthGateSnapshot(),
+    turn_cue:turnCueSnapshot(),
+    roll_bank:rollBankSnapshot(),
+    sector_transition:sectorTransitionSnapshot(),
+    sector_portals:sectorPortalSnapshot(),
+    portal_wake:portalWakeSnapshot(),
+    route_compass:routeCompassSnapshot(),
+    route_discipline:routeDiscipline(),
+    sector_plan:sectorPlanSnapshot(),
+    sector_mastery:sectorMastery,
+    route_landmarks:routeLandmarkSnapshot(),
+    next_landmark:nextLandmark(),
+    course_map:courseMapSnapshot(),
+    route_coach:routeCoach,
+    route_mistakes:routeMistakes,
+    head_on_hits:headOnHits,
+    route_splits:routeSplits,
+    best_route_splits:bestRouteSplits,
+    pace_delta:paceDelta,
+    speedway_report:speedwayReportCard(),
+    speedway_medal:speedwayMedal(),
+    best_speedway_medal:bestSpeedwayMedal,
+    target_lock:targetLock,
+    perfect_line_hits:perfectLineHits,
+    flame_shots:flameShots,
+    audio_enabled:audioEnabled,
+    audio_events:audioEvents,
+    route_coach:routeCoach,
+    route_mistakes:routeMistakes,
+    head_on_hits:headOnHits,
+    all_in_one_complete:runComplete,
+    paused,
+    assist_mode:assistMode,
+    badges_unlocked:unlockedBadges.slice(),
+    run_badges:runBadges.map(b=>b.id),
+    flight_log_rank:flightLogSnapshot().findIndex(entry=>entry.score<=score)+1,
+    flight_log:flightLogSnapshot(),
+    missions:missionSnapshot(),
+    state:Object.keys(STATE).find(k=>STATE[k]===state),
+    rings_collected:targetStats.rings,
+    active_rings:rings.filter(r=>!r.hit).length,
+    crystals_collected:targetStats.crystals,
+    drones_destroyed:targetStats.drones,
+    gates_cleared:targetStats.gates,
+    pipes:pipes.length,
+    dragon:{x:Math.round(bird.x),y:Math.round(bird.y),vy:Number(bird.vy.toFixed(2)),glide:!!bird.glide,dive:!!diveHold,roll:rollHold<0?'left':rollHold>0?'right':'center',boost:bird.boost||0},
+    controls:['SPACE flap','SHIFT glide','F flame','Z/X boost','P pause','M mute audio','T time attack','S/Down dive surge','Q/E roll bank','ride wind lanes','chain turbo rings','hold route corridor','build aero flow','chain apex turns','bank toward route line','clear checkpoint beacons','A assist','R restart','O export receipt']
+  };
+}
+
+function exportFlightReceipt(){
+  if(state===STATE.DEAD)recordFlightLogEntry('receipt-export');
+  lastReceipt=flightReceiptPayload();
+  localStorage.setItem('skyDragonDharmaLastReceipt',JSON.stringify(lastReceipt));
+  const blob=new Blob([JSON.stringify(lastReceipt,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download='sky-dragon-dharma-flight-receipt.json';a.click();URL.revokeObjectURL(a.href);
+}
+window.skyDragonDharmaPlaytestPayload=flightReceiptPayload;
+window.exportFlightReceipt=exportFlightReceipt;
+
+function spawnParticles(x,y,color,count){
+  for(let i=0;i<count;i++){
+    const a=Math.random()*Math.PI*2;
+    const sp=Math.random()*4+1;
+    particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,color,size:Math.random()*3+1});
+  }
+}
+
+function update(){
+  frameCount++;
+
+  if(state!==STATE.PLAY)return;
+  if(paused){if(announcer)announcer.ttl=Math.max(0,announcer.ttl-1);return;}
+  runAssistPilot();
+  if(IS_PLAYTEST){
+    state=STATE.PLAY;
+    bird.vy=Math.sin(frameCount*0.04)*0.85;
+    bird.y=H*0.42+Math.sin(frameCount*0.035)*34;
+    bird.rot=Math.sin(frameCount*0.045)*0.22;
+    bird.trail.push({x:bird.x-Math.sin(frameCount*0.03)*8,y:bird.y,life:1});
+    if(bird.trail.length>22)bird.trail.shift();
+    bird.trail.forEach(t=>t.life=Math.max(0.24,t.life-0.035));
+    pipes.forEach((p,i)=>{p.x+=Math.sin(frameCount*0.018+i)*0.18;});
+    rings.forEach((r,i)=>{r.x+=Math.sin(frameCount*0.02+i)*0.4;r.y+=Math.cos(frameCount*0.025+i)*0.3;});
+    crystals.forEach((c,i)=>{c.x+=Math.sin(frameCount*0.018+i)*0.25;c.y+=Math.cos(frameCount*0.02+i)*0.25;});
+    drones.forEach((d,i)=>{d.x+=Math.sin(frameCount*0.016+i)*0.3;d.y+=Math.cos(frameCount*0.018+i)*0.35;});
+    if(frameCount%9===0)spawnParticles(bird.x-18,bird.y+Math.sin(frameCount)*9,['#0ff','#fd0','#f0f'][frameCount%3],1);
+    flameBursts.forEach(f=>f.life--);flameBursts=flameBursts.filter(f=>f.life>0);
+    hitLabels.forEach(l=>{l.y-=0.35;l.life-=0.015;});hitLabels=hitLabels.filter(l=>l.life>0);
+    updateTargetLock();
+    updateRouteCorridor();
+    updateSplitGhostRival();
+    updateSectorTransition();
+    updatePortalWake();
+    if(announcer)announcer.ttl=Math.max(0,announcer.ttl-1);
+    particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.life-=0.018;p.vy+=0.025;});
+    particles=particles.filter(p=>p.life>0);
+    return;
+  }
+
+  timeLeft=Math.max(0,timeLeft-1/60);
+  if(timeLeft<=0){die('timeout');return;}
+  updateSpeedChain();
+  updateSectorTransition();
+
+  // Speed increases with score
+  refreshRouteTier();
+  speedMult=routeTier.wind+score*0.012+(routeFlow/100)*0.18+(diveSurge/100)*0.12;
+  const spd=baseSpeed*speedMult+(bird.boost>0?1.4+(routeFlow/100)*0.42:0);
+  ringTimer+=spd;crystalTimer+=spd;droneTimer+=spd;
+  if(frameCount%240===0)spawnWindLane();
+  if(frameCount%210===0)spawnSpeedRing();
+  if(frameCount%360===0&&activeSpeedwayKind()!=='complete'&&(sectorPortals||[]).filter(portal=>!portal.hit).length<1)spawnSectorPortal();
+  if(ringTimer>155){ringTimer=0;spawnRing();}
+  if(crystalTimer>125){crystalTimer=0;spawnCrystal();}
+  if(droneTimer>265){droneTimer=0;spawnDrone();}
+  charge=Math.min(100,charge+0.045+(routeFlow/100)*0.09);
+  if(bird.boost>0)bird.boost--;
+  if((bird.boost>0||routeFlow>=80||diveSurge>=70)&&frameCount%8===0)triggerSpeedFx(5,routeFlow>=80?'#0ff':'#fd0',2);
+  updateSpeedFx();
+  for(const lane of windLanes){lane.x-=spd*1.16;if(!lane.hit&&Math.abs(lane.x-bird.x)<32&&Math.abs(lane.y-bird.y)<lane.width)collectWindLane(lane);}
+  windLanes=windLanes.filter(lane=>lane.x>-90&&!lane.hit);
+  for(const ring of speedRings){ring.x-=spd*1.28;if(!ring.hit&&Math.abs(ring.x-bird.x)<38&&Math.abs(ring.y-bird.y)<ring.r)collectSpeedRing(ring);}
+  speedRings=speedRings.filter(ring=>ring.x>-90&&!ring.hit);
+  for(const portal of sectorPortals){portal.x-=spd*1.12;if(!portal.hit&&Math.abs(portal.x-bird.x)<48&&Math.abs(portal.y-bird.y)<portal.r*1.15)collectSectorPortal(portal);}
+  sectorPortals=sectorPortals.filter(portal=>portal.x>-120&&!portal.hit);
+  flameBursts.forEach(f=>f.life--);flameBursts=flameBursts.filter(f=>f.life>0);
+  hitLabels.forEach(l=>{l.y-=0.7;l.life-=0.025;});hitLabels=hitLabels.filter(l=>l.life>0);
+  updateTargetLock();
+  updateRouteCorridor();
+  updateSplitGhostRival();
+  updateDiveSurge();
+  updatePortalWake();
+  updateAltitudeBand();
+
+  // Bird physics
+  if(flap){bird.vy=-7.5;flap=false;spawnParticles(bird.x,bird.y+10,'#0ff',5);}
+  bird.vy+=diveHold?0.72:(bird.glide?0.18:0.38);// gravity / glide / dive
+  bird.y+=bird.vy;
+  updateBankedTurn();
+  bird.rot=Math.min(bird.vy*3+(bankedChain>0?Math.sign((routeCorridor&&routeCorridor.delta)||0)*10:0),80)*Math.PI/180;
+
+  // Trail
+  bird.trail.push({x:bird.x,y:bird.y,life:1,glide:bird.glide});
+  if(bird.trail.length>15)bird.trail.shift();
+  bird.trail.forEach(t=>t.life-=0.07);
+
+  // Pipe spawning
+  pipeTimer+=spd;
+  if(pipeTimer>200){pipeTimer=0;spawnPipe();}
+
+  // Move rings
+  for(let r of rings){
+    r.x-=spd*1.08;
+    const dx=bird.x-r.x,dy=bird.y-r.y;
+    if(!r.hit&&Math.hypot(dx,dy)<r.r+16)collectRing(r);
+  }
+  rings=rings.filter(r=>r.x>-60&&!r.hit);
+
+  for(let c of crystals){
+    c.x-=spd*1.03;
+    const dx=bird.x-c.x,dy=bird.y-c.y;
+    if(!c.hit&&Math.hypot(dx,dy)<c.r+15)collectCrystal(c);
+  }
+  crystals=crystals.filter(c=>c.x>-60&&!c.hit);
+
+  for(let d of drones){
+    d.x-=spd*1.18;d.y+=Math.sin(frameCount*0.045+d.wobble)*0.85;
+    const dx=bird.x-d.x,dy=bird.y-d.y;
+    if(!d.hit&&Math.hypot(dx,dy)<d.r+15){
+      if(bird.boost>0)destroyDrone(d);
+      else {combo=0;die('drone-collision');return;}
+    }
+  }
+  drones=drones.filter(d=>d.x>-70&&!d.hit);
+
+  // Move pipes
+  for(let p of pipes){
+    p.x-=spd;
+    if(!p.scored&&p.x+70<bird.x){p.scored=true;
+      const nearEdge=Math.min(Math.abs(bird.y-p.gapY),Math.abs(bird.y-(p.gapY+p.gapH)));
+      if(nearEdge<28){
+        nearMisses++;score+=2;charge=Math.min(100,charge+8);setAnnouncer('NEAR MISS +2','#0ff');evaluateMissions();
+      }else score++;
+      markSpeedwayTarget('gates',0);
+      refreshRouteTier();
+      evaluateMissions();
+      spawnParticles(bird.x,bird.y,'#fd0',8);
+    }
+  }
+  pipes=pipes.filter(p=>p.x>-80);
+
+  // Collision detection
+  const br=14;// bird radius
+  // Floor/ceiling
+  if(bird.y<br||bird.y>H-br){combo=0;die();return;}
+
+  // Pipes
+  for(let p of pipes){
+    if(bird.x+br>p.x&&bird.x-br<p.x+70){
+      if(bird.y-br<p.gapY||bird.y+br>p.gapY+p.gapH){combo=0;die();return;}
+    }
+  }
+
+  // Particles
+  if(announcer)announcer.ttl=Math.max(0,announcer.ttl-1);
+  particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.life-=0.025;p.vy+=0.05;});
+  particles=particles.filter(p=>p.life>0);
+}
+
+function die(reason='crash'){
+  state=STATE.DEAD;
+  chip('explode');chip('death');stopChiptuneMusic();triggerScreenShake(9);
+  spawnParticles(bird.x,bird.y,'#f44',25);
+  spawnParticles(bird.x,bird.y,'#fd0',15);
+  evaluateMissions();
+  if(score>highScore){highScore=score;localStorage.setItem('flappyDharma_hi',highScore);}
+  recordFlightLogEntry(reason);
+}
+
+function draw(){
+  // Background
+  ctx.fillStyle='#06060f';ctx.fillRect(0,0,W,H);
+  if(flapBgReady){ // AI sky base (opaque, cover-fit); motion plate overlays it when ready
+    const bw=flapBgImg.width,bh=flapBgImg.height,sc=Math.max(W/bw,H/bh);
+    const dw=bw*sc,dh=bh*sc;
+    ctx.save();ctx.globalAlpha=0.9;ctx.drawImage(flapBgImg,(W-dw)/2,(H-dh)/2,dw,dh);
+    ctx.fillStyle='rgba(6,6,15,0.34)';ctx.fillRect(0,0,W,H);ctx.restore();
+  }
+  drawMotionPlate();
+  drawCausticSky();
+  if(cameraShake>0){ctx.save();ctx.globalAlpha=Math.min(0.18,cameraShake/40);ctx.fillStyle='#0ff';ctx.fillRect(0,0,W,H);ctx.restore();}
+
+  // Stars
+  bgStars.forEach(s=>{
+    s.b+=0.03;
+    const bright=0.3+Math.sin(s.b)*0.3;
+    ctx.fillStyle=`rgba(200,220,255,${bright})`;
+    ctx.fillRect(s.x,s.y,s.s,s.s);
+  });
+
+  // Subtle grid
+  ctx.strokeStyle='rgba(0,255,255,0.04)';ctx.lineWidth=1;
+  for(let x=0;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+  drawSpeedFx();
+  drawRouteLandmarks();
+  drawRouteCorridor();
+  drawGhostRouteRibbon();
+  drawDepthGates();
+  drawTurnCues();
+  drawRouteGuide();
+  drawRouteCompass();
+  drawSpeedChainGauge();
+  drawSectorTransition();
+  drawSectorPortals();
+  drawPortalWake();
+  drawCourseMap();
+
+  for(const lane of windLanes){
+    ctx.save();ctx.globalAlpha=lane.hit?0.12:0.38;ctx.strokeStyle='#0ff';ctx.fillStyle='rgba(0,255,255,.08)';ctx.shadowColor='#0ff';ctx.shadowBlur=18;ctx.lineWidth=2;
+    ctx.beginPath();ctx.ellipse(lane.x,lane.y,lane.width*0.9,lane.width*1.35,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.font='bold 10px Courier New';ctx.textAlign='center';ctx.fillStyle='#0ff';ctx.fillText('WIND',lane.x,lane.y-38);ctx.restore();
+  }
+
+  for(const ring of speedRings){
+    ctx.save();ctx.globalCompositeOperation='screen';ctx.globalAlpha=ring.hit?0.14:0.72;ctx.strokeStyle='#fd0';ctx.fillStyle='rgba(245,197,66,.06)';ctx.shadowColor='#fd0';ctx.shadowBlur=22;ctx.lineWidth=3;
+    ctx.beginPath();ctx.arc(ring.x,ring.y,ring.r+Math.sin(frameCount*0.16)*3,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.arc(ring.x,ring.y,ring.r*0.52,0,Math.PI*2);ctx.stroke();
+    ctx.font='bold 10px Courier New';ctx.textAlign='center';ctx.fillStyle='#fd0';ctx.fillText('TURBO',ring.x,ring.y-ring.r-10);ctx.restore();
+  }
+
+  // Rings
+  for(let r of rings){
+    ctx.save();ctx.globalCompositeOperation='screen';
+    ctx.strokeStyle=r.hit?'rgba(0,255,128,.25)':'rgba(245,197,66,.78)';ctx.lineWidth=4;
+    ctx.shadowColor='#fd0';ctx.shadowBlur=18;ctx.beginPath();ctx.arc(r.x,r.y,r.r,0,Math.PI*2);ctx.stroke();
+    drawFacetGem(r.x,r.y,6,(frameCount*2+r.x)%360,frameCount*0.04,0.9);ctx.restore();
+  }
+
+  for(let c of crystals){
+    drawFacetGem(c.x,c.y,c.r,185+frameCount%90,frameCount*0.06,0.92);
+  }
+
+  for(let f of flameBursts){
+    ctx.save();ctx.globalAlpha=Math.max(0,f.life/12);ctx.fillStyle='rgba(255,124,24,.32)';ctx.shadowColor='#f60';ctx.shadowBlur=18;
+    ctx.beginPath();ctx.moveTo(f.x,f.y);ctx.lineTo(f.x+120,f.y-45);ctx.lineTo(f.x+120,f.y+45);ctx.closePath();ctx.fill();ctx.restore();
+  }
+
+  for(let d of drones){
+    ctx.save();ctx.globalAlpha=0.9;ctx.strokeStyle='#f0f';ctx.lineWidth=3;ctx.shadowColor='#f0f';ctx.shadowBlur=14;
+    drawTriangle(d.x,d.y,d.r+8,frameCount*0.05+d.wobble);ctx.stroke();
+    drawFacetGem(d.x,d.y,6,305,frameCount*0.09,0.95);ctx.restore();
+  }
+
+  // Pipes
+  for(let p of pipes)drawSacredPillar(p.x,p.gapY,p.gapH);
+
+  // Bird trail
+  if(bird.trail){
+    bird.trail.forEach((t,i)=>{
+      if(t.life<=0)return;
+      drawFacetGem(t.x,t.y,5+i*0.45,185+i*12,frameCount*0.05+i,t.life*0.48);
+    });
+  }
+
+  // Bird - AI dragon sprite (juiced) with full procedural DHARMA octagon fallback
+  ctx.save();
+  // idle bob when gliding calmly; squash/stretch from vertical velocity
+  const _vy=Math.max(-9,Math.min(9,bird.vy||0));
+  const _bob=Math.abs(_vy)<1.2?Math.sin(frameCount*0.16)*1.6:0;
+  ctx.translate(bird.x,bird.y+_bob);
+  ctx.rotate(bird.rot+(rollHold||0)*0.16);
+
+  // Outer glow (kept for both modes)
+  const grd=ctx.createRadialGradient(0,0,5,0,0,30);
+  grd.addColorStop(0,'rgba(0,255,255,0.4)');grd.addColorStop(1,'transparent');
+  ctx.fillStyle=grd;ctx.fillRect(-30,-30,60,60);
+
+  if(flapDragonReady){
+    // sprite path: squash/stretch, hit-flash on boost, flap pulse
+    const sw=68,sh=sw*(flapDragonImg.height/flapDragonImg.width||0.82);
+    const stretch=Math.max(-0.14,Math.min(0.14,_vy*0.018));
+    const pulse=1+Math.sin(frameCount*0.3)*0.03;
+    ctx.save();
+    ctx.scale((1-stretch)*pulse,(1+stretch)*pulse);
+    ctx.drawImage(flapDragonImg,-sw/2,-sh/2,sw,sh);
+    if((bird.boost||0)>0){ // boost hit-flash (additive)
+      ctx.globalCompositeOperation='lighter';ctx.globalAlpha=Math.min(0.6,(bird.boost||0)/24);
+      ctx.drawImage(flapDragonImg,-sw/2,-sh/2,sw,sh);
+    }
+    ctx.restore();
+  } else {
+    // Procedural fallback (original holographic dragon) — never removed
+    ctx.fillStyle='rgba(255,255,255,0.22)';
+    ctx.strokeStyle='rgba(255,255,255,0.58)';
+    ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(-10,-4);ctx.lineTo(-28,-14);ctx.lineTo(-18,2);ctx.lineTo(-28,15);ctx.lineTo(-8,8);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(10,-4);ctx.lineTo(28,-14);ctx.lineTo(18,2);ctx.lineTo(28,15);ctx.lineTo(8,8);ctx.stroke();
+    drawFacetGem(0,0,17,185,frameCount*0.03,1);
+    ctx.fillStyle='#06060f';
+    drawOctagon(0,0,10,frameCount*0.03+Math.PI/8);ctx.fill();
+    ctx.strokeStyle='#fd0';ctx.lineWidth=1.5;
+    drawOctagon(0,0,6,frameCount*0.05);ctx.stroke();
+    drawFacetGem(6,-7,4,52,frameCount*0.08,1);
+    drawFacetGem(7,7,4,315,-frameCount*0.08,1);
+  }
+
+  ctx.restore();
+
+  for(let l of hitLabels){
+    ctx.save();ctx.globalAlpha=Math.max(0,l.life);ctx.font='bold 13px Courier New';ctx.textAlign='center';ctx.fillStyle=l.color;ctx.shadowColor=l.color;ctx.shadowBlur=10;ctx.fillText(l.text,l.x,l.y);ctx.restore();
+  }
+
+  // Particles
+  for(let p of particles){
+    const hue=p.color==='#f44'?5:p.color==='#fd0'?50:p.color==='#0ff'?185:305;
+    drawFacetGem(p.x,p.y,p.size+2,hue,frameCount*0.08+p.x,p.life);
+  }
+
+  // HUD
+  if(state===STATE.PLAY||state===STATE.DEAD){
+    ctx.fillStyle='#fff';ctx.font='bold 36px Courier New';ctx.textAlign='center';
+    ctx.shadowColor='#0ff';ctx.shadowBlur=15;
+    ctx.fillText(score,W/2,60);
+    ctx.shadowBlur=0;
+
+    ctx.font='14px Courier New';ctx.fillStyle='#888';
+    ctx.fillText('HI: '+highScore,W/2,85);
+    ctx.textAlign='right';ctx.fillStyle=timeLeft<8?'#f44':'#fd0';ctx.fillText((timeAttackMode?'ATTACK ':'TIME ')+Math.ceil(timeLeft),W-20,34);
+    speedwaySnapshot().forEach((target,i)=>{ctx.fillStyle=target.id===activeSpeedwayKind()?'#fd0':target.complete?'#0f8':'#888';ctx.fillText((target.id===activeSpeedwayKind()?'> ':'')+target.label.toUpperCase()+' '+target.count+'/'+target.target,W-20,56+i*18);});
+    const medal=speedwayMedal();
+    ctx.fillStyle=medal.color;ctx.fillText('MEDAL '+medal.label.toUpperCase(),W-20,136);
+    ctx.fillStyle='#0ff';ctx.fillText('ORDER x'+routeStreak+'  CHAIN x'+(speedChain||0),W-20,154);
+    ctx.fillStyle='#888';ctx.fillText('SPLITS '+Object.keys(routeSplits||{}).length+'https://app.northstarprime.net/4',W-20,172);
+    ctx.fillStyle=timeAttackMode?'#0f8':'#555';ctx.fillText(timeAttackMode?'TIME ATTACK '+timeAttackElapsed().toFixed(1)+'s':'T TIME ATTACK',W-20,208);
+    ctx.fillStyle=paceDelta&&paceDelta.ahead?'#0f8':paceDelta&&paceDelta.behind?'#f66':'#888';ctx.fillText('PACE '+paceDeltaLabel(),W-20,190);
+    const corridor=routeCorridor||routeCorridorSnapshot();ctx.fillStyle=corridor.inside?'#0f8':'#f66';ctx.fillText('LINE '+corridorScore+' / '+bestCorridorScore,W-20,226);
+    const flow=routeFlowSnapshot();ctx.fillStyle=flow.flow>=80?'#0ff':flow.flow>=45?'#0f8':'#555';ctx.fillText('FLOW '+flow.flow+' / '+flow.best,W-20,244);
+    ctx.fillStyle=apexChain>0?'#fd0':'#555';ctx.fillText('APEX x'+apexChain+' / '+bestApexChain,W-20,262);
+    const cp=checkpointSnapshot();ctx.fillStyle=cp.score>=bestCheckpointScore&&cp.score>0?'#0ff':'#555';ctx.fillText('CHECK '+cp.score+' / '+cp.best_score,W-20,280);
+    ctx.fillStyle=bankedChain>0?'#0ff':'#555';ctx.fillText((rollHold<0?'ROLL ◄ ':rollHold>0?'ROLL ► ':'BANK ')+bankedChain+' / '+bestBankedChain,W-20,298);
+    ctx.fillStyle=windLaneHits>0?'#0ff':'#555';ctx.fillText('WIND '+windLaneHits+' / '+bestWindLaneHits,W-20,316);
+    ctx.fillStyle=speedRingChain>0?'#fd0':'#555';ctx.fillText('TURBO x'+speedRingChain+' / '+bestSpeedRingChain,W-20,352);
+    ctx.fillStyle=sectorPortalHits>0?'#0ff':'#555';ctx.fillText('PORTALS '+sectorPortalHits+' / '+bestSectorPortalHits,W-20,374);
+    ctx.fillStyle=portalWakeScore>0?'#0ff':'#555';ctx.fillText('WAKE '+portalWakeScore+' / '+bestPortalWakeScore,W-20,396);
+    const speedFx=speedFxSnapshot();ctx.fillStyle=speedFx.level>=45?'#0ff':'#555';ctx.fillText('SPEED FX '+speedFx.level+' / '+speedFx.best_level,W-20,388);
+    const dive=diveSurgeSnapshot();ctx.fillStyle=dive.active?'#0ff':'#555';ctx.fillText('DIVE '+dive.surges+' / '+dive.best_surges,W-20,370);
+    const ghost=splitGhostRival||splitGhostRivalSnapshot();ctx.fillStyle=ghost&&ghost.ahead?'#0f8':ghost&&ghost.behind?'#f66':'#555';ctx.fillText('GHOST x'+splitGhostStreak+' / '+bestSplitGhostStreak,W-20,334);
+    ctx.textAlign='left';ctx.fillStyle='#0f8';ctx.fillText('COMBO x'+combo,20,34);
+    ctx.fillStyle='#fd0';ctx.fillText('CHARGE '+Math.round(charge)+'%',20,56);
+    ctx.fillStyle='#f60';ctx.fillText('F FLAME '+flameShots,20,188);
+    ctx.fillStyle=targetLock&&targetLock.locked?'#0f8':'#555';ctx.fillText(targetLock&&targetLock.locked?'TARGET LOCK':'LOCK '+Math.round(((targetLock&&targetLock.strength)||0)*100)+'%',20,210);
+    ctx.fillStyle=audioEnabled?'#0f8':'#555';ctx.fillText(audioEnabled?'AUDIO ON':'MUTED',20,232);
+    const sector=activeSectorPlan();
+    ctx.fillStyle=sector.color;ctx.fillText('SECTOR '+sector.name.toUpperCase(),20,254);
+    ctx.fillStyle=routeCoach&&routeCoach.cue==='INTERCEPT HEAD-ON'?'#0f8':'#fd0';ctx.fillText('COACH '+((routeCoach&&routeCoach.cue)||'FIND ROUTE'),20,276);
+    ctx.fillStyle='#aaa';ctx.fillText('LANDMARK '+((routeCoach&&routeCoach.landmark)||'NONE'),20,320);
+    ctx.fillStyle='#888';ctx.fillText('HEAD-ON '+headOnHits+'  MISTAKES '+routeMistakes,20,298);
+    const discipline=routeDiscipline();ctx.fillStyle=discipline.grade==='S'?'#fd0':discipline.grade==='A'?'#0f8':'#888';ctx.fillText('DISCIPLINE '+discipline.grade+' '+discipline.score,20,342);
+    const alt=altitudeBandSnapshot();ctx.fillStyle=alt.inside?'#fd0':'#555';ctx.fillText('ALT BAND '+alt.holds+' / '+alt.best_holds,20,386);
+    ctx.fillStyle=bird.glide?'#0ff':'#666';ctx.fillText(bird.glide?'GLIDE':'SHIFT GLIDE',20,78);
+    ctx.fillStyle=diveHold?'#0ff':'#555';ctx.fillText(diveHold?'DIVE SURGE':'S/DOWN DIVE',20,364);
+    ctx.fillStyle=routeTier.color;ctx.fillText(routeTier.name.toUpperCase(),20,100);
+    ctx.fillStyle='#888';ctx.fillText('NEAR MISS '+nearMisses,20,122);
+    ctx.fillStyle=assistMode?'#0f8':'#555';ctx.fillText(assistMode?'ASSIST ON':'A ASSIST',20,144);
+    const activeMission=missionSnapshot().find(m=>!m.complete)||missionSnapshot()[missionSnapshot().length-1];
+    ctx.fillStyle=activeMission&&activeMission.complete?'#fd0':'#aaa';ctx.fillText('MISSION '+(activeMission?activeMission.label.toUpperCase():'CLEAR'),20,166);
+    ctx.textAlign='center';
+    if(announcer&&announcer.ttl>0){
+      ctx.font='bold 18px Courier New';ctx.fillStyle=announcer.color;ctx.shadowColor=announcer.color;ctx.shadowBlur=14;
+      ctx.fillText(announcer.text,W/2,122);ctx.shadowBlur=0;
+    }
+    if(paused){
+      ctx.fillStyle='rgba(6,6,15,0.62)';ctx.fillRect(0,0,W,H);
+      ctx.font='bold 34px Courier New';ctx.fillStyle='#fd0';ctx.shadowColor='#fd0';ctx.shadowBlur=20;
+      ctx.fillText('PAUSED',W/2,H/2-18);ctx.shadowBlur=0;
+      ctx.font='14px Courier New';ctx.fillStyle='#0ff';ctx.fillText('P RESUME · R RESTART · O EXPORT',W/2,H/2+20);
+    }
+  }
+
+  // Menu screen
+  if(state===STATE.MENU){
+    drawMenuScreen();
+  }
+
+  // Game over screen
+  if(state===STATE.DEAD){
+    drawDeadScreen();
+  }
+}
+
+function drawMenuScreen(){
+  ctx.fillStyle='rgba(6,6,15,0.7)';ctx.fillRect(0,0,W,H);
+
+  ctx.textAlign='center';
+  ctx.shadowColor='#0ff';ctx.shadowBlur=20;
+
+  // Title
+  ctx.font='bold 42px Courier New';ctx.fillStyle='#0ff';
+  ctx.fillText('SKY DRAGON',W/2,H/2-100);
+  ctx.font='bold 52px Courier New';ctx.fillStyle='#fd0';
+  ctx.shadowColor='#fd0';
+  ctx.fillText('DHARMA',W/2,H/2-50);
+
+  // Decorative octagon
+  ctx.shadowBlur=30;ctx.shadowColor='#0ff';
+  ctx.strokeStyle='#0ff';ctx.lineWidth=2;
+  drawOctagon(W/2,H/2+30,50,frameCount*0.02);ctx.stroke();
+  ctx.strokeStyle='#fd0';ctx.lineWidth=1;
+  drawOctagon(W/2,H/2+30,35,frameCount*-0.03);ctx.stroke();
+
+  ctx.shadowBlur=0;
+  ctx.font='16px Courier New';ctx.fillStyle='#0f8';
+  const blink=Math.sin(frameCount*0.06)>0;
+  if(blink)ctx.fillText('PRESS SPACE TO START',W/2,H/2+120);
+
+  // concise start-screen legend (fits the 640px canvas; full feature set surfaces in-run)
+  ctx.font='11px Courier New';ctx.fillStyle='#8ad';
+  ctx.fillText('30s SPEEDWAY - clear 8 rings, gates, crystals & drones',W/2,H/2+152);
+  ctx.fillStyle='#888';
+  ctx.fillText('SPACE flap  ·  SHIFT glide  ·  Z boost  ·  F flame',W/2,H/2+178);
+  ctx.fillText('Q/E roll  ·  S/down dive  ·  A assist  ·  T time attack',W/2,H/2+198);
+  ctx.fillText('P pause  ·  M mute  ·  R restart  ·  O export receipt',W/2,H/2+218);
+  ctx.fillStyle='#556';
+  ctx.fillText('route: rings > gates > crystals > drones - hold the line',W/2,H/2+244);
+}
+
+function drawSpeedwayReportCard(){
+  const report=speedwayReportCard();
+  ctx.save();
+  ctx.textAlign='left';ctx.font='bold 12px Courier New';ctx.fillStyle=report.medal_color;ctx.shadowColor=report.medal_color;ctx.shadowBlur=10;
+  ctx.fillText('SPEEDWAY REPORT · '+report.medal.toUpperCase()+' · PACE '+report.pace_delta,32,H/2+118);
+  ctx.shadowBlur=0;ctx.font='11px Courier New';
+  report.splits.forEach((split,i)=>{
+    const y=H/2+136+i*14;
+    const complete=!!split.current;
+    ctx.fillStyle=complete?'#0f8':'#666';
+    ctx.fillText(split.label.toUpperCase().padEnd(8,' ')+' '+split.comparison,32,y);
+  });
+  ctx.textAlign='right';ctx.fillStyle='#888';
+  ctx.fillText('BEST SPLIT GHOST SAVED LOCALLY · RIVAL '+splitGhostLabel(),W-32,H/2+188);
+  ctx.restore();
+}
+
+function drawDeadScreen(){
+  ctx.fillStyle='rgba(6,6,15,0.75)';ctx.fillRect(0,H/2-120,W,240);
+
+  ctx.textAlign='center';
+  ctx.shadowColor='#f44';ctx.shadowBlur=20;
+  ctx.font='bold 40px Courier New';ctx.fillStyle='#f44';
+  ctx.fillText(runComplete?'ALL-IN-ONE CLEAR':'GAME OVER',W/2,H/2-50);
+
+  ctx.shadowBlur=0;
+  ctx.font='24px Courier New';ctx.fillStyle='#fd0';
+  ctx.fillText('SCORE: '+score,W/2,H/2);
+
+  if(score>=highScore&&score>0){
+    ctx.fillStyle='#0f8';ctx.font='18px Courier New';
+    ctx.fillText('NEW HIGH SCORE!',W/2,H/2+30);
+  }
+
+  ctx.font='14px Courier New';ctx.fillStyle='#888';
+  ctx.fillText('HIGH SCORE: '+highScore+'   BEST COMBO: '+bestCombo,W/2,H/2+55);
+  ctx.fillText('ROUTE: '+routeTier.name+'   TIME: '+Math.ceil(timeLeft)+'s',W/2,H/2+75);
+  ctx.fillText('BADGES THIS RUN: '+(runBadges.length?runBadges.map(b=>b.label).join(', '):'NONE'),W/2,H/2+95);
+  drawSpeedwayReportCard();
+  const leaders=flightLogSnapshot();
+  ctx.fillStyle='#0ff';ctx.fillText('LOCAL FLIGHT LOG',W/2,H/2+118);
+  ctx.fillStyle='#888';ctx.font='12px Courier New';
+  leaders.slice(0,3).forEach((entry,i)=>ctx.fillText((i+1)+'. '+entry.score+' pts · '+entry.route_tier+' · combo '+entry.best_combo,W/2,H/2+138+i*16));
+
+  ctx.font='16px Courier New';ctx.fillStyle='#0f8';
+  const blink=Math.sin(frameCount*0.06)>0;
+  if(blink)ctx.fillText('PRESS SPACE TO RETRY',W/2,H/2+195);
+}
+
+function loop(){
+  update();draw();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

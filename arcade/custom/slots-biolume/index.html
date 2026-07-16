@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>BIOLUME JACKPOT</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#020810;font-family:'Share Tech Mono',monospace;color:#7fdbff;overflow-x:hidden;min-height:100vh}
+
+#boot{position:fixed;inset:0;background:#020810;z-index:9999;display:flex;flex-direction:column;justify-content:center;align-items:center;transition:opacity 0.8s}
+#boot.done{opacity:0;pointer-events:none}
+#boot .line{color:#0a4a6a;font-size:14px;margin:2px 0;opacity:0;transition:opacity 0.3s}
+#boot .line.show{opacity:1}
+#boot .title{color:#7fdbff;font-size:28px;letter-spacing:6px;margin-bottom:20px;text-shadow:0 0 30px #7fdbff80}
+
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px);pointer-events:none;z-index:9998}
+
+header{text-align:center;padding:15px;border-bottom:1px solid #0a2a3a;background:linear-gradient(180deg,#040e18,#020810)}
+header h1{font-size:12px;letter-spacing:6px;color:#0a6a8a;margin-bottom:4px}
+header h2{font-size:22px;letter-spacing:4px;color:#7fdbff;text-shadow:0 0 20px #7fdbff60}
+.back-btn{position:absolute;left:15px;top:15px;color:#0a6a8a;text-decoration:none;font-size:13px;border:1px solid #0a2a3a;padding:4px 10px;transition:all 0.3s}
+.back-btn:hover{color:#7fdbff;border-color:#7fdbff}
+
+#ocean-bg{position:fixed;inset:0;z-index:-1;overflow:hidden}
+.particle{position:absolute;border-radius:50%;animation:floatUp linear infinite;opacity:0}
+@keyframes floatUp{0%{transform:translateY(100vh) scale(0.5);opacity:0}10%{opacity:0.6}90%{opacity:0.6}100%{transform:translateY(-20px) scale(1);opacity:0}}
+
+#game{max-width:800px;margin:0 auto;padding:15px;position:relative}
+
+#jackpot-bar{text-align:center;padding:12px;margin-bottom:10px;background:linear-gradient(90deg,transparent,#0a1a2a40,transparent);border:1px solid #1a3a5a;border-radius:8px}
+#jackpot-bar .label{font-size:10px;letter-spacing:4px;color:#0a6a8a}
+#jackpot-bar .amount{font-size:32px;color:#ff6af5;text-shadow:0 0 20px #ff6af560,0 0 40px #ff6af530;animation:jackpotPulse 2s infinite}
+@keyframes jackpotPulse{0%,100%{text-shadow:0 0 20px #ff6af560}50%{text-shadow:0 0 30px #ff6af580,0 0 60px #ff6af540}}
+
+#machine{background:linear-gradient(180deg,#0a1a2a,#061020,#0a1a2a);border:2px solid #1a3a5a;border-radius:12px;padding:20px;position:relative;box-shadow:0 0 40px #0a2a4a40,inset 0 0 40px #00000080}
+
+#reels-container{display:flex;justify-content:center;gap:6px;padding:20px 0;position:relative}
+.reel{width:100px;height:240px;overflow:hidden;border:2px solid #1a4a6a;border-radius:6px;position:relative;background:#040c18}
+.reel-inner{transition:transform 0.1s;will-change:transform}
+.reel.spinning .reel-inner{transition:none}
+.symbol{width:100px;height:80px;display:flex;align-items:center;justify-content:center;font-size:40px;position:relative}
+.symbol.glow{animation:symbolGlow 1s ease-in-out infinite alternate}
+@keyframes symbolGlow{from{filter:brightness(1) drop-shadow(0 0 5px currentColor)}to{filter:brightness(1.5) drop-shadow(0 0 15px currentColor)}}
+
+/* Payline indicator */
+.payline-indicator{position:absolute;left:-8px;right:-8px;height:3px;background:#ff6af5;top:50%;transform:translateY(-50%);opacity:0;box-shadow:0 0 10px #ff6af5;z-index:5;pointer-events:none}
+.payline-indicator.active{opacity:1;animation:paylinePulse 0.5s ease-in-out 3}
+@keyframes paylinePulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+#info{display:flex;justify-content:space-between;padding:12px 20px;font-size:13px}
+#tokens-display{color:#7fdbff;font-size:16px;text-align:center;margin:10px 0}
+#win-display{text-align:center;font-size:20px;min-height:30px;color:#2aff6a;text-shadow:0 0 15px #2aff6a60;margin:8px 0}
+
+#controls-area{display:flex;justify-content:center;align-items:center;gap:15px;padding:15px 0;flex-wrap:wrap}
+.btn{background:linear-gradient(180deg,#1a2a3a,#0a1a2a);color:#7fdbff;border:1px solid #1a4a6a;padding:10px 20px;font-family:inherit;font-size:14px;cursor:pointer;letter-spacing:2px;transition:all 0.2s;text-transform:uppercase;border-radius:4px}
+.btn:hover:not(:disabled){background:linear-gradient(180deg,#2a3a4a,#1a2a3a);border-color:#7fdbff;text-shadow:0 0 8px #7fdbff;box-shadow:0 0 15px #7fdbff30}
+.btn:disabled{opacity:0.3;cursor:default}
+.btn.spin-btn{background:linear-gradient(180deg,#2a1a3a,#1a0a2a);border-color:#ff6af5;color:#ff6af5;font-size:18px;padding:12px 40px}
+.btn.spin-btn:hover:not(:disabled){box-shadow:0 0 20px #ff6af540}
+
+#bet-controls{display:flex;align-items:center;gap:8px}
+#bet-controls .label{font-size:11px;color:#0a6a8a}
+
+#paylines-display{font-size:11px;color:#0a6a8a;text-align:center;margin:6px 0}
+
+#paytable{display:none;background:#040c18;border:1px solid #1a3a5a;border-radius:8px;padding:15px;margin-top:12px;font-size:12px}
+#paytable h3{color:#7fdbff;font-size:12px;letter-spacing:3px;margin-bottom:10px;text-align:center}
+#paytable .row{display:flex;justify-content:space-between;padding:3px 10px;border-bottom:1px solid #0a1a2a}
+#paytable .row .sym{font-size:20px}
+#paytable .row .pay{color:#2aff6a}
+
+#stats-bar{display:flex;justify-content:space-around;padding:8px;font-size:11px;color:#0a6a8a;border-top:1px solid #0a2a3a;margin-top:10px}
+
+/* Win particles */
+.win-particle{position:absolute;border-radius:50%;pointer-events:none;animation:winBurst 1s ease-out forwards}
+@keyframes winBurst{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(0);opacity:0}}
+
+#free-spins-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:100;justify-content:center;align-items:center;flex-direction:column}
+#free-spins-overlay.active{display:flex}
+#free-spins-overlay .title{font-size:36px;color:#ff6af5;text-shadow:0 0 30px #ff6af5;letter-spacing:6px;animation:fsPulse 1s infinite}
+#free-spins-overlay .count{font-size:60px;color:#2aff6a;margin:20px 0}
+@keyframes fsPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+
+body{
+  background:
+    radial-gradient(circle at 18% 16%, rgba(34,211,238,0.20), transparent 24%),
+    radial-gradient(circle at 82% 20%, rgba(255,106,245,0.18), transparent 25%),
+    radial-gradient(circle at 50% 88%, rgba(42,255,106,0.14), transparent 32%),
+    repeating-linear-gradient(118deg, rgba(127,219,255,0.08) 0 1px, transparent 1px 46px),
+    #020810;
+}
+#machine{
+  background:
+    linear-gradient(180deg,rgba(10,26,42,0.96),rgba(6,16,32,0.96),rgba(10,26,42,0.96)) padding-box,
+    conic-gradient(from 140deg,#7fdbff,#ff6af5,#ffd700,#2aff6a,#66ccff,#7fdbff) border-box;
+  border:2px solid transparent;
+  box-shadow:0 0 42px rgba(127,219,255,0.32),0 0 60px rgba(255,106,245,0.16),inset 0 0 54px rgba(0,0,0,0.86);
+}
+#machine::before{
+  content:"";
+  position:absolute;
+  inset:10px;
+  border-radius:9px;
+  background:
+    radial-gradient(circle at 20% 18%, rgba(255,255,255,0.16), transparent 20%),
+    radial-gradient(circle at 80% 72%, rgba(42,255,106,0.12), transparent 22%);
+  pointer-events:none;
+  mix-blend-mode:screen;
+}
+.reel{
+  background:
+    radial-gradient(circle at 50% 18%, rgba(255,255,255,0.12), transparent 22%),
+    linear-gradient(180deg,#041424,#020712 48%,#07182a);
+  border:2px solid transparent;
+  background-clip:padding-box;
+  box-shadow:inset 0 0 28px rgba(0,0,0,0.82),0 0 16px rgba(127,219,255,0.24);
+}
+.reel::after{
+  content:"";
+  position:absolute;
+  inset:8px;
+  border:1px solid rgba(255,255,255,0.16);
+  border-radius:4px;
+  pointer-events:none;
+}
+.symbol{
+  text-shadow:0 0 10px currentColor,0 0 24px currentColor;
+  filter:saturate(1.45);
+}
+.symbol::before{
+  content:"";
+  position:absolute;
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  background:radial-gradient(circle at 32% 26%, rgba(255,255,255,0.72), transparent 20%, rgba(255,255,255,0.08) 52%, transparent 70%);
+  opacity:0.7;
+  pointer-events:none;
+}
+#jackpot-bar{
+  background:
+    linear-gradient(90deg,transparent,rgba(255,106,245,0.12),rgba(127,219,255,0.12),transparent),
+    rgba(4,12,24,0.72);
+  box-shadow:0 0 26px rgba(255,106,245,0.18), inset 0 0 18px rgba(127,219,255,0.08);
+}
+.btn{box-shadow:0 0 16px rgba(127,219,255,0.12), inset 0 0 12px rgba(255,255,255,0.05)}
+</style>
+</head>
+<body>
+
+<div id="boot">
+  <div class="title">BIOLUME JACKPOT</div>
+  <div class="line" data-delay="200">DHARMA INITIATIVE // HIGH ROLLER ARCADE</div>
+  <div class="line" data-delay="500">Descending to depth...</div>
+  <div class="line" data-delay="800">Bioluminescent array online</div>
+  <div class="line" data-delay="1100">Loading 5-reel matrix... 20 paylines</div>
+  <div class="line" data-delay="1400">Pressure equalized. Reels primed.</div>
+  <div class="line" data-delay="1700">[ DIVE INITIATED ]</div>
+</div>
+
+<div id="ocean-bg"></div>
+
+<header>
+  <a href="/arcade" class="back-btn">&lt; BACK</a>
+  <h1>DHARMA // HIGH ROLLER ARCADE</h1>
+  <h2>BIOLUME JACKPOT</h2>
+</header>
+
+<div id="game">
+  <div id="jackpot-bar">
+    <div class="label">PROGRESSIVE JACKPOT</div>
+    <div class="amount" id="jackpot-amount">25,000</div>
+  </div>
+
+  <div id="machine">
+    <div id="tokens-display">TOKENS: <span id="token-count">5000</span> | BET: <span id="bet-amount">20</span> | LINES: <span id="line-count">20</span></div>
+
+    <div id="reels-container">
+      <div class="reel" id="reel0"><div class="reel-inner" id="reel-inner0"></div></div>
+      <div class="reel" id="reel1"><div class="reel-inner" id="reel-inner1"></div></div>
+      <div class="reel" id="reel2"><div class="reel-inner" id="reel-inner2"></div></div>
+      <div class="reel" id="reel3"><div class="reel-inner" id="reel-inner3"></div></div>
+      <div class="reel" id="reel4"><div class="reel-inner" id="reel-inner4"></div></div>
+      <div class="payline-indicator" id="payline-ind"></div>
+    </div>
+
+    <div id="win-display"></div>
+
+    <div id="controls-area">
+      <div id="bet-controls">
+        <span class="label">BET/LINE:</span>
+        <button class="btn" onclick="changeBet(-1)" style="padding:6px 12px">-</button>
+        <span id="bet-per-line">1</span>
+        <button class="btn" onclick="changeBet(1)" style="padding:6px 12px">+</button>
+      </div>
+      <button class="btn spin-btn" id="spin-btn" onclick="spin()">SPIN</button>
+      <button class="btn" id="auto-btn" onclick="toggleAuto()">AUTO: OFF</button>
+      <button class="btn" onclick="togglePaytable()" style="font-size:11px;padding:6px 12px">PAYTABLE</button>
+    </div>
+
+    <div id="paylines-display">20 PAYLINES ACTIVE</div>
+  </div>
+
+  <div id="paytable">
+    <h3>PAYTABLE</h3>
+    <div class="row"><span class="sym">&#x1F419;</span><span>KRAKEN (WILD) - Substitutes all except Scatter</span><span class="pay">5x=500</span></div>
+    <div class="row"><span class="sym">&#x1F9DC;</span><span>DIVER - Premium</span><span class="pay">5x=250</span></div>
+    <div class="row"><span class="sym">&#x1FAB8;</span><span>JELLYFISH - High</span><span class="pay">5x=150</span></div>
+    <div class="row"><span class="sym">&#x1F41F;</span><span>ANGLERFISH - High</span><span class="pay">5x=100</span></div>
+    <div class="row"><span class="sym">&#x1F4A0;</span><span>TREASURE - Medium</span><span class="pay">5x=75</span></div>
+    <div class="row"><span class="sym">&#x1FAB8;</span><span>CORAL - Medium</span><span class="pay">5x=50</span></div>
+    <div class="row"><span class="sym">&#x1F30A;</span><span>WAVE - Low</span><span class="pay">5x=25</span></div>
+    <div class="row"><span class="sym">&#x2B50;</span><span>STAR - Low</span><span class="pay">5x=15</span></div>
+    <div class="row"><span class="sym">&#x1F5FF;</span><span>PEARL (SCATTER) - 3+ = FREE SPINS</span><span class="pay">3=8 4=12 5=20</span></div>
+  </div>
+
+  <div id="stats-bar">
+    <span>SPINS: <span id="stat-spins">0</span></span>
+    <span>WINS: <span id="stat-wins">0</span></span>
+    <span>BIGGEST WIN: <span id="stat-biggest">0</span></span>
+    <span>SESSION P/L: <span id="stat-pl">0</span></span>
+  </div>
+
+  <div id="free-spins-overlay">
+    <div class="title">FREE SPINS!</div>
+    <div class="count" id="fs-count">0</div>
+    <button class="btn spin-btn" onclick="startFreeSpins()" style="margin-top:20px">START</button>
+  </div>
+</div>
+
+<script>
+// ===== SYMBOLS =====
+const SYMBOLS=[
+  {id:'wild',   icon:'\u{1F419}', name:'KRAKEN',    weight:2,  pays:[0,0,5,25,100,500]},
+  {id:'diver',  icon:'\u{1F9DC}', name:'DIVER',     weight:4,  pays:[0,0,3,15,50,250]},
+  {id:'jelly',  icon:'\u{1FAB8}', name:'JELLYFISH', weight:6,  pays:[0,0,2,10,30,150]},
+  {id:'angler', icon:'\u{1F41F}', name:'ANGLERFISH',weight:7,  pays:[0,0,2,8,25,100]},
+  {id:'treasure',icon:'\u{1F4A0}',name:'TREASURE',  weight:8,  pays:[0,0,0,5,15,75]},
+  {id:'coral',  icon:'\u{1F3DD}', name:'CORAL',     weight:10, pays:[0,0,0,3,10,50]},
+  {id:'wave',   icon:'\u{1F30A}', name:'WAVE',      weight:12, pays:[0,0,0,2,5,25]},
+  {id:'star',   icon:'\u{1F31F}', name:'STAR',      weight:14, pays:[0,0,0,2,5,15]},
+  {id:'scatter',icon:'\u{26AA}',  name:'PEARL',     weight:3,  pays:[0,0,0,5,20,100]},
+];
+
+// Weighted reel strip
+function buildStrip(){
+  const strip=[];
+  SYMBOLS.forEach(s=>{for(let i=0;i<s.weight;i++)strip.push(s)});
+  for(let i=strip.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[strip[i],strip[j]]=[strip[j],strip[i]]}
+  return strip;
+}
+const reelStrips=[buildStrip(),buildStrip(),buildStrip(),buildStrip(),buildStrip()];
+
+// Paylines (row indices 0-2 for each of 5 reels)
+const PAYLINES=[
+  [1,1,1,1,1],[0,0,0,0,0],[2,2,2,2,2],
+  [0,1,2,1,0],[2,1,0,1,2],[0,0,1,2,2],
+  [2,2,1,0,0],[1,0,1,0,1],[1,2,1,2,1],
+  [0,1,0,1,0],[2,1,2,1,2],[1,0,0,0,1],
+  [1,2,2,2,1],[0,1,1,1,0],[2,1,1,1,2],
+  [0,2,0,2,0],[2,0,2,0,2],[1,1,0,1,1],
+  [1,1,2,1,1],[0,2,1,2,0]
+];
+
+// ===== AUDIO =====
+const AudioCtx=window.AudioContext||window.webkitAudioContext;
+let audioCtx;
+function initAudio(){if(!audioCtx)audioCtx=new AudioCtx()}
+function playSound(type){
+  initAudio();const t=audioCtx.currentTime;
+  if(type==='spin'){
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);
+    o.type='sawtooth';o.frequency.setValueAtTime(100,t);o.frequency.linearRampToValueAtTime(60,t+0.3);
+    g.gain.setValueAtTime(0.05,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.3);o.start(t);o.stop(t+0.3);
+  }else if(type==='stop'){
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);
+    o.type='sine';o.frequency.value=600;g.gain.setValueAtTime(0.1,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.1);o.start(t);o.stop(t+0.1);
+  }else if(type==='win'){
+    [523,659,784,1046].forEach((f,i)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0,t+i*0.1);g.gain.linearRampToValueAtTime(0.1,t+i*0.1+0.05);g.gain.exponentialRampToValueAtTime(0.001,t+i*0.1+0.25);o.start(t+i*0.1);o.stop(t+i*0.1+0.25)});
+  }else if(type==='bigwin'){
+    [262,330,392,523,659,784].forEach((f,i)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);o.type='triangle';o.frequency.value=f;g.gain.setValueAtTime(0,t+i*0.12);g.gain.linearRampToValueAtTime(0.12,t+i*0.12+0.05);g.gain.exponentialRampToValueAtTime(0.001,t+i*0.12+0.4);o.start(t+i*0.12);o.stop(t+i*0.12+0.4)});
+  }else if(type==='scatter'){
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);
+    o.type='sine';o.frequency.setValueAtTime(400,t);o.frequency.exponentialRampToValueAtTime(1200,t+0.3);
+    g.gain.setValueAtTime(0.1,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.5);o.start(t);o.stop(t+0.5);
+  }
+}
+
+// ===== STATE =====
+let tokens=5000,betPerLine=1,totalBet=20,spinning=false,autoSpin=false;
+let freeSpins=0,freeSpinActive=false,freeSpinCount=0;
+let jackpot=25000,stats={spins:0,wins:0,biggest:0,pl:0};
+let grid=[[],[],[],[],[]]; // 5 reels, 3 visible rows each
+
+function randomSymbol(reelIdx){
+  const strip=reelStrips[reelIdx];
+  return strip[Math.floor(Math.random()*strip.length)];
+}
+
+function initReels(){
+  for(let r=0;r<5;r++){
+    grid[r]=[];
+    for(let row=0;row<3;row++){
+      grid[r][row]=randomSymbol(r);
+    }
+  }
+  renderReels();
+}
+
+function renderReels(){
+  for(let r=0;r<5;r++){
+    const inner=document.getElementById('reel-inner'+r);
+    inner.innerHTML='';
+    for(let row=0;row<3;row++){
+      const div=document.createElement('div');
+      div.className='symbol';
+      div.textContent=grid[r][row].icon;
+      div.style.color=getSymbolColor(grid[r][row].id);
+      inner.appendChild(div);
+    }
+  }
+}
+
+function getSymbolColor(id){
+  const colors={wild:'#ff6af5',diver:'#ffd700',jelly:'#00ffcc',angler:'#ff6633',treasure:'#66ccff',coral:'#ff99cc',wave:'#4488ff',star:'#ffff66',scatter:'#ffffff'};
+  return colors[id]||'#7fdbff';
+}
+
+// ===== SPINNING =====
+function spin(){
+  if(spinning)return;
+  initAudio();
+  if(!freeSpinActive){
+    if(tokens<totalBet)return;
+    tokens-=totalBet;
+  }
+  spinning=true;
+  document.getElementById('win-display').textContent='';
+  document.getElementById('spin-btn').disabled=true;
+  stats.spins++;
+  updateUI();
+  playSound('spin');
+
+  // Generate results
+  const results=[];
+  for(let r=0;r<5;r++){
+    results[r]=[];
+    for(let row=0;row<3;row++){
+      results[r][row]=randomSymbol(r);
+    }
+  }
+
+  // Animate each reel stopping sequentially
+  let reelsDone=0;
+  for(let r=0;r<5;r++){
+    const reel=document.getElementById('reel'+r);
+    const inner=document.getElementById('reel-inner'+r);
+    reel.classList.add('spinning');
+
+    // Fast spinning symbols
+    let spinInterval;
+    let spinCount=0;
+    spinInterval=setInterval(()=>{
+      inner.innerHTML='';
+      for(let row=0;row<3;row++){
+        const div=document.createElement('div');
+        div.className='symbol';
+        const sym=randomSymbol(r);
+        div.textContent=sym.icon;
+        div.style.color=getSymbolColor(sym.id);
+        inner.appendChild(div);
+      }
+      spinCount++;
+    },80);
+
+    setTimeout(()=>{
+      clearInterval(spinInterval);
+      reel.classList.remove('spinning');
+      grid[r]=results[r];
+      inner.innerHTML='';
+      for(let row=0;row<3;row++){
+        const div=document.createElement('div');
+        div.className='symbol';
+        div.textContent=results[r][row].icon;
+        div.style.color=getSymbolColor(results[r][row].id);
+        inner.appendChild(div);
+      }
+      playSound('stop');
+      reelsDone++;
+      if(reelsDone===5){
+        setTimeout(()=>evaluateWin(),300);
+      }
+    },800+r*400);
+  }
+}
+
+function evaluateWin(){
+  spinning=false;
+  document.getElementById('spin-btn').disabled=false;
+  let totalWin=0;
+  let winLines=[];
+
+  // Check each payline
+  for(let pl=0;pl<PAYLINES.length;pl++){
+    const line=PAYLINES[pl];
+    const symbols=line.map((row,reel)=>grid[reel][row]);
+    const result=evaluateLine(symbols);
+    if(result>0){
+      totalWin+=result*betPerLine;
+      winLines.push({line:pl,amount:result*betPerLine});
+    }
+  }
+
+  // Check scatters (anywhere)
+  let scatterCount=0;
+  for(let r=0;r<5;r++)for(let row=0;row<3;row++){
+    if(grid[r][row].id==='scatter')scatterCount++;
+  }
+  if(scatterCount>=3){
+    const scatterPay=SYMBOLS.find(s=>s.id==='scatter').pays[scatterCount];
+    totalWin+=scatterPay*totalBet;
+    // Award free spins
+    const fsAward=scatterCount===3?8:scatterCount===4?12:20;
+    if(!freeSpinActive){
+      freeSpins=fsAward;
+      playSound('scatter');
+    }else{
+      freeSpins+=fsAward;
+    }
+  }
+
+  // Jackpot contribution
+  if(!freeSpinActive)jackpot+=Math.floor(totalBet*0.02);
+
+  // Check jackpot (5 wilds)
+  let wildCount=0;
+  for(let r=0;r<5;r++)if(grid[r][1].id==='wild')wildCount++;
+  if(wildCount===5){totalWin+=jackpot;jackpot=10000;playSound('bigwin')}
+
+  if(totalWin>0){
+    tokens+=totalWin;
+    stats.wins++;
+    if(totalWin>stats.biggest)stats.biggest=totalWin;
+    if(!freeSpinActive)stats.pl+=totalWin-totalBet;else stats.pl+=totalWin;
+    document.getElementById('win-display').textContent='WIN: '+totalWin+' TOKENS!';
+    if(totalWin>=totalBet*10)playSound('bigwin');else playSound('win');
+    spawnWinParticles();
+    // Glow winning symbols
+    highlightWins(winLines);
+  }else{
+    if(!freeSpinActive)stats.pl-=totalBet;
+  }
+
+  updateUI();
+
+  // Free spins
+  if(freeSpins>0&&!freeSpinActive){
+    setTimeout(()=>{
+      document.getElementById('fs-count').textContent=freeSpins;
+      document.getElementById('free-spins-overlay').classList.add('active');
+    },800);
+  }
+
+  if(freeSpinActive){
+    freeSpinCount--;
+    if(freeSpinCount<=0){
+      freeSpinActive=false;
+      document.getElementById('spin-btn').textContent='SPIN';
+    }else{
+      document.getElementById('spin-btn').textContent='FREE: '+freeSpinCount;
+      if(autoSpin)setTimeout(()=>spin(),1200);
+    }
+  }else if(autoSpin&&tokens>=totalBet){
+    setTimeout(()=>spin(),1200);
+  }
+}
+
+function startFreeSpins(){
+  document.getElementById('free-spins-overlay').classList.remove('active');
+  freeSpinActive=true;
+  freeSpinCount=freeSpins;
+  freeSpins=0;
+  document.getElementById('spin-btn').textContent='FREE: '+freeSpinCount;
+  setTimeout(()=>spin(),500);
+}
+
+function evaluateLine(symbols){
+  // Find first non-wild
+  let baseSymbol=null;
+  for(let s of symbols){
+    if(s.id!=='wild'&&s.id!=='scatter'){baseSymbol=s;break}
+  }
+  if(!baseSymbol){
+    // All wilds
+    if(symbols.every(s=>s.id==='wild'))return SYMBOLS[0].pays[5];
+    return 0;
+  }
+  let count=0;
+  for(let i=0;i<symbols.length;i++){
+    if(symbols[i].id===baseSymbol.id||symbols[i].id==='wild')count++;
+    else break;
+  }
+  return baseSymbol.pays[count]||0;
+}
+
+function highlightWins(winLines){
+  // Simple: add glow class to winning symbols
+  for(let wl of winLines){
+    const line=PAYLINES[wl.line];
+    line.forEach((row,reel)=>{
+      const inner=document.getElementById('reel-inner'+reel);
+      if(inner.children[row])inner.children[row].classList.add('glow');
+    });
+  }
+  setTimeout(()=>{
+    document.querySelectorAll('.symbol.glow').forEach(el=>el.classList.remove('glow'));
+  },2000);
+}
+
+function spawnWinParticles(){
+  const container=document.getElementById('reels-container');
+  const rect=container.getBoundingClientRect();
+  for(let i=0;i<20;i++){
+    const p=document.createElement('div');
+    p.className='win-particle';
+    const size=Math.random()*6+3;
+    p.style.width=size+'px';p.style.height=size+'px';
+    p.style.background=['#ff6af5','#00ffcc','#ffd700','#66ccff','#ff6633'][Math.floor(Math.random()*5)];
+    p.style.left=(Math.random()*100)+'%';
+    p.style.top=(Math.random()*100)+'%';
+    p.style.setProperty('--dx',(Math.random()-0.5)*200+'px');
+    p.style.setProperty('--dy',(Math.random()-0.5)*200+'px');
+    container.appendChild(p);
+    setTimeout(()=>p.remove(),1000);
+  }
+}
+
+// ===== CONTROLS =====
+function changeBet(dir){
+  if(spinning)return;
+  const bets=[1,2,5,10];
+  let idx=bets.indexOf(betPerLine);
+  idx=Math.max(0,Math.min(bets.length-1,idx+dir));
+  betPerLine=bets[idx];
+  totalBet=betPerLine*20;
+  updateUI();
+}
+
+function toggleAuto(){
+  autoSpin=!autoSpin;
+  document.getElementById('auto-btn').textContent='AUTO: '+(autoSpin?'ON':'OFF');
+  if(autoSpin&&!spinning)spin();
+}
+
+function togglePaytable(){
+  const pt=document.getElementById('paytable');
+  pt.style.display=pt.style.display==='none'?'block':'none';
+}
+
+function updateUI(){
+  document.getElementById('token-count').textContent=tokens;
+  document.getElementById('bet-amount').textContent=totalBet;
+  document.getElementById('bet-per-line').textContent=betPerLine;
+  document.getElementById('jackpot-amount').textContent=jackpot.toLocaleString();
+  document.getElementById('stat-spins').textContent=stats.spins;
+  document.getElementById('stat-wins').textContent=stats.wins;
+  document.getElementById('stat-biggest').textContent=stats.biggest;
+  const plEl=document.getElementById('stat-pl');
+  plEl.textContent=(stats.pl>=0?'+':'')+stats.pl;
+  plEl.style.color=stats.pl>=0?'#2aff6a':'#ff4444';
+}
+
+// ===== OCEAN PARTICLES =====
+function createOceanParticles(){
+  const bg=document.getElementById('ocean-bg');
+  for(let i=0;i<30;i++){
+    const p=document.createElement('div');
+    p.className='particle';
+    const size=Math.random()*4+1;
+    p.style.width=size+'px';p.style.height=size+'px';
+    p.style.left=Math.random()*100+'%';
+    p.style.background=['#00ffcc','#7fdbff','#ff6af5','#4488ff'][Math.floor(Math.random()*4)];
+    p.style.animationDuration=(Math.random()*15+10)+'s';
+    p.style.animationDelay=(Math.random()*15)+'s';
+    bg.appendChild(p);
+  }
+}
+
+// ===== KEYBOARD =====
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'&&!spinning){e.preventDefault();spin()}
+});
+
+// ===== BOOT =====
+createOceanParticles();
+initReels();
+updateUI();
+const bootLines=document.querySelectorAll('#boot .line');
+bootLines.forEach(l=>{setTimeout(()=>l.classList.add('show'),parseInt(l.dataset.delay))});
+setTimeout(()=>{document.getElementById('boot').classList.add('done');setTimeout(()=>document.getElementById('boot').style.display='none',800)},2800);
+</script>
+</body>
+</html>

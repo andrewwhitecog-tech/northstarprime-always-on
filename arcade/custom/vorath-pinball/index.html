@@ -1,0 +1,2145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vorath Pinball</title>
+  <script src="/static/games/chiptune.js"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #05050b;
+      --panel: rgba(6, 8, 18, 0.84);
+      --line: rgba(143, 255, 231, 0.28);
+      --text: #f8fbff;
+      --muted: #a9b6ca;
+      --red: #ff2e6d;
+      --emerald: #3dffad;
+      --cyan: #38e9ff;
+      --gold: #ffd75e;
+      --violet: #b760ff;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      min-height: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 15% 12%, rgba(255, 46, 109, 0.28), transparent 31rem),
+        radial-gradient(circle at 80% 18%, rgba(61, 255, 173, 0.24), transparent 28rem),
+        radial-gradient(circle at 58% 78%, rgba(255, 215, 94, 0.18), transparent 25rem),
+        linear-gradient(135deg, #02030a 0%, #071527 38%, #180a24 70%, #03040b 100%);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        repeating-linear-gradient(90deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 52px),
+        repeating-linear-gradient(0deg, rgba(255,255,255,0.028) 0 1px, transparent 1px 48px);
+      mask-image: radial-gradient(circle at center, black, transparent 84%);
+    }
+
+    .shell {
+      width: min(1440px, calc(100vw - 24px));
+      margin: 0 auto;
+      padding: 18px 0 26px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 16px;
+      align-items: end;
+      padding: 8px 2px 16px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 4.2vw, 5rem);
+      line-height: 0.9;
+      letter-spacing: 0;
+      text-transform: uppercase;
+      text-shadow: 0 0 18px rgba(56,233,255,0.68), 0 0 38px rgba(255,46,109,0.42);
+    }
+
+    .subtitle {
+      max-width: 900px;
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.45;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(560px, 1fr) 330px;
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .table-wrap,
+    .panel {
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(6, 8, 18, 0.82), rgba(8, 4, 14, 0.94));
+      box-shadow: 0 0 40px rgba(56,233,255,0.13), inset 0 0 44px rgba(183,96,255,0.12);
+      border-radius: 8px;
+    }
+
+    .table-wrap {
+      position: relative;
+      min-height: 720px;
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: min(78vh, 860px);
+      min-height: 680px;
+      background: #05050b;
+      touch-action: none;
+    }
+
+    .panel {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .meters {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .meter, .log, .controls, .note {
+      border: 1px solid rgba(56, 233, 255, 0.22);
+      background: linear-gradient(180deg, rgba(9, 13, 26, 0.58), rgba(3, 5, 12, 0.74));
+      border-radius: 8px;
+      padding: 10px;
+      backdrop-filter: blur(6px);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+    }
+
+    .value {
+      margin-top: 4px;
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--text);
+      text-shadow: 0 0 14px rgba(61,255,173,0.42);
+      overflow-wrap: anywhere;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    button {
+      appearance: none;
+      min-height: 42px;
+      border: 1px solid rgba(143, 255, 231, 0.36);
+      border-radius: 8px;
+      color: var(--text);
+      background: linear-gradient(180deg, rgba(20, 34, 54, 0.95), rgba(6, 8, 18, 0.96));
+      box-shadow: inset 0 0 16px rgba(56,233,255,0.1), 0 0 14px rgba(56,233,255,0.08);
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    button:active,
+    button.is-down {
+      transform: translateY(1px);
+      border-color: rgba(61,255,173,0.78);
+      box-shadow: 0 0 22px rgba(61,255,173,0.28), inset 0 0 18px rgba(255,46,109,0.2);
+    }
+
+    .wide { grid-column: 1 / -1; }
+
+    .log {
+      min-height: 160px;
+      max-height: 220px;
+      overflow: auto;
+      font-size: 0.88rem;
+      line-height: 1.4;
+    }
+
+    .log p {
+      margin: 0 0 8px;
+      color: var(--muted);
+    }
+
+    .log strong { color: var(--emerald); }
+
+    .note {
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 980px) {
+      .grid { grid-template-columns: 1fr; }
+      .table-wrap { min-height: 620px; }
+      canvas { height: 650px; min-height: 620px; }
+      header { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 620px) {
+      .shell { width: min(100vw - 14px, 1440px); padding-top: 8px; }
+      .meters { grid-template-columns: 1fr; }
+      .controls { grid-template-columns: 1fr 1fr; }
+      canvas { height: 600px; min-height: 560px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div>
+        <h1>Vorath Pinball</h1>
+        <p class="subtitle">A procedural neon pinball table with launch skill-shot timing, ruby bumpers, emerald flippers, rainbow orbit lanes, crystal jackpots, ball trails, multiball pressure, and a local VORATH receipt.</p>
+      </div>
+      <button id="exportTop">Export Receipt</button>
+    </header>
+
+    <section class="grid" aria-label="Vorath Pinball playable cabinet">
+      <div class="table-wrap">
+        <canvas id="game" width="1080" height="1480"></canvas>
+        <script src="/static/games/juice.js"></script>
+      </div>
+
+      <aside class="panel">
+        <div class="meters">
+          <div class="meter">
+            <div class="label">Score</div>
+            <div class="value" id="score">0</div>
+          </div>
+          <div class="meter">
+            <div class="label">Balls</div>
+            <div class="value" id="balls">3</div>
+          </div>
+          <div class="meter">
+            <div class="label">Multiplier</div>
+            <div class="value" id="multiplier">1x</div>
+          </div>
+          <div class="meter">
+            <div class="label">Gate</div>
+            <div class="value" id="gate">ORBIT</div>
+          </div>
+          <div class="meter">
+            <div class="label">Plunger</div>
+            <div class="value" id="plunger">0%</div>
+          </div>
+          <div class="meter">
+            <div class="label">Jackpot</div>
+            <div class="value" id="jackpot">Dormant</div>
+          </div>
+          <div class="meter">
+            <div class="label">Table</div>
+            <div class="value" id="tableMode">Star Cadet</div>
+          </div>
+          <div class="meter">
+            <div class="label">Mission</div>
+            <div class="value" id="mission">Select</div>
+          </div>
+          <div class="meter">
+            <div class="label">Fuel</div>
+            <div class="value" id="fuel">0</div>
+          </div>
+          <div class="meter">
+            <div class="label">Rank/Relic</div>
+            <div class="value" id="rank">Initiate</div>
+          </div>
+        </div>
+
+        <div class="controls" aria-label="Pinball controls">
+          <button id="startBtn" class="wide">Start Table</button>
+          <button id="leftBtn">Left Flipper A</button>
+          <button id="rightBtn">Right Flipper L</button>
+          <button id="launchBtn" class="wide">Hold Plunger Space</button>
+          <button id="tableBtn">Table T</button>
+          <button id="missionBtn">Mission R</button>
+          <button id="nudgeBtn">Nudge N</button>
+          <button id="exportBtn">Export Receipt</button>
+        </div>
+
+        <div class="log" id="log" aria-live="polite">
+          <p><strong>Boot:</strong> Hold Space or the plunger button, release to launch. A/Left and L/Right drive the flippers.</p>
+        </div>
+
+        <div class="note">
+          No commercial pinball assets, table layouts, sounds, logos, names, or ROM data are used. This is an original VORATH procedural cabinet using public pinball grammar only, with three original table personas, rank missions, treasure-map modes, fantasy awards, launch skill-shot lanes, fuel, ball-save, locks, and multiball.
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const canvas = document.querySelector("#game");
+    let ctx = canvas.getContext("2d");
+    if (window.Juice) Juice.attachFX(canvas, { vignette: 0.5, scanlines: 0.04, glow: 0.07 });
+    const motionPlate = document.createElement("video");
+    let motionPlateReady = false;
+    {
+      const still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (!still) {
+        motionPlate.muted = true; motionPlate.loop = true; motionPlate.playsInline = true; motionPlate.preload = "auto";
+        motionPlate.src = "/static/games/imagegen_quality_pass_20260625/vorath_pinball_plate_motion_916.mp4";
+        const go = () => { if (motionPlateReady) return; motionPlate.play().then(() => { motionPlateReady = true; }).catch(() => {}); };
+        motionPlate.addEventListener("canplaythrough", go, { once: true });
+        motionPlate.addEventListener("error", () => { motionPlateReady = false; });
+        window.addEventListener("pointerdown", go, { once: true });
+        window.addEventListener("keydown", go, { once: true });
+      }
+    }
+    const els = {
+      score: document.querySelector("#score"),
+      balls: document.querySelector("#balls"),
+      multiplier: document.querySelector("#multiplier"),
+      gate: document.querySelector("#gate"),
+      plunger: document.querySelector("#plunger"),
+      jackpot: document.querySelector("#jackpot"),
+      tableMode: document.querySelector("#tableMode"),
+      mission: document.querySelector("#mission"),
+      fuel: document.querySelector("#fuel"),
+      rank: document.querySelector("#rank"),
+      log: document.querySelector("#log"),
+      startBtn: document.querySelector("#startBtn"),
+      leftBtn: document.querySelector("#leftBtn"),
+      rightBtn: document.querySelector("#rightBtn"),
+      launchBtn: document.querySelector("#launchBtn"),
+      tableBtn: document.querySelector("#tableBtn"),
+      missionBtn: document.querySelector("#missionBtn"),
+      nudgeBtn: document.querySelector("#nudgeBtn"),
+      exportBtn: document.querySelector("#exportBtn"),
+      exportTop: document.querySelector("#exportTop")
+    };
+
+    const keys = new Set();
+    const view = { w: 760, h: 920, dpr: 1 };
+
+    // ---- Chiptune audio (safe, optional) ----
+    const Audio = (typeof Chiptune !== "undefined") ? Chiptune : null;
+    let musicBed = null;
+    let audioReady = false;
+    function sfx(name) {
+      try { if (Audio && Audio.SFX && typeof Audio.SFX[name] === "function") Audio.SFX[name](); } catch (e) {}
+    }
+    function resumeAudio() {
+      try { if (Audio && !audioReady) { Audio.resume(); audioReady = true; } } catch (e) {}
+    }
+    function startMusic() {
+      try {
+        if (!Audio || musicBed) return;
+        musicBed = Audio.Music({ bpm: 132, mel: [72, 76, 79, 84, 79, 76, 72, 67], bass: [36, 36, 43, 43, 41, 41, 38, 38], melType: "square" });
+      } catch (e) { musicBed = null; }
+    }
+    function stopMusic() {
+      try { if (musicBed) { musicBed.stop(); musicBed = null; } } catch (e) { musicBed = null; }
+    }
+    window.addEventListener("pointerdown", resumeAudio, { once: false });
+    window.addEventListener("keydown", resumeAudio, { once: false });
+
+    // ---- Ball sprite (procedural fallback always kept) ----
+    const ballSprite = new Image();
+    let ballSpriteReady = false;
+    ballSprite.onload = () => { ballSpriteReady = true; };
+    ballSprite.onerror = () => { ballSpriteReady = false; };
+    ballSprite.src = "/static/games/roster/pin_ball.png";
+
+    // ---- Juice: screen shake ----
+    const shake = { mag: 0 };
+    function addShake(amount) { shake.mag = Math.min(24, shake.mag + amount); }
+    function applyShake() {
+      if (shake.mag <= 0.2) { canvas.style.transform = ""; return; }
+      const dx = (Math.random() - 0.5) * shake.mag;
+      const dy = (Math.random() - 0.5) * shake.mag;
+      canvas.style.transform = `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px)`;
+      shake.mag *= 0.86;
+    }
+    const tableModes = [
+      {
+        id: "star",
+        name: "Star Cadet",
+        rankNames: ["Initiate", "Cadet", "Pilot", "Navigator", "Commander", "Tribune", "Oracle Ace"],
+        missionVerb: "mission",
+        missions: [
+          { name: "Target Practice", event: "target", goal: 4, fuel: 18, reward: "rank" },
+          { name: "Launch Ramp Survey", event: "ramp", goal: 3, fuel: 22, reward: "rank" },
+          { name: "Wormhole Lock Drill", event: "lock", goal: 3, fuel: 26, reward: "multiball" },
+          { name: "Re-Entry Training", event: "rollover", goal: 5, fuel: 20, reward: "ballSave" }
+        ]
+      },
+      {
+        id: "relic",
+        name: "Skullwake Relic",
+        rankNames: ["No Map", "One Shard", "Two Shards", "Three Shards", "Four Shards", "Five Shards", "Relic Found"],
+        missionVerb: "voyage",
+        missions: [
+          { name: "Map Fragment Run", event: "target", goal: 3, fuel: 18, reward: "map" },
+          { name: "Storm Orbit", event: "orbit", goal: 2, fuel: 16, reward: "jackpot" },
+          { name: "Treasure Vault Lock", event: "lock", goal: 2, fuel: 24, reward: "map" },
+          { name: "Captain's Replay", event: "rollover", goal: 5, fuel: 20, reward: "ballSave" }
+        ]
+      },
+      {
+        id: "wyrm",
+        name: "Wyrm Reliquary",
+        rankNames: ["Ash", "Scale", "Claw", "Wing", "Crown", "Hoard", "Wyrm-Binder"],
+        missionVerb: "quest",
+        missions: [
+          { name: "Crystal Hoard", event: "bumper", goal: 6, fuel: 22, reward: "spell" },
+          { name: "Fire Wyrm Pass", event: "ramp", goal: 3, fuel: 20, reward: "weapon" },
+          { name: "Emerald Armor Rite", event: "target", goal: 4, fuel: 24, reward: "armor" },
+          { name: "Slay the Aurora Wyrm", event: "lock", goal: 3, fuel: 30, reward: "multiball" }
+        ]
+      }
+    ];
+    const state = {
+      running: false,
+      score: 0,
+      balls: 3,
+      multiplier: 1,
+      gate: "ORBIT",
+      jackpot: 0,
+      plunger: 0,
+      launchHeld: false,
+      tilt: 0,
+      last: 0,
+      tableIndex: 0,
+      selectedMission: 0,
+      missionActive: false,
+      missionProgress: 0,
+      missionGoal: 0,
+      fuel: 0,
+      fuelTick: 0,
+      rankIndex: 0,
+      rankLights: 0,
+      mapShards: 0,
+      awards: [],
+      locks: 0,
+      ballSave: true,
+      magnetTimer: 0,
+      leftFlip: false,
+      rightFlip: false,
+      combo: 0,
+      multiballReady: 0,
+      message: "Insert a VORATH charge.",
+      particles: [],
+      trails: [],
+      shockwaves: [],
+      hitStop: 0,
+      displayScore: 0,
+      startFade: 0,
+      overFade: 0,
+      log: ["Red-core table glass online."],
+      receipts: 0,
+      skillShotArmed: false,
+      skillShotWindow: 0,
+      skillShotPower: 0,
+      skillShotHits: 0,
+      skillShotBest: parseInt(localStorage.getItem("vorathPinballSkillShotBest") || "0", 10) || 0,
+      skillShotGrade: "Dormant"
+    };
+
+    const ball = { x: 660, y: 760, vx: 0, vy: 0, r: 10, held: true, active: true, hue: 185 };
+    const extraBalls = [];
+
+    const bumpers = [
+      { x: 315, y: 250, r: 35, value: 750, color: "#ff2e6d", label: "R" },
+      { x: 455, y: 265, r: 35, value: 750, color: "#3dffad", label: "E" },
+      { x: 385, y: 370, r: 42, value: 1200, color: "#ffd75e", label: "D" },
+      { x: 235, y: 420, r: 30, value: 900, color: "#38e9ff", label: "Q" },
+      { x: 535, y: 430, r: 30, value: 900, color: "#b760ff", label: "O" }
+    ];
+
+    const targets = [
+      { x: 120, y: 305, w: 42, h: 108, lit: false, value: 550, color: "#ff9f43", label: "SUN" },
+      { x: 598, y: 310, w: 42, h: 108, lit: false, value: 550, color: "#40e0ff", label: "MOON" },
+      { x: 156, y: 560, w: 54, h: 88, lit: false, value: 700, color: "#ff2e6d", label: "RUBY" },
+      { x: 550, y: 565, w: 54, h: 88, lit: false, value: 700, color: "#3dffad", label: "GEM" }
+    ];
+
+    const rollovers = [
+      { x: 235, y: 118, r: 17, lit: false, label: "V" },
+      { x: 310, y: 102, r: 17, lit: false, label: "O" },
+      { x: 385, y: 96, r: 17, lit: false, label: "R" },
+      { x: 460, y: 102, r: 17, lit: false, label: "A" },
+      { x: 535, y: 118, r: 17, lit: false, label: "T" }
+    ];
+
+    const wormholes = [
+      { x: 210, y: 218, r: 23, color: "#38e9ff", label: "BLUE" },
+      { x: 560, y: 222, r: 23, color: "#ff9f43", label: "GOLD" },
+      { x: 382, y: 512, r: 26, color: "#b760ff", label: "VOID" }
+    ];
+
+    function addLog(text) {
+      state.log.unshift(text);
+      state.log = state.log.slice(0, 8);
+      els.log.innerHTML = state.log.map((line, index) => `<p>${index === 0 ? "<strong>Now:</strong> " : ""}${line}</p>`).join("");
+    }
+
+    function currentTable() {
+      return tableModes[state.tableIndex];
+    }
+
+    function currentMission() {
+      return currentTable().missions[state.selectedMission];
+    }
+
+    function cycleTable() {
+      if (state.running && !ball.held) addScore(250, "Table persona shift");
+      state.tableIndex = (state.tableIndex + 1) % tableModes.length;
+      state.selectedMission = 0;
+      state.missionActive = false;
+      state.missionProgress = 0;
+      state.fuel = 0;
+      state.rankIndex = Math.min(state.rankIndex, currentTable().rankNames.length - 1);
+      addLog(`Table persona: ${currentTable().name}.`);
+    }
+
+    function selectMission(reason = "target bank") {
+      state.selectedMission = (state.selectedMission + 1) % currentTable().missions.length;
+      state.missionActive = false;
+      state.missionProgress = 0;
+      state.fuel = 0;
+      const mission = currentMission();
+      addLog(`${reason} selects ${currentTable().missionVerb}: ${mission.name}. Launch the ramp to start.`);
+    }
+
+    function startMission(reason = "launch ramp") {
+      const mission = currentMission();
+      state.missionActive = true;
+      state.missionProgress = 0;
+      state.missionGoal = mission.goal;
+      state.fuel = mission.fuel;
+      state.fuelTick = 0;
+      state.gate = mission.name.toUpperCase().slice(0, 10);
+      addLog(`${reason} starts ${mission.name}. Fuel ${state.fuel}.`);
+    }
+
+    function skillShotSnapshot() {
+      return {
+        armed: state.skillShotArmed,
+        window: Math.max(0, Math.round(state.skillShotWindow)),
+        power: Number((state.skillShotPower || 0).toFixed(2)),
+        hits: state.skillShotHits,
+        best: state.skillShotBest,
+        grade: state.skillShotGrade
+      };
+    }
+
+    function armSkillShot(force) {
+      state.skillShotArmed = true;
+      state.skillShotWindow = 210;
+      state.skillShotPower = force;
+      state.skillShotGrade = force >= 0.74 && force <= 0.9 ? "Primed" : "Wild";
+      addLog(`Skill-shot lane armed at ${Math.round(force * 100)}% plunger.`);
+    }
+
+    function resolveSkillShot(reason = "aurora orbit") {
+      if (!state.skillShotArmed) return false;
+      const centeredPower = 1 - Math.min(1, Math.abs((state.skillShotPower || 0) - 0.82) / 0.36);
+      const grade = centeredPower > 0.82 ? "Perfect" : centeredPower > 0.52 ? "Good" : "Saved";
+      const award = grade === "Perfect" ? 6500 : grade === "Good" ? 3200 : 900;
+      state.skillShotArmed = false;
+      state.skillShotWindow = 0;
+      state.skillShotGrade = grade;
+      state.skillShotHits += 1;
+      state.skillShotBest = Math.max(state.skillShotBest, state.skillShotHits);
+      localStorage.setItem("vorathPinballSkillShotBest", String(state.skillShotBest));
+      addScore(award, `${grade} skill shot`);
+      state.jackpot += Math.round(award * 0.35);
+      if (grade === "Perfect") state.multiplier = Math.min(9, state.multiplier + 1);
+      if (grade !== "Saved") missionEvent("ramp");
+      sfx(grade === "Perfect" ? "oneUp" : "powerUp");
+      addShake(grade === "Perfect" ? 12 : 6);
+      burst(view.w * 0.5, view.h * 0.12, grade === "Perfect" ? 34 : 20, grade === "Perfect" ? "#ffd75e" : "#38e9ff", 7);
+      addLog(`${grade} skill shot from ${reason}.`);
+      return true;
+    }
+
+    function updateSkillShot(dt) {
+      if (!state.skillShotArmed) return;
+      state.skillShotWindow = Math.max(0, state.skillShotWindow - dt);
+      if (state.skillShotWindow <= 0) {
+        state.skillShotArmed = false;
+        state.skillShotGrade = "Expired";
+        addLog("Skill-shot lane expired.");
+      }
+    }
+
+    function missionEvent(type, amount = 1) {
+      if (type === "ramp") {
+        if (!state.missionActive) {
+          startMission("Launch ramp");
+          return;
+        }
+        state.fuel = Math.min(currentMission().fuel, state.fuel + 5);
+        addLog("Ramp relights fuel.");
+      }
+      if (!state.missionActive) return;
+      const mission = currentMission();
+      if (mission.event !== type) return;
+      state.missionProgress += amount;
+      addScore(300 + state.missionProgress * 80, `${mission.name} progress`);
+      if (state.missionProgress >= mission.goal) finishMission(mission);
+    }
+
+    function finishMission(mission) {
+      state.missionActive = false;
+      state.fuel = 0;
+      state.rankLights += 1;
+      state.score += 4500 * state.multiplier;
+      state.multiplier = Math.min(9, state.multiplier + 1);
+      if (state.rankLights >= 3) {
+        state.rankLights = 0;
+        state.rankIndex = Math.min(currentTable().rankNames.length - 1, state.rankIndex + 1);
+        addLog(`${currentTable().name} rank advances to ${currentTable().rankNames[state.rankIndex]}.`);
+      }
+      if (mission.reward === "rank") {
+        state.rankIndex = Math.min(currentTable().rankNames.length - 1, state.rankIndex + 1);
+      } else if (mission.reward === "map") {
+        state.mapShards = Math.min(6, state.mapShards + 1);
+        if (state.mapShards >= 6) {
+          state.score += 18000;
+          addLog("Skullwake relic found. Treasure award paid.");
+        }
+      } else if (mission.reward === "jackpot") {
+        state.jackpot += 12000;
+      } else if (mission.reward === "ballSave") {
+        state.ballSave = true;
+      } else if (mission.reward === "spell") {
+        state.awards.push("Prism Spell");
+        state.magnetTimer = 720;
+      } else if (mission.reward === "weapon") {
+        state.awards.push("Crystal Weapon");
+        state.multiplier = Math.min(9, state.multiplier + 2);
+      } else if (mission.reward === "armor") {
+        state.awards.push("Emerald Armor");
+        state.ballSave = true;
+      } else if (mission.reward === "multiball") {
+        state.multiballReady += 1;
+        spawnMultiball();
+      }
+      burst(view.w * 0.5, view.h * 0.22, 42, "#ffd75e", 8);
+      shockwave(view.w * 0.5, view.h * 0.22, "#ffd75e", view.w * 0.24);
+      state.hitStop = 2;
+      sfx("oneUp");
+      addShake(8);
+      addLog(`${mission.name} complete. ${mission.reward} awarded.`);
+      selectMission("Award bank");
+    }
+
+    function updateMissionFuel(dt) {
+      if (!state.missionActive) return;
+      state.fuelTick += dt;
+      if (state.fuelTick < 58) return;
+      state.fuelTick = 0;
+      state.fuel -= 1;
+      if (state.fuel <= 0) {
+        addLog(`${currentMission().name} fuel expired. Relight and try again.`);
+        state.missionActive = false;
+        state.missionProgress = 0;
+        state.gate = "ORBIT";
+      }
+    }
+
+    function lockBall(orb) {
+      if (state.locks >= 3) return;
+      state.locks += 1;
+      orb.active = false;
+      sfx("powerUp");
+      addShake(5);
+      addScore(1500, `Wormhole lock ${state.locks}`);
+      burst(orb.x, orb.y, 30, "#b760ff", 7);
+      missionEvent("lock");
+      if (state.locks >= 3) {
+        state.locks = 0;
+        state.multiballReady += 1;
+        spawnMultiball();
+      }
+      if (orb === ball && !extraBalls.some(item => item.active)) {
+        resetBall();
+      }
+    }
+
+    function resize() {
+      const rect = canvas.getBoundingClientRect();
+      view.dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      view.w = Math.max(540, rect.width);
+      view.h = Math.max(560, rect.height);
+      canvas.width = Math.floor(view.w * view.dpr);
+      canvas.height = Math.floor(view.h * view.dpr);
+      ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+      if (typeof buildLayers === "function") buildLayers();
+    }
+
+    function resetBall() {
+      ball.x = view.w - 86;
+      ball.y = view.h - 162;
+      ball.vx = 0;
+      ball.vy = 0;
+      ball.held = true;
+      ball.active = true;
+      ball.r = Math.max(8, Math.min(12, view.w * 0.014));
+      extraBalls.length = 0;
+      state.plunger = 0;
+      state.launchHeld = false;
+    }
+
+    function startTable() {
+      resumeAudio();
+      startMusic();
+      state.running = true;
+      state.score = 0;
+      state.balls = 3;
+      state.multiplier = 1;
+      state.jackpot = 0;
+      state.combo = 0;
+      state.multiballReady = 0;
+      state.skillShotArmed = false;
+      state.skillShotWindow = 0;
+      state.skillShotPower = 0;
+      state.skillShotHits = 0;
+      state.skillShotGrade = "Dormant";
+      state.missionActive = false;
+      state.missionProgress = 0;
+      state.missionGoal = 0;
+      state.fuel = 0;
+      state.rankIndex = 0;
+      state.rankLights = 0;
+      state.mapShards = 0;
+      state.awards = [];
+      state.locks = 0;
+      state.ballSave = true;
+      state.magnetTimer = 0;
+      targets.forEach(target => target.lit = false);
+      rollovers.forEach(lane => lane.lit = false);
+      state.displayScore = 0;
+      state.hitStop = 0;
+      state.shockwaves.length = 0;
+      state.overFade = 0;
+      state.startFade = 1;
+      resetBall();
+      addLog(`${currentTable().name} armed. Charge the plunger.`);
+    }
+
+    function launchBall() {
+      if (!state.running) startTable();
+      if (!ball.held) return;
+      const force = Math.max(0.48, state.plunger || 0.72);
+      ball.held = false;
+      sfx("shoot");
+      addShake(4);
+      ball.vx = -92 - force * 70;
+      ball.vy = -760 - force * 420;
+      armSkillShot(force);
+      state.plunger = 0;
+      state.launchHeld = false;
+      state.message = "Rainbow orbit launch.";
+      addLog(`Launch force ${(force * 100).toFixed(0)} percent.`);
+      burst(ball.x, ball.y, 24, "#3dffad", 7);
+    }
+
+    function addScore(points, reason) {
+      const earned = Math.round(points * state.multiplier);
+      state.score += earned;
+      state.jackpot += Math.round(earned * 0.18);
+      state.combo += 1;
+      if (state.combo % 6 === 0) {
+        state.multiplier = Math.min(9, state.multiplier + 1);
+        sfx("powerUp");
+        addLog(`Multiplier raised to ${state.multiplier}x by ${reason}.`);
+      } else {
+        addLog(`${reason}: +${earned}`);
+      }
+      if (state.jackpot > 9000) {
+        state.multiballReady = Math.min(2, state.multiballReady + 1);
+      }
+    }
+
+    function nudgeTable() {
+      if (!state.running) return;
+      state.tilt = Math.min(100, state.tilt + 18);
+      sfx("blip");
+      addShake(6);
+      ball.vx += (Math.random() - 0.5) * 160;
+      for (const orb of extraBalls) orb.vx += (Math.random() - 0.5) * 140;
+      burst(view.w * 0.5, view.h * 0.58, 18, "#ffd75e", 5);
+      addLog("Cabinet nudged; tribunal glass shivers.");
+    }
+
+    function spawnMultiball() {
+      if (state.multiballReady <= 0) return;
+      state.multiballReady -= 1;
+      extraBalls.push({
+        x: view.w * 0.52,
+        y: view.h * 0.36,
+        vx: -190,
+        vy: -250,
+        r: ball.r * 0.92,
+        active: true,
+        hue: 330
+      });
+      extraBalls.push({
+        x: view.w * 0.48,
+        y: view.h * 0.36,
+        vx: 210,
+        vy: -220,
+        r: ball.r * 0.92,
+        active: true,
+        hue: 98
+      });
+      state.jackpot = Math.max(0, state.jackpot - 7000);
+      sfx("explode");
+      addShake(10);
+      state.hitStop = 3;
+      shockwave(view.w * 0.5, view.h * 0.36, "#ffd75e", view.w * 0.3);
+      shockwave(view.w * 0.5, view.h * 0.36, "#b760ff", view.w * 0.18);
+      addLog("Crystal multiball released.");
+    }
+
+    function shockwave(x, y, color, maxR = 70) {
+      if (state.shockwaves.length > 14) state.shockwaves.shift();
+      state.shockwaves.push({ x, y, color, maxR, life: 1 });
+    }
+
+    function burst(x, y, count, color, power) {
+      count = Math.min(count, Math.max(0, 260 - state.particles.length));
+      for (let i = 0; i < count; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const s = (Math.random() * 2 + 1) * power;
+        state.particles.push({
+          x, y,
+          vx: Math.cos(a) * s,
+          vy: Math.sin(a) * s,
+          life: 34 + Math.random() * 26,
+          color,
+          size: 2 + Math.random() * 4
+        });
+      }
+    }
+
+    function closestPointOnSegment(px, py, ax, ay, bx, by) {
+      const abx = bx - ax;
+      const aby = by - ay;
+      const apx = px - ax;
+      const apy = py - ay;
+      const denom = abx * abx + aby * aby || 1;
+      const t = Math.max(0, Math.min(1, (apx * abx + apy * aby) / denom));
+      return { x: ax + abx * t, y: ay + aby * t, t };
+    }
+
+    function flipperSegment(side) {
+      const y = view.h - 120;
+      const length = Math.min(142, view.w * 0.2);
+      if (side === "left") {
+        const pivot = { x: view.w * 0.39, y };
+        const angle = (state.leftFlip ? -34 : 18) * Math.PI / 180;
+        return { ax: pivot.x, ay: pivot.y, bx: pivot.x - Math.cos(angle) * length, by: pivot.y - Math.sin(angle) * length, active: state.leftFlip };
+      }
+      const pivot = { x: view.w * 0.61, y };
+      const angle = (state.rightFlip ? 214 : 162) * Math.PI / 180;
+      return { ax: pivot.x, ay: pivot.y, bx: pivot.x + Math.cos(angle) * length, by: pivot.y + Math.sin(angle) * length, active: state.rightFlip };
+    }
+
+    function collideFlipper(orb, segment) {
+      const p = closestPointOnSegment(orb.x, orb.y, segment.ax, segment.ay, segment.bx, segment.by);
+      const dx = orb.x - p.x;
+      const dy = orb.y - p.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      if (dist > orb.r + 7) return;
+      const nx = dx / dist;
+      const ny = dy / dist;
+      const dot = orb.vx * nx + orb.vy * ny;
+      if (dot < 0 || segment.active) {
+        orb.x = p.x + nx * (orb.r + 8);
+        orb.y = p.y + ny * (orb.r + 8);
+        orb.vx -= 1.9 * dot * nx;
+        orb.vy -= 1.9 * dot * ny;
+        if (segment.active) {
+          const lift = segment.ax < view.w * 0.5 ? -1 : 1;
+          orb.vx += lift * 380;
+          orb.vy -= 720;
+          addScore(85, "Emerald flipper");
+          sfx("blip");
+          burst(orb.x, orb.y, 10, "#3dffad", 4);
+        }
+      }
+    }
+
+    function collideCircle(orb, item) {
+      const dx = orb.x - item.x;
+      const dy = orb.y - item.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      if (dist > orb.r + item.r) return false;
+      const nx = dx / dist;
+      const ny = dy / dist;
+      orb.x = item.x + nx * (orb.r + item.r + 0.2);
+      orb.y = item.y + ny * (orb.r + item.r + 0.2);
+      const dot = orb.vx * nx + orb.vy * ny;
+      orb.vx -= 1.95 * dot * nx;
+      orb.vy -= 1.95 * dot * ny;
+      orb.vx += nx * 170;
+      orb.vy += ny * 170;
+      addScore(item.value, `${item.label} bumper`);
+      missionEvent("bumper");
+      burst(item.x, item.y, 22, item.color, 6);
+      return true;
+    }
+
+    function collideRect(orb, rect) {
+      const cx = Math.max(rect.x, Math.min(orb.x, rect.x + rect.w));
+      const cy = Math.max(rect.y, Math.min(orb.y, rect.y + rect.h));
+      const dx = orb.x - cx;
+      const dy = orb.y - cy;
+      const dist = Math.hypot(dx, dy);
+      if (dist > orb.r) return false;
+      const nx = dist ? dx / dist : (orb.x < rect.x + rect.w / 2 ? -1 : 1);
+      const ny = dist ? dy / dist : -1;
+      orb.x = cx + nx * (orb.r + 0.4);
+      orb.y = cy + ny * (orb.r + 0.4);
+      const dot = orb.vx * nx + orb.vy * ny;
+      orb.vx -= 1.75 * dot * nx;
+      orb.vy -= 1.75 * dot * ny;
+      if (!rect.lit) {
+        rect.lit = true;
+        addScore(rect.value, `${rect.label} crystal target`);
+        missionEvent("target");
+        if (!state.missionActive) selectMission(`${rect.label} target`);
+      } else {
+        addScore(Math.round(rect.value * 0.25), `${rect.label} target echo`);
+        missionEvent("target");
+      }
+      burst(rect.x + rect.w / 2, rect.y + rect.h / 2, 16, rect.color, 5);
+      if (targets.every(target => target.lit)) {
+        targets.forEach(target => target.lit = false);
+        state.multiballReady += 1;
+        state.multiplier = Math.min(9, state.multiplier + 1);
+        addLog("Crystal bank completed. Multiball lit.");
+      }
+      return true;
+    }
+
+    function updateOrb(orb, dt) {
+      if (!orb.active) return;
+      if (orb.held) {
+        orb.x = view.w - 86;
+        orb.y = view.h - 162;
+        return;
+      }
+      orb.vy += 23.5 * dt;
+      orb.vx *= 0.996;
+      orb.vy *= 0.998;
+      orb.x += orb.vx * dt / 60;
+      orb.y += orb.vy * dt / 60;
+
+      const leftWall = 58;
+      const rightWall = view.w - 58;
+      const topWall = 44;
+      if (orb.x < leftWall + orb.r) {
+        orb.x = leftWall + orb.r;
+        orb.vx = Math.abs(orb.vx) * 0.92;
+      }
+      if (orb.x > rightWall - orb.r) {
+        orb.x = rightWall - orb.r;
+        orb.vx = -Math.abs(orb.vx) * 0.92;
+      }
+      if (orb.y < topWall + orb.r) {
+        orb.y = topWall + orb.r;
+        orb.vy = Math.abs(orb.vy) * 0.94;
+        addScore(240, "Aurora orbit");
+        resolveSkillShot("aurora orbit");
+        missionEvent("orbit");
+        missionEvent("ramp");
+      }
+
+      if (state.magnetTimer > 0 && !orb.held) {
+        const pullX = view.w * 0.5 - orb.x;
+        const pullY = view.h * 0.38 - orb.y;
+        orb.vx += pullX * 0.010 * dt;
+        orb.vy += pullY * 0.006 * dt;
+      }
+
+      for (const bumper of bumpers) {
+        const scaledBumper = scaleItem(bumper);
+        if (collideCircle(orb, scaledBumper)) {
+          bumper.flash = 1;
+          sfx("pop");
+          addShake(3.5);
+          shockwave(scaledBumper.x, scaledBumper.y, bumper.color, scaledBumper.r * 2.7);
+        }
+      }
+      for (const hole of wormholes.map(scaleItem)) {
+        const dx = orb.x - hole.x;
+        const dy = orb.y - hole.y;
+        if (!orb.held && Math.hypot(dx, dy) < orb.r + hole.r * 0.72) {
+          lockBall(orb);
+          return;
+        }
+      }
+      for (const target of targets) {
+        const wasLit = target.lit;
+        if (collideRect(orb, scaleRect(target))) {
+          target.flash = 1;
+          sfx(wasLit ? "blip" : "coin");
+          addShake(2);
+        }
+      }
+      for (const lane of rollovers) {
+        const scaled = scaleItem(lane);
+        const dx = orb.x - scaled.x;
+        const dy = orb.y - scaled.y;
+        if (Math.hypot(dx, dy) < orb.r + scaled.r && !lane.lit) {
+          lane.lit = true;
+          sfx("blip");
+          addScore(450, `${lane.label} rollover`);
+          missionEvent("rollover");
+          state.fuel = state.missionActive ? Math.min(currentMission().fuel, state.fuel + 2) : state.fuel;
+          burst(scaled.x, scaled.y, 14, "#38e9ff", 4);
+          if (rollovers.every(item => item.lit)) {
+            rollovers.forEach(item => item.lit = false);
+            state.multiplier = Math.min(9, state.multiplier + 1);
+            addLog("VORAT lanes completed.");
+            if (!state.missionActive) selectMission("Rollover lanes");
+          }
+        }
+      }
+
+      collideFlipper(orb, flipperSegment("left"));
+      collideFlipper(orb, flipperSegment("right"));
+
+      const leftOut = { ax: 58, ay: view.h - 210, bx: view.w * 0.33, by: view.h - 115 };
+      const rightOut = { ax: view.w - 58, ay: view.h - 210, bx: view.w * 0.67, by: view.h - 115 };
+      collideWallSegment(orb, leftOut);
+      collideWallSegment(orb, rightOut);
+
+      state.trails.push({ x: orb.x, y: orb.y, hue: orb.hue, life: 22, r: orb.r });
+      if (orb.y > view.h + 60) {
+        if (orb === ball && state.ballSave) {
+          state.ballSave = false;
+          sfx("gate");
+          addLog("Ball-save gate fires. Ruby ball returned.");
+          resetBall();
+          burst(view.w - 86, view.h - 162, 24, "#3dffad", 7);
+        } else {
+          orb.active = false;
+        }
+      }
+    }
+
+    function collideWallSegment(orb, wall) {
+      const p = closestPointOnSegment(orb.x, orb.y, wall.ax, wall.ay, wall.bx, wall.by);
+      const dx = orb.x - p.x;
+      const dy = orb.y - p.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      if (dist > orb.r + 5) return;
+      const nx = dx / dist;
+      const ny = dy / dist;
+      const dot = orb.vx * nx + orb.vy * ny;
+      if (dot < 0) {
+        orb.x = p.x + nx * (orb.r + 6);
+        orb.y = p.y + ny * (orb.r + 6);
+        orb.vx -= 1.65 * dot * nx;
+        orb.vy -= 1.65 * dot * ny;
+      }
+    }
+
+    function scaleItem(item) {
+      return {
+        x: item.x / 760 * view.w,
+        y: item.y / 920 * view.h,
+        r: item.r / 760 * view.w,
+        value: item.value,
+        color: item.color,
+        label: item.label,
+        lit: item.lit,
+        flash: item.flash || 0
+      };
+    }
+
+    function scaleRect(item) {
+      return {
+        x: item.x / 760 * view.w,
+        y: item.y / 920 * view.h,
+        w: item.w / 760 * view.w,
+        h: item.h / 920 * view.h,
+        value: item.value,
+        color: item.color,
+        label: item.label,
+        lit: item.lit,
+        flash: item.flash || 0
+      };
+    }
+
+    function loseBallIfNeeded() {
+      const activeExtra = extraBalls.filter(orb => orb.active);
+      extraBalls.length = 0;
+      extraBalls.push(...activeExtra);
+      if (ball.active || extraBalls.length) return;
+      state.balls -= 1;
+      state.combo = 0;
+      state.multiplier = Math.max(1, state.multiplier - 1);
+      if (state.balls > 0) {
+        sfx("hurt");
+        addShake(6);
+        addLog("Drain. New ruby ball served.");
+        resetBall();
+      } else {
+        state.running = false;
+        sfx("ko");
+        addShake(14);
+        stopMusic();
+        addLog("Game over. Export the tribunal receipt.");
+      }
+    }
+
+    function updateGame(now = performance.now()) {
+      if (!state.last) state.last = now;
+      const dt = Math.min(2.2, Math.max(0.25, (now - state.last) / 16.667));
+      state.last = now;
+
+      state.leftFlip = keys.has("a") || keys.has("arrowleft") || els.leftBtn.classList.contains("is-down");
+      state.rightFlip = keys.has("l") || keys.has("arrowright") || els.rightBtn.classList.contains("is-down");
+      if ((keys.has(" ") || els.launchBtn.classList.contains("is-down")) && ball.held) {
+        state.launchHeld = true;
+        state.plunger = Math.min(1, state.plunger + 0.018 * dt);
+      } else if (state.launchHeld && ball.held) {
+        launchBall();
+      }
+
+      if (keys.has("n")) {
+        keys.delete("n");
+        nudgeTable();
+      }
+
+      state.tilt = Math.max(0, state.tilt - 0.12 * dt);
+      state.particles.forEach(p => {
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 0.08 * dt;
+        p.life -= dt;
+      });
+      state.particles = state.particles.filter(p => p.life > 0);
+      bumpers.forEach(b => { if (b.flash) b.flash = Math.max(0, b.flash - 0.09 * dt); });
+      targets.forEach(t => { if (t.flash) t.flash = Math.max(0, t.flash - 0.09 * dt); });
+      state.trails.forEach(t => t.life -= dt);
+      state.trails = state.trails.filter(t => t.life > 0).slice(-80);
+      state.shockwaves.forEach(sw => sw.life -= 0.045 * dt);
+      state.shockwaves = state.shockwaves.filter(sw => sw.life > 0);
+      state.magnetTimer = Math.max(0, state.magnetTimer - dt);
+      updateMissionFuel(dt);
+      updateSkillShot(dt);
+
+      if (state.running) {
+        if (state.hitStop > 0) {
+          state.hitStop -= 1;
+        } else {
+          updateOrb(ball, dt);
+          extraBalls.forEach(orb => updateOrb(orb, dt));
+          loseBallIfNeeded();
+        }
+      }
+
+      draw();
+      applyShake();
+      updateHud();
+      requestAnimationFrame(updateGame);
+    }
+
+    function updateHud() {
+      state.displayScore += (state.score - state.displayScore) * 0.16;
+      if (Math.abs(state.score - state.displayScore) < 1) state.displayScore = state.score;
+      els.score.textContent = Math.round(state.displayScore).toLocaleString();
+      els.balls.textContent = String(Math.max(0, state.balls));
+      els.multiplier.textContent = `${state.multiplier}x`;
+      els.gate.textContent = state.running ? state.gate : "REST";
+      els.plunger.textContent = `${Math.round(state.plunger * 100)}%`;
+      els.jackpot.textContent = state.multiballReady > 0 ? "Lit" : state.jackpot.toLocaleString();
+      els.tableMode.textContent = currentTable().name;
+      const mission = currentMission();
+      els.mission.textContent = state.missionActive ? `${state.missionProgress}/${state.missionGoal}` : mission.name;
+      els.fuel.textContent = state.missionActive ? String(Math.max(0, Math.ceil(state.fuel))) : (state.ballSave ? "Save" : "0");
+      const rankName = currentTable().rankNames[Math.min(state.rankIndex, currentTable().rankNames.length - 1)];
+      els.rank.textContent = currentTable().id === "relic" ? `${rankName} ${state.mapShards}/6` : rankName;
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, view.w, view.h);
+      drawTable();
+      // Comet trail: additive, tapering toward the tail (no per-dot shadow allocation).
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      for (const trail of state.trails) {
+        const t = Math.max(0, trail.life / 22);
+        ctx.globalAlpha = t * t * 0.5;
+        ctx.fillStyle = `hsl(${trail.hue}, 100%, 62%)`;
+        ctx.beginPath();
+        ctx.arc(trail.x, trail.y, trail.r * (0.35 + t * 0.85), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+      drawBumpers();
+      drawWormholes();
+      drawTargets();
+      drawRollovers();
+      drawFlippers();
+      drawBall(ball);
+      extraBalls.forEach(drawBall);
+      drawShockwaves();
+      drawParticles();
+      drawPlungerLane();
+      drawGlassText();
+      drawGlassOverlay();
+      drawStateFades();
+    }
+
+    function drawShockwaves() {
+      if (!state.shockwaves.length) return;
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      for (const sw of state.shockwaves) {
+        const grow = 1 - sw.life;
+        const eased = 1 - (1 - grow) * (1 - grow);
+        const radius = 8 + eased * (sw.maxR - 8);
+        ctx.globalAlpha = sw.life * 0.7;
+        ctx.strokeStyle = sw.color;
+        ctx.lineWidth = 1 + sw.life * 3.4;
+        ctx.beginPath();
+        ctx.arc(sw.x, sw.y, radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = sw.life * 0.24;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(sw.x, sw.y, radius * 0.72, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawStateFades() {
+      // Eased start fade-in.
+      if (state.startFade > 0.015) {
+        state.startFade *= 0.92;
+        ctx.save();
+        ctx.globalAlpha = state.startFade * 0.85;
+        ctx.fillStyle = "#02030a";
+        ctx.fillRect(0, 0, view.w, view.h);
+        ctx.restore();
+      } else {
+        state.startFade = 0;
+      }
+      // Soft game-over veil.
+      const over = !state.running && state.balls <= 0;
+      state.overFade += ((over ? 1 : 0) - state.overFade) * 0.055;
+      if (state.overFade > 0.015) {
+        ctx.save();
+        ctx.globalAlpha = state.overFade * 0.58;
+        ctx.fillStyle = "#02030a";
+        ctx.fillRect(0, 0, view.w, view.h);
+        ctx.globalAlpha = state.overFade;
+        ctx.textAlign = "center";
+        ctx.shadowBlur = 24;
+        ctx.shadowColor = "#ff2e6d";
+        ctx.fillStyle = "#f8fbff";
+        ctx.font = `900 ${Math.max(26, view.w * 0.05)}px ui-sans-serif`;
+        ctx.fillText("GAME OVER", view.w / 2, view.h * 0.44);
+        ctx.shadowColor = "#ffd75e";
+        ctx.fillStyle = "#ffd75e";
+        ctx.font = `800 ${Math.max(15, view.w * 0.024)}px ui-sans-serif`;
+        ctx.fillText(`${state.score.toLocaleString()} PTS`, view.w / 2, view.h * 0.44 + Math.max(30, view.w * 0.044));
+        ctx.restore();
+      }
+    }
+
+    // ---- Pre-rendered static layers (rebuilt on resize; no per-frame gradient allocation) ----
+    let bgLayer = null, staticLayer = null, glassLayer = null, plungerGrad = null;
+    let bumperSprites = [], targetSprites = [], wormholeSprites = [];
+    const gemSpriteCache = new Map();
+
+    function spriteLayer(w, h) {
+      const c = document.createElement("canvas");
+      c.width = Math.max(2, Math.ceil(w * view.dpr));
+      c.height = Math.max(2, Math.ceil(h * view.dpr));
+      const cx = c.getContext("2d");
+      cx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+      return { c, cx };
+    }
+
+    function cachedGem(size, hue) {
+      const bucket = ((Math.round(hue / 12) * 12) % 360 + 360) % 360;
+      const key = size + "|" + bucket;
+      let spr = gemSpriteCache.get(key);
+      if (!spr) {
+        const pad = size * 2.6;
+        const s = spriteLayer(pad * 2, pad * 2);
+        const mainCtx = ctx;
+        ctx = s.cx;
+        ctx.translate(pad, pad);
+        drawFacetGem(0, 0, size, `hsl(${bucket}, 100%, 63%)`, 0);
+        ctx = mainCtx;
+        spr = { c: s.c, pad };
+        gemSpriteCache.set(key, spr);
+      }
+      return spr;
+    }
+
+    function buildEntitySprites() {
+      const mainCtx = ctx;
+      bumperSprites = bumpers.map(raw => {
+        const b = scaleItem(raw);
+        const pad = b.r * 2.1;
+        let s = spriteLayer(pad * 2, pad * 2);
+        ctx = s.cx;
+        const g = ctx.createRadialGradient(pad - b.r * 0.3, pad - b.r * 0.35, 1, pad, pad, b.r * 1.4);
+        g.addColorStop(0, "#ffffff");
+        g.addColorStop(0.18, b.color);
+        g.addColorStop(1, "rgba(0,0,0,0.45)");
+        ctx.fillStyle = g;
+        ctx.shadowBlur = 24;
+        ctx.shadowColor = b.color;
+        ctx.beginPath();
+        ctx.arc(pad, pad, b.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = "rgba(255,255,255,0.62)";
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(255,255,255,0.34)";
+        ctx.lineWidth = 1.2;
+        for (let i = 0; i < 4; i++) {
+          ctx.beginPath();
+          ctx.arc(pad, pad, b.r * (0.42 + i * 0.17), 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.fillStyle = "#05050b";
+        ctx.font = `800 ${Math.max(16, b.r * 0.72)}px ui-sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(b.label, pad, pad + 1);
+        const body = s.c;
+        s = spriteLayer(pad * 2, pad * 2);
+        ctx = s.cx;
+        ctx.translate(pad, pad);
+        for (let i = 0; i < 10; i++) {
+          const a = i * Math.PI / 5;
+          const radius = b.r * (1.17 + (i % 2) * 0.2);
+          drawFacetGem(Math.cos(a) * radius, Math.sin(a) * radius, b.r * 0.12, i % 2 ? "#ffffff" : b.color, a);
+        }
+        const ring = s.c;
+        return { body, ring, pad };
+      });
+
+      targetSprites = targets.map(raw => {
+        const t = scaleRect(raw);
+        const m = 32;
+        const build = lit => {
+          const s = spriteLayer(t.w + m * 2, t.h + m * 2);
+          ctx = s.cx;
+          ctx.save();
+          ctx.translate(m, m);
+          ctx.shadowBlur = lit ? 26 : 10;
+          ctx.shadowColor = t.color;
+          ctx.fillStyle = lit ? t.color : "rgba(255,255,255,0.09)";
+          roundRect(0, 0, t.w, t.h, 7);
+          ctx.fill();
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = t.color;
+          ctx.stroke();
+          const facet = ctx.createLinearGradient(0, 0, t.w, t.h);
+          facet.addColorStop(0, "rgba(255,255,255,0.58)");
+          facet.addColorStop(0.42, "rgba(255,255,255,0)");
+          facet.addColorStop(1, "rgba(0,0,0,0.38)");
+          ctx.fillStyle = facet;
+          ctx.beginPath();
+          ctx.moveTo(t.w * 0.12, t.h * 0.12);
+          ctx.lineTo(t.w * 0.88, t.h * 0.24);
+          ctx.lineTo(t.w * 0.62, t.h * 0.88);
+          ctx.lineTo(t.w * 0.2, t.h * 0.74);
+          ctx.closePath();
+          ctx.fill();
+          drawFacetGem(t.w / 2, 15, Math.min(9, t.w * 0.18), t.color, -0.2);
+          ctx.translate(t.w / 2, t.h / 2);
+          ctx.rotate(-Math.PI / 2);
+          ctx.fillStyle = lit ? "#06110c" : "#f8fbff";
+          ctx.font = "800 12px ui-sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(t.label, 0, 4);
+          ctx.restore();
+          return s.c;
+        };
+        return { lit: build(true), unlit: build(false), m };
+      });
+
+      wormholeSprites = wormholes.map(raw => {
+        const hole = scaleItem(raw);
+        const pad = hole.r * 1.45 + 26;
+        const s = spriteLayer(pad * 2, pad * 2);
+        ctx = s.cx;
+        const g = ctx.createRadialGradient(pad, pad, 2, pad, pad, hole.r * 1.45);
+        g.addColorStop(0, "rgba(255,255,255,0.92)");
+        g.addColorStop(0.28, hole.color);
+        g.addColorStop(0.72, "rgba(6,5,18,0.95)");
+        g.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = g;
+        ctx.shadowBlur = 24;
+        ctx.shadowColor = hole.color;
+        ctx.beginPath();
+        ctx.arc(pad, pad, hole.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "rgba(255,255,255,0.58)";
+        ctx.stroke();
+        return { c: s.c, pad };
+      });
+
+      ctx = mainCtx;
+    }
+
+    function makeLayer() {
+      const layer = document.createElement("canvas");
+      layer.width = Math.max(1, Math.floor(view.w * view.dpr));
+      layer.height = Math.max(1, Math.floor(view.h * view.dpr));
+      const layerCtx = layer.getContext("2d");
+      layerCtx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+      return { canvas: layer, ctx: layerCtx };
+    }
+
+    function buildLayers() {
+      const mainCtx = ctx;
+      // Base gradient plate.
+      let layer = makeLayer();
+      ctx = layer.ctx;
+      const grad = ctx.createLinearGradient(0, 0, view.w, view.h);
+      grad.addColorStop(0, "#071326");
+      grad.addColorStop(0.38, "#120720");
+      grad.addColorStop(0.7, "#071b17");
+      grad.addColorStop(1, "#05050b");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, view.w, view.h);
+      bgLayer = layer.canvas;
+
+      // Static playfield art: material, orbit rings, border, rails, wires, crystals.
+      layer = makeLayer();
+      ctx = layer.ctx;
+      drawPlayfieldMaterial();
+      for (let i = 0; i < 18; i++) {
+        ctx.strokeStyle = `hsla(${i * 24}, 100%, 62%, 0.11)`;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.ellipse(view.w / 2, view.h * 0.48, view.w * (0.18 + i * 0.018), view.h * (0.18 + i * 0.012), -0.24, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = "rgba(143,255,231,0.7)";
+      ctx.shadowBlur = 18;
+      ctx.shadowColor = "#38e9ff";
+      roundRect(36, 28, view.w - 72, view.h - 54, 34);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      drawSideRailHardware();
+      ctx.strokeStyle = "rgba(255,255,255,0.16)";
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.moveTo(view.w * 0.18, 82);
+      ctx.bezierCurveTo(view.w * 0.11, view.h * 0.34, view.w * 0.16, view.h * 0.57, view.w * 0.32, view.h * 0.76);
+      ctx.moveTo(view.w * 0.82, 82);
+      ctx.bezierCurveTo(view.w * 0.89, view.h * 0.34, view.w * 0.84, view.h * 0.57, view.w * 0.68, view.h * 0.76);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(255,215,94,0.34)";
+      ctx.lineWidth = 2;
+      for (let x = 90; x < view.w - 90; x += 52) {
+        ctx.beginPath();
+        ctx.moveTo(x, 46);
+        ctx.quadraticCurveTo(view.w / 2, view.h * 0.32, view.w - x, view.h - 190);
+        ctx.stroke();
+      }
+      drawCrystal(view.w * 0.5, view.h * 0.18, 56, "#ff2e6d", "#ffd75e");
+      drawCrystal(view.w * 0.17, view.h * 0.68, 38, "#38e9ff", "#3dffad");
+      drawCrystal(view.w * 0.83, view.h * 0.68, 38, "#b760ff", "#ff2e6d");
+      staticLayer = layer.canvas;
+
+      // Glass shine layer (screen-composited at draw time).
+      layer = makeLayer();
+      ctx = layer.ctx;
+      paintGlassContent();
+      glassLayer = layer.canvas;
+
+      ctx = mainCtx;
+
+      // Full-height plunger gradient, reused every frame.
+      plungerGrad = ctx.createLinearGradient(0, view.h - 110, 0, view.h - 110 - (view.h - 250));
+      plungerGrad.addColorStop(0, "#ff2e6d");
+      plungerGrad.addColorStop(0.5, "#ffd75e");
+      plungerGrad.addColorStop(1, "#3dffad");
+    }
+
+    function drawTable() {
+      if (!bgLayer) buildLayers();
+      ctx.drawImage(bgLayer, 0, 0, view.w, view.h);
+      if (motionPlateReady && motionPlate.readyState >= 2) {
+        const vw = motionPlate.videoWidth, vh = motionPlate.videoHeight;
+        if (vw && vh) {
+          const sc = Math.max(view.w / vw, view.h / vh);
+          ctx.save(); ctx.globalAlpha = 0.5;
+          ctx.drawImage(motionPlate, (view.w - vw * sc) / 2, (view.h - vh * sc) / 2, vw * sc, vh * sc);
+          ctx.restore();
+        }
+      }
+      ctx.drawImage(staticLayer, 0, 0, view.w, view.h);
+      drawCausticField(0, 0, view.w, view.h, performance.now() * 0.0005);
+
+      for (let side = 0; side < 2; side++) {
+        const x = side === 0 ? 63 : view.w - 63;
+        for (let i = 0; i < 13; i++) {
+          const y = 86 + i * ((view.h - 190) / 12);
+          const hue = (i * 31 + side * 118 + performance.now() * 0.018) % 360;
+          drawFacetGem(x, y, 8 + (i % 3), `hsl(${hue}, 100%, 63%)`, i * 0.4);
+        }
+      }
+    }
+
+    function drawPlayfieldMaterial() {
+      ctx.save();
+      const grain = ctx.createLinearGradient(0, 0, view.w, view.h);
+      grain.addColorStop(0, "rgba(255,255,255,0.05)");
+      grain.addColorStop(0.34, "rgba(255,215,94,0.035)");
+      grain.addColorStop(0.7, "rgba(56,233,255,0.035)");
+      grain.addColorStop(1, "rgba(0,0,0,0.28)");
+      ctx.fillStyle = grain;
+      ctx.fillRect(0, 0, view.w, view.h);
+      ctx.globalCompositeOperation = "overlay";
+      ctx.globalAlpha = 0.28;
+      for (let i = 0; i < 90; i += 1) {
+        const x = (i * 67) % view.w;
+        const y = (i * 43 + Math.sin(i) * 18) % view.h;
+        ctx.strokeStyle = i % 4 === 0 ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.32)";
+        ctx.lineWidth = 0.6 + (i % 3) * 0.28;
+        ctx.beginPath();
+        ctx.moveTo(x - 60, y);
+        ctx.bezierCurveTo(x - 12, y + Math.sin(i) * 9, x + 46, y - Math.cos(i) * 12, x + 112, y + Math.sin(i * 0.7) * 8);
+        ctx.stroke();
+      }
+      ctx.globalCompositeOperation = "source-over";
+      ctx.globalAlpha = 1;
+      const vignette = ctx.createRadialGradient(view.w / 2, view.h * 0.5, view.w * 0.18, view.w / 2, view.h * 0.5, view.w * 0.72);
+      vignette.addColorStop(0, "rgba(0,0,0,0)");
+      vignette.addColorStop(1, "rgba(0,0,0,0.52)");
+      ctx.fillStyle = vignette;
+      ctx.fillRect(0, 0, view.w, view.h);
+      ctx.restore();
+    }
+
+    function drawSideRailHardware() {
+      ctx.save();
+      for (const side of [-1, 1]) {
+        const x = side < 0 ? 42 : view.w - 42;
+        const rail = ctx.createLinearGradient(x - side * 18, 0, x + side * 18, 0);
+        rail.addColorStop(0, "rgba(255,255,255,0.58)");
+        rail.addColorStop(0.34, "rgba(255,215,94,0.32)");
+        rail.addColorStop(0.68, "rgba(20,28,40,0.86)");
+        rail.addColorStop(1, "rgba(0,0,0,0.6)");
+        ctx.fillStyle = rail;
+        roundRect(x - 13, 56, 26, view.h - 126, 13);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255,255,255,0.22)";
+        ctx.lineWidth = 1.4;
+        ctx.stroke();
+        for (let i = 0; i < 10; i += 1) {
+          const y = 96 + i * ((view.h - 196) / 9);
+          const screw = ctx.createRadialGradient(x - 3, y - 4, 1, x, y, 9);
+          screw.addColorStop(0, "rgba(255,255,255,0.88)");
+          screw.addColorStop(0.38, "rgba(255,215,94,0.48)");
+          screw.addColorStop(1, "rgba(5,5,11,0.95)");
+          ctx.fillStyle = screw;
+          ctx.beginPath();
+          ctx.arc(x, y, 8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "rgba(0,0,0,0.72)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(x - 5, y);
+          ctx.lineTo(x + 5, y);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+
+    function drawBumpers() {
+      for (const bumper of bumpers.map(scaleItem)) {
+        ctx.save();
+        const g = ctx.createRadialGradient(bumper.x - bumper.r * 0.3, bumper.y - bumper.r * 0.35, 1, bumper.x, bumper.y, bumper.r * 1.4);
+        g.addColorStop(0, "#ffffff");
+        g.addColorStop(0.18, bumper.color);
+        g.addColorStop(1, "rgba(0,0,0,0.45)");
+        ctx.fillStyle = g;
+        ctx.shadowBlur = 24;
+        ctx.shadowColor = bumper.color;
+        ctx.beginPath();
+        ctx.arc(bumper.x, bumper.y, bumper.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = "rgba(255,255,255,0.62)";
+        ctx.stroke();
+        ctx.lineWidth = 1.2;
+        for (let i = 0; i < 10; i++) {
+          const a = performance.now() * 0.0012 + i * Math.PI / 5;
+          const radius = bumper.r * (1.17 + (i % 2) * 0.2);
+          drawFacetGem(
+            bumper.x + Math.cos(a) * radius,
+            bumper.y + Math.sin(a) * radius,
+            bumper.r * 0.12,
+            i % 2 ? "#ffffff" : bumper.color,
+            a
+          );
+        }
+        ctx.strokeStyle = "rgba(255,255,255,0.34)";
+        for (let i = 0; i < 4; i++) {
+          ctx.beginPath();
+          ctx.arc(bumper.x, bumper.y, bumper.r * (0.42 + i * 0.17), 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.fillStyle = "#05050b";
+        ctx.font = `800 ${Math.max(16, bumper.r * 0.72)}px ui-sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(bumper.label, bumper.x, bumper.y + 1);
+        if (bumper.flash > 0) {
+          ctx.globalCompositeOperation = "lighter";
+          ctx.globalAlpha = bumper.flash;
+          ctx.fillStyle = "rgba(255,255,255,0.9)";
+          ctx.shadowBlur = 30;
+          ctx.shadowColor = "#ffffff";
+          ctx.beginPath();
+          ctx.arc(bumper.x, bumper.y, bumper.r * (1 + (1 - bumper.flash) * 0.35), 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+    }
+
+    function drawTargets() {
+      for (const target of targets.map(scaleRect)) {
+        ctx.save();
+        ctx.shadowBlur = target.lit ? 26 : 10;
+        ctx.shadowColor = target.color;
+        ctx.fillStyle = target.lit ? target.color : "rgba(255,255,255,0.09)";
+        roundRect(target.x, target.y, target.w, target.h, 7);
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = target.color;
+        ctx.stroke();
+        if (target.flash > 0) {
+          ctx.save();
+          ctx.globalCompositeOperation = "lighter";
+          ctx.globalAlpha = target.flash;
+          ctx.fillStyle = "rgba(255,255,255,0.92)";
+          ctx.shadowBlur = 24;
+          ctx.shadowColor = "#ffffff";
+          roundRect(target.x, target.y, target.w, target.h, 7);
+          ctx.fill();
+          ctx.restore();
+        }
+        const facet = ctx.createLinearGradient(target.x, target.y, target.x + target.w, target.y + target.h);
+        facet.addColorStop(0, "rgba(255,255,255,0.58)");
+        facet.addColorStop(0.42, "rgba(255,255,255,0)");
+        facet.addColorStop(1, "rgba(0,0,0,0.38)");
+        ctx.fillStyle = facet;
+        ctx.beginPath();
+        ctx.moveTo(target.x + target.w * 0.12, target.y + target.h * 0.12);
+        ctx.lineTo(target.x + target.w * 0.88, target.y + target.h * 0.24);
+        ctx.lineTo(target.x + target.w * 0.62, target.y + target.h * 0.88);
+        ctx.lineTo(target.x + target.w * 0.2, target.y + target.h * 0.74);
+        ctx.closePath();
+        ctx.fill();
+        drawFacetGem(target.x + target.w / 2, target.y + 15, Math.min(9, target.w * 0.18), target.color, -0.2);
+        ctx.translate(target.x + target.w / 2, target.y + target.h / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillStyle = target.lit ? "#06110c" : "#f8fbff";
+        ctx.font = "800 12px ui-sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(target.label, 0, 4);
+        ctx.restore();
+      }
+    }
+
+    function drawRollovers() {
+      for (const lane of rollovers.map(scaleItem)) {
+        ctx.save();
+        ctx.fillStyle = lane.lit ? "#3dffad" : "rgba(56,233,255,0.16)";
+        ctx.shadowBlur = lane.lit ? 22 : 8;
+        ctx.shadowColor = lane.lit ? "#3dffad" : "#38e9ff";
+        ctx.beginPath();
+        ctx.arc(lane.x, lane.y, lane.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255,255,255,0.75)";
+        ctx.stroke();
+        ctx.fillStyle = lane.lit ? "#06110c" : "#f8fbff";
+        ctx.font = "900 13px ui-sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(lane.label, lane.x, lane.y);
+        ctx.restore();
+      }
+    }
+
+    function drawWormholes() {
+      for (const hole of wormholes.map(scaleItem)) {
+        ctx.save();
+        const pulse = 0.82 + Math.sin(performance.now() / 190 + hole.x) * 0.18;
+        const g = ctx.createRadialGradient(hole.x, hole.y, 2, hole.x, hole.y, hole.r * 1.45);
+        g.addColorStop(0, "rgba(255,255,255,0.92)");
+        g.addColorStop(0.28, hole.color);
+        g.addColorStop(0.72, "rgba(6,5,18,0.95)");
+        g.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = g;
+        ctx.shadowBlur = 24;
+        ctx.shadowColor = hole.color;
+        ctx.beginPath();
+        ctx.arc(hole.x, hole.y, hole.r * pulse, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "rgba(255,255,255,0.58)";
+        ctx.stroke();
+        ctx.fillStyle = "#f8fbff";
+        ctx.font = "800 9px ui-sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(hole.label, hole.x, hole.y + hole.r + 14);
+        ctx.restore();
+      }
+    }
+
+    function drawFlippers() {
+      for (const segment of [flipperSegment("left"), flipperSegment("right")]) {
+        ctx.save();
+        ctx.lineCap = "round";
+        ctx.lineWidth = 18;
+        ctx.strokeStyle = segment.active ? "#3dffad" : "#38e9ff";
+        ctx.shadowBlur = segment.active ? 28 : 14;
+        ctx.shadowColor = segment.active ? "#3dffad" : "#38e9ff";
+        ctx.beginPath();
+        ctx.moveTo(segment.ax, segment.ay);
+        ctx.lineTo(segment.bx, segment.by);
+        ctx.stroke();
+        ctx.lineWidth = 6;
+        ctx.strokeStyle = "rgba(255,255,255,0.75)";
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    function drawBall(orb) {
+      if (!orb.active) return;
+      // Sprite path (with procedural glow underneath). Falls back if image not ready.
+      if (ballSpriteReady && ballSprite.naturalWidth) {
+        ctx.save();
+        // glow halo, hue-tinted like the procedural ball
+        ctx.shadowBlur = 26;
+        ctx.shadowColor = `hsl(${orb.hue}, 100%, 62%)`;
+        ctx.fillStyle = `hsla(${orb.hue}, 100%, 60%, 0.55)`;
+        ctx.beginPath();
+        ctx.arc(orb.x, orb.y, orb.r * 0.95, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        ctx.save();
+        // subtle squash/stretch from vertical speed
+        const spd = Math.min(1, Math.hypot(orb.vx, orb.vy) / 900);
+        const sx = 1 + spd * 0.12;
+        const sy = 1 - spd * 0.12;
+        const d = orb.r * 2.3;
+        ctx.translate(orb.x, orb.y);
+        ctx.scale(sx, sy);
+        ctx.globalAlpha = 0.96;
+        ctx.drawImage(ballSprite, -d / 2, -d / 2, d, d);
+        ctx.restore();
+        return;
+      }
+      ctx.save();
+      const g = ctx.createRadialGradient(orb.x - orb.r * 0.35, orb.y - orb.r * 0.4, 1, orb.x, orb.y, orb.r * 1.35);
+      g.addColorStop(0, "#ffffff");
+      g.addColorStop(0.22, `hsl(${orb.hue}, 100%, 66%)`);
+      g.addColorStop(0.7, "#2d0b46");
+      g.addColorStop(1, "#06030b");
+      ctx.shadowBlur = 26;
+      ctx.shadowColor = `hsl(${orb.hue}, 100%, 62%)`;
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(orb.x, orb.y, orb.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(orb.x, orb.y, orb.r * 0.92, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.strokeStyle = "rgba(255,255,255,0.42)";
+      ctx.lineWidth = Math.max(1, orb.r * 0.12);
+      for (let i = -2; i <= 2; i++) {
+        ctx.beginPath();
+        ctx.ellipse(orb.x + i * orb.r * 0.12, orb.y, orb.r * (0.34 + Math.abs(i) * 0.08), orb.r * 1.04, i * 0.34, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.fillStyle = "rgba(255,255,255,0.76)";
+      ctx.beginPath();
+      ctx.ellipse(orb.x - orb.r * 0.36, orb.y - orb.r * 0.42, orb.r * 0.28, orb.r * 0.16, -0.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle = "rgba(255,255,255,0.78)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawParticles() {
+      if (!state.particles.length) return;
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      for (const p of state.particles) {
+        ctx.globalAlpha = Math.max(0, p.life / 55);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawPlungerLane() {
+      const laneX = view.w - 102;
+      ctx.save();
+      ctx.strokeStyle = "rgba(255,215,94,0.52)";
+      ctx.lineWidth = 3;
+      roundRect(laneX - 22, 82, 44, view.h - 180, 24);
+      ctx.stroke();
+      const meterH = (view.h - 250) * state.plunger;
+      ctx.fillStyle = plungerGrad || "#ffd75e";
+      roundRect(laneX - 14, view.h - 112 - meterH, 28, meterH, 14);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawCrystal(x, y, size, top, bottom) {
+      ctx.save();
+      const g = ctx.createLinearGradient(x, y - size, x, y + size);
+      g.addColorStop(0, top);
+      g.addColorStop(1, bottom);
+      ctx.shadowBlur = 30;
+      ctx.shadowColor = top;
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(x, y - size);
+      ctx.lineTo(x + size * 0.62, y - size * 0.12);
+      ctx.lineTo(x + size * 0.32, y + size);
+      ctx.lineTo(x - size * 0.32, y + size);
+      ctx.lineTo(x - size * 0.62, y - size * 0.12);
+      ctx.closePath();
+      ctx.fill();
+      ctx.save();
+      ctx.clip();
+      ctx.globalAlpha = 0.66;
+      ctx.strokeStyle = "rgba(255,255,255,0.72)";
+      ctx.lineWidth = Math.max(1.2, size * 0.035);
+      for (const dx of [-0.42, -0.18, 0.18, 0.42]) {
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.92);
+        ctx.lineTo(x + size * dx, y + size * 0.82);
+        ctx.stroke();
+      }
+      ctx.fillStyle = "rgba(255,255,255,0.18)";
+      ctx.beginPath();
+      ctx.moveTo(x - size * 0.36, y - size * 0.18);
+      ctx.lineTo(x, y - size * 0.82);
+      ctx.lineTo(x + size * 0.18, y - size * 0.08);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle = "rgba(255,255,255,0.66)";
+      ctx.beginPath();
+      ctx.moveTo(x, y - size);
+      ctx.lineTo(x + size * 0.62, y - size * 0.12);
+      ctx.lineTo(x + size * 0.32, y + size);
+      ctx.lineTo(x - size * 0.32, y + size);
+      ctx.lineTo(x - size * 0.62, y - size * 0.12);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawCausticField(x, y, w, h, phase) {
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      ctx.globalAlpha = 0.32;
+      for (let i = 0; i < 30; i++) {
+        const hue = (i * 17 + phase * 120) % 360;
+        ctx.strokeStyle = `hsla(${hue}, 100%, 66%, ${0.08 + (i % 5) * 0.018})`;
+        ctx.lineWidth = 0.8 + (i % 4) * 0.32;
+        const yy = y + ((i * 53 + phase * 90) % (h + 140)) - 70;
+        ctx.beginPath();
+        ctx.moveTo(x - 20, yy);
+        for (let px = x - 20; px <= x + w + 40; px += 58) {
+          ctx.lineTo(px, yy + Math.sin(px * 0.014 + i + phase * 5) * 22);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawGlassOverlay() {
+      if (!glassLayer) return;
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      ctx.drawImage(glassLayer, 0, 0, view.w, view.h);
+      ctx.restore();
+    }
+
+    function paintGlassContent() {
+      ctx.save();
+      const shine = ctx.createLinearGradient(0, 0, view.w, view.h);
+      shine.addColorStop(0, "rgba(255,255,255,0.28)");
+      shine.addColorStop(0.16, "rgba(255,255,255,0.035)");
+      shine.addColorStop(0.5, "rgba(56,233,255,0.035)");
+      shine.addColorStop(0.84, "rgba(255,255,255,0.02)");
+      shine.addColorStop(1, "rgba(255,255,255,0.16)");
+      ctx.fillStyle = shine;
+      ctx.beginPath();
+      ctx.moveTo(view.w * 0.08, 42);
+      ctx.bezierCurveTo(view.w * 0.24, view.h * 0.16, view.w * 0.76, view.h * 0.12, view.w * 0.92, 42);
+      ctx.lineTo(view.w, view.h);
+      ctx.lineTo(0, view.h);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.globalAlpha = 0.24;
+      ctx.strokeStyle = "rgba(255,255,255,0.46)";
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 38; i += 1) {
+        const x = (i * 73) % view.w;
+        const y = 40 + ((i * 109) % Math.max(1, view.h - 120));
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + 18 + (i % 5) * 13, y - 4 + Math.sin(i) * 9);
+        ctx.stroke();
+      }
+
+      ctx.globalAlpha = 0.18;
+      ctx.strokeStyle = "#38e9ff";
+      ctx.lineWidth = 1.2;
+      for (let i = 0; i < 7; i += 1) {
+        ctx.beginPath();
+        ctx.moveTo(view.w * (0.16 + i * 0.11), view.h);
+        ctx.quadraticCurveTo(view.w * 0.5, view.h * (0.58 - i * 0.018), view.w * (0.88 - i * 0.08), 64);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawFacetGem(x, y, size, color, rotation = 0) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rotation);
+      ctx.shadowBlur = size * 1.7;
+      ctx.shadowColor = color;
+      const g = ctx.createLinearGradient(-size, -size, size, size);
+      g.addColorStop(0, "#ffffff");
+      g.addColorStop(0.25, color);
+      g.addColorStop(1, "rgba(12,4,26,0.95)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      for (let i = 0; i < 8; i++) {
+        const a = -Math.PI / 2 + i * Math.PI / 4;
+        const r = i % 2 ? size * 0.72 : size;
+        ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.62)";
+      ctx.lineWidth = Math.max(1, size * 0.08);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(255,255,255,0.36)";
+      for (let i = 0; i < 4; i++) {
+        const a = -Math.PI / 2 + i * Math.PI / 2;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(a) * size * 0.88, Math.sin(a) * size * 0.88);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawGlassText() {
+      ctx.save();
+      const idlePulse = state.running ? 1 : 0.62 + 0.38 * (0.5 + 0.5 * Math.sin(performance.now() / 560));
+      ctx.fillStyle = `rgba(248,251,255,${(0.78 * idlePulse).toFixed(3)})`;
+      ctx.font = `900 ${Math.max(16, view.w * 0.032)}px ui-sans-serif`;
+      ctx.textAlign = "center";
+      ctx.shadowBlur = state.running ? 16 : 10 + idlePulse * 14;
+      ctx.shadowColor = "#ff2e6d";
+      ctx.fillText(state.running ? "VORATH ORBIT TRIBUNAL" : "PRESS START TABLE", view.w / 2, view.h - 42);
+      if (state.multiballReady > 0) {
+        ctx.fillStyle = "#ffd75e";
+        ctx.fillText("MULTIBALL LIT", view.w / 2, view.h * 0.56);
+      }
+      const mission = currentMission();
+      ctx.font = `800 ${Math.max(12, view.w * 0.018)}px ui-sans-serif`;
+      ctx.fillStyle = "rgba(248,251,255,0.72)";
+      const missionLine = state.missionActive
+        ? `${mission.name}: ${state.missionProgress}/${state.missionGoal}  FUEL ${Math.max(0, Math.ceil(state.fuel))}`
+        : `${currentTable().name} - ${mission.name}`;
+      ctx.fillText(missionLine, view.w / 2, 86);
+      if (state.locks > 0) {
+        ctx.fillStyle = "#b760ff";
+        ctx.fillText(`LOCKS ${state.locks}/3`, view.w / 2, 114);
+      }
+      if (state.skillShotArmed || state.skillShotHits > 0) {
+        const skill = skillShotSnapshot();
+        ctx.fillStyle = skill.armed ? "#ffd75e" : "#38e9ff";
+        ctx.fillText(`SKILL SHOT ${skill.grade} · ${skill.hits}/${skill.best}`, view.w / 2, 142);
+      }
+      ctx.restore();
+    }
+
+    function roundRect(x, y, w, h, r) {
+      const radius = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.arcTo(x + w, y, x + w, y + h, radius);
+      ctx.arcTo(x + w, y + h, x, y + h, radius);
+      ctx.arcTo(x, y + h, x, y, radius);
+      ctx.arcTo(x, y, x + w, y, radius);
+      ctx.closePath();
+    }
+
+    function makeReceipt(reason = "manual_export") {
+      return {
+        cabinet: "Vorath Pinball",
+        route: "/arcade/custom/vorath-pinball",
+        reason,
+        score: state.score,
+        balls: state.balls,
+        multiplier: state.multiplier,
+        jackpot: state.jackpot,
+        tablePersona: currentTable().name,
+        selectedMission: currentMission().name,
+        missionActive: state.missionActive,
+        missionProgress: state.missionProgress,
+        fuel: state.fuel,
+        rank: currentTable().rankNames[Math.min(state.rankIndex, currentTable().rankNames.length - 1)],
+        mapShards: state.mapShards,
+        locks: state.locks,
+        awards: state.awards.slice(-8),
+        ballSave: state.ballSave,
+        multiballReady: state.multiballReady,
+        skillShot: skillShotSnapshot(),
+        gate: "ORBIT",
+        inspirationGrammar: "three original table personas, mission selection, plunger skill-shot timing, fuel/re-light pressure, rank progression, map fragments, fantasy awards, ball-save, locks, and multiball",
+        visual_directive: "rainbows neon maximalism holographic gems jewels crystals alien circuitry glow trails",
+        noCommercialAssets: "No commercial pinball assets, table layouts, ROMs, sounds, logos, names, missions, or dot-matrix art are used.",
+        generatedAt: new Date().toISOString(),
+        log: state.log.slice(0, 6)
+      };
+    }
+
+    function exportReceipt() {
+      state.receipts += 1;
+      const receipt = makeReceipt("player_export");
+      const blob = new Blob([JSON.stringify(receipt, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `vorath-pinball-receipt-${String(state.receipts).padStart(2, "0")}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      sfx("blip");
+      addLog("Receipt exported with ORBIT gate state.");
+    }
+
+    function bindHold(button, onDown, onUp) {
+      button.addEventListener("pointerdown", event => {
+        event.preventDefault();
+        try { button.setPointerCapture(event.pointerId); } catch (e) {}
+        button.classList.add("is-down");
+        onDown();
+      });
+      button.addEventListener("pointerup", event => {
+        button.releasePointerCapture(event.pointerId);
+        button.classList.remove("is-down");
+        onUp();
+      });
+      button.addEventListener("pointercancel", () => {
+        button.classList.remove("is-down");
+        onUp();
+      });
+    }
+
+    window.addEventListener("keydown", event => {
+      const key = event.key.toLowerCase();
+      if ([" ", "arrowleft", "arrowright"].includes(key)) event.preventDefault();
+      keys.add(key);
+      if (key === "t") {
+        cycleTable();
+        keys.delete("t");
+      }
+      if (key === "r") {
+        if (state.missionActive) startMission("Mission restart");
+        else selectMission("Mission button");
+        keys.delete("r");
+      }
+      if (key === "m") spawnMultiball();
+    });
+
+    window.addEventListener("keyup", event => {
+      keys.delete(event.key.toLowerCase());
+    });
+
+    els.startBtn.addEventListener("click", startTable);
+    els.tableBtn.addEventListener("click", cycleTable);
+    els.missionBtn.addEventListener("click", () => {
+      if (state.missionActive) startMission("Mission restart");
+      else selectMission("Mission button");
+    });
+    els.nudgeBtn.addEventListener("click", nudgeTable);
+    els.exportBtn.addEventListener("click", exportReceipt);
+    els.exportTop.addEventListener("click", exportReceipt);
+    bindHold(els.leftBtn, () => { state.leftFlip = true; }, () => { state.leftFlip = false; });
+    bindHold(els.rightBtn, () => { state.rightFlip = true; }, () => { state.rightFlip = false; });
+    bindHold(els.launchBtn, () => { state.launchHeld = true; }, () => { if (ball.held) launchBall(); });
+
+    window.addEventListener("resize", () => {
+      const held = ball.held;
+      resize();
+      if (held) resetBall();
+    });
+
+    resize();
+    resetBall();
+    updateHud();
+    draw();
+    requestAnimationFrame(updateGame);
+
+    window.vorathPinball = { startTable, launchBall, updateGame, exportReceipt, makeReceipt, skillShotSnapshot, armSkillShot, resolveSkillShot };
+  </script>
+</body>
+</html>

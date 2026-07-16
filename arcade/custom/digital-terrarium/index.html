@@ -1,0 +1,3565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>THESEUS DEEP-FIELD OBSERVATORY // Digital Terrarium v6.0.0</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bezel: #1a1a1e;
+  --bezel-light: #2a2a30;
+  --bezel-dark: #0a0a0d;
+  --screen-glow: rgba(0, 180, 120, 0.08);
+  --accent: #00cc88;
+  --accent-dim: #005533;
+  --danger: #ff3344;
+  --warn: #ffaa22;
+}
+body {
+  background: #0d0d10;
+  overflow: hidden;
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  cursor: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* ======== CRT MONITOR FRAME ======== */
+#monitor {
+  position: relative;
+  width: 96vw;
+  height: 94vh;
+  background: linear-gradient(145deg, var(--bezel-light), var(--bezel), var(--bezel-dark));
+  border-radius: 18px;
+  padding: 22px 26px 32px;
+  box-shadow:
+    0 0 0 2px #333,
+    0 0 0 4px #111,
+    inset 0 2px 4px rgba(255,255,255,0.05),
+    0 8px 40px rgba(0,0,0,0.8),
+    0 0 120px rgba(0, 180, 120, 0.04);
+}
+#monitor-brand {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #555;
+  font-size: 10px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  user-select: none;
+}
+#power-led {
+  position: absolute;
+  bottom: 10px;
+  right: 40px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #00ff88;
+  box-shadow: 0 0 6px #00ff88, 0 0 12px #00ff8844;
+  animation: ledBlink 3s ease-in-out infinite;
+}
+@keyframes ledBlink {
+  0%, 90%, 100% { opacity: 1; }
+  95% { opacity: 0.3; }
+}
+#power-label {
+  position: absolute;
+  bottom: 8px;
+  right: 52px;
+  color: #444;
+  font-size: 8px;
+  letter-spacing: 2px;
+}
+
+/* ======== SCREEN VIEWPORT ======== */
+#screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #000408;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow:
+    inset 0 0 80px rgba(0, 180, 120, 0.06),
+    inset 0 0 3px rgba(0,0,0,1),
+    0 0 1px rgba(0, 180, 120, 0.3);
+}
+
+/* CRT curvature effect */
+#screen::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.4) 100%);
+  pointer-events: none;
+  z-index: 50;
+}
+
+/* Scanlines overlay */
+#scanlines {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.12) 2px,
+    rgba(0, 0, 0, 0.12) 4px
+  );
+  pointer-events: none;
+  z-index: 45;
+  mix-blend-mode: multiply;
+}
+#scanlines.hidden { display: none; }
+
+/* Screen bloom/glow */
+#screen-bloom {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  box-shadow: inset 0 0 100px rgba(0, 180, 120, 0.03);
+  pointer-events: none;
+  z-index: 44;
+}
+
+/* Grid overlay */
+#grid-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image:
+    linear-gradient(rgba(0, 180, 120, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 180, 120, 0.04) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none;
+  z-index: 40;
+}
+#grid-overlay.hidden { opacity: 0; }
+
+/* Glitch effect layer */
+#glitch {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 55;
+  opacity: 0;
+}
+
+/* Screen shake */
+#screen.shake {
+  animation: screenShake 0.15s ease-in-out;
+}
+@keyframes screenShake {
+  0%, 100% { transform: translate(0,0); }
+  20% { transform: translate(-2px, 1px); }
+  40% { transform: translate(2px, -1px); }
+  60% { transform: translate(-1px, 2px); }
+  80% { transform: translate(1px, -2px); }
+}
+
+/* Screen distort for extinction */
+#screen.distort {
+  animation: screenDistort 2s ease-out;
+}
+@keyframes screenDistort {
+  0% { filter: hue-rotate(0deg) saturate(1) brightness(1); }
+  10% { filter: hue-rotate(20deg) saturate(2) brightness(1.3); }
+  30% { filter: hue-rotate(-10deg) saturate(1.5) brightness(0.8); }
+  50% { filter: hue-rotate(5deg) saturate(1.2) brightness(1.1); }
+  100% { filter: hue-rotate(0deg) saturate(1) brightness(1); }
+}
+
+/* ======== SIMULATION UI TOP BAR ======== */
+#top-bar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 32px;
+  background: linear-gradient(180deg, rgba(0, 20, 12, 0.95), rgba(0, 12, 8, 0.85));
+  border-bottom: 1px solid rgba(0, 180, 120, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 30;
+  font-size: 10px;
+  color: var(--accent-dim);
+  letter-spacing: 1px;
+  user-select: none;
+}
+#top-bar .title {
+  color: var(--accent);
+  font-size: 11px;
+}
+#top-bar .sys-time {
+  color: #337755;
+  font-size: 10px;
+}
+
+/* ======== STATS BAR ======== */
+#stats-bar {
+  position: absolute;
+  top: 32px; left: 0; right: 0;
+  height: 24px;
+  background: rgba(0, 12, 8, 0.7);
+  border-bottom: 1px solid rgba(0, 180, 120, 0.08);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 16px;
+  z-index: 30;
+  font-size: 9px;
+  color: #336644;
+  letter-spacing: 1px;
+  user-select: none;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+#stats-bar .stat-val { color: #44aa66; }
+#stats-bar .stat-warn { color: var(--warn); }
+#stats-bar .stat-danger { color: var(--danger); }
+
+/* ======== WARNING INDICATOR ======== */
+#warnings {
+  position: absolute;
+  top: 60px; right: 12px;
+  z-index: 30;
+  font-size: 9px;
+  text-align: right;
+  user-select: none;
+}
+.warning-line {
+  color: var(--danger);
+  opacity: 0;
+  transition: opacity 0.3s;
+  text-shadow: 0 0 4px rgba(255, 50, 50, 0.3);
+  margin: 2px 0;
+}
+.warning-line.active { opacity: 1; }
+
+/* ======== EVENT LOG ======== */
+#event-log {
+  position: absolute;
+  top: 60px; left: 12px;
+  z-index: 30;
+  font-size: 8px;
+  color: var(--accent);
+  user-select: none;
+  max-width: 400px;
+  max-height: 120px;
+  overflow: hidden;
+}
+.event-line {
+  opacity: 1;
+  transition: opacity 2s;
+  margin: 2px 0;
+  text-shadow: 0 0 4px rgba(0, 200, 120, 0.3);
+  white-space: nowrap;
+}
+.event-line.danger { color: var(--danger); text-shadow: 0 0 6px rgba(255, 50, 50, 0.5); }
+.event-line.warn { color: var(--warn); text-shadow: 0 0 6px rgba(255, 170, 30, 0.5); }
+.event-line.critical { color: #ff0044; font-size: 10px; text-shadow: 0 0 10px rgba(255, 0, 60, 0.8); }
+
+/* ======== INFO PANEL (bottom left) ======== */
+#info-panel {
+  position: absolute;
+  bottom: 8px; left: 12px;
+  z-index: 30;
+  font-size: 9px;
+  color: #336644;
+  line-height: 1.6;
+  max-width: 340px;
+  background: rgba(0, 8, 4, 0.6);
+  padding: 8px 12px;
+  border: 1px solid rgba(0, 180, 120, 0.1);
+  border-radius: 2px;
+  user-select: none;
+}
+#info-panel.hidden { display: none; }
+#info-panel .label { color: #227744; }
+#info-panel .val { color: var(--accent); }
+
+/* ======== CLASSIFICATION READOUT (follows cursor) ======== */
+#classify {
+  position: fixed;
+  z-index: 60;
+  font-size: 9px;
+  color: var(--accent);
+  line-height: 1.5;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  text-shadow: 0 0 4px rgba(0, 200, 130, 0.3);
+  white-space: pre;
+  background: rgba(0, 8, 4, 0.6);
+  padding: 4px 8px;
+  border-left: 1px solid rgba(0, 180, 120, 0.3);
+}
+#classify.visible { opacity: 1; }
+
+/* ======== CURSOR RETICLE ======== */
+#reticle {
+  position: fixed;
+  width: 40px;
+  height: 40px;
+  pointer-events: none;
+  z-index: 100;
+  transform: translate(-50%, -50%);
+}
+
+/* ======== TAGGED ORGANISM INDICATOR ======== */
+.tag-marker {
+  position: absolute;
+  pointer-events: none;
+  z-index: 25;
+  color: var(--warn);
+  font-size: 8px;
+  letter-spacing: 1px;
+}
+
+/* ======== BOOT SEQUENCE ======== */
+#boot {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: #000408;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  color: var(--accent-dim);
+  font-size: 12px;
+  transition: opacity 1.5s;
+  padding: 40px;
+}
+#boot.done { opacity: 0; pointer-events: none; }
+#boot div { margin: 3px 0; opacity: 0; transition: opacity 0.3s; }
+#boot .ok { color: var(--accent); }
+#boot .warn { color: var(--warn); }
+#boot .err { color: var(--danger); }
+
+/* ======== CONTROLS HELP ======== */
+#controls {
+  position: absolute;
+  bottom: 8px; right: 12px;
+  z-index: 30;
+  font-size: 8px;
+  color: #223322;
+  text-align: right;
+  user-select: none;
+  line-height: 1.8;
+}
+#controls span { color: #446644; }
+
+/* ======== DEPTH GAUGE ======== */
+#depth-gauge {
+  position: absolute;
+  right: 8px;
+  top: 70px;
+  bottom: 40px;
+  width: 4px;
+  background: rgba(0, 60, 40, 0.2);
+  z-index: 30;
+  border-radius: 2px;
+}
+#depth-marker {
+  width: 10px;
+  height: 3px;
+  background: var(--accent);
+  position: absolute;
+  left: -3px;
+  box-shadow: 0 0 4px var(--accent);
+  border-radius: 1px;
+  transition: top 0.5s;
+}
+
+/* ======== PAUSE OVERLAY ======== */
+#pause-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 4, 2, 0.5);
+  z-index: 100;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  font-size: 24px;
+  letter-spacing: 8px;
+}
+#pause-overlay.active { display: flex; }
+
+/* ======== EXTINCTION WARNING OVERLAY ======== */
+#extinction-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 90;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+#extinction-overlay.active {
+  display: flex;
+  animation: extinctionFlash 0.5s ease-out 3;
+}
+#extinction-text {
+  color: #ff0044;
+  font-size: 28px;
+  letter-spacing: 6px;
+  text-shadow: 0 0 20px rgba(255, 0, 60, 0.8), 0 0 40px rgba(255, 0, 60, 0.4);
+}
+@keyframes extinctionFlash {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+
+/* ======== FULLSCREEN ADJUSTMENTS ======== */
+body:fullscreen #monitor,
+body:-webkit-full-screen #monitor {
+  width: 100vw;
+  height: 100vh;
+  border-radius: 0;
+}
+
+canvas#c {
+  position: absolute;
+  top: 56px; left: 0;
+  z-index: 10;
+}
+
+/* ======== POPULATION CHART PANEL ======== */
+#pop-chart-panel {
+  position: absolute;
+  bottom: 8px; right: 12px;
+  z-index: 31;
+  width: 280px;
+  height: 160px;
+  background: rgba(0, 8, 4, 0.75);
+  border: 1px solid rgba(0, 180, 120, 0.15);
+  border-radius: 2px;
+  padding: 4px;
+  user-select: none;
+}
+#pop-chart-panel .chart-title {
+  font-size: 8px;
+  color: #337755;
+  letter-spacing: 2px;
+  text-align: center;
+  margin-bottom: 2px;
+}
+#pop-chart-canvas {
+  width: 100%;
+  height: calc(100% - 14px);
+}
+
+/* ======== INFECTION HP BAR ======== */
+#infection-bar-wrap {
+  position: absolute;
+  top: 57px; left: 12px; right: 12px;
+  height: 6px;
+  z-index: 31;
+  background: rgba(0, 20, 12, 0.6);
+  border: 1px solid rgba(0, 180, 120, 0.1);
+  border-radius: 1px;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+#infection-bar-wrap.visible { opacity: 1; }
+#infection-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #44aa22, #ccaa00, #ff4400, #ff0033);
+  background-size: 400% 100%;
+  transition: width 0.3s ease;
+  box-shadow: 0 0 6px rgba(255, 100, 0, 0.4);
+  border-radius: 1px;
+}
+#infection-bar-label {
+  position: absolute;
+  top: -1px;
+  right: 4px;
+  font-size: 7px;
+  color: #ff8844;
+  letter-spacing: 1px;
+  line-height: 8px;
+}
+
+/* ======== DANGER ALERTS (BIG BOLD + SKULL) ======== */
+#danger-alert {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 80;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+#danger-alert.active { opacity: 1; }
+#danger-alert .alert-icon {
+  font-size: 48px;
+  line-height: 1;
+  filter: drop-shadow(0 0 12px rgba(255, 30, 30, 0.8));
+}
+#danger-alert .alert-text {
+  font-size: 16px;
+  font-weight: bold;
+  color: #ff2233;
+  letter-spacing: 4px;
+  text-shadow: 0 0 10px rgba(255, 30, 30, 0.8), 0 0 30px rgba(255, 0, 30, 0.4);
+  margin-top: 4px;
+}
+#danger-alert .alert-sub {
+  font-size: 10px;
+  color: #ff6644;
+  letter-spacing: 2px;
+  margin-top: 4px;
+  text-shadow: 0 0 6px rgba(255, 80, 40, 0.5);
+}
+
+/* ======== AI INTERPRETATION WINDOW (top right) ======== */
+#ai-window {
+  position: absolute;
+  top: 66px; right: 12px;
+  z-index: 31;
+  width: 220px;
+  max-height: 180px;
+  background: rgba(0, 6, 12, 0.8);
+  border: 1px solid rgba(60, 140, 255, 0.2);
+  border-radius: 2px;
+  padding: 6px 8px;
+  overflow: hidden;
+  user-select: none;
+}
+#ai-window .ai-title {
+  font-size: 8px;
+  color: #3388cc;
+  letter-spacing: 2px;
+  border-bottom: 1px solid rgba(60, 140, 255, 0.1);
+  padding-bottom: 3px;
+  margin-bottom: 4px;
+}
+#ai-window .ai-line {
+  font-size: 8px;
+  color: #5599bb;
+  line-height: 1.5;
+  margin: 2px 0;
+  opacity: 0.9;
+}
+#ai-window .ai-line.action { color: #44ccaa; }
+#ai-window .ai-line.threat { color: #ff6644; }
+#ai-window .ai-line.event { color: #ccaa44; }
+#ai-window .ai-cursor {
+  display: inline-block;
+  width: 5px;
+  height: 8px;
+  background: #3388cc;
+  animation: aiCursorBlink 1s step-end infinite;
+  vertical-align: middle;
+  margin-left: 2px;
+}
+@keyframes aiCursorBlink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+/* ======== NEON NIGHTLIFE OVERRIDE ======== */
+@keyframes rainbowPulse {
+  0% { filter: hue-rotate(0deg) saturate(1.15); }
+  100% { filter: hue-rotate(360deg) saturate(1.15); }
+}
+body {
+  background:
+    repeating-linear-gradient(116deg, rgba(34,211,238,0.10) 0 1px, transparent 1px 46px),
+    repeating-linear-gradient(64deg, rgba(236,72,153,0.10) 0 1px, transparent 1px 54px),
+    linear-gradient(135deg, #02030a, #0b0618 44%, #030d16 72%, #120008);
+}
+#monitor {
+  background:
+    linear-gradient(145deg, rgba(34,211,238,0.28), rgba(25,20,38,0.96), rgba(236,72,153,0.22)) padding-box,
+    conic-gradient(from 120deg, #22d3ee, #a855f7, #ec4899, #f5c542, #10b981, #22d3ee) border-box;
+  border: 2px solid transparent;
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,0.08),
+    inset 0 2px 4px rgba(255,255,255,0.08),
+    0 8px 40px rgba(0,0,0,0.8),
+    0 0 42px rgba(34,211,238,0.32),
+    0 0 72px rgba(236,72,153,0.22);
+  animation: rainbowPulse 12s linear infinite;
+}
+#screen {
+  box-shadow:
+    inset 0 0 95px rgba(34,211,238,0.10),
+    inset 0 0 120px rgba(236,72,153,0.06),
+    0 0 26px rgba(34,211,238,0.24),
+    0 0 44px rgba(236,72,153,0.16);
+}
+#screen-bloom {
+  box-shadow:
+    inset 0 0 110px rgba(34,211,238,0.08),
+    inset 0 0 150px rgba(236,72,153,0.05),
+    0 0 32px rgba(245,197,66,0.10);
+}
+#grid-overlay {
+  background-image:
+    linear-gradient(rgba(34,211,238,0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(236,72,153,0.07) 1px, transparent 1px);
+}
+#monitor-brand {
+  color: rgba(255,255,255,0.72);
+  text-shadow: 0 0 10px rgba(34,211,238,0.7), 0 0 20px rgba(236,72,153,0.45);
+}
+#power-led {
+  background: #f5c542;
+  box-shadow: 0 0 8px #f5c542, 0 0 18px rgba(236,72,153,0.55), 0 0 28px rgba(34,211,238,0.42);
+}
+</style>
+<script src="/static/games/chiptune.js"></script>
+</head>
+<body>
+
+<div id="monitor">
+  <div id="monitor-brand">THESEUS DEEP-FIELD OBSERVATORY</div>
+  <div id="power-led"></div>
+  <div id="power-label">PWR</div>
+
+  <div id="screen">
+    <div id="boot"></div>
+    <div id="scanlines"></div>
+    <div id="screen-bloom"></div>
+    <div id="grid-overlay"></div>
+    <div id="glitch"></div>
+
+    <div id="top-bar">
+      <span class="title">DIGITAL TERRARIUM v6.0.0 // XENOBIOLOGICAL CONTAINMENT UNIT</span>
+      <span class="sys-time" id="sys-time">00:00:00.000</span>
+    </div>
+
+    <div id="stats-bar">
+      <span>FPS: <span class="stat-val" id="stat-fps">60</span></span>
+      <span>POP: <span class="stat-val" id="stat-pop">0</span></span>
+      <span>GEN: <span class="stat-val" id="stat-gen">0</span></span>
+      <span>BIOMASS: <span class="stat-val" id="stat-biomass">0.00</span></span>
+      <span>ENTROPY: <span class="stat-val" id="stat-entropy">0.00</span></span>
+      <span>INFECT: <span class="stat-val" id="stat-infect">0%</span></span>
+      <span>TAGGED: <span class="stat-val" id="stat-tagged">0</span></span>
+      <span>EPOCH: <span class="stat-val" id="stat-epoch">0</span></span>
+    </div>
+
+    <div id="warnings">
+      <div class="warning-line" id="warn1">! ANOMALOUS PATTERN DETECTED</div>
+      <div class="warning-line" id="warn2">! NON-BASELINE INTELLIGENCE</div>
+      <div class="warning-line" id="warn3">! CONTAINMENT FIELD VARIANCE</div>
+    </div>
+
+    <div id="event-log"></div>
+
+    <div id="info-panel">
+      <div><span class="label">SYSTEM:</span> <span class="val">THESEUS DEEP-FIELD</span></div>
+      <div><span class="label">BIOME:</span> <span class="val">WATTS-7 XENOBIOLOGICAL</span></div>
+      <div><span class="label">PROTOCOL:</span> <span class="val">SCRAMBLER CONTAINMENT</span></div>
+      <div><span class="label">OBSERVER:</span> <span class="val">PASSIVE / RECORDING</span></div>
+      <div id="info-species" style="margin-top:6px;"></div>
+    </div>
+
+    <!-- Infection HP Bar -->
+    <div id="infection-bar-wrap">
+      <div id="infection-bar-fill"></div>
+      <div id="infection-bar-label">BEHEMOTH 0%</div>
+    </div>
+
+    <!-- Danger Alert Overlay -->
+    <div id="danger-alert">
+      <div class="alert-icon" id="danger-icon"></div>
+      <div class="alert-text" id="danger-text"></div>
+      <div class="alert-sub" id="danger-sub"></div>
+    </div>
+
+    <!-- AI Interpretation Window -->
+    <div id="ai-window">
+      <div class="ai-title">THESEUS AI // BEHAVIORAL ANALYSIS</div>
+      <div id="ai-content"></div>
+    </div>
+
+    <!-- Population Chart -->
+    <div id="pop-chart-panel">
+      <div class="chart-title">POPULATION DYNAMICS</div>
+      <canvas id="pop-chart-canvas"></canvas>
+    </div>
+
+    <div id="controls" style="bottom:175px;">
+      <span>F</span> FULLSCREEN | <span>G</span> GRID | <span>S</span> SCANLINES<br>
+      <span>I</span> INFO PANEL | <span>SPACE</span> PAUSE | <span>CLICK</span> TAG<br>
+      <span>V</span> DEPLOY SEPPUKU | <span>B</span> SPAWN BEHEMOTH
+    </div>
+
+    <div id="depth-gauge"><div id="depth-marker" style="top:50%"></div></div>
+
+    <div id="pause-overlay">PAUSED</div>
+    <div id="extinction-overlay"><div id="extinction-text">EXTINCTION EVENT</div></div>
+
+    <canvas id="c"></canvas>
+  </div>
+</div>
+
+<div id="reticle"></div>
+<div id="classify"></div>
+
+<script>
+// ============================================================
+// DIGITAL TERRARIUM v3 (v5.0.0) - THESEUS DEEP-FIELD OBSERVATORY
+// Peter Watts full bibliography xenobiology + CRT aesthetic
+// Blindsight/Echopraxia + Rifters trilogy + Starfish
+// ============================================================
+
+var canvas = document.getElementById('c');
+var ctx = canvas.getContext('2d');
+var screenEl = document.getElementById('screen');
+var reticle = document.getElementById('reticle');
+var classify = document.getElementById('classify');
+var depthMarker = document.getElementById('depth-marker');
+var glitchEl = document.getElementById('glitch');
+var pauseOverlay = document.getElementById('pause-overlay');
+var eventLogEl = document.getElementById('event-log');
+var extinctionOverlay = document.getElementById('extinction-overlay');
+
+// ============================================================
+// AI SPRITE / BACKGROUND ASSETS (with procedural fallback)
+// ============================================================
+function loadImg(src) {
+  var im = new Image();
+  im.__ready = false;
+  im.onload = function() { im.__ready = true; };
+  im.onerror = function() { im.__ready = false; };
+  im.src = src;
+  return im;
+}
+var ASSET = {
+  bg: loadImg('/static/games/roster/terr_bg_abyss.png'),
+  rorschach: loadImg('/static/games/roster/terr_rorschach.png')
+};
+function imgReady(im) { return im && im.__ready && im.naturalWidth > 0; }
+
+// ============================================================
+// SAFE CHIPTUNE AUDIO WRAPPER (never throws if engine missing)
+// ============================================================
+var AUDIO = { music: null, started: false };
+function sfx(name) {
+  try {
+    if (window.Chiptune && Chiptune.SFX && typeof Chiptune.SFX[name] === 'function') {
+      Chiptune.SFX[name]();
+    }
+  } catch (e) {}
+}
+var _sfxLast = {};
+function sfxThrottled(name, ms) {
+  var now = (window.performance && performance.now) ? performance.now() : Date.now();
+  if (_sfxLast[name] && now - _sfxLast[name] < (ms || 120)) return;
+  _sfxLast[name] = now;
+  sfx(name);
+}
+function startAudio() {
+  if (AUDIO.started) return;
+  AUDIO.started = true;
+  try {
+    if (window.Chiptune) {
+      if (Chiptune.resume) Chiptune.resume();
+      if (Chiptune.Music) {
+        AUDIO.music = Chiptune.Music({
+          bpm: 96,
+          mel: [60, 63, 67, 70, 67, 63, 62, 58],
+          bass: [36, 36, 39, 39, 41, 41, 38, 38],
+          melType: 'triangle'
+        });
+      }
+    }
+  } catch (e) { AUDIO.music = null; }
+}
+function stopAudio() {
+  try { if (AUDIO.music && AUDIO.music.stop) AUDIO.music.stop(); } catch (e) {}
+  AUDIO.music = null;
+}
+// Resume audio context on first user gesture (browser autoplay policy)
+function firstGestureAudio() {
+  try { if (window.Chiptune && Chiptune.resume) Chiptune.resume(); } catch (e) {}
+  startAudio();
+}
+window.addEventListener('pointerdown', firstGestureAudio, { once: false });
+window.addEventListener('keydown', firstGestureAudio, { once: false });
+
+var W, H, screenRect;
+var paused = false;
+var showGrid = true;
+var showScanlines = true;
+var showInfo = true;
+var simTime = 0;
+
+function resize() {
+  screenRect = screenEl.getBoundingClientRect();
+  W = canvas.width = screenRect.width;
+  H = canvas.height = screenRect.height - 56;
+}
+resize();
+window.addEventListener('resize', resize);
+
+var mx = 0, my = 0;
+var rawMx = 0, rawMy = 0;
+document.addEventListener('mousemove', function(e) {
+  rawMx = e.clientX;
+  rawMy = e.clientY;
+  mx = e.clientX - screenRect.left;
+  my = e.clientY - screenRect.top - 56;
+  reticle.style.left = rawMx + 'px';
+  reticle.style.top = rawMy + 'px';
+});
+
+// ============================================================
+// EVENT LOG SYSTEM
+// ============================================================
+var eventLines = [];
+var eventCooldowns = {};
+
+function logEvent(msg, cls, cooldownKey) {
+  if (cooldownKey && eventCooldowns[cooldownKey] && simTime - eventCooldowns[cooldownKey] < 300) return;
+  if (cooldownKey) eventCooldowns[cooldownKey] = simTime;
+  var div = document.createElement('div');
+  div.className = 'event-line' + (cls ? ' ' + cls : '');
+  div.textContent = '> ' + msg;
+  eventLogEl.appendChild(div);
+  eventLines.push({ el: div, time: simTime });
+  if (eventLines.length > 8) {
+    var old = eventLines.shift();
+    if (old.el.parentNode) old.el.parentNode.removeChild(old.el);
+  }
+  // Fade old events
+  for (var i = 0; i < eventLines.length; i++) {
+    var age = simTime - eventLines[i].time;
+    if (age > 300) {
+      eventLines[i].el.style.opacity = Math.max(0, 1 - (age - 300) / 200);
+    }
+  }
+}
+
+function triggerScreenShake() {
+  screenEl.classList.remove('shake');
+  void screenEl.offsetWidth;
+  screenEl.classList.add('shake');
+  setTimeout(function() { screenEl.classList.remove('shake'); }, 200);
+}
+
+function triggerExtinction() {
+  extinctionOverlay.classList.add('active');
+  screenEl.classList.add('distort');
+  setTimeout(function() {
+    extinctionOverlay.classList.remove('active');
+    screenEl.classList.remove('distort');
+  }, 2000);
+}
+
+// ============================================================
+// SCREEN FLASH EFFECT
+// ============================================================
+var screenFlash = { active: false, color: [255,255,255], alpha: 0 };
+
+function flashScreen(r, g, b, intensity) {
+  screenFlash.active = true;
+  screenFlash.color = [r, g, b];
+  screenFlash.alpha = intensity || 0.15;
+}
+
+// ============================================================
+// RETICLE
+// ============================================================
+var reticleCanvas = document.createElement('canvas');
+reticleCanvas.width = 40;
+reticleCanvas.height = 40;
+var rctx = reticleCanvas.getContext('2d');
+
+function drawReticle(near) {
+  rctx.clearRect(0, 0, 40, 40);
+  var c = near ? 'rgba(255,80,60,' : 'rgba(0,200,120,';
+  var cx2 = 20, cy2 = 20;
+  rctx.strokeStyle = c + '0.7)';
+  rctx.lineWidth = 1;
+  rctx.beginPath();
+  rctx.arc(cx2, cy2, 16, 0, Math.PI * 2);
+  rctx.stroke();
+  rctx.beginPath();
+  rctx.arc(cx2, cy2, 6, 0, Math.PI * 2);
+  rctx.stroke();
+  rctx.beginPath();
+  rctx.moveTo(cx2, cy2 - 19); rctx.lineTo(cx2, cy2 - 8);
+  rctx.moveTo(cx2, cy2 + 8); rctx.lineTo(cx2, cy2 + 19);
+  rctx.moveTo(cx2 - 19, cy2); rctx.lineTo(cx2 - 8, cy2);
+  rctx.moveTo(cx2 + 8, cy2); rctx.lineTo(cx2 + 19, cy2);
+  rctx.stroke();
+  var s = 14;
+  rctx.strokeStyle = c + '0.4)';
+  for (var a = 0; a < 4; a++) {
+    var angle = a * Math.PI / 2 + Math.PI / 4;
+    var x1 = cx2 + Math.cos(angle) * s;
+    var y1 = cy2 + Math.sin(angle) * s;
+    var x2 = cx2 + Math.cos(angle) * (s + 4);
+    var y2 = cy2 + Math.sin(angle) * (s + 4);
+    rctx.beginPath();
+    rctx.moveTo(x1, y1);
+    rctx.lineTo(x2, y2);
+    rctx.stroke();
+  }
+  reticle.innerHTML = '';
+  reticle.appendChild(reticleCanvas);
+}
+drawReticle(false);
+
+// ============================================================
+// BOOT SEQUENCE
+// ============================================================
+var bootLines = [
+  { text: 'THESEUS DEEP-FIELD OBSERVATORY v5.0.0', cls: '' },
+  { text: 'Initializing quantum substrate...', cls: '' },
+  { text: 'Loading xenobiological genome database...', cls: '' },
+  { text: 'Calibrating bioluminescence array.............. [OK]', cls: 'ok' },
+  { text: 'Initializing fluid dynamics engine.............. [OK]', cls: 'ok' },
+  { text: 'Loading Rifters-class deep modifications........ [OK]', cls: 'ok' },
+  { text: 'Compiling Behemoth viral containment protocols.. [OK]', cls: 'ok' },
+  { text: 'Seeding primordial organisms.................... [OK]', cls: 'ok' },
+  { text: 'Activating containment field.................... [OK]', cls: 'ok' },
+  { text: 'WARNING: Vampire-class predator genome detected in substrate', cls: 'warn' },
+  { text: 'WARNING: Bicameral hive-mind signatures in neural mesh', cls: 'warn' },
+  { text: 'WARNING: Behemoth viral reservoir at 0.3% -- MONITORING', cls: 'warn' },
+  { text: 'ALERT: Scrambler protocol ACTIVE', cls: 'err' },
+  { text: 'ALERT: Seppuku countermeasure ARMED', cls: 'err' },
+  { text: 'Observer mode: PASSIVE // Recording to black box', cls: '' },
+  { text: '> DIGITAL TERRARIUM v6.0.0 ONLINE', cls: 'ok' }
+];
+
+async function boot() {
+  var bootEl = document.getElementById('boot');
+  for (var i = 0; i < bootLines.length; i++) {
+    var div = document.createElement('div');
+    div.textContent = bootLines[i].text;
+    if (bootLines[i].cls) div.classList.add(bootLines[i].cls);
+    bootEl.appendChild(div);
+    await new Promise(function(r) { setTimeout(r, 120 + Math.random() * 200); });
+    div.style.opacity = '1';
+  }
+  await new Promise(function(r) { setTimeout(r, 1000); });
+  bootEl.classList.add('done');
+  setTimeout(function() { bootEl.remove(); }, 1500);
+  startAudio();
+  requestAnimationFrame(loop);
+}
+
+// ============================================================
+// SPECIES DEFINITIONS
+// ============================================================
+var SPECIES = {
+  DRIFTER: {
+    color: [20, 80, 60], glow: [40, 220, 150], size: [10, 24],
+    speed: 0.3, metabolism: 0.001, reproduce: 0.0008,
+    cursorReact: -1,
+    desc: 'DRIFTER // Cnidaria digitalis\nClass: Filter-feeder\nBlind bioluminescent organism\nNavigates via chemotaxis'
+  },
+  SCRAMBLER: {
+    color: [100, 20, 20], glow: [220, 60, 40], size: [8, 16],
+    speed: 1.8, metabolism: 0.004, reproduce: 0.0003,
+    cursorReact: 1,
+    desc: 'SCRAMBLER // Rorschach praedator\nClass: Apex predator\nNo consciousness detected\nPure reflex architecture'
+  },
+  CRUCIFORM: {
+    color: [60, 40, 90], glow: [150, 110, 220], size: [6, 12],
+    speed: 0.5, metabolism: 0.002, reproduce: 0.001,
+    cursorReact: -1,
+    desc: 'CRUCIFORM // Colonialis geometrica\nClass: Colonial superorganism\nForms geometric defense arrays'
+  },
+  RORSCHACH: {
+    color: [40, 40, 40], glow: [120, 120, 120], size: [35, 65],
+    speed: 0.05, metabolism: 0.0005, reproduce: 0.0001,
+    cursorReact: 0,
+    desc: 'RORSCHACH // Architectus abyssalis\nClass: Sessile megafauna\nManipulates local EM field\nSentience: INDETERMINATE'
+  },
+  CHIMAERA: {
+    color: [90, 70, 20], glow: [220, 180, 40], size: [4, 9],
+    speed: 1.2, metabolism: 0.003, reproduce: 0.0005,
+    cursorReact: -1,
+    desc: 'CHIMAERA // Parasitus neuros\nClass: Neural parasite\nHijacks host nervous system'
+  },
+  FIREFLY: {
+    color: [20, 60, 90], glow: [60, 190, 255], size: [2, 5],
+    speed: 0.8, metabolism: 0.002, reproduce: 0.002,
+    cursorReact: 1,
+    desc: 'FIREFLY // Lux collectiva\nClass: Swarm intelligence\nSynchronized bioluminescent pulses'
+  },
+  VAMPIRE: {
+    color: [120, 10, 10], glow: [220, 30, 30], size: [20, 30],
+    speed: 2.5, metabolism: 0.003, reproduce: 0.00005,
+    cursorReact: 0,
+    desc: 'VAMPIRE // Homo sapiens vampiris\nClass: Apex super-predator\nCross-hemisphere cognition\nRight-angle fixation detected\nEXTREME DANGER'
+  },
+  BICAMERAL: {
+    color: [20, 100, 100], glow: [40, 220, 220], size: [6, 10],
+    speed: 0.7, metabolism: 0.002, reproduce: 0.0006,
+    cursorReact: -1,
+    desc: 'BICAMERAL // Homo sapiens bicameralis\nClass: Hive-mind collective\nLinked neural mesh detected\nNo individual consciousness'
+  },
+  RIFTER: {
+    color: [10, 15, 40], glow: [30, 60, 180], size: [8, 14],
+    speed: 0.9, metabolism: 0.002, reproduce: 0.0004,
+    cursorReact: 0,
+    desc: 'RIFTER // Homo sapiens abyssalis\nClass: Deep-modified human\nPressure-rated to 300atm\nPsychological profile: UNSTABLE'
+  },
+  NEUROGEL: {
+    color: [80, 20, 120], glow: [180, 80, 255], size: [8, 18],
+    speed: 0.2, metabolism: 0.001, reproduce: 0.0002,
+    cursorReact: 0,
+    desc: 'NEUROGEL // Synthetica neuralis\nClass: Amorphous neural network\nMerges on contact\nSpeciation engine detected'
+  },
+  LENIE: {
+    color: [5, 5, 15], glow: [200, 20, 20], size: [10, 14],
+    speed: 1.0, metabolism: 0.002, reproduce: 0,
+    cursorReact: 0,
+    desc: 'LENIE CLARKE // Named Entity\nClass: Modified Rifter (unique)\nDeliberately seeks infection zones\nCHAOS AGENT -- DO NOT APPROACH'
+  }
+};
+
+// ============================================================
+// BACKGROUND LAYERS
+// ============================================================
+var bgCanvas = document.createElement('canvas');
+var bgCtx = bgCanvas.getContext('2d');
+var bgParticles = [];
+
+function initBackground() {
+  bgCanvas.width = W;
+  bgCanvas.height = H;
+  var g = bgCtx.createRadialGradient(W/2, H/2, 0, W/2, H/2, Math.max(W, H) * 0.7);
+  g.addColorStop(0, '#030a14');
+  g.addColorStop(0.4, '#020810');
+  g.addColorStop(0.7, '#01050a');
+  g.addColorStop(1, '#000204');
+  bgCtx.fillStyle = g;
+  bgCtx.fillRect(0, 0, W, H);
+
+  for (var i = 0; i < 8; i++) {
+    var x = Math.random() * W;
+    var y = Math.random() * H;
+    var r = 100 + Math.random() * 200;
+    var ng = bgCtx.createRadialGradient(x, y, 0, x, y, r);
+    var hue = Math.random() < 0.5 ? [0, 20 + Math.random()*20, 30 + Math.random()*20] : [10 + Math.random()*10, 0, 30 + Math.random()*20];
+    ng.addColorStop(0, 'rgba(' + hue[0] + ',' + hue[1] + ',' + hue[2] + ',0.08)');
+    ng.addColorStop(1, 'transparent');
+    bgCtx.fillStyle = ng;
+    bgCtx.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+
+  bgParticles = [];
+  for (var i = 0; i < 150; i++) {
+    bgParticles.push({
+      x: Math.random() * W, y: Math.random() * H,
+      size: 0.3 + Math.random() * 1.2,
+      brightness: 0.1 + Math.random() * 0.3,
+      speed: 0.02 + Math.random() * 0.08,
+      phase: Math.random() * Math.PI * 2,
+      layer: Math.random()
+    });
+  }
+}
+
+// ============================================================
+// AMBIENT PARTICLES
+// ============================================================
+var ambientParticles = [];
+
+function initAmbientParticles() {
+  ambientParticles = [];
+  for (var i = 0; i < 80; i++) {
+    ambientParticles.push({
+      x: Math.random() * W, y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.15,
+      vy: -0.05 - Math.random() * 0.1,
+      size: 0.5 + Math.random() * 2,
+      alpha: 0.05 + Math.random() * 0.15,
+      hue: Math.random() < 0.3 ? [0, 150, 100] : Math.random() < 0.5 ? [80, 60, 160] : [20, 100, 80],
+      phase: Math.random() * Math.PI * 2
+    });
+  }
+}
+
+function updateAmbientParticles(dt) {
+  for (var i = 0; i < ambientParticles.length; i++) {
+    var p = ambientParticles[i];
+    p.phase += dt * 0.01;
+    p.x += p.vx * dt + Math.sin(p.phase) * 0.05;
+    p.y += p.vy * dt;
+    if (p.y < -10) { p.y = H + 10; p.x = Math.random() * W; }
+    if (p.x < -10) p.x = W + 10;
+    if (p.x > W + 10) p.x = -10;
+  }
+}
+
+function drawAmbientParticles() {
+  for (var i = 0; i < ambientParticles.length; i++) {
+    var p = ambientParticles[i];
+    var pulse = Math.sin(p.phase) * 0.3 + 0.7;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(' + p.hue[0] + ',' + p.hue[1] + ',' + p.hue[2] + ',' + (p.alpha * pulse) + ')';
+    ctx.fill();
+  }
+}
+
+// ============================================================
+// EXPLOSION/DEATH PARTICLES
+// ============================================================
+var particles = [];
+
+function spawnParticles(x, y, color, count) {
+  for (var i = 0; i < count; i++) {
+    var angle = Math.random() * Math.PI * 2;
+    var speed = 0.3 + Math.random() * 1.5;
+    particles.push({
+      x: x, y: y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      decay: 0.01 + Math.random() * 0.02,
+      size: 1 + Math.random() * 3,
+      color: color
+    });
+  }
+}
+
+// Blood spray for vampire kills
+function spawnBloodSpray(x, y, count) {
+  for (var i = 0; i < count; i++) {
+    var angle = Math.random() * Math.PI * 2;
+    var speed = 1 + Math.random() * 3;
+    particles.push({
+      x: x, y: y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      decay: 0.008 + Math.random() * 0.015,
+      size: 1 + Math.random() * 4,
+      color: [200 + Math.floor(Math.random()*55), Math.floor(Math.random()*30), Math.floor(Math.random()*20)]
+    });
+  }
+}
+
+function updateParticles(dt) {
+  for (var i = particles.length - 1; i >= 0; i--) {
+    var p = particles[i];
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vx *= 0.98;
+    p.vy *= 0.98;
+    p.life -= p.decay * dt;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+}
+
+function drawParticles() {
+  for (var i = 0; i < particles.length; i++) {
+    var p = particles[i];
+    var a = p.life * 0.8;
+    var g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 3);
+    g.addColorStop(0, 'rgba(' + p.color[0] + ',' + p.color[1] + ',' + p.color[2] + ',' + (a * 0.4) + ')');
+    g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.fillRect(p.x - p.size * 3, p.y - p.size * 3, p.size * 6, p.size * 6);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(' + p.color[0] + ',' + p.color[1] + ',' + p.color[2] + ',' + a + ')';
+    ctx.fill();
+  }
+}
+
+// ============================================================
+// BEHEMOTH VIRAL SYSTEM
+// ============================================================
+var behemothClouds = [];
+var seppukuClouds = [];
+var infectionRate = 0;
+
+function spawnBehemoth(x, y) {
+  behemothClouds.push({
+    x: x || Math.random() * W,
+    y: y || Math.random() * H,
+    radius: 15,
+    maxRadius: 120 + Math.random() * 80,
+    growRate: 0.08,
+    life: 1,
+    particles: []
+  });
+  logEvent('BEHEMOTH OUTBREAK: NEW INFECTION ZONE DETECTED', 'danger', 'behemoth_spawn');
+  flashScreen(255, 100, 0, 0.08);
+  sfx('hurt');
+}
+
+function spawnSeppuku(x, y) {
+  seppukuClouds.push({
+    x: x || W/2,
+    y: y || H/2,
+    radius: 20,
+    maxRadius: 200,
+    growRate: 0.15,
+    life: 1,
+    particles: []
+  });
+  logEvent('SEPPUKU PROTOCOL INITIATED. COLLATERAL DAMAGE EXPECTED.', 'critical', 'seppuku');
+  flashScreen(0, 100, 255, 0.15);
+  triggerScreenShake();
+  sfx('explode');
+}
+
+function updateBehemoth(dt) {
+  // Update behemoth clouds
+  for (var i = behemothClouds.length - 1; i >= 0; i--) {
+    var cloud = behemothClouds[i];
+    cloud.radius = Math.min(cloud.maxRadius, cloud.radius + cloud.growRate * dt);
+    cloud.life -= 0.0003 * dt;
+    // Spawn visual particles
+    if (Math.random() < 0.3) {
+      cloud.particles.push({
+        x: cloud.x + (Math.random() - 0.5) * cloud.radius * 2,
+        y: cloud.y + (Math.random() - 0.5) * cloud.radius * 2,
+        life: 1, size: 1 + Math.random() * 3
+      });
+    }
+    // Update particles
+    for (var j = cloud.particles.length - 1; j >= 0; j--) {
+      cloud.particles[j].life -= 0.02 * dt;
+      if (cloud.particles[j].life <= 0) cloud.particles.splice(j, 1);
+    }
+    if (cloud.life <= 0 || cloud.particles.length === 0 && cloud.radius >= cloud.maxRadius) {
+      behemothClouds.splice(i, 1);
+    }
+  }
+
+  // Update seppuku clouds
+  for (var i = seppukuClouds.length - 1; i >= 0; i--) {
+    var cloud = seppukuClouds[i];
+    cloud.radius = Math.min(cloud.maxRadius, cloud.radius + cloud.growRate * dt);
+    cloud.life -= 0.002 * dt;
+    if (Math.random() < 0.4) {
+      cloud.particles.push({
+        x: cloud.x + (Math.random() - 0.5) * cloud.radius * 2,
+        y: cloud.y + (Math.random() - 0.5) * cloud.radius * 2,
+        life: 1, size: 1 + Math.random() * 2
+      });
+    }
+    for (var j = cloud.particles.length - 1; j >= 0; j--) {
+      cloud.particles[j].life -= 0.03 * dt;
+      if (cloud.particles[j].life <= 0) cloud.particles.splice(j, 1);
+    }
+    if (cloud.life <= 0) {
+      seppukuClouds.splice(i, 1);
+    }
+  }
+
+  // Calculate infection rate
+  var infected = 0;
+  for (var i = 0; i < organisms.length; i++) {
+    if (organisms[i].infected) infected++;
+  }
+  infectionRate = organisms.length > 0 ? infected / organisms.length : 0;
+
+  // Auto-deploy seppuku at 30%
+  if (infectionRate > 0.3 && seppukuClouds.length === 0) {
+    var casualties = Math.floor(organisms.length * 0.15);
+    logEvent('SEPPUKU PROTOCOL INITIATED. ESTIMATED CASUALTIES: ' + casualties, 'critical', 'seppuku_auto');
+    spawnSeppuku();
+  }
+
+  // Log infection milestones
+  if (infectionRate > 0.05 && infectionRate < 0.15) {
+    logEvent('BEHEMOTH OUTBREAK: INFECTION AT ' + Math.floor(infectionRate * 100) + '% AND RISING', 'danger', 'infect_low');
+  } else if (infectionRate > 0.15 && infectionRate < 0.3) {
+    logEvent('BEHEMOTH CRITICAL: INFECTION AT ' + Math.floor(infectionRate * 100) + '%', 'critical', 'infect_high');
+  }
+}
+
+function drawBehemoth() {
+  // Draw behemoth clouds
+  for (var i = 0; i < behemothClouds.length; i++) {
+    var cloud = behemothClouds[i];
+    var g = ctx.createRadialGradient(cloud.x, cloud.y, 0, cloud.x, cloud.y, cloud.radius);
+    g.addColorStop(0, 'rgba(200, 80, 20, ' + (0.08 * cloud.life) + ')');
+    g.addColorStop(0.5, 'rgba(180, 50, 10, ' + (0.04 * cloud.life) + ')');
+    g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.fillRect(cloud.x - cloud.radius, cloud.y - cloud.radius, cloud.radius * 2, cloud.radius * 2);
+    // Particles
+    for (var j = 0; j < cloud.particles.length; j++) {
+      var p = cloud.particles[j];
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(220, 100, 20, ' + (p.life * 0.4) + ')';
+      ctx.fill();
+    }
+  }
+
+  // Draw seppuku clouds
+  for (var i = 0; i < seppukuClouds.length; i++) {
+    var cloud = seppukuClouds[i];
+    var g = ctx.createRadialGradient(cloud.x, cloud.y, 0, cloud.x, cloud.y, cloud.radius);
+    g.addColorStop(0, 'rgba(30, 100, 255, ' + (0.1 * cloud.life) + ')');
+    g.addColorStop(0.5, 'rgba(20, 60, 200, ' + (0.05 * cloud.life) + ')');
+    g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.fillRect(cloud.x - cloud.radius, cloud.y - cloud.radius, cloud.radius * 2, cloud.radius * 2);
+    for (var j = 0; j < cloud.particles.length; j++) {
+      var p = cloud.particles[j];
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(60, 140, 255, ' + (p.life * 0.5) + ')';
+      ctx.fill();
+    }
+  }
+
+  // Draw infection tendrils between infected organisms
+  ctx.strokeStyle = 'rgba(200, 80, 20, 0.08)';
+  ctx.lineWidth = 0.5;
+  for (var i = 0; i < organisms.length; i++) {
+    var o = organisms[i];
+    if (!o.infected) continue;
+    for (var j = i + 1; j < organisms.length; j++) {
+      var o2 = organisms[j];
+      if (!o2.infected) continue;
+      var dx = o2.x - o.x, dy = o2.y - o.y;
+      var d = Math.sqrt(dx*dx + dy*dy);
+      if (d < 80) {
+        ctx.beginPath();
+        ctx.moveTo(o.x, o.y);
+        ctx.lineTo(o2.x, o2.y);
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+// ============================================================
+// ORGANISM CLASS
+// ============================================================
+var organisms = [];
+var generation = 0;
+var epoch = 0;
+var totalDeaths = 0;
+var nearestOrg = null;
+var taggedOrganisms = new Set();
+var tagIdCounter = 0;
+var lenieExists = false;
+var vampireCount = 0;
+
+// Bicameral group tracking
+var bicameralGroups = [];
+
+function Organism(type, x, y, gen) {
+  var spec = SPECIES[type];
+  this.type = type;
+  this.spec = spec;
+  this.id = tagIdCounter++;
+  this.x = x !== undefined ? x : Math.random() * W;
+  this.y = y !== undefined ? y : Math.random() * H;
+  this.gen = gen || 0;
+  this.size = spec.size[0] + Math.random() * (spec.size[1] - spec.size[0]);
+  this.energy = 0.5 + Math.random() * 0.5;
+  this.age = 0;
+  this.maxAge = 2000 + Math.random() * 3000;
+  this.vx = (Math.random() - 0.5) * spec.speed;
+  this.vy = (Math.random() - 0.5) * spec.speed;
+  this.phase = Math.random() * Math.PI * 2;
+  this.pulsePhase = Math.random() * Math.PI * 2;
+  this.tentacles = type === 'DRIFTER' ? 5 + Math.floor(Math.random() * 5) : 0;
+  this.segments = type === 'SCRAMBLER' ? 5 + Math.floor(Math.random() * 3) : 0;
+  this.trail = [];
+  this.attached = null;
+  this.cruciNeighbors = [];
+  this.pulseSync = 0;
+  this.aware = false;
+  this.fleeing = false;
+  this.huntTarget = null;
+  this.tagged = false;
+  this.tagLabel = '';
+  this.depth = 0.3 + Math.random() * 0.7;
+  this.mutations = [];
+  this.infected = false;
+  this.infectedTimer = 0;
+  this.flickerTimer = 0;
+  this.lunging = false;
+  this.lungeTimer = 0;
+  // Faction for inhabitants (Cruciform = Bowinian/Heretic)
+  this.faction = type === 'CRUCIFORM' ? (Math.random() < 0.5 ? 'BOWINIAN' : 'HERETIC') : null;
+  // Bicameral group
+  this.bicameralGroup = -1;
+  // Neurogel merge mass
+  this.gelMass = type === 'NEUROGEL' ? 1 : 0;
+  // Rifter sabotage cooldown
+  this.sabotageCooldown = 0;
+  // Vampire right-angle freeze
+  this.rightAngleFreeze = 0;
+  // Afterimage trail for fast movers
+  this.afterimages = [];
+
+  if (Math.random() < 0.12 && type !== 'VAMPIRE' && type !== 'LENIE') {
+    this.mutations.push(Math.random() < 0.5 ? 'gigantism' : 'luminous');
+    if (this.mutations.includes('gigantism')) this.size *= 1.5;
+  }
+
+  // Rorschach tendrils
+  this.tendrils = [];
+  if (type === 'RORSCHACH') {
+    for (var i = 0; i < 8 + Math.floor(Math.random() * 6); i++) {
+      this.tendrils.push({
+        angle: Math.random() * Math.PI * 2,
+        length: 0.5 + Math.random() * 0.8,
+        speed: 0.005 + Math.random() * 0.01,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+  }
+
+  // Vampire specific
+  if (type === 'VAMPIRE') {
+    this.maxAge = 8000 + Math.random() * 5000;
+    this.size = 22 + Math.random() * 8;
+  }
+
+  // Lenie specific
+  if (type === 'LENIE') {
+    this.maxAge = 999999;
+    this.size = 12;
+  }
+
+  // Neurogel internal arcs
+  this.gelArcs = [];
+  if (type === 'NEUROGEL') {
+    for (var i = 0; i < 3; i++) {
+      this.gelArcs.push({ angle: Math.random() * Math.PI * 2, target: Math.random() * Math.PI * 2 });
+    }
+  }
+}
+
+Organism.prototype.update = function(dt, others) {
+  this.age += dt;
+  this.phase += dt * 0.02;
+  this.pulsePhase += dt * 0.05;
+  this.energy -= this.spec.metabolism * dt;
+
+  // Infection effects
+  if (this.infected) {
+    this.infectedTimer += dt;
+    this.energy -= 0.001 * dt; // infected drain faster
+    // Erratic behavior
+    if (Math.random() < 0.05) {
+      this.vx += (Math.random() - 0.5) * 1;
+      this.vy += (Math.random() - 0.5) * 1;
+    }
+    // Spread to nearby
+    for (var i = 0; i < others.length; i++) {
+      var o = others[i];
+      if (o === this || o.infected || o.type === 'RIFTER' || o.type === 'LENIE') continue;
+      var dx = o.x - this.x, dy = o.y - this.y;
+      var d = Math.sqrt(dx*dx + dy*dy);
+      if (d < 40 && Math.random() < 0.01 * dt) {
+        o.infected = true;
+        spawnParticles(o.x, o.y, [200, 100, 20], 5);
+      }
+    }
+  }
+
+  // Check behemoth clouds for infection
+  for (var i = 0; i < behemothClouds.length; i++) {
+    var cloud = behemothClouds[i];
+    var dx = this.x - cloud.x, dy = this.y - cloud.y;
+    var d = Math.sqrt(dx*dx + dy*dy);
+    if (d < cloud.radius && !this.infected && this.type !== 'RIFTER' && this.type !== 'LENIE') {
+      if (Math.random() < 0.02 * dt) {
+        this.infected = true;
+        spawnParticles(this.x, this.y, [200, 100, 20], 5);
+      }
+    }
+  }
+
+  // Check seppuku clouds
+  for (var i = 0; i < seppukuClouds.length; i++) {
+    var cloud = seppukuClouds[i];
+    var dx = this.x - cloud.x, dy = this.y - cloud.y;
+    var d = Math.sqrt(dx*dx + dy*dy);
+    if (d < cloud.radius) {
+      if (this.infected) {
+        this.energy = -1; // kill infected
+        spawnParticles(this.x, this.y, [60, 140, 255], 15);
+      } else if (Math.random() < 0.005 * dt) {
+        this.energy = -1; // collateral damage
+        spawnParticles(this.x, this.y, [60, 140, 255], 8);
+      }
+    }
+  }
+
+  // Flicker timer for attack victims
+  if (this.flickerTimer > 0) this.flickerTimer -= dt;
+  if (this.lungeTimer > 0) this.lungeTimer -= dt;
+  if (this.sabotageCooldown > 0) this.sabotageCooldown -= dt;
+
+  // Cursor awareness
+  var dxC = mx - this.x, dyC = my - this.y;
+  var distCursor = Math.sqrt(dxC * dxC + dyC * dyC);
+  this.aware = distCursor < 150;
+
+  // Type-specific behavior
+  switch(this.type) {
+    case 'DRIFTER': this.behaveDrifter(dt, others); break;
+    case 'SCRAMBLER': this.behaveScrambler(dt, others); break;
+    case 'CRUCIFORM': this.behaveCruciform(dt, others); break;
+    case 'RORSCHACH': this.behaveRorschach(dt, others); break;
+    case 'CHIMAERA': this.behaveChimaera(dt, others); break;
+    case 'FIREFLY': this.behaveFirefly(dt, others); break;
+    case 'VAMPIRE': this.behaveVampire(dt, others); break;
+    case 'BICAMERAL': this.behaveBicameral(dt, others); break;
+    case 'RIFTER': this.behaveRifter(dt, others); break;
+    case 'NEUROGEL': this.behaveNeurogel(dt, others); break;
+    case 'LENIE': this.behaveLenie(dt, others); break;
+  }
+
+  // Observer effect
+  if (this.aware && distCursor > 10) {
+    var react = this.spec.cursorReact;
+    var strength = react * 0.0003;
+    this.vx += dxC * strength;
+    this.vy += dyC * strength;
+  }
+
+  // Movement
+  this.x += this.vx * dt;
+  this.y += this.vy * dt;
+
+  // Wrap
+  if (this.x < -50) this.x = W + 50;
+  if (this.x > W + 50) this.x = -50;
+  if (this.y < -50) this.y = H + 50;
+  if (this.y > H + 50) this.y = -50;
+
+  // Damping
+  this.vx *= 0.99;
+  this.vy *= 0.99;
+
+  // Afterimages for fast movers
+  var spd = Math.sqrt(this.vx*this.vx + this.vy*this.vy);
+  if (spd > 1.0 && (this.type === 'VAMPIRE' || this.type === 'SCRAMBLER')) {
+    this.afterimages.push({ x: this.x, y: this.y, a: 0.4, size: this.size });
+    if (this.afterimages.length > 8) this.afterimages.shift();
+  }
+  for (var i = this.afterimages.length - 1; i >= 0; i--) {
+    this.afterimages[i].a *= 0.9;
+    if (this.afterimages[i].a < 0.02) this.afterimages.splice(i, 1);
+  }
+
+  // Trail
+  if (this.age % 3 < 1) {
+    this.trail.push({ x: this.x, y: this.y, a: 1 });
+    if (this.trail.length > 25) this.trail.shift();
+  }
+  for (var i = 0; i < this.trail.length; i++) {
+    this.trail[i].a *= 0.96;
+  }
+
+  // Passive energy
+  if (this.type !== 'SCRAMBLER' && this.type !== 'CHIMAERA' && this.type !== 'VAMPIRE') {
+    this.energy += 0.0003 * dt;
+  }
+
+  // Reproduction
+  if (this.energy > 0.8 && Math.random() < this.spec.reproduce * dt && organisms.length < 300) {
+    return this.reproduce();
+  }
+
+  return null;
+};
+
+// ============ BEHAVIORS ============
+
+Organism.prototype.behaveDrifter = function(dt, others) {
+  this.vx += Math.sin(this.phase) * 0.01;
+  this.vy += Math.cos(this.phase * 0.7) * 0.008;
+  for (var i = 0; i < others.length; i++) {
+    var o = others[i];
+    if (o === this) continue;
+    var dx = o.x - this.x, dy = o.y - this.y;
+    var d = Math.sqrt(dx*dx + dy*dy);
+    if (d < 200 && d > 30 && o.type === 'FIREFLY') {
+      this.vx += dx / d * 0.005;
+      this.vy += dy / d * 0.005;
+    }
+  }
+};
+
+Organism.prototype.behaveScrambler = function(dt, others) {
+  var closest = null, closestD = Infinity;
+  for (var i = 0; i < others.length; i++) {
+    var o = others[i];
+    if (o === this || o.type === 'SCRAMBLER' || o.type === 'RORSCHACH' || o.type === 'VAMPIRE') continue;
+    var dx = o.x - this.x, dy = o.y - this.y;
+    var d = Math.sqrt(dx*dx + dy*dy);
+    if (d < closestD) { closestD = d; closest = o; }
+  }
+  if (closest && closestD < 300) {
+    var dx = closest.x - this.x, dy = closest.y - this.y;
+    this.vx += dx / closestD * 0.05;
+    this.vy += dy / closestD * 0.05;
+    this.huntTarget = closest;
+    if (closestD < this.size + closest.size) {
+      // Lunge animation
+      this.lunging = true;
+      this.lungeTimer = 10;
+      closest.flickerTimer = 15;
+      this.energy += closest.energy * 0.6;
+      closest.energy = -1;
+      spawnParticles(closest.x, closest.y, closest.spec.glow, 25);
+      flashScreen(closest.spec.glow[0], closest.spec.glow[1], closest.spec.glow[2], 0.05);
+      sfxThrottled('stomp', 140);
+    }
+  } else {
+    this.huntTarget = null;
+    if (Math.random() < 0.02) {
+      this.vx += (Math.random() - 0.5) * 0.5;
+      this.vy += (Math.random() - 0.5) * 0.5;
+    }
+  }
+  // Flee from Rorschach and Vampires
+  for (var i = 0; i < others.length; i++) {
+    var o = others[i];
+    if (o.type !== 'RORSCHACH' && o.type !== 'VAMPIRE') continue;
+    var dx = o.x - this.x, dy = o.y - this.y;
+    var d = Math.sqrt(dx*dx + dy*dy);
+    if (d < o.size * 3) {
+      this.vx -= dx / d * 0.1;
+      this.vy -= dy / d * 0.1;
+    }
+  }
+};
+
+Organism.prototype.behaveCruciform = function(dt, others) {
+  this.cruciNeighbors = [];
+  for (var i = 0; i < others.length; i++) {
+    var o = others[i];
+    if (o === this || o.type !== 'CRUCIFORM') continue;
+    var dx = o.x - this.x, dy = o.y - this.y;
+    var d = Math.sqrt(dx*dx + dy*dy);
+    if (d < 120) {
+      this.cruciNeighbors.push(o);
+      var ideal = 40 + this.size * 2;
+      var force = (d - ideal) * 0.001;
+      this.vx += dx / d * force;
+      this.vy += dy / d * force;
+    }
+    // Faction wars - fight opposite faction
+    if (d < 30 && o.faction !== this.faction && d > 5) {
+      if (Math.random() < 0.003 * dt) {
+        // Fight!
+        var loser = Math.random() < 0.5 ? this : o;
+        loser.energy = -1;
+        spawnParticles(loser.x, loser.y, [255, 50, 30], 20);
+        flashScreen(255, 30, 30, 0.04);
+        logEvent('INHABITANT FACTION WAR: ' + (this.faction === 'BOWINIAN' ? 'BOWINIAN' : 'HERETIC') + ' VS ' + o.faction, 'warn', 'faction_war');
+      }
+    }
+  }
+  // Flee from predators
+  for (var i = 0; i < others.length; i++) {
+    var o = others[i];
+    if (o.type !== 'SCRAMBLER' && o.type !== 'VAMPIRE') continue;
+    var dx = o.x - this.x, dy = o.y - this.y;
+    var d = Math.sqrt(dx*dx + dy*dy);
+    if (d < 150) {
+      this.vx -= dx / d * 0.08;
+      this.vy -= dy / d * 0.08;
+      this.fleeing = true;
+    }
+  }
+  if (!this.fleeing) {
+    this.vx += Math.sin(this.phase + this.x * 0.01) * 0.005;
+    this.vy += Math.cos(this.phase + this.y * 0.01) * 0.005;
+  }
+  this.fleeing = false;
+};
+
+Organism.prototype.behaveRorschach = function(dt, others) {
+  this.vx *= 0.95;
+  this.vy *= 0.95;
+  for (var i = 0; i < others.length; i++) {
+    var o = others[i];
+    if (o === this || o.type === 'RORSCHACH' || o.type === 'RIFTER') continue;
+    var dx = this.x - o.x, dy = this.y - o.y;
+    var d = Math.sqrt(dx*dx + dy*dy);
+    // Pull force with visible force lines
+    if (d < this.size * 5 && d > this.size) {
+      var pullStr = 0.01 / (d * 0.01);
+      o.vx += dx / d * pullStr;
+      o.vy += dy / d * pullStr;
+    }
+    // Consume
+    if (d < this.size * 0.8 && o.type !== 'SCRAMBLER' && o.type !== 'VAMPIRE') {
+      this.energy += o.energy * 0.3;
+      o.energy = -1;
+      spawnParticles(o.x, o.y, this.spec.glow, 15);
+    }
+  }
+  if (this.energy > 0.6) {
+    this.size = Math.min(80, this.size + 0.001 * dt);
+  }
+  for (var i = 0; i < this.tendrils.length; i++) {
+    var t = this.tendrils[i];
+    t.phase += t.speed * dt;
+    t.angle += Math.sin(t.phase) * 0.002 * dt;
+  }
+};
+
+Organism.prototype.behaveChimaera = function(dt, others) {
+  if (this.attached) {
+    this.x = this.attached.x + Math.sin(this.phase) * this.attached.size;
+    this.y = this.attached.y + Math.cos(this.phase) * this.attached.size;
+    this.attached.energy -= 0.001 * dt;
+    this.energy += 0.0008 * dt;
+    if (this.attached.energy <= 0) this.attached = null;
+    return;
+  }
+  var closest = null, closestD = Infinity;
+  for (var i = 0; i < others.length; i++) {
+    var o = others[i];
+    if (o === this || o.type === 'CHIMAERA' || o.type === 'RORSCHACH' || o.type === 'VAMPIRE') continue;
+    var dx = o.x - this.x, dy = o.y - this.y;
+    var d = Math.sqrt(dx*dx + dy*dy);
+    if (d < closestD) { closestD = d; closest = o; }
+  }
+  if (closest && closestD < 200) {
+    var dx = closest.x - this.x, dy = closest.y - this.y;
+    this.vx += dx / closestD * 0.04;
+    this.vy += dy / closestD * 0.04;
+    if (closestD < closest.size + this.size) {
+      this.attached = closest;
+      spawnParticles(this.x, this.y, this.spec.glow, 5);
+    }
+  }
+};
+
+Organism.prototype.behaveFirefly = function(dt, others) {
+  var sx = 0, sy = 0, cx = 0, cy = 0, ax = 0, ay = 0, n = 0;
+  for (var i = 0; i < others.length; i++) {
+    var o = others[i];
+    if (o === this || o.type !== 'FIREFLY') continue;
+    var dx = o.x - this.x, dy = o.y - this.y;
+    var d = Math.sqrt(dx*dx + dy*dy);
+    if (d < 100) {
+      if (d < 20) { sx -= dx / d; sy -= dy / d; }
+      ax += o.vx; ay += o.vy;
+      cx += o.x; cy += o.y;
+      this.pulseSync += Math.sin(o.pulsePhase - this.pulsePhase) * 0.05;
+      n++;
+    }
+  }
+  if (n > 0) {
+    this.vx += sx * 0.05 + (cx/n - this.x) * 0.001 + (ax/n - this.vx) * 0.05;
+    this.vy += sy * 0.05 + (cy/n - this.y) * 0.001 + (ay/n - this.vy) * 0.05;
+  }
+  this.pulsePhase += this.pulseSync * dt;
+  this.vx += (Math.random() - 0.5) * 0.05;
+  this.vy += (Math.random() - 0.5) * 0.05;
+  var spd = Math.sqrt(this.vx*this.vx + this.vy*this.vy);
+  if (spd > this.spec.speed) {
+    this.vx = this.vx/spd * this.spec.speed;
+    this.vy = this.vy/spd * this.spec.speed;
+  }
+};
+
+// ============ NEW SPECIES BEHAVIORS ============
+
+Organism.prototype.behaveVampire = function(dt, others) {
+  // Right-angle detection - freeze near grid lines
+  var gridSize = 60;
+  var nearGridX = Math.abs(this.x % gridSize) < 8 || Math.abs(this.x % gridSize - gridSize) < 8;
+  var nearGridY = Math.abs(this.y % gridSize) < 8 || Math.abs(this.y % gridSize - gridSize) < 8;
+  if (nearGridX && nearGridY && showGrid) {
+    this.rightAngleFreeze = 30;
+  }
+  if (this.rightAngleFreeze > 0) {
+    this.rightAngleFreeze -= dt;
+    this.vx *= 0.8;
+    this.vy *= 0.8;
+    return;
+  }
+
+  // Hunt - prefer Scramblers, then large organisms
+  var target = null, targetD = Infinity;
+  for (var i = 0; i < others.length; i++) {
+    var o = others[i];
+    if (o === this || o.type === 'VAMPIRE' || o.type === 'RORSCHACH') continue;
+    var dx = o.x - this.x, dy = o.y - this.y;
+    var d = Math.sqrt(dx*dx + dy*dy);
+    var priority = d;
+    if (o.type === 'SCRAMBLER') priority *= 0.5; // prefer scramblers
+    if (o.type === 'BICAMERAL') priority *= 0.6;
+    if (priority < targetD) { targetD = priority; target = o; }
+  }
+  if (target) {
+    var dx = target.x - this.x, dy = target.y - this.y;
+    var d = Math.sqrt(dx*dx + dy*dy);
+    this.vx += dx / d * 0.12;
+    this.vy += dy / d * 0.12;
+    this.huntTarget = target;
+    // Kill on contact - dramatic
+    if (d < this.size + target.size) {
+      // Dramatic kill
+      target.energy = -1;
+      this.energy = Math.min(1, this.energy + 0.4);
+      spawnBloodSpray(target.x, target.y, 40);
+      spawnParticles(target.x, target.y, [255, 255, 255], 15);
+      flashScreen(255, 20, 20, 0.12);
+      triggerScreenShake();
+      sfxThrottled('hit', 160);
+      logEvent('VAMPIRE KILL: ' + target.type + ' ELIMINATED. SECTOR ' + Math.floor(target.x / (W/8)), 'danger', 'vamp_kill');
+    }
+  } else {
+    if (Math.random() < 0.01) {
+      this.vx += (Math.random() - 0.5) * 0.8;
+      this.vy += (Math.random() - 0.5) * 0.8;
+    }
+  }
+  // Speed cap
+  var spd = Math.sqrt(this.vx*this.vx + this.vy*this.vy);
+  if (spd > this.spec.speed) {
+    this.vx = this.vx/spd * this.spec.speed;
+    this.vy = this.vy/spd * this.spec.speed;
+  }
+};
+
+Organism.prototype.behaveBicameral = function(dt, others) {
+  // Find group center or join a group
+  var groupMembers = [];
+  for (var i = 0; i < others.length; i++) {
+    var o = others[i];
+    if (o === this || o.type !== 'BICAMERAL') continue;
+    var dx = o.x - this.x, dy = o.y - this.y;
+    var d = Math.sqrt(dx*dx + dy*dy);
+    if (d < 100) groupMembers.push(o);
+  }
+
+  if (groupMembers.length > 0) {
+    // Move in sync with group
+    var avgVx = 0, avgVy = 0, avgX = 0, avgY = 0;
+    for (var i = 0; i < groupMembers.length; i++) {
+      avgVx += groupMembers[i].vx;
+      avgVy += groupMembers[i].vy;
+      avgX += groupMembers[i].x;
+      avgY += groupMembers[i].y;
+    }
+    avgVx /= groupMembers.length;
+    avgVy /= groupMembers.length;
+    avgX /= groupMembers.length;
+    avgY /= groupMembers.length;
+    // Sync velocity
+    this.vx += (avgVx - this.vx) * 0.1;
+    this.vy += (avgVy - this.vy) * 0.1;
+    // Maintain formation
+    this.vx += (avgX - this.x) * 0.003;
+    this.vy += (avgY - this.y) * 0.003;
+    // If a member dies, panic
+    if (groupMembers.length < 3) {
+      this.vx += (Math.random() - 0.5) * 0.8;
+      this.vy += (Math.random() - 0.5) * 0.8;
+    }
+  }
+
+  // Build structures faster (boost nearby Cruciform energy)
+  for (var i = 0; i < others.length; i++) {
+    var o = others[i];
+    if (o.type === 'CRUCIFORM') {
+      var dx = o.x - this.x, dy = o.y - this.y;
+      var d = Math.sqrt(dx*dx + dy*dy);
+      if (d < 60) {
+        o.energy += 0.0005 * dt;
+      }
+    }
+  }
+
+  this.vx += Math.sin(this.phase * 0.5) * 0.008;
+  this.vy += Math.cos(this.phase * 0.3) * 0.008;
+};
+
+Organism.prototype.behaveRifter = function(dt, others) {
+  // Immune to Rorschach pull - handled in Rorschach behavior
+  // Can survive near edges
+  // Sometimes sabotage Bowinian structures
+  if (this.sabotageCooldown <= 0) {
+    for (var i = 0; i < others.length; i++) {
+      var o = others[i];
+      if (o.type === 'CRUCIFORM' && o.faction === 'BOWINIAN') {
+        var dx = o.x - this.x, dy = o.y - this.y;
+        var d = Math.sqrt(dx*dx + dy*dy);
+        if (d < 40 && Math.random() < 0.005 * dt) {
+          o.energy -= 0.3;
+          spawnParticles(o.x, o.y, [30, 60, 180], 10);
+          this.sabotageCooldown = 200;
+          logEvent('RIFTER SABOTAGE: BOWINIAN STRUCTURE COMPROMISED', 'warn', 'rifter_sab');
+          break;
+        }
+      }
+    }
+  }
+
+  // Dark, deliberate movement
+  this.vx += Math.sin(this.phase * 0.3) * 0.01;
+  this.vy += Math.cos(this.phase * 0.2) * 0.01;
+
+  // Occasional bioluminescent flash
+  if (Math.random() < 0.002) {
+    this.flickerTimer = 5;
+  }
+};
+
+Organism.prototype.behaveNeurogel = function(dt, others) {
+  // Merge with other neurogels on contact
+  for (var i = 0; i < others.length; i++) {
+    var o = others[i];
+    if (o === this || o.type !== 'NEUROGEL' || o.energy <= 0) continue;
+    var dx = o.x - this.x, dy = o.y - this.y;
+    var d = Math.sqrt(dx*dx + dy*dy);
+    if (d < this.size + o.size && this.gelMass >= o.gelMass) {
+      // Merge
+      this.gelMass += o.gelMass;
+      this.size = Math.min(40, 8 + this.gelMass * 3);
+      this.energy = Math.min(1, this.energy + o.energy * 0.5);
+      o.energy = -1;
+      spawnParticles(this.x, this.y, [180, 80, 255], 12);
+      // Lightning arc effect
+      flashScreen(180, 80, 255, 0.04);
+    }
+  }
+
+  // Critical mass - split and spawn random species
+  if (this.gelMass >= 5) {
+    var possibleTypes = ['DRIFTER', 'SCRAMBLER', 'CRUCIFORM', 'FIREFLY', 'CHIMAERA', 'BICAMERAL', 'RIFTER'];
+    var newType = possibleTypes[Math.floor(Math.random() * possibleTypes.length)];
+    var child = new Organism(newType, this.x + (Math.random()-0.5)*30, this.y + (Math.random()-0.5)*30, this.gen + 1);
+    // Apply mutation
+    child.mutations.push('neurogel_born');
+    child.size *= 1.2;
+    this.gelMass = 1;
+    this.size = 8 + this.gelMass * 3;
+    this.energy *= 0.3;
+    spawnParticles(this.x, this.y, [255, 200, 255], 30);
+    flashScreen(180, 80, 255, 0.1);
+    logEvent('NEUROGEL CRITICAL MASS REACHED. SPECIATION EVENT: ' + newType, 'warn', 'neurogel_spec');
+    return child;
+  }
+
+  // Slow drift toward other neurogels
+  for (var i = 0; i < others.length; i++) {
+    var o = others[i];
+    if (o === this || o.type !== 'NEUROGEL') continue;
+    var dx = o.x - this.x, dy = o.y - this.y;
+    var d = Math.sqrt(dx*dx + dy*dy);
+    if (d < 200 && d > 10) {
+      this.vx += dx / d * 0.01;
+      this.vy += dy / d * 0.01;
+    }
+  }
+
+  // Update arcs
+  for (var i = 0; i < this.gelArcs.length; i++) {
+    this.gelArcs[i].angle += 0.05 * dt;
+    this.gelArcs[i].target += 0.03 * dt;
+  }
+
+  this.vx += Math.sin(this.phase * 0.2) * 0.003;
+  this.vy += Math.cos(this.phase * 0.15) * 0.003;
+};
+
+Organism.prototype.behaveLenie = function(dt, others) {
+  // Lenie Clarke - deliberately moves toward Behemoth clouds
+  var nearestCloud = null, nearestCloudD = Infinity;
+  for (var i = 0; i < behemothClouds.length; i++) {
+    var cloud = behemothClouds[i];
+    var dx = cloud.x - this.x, dy = cloud.y - this.y;
+    var d = Math.sqrt(dx*dx + dy*dy);
+    if (d < nearestCloudD) { nearestCloudD = d; nearestCloud = cloud; }
+  }
+
+  if (nearestCloud) {
+    var dx = nearestCloud.x - this.x, dy = nearestCloud.y - this.y;
+    var d = Math.sqrt(dx*dx + dy*dy);
+    this.vx += dx / d * 0.04;
+    this.vy += dy / d * 0.04;
+    // If she reaches it, double the spread rate
+    if (d < nearestCloud.radius) {
+      nearestCloud.growRate = 0.2;
+      nearestCloud.maxRadius = Math.min(250, nearestCloud.maxRadius * 1.001);
+      if (Math.random() < 0.01) {
+        logEvent('LENIE CLARKE AMPLIFYING OUTBREAK. SPREAD RATE DOUBLED.', 'critical', 'lenie_amp');
+      }
+    }
+  } else {
+    // Wander, occasionally trigger new outbreak
+    this.vx += Math.sin(this.phase * 0.4) * 0.015;
+    this.vy += Math.cos(this.phase * 0.3) * 0.015;
+    if (Math.random() < 0.0005 * dt && behemothClouds.length < 3) {
+      spawnBehemoth(this.x, this.y);
+      logEvent('LENIE CLARKE HAS INITIATED NEW OUTBREAK', 'critical', 'lenie_outbreak');
+    }
+  }
+
+  // Occasional red eye flash
+  if (Math.random() < 0.01) this.flickerTimer = 8;
+};
+
+Organism.prototype.reproduce = function() {
+  generation++;
+  var child = new Organism(
+    this.type,
+    this.x + (Math.random()-0.5) * 30,
+    this.y + (Math.random()-0.5) * 30,
+    this.gen + 1
+  );
+  child.depth = this.depth + (Math.random() - 0.5) * 0.1;
+  child.depth = Math.max(0.1, Math.min(1, child.depth));
+  child.faction = this.faction;
+  this.energy *= 0.5;
+
+  // Enhanced mutation system
+  if (Math.random() < 0.08) {
+    var mutType = Math.random();
+    if (mutType < 0.25) {
+      child.size *= 0.7 + Math.random() * 0.6;
+      child.mutations.push('size_shift');
+    } else if (mutType < 0.5) {
+      child.spec = Object.assign({}, child.spec);
+      child.spec.speed *= 0.8 + Math.random() * 0.4;
+      child.mutations.push('speed_shift');
+      if (child.spec.speed > SPECIES[child.type].speed * 1.5) {
+        logEvent('EVOLUTION: ' + child.type + ' VARIANT DETECTED - SPEED ' + Math.floor(child.spec.speed / SPECIES[child.type].speed * 100) + '% ABOVE BASELINE', 'warn', 'evo_' + child.type);
+      }
+    } else if (mutType < 0.75) {
+      child.mutations.push('luminous');
+      logEvent('EVOLUTION: ' + child.type + ' VARIANT DETECTED - BIOLUMINESCENCE ' + (200 + Math.floor(Math.random()*200)) + '% ABOVE BASELINE', 'warn', 'evo_lum_' + child.type);
+    } else {
+      child.mutations.push('gigantism');
+      child.size *= 1.6;
+    }
+    child.maxAge *= 0.8 + Math.random() * 0.4;
+  }
+
+  spawnParticles(this.x, this.y, this.spec.glow, 10);
+  sfxThrottled('pop', 220);
+  return child;
+};
+
+// ============ DRAW METHODS ============
+
+Organism.prototype.draw = function() {
+  var pulse = Math.sin(this.pulsePhase) * 0.3 + 0.7;
+  var glow = this.spec.glow;
+  var energyAlpha = Math.max(0.15, this.energy);
+  var glowStr = this.mutations.indexOf('luminous') >= 0 ? 2.5 : 1;
+  var depthAlpha = 0.5 + this.depth * 0.5;
+  var effectiveAlpha = energyAlpha * depthAlpha;
+
+  // Infection color override
+  if (this.infected) {
+    glow = [200, 120 + Math.sin(this.phase * 3) * 40, 20];
+    effectiveAlpha *= 0.7 + Math.sin(this.phase * 5) * 0.3;
+  }
+
+  // Flicker effect (being attacked)
+  if (this.flickerTimer > 0) {
+    if (Math.floor(this.flickerTimer) % 2 === 0) return;
+  }
+
+  // Afterimages
+  for (var i = 0; i < this.afterimages.length; i++) {
+    var ai = this.afterimages[i];
+    ctx.save();
+    ctx.globalAlpha = ai.a * 0.3;
+    ctx.translate(ai.x, ai.y);
+    var aiGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, ai.size);
+    aiGrad.addColorStop(0, 'rgba(' + glow[0] + ',' + glow[1] + ',' + glow[2] + ',0.3)');
+    aiGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = aiGrad;
+    ctx.fillRect(-ai.size, -ai.size, ai.size * 2, ai.size * 2);
+    ctx.restore();
+  }
+
+  // Trail
+  if (this.trail.length > 1) {
+    ctx.beginPath();
+    for (var i = 0; i < this.trail.length; i++) {
+      var t = this.trail[i];
+      if (i === 0) ctx.moveTo(t.x, t.y);
+      else ctx.lineTo(t.x, t.y);
+    }
+    ctx.strokeStyle = 'rgba(' + glow[0] + ',' + glow[1] + ',' + glow[2] + ',0.06)';
+    ctx.lineWidth = this.type === 'SCRAMBLER' || this.type === 'VAMPIRE' ? 2 : 1;
+    ctx.stroke();
+  }
+
+  ctx.save();
+  ctx.translate(this.x, this.y);
+
+  // Brighter pulsing during action
+  var actionPulse = (this.huntTarget || this.lunging) ? 1.3 : 1;
+
+  // Outer glow aura
+  var glowSize = this.size * (2 + pulse * 0.8) * glowStr * actionPulse;
+  var grad = ctx.createRadialGradient(0, 0, 0, 0, 0, glowSize);
+  grad.addColorStop(0, 'rgba(' + glow[0] + ',' + glow[1] + ',' + glow[2] + ',' + (0.2 * effectiveAlpha * pulse * actionPulse) + ')');
+  grad.addColorStop(0.3, 'rgba(' + glow[0] + ',' + glow[1] + ',' + glow[2] + ',' + (0.08 * effectiveAlpha) + ')');
+  grad.addColorStop(0.6, 'rgba(' + glow[0] + ',' + glow[1] + ',' + glow[2] + ',' + (0.02 * effectiveAlpha) + ')');
+  grad.addColorStop(1, 'transparent');
+  ctx.fillStyle = grad;
+  ctx.fillRect(-glowSize, -glowSize, glowSize * 2, glowSize * 2);
+
+  // AI sprite underlay for RORSCHACH megafauna (procedural detail draws on top as fallback)
+  if (this.type === 'RORSCHACH' && imgReady(ASSET.rorschach)) {
+    var im = ASSET.rorschach;
+    var bob = 1 + Math.sin(this.pulsePhase) * 0.04; // idle breathing
+    var sw = this.size * 3.4 * bob;
+    var sh = sw * (im.naturalHeight / im.naturalWidth);
+    ctx.save();
+    ctx.globalAlpha = effectiveAlpha * 0.85;
+    ctx.rotate(this.rot || 0);
+    ctx.drawImage(im, -sw / 2, -sh / 2, sw, sh);
+    ctx.restore();
+  }
+
+  switch(this.type) {
+    case 'DRIFTER': this.drawDrifter(pulse, effectiveAlpha); break;
+    case 'SCRAMBLER': this.drawScrambler(pulse, effectiveAlpha); break;
+    case 'CRUCIFORM': this.drawCruciform(pulse, effectiveAlpha); break;
+    case 'RORSCHACH': this.drawRorschach(pulse, effectiveAlpha); break;
+    case 'CHIMAERA': this.drawChimaera(pulse, effectiveAlpha); break;
+    case 'FIREFLY': this.drawFirefly(pulse, effectiveAlpha); break;
+    case 'VAMPIRE': this.drawVampire(pulse, effectiveAlpha); break;
+    case 'BICAMERAL': this.drawBicameral(pulse, effectiveAlpha); break;
+    case 'RIFTER': this.drawRifter(pulse, effectiveAlpha); break;
+    case 'NEUROGEL': this.drawNeurogel(pulse, effectiveAlpha); break;
+    case 'LENIE': this.drawLenie(pulse, effectiveAlpha); break;
+  }
+
+  // Tagged indicator
+  if (this.tagged) {
+    ctx.strokeStyle = 'rgba(255, 170, 30, ' + (0.4 + pulse * 0.3) + ')';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.arc(0, 0, this.size + 8, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(255, 170, 30, 0.6)';
+    ctx.font = '7px Share Tech Mono, monospace';
+    ctx.fillText('TAG-' + String(this.id).padStart(3, '0'), this.size + 10, -this.size);
+  }
+
+  ctx.restore();
+};
+
+Organism.prototype.drawDrifter = function(pulse, alpha) {
+  var g = this.spec.glow;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, this.size, this.size * 0.65, 0, 0, Math.PI, true);
+  ctx.closePath();
+  var bellGrad = ctx.createRadialGradient(0, -this.size * 0.2, 0, 0, 0, this.size);
+  bellGrad.addColorStop(0, 'rgba(' + (g[0]+20) + ',' + (g[1]+40) + ',' + (g[2]+20) + ',' + (0.15 * alpha * pulse) + ')');
+  bellGrad.addColorStop(0.5, 'rgba(' + g[0] + ',' + g[1] + ',' + g[2] + ',' + (0.06 * alpha) + ')');
+  bellGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = bellGrad;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(' + g[0] + ',' + g[1] + ',' + g[2] + ',' + (0.4 * alpha * pulse) + ')';
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  for (var i = 0; i < 3; i++) {
+    ctx.beginPath();
+    var startX = (i - 1) * this.size * 0.3;
+    ctx.moveTo(startX, -this.size * 0.1);
+    ctx.quadraticCurveTo(startX + Math.sin(this.phase + i) * 3, -this.size * 0.35, startX + Math.sin(this.phase * 0.7 + i * 1.5) * 4, -this.size * 0.5);
+    ctx.strokeStyle = 'rgba(' + (g[0]+30) + ',' + (g[1]+60) + ',' + (g[2]+30) + ',' + (0.2 * alpha * pulse) + ')';
+    ctx.lineWidth = 0.6;
+    ctx.stroke();
+  }
+  for (var i = 0; i < this.tentacles; i++) {
+    var tx = (i / (this.tentacles-1) - 0.5) * this.size * 1.6;
+    ctx.beginPath();
+    ctx.moveTo(tx, 0);
+    for (var j = 1; j <= 10; j++) {
+      var ty = j * this.size * 0.3;
+      var wave = Math.sin(this.phase + i * 0.8 + j * 0.4) * (4 + j * 0.5);
+      ctx.lineTo(tx + wave, ty);
+    }
+    ctx.strokeStyle = 'rgba(' + g[0] + ',' + g[1] + ',' + g[2] + ',' + (0.12 * alpha * (1 - pulse * 0.2)) + ')';
+    ctx.lineWidth = 0.7;
+    ctx.stroke();
+  }
+  for (var i = 0; i < 4; i++) {
+    var ox = Math.sin(this.phase + i * 1.7) * this.size * 0.3;
+    var oy = -(Math.cos(this.phase + i * 1.1) * this.size * 0.15 + this.size * 0.18);
+    var nodeGrad = ctx.createRadialGradient(ox, oy, 0, ox, oy, 3);
+    nodeGrad.addColorStop(0, 'rgba(' + (g[0]+40) + ',' + Math.min(255, g[1]+80) + ',' + (g[2]+20) + ',' + (0.7 * alpha * pulse) + ')');
+    nodeGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = nodeGrad;
+    ctx.fillRect(ox - 3, oy - 3, 6, 6);
+  }
+};
+
+Organism.prototype.drawScrambler = function(pulse, alpha) {
+  var g = this.spec.glow;
+  var angle = Math.atan2(this.vy, this.vx);
+  ctx.rotate(angle);
+  // Lunge animation
+  var lungeOffset = this.lungeTimer > 0 ? Math.sin(this.lungeTimer) * 5 : 0;
+  ctx.translate(lungeOffset, 0);
+
+  for (var i = this.segments - 1; i >= 0; i--) {
+    var sx = -i * this.size * 0.5;
+    var segSize = this.size * (1 - i * 0.1);
+    var segGrad = ctx.createRadialGradient(sx, 0, 0, sx, 0, segSize * 1.5);
+    segGrad.addColorStop(0, 'rgba(' + g[0] + ',' + g[1] + ',' + g[2] + ',' + ((0.15 - i*0.015) * alpha) + ')');
+    segGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = segGrad;
+    ctx.fillRect(sx - segSize * 1.5, -segSize * 1.5, segSize * 3, segSize * 3);
+    ctx.beginPath();
+    ctx.ellipse(sx, 0, segSize, segSize * 0.6, 0, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(' + (g[0]*0.5) + ',' + (g[1]*0.5) + ',' + (g[2]*0.5) + ',' + ((0.12 - i*0.01) * alpha) + ')';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(' + g[0] + ',' + g[1] + ',' + g[2] + ',' + (0.35 * alpha * (i === 0 ? pulse : 0.7)) + ')';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+  }
+  var mandOpen = Math.sin(this.phase * 3) * 0.3 + 0.5;
+  for (var s = -1; s <= 1; s += 2) {
+    ctx.beginPath();
+    ctx.moveTo(this.size, 0);
+    ctx.quadraticCurveTo(this.size * 1.5, s * this.size * mandOpen, this.size * 2.2, s * this.size * 0.3);
+    ctx.strokeStyle = 'rgba(' + Math.min(255, g[0]+80) + ',' + g[1] + ',' + g[2] + ',' + (0.5 * alpha) + ')';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+  }
+  for (var s = -1; s <= 1; s += 2) {
+    var pitGrad = ctx.createRadialGradient(this.size * 0.5, s * this.size * 0.25, 0, this.size * 0.5, s * this.size * 0.25, 4);
+    pitGrad.addColorStop(0, 'rgba(255,' + Math.floor(40+pulse*40) + ',0,' + (0.6 * alpha * pulse) + ')');
+    pitGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = pitGrad;
+    ctx.fillRect(this.size * 0.5 - 4, s * this.size * 0.25 - 4, 8, 8);
+  }
+  if (this.huntTarget) {
+    ctx.translate(-lungeOffset, 0);
+    ctx.rotate(-angle);
+    ctx.beginPath();
+    ctx.setLineDash([2, 4]);
+    ctx.moveTo(0, 0);
+    var tdx = this.huntTarget.x - this.x;
+    var tdy = this.huntTarget.y - this.y;
+    var td = Math.sqrt(tdx*tdx + tdy*tdy);
+    ctx.lineTo(tdx / td * Math.min(td, 50), tdy / td * Math.min(td, 50));
+    ctx.strokeStyle = 'rgba(255, 50, 30, ' + (0.15 * pulse) + ')';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+};
+
+Organism.prototype.drawCruciform = function(pulse, alpha) {
+  var g = this.spec.glow;
+  // Color shift based on faction
+  if (this.faction === 'HERETIC') {
+    g = [180, 80, 80]; // redder tint
+  }
+  for (var a = 0; a < 4; a++) {
+    var ang = a * Math.PI / 2 + this.phase * 0.2;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    var ex = Math.cos(ang) * this.size * 1.8;
+    var ey = Math.sin(ang) * this.size * 1.8;
+    ctx.lineTo(ex, ey);
+    ctx.strokeStyle = 'rgba(' + g[0] + ',' + g[1] + ',' + g[2] + ',' + (0.35 * alpha * pulse) + ')';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    var tipGrad = ctx.createRadialGradient(ex, ey, 0, ex, ey, 5);
+    tipGrad.addColorStop(0, 'rgba(' + g[0] + ',' + g[1] + ',' + g[2] + ',' + (0.4 * alpha * pulse) + ')');
+    tipGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = tipGrad;
+    ctx.fillRect(ex - 5, ey - 5, 10, 10);
+  }
+  var coreGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, this.size);
+  coreGrad.addColorStop(0, 'rgba(' + g[0] + ',' + g[1] + ',' + g[2] + ',' + (0.25 * alpha * pulse) + ')');
+  coreGrad.addColorStop(0.5, 'rgba(' + g[0] + ',' + g[1] + ',' + g[2] + ',' + (0.08 * alpha) + ')');
+  coreGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = coreGrad;
+  ctx.beginPath();
+  ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+  ctx.fill();
+  for (var i = 0; i < this.cruciNeighbors.length; i++) {
+    var nb = this.cruciNeighbors[i];
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(nb.x - this.x, nb.y - this.y);
+    ctx.strokeStyle = 'rgba(' + g[0] + ',' + g[1] + ',' + g[2] + ',0.06)';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  }
+};
+
+Organism.prototype.drawRorschach = function(pulse, alpha) {
+  var g = this.spec.glow;
+  var auraGrad = ctx.createRadialGradient(0, 0, this.size * 0.3, 0, 0, this.size * 2.5);
+  auraGrad.addColorStop(0, 'rgba(5, 5, 10, ' + (0.3 * alpha) + ')');
+  auraGrad.addColorStop(0.5, 'rgba(5, 5, 10, ' + (0.1 * alpha) + ')');
+  auraGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = auraGrad;
+  ctx.fillRect(-this.size * 2.5, -this.size * 2.5, this.size * 5, this.size * 5);
+  for (var i = 0; i < this.tendrils.length; i++) {
+    var t = this.tendrils[i];
+    var len = this.size * t.length * (1 + Math.sin(t.phase) * 0.3);
+    var ex = Math.cos(t.angle) * len;
+    var ey = Math.sin(t.angle) * len;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    var cpx = ex * 0.5 + Math.sin(t.phase * 2) * this.size * 0.2;
+    var cpy = ey * 0.5 + Math.cos(t.phase * 1.5) * this.size * 0.2;
+    ctx.quadraticCurveTo(cpx, cpy, ex, ey);
+    ctx.strokeStyle = 'rgba(' + g[0] + ',' + g[1] + ',' + g[2] + ',' + (0.15 * alpha) + ')';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+  for (var i = 0; i < 5; i++) {
+    var ox = Math.sin(this.phase * 0.3 + i * 1.3) * this.size * 0.2;
+    var oy = Math.cos(this.phase * 0.2 + i * 1.7) * this.size * 0.2;
+    var r = this.size * (0.4 + Math.sin(this.phase * 0.1 + i) * 0.1);
+    var bodyGrad = ctx.createRadialGradient(ox, oy, 0, ox, oy, r);
+    bodyGrad.addColorStop(0, 'rgba(' + (g[0]+20) + ',' + (g[1]+20) + ',' + (g[2]+20) + ',' + (0.08 * alpha * pulse) + ')');
+    bodyGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = bodyGrad;
+    ctx.beginPath();
+    ctx.arc(ox, oy, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.beginPath();
+  ctx.arc(0, 0, this.size * 0.5, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(' + g[0] + ',' + g[1] + ',' + g[2] + ',' + (0.12 * alpha * pulse) + ')';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  var eyeGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, this.size * 0.15);
+  eyeGrad.addColorStop(0, 'rgba(200, 200, 255, ' + (0.15 * alpha * pulse) + ')');
+  eyeGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = eyeGrad;
+  ctx.fillRect(-this.size * 0.15, -this.size * 0.15, this.size * 0.3, this.size * 0.3);
+
+  // Draw force lines to nearby organisms being pulled
+  ctx.save();
+  ctx.translate(-this.x, -this.y);
+  for (var i = 0; i < organisms.length; i++) {
+    var o = organisms[i];
+    if (o === this || o.type === 'RORSCHACH' || o.type === 'RIFTER') continue;
+    var dx = this.x - o.x, dy = this.y - o.y;
+    var d = Math.sqrt(dx*dx + dy*dy);
+    if (d < this.size * 4 && d > this.size) {
+      ctx.beginPath();
+      ctx.moveTo(o.x, o.y);
+      ctx.lineTo(this.x, this.y);
+      ctx.strokeStyle = 'rgba(120, 120, 120, ' + (0.04 * (1 - d / (this.size * 4))) + ')';
+      ctx.lineWidth = 0.3;
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+};
+
+Organism.prototype.drawChimaera = function(pulse, alpha) {
+  var g = this.spec.glow;
+  var bodyGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, this.size * 1.5);
+  bodyGrad.addColorStop(0, 'rgba(' + g[0] + ',' + g[1] + ',' + g[2] + ',' + (0.3 * alpha * pulse) + ')');
+  bodyGrad.addColorStop(0.5, 'rgba(' + g[0] + ',' + g[1] + ',' + g[2] + ',' + (0.1 * alpha) + ')');
+  bodyGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = bodyGrad;
+  ctx.beginPath();
+  ctx.arc(0, 0, this.size * 1.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(' + (g[0]*0.5) + ',' + (g[1]*0.5) + ',' + (g[2]*0.5) + ',' + (0.15 * alpha) + ')';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(' + g[0] + ',' + g[1] + ',' + g[2] + ',' + (0.4 * alpha * pulse) + ')';
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+  for (var i = 0; i < 6; i++) {
+    var ang = i * Math.PI / 3 + this.phase * 0.5;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    var len = this.size * (2 + Math.sin(this.phase + i) * 0.5);
+    var ex = Math.cos(ang) * len;
+    var ey = Math.sin(ang) * len;
+    ctx.quadraticCurveTo(Math.cos(ang + 0.3) * len * 0.6, Math.sin(ang + 0.3) * len * 0.6, ex, ey);
+    ctx.strokeStyle = 'rgba(' + g[0] + ',' + g[1] + ',' + g[2] + ',' + (0.12 * alpha) + ')';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  }
+  if (this.attached) {
+    ctx.beginPath();
+    ctx.arc(0, 0, this.size + 2, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255, 0, 0, ' + (0.2 * pulse) + ')';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  }
+};
+
+Organism.prototype.drawFirefly = function(pulse, alpha) {
+  var g = this.spec.glow;
+  var p = (Math.sin(this.pulsePhase) + 1) / 2;
+  var glowR = this.size * (3 + p * 5);
+  var fGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, glowR);
+  fGrad.addColorStop(0, 'rgba(' + g[0] + ',' + g[1] + ',' + g[2] + ',' + (0.5 * alpha * p) + ')');
+  fGrad.addColorStop(0.2, 'rgba(' + g[0] + ',' + g[1] + ',' + g[2] + ',' + (0.15 * alpha * p) + ')');
+  fGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = fGrad;
+  ctx.fillRect(-glowR, -glowR, glowR * 2, glowR * 2);
+  ctx.beginPath();
+  ctx.arc(0, 0, this.size * (0.5 + p * 0.5), 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(' + Math.min(255, g[0]+60) + ',' + Math.min(255, g[1]+60) + ',' + Math.min(255, g[2]+40) + ',' + (0.7 * alpha * (0.3 + p * 0.7)) + ')';
+  ctx.fill();
+};
+
+// ============ NEW SPECIES DRAW METHODS ============
+
+Organism.prototype.drawVampire = function(pulse, alpha) {
+  var g = this.spec.glow;
+  var angle = Math.atan2(this.vy, this.vx);
+
+  // Angular geometric shape - predatory
+  ctx.rotate(angle);
+
+  // Main body - angular diamond/rhombus
+  ctx.beginPath();
+  ctx.moveTo(this.size * 1.2, 0);
+  ctx.lineTo(0, -this.size * 0.6);
+  ctx.lineTo(-this.size * 0.8, 0);
+  ctx.lineTo(0, this.size * 0.6);
+  ctx.closePath();
+
+  var bodyGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, this.size);
+  bodyGrad.addColorStop(0, 'rgba(' + g[0] + ',' + g[1] + ',' + g[2] + ',' + (0.25 * alpha * pulse) + ')');
+  bodyGrad.addColorStop(1, 'rgba(' + Math.floor(g[0]*0.3) + ',' + Math.floor(g[1]*0.3) + ',' + Math.floor(g[2]*0.3) + ',' + (0.1 * alpha) + ')');
+  ctx.fillStyle = bodyGrad;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(' + g[0] + ',' + g[1] + ',' + g[2] + ',' + (0.6 * alpha * pulse) + ')';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Angular wing structures
+  for (var s = -1; s <= 1; s += 2) {
+    ctx.beginPath();
+    ctx.moveTo(-this.size * 0.3, s * this.size * 0.3);
+    ctx.lineTo(-this.size * 0.8, s * this.size * 1.0);
+    ctx.lineTo(-this.size * 1.2, s * this.size * 0.8);
+    ctx.strokeStyle = 'rgba(' + g[0] + ',' + g[1] + ',' + g[2] + ',' + (0.3 * alpha) + ')';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Eyes - crimson
+  for (var s = -1; s <= 1; s += 2) {
+    var eyeGrad = ctx.createRadialGradient(this.size * 0.4, s * this.size * 0.15, 0, this.size * 0.4, s * this.size * 0.15, 4);
+    eyeGrad.addColorStop(0, 'rgba(255, 40, 20, ' + (0.8 * alpha * pulse) + ')');
+    eyeGrad.addColorStop(0.5, 'rgba(200, 20, 10, ' + (0.4 * alpha) + ')');
+    eyeGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = eyeGrad;
+    ctx.fillRect(this.size * 0.4 - 4, s * this.size * 0.15 - 4, 8, 8);
+  }
+
+  // Right-angle freeze indicator
+  if (this.rightAngleFreeze > 0) {
+    ctx.rotate(-angle);
+    ctx.strokeStyle = 'rgba(255, 0, 0, ' + (0.3 * Math.sin(this.phase * 10)) + ')';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(0, 0, this.size * 1.5, 0, Math.PI * 2);
+    ctx.stroke();
+    // Right angle symbol
+    ctx.beginPath();
+    ctx.moveTo(-8, -8);
+    ctx.lineTo(-8, 8);
+    ctx.lineTo(8, 8);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Hunting line
+  if (this.huntTarget) {
+    ctx.rotate(-angle);
+    ctx.beginPath();
+    ctx.setLineDash([4, 4]);
+    ctx.moveTo(0, 0);
+    var tdx = this.huntTarget.x - this.x;
+    var tdy = this.huntTarget.y - this.y;
+    var td = Math.sqrt(tdx*tdx + tdy*tdy);
+    ctx.lineTo(tdx / td * Math.min(td, 80), tdy / td * Math.min(td, 80));
+    ctx.strokeStyle = 'rgba(255, 20, 20, ' + (0.2 * pulse) + ')';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+};
+
+Organism.prototype.drawBicameral = function(pulse, alpha) {
+  var g = this.spec.glow;
+
+  // Teal/cyan humanoid-ish sprite
+  var bodyGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, this.size * 2);
+  bodyGrad.addColorStop(0, 'rgba(' + g[0] + ',' + g[1] + ',' + g[2] + ',' + (0.2 * alpha * pulse) + ')');
+  bodyGrad.addColorStop(0.5, 'rgba(' + g[0] + ',' + g[1] + ',' + g[2] + ',' + (0.08 * alpha) + ')');
+  bodyGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = bodyGrad;
+  ctx.fillRect(-this.size * 2, -this.size * 2, this.size * 4, this.size * 4);
+
+  // Core - round body
+  ctx.beginPath();
+  ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(' + Math.floor(g[0]*0.4) + ',' + Math.floor(g[1]*0.4) + ',' + Math.floor(g[2]*0.4) + ',' + (0.15 * alpha) + ')';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(' + g[0] + ',' + g[1] + ',' + g[2] + ',' + (0.4 * alpha * pulse) + ')';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Link lines to nearby bicamerals
+  for (var i = 0; i < organisms.length; i++) {
+    var o = organisms[i];
+    if (o === this || o.type !== 'BICAMERAL') continue;
+    var dx = o.x - this.x, dy = o.y - this.y;
+    var d = Math.sqrt(dx*dx + dy*dy);
+    if (d < 80) {
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(dx, dy);
+      ctx.strokeStyle = 'rgba(' + g[0] + ',' + g[1] + ',' + g[2] + ',' + (0.15 * alpha * pulse) + ')';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+      // Small pulse along line
+      var px = dx * (Math.sin(this.phase * 2) * 0.5 + 0.5);
+      var py = dy * (Math.sin(this.phase * 2) * 0.5 + 0.5);
+      ctx.beginPath();
+      ctx.arc(px, py, 2, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(' + g[0] + ',' + g[1] + ',' + g[2] + ',' + (0.4 * alpha) + ')';
+      ctx.fill();
+    }
+  }
+
+  // Neural mesh indicator
+  var meshGrad = ctx.createRadialGradient(0, -this.size * 0.3, 0, 0, -this.size * 0.3, 4);
+  meshGrad.addColorStop(0, 'rgba(' + Math.min(255, g[0]+60) + ',' + Math.min(255, g[1]+60) + ',' + Math.min(255, g[2]+20) + ',' + (0.5 * alpha * pulse) + ')');
+  meshGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = meshGrad;
+  ctx.fillRect(-4, -this.size * 0.3 - 4, 8, 8);
+};
+
+Organism.prototype.drawRifter = function(pulse, alpha) {
+  var g = this.spec.glow;
+
+  // Dark sprite with subtle bioluminescent patches
+  ctx.beginPath();
+  ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(5, 8, 20, ' + (0.3 * alpha) + ')';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(' + g[0] + ',' + g[1] + ',' + g[2] + ',' + (0.2 * alpha) + ')';
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+
+  // Bioluminescent patches - occasional flash
+  var flashIntensity = this.flickerTimer > 0 ? 1 : 0.2;
+  for (var i = 0; i < 3; i++) {
+    var px = Math.sin(i * 2.1 + this.phase * 0.1) * this.size * 0.5;
+    var py = Math.cos(i * 1.7 + this.phase * 0.1) * this.size * 0.5;
+    var patchGrad = ctx.createRadialGradient(px, py, 0, px, py, 3 * flashIntensity);
+    patchGrad.addColorStop(0, 'rgba(' + g[0] + ',' + g[1] + ',' + g[2] + ',' + (0.5 * alpha * flashIntensity) + ')');
+    patchGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = patchGrad;
+    ctx.fillRect(px - 3, py - 3, 6, 6);
+  }
+
+  // Dark "diveskin" outline
+  ctx.beginPath();
+  ctx.arc(0, 0, this.size + 1, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(10, 15, 40, ' + (0.2 * alpha) + ')';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+};
+
+Organism.prototype.drawNeurogel = function(pulse, alpha) {
+  var g = this.spec.glow;
+  var massScale = 1 + this.gelMass * 0.3;
+
+  // Amorphous blob - multiple overlapping circles
+  for (var i = 0; i < 4; i++) {
+    var ox = Math.sin(this.phase * 0.5 + i * 1.5) * this.size * 0.3;
+    var oy = Math.cos(this.phase * 0.3 + i * 2.0) * this.size * 0.3;
+    var r = this.size * (0.5 + Math.sin(this.phase * 0.2 + i) * 0.15);
+    var blobGrad = ctx.createRadialGradient(ox, oy, 0, ox, oy, r);
+    blobGrad.addColorStop(0, 'rgba(' + g[0] + ',' + g[1] + ',' + g[2] + ',' + (0.12 * alpha * pulse) + ')');
+    blobGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = blobGrad;
+    ctx.beginPath();
+    ctx.arc(ox, oy, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Core
+  ctx.beginPath();
+  ctx.arc(0, 0, this.size * 0.6, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(' + Math.floor(g[0]*0.5) + ',' + Math.floor(g[1]*0.5) + ',' + Math.floor(g[2]*0.5) + ',' + (0.15 * alpha) + ')';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(' + g[0] + ',' + g[1] + ',' + g[2] + ',' + (0.3 * alpha * pulse) + ')';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Internal electrical arcs
+  for (var i = 0; i < this.gelArcs.length; i++) {
+    var arc = this.gelArcs[i];
+    var ax1 = Math.cos(arc.angle) * this.size * 0.4;
+    var ay1 = Math.sin(arc.angle) * this.size * 0.4;
+    var ax2 = Math.cos(arc.target) * this.size * 0.4;
+    var ay2 = Math.sin(arc.target) * this.size * 0.4;
+    // Jagged lightning
+    ctx.beginPath();
+    ctx.moveTo(ax1, ay1);
+    var midX = (ax1 + ax2) / 2 + (Math.random() - 0.5) * this.size * 0.3;
+    var midY = (ay1 + ay2) / 2 + (Math.random() - 0.5) * this.size * 0.3;
+    ctx.lineTo(midX, midY);
+    ctx.lineTo(ax2, ay2);
+    ctx.strokeStyle = 'rgba(200, 150, 255, ' + (0.3 * alpha * pulse) + ')';
+    ctx.lineWidth = 0.5 + Math.random() * 0.5;
+    ctx.stroke();
+  }
+
+  // Mass indicator
+  if (this.gelMass > 1) {
+    ctx.fillStyle = 'rgba(200, 150, 255, 0.3)';
+    ctx.font = '6px Share Tech Mono, monospace';
+    ctx.fillText('M:' + this.gelMass, this.size + 3, -2);
+  }
+};
+
+Organism.prototype.drawLenie = function(pulse, alpha) {
+  // Very dark body
+  ctx.beginPath();
+  ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(3, 3, 10, ' + (0.4 * alpha) + ')';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(20, 20, 50, ' + (0.3 * alpha) + ')';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Dark diveskin outline
+  ctx.beginPath();
+  ctx.arc(0, 0, this.size + 2, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(5, 5, 20, ' + (0.15 * alpha) + ')';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  // Single red eye
+  var eyePulse = this.flickerTimer > 0 ? 1.0 : (0.4 + Math.sin(this.phase * 2) * 0.3);
+  var eyeGrad = ctx.createRadialGradient(this.size * 0.3, -this.size * 0.1, 0, this.size * 0.3, -this.size * 0.1, 5);
+  eyeGrad.addColorStop(0, 'rgba(255, 20, 0, ' + (eyePulse * alpha) + ')');
+  eyeGrad.addColorStop(0.5, 'rgba(200, 0, 0, ' + (eyePulse * 0.4 * alpha) + ')');
+  eyeGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = eyeGrad;
+  ctx.fillRect(this.size * 0.3 - 5, -this.size * 0.1 - 5, 10, 10);
+
+  // Name label
+  ctx.fillStyle = 'rgba(255, 30, 30, 0.4)';
+  ctx.font = '7px Share Tech Mono, monospace';
+  ctx.fillText('CLARKE', -this.size, -this.size - 4);
+};
+
+// ============================================================
+// FLUID DISTORTION
+// ============================================================
+var fluidTime = 0;
+function drawFluidDistortion() {
+  fluidTime += 0.005;
+  ctx.save();
+  ctx.globalAlpha = 0.02;
+  ctx.globalCompositeOperation = 'lighter';
+  for (var i = 0; i < 3; i++) {
+    var x = W * 0.3 + Math.sin(fluidTime + i * 2) * W * 0.3;
+    var y = H * 0.3 + Math.cos(fluidTime * 0.7 + i * 1.5) * H * 0.3;
+    var r = 150 + Math.sin(fluidTime + i) * 50;
+    var cg = ctx.createRadialGradient(x, y, 0, x, y, r);
+    cg.addColorStop(0, 'rgba(0, 100, 80, 0.3)');
+    cg.addColorStop(1, 'transparent');
+    ctx.fillStyle = cg;
+    ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  ctx.restore();
+}
+
+// ============================================================
+// DEPTH OF FIELD BLUR (background layer)
+// ============================================================
+function drawDepthBlur() {
+  // Subtle blur effect on far-depth region
+  ctx.save();
+  ctx.globalCompositeOperation = 'source-over';
+  var dofGrad = ctx.createRadialGradient(W/2, H/2, W * 0.15, W/2, H/2, W * 0.6);
+  dofGrad.addColorStop(0, 'transparent');
+  dofGrad.addColorStop(1, 'rgba(2, 4, 8, 0.08)');
+  ctx.fillStyle = dofGrad;
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+}
+
+// ============================================================
+// SEEDING
+// ============================================================
+function seed() {
+  organisms = [];
+  for (var i = 0; i < 18; i++) organisms.push(new Organism('DRIFTER'));
+  for (var i = 0; i < 5; i++) organisms.push(new Organism('SCRAMBLER'));
+  for (var i = 0; i < 14; i++) organisms.push(new Organism('CRUCIFORM'));
+  for (var i = 0; i < 2; i++) organisms.push(new Organism('RORSCHACH'));
+  for (var i = 0; i < 7; i++) organisms.push(new Organism('CHIMAERA'));
+  for (var i = 0; i < 30; i++) organisms.push(new Organism('FIREFLY'));
+  for (var i = 0; i < 2; i++) organisms.push(new Organism('VAMPIRE'));
+  for (var i = 0; i < 6; i++) organisms.push(new Organism('BICAMERAL'));
+  for (var i = 0; i < 3; i++) organisms.push(new Organism('RIFTER'));
+  for (var i = 0; i < 3; i++) organisms.push(new Organism('NEUROGEL'));
+  // Lenie spawns later via event
+  lenieExists = false;
+  vampireCount = 2;
+}
+
+// ============================================================
+// EVOLUTION SYSTEM - every 500 generations
+// ============================================================
+var lastEvolutionGen = 0;
+
+function checkEvolution() {
+  if (generation - lastEvolutionGen >= 500 && organisms.length < 280) {
+    lastEvolutionGen = generation;
+    // Spontaneous speciation - combine traits of two random species
+    var types = Object.keys(SPECIES);
+    var typeA = types[Math.floor(Math.random() * types.length)];
+    var typeB = types[Math.floor(Math.random() * types.length)];
+    // Spawn a mutant
+    var mutant = new Organism(typeA, W * Math.random(), H * Math.random(), generation);
+    mutant.size = (SPECIES[typeA].size[0] + SPECIES[typeB].size[0]) / 2;
+    mutant.spec = Object.assign({}, SPECIES[typeA]);
+    mutant.spec.speed = (SPECIES[typeA].speed + SPECIES[typeB].speed) / 2;
+    mutant.mutations.push('hybrid_' + typeB.toLowerCase());
+    organisms.push(mutant);
+    logEvent('SPONTANEOUS SPECIATION: ' + typeA + '/' + typeB + ' HYBRID DETECTED', 'warn', 'speciation');
+    spawnParticles(mutant.x, mutant.y, [255, 255, 200], 20);
+    flashScreen(200, 200, 100, 0.06);
+  }
+}
+
+// ============================================================
+// GLITCH EFFECT
+// ============================================================
+var nextGlitch = 5000 + Math.random() * 15000;
+var glitchTimer = 0;
+var glitchActive = false;
+var glitchDuration = 0;
+
+function updateGlitch(dt) {
+  glitchTimer += dt * 16.67;
+  if (!glitchActive && glitchTimer > nextGlitch) {
+    glitchActive = true;
+    glitchDuration = 100 + Math.random() * 200;
+    glitchTimer = 0;
+    nextGlitch = 8000 + Math.random() * 20000;
+  }
+  if (glitchActive) {
+    glitchDuration -= dt * 16.67;
+    if (glitchDuration <= 0) {
+      glitchActive = false;
+      glitchEl.style.opacity = '0';
+    } else {
+      glitchEl.style.opacity = '1';
+      var intensity = Math.random();
+      if (intensity > 0.7) {
+        glitchEl.style.background = 'rgba(' + (Math.random() > 0.5 ? '0,255,100' : '255,0,50') + ',' + (0.02 + Math.random() * 0.04) + ')';
+      } else {
+        glitchEl.style.background = 'transparent';
+      }
+      if (Math.random() > 0.8) {
+        canvas.style.transform = 'translateX(' + (Math.random() - 0.5) * 4 + 'px)';
+      } else {
+        canvas.style.transform = '';
+      }
+    }
+  }
+}
+
+// ============================================================
+// WARNING FLASHES
+// ============================================================
+var nextWarning = 10000 + Math.random() * 20000;
+var warningTimer = 0;
+
+function updateWarnings(dt) {
+  warningTimer += dt * 16.67;
+  if (warningTimer > nextWarning) {
+    warningTimer = 0;
+    nextWarning = 12000 + Math.random() * 25000;
+    var warns = [document.getElementById('warn1'), document.getElementById('warn2'), document.getElementById('warn3')];
+    var w = warns[Math.floor(Math.random() * warns.length)];
+    w.classList.add('active');
+    setTimeout(function() { w.classList.remove('active'); }, 2000 + Math.random() * 3000);
+  }
+}
+
+// ============================================================
+// DYNAMIC EVENTS
+// ============================================================
+var eventTimer = 0;
+
+function updateDynamicEvents(dt) {
+  eventTimer += dt;
+
+  // Vampire detection alerts
+  var vamps = organisms.filter(function(o) { return o.type === 'VAMPIRE'; });
+  if (vamps.length > 0 && Math.random() < 0.001 * dt) {
+    var v = vamps[Math.floor(Math.random() * vamps.length)];
+    var sector = Math.floor(v.x / (W / 8)) + 1;
+    logEvent('VAMPIRE DETECTED IN SECTOR ' + sector + '. ALL ORGANISMS ALERT.', 'danger', 'vamp_detect');
+  }
+
+  // Lenie Clarke spawn
+  if (!lenieExists && simTime > 500 && Math.random() < 0.0002 * dt) {
+    organisms.push(new Organism('LENIE', Math.random() * W, Math.random() * H));
+    lenieExists = true;
+    logEvent('LENIE CLARKE SIGHTED. HEADING TOWARD OUTBREAK ZONE.', 'critical', 'lenie_sight');
+    flashScreen(200, 20, 20, 0.08);
+  }
+
+  // Behemoth spontaneous outbreak
+  if (behemothClouds.length === 0 && Math.random() < 0.0003 * dt && simTime > 300) {
+    spawnBehemoth();
+  }
+
+  // Population crash detection
+  if (organisms.length < 30 && simTime > 100) {
+    logEvent('WARNING: POPULATION CRITICAL -- ' + organisms.length + ' ORGANISMS REMAINING', 'critical', 'pop_crash');
+    if (organisms.length < 15) {
+      triggerExtinction();
+    }
+  }
+
+  // Vampire settlement warning
+  for (var i = 0; i < vamps.length; i++) {
+    var v = vamps[i];
+    var nearSettlement = 0;
+    for (var j = 0; j < organisms.length; j++) {
+      if (organisms[j].type === 'CRUCIFORM') {
+        var dx = organisms[j].x - v.x, dy = organisms[j].y - v.y;
+        if (Math.sqrt(dx*dx+dy*dy) < 100) nearSettlement++;
+      }
+    }
+    if (nearSettlement > 3 && Math.random() < 0.002 * dt) {
+      logEvent('WARNING: VAMPIRE HAS ENTERED SETTLEMENT ALPHA', 'danger', 'vamp_settle');
+    }
+  }
+}
+
+// ============================================================
+// HUD UPDATE
+// ============================================================
+var fpsFrames = 0, fpsTime = 0, currentFps = 60;
+
+function updateHUD(dt) {
+  fpsFrames++;
+  fpsTime += dt;
+  if (fpsTime > 60) {
+    currentFps = Math.round(fpsFrames / (fpsTime / 60));
+    fpsFrames = 0;
+    fpsTime = 0;
+  }
+
+  var totalBiomass = 0;
+  var speciesCounts = {};
+  for (var i = 0; i < organisms.length; i++) {
+    var o = organisms[i];
+    totalBiomass += o.energy * o.size;
+    speciesCounts[o.type] = (speciesCounts[o.type] || 0) + 1;
+  }
+
+  document.getElementById('stat-fps').textContent = currentFps;
+  document.getElementById('stat-pop').textContent = organisms.length;
+  document.getElementById('stat-gen').textContent = generation;
+  document.getElementById('stat-biomass').textContent = totalBiomass.toFixed(1);
+  document.getElementById('stat-entropy').textContent = (totalDeaths * 0.01).toFixed(2);
+  document.getElementById('stat-tagged').textContent = taggedOrganisms.size;
+  document.getElementById('stat-epoch').textContent = epoch;
+
+  // Infection stat
+  var infectEl = document.getElementById('stat-infect');
+  var infectPct = Math.floor(infectionRate * 100);
+  infectEl.textContent = infectPct + '%';
+  if (infectPct > 20) {
+    infectEl.className = 'stat-danger';
+  } else if (infectPct > 5) {
+    infectEl.className = 'stat-warn';
+  } else {
+    infectEl.className = 'stat-val';
+  }
+
+  // Timestamp
+  var now = new Date();
+  var ts = now.getHours().toString().padStart(2,'0') + ':' +
+           now.getMinutes().toString().padStart(2,'0') + ':' +
+           now.getSeconds().toString().padStart(2,'0') + '.' +
+           now.getMilliseconds().toString().padStart(3,'0');
+  document.getElementById('sys-time').textContent = ts;
+
+  // Species breakdown
+  var infoSpecies = document.getElementById('info-species');
+  if (showInfo) {
+    var html = '';
+    for (var type in speciesCounts) {
+      html += '<span class="label">' + type + ':</span> <span class="val">' + speciesCounts[type] + '</span>  ';
+    }
+    infoSpecies.innerHTML = html;
+  }
+
+  // Classification readout near cursor
+  nearestOrg = null;
+  var nearestDist = 100;
+  for (var i = 0; i < organisms.length; i++) {
+    var o = organisms[i];
+    var dx = mx - o.x, dy = my - o.y;
+    var d = Math.sqrt(dx*dx + dy*dy);
+    if (d < nearestDist) {
+      nearestDist = d;
+      nearestOrg = o;
+    }
+  }
+
+  if (nearestOrg) {
+    classify.classList.add('visible');
+    classify.style.left = (rawMx + 25) + 'px';
+    classify.style.top = (rawMy - 10) + 'px';
+    var info = nearestOrg.spec.desc +
+      '\nGEN: ' + nearestOrg.gen +
+      ' | NRG: ' + nearestOrg.energy.toFixed(2) +
+      ' | AGE: ' + Math.floor(nearestOrg.age);
+    if (nearestOrg.tagged) {
+      info += '\n[TAGGED: TAG-' + String(nearestOrg.id).padStart(3, '0') + ']';
+    }
+    if (nearestOrg.mutations.length > 0) {
+      info += '\nMUT: ' + nearestOrg.mutations.join(', ').toUpperCase();
+    }
+    if (nearestOrg.infected) {
+      info += '\n[INFECTED - BEHEMOTH]';
+    }
+    if (nearestOrg.faction) {
+      info += '\nFACTION: ' + nearestOrg.faction;
+    }
+    if (nearestOrg.type === 'NEUROGEL') {
+      info += '\nGEL MASS: ' + nearestOrg.gelMass;
+    }
+    classify.textContent = info;
+    drawReticle(true);
+  } else {
+    classify.classList.remove('visible');
+    drawReticle(false);
+  }
+
+  // Depth gauge
+  if (organisms.length > 0) {
+    var avgDepth = 0;
+    for (var i = 0; i < organisms.length; i++) avgDepth += organisms[i].depth;
+    avgDepth /= organisms.length;
+    depthMarker.style.top = ((1 - avgDepth) * 100) + '%';
+  }
+}
+
+// ============================================================
+// MAIN LOOP
+// ============================================================
+var lastTime = 0;
+
+function loop(time) {
+  if (!lastTime) lastTime = time;
+  var dt = Math.min((time - lastTime) / 16.67, 3);
+  lastTime = time;
+
+  if (!paused) {
+    simTime += dt;
+
+    // Update organisms
+    var newOrganisms = [];
+    for (var i = 0; i < organisms.length; i++) {
+      var child = organisms[i].update(dt, organisms);
+      if (child) newOrganisms.push(child);
+    }
+    for (var i = 0; i < newOrganisms.length; i++) {
+      organisms.push(newOrganisms[i]);
+    }
+
+    // Remove dead
+    var before = organisms.length;
+    organisms = organisms.filter(function(o) { return o.energy > 0 && o.age < o.maxAge; });
+    var deaths = before - organisms.length;
+    totalDeaths += deaths;
+
+    // Track Lenie
+    lenieExists = false;
+    vampireCount = 0;
+    for (var i = 0; i < organisms.length; i++) {
+      if (organisms[i].type === 'LENIE') lenieExists = true;
+      if (organisms[i].type === 'VAMPIRE') vampireCount++;
+    }
+
+    // Mass die-off detection
+    if (deaths > 10) {
+      triggerScreenShake();
+      sfxThrottled('ko', 300);
+      logEvent('MASS DIE-OFF EVENT: ' + deaths + ' CASUALTIES', 'critical', 'dieoff');
+      if (deaths > 20) {
+        triggerExtinction();
+        sfx('death');
+      }
+    }
+
+    // Epoch tracking
+    if (totalDeaths > 0 && totalDeaths % 50 === 0) epoch++;
+
+    // Maintain minimum population
+    var speciesCounts = {};
+    for (var i = 0; i < organisms.length; i++) {
+      speciesCounts[organisms[i].type] = (speciesCounts[organisms[i].type] || 0) + 1;
+    }
+    var minimums = {
+      DRIFTER: 6, SCRAMBLER: 2, CRUCIFORM: 5, RORSCHACH: 1,
+      CHIMAERA: 2, FIREFLY: 12, VAMPIRE: 1, BICAMERAL: 3,
+      RIFTER: 1, NEUROGEL: 2
+    };
+    for (var type in minimums) {
+      var min = minimums[type];
+      while ((speciesCounts[type] || 0) < min && organisms.length < 300) {
+        organisms.push(new Organism(type));
+        speciesCounts[type] = (speciesCounts[type] || 0) + 1;
+      }
+    }
+    // Cap vampires
+    while ((speciesCounts['VAMPIRE'] || 0) > 3) {
+      for (var i = organisms.length - 1; i >= 0; i--) {
+        if (organisms[i].type === 'VAMPIRE') {
+          organisms.splice(i, 1);
+          speciesCounts['VAMPIRE']--;
+          break;
+        }
+      }
+    }
+
+    // Clean up tagged references
+    var aliveIds = new Set(organisms.map(function(o) { return o.id; }));
+    taggedOrganisms.forEach(function(id) {
+      if (!aliveIds.has(id)) taggedOrganisms.delete(id);
+    });
+
+    updateAmbientParticles(dt);
+    updateParticles(dt);
+    updateGlitch(dt);
+    updateWarnings(dt);
+    updateBehemoth(dt);
+    updateDynamicEvents(dt);
+    checkEvolution();
+    updatePopChart();
+    updateInfectionBar();
+    updateDangerAlert(dt);
+    updateAiWindow(dt);
+
+    // Update screen flash
+    if (screenFlash.active) {
+      screenFlash.alpha *= 0.92;
+      if (screenFlash.alpha < 0.005) screenFlash.active = false;
+    }
+  }
+
+  updateHUD(dt);
+
+  // ======== RENDER ========
+  ctx.clearRect(0, 0, W, H);
+
+  // Background
+  ctx.drawImage(bgCanvas, 0, 0);
+
+  // AI abyssal background underlay (subtle; procedural bg stays as fallback)
+  if (imgReady(ASSET.bg)) {
+    ctx.save();
+    ctx.globalAlpha = 0.30;
+    ctx.drawImage(ASSET.bg, 0, 0, W, H);
+    ctx.restore();
+  }
+
+  // Background particles
+  for (var i = 0; i < bgParticles.length; i++) {
+    var p = bgParticles[i];
+    p.phase += p.speed * 0.01;
+    var px = p.x + Math.sin(p.phase) * 2;
+    var py = p.y + Math.cos(p.phase * 0.7) * 1;
+    var twinkle = Math.sin(p.phase * 3) * 0.15 + 0.85;
+    ctx.beginPath();
+    ctx.arc(px, py, p.size, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(80, 160, 140, ' + (p.brightness * twinkle) + ')';
+    ctx.fill();
+  }
+
+  // Fluid distortion
+  drawFluidDistortion();
+
+  // Depth of field
+  drawDepthBlur();
+
+  // Ambient particles
+  drawAmbientParticles();
+
+  // Draw Behemoth/Seppuku clouds (behind organisms)
+  drawBehemoth();
+
+  // Sort organisms by depth
+  organisms.sort(function(a, b) { return a.depth - b.depth; });
+
+  // Draw organisms
+  for (var i = 0; i < organisms.length; i++) {
+    organisms[i].draw();
+  }
+
+  // Death/spawn particles
+  drawParticles();
+
+  // Screen flash
+  if (screenFlash.active) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(' + screenFlash.color[0] + ',' + screenFlash.color[1] + ',' + screenFlash.color[2] + ',' + screenFlash.alpha + ')';
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+
+  // Vignette
+  var vig = ctx.createRadialGradient(W/2, H/2, W * 0.2, W/2, H/2, W * 0.7);
+  vig.addColorStop(0, 'transparent');
+  vig.addColorStop(1, 'rgba(0, 2, 4, 0.4)');
+  ctx.fillStyle = vig;
+  ctx.fillRect(0, 0, W, H);
+
+  requestAnimationFrame(loop);
+}
+
+// ============================================================
+// INPUT HANDLING
+// ============================================================
+document.addEventListener('keydown', function(e) {
+  switch(e.key.toLowerCase()) {
+    case 'f':
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen();
+      break;
+    case 'g':
+      showGrid = !showGrid;
+      document.getElementById('grid-overlay').classList.toggle('hidden');
+      sfx('blip');
+      break;
+    case 's':
+      showScanlines = !showScanlines;
+      document.getElementById('scanlines').classList.toggle('hidden');
+      sfx('blip');
+      break;
+    case 'i':
+      showInfo = !showInfo;
+      document.getElementById('info-panel').classList.toggle('hidden');
+      sfx('blip');
+      break;
+    case ' ':
+      e.preventDefault();
+      paused = !paused;
+      pauseOverlay.classList.toggle('active');
+      sfx('gate');
+      break;
+    case 'v':
+      // Deploy Seppuku manually
+      spawnSeppuku(mx, my);
+      break;
+    case 'b':
+      // Spawn Behemoth manually
+      spawnBehemoth(mx, my);
+      break;
+  }
+});
+
+// Click to tag organisms
+document.addEventListener('click', function(e) {
+  if (nearestOrg) {
+    nearestOrg.tagged = !nearestOrg.tagged;
+    if (nearestOrg.tagged) {
+      taggedOrganisms.add(nearestOrg.id);
+      sfx('coin');
+    } else {
+      taggedOrganisms.delete(nearestOrg.id);
+      sfx('blip');
+    }
+  } else {
+    sfx('blip');
+  }
+});
+
+// ============================================================
+// POPULATION CHART SYSTEM
+// ============================================================
+var popChartCanvas = document.getElementById('pop-chart-canvas');
+var popChartCtx = popChartCanvas.getContext('2d');
+var popHistory = {}; // { type: [values] }
+var popHistoryMax = 120; // frames of history
+var popChartTimer = 0;
+var popChartInterval = 30; // update every 30 frames
+
+var CHART_COLORS = {
+  DRIFTER: '#28DC96',
+  SCRAMBLER: '#DC3C28',
+  CRUCIFORM: '#966EE0',
+  RORSCHACH: '#787878',
+  CHIMAERA: '#DCB428',
+  FIREFLY: '#3CBEFF',
+  VAMPIRE: '#FF1E1E',
+  BICAMERAL: '#28DCDC',
+  RIFTER: '#1E3CB4',
+  NEUROGEL: '#B450FF',
+  LENIE: '#C81414'
+};
+
+function initPopChart() {
+  var rect = popChartCanvas.parentElement.getBoundingClientRect();
+  popChartCanvas.width = rect.width - 8;
+  popChartCanvas.height = rect.height - 18;
+  for (var type in SPECIES) {
+    popHistory[type] = [];
+  }
+}
+
+function updatePopChart() {
+  popChartTimer++;
+  if (popChartTimer < popChartInterval) return;
+  popChartTimer = 0;
+
+  var counts = {};
+  for (var type in SPECIES) counts[type] = 0;
+  for (var i = 0; i < organisms.length; i++) {
+    counts[organisms[i].type] = (counts[organisms[i].type] || 0) + 1;
+  }
+  for (var type in counts) {
+    if (!popHistory[type]) popHistory[type] = [];
+    popHistory[type].push(counts[type]);
+    if (popHistory[type].length > popHistoryMax) popHistory[type].shift();
+  }
+
+  drawPopChart();
+}
+
+function drawPopChart() {
+  var w = popChartCanvas.width;
+  var h = popChartCanvas.height;
+  popChartCtx.clearRect(0, 0, w, h);
+
+  // Find max
+  var maxPop = 10;
+  for (var type in popHistory) {
+    for (var i = 0; i < popHistory[type].length; i++) {
+      if (popHistory[type][i] > maxPop) maxPop = popHistory[type][i];
+    }
+  }
+
+  // Grid lines
+  popChartCtx.strokeStyle = 'rgba(0, 180, 120, 0.08)';
+  popChartCtx.lineWidth = 0.5;
+  for (var i = 0; i < 5; i++) {
+    var y = (i / 4) * h;
+    popChartCtx.beginPath();
+    popChartCtx.moveTo(0, y);
+    popChartCtx.lineTo(w, y);
+    popChartCtx.stroke();
+  }
+
+  // Draw each species line
+  var drawOrder = ['FIREFLY','DRIFTER','CRUCIFORM','BICAMERAL','CHIMAERA','NEUROGEL','RIFTER','SCRAMBLER','RORSCHACH','VAMPIRE','LENIE'];
+  for (var si = 0; si < drawOrder.length; si++) {
+    var type = drawOrder[si];
+    var data = popHistory[type];
+    if (!data || data.length < 2) continue;
+    var hasAny = false;
+    for (var i = 0; i < data.length; i++) { if (data[i] > 0) { hasAny = true; break; } }
+    if (!hasAny) continue;
+
+    popChartCtx.strokeStyle = CHART_COLORS[type] || '#44aa66';
+    popChartCtx.lineWidth = type === 'VAMPIRE' ? 2 : 1;
+    popChartCtx.globalAlpha = 0.8;
+    popChartCtx.beginPath();
+    for (var i = 0; i < data.length; i++) {
+      var x = (i / (popHistoryMax - 1)) * w;
+      var y = h - (data[i] / maxPop) * h;
+      if (i === 0) popChartCtx.moveTo(x, y);
+      else popChartCtx.lineTo(x, y);
+    }
+    popChartCtx.stroke();
+    popChartCtx.globalAlpha = 1;
+  }
+
+  // Legend (compact)
+  popChartCtx.font = '7px Share Tech Mono, monospace';
+  var lx = 4, ly = h - 4;
+  var counts = {};
+  for (var type in popHistory) {
+    var d = popHistory[type];
+    counts[type] = d.length > 0 ? d[d.length - 1] : 0;
+  }
+  var drawn = 0;
+  for (var si = 0; si < drawOrder.length; si++) {
+    var type = drawOrder[si];
+    if (counts[type] > 0) {
+      popChartCtx.fillStyle = CHART_COLORS[type];
+      var tx = 4 + (drawn % 4) * 70;
+      var ty = h - 14 + Math.floor(drawn / 4) * 10;
+      popChartCtx.fillRect(tx, ty - 4, 4, 4);
+      popChartCtx.fillText(type.substring(0,4) + ':' + counts[type], tx + 6, ty);
+      drawn++;
+    }
+  }
+}
+
+// ============================================================
+// INFECTION HP BAR
+// ============================================================
+var infectionBarWrap = document.getElementById('infection-bar-wrap');
+var infectionBarFill = document.getElementById('infection-bar-fill');
+var infectionBarLabel = document.getElementById('infection-bar-label');
+
+function updateInfectionBar() {
+  var pct = Math.floor(infectionRate * 100);
+  if (pct > 0) {
+    infectionBarWrap.classList.add('visible');
+    infectionBarFill.style.width = Math.min(100, pct) + '%';
+    // Shift gradient position based on severity
+    infectionBarFill.style.backgroundPosition = Math.min(100, pct * 3) + '% 0';
+    infectionBarLabel.textContent = 'BEHEMOTH ' + pct + '%';
+    if (pct > 20) {
+      infectionBarLabel.style.color = '#ff2233';
+      infectionBarFill.style.boxShadow = '0 0 10px rgba(255, 0, 30, 0.6)';
+    } else if (pct > 10) {
+      infectionBarLabel.style.color = '#ff8844';
+      infectionBarFill.style.boxShadow = '0 0 6px rgba(255, 100, 0, 0.4)';
+    } else {
+      infectionBarLabel.style.color = '#ccaa44';
+      infectionBarFill.style.boxShadow = '0 0 4px rgba(200, 150, 0, 0.3)';
+    }
+  } else {
+    infectionBarWrap.classList.remove('visible');
+  }
+}
+
+// ============================================================
+// DANGER ALERT SYSTEM (SKULL / BIOHAZARD PICTOGRAPHS)
+// ============================================================
+var dangerAlert = document.getElementById('danger-alert');
+var dangerIcon = document.getElementById('danger-icon');
+var dangerText = document.getElementById('danger-text');
+var dangerSub = document.getElementById('danger-sub');
+var dangerAlertTimer = 0;
+var dangerAlertCooldown = 0;
+
+// SVG skull drawn to canvas for non-unicode safety
+var DANGER_ICONS = {
+  skull: '\u2620',      // skull and crossbones (rendered by font)
+  biohazard: '\u2623',  // biohazard
+  radiation: '\u2622',  // radiation
+  warning: '\u26A0'     // warning triangle
+};
+
+function showDangerAlert(icon, text, sub, duration) {
+  if (dangerAlertCooldown > 0) return;
+  dangerIcon.textContent = icon;
+  dangerIcon.style.color = icon === DANGER_ICONS.skull ? '#ff1122' : icon === DANGER_ICONS.biohazard ? '#ff6600' : '#ffaa00';
+  dangerText.textContent = text;
+  dangerSub.textContent = sub || '';
+  dangerAlert.classList.add('active');
+  dangerAlertTimer = duration || 120;
+  dangerAlertCooldown = 300;
+}
+
+function updateDangerAlert(dt) {
+  if (dangerAlertTimer > 0) {
+    dangerAlertTimer -= dt;
+    if (dangerAlertTimer <= 0) {
+      dangerAlert.classList.remove('active');
+    }
+  }
+  if (dangerAlertCooldown > 0) dangerAlertCooldown -= dt;
+
+  // Trigger alerts based on conditions
+  if (vampireCount > 0 && Math.random() < 0.0008 * dt) {
+    showDangerAlert(DANGER_ICONS.skull, 'VAMPIRE PRESENCE DETECTED', 'APEX PREDATOR IN CONTAINMENT ZONE', 90);
+  }
+  if (infectionRate > 0.15 && Math.random() < 0.001 * dt) {
+    showDangerAlert(DANGER_ICONS.biohazard, 'INFECTION LEVEL CRITICAL', 'BEHEMOTH SPREAD AT ' + Math.floor(infectionRate * 100) + '%', 80);
+  }
+  if (organisms.length < 25 && Math.random() < 0.002 * dt) {
+    showDangerAlert(DANGER_ICONS.warning, 'POPULATION COLLAPSE', 'EXTINCTION THRESHOLD APPROACHING', 100);
+  }
+}
+
+// ============================================================
+// AI INTERPRETATION WINDOW
+// ============================================================
+var aiContent = document.getElementById('ai-content');
+var aiLines = [];
+var aiMaxLines = 12;
+var aiUpdateTimer = 0;
+var aiUpdateInterval = 80; // frames between AI thoughts
+
+function addAiLine(text, cls) {
+  aiLines.push({ text: text, cls: cls || '' });
+  if (aiLines.length > aiMaxLines) aiLines.shift();
+  renderAiWindow();
+}
+
+function renderAiWindow() {
+  var html = '';
+  for (var i = 0; i < aiLines.length; i++) {
+    var age = aiLines.length - i;
+    var opacity = Math.max(0.3, 1 - age * 0.06);
+    html += '<div class="ai-line ' + aiLines[i].cls + '" style="opacity:' + opacity + '">' + aiLines[i].text + '</div>';
+  }
+  html += '<div class="ai-line" style="opacity:0.6">><span class="ai-cursor"></span></div>';
+  aiContent.innerHTML = html;
+}
+
+function updateAiWindow(dt) {
+  aiUpdateTimer += dt;
+  if (aiUpdateTimer < aiUpdateInterval) return;
+  aiUpdateTimer = 0;
+
+  // Count species
+  var counts = {};
+  var totalE = 0;
+  var infected = 0;
+  for (var i = 0; i < organisms.length; i++) {
+    var o = organisms[i];
+    counts[o.type] = (counts[o.type] || 0) + 1;
+    totalE += o.energy;
+    if (o.infected) infected++;
+  }
+
+  var pop = organisms.length;
+  if (pop === 0) { addAiLine('No organisms detected. Awaiting reseeding.', ''); return; }
+
+  // Pick an observation type
+  var roll = Math.random();
+
+  if (roll < 0.12 && counts.VAMPIRE > 0) {
+    // Vampire behavior
+    var vamps = organisms.filter(function(o) { return o.type === 'VAMPIRE'; });
+    var v = vamps[Math.floor(Math.random() * vamps.length)];
+    if (v.huntTarget) {
+      addAiLine('Vampire stalking ' + v.huntTarget.type + ' at range ' + Math.floor(Math.sqrt((v.x-v.huntTarget.x)*(v.x-v.huntTarget.x)+(v.y-v.huntTarget.y)*(v.y-v.huntTarget.y))) + 'u', 'threat');
+    } else {
+      addAiLine('Vampire patrolling sector ' + Math.floor(v.x / (W/8)+1) + '. No active pursuit.', 'threat');
+    }
+  } else if (roll < 0.22 && infected > 0) {
+    // Infection analysis
+    addAiLine('Behemoth infection: ' + infected + '/' + pop + ' hosts (' + Math.floor(infected/pop*100) + '%). Vectors active.', 'threat');
+  } else if (roll < 0.32 && counts.SCRAMBLER > 0) {
+    // Predation
+    var scramblers = organisms.filter(function(o) { return o.type === 'SCRAMBLER' && o.huntTarget; });
+    if (scramblers.length > 0) {
+      var s = scramblers[Math.floor(Math.random() * scramblers.length)];
+      addAiLine('Scrambler pursuing ' + s.huntTarget.type + '. Closing velocity high.', 'action');
+    } else {
+      addAiLine('Scramblers idle. No prey in acquisition range.', '');
+    }
+  } else if (roll < 0.40 && counts.FIREFLY > 5) {
+    // Swarm behavior
+    addAiLine('Firefly swarm: ' + counts.FIREFLY + ' units. Pulse sync detected.', 'action');
+  } else if (roll < 0.48 && counts.CRUCIFORM > 3) {
+    // Settlement
+    var bowinian = 0, heretic = 0;
+    organisms.forEach(function(o) { if (o.faction === 'BOWINIAN') bowinian++; if (o.faction === 'HERETIC') heretic++; });
+    addAiLine('Settlements: Bowinian=' + bowinian + ' Heretic=' + heretic + '. Tension index: ' + Math.floor(Math.abs(bowinian-heretic)/(bowinian+heretic||1)*100) + '%', 'event');
+  } else if (roll < 0.55 && counts.BICAMERAL > 0) {
+    addAiLine('Bicameral collective: ' + counts.BICAMERAL + ' linked nodes. Group coherence nominal.', 'action');
+  } else if (roll < 0.62 && counts.NEUROGEL > 0) {
+    var gels = organisms.filter(function(o) { return o.type === 'NEUROGEL'; });
+    var maxMass = 0;
+    gels.forEach(function(g) { if (g.gelMass > maxMass) maxMass = g.gelMass; });
+    addAiLine('Neurogel mass peak: ' + maxMass + 'https://app.northstarprime.net/5. ' + (maxMass >= 4 ? 'SPECIATION IMMINENT.' : 'Accumulating.'), maxMass >= 4 ? 'event' : '');
+  } else if (roll < 0.68 && counts.RORSCHACH > 0) {
+    addAiLine('Rorschach EM field active. Nearby organisms drawn to gravity well.', '');
+  } else if (roll < 0.74 && counts.RIFTER > 0) {
+    var rifters = organisms.filter(function(o) { return o.type === 'RIFTER'; });
+    var sabReady = rifters.filter(function(r) { return r.sabotageCooldown <= 0; }).length;
+    addAiLine('Rifter unit' + (counts.RIFTER > 1 ? 's' : '') + ': ' + counts.RIFTER + '. Sabotage-ready: ' + sabReady + '.', sabReady > 0 ? 'event' : '');
+  } else if (roll < 0.80) {
+    // Overall ecosystem
+    var avgE = totalE / pop;
+    var health = avgE > 0.5 ? 'STABLE' : avgE > 0.3 ? 'STRESSED' : 'DECLINING';
+    addAiLine('Ecosystem: ' + pop + ' organisms. Avg energy: ' + avgE.toFixed(2) + '. Status: ' + health, avgE < 0.3 ? 'threat' : '');
+  } else if (roll < 0.88) {
+    // Find dominant species
+    var maxType = '', maxCount = 0;
+    for (var t in counts) { if (counts[t] > maxCount) { maxCount = counts[t]; maxType = t; } }
+    addAiLine('Dominant species: ' + maxType + ' (' + maxCount + '). ' + Math.floor(maxCount/pop*100) + '% of population.', '');
+  } else {
+    // Random interaction observation
+    if (pop > 5) {
+      var o1 = organisms[Math.floor(Math.random() * pop)];
+      var nearest = null, nd = Infinity;
+      for (var i = 0; i < organisms.length; i++) {
+        if (organisms[i] === o1) continue;
+        var dx = organisms[i].x - o1.x, dy = organisms[i].y - o1.y;
+        var d = Math.sqrt(dx*dx+dy*dy);
+        if (d < nd) { nd = d; nearest = organisms[i]; }
+      }
+      if (nearest && nd < 100) {
+        var verb = o1.type === 'SCRAMBLER' || o1.type === 'VAMPIRE' ? 'hunting' :
+                   o1.type === 'CHIMAERA' ? 'parasitizing' :
+                   o1.type === 'DRIFTER' ? 'drifting near' : 'interacting with';
+        addAiLine(o1.type + ' ' + verb + ' ' + nearest.type + ' (dist: ' + Math.floor(nd) + 'u)', 'action');
+      } else {
+        addAiLine('Scanning sector ' + Math.floor(Math.random()*8+1) + '... No notable interactions.', '');
+      }
+    }
+  }
+}
+
+// ============================================================
+// INIT
+// ============================================================
+function init() {
+  resize();
+  initBackground();
+  initAmbientParticles();
+  initPopChart();
+  seed();
+  boot();
+}
+
+window.addEventListener('resize', function() {
+  resize();
+  initBackground();
+  initPopChart();
+});
+
+init();
+</script>
+</body>
+</html>

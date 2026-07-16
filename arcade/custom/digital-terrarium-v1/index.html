@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Digital Terrarium // Blindsight Edition</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #000; overflow: hidden; font-family: 'Courier New', monospace; cursor: none; }
+canvas { display: block; }
+#hud {
+  position: fixed; top: 0; left: 0; width: 100%; padding: 10px 20px;
+  color: #1a3a2a; font-size: 11px; z-index: 10; pointer-events: none;
+  display: flex; justify-content: space-between; opacity: 0.7;
+}
+#hud.active { color: #2a8a5a; opacity: 1; }
+#hud span { display: inline-block; min-width: 120px; }
+#cursor {
+  position: fixed; width: 20px; height: 20px; border: 1px solid rgba(40,180,120,0.3);
+  border-radius: 50%; pointer-events: none; z-index: 100;
+  transform: translate(-50%,-50%); transition: border-color 0.3s;
+}
+#cursor.near { border-color: rgba(200,60,60,0.6); box-shadow: 0 0 10px rgba(200,60,60,0.2); }
+#info {
+  position: fixed; bottom: 20px; left: 20px; color: #1a4a3a; font-size: 10px;
+  z-index: 10; pointer-events: none; max-width: 300px; line-height: 1.6;
+  opacity: 0; transition: opacity 0.5s;
+}
+#info.visible { opacity: 0.8; }
+#depth-gauge {
+  position: fixed; right: 20px; top: 50%; transform: translateY(-50%);
+  width: 3px; height: 200px; background: rgba(20,60,40,0.3); z-index: 10;
+}
+#depth-marker {
+  width: 9px; height: 2px; background: #2a8a5a; position: absolute;
+  left: -3px; transition: top 0.5s;
+}
+#classification {
+  position: fixed; bottom: 20px; right: 20px; color: #1a3a2a; font-size: 9px;
+  z-index: 10; pointer-events: none; text-align: right; opacity: 0.5;
+}
+#boot {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: #000; z-index: 1000; display: flex; align-items: center;
+  justify-content: center; flex-direction: column; color: #1a4a3a;
+  font-size: 12px; transition: opacity 1s;
+}
+#boot.done { opacity: 0; pointer-events: none; }
+#boot div { margin: 4px 0; opacity: 0; }
+</style>
+</head>
+<body>
+<div id="boot"></div>
+<div id="hud">
+  <span id="pop">POP: 0</span>
+  <span id="gen">GEN: 0</span>
+  <span id="biomass">BIOMASS: 0.00</span>
+  <span id="entropy">ENTROPY: 0.00</span>
+  <span id="epoch">EPOCH: 0</span>
+</div>
+<div id="cursor"></div>
+<div id="info"></div>
+<div id="depth-gauge"><div id="depth-marker"></div></div>
+<div id="classification">
+  THESEUS DEEP-FIELD OBSERVATORY<br>
+  CLASSIFICATION: WATTS-7 BIOME<br>
+  STATUS: MONITORING
+</div>
+<canvas id="c"></canvas>
+
+<script>
+// ============================================================
+// DIGITAL TERRARIUM - BLINDSIGHT EDITION
+// Inspired by Peter Watts' xenobiology
+// ============================================================
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const cursor = document.getElementById('cursor');
+const info = document.getElementById('info');
+const depthMarker = document.getElementById('depth-marker');
+
+let W, H;
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+let mx = W/2, my = H/2;
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  cursor.style.left = mx + 'px';
+  cursor.style.top = my + 'px';
+});
+
+// ============================================================
+// BOOT SEQUENCE
+// ============================================================
+const bootLines = [
+  'THESEUS DEEP-FIELD OBSERVATORY v4.1.7',
+  'Initializing xenobiological scanning array...',
+  'Calibrating bioluminescence sensors...',
+  'Loading evolutionary substrate...',
+  'Seeding primordial organisms...',
+  'WARNING: Non-baseline intelligence patterns detected',
+  'WARNING: Organisms exhibit purposeful behavior without CNS',
+  'Scramblers protocol: ACTIVE',
+  'Observation mode: PASSIVE',
+  '> TERRARIUM ONLINE'
+];
+
+async function boot() {
+  const bootEl = document.getElementById('boot');
+  for (let i = 0; i < bootLines.length; i++) {
+    const div = document.createElement('div');
+    div.textContent = bootLines[i];
+    bootEl.appendChild(div);
+    await new Promise(r => setTimeout(r, 200 + Math.random() * 300));
+    div.style.opacity = '1';
+    div.style.transition = 'opacity 0.3s';
+  }
+  await new Promise(r => setTimeout(r, 1500));
+  bootEl.classList.add('done');
+  setTimeout(() => bootEl.remove(), 1000);
+  requestAnimationFrame(loop);
+}
+
+// ============================================================
+// ORGANISM TYPES (Watts-inspired xenobiology)
+// ============================================================
+
+// Type 0: DRIFTERS - Blind jellyfish-like, bioluminescent, filter feeders
+// Type 1: SCRAMBLERS - Fast, predatory, no consciousness, pure reflex
+// Type 2: CRUCIFORMS - Colonial organisms, form geometric patterns
+// Type 3: RORSCHACH - Massive sessile organisms, manipulate others
+// Type 4: CHIMAERA - Parasitic, hijack other organisms' nervous systems
+// Type 5: FIREFLIES - Tiny, swarm intelligence, communicate via light pulses
+
+const SPECIES = {
+  DRIFTER: {
+    color: [20, 80, 60], glow: [40, 200, 140], size: [8, 20],
+    speed: 0.3, metabolism: 0.001, reproduce: 0.0008,
+    desc: 'DRIFTER // Cnidaria digitalis\nBlind filter-feeder. Bioluminescent lure.\nNo central nervous system.\nNavigates via chemotaxis.'
+  },
+  SCRAMBLER: {
+    color: [80, 20, 20], glow: [200, 60, 40], size: [6, 14],
+    speed: 1.8, metabolism: 0.004, reproduce: 0.0003,
+    desc: 'SCRAMBLER // Rorschach praedator\nApex predator. No consciousness.\nPure reflex architecture.\nMimics intelligence without understanding.'
+  },
+  CRUCIFORM: {
+    color: [60, 40, 80], glow: [140, 100, 200], size: [5, 10],
+    speed: 0.5, metabolism: 0.002, reproduce: 0.001,
+    desc: 'CRUCIFORM // Colonialis geometrica\nColonial superorganism.\nForms geometric defense arrays.\nIndividuals are expendable.'
+  },
+  RORSCHACH: {
+    color: [40, 40, 40], glow: [100, 100, 100], size: [30, 60],
+    speed: 0.05, metabolism: 0.0005, reproduce: 0.0001,
+    desc: 'RORSCHACH // Architectus abyssalis\nMassive sessile organism.\nManipulates local electromagnetic field.\nOther organisms orbit involuntarily.'
+  },
+  CHIMAERA: {
+    color: [80, 60, 20], glow: [200, 160, 40], size: [4, 8],
+    speed: 1.2, metabolism: 0.003, reproduce: 0.0005,
+    desc: 'CHIMAERA // Parasitus neuros\nNeural parasite. Hijacks host behavior.\nHost continues functioning, unaware.\nThe lights are on but nobody is home.'
+  },
+  FIREFLY: {
+    color: [20, 60, 80], glow: [60, 180, 255], size: [2, 4],
+    speed: 0.8, metabolism: 0.002, reproduce: 0.002,
+    desc: 'FIREFLY // Lux collectiva\nSwarm intelligence. No individual mind.\nCommunicates via synchronized light pulses.\nEmergent behavior exceeds sum of parts.'
+  }
+};
+
+// ============================================================
+// ORGANISM CLASS
+// ============================================================
+
+let organisms = [];
+let particles = [];
+let generation = 0;
+let epoch = 0;
+let totalDeaths = 0;
+let nearestOrg = null;
+
+class Organism {
+  constructor(type, x, y, gen) {
+    const spec = SPECIES[type];
+    this.type = type;
+    this.spec = spec;
+    this.x = x || Math.random() * W;
+    this.y = y || Math.random() * H;
+    this.gen = gen || 0;
+    this.size = spec.size[0] + Math.random() * (spec.size[1] - spec.size[0]);
+    this.energy = 0.5 + Math.random() * 0.5;
+    this.age = 0;
+    this.maxAge = 2000 + Math.random() * 3000;
+    this.vx = (Math.random() - 0.5) * spec.speed;
+    this.vy = (Math.random() - 0.5) * spec.speed;
+    this.phase = Math.random() * Math.PI * 2;
+    this.pulsePhase = Math.random() * Math.PI * 2;
+    this.tentacles = type === 'DRIFTER' ? 4 + Math.floor(Math.random() * 4) : 0;
+    this.segments = type === 'SCRAMBLER' ? 5 + Math.floor(Math.random() * 3) : 0;
+    this.trail = [];
+    this.attached = null; // for CHIMAERA
+    this.cruciNeighbors = []; // for CRUCIFORM
+    this.pulseSync = 0; // for FIREFLY
+    this.aware = false; // detected by cursor
+    this.fleeing = false;
+    this.huntTarget = null;
+    this.mutations = [];
+    if (Math.random() < 0.1) {
+      this.mutations.push(Math.random() < 0.5 ? 'gigantism' : 'luminous');
+      if (this.mutations.includes('gigantism')) this.size *= 1.5;
+    }
+  }
+
+  update(dt, others) {
+    this.age += dt;
+    this.phase += dt * 0.02;
+    this.pulsePhase += dt * 0.05;
+    this.energy -= this.spec.metabolism * dt;
+
+    // Cursor awareness - organisms react to observation
+    const dxC = mx - this.x, dyC = my - this.y;
+    const distCursor = Math.sqrt(dxC * dxC + dyC * dyC);
+    this.aware = distCursor < 150;
+
+    // Behavior by type
+    switch(this.type) {
+      case 'DRIFTER': this.behaveDrifter(dt, others); break;
+      case 'SCRAMBLER': this.behaveScrambler(dt, others); break;
+      case 'CRUCIFORM': this.behaveCruciform(dt, others); break;
+      case 'RORSCHACH': this.behaveRorschach(dt, others); break;
+      case 'CHIMAERA': this.behaveChimaera(dt, others); break;
+      case 'FIREFLY': this.behaveFirefly(dt, others); break;
+    }
+
+    // Observer effect - scramblers are attracted to attention
+    if (this.aware && this.type === 'SCRAMBLER') {
+      this.vx += dxC * 0.0003;
+      this.vy += dyC * 0.0003;
+    } else if (this.aware && this.type !== 'RORSCHACH') {
+      // Most organisms flee observation
+      this.vx -= dxC * 0.0001;
+      this.vy -= dyC * 0.0001;
+    }
+
+    // Movement
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+
+    // Wrap
+    if (this.x < -50) this.x = W + 50;
+    if (this.x > W + 50) this.x = -50;
+    if (this.y < -50) this.y = H + 50;
+    if (this.y > H + 50) this.y = -50;
+
+    // Damping
+    this.vx *= 0.99;
+    this.vy *= 0.99;
+
+    // Trail
+    if (this.age % 3 < 1) {
+      this.trail.push({ x: this.x, y: this.y, a: 1 });
+      if (this.trail.length > 20) this.trail.shift();
+    }
+    this.trail.forEach(t => t.a *= 0.97);
+
+    // Passive energy from environment (photosynthesis analog)
+    if (this.type !== 'SCRAMBLER' && this.type !== 'CHIMAERA') {
+      this.energy += 0.0003 * dt;
+    }
+
+    // Reproduction
+    if (this.energy > 0.8 && Math.random() < this.spec.reproduce * dt) {
+      return this.reproduce();
+    }
+
+    return null;
+  }
+
+  behaveDrifter(dt, others) {
+    // Gentle sinusoidal drift
+    this.vx += Math.sin(this.phase) * 0.01;
+    this.vy += Math.cos(this.phase * 0.7) * 0.008;
+    // Attracted to light (other bioluminescent organisms)
+    for (const o of others) {
+      if (o === this) continue;
+      const dx = o.x - this.x, dy = o.y - this.y;
+      const d = Math.sqrt(dx*dx + dy*dy);
+      if (d < 200 && d > 30 && o.type === 'FIREFLY') {
+        this.vx += dx / d * 0.005;
+        this.vy += dy / d * 0.005;
+      }
+    }
+  }
+
+  behaveScrambler(dt, others) {
+    // Hunt nearest non-scrambler
+    let closest = null, closestD = Infinity;
+    for (const o of others) {
+      if (o === this || o.type === 'SCRAMBLER' || o.type === 'RORSCHACH') continue;
+      const dx = o.x - this.x, dy = o.y - this.y;
+      const d = Math.sqrt(dx*dx + dy*dy);
+      if (d < closestD) { closestD = d; closest = o; }
+    }
+    if (closest && closestD < 300) {
+      const dx = closest.x - this.x, dy = closest.y - this.y;
+      this.vx += dx / closestD * 0.05;
+      this.vy += dy / closestD * 0.05;
+      this.huntTarget = closest;
+      // Kill on contact
+      if (closestD < this.size + closest.size) {
+        this.energy += closest.energy * 0.6;
+        closest.energy = -1; // mark for death
+        spawnParticles(closest.x, closest.y, closest.spec.glow, 15);
+      }
+    } else {
+      this.huntTarget = null;
+      // Random patrol
+      if (Math.random() < 0.02) {
+        this.vx += (Math.random() - 0.5) * 0.5;
+        this.vy += (Math.random() - 0.5) * 0.5;
+      }
+    }
+    // Flee from Rorschach
+    for (const o of others) {
+      if (o.type !== 'RORSCHACH') continue;
+      const dx = o.x - this.x, dy = o.y - this.y;
+      const d = Math.sqrt(dx*dx + dy*dy);
+      if (d < o.size * 3) {
+        this.vx -= dx / d * 0.1;
+        this.vy -= dy / d * 0.1;
+      }
+    }
+  }
+
+  behaveCruciform(dt, others) {
+    // Find nearby cruciforms and form geometric patterns
+    this.cruciNeighbors = [];
+    for (const o of others) {
+      if (o === this || o.type !== 'CRUCIFORM') continue;
+      const dx = o.x - this.x, dy = o.y - this.y;
+      const d = Math.sqrt(dx*dx + dy*dy);
+      if (d < 120) {
+        this.cruciNeighbors.push(o);
+        // Maintain optimal distance
+        const ideal = 40 + this.size * 2;
+        const force = (d - ideal) * 0.001;
+        this.vx += dx / d * force;
+        this.vy += dy / d * force;
+      }
+    }
+    // Flee from scramblers
+    for (const o of others) {
+      if (o.type !== 'SCRAMBLER') continue;
+      const dx = o.x - this.x, dy = o.y - this.y;
+      const d = Math.sqrt(dx*dx + dy*dy);
+      if (d < 150) {
+        this.vx -= dx / d * 0.08;
+        this.vy -= dy / d * 0.08;
+        this.fleeing = true;
+      }
+    }
+    if (!this.fleeing) {
+      this.vx += Math.sin(this.phase + this.x * 0.01) * 0.005;
+      this.vy += Math.cos(this.phase + this.y * 0.01) * 0.005;
+    }
+    this.fleeing = false;
+  }
+
+  behaveRorschach(dt, others) {
+    // Nearly sessile - slight drift
+    this.vx *= 0.95;
+    this.vy *= 0.95;
+    // Gravitational pull on smaller organisms
+    for (const o of others) {
+      if (o === this || o.type === 'RORSCHACH') continue;
+      const dx = this.x - o.x, dy = this.y - o.y;
+      const d = Math.sqrt(dx*dx + dy*dy);
+      if (d < this.size * 5 && d > this.size) {
+        o.vx += dx / d * 0.01 / (d * 0.01);
+        o.vy += dy / d * 0.01 / (d * 0.01);
+      }
+      // Absorb organisms that touch it
+      if (d < this.size * 0.8 && o.type !== 'SCRAMBLER') {
+        this.energy += o.energy * 0.3;
+        o.energy = -1;
+        spawnParticles(o.x, o.y, this.spec.glow, 8);
+      }
+    }
+    // Slowly grow with energy
+    if (this.energy > 0.6) {
+      this.size = Math.min(80, this.size + 0.001 * dt);
+    }
+  }
+
+  behaveChimaera(dt, others) {
+    if (this.attached) {
+      // Ride the host
+      this.x = this.attached.x + Math.sin(this.phase) * this.attached.size;
+      this.y = this.attached.y + Math.cos(this.phase) * this.attached.size;
+      // Drain host
+      this.attached.energy -= 0.001 * dt;
+      this.energy += 0.0008 * dt;
+      // Host dies, detach
+      if (this.attached.energy <= 0) this.attached = null;
+      return;
+    }
+    // Seek host
+    let closest = null, closestD = Infinity;
+    for (const o of others) {
+      if (o === this || o.type === 'CHIMAERA' || o.type === 'RORSCHACH') continue;
+      const dx = o.x - this.x, dy = o.y - this.y;
+      const d = Math.sqrt(dx*dx + dy*dy);
+      if (d < closestD) { closestD = d; closest = o; }
+    }
+    if (closest && closestD < 200) {
+      const dx = closest.x - this.x, dy = closest.y - this.y;
+      this.vx += dx / closestD * 0.04;
+      this.vy += dy / closestD * 0.04;
+      if (closestD < closest.size + this.size) {
+        this.attached = closest;
+        spawnParticles(this.x, this.y, this.spec.glow, 5);
+      }
+    }
+  }
+
+  behaveFirefly(dt, others) {
+    // Swarm behavior - boids
+    let sx = 0, sy = 0, cx = 0, cy = 0, ax = 0, ay = 0, n = 0;
+    for (const o of others) {
+      if (o === this || o.type !== 'FIREFLY') continue;
+      const dx = o.x - this.x, dy = o.y - this.y;
+      const d = Math.sqrt(dx*dx + dy*dy);
+      if (d < 100) {
+        // Separation
+        if (d < 20) { sx -= dx / d; sy -= dy / d; }
+        // Alignment
+        ax += o.vx; ay += o.vy;
+        // Cohesion
+        cx += o.x; cy += o.y;
+        // Pulse sync
+        this.pulseSync += Math.sin(o.pulsePhase - this.pulsePhase) * 0.05;
+        n++;
+      }
+    }
+    if (n > 0) {
+      this.vx += sx * 0.05 + (cx/n - this.x) * 0.001 + (ax/n - this.vx) * 0.05;
+      this.vy += sy * 0.05 + (cy/n - this.y) * 0.001 + (ay/n - this.vy) * 0.05;
+    }
+    this.pulsePhase += this.pulseSync * dt;
+    // Random wandering
+    this.vx += (Math.random() - 0.5) * 0.05;
+    this.vy += (Math.random() - 0.5) * 0.05;
+    // Speed limit
+    const spd = Math.sqrt(this.vx*this.vx + this.vy*this.vy);
+    if (spd > this.spec.speed) {
+      this.vx = this.vx/spd * this.spec.speed;
+      this.vy = this.vy/spd * this.spec.speed;
+    }
+  }
+
+  reproduce() {
+    generation++;
+    const child = new Organism(
+      this.type,
+      this.x + (Math.random()-0.5) * 30,
+      this.y + (Math.random()-0.5) * 30,
+      this.gen + 1
+    );
+    this.energy *= 0.5;
+    // Mutation chance
+    if (Math.random() < 0.05) {
+      child.size *= 0.8 + Math.random() * 0.4;
+      child.maxAge *= 0.8 + Math.random() * 0.4;
+    }
+    spawnParticles(this.x, this.y, this.spec.glow, 5);
+    return child;
+  }
+
+  draw() {
+    const pulse = Math.sin(this.pulsePhase) * 0.3 + 0.7;
+    const glow = this.spec.glow;
+    const energyAlpha = Math.max(0.1, this.energy);
+    const glowStr = this.mutations.includes('luminous') ? 2 : 1;
+
+    // Trail
+    ctx.beginPath();
+    for (let i = 0; i < this.trail.length; i++) {
+      const t = this.trail[i];
+      if (i === 0) ctx.moveTo(t.x, t.y);
+      else ctx.lineTo(t.x, t.y);
+    }
+    ctx.strokeStyle = `rgba(${glow[0]},${glow[1]},${glow[2]},${0.05})`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.save();
+    ctx.translate(this.x, this.y);
+
+    // Glow
+    const glowSize = this.size * (1.5 + pulse * 0.5) * glowStr;
+    const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, glowSize);
+    grad.addColorStop(0, `rgba(${glow[0]},${glow[1]},${glow[2]},${0.15 * energyAlpha * pulse})`);
+    grad.addColorStop(0.5, `rgba(${glow[0]},${glow[1]},${glow[2]},${0.05 * energyAlpha})`);
+    grad.addColorStop(1, 'transparent');
+    ctx.fillStyle = grad;
+    ctx.fillRect(-glowSize, -glowSize, glowSize*2, glowSize*2);
+
+    switch(this.type) {
+      case 'DRIFTER': this.drawDrifter(pulse, energyAlpha); break;
+      case 'SCRAMBLER': this.drawScrambler(pulse, energyAlpha); break;
+      case 'CRUCIFORM': this.drawCruciform(pulse, energyAlpha); break;
+      case 'RORSCHACH': this.drawRorschach(pulse, energyAlpha); break;
+      case 'CHIMAERA': this.drawChimaera(pulse, energyAlpha); break;
+      case 'FIREFLY': this.drawFirefly(pulse, energyAlpha); break;
+    }
+
+    ctx.restore();
+  }
+
+  drawDrifter(pulse, alpha) {
+    const g = this.spec.glow;
+    // Bell
+    ctx.beginPath();
+    ctx.ellipse(0, 0, this.size, this.size * 0.6, 0, 0, Math.PI, true);
+    ctx.closePath();
+    ctx.fillStyle = `rgba(${g[0]},${g[1]},${g[2]},${0.08 * alpha})`;
+    ctx.fill();
+    ctx.strokeStyle = `rgba(${g[0]},${g[1]},${g[2]},${0.3 * alpha * pulse})`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // Tentacles
+    for (let i = 0; i < this.tentacles; i++) {
+      const tx = (i / (this.tentacles-1) - 0.5) * this.size * 1.5;
+      ctx.beginPath();
+      ctx.moveTo(tx, 0);
+      for (let j = 1; j <= 8; j++) {
+        const ty = j * this.size * 0.3;
+        const wave = Math.sin(this.phase + i + j * 0.5) * 5;
+        ctx.lineTo(tx + wave, ty);
+      }
+      ctx.strokeStyle = `rgba(${g[0]},${g[1]},${g[2]},${0.15 * alpha})`;
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+    // Internal organs - pulsing spots
+    for (let i = 0; i < 3; i++) {
+      const ox = (Math.sin(this.phase + i * 2) * this.size * 0.3);
+      const oy = -(Math.cos(this.phase + i) * this.size * 0.15 + this.size * 0.15);
+      ctx.beginPath();
+      ctx.arc(ox, oy, 1.5 * pulse, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(${g[0]},${g[1]+50},${g[2]},${0.5 * alpha * pulse})`;
+      ctx.fill();
+    }
+  }
+
+  drawScrambler(pulse, alpha) {
+    const g = this.spec.glow;
+    const angle = Math.atan2(this.vy, this.vx);
+    ctx.rotate(angle);
+    // Segmented body
+    for (let i = 0; i < this.segments; i++) {
+      const sx = -i * this.size * 0.5;
+      const segSize = this.size * (1 - i * 0.12);
+      ctx.beginPath();
+      ctx.ellipse(sx, 0, segSize, segSize * 0.6, 0, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(${g[0]},${g[1]},${g[2]},${(0.12 - i*0.015) * alpha})`;
+      ctx.fill();
+      ctx.strokeStyle = `rgba(${g[0]},${g[1]},${g[2]},${0.3 * alpha})`;
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+    // Mandibles
+    const mandOpen = Math.sin(this.phase * 3) * 0.3 + 0.5;
+    for (let s = -1; s <= 1; s += 2) {
+      ctx.beginPath();
+      ctx.moveTo(this.size, 0);
+      ctx.quadraticCurveTo(this.size * 1.5, s * this.size * mandOpen, this.size * 2, s * this.size * 0.3);
+      ctx.strokeStyle = `rgba(${g[0]+50},${g[1]},${g[2]},${0.4 * alpha})`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+    // Heat-sensing pits (no eyes)
+    for (let s = -1; s <= 1; s += 2) {
+      ctx.beginPath();
+      ctx.arc(this.size * 0.5, s * this.size * 0.25, 1.5, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(255,${40+pulse*30},0,${0.4 * alpha * pulse})`;
+      ctx.fill();
+    }
+  }
+
+  drawCruciform(pulse, alpha) {
+    const g = this.spec.glow;
+    // Cross/cruciform shape
+    for (let a = 0; a < 4; a++) {
+      const angle = a * Math.PI / 2 + this.phase * 0.2;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      const ex = Math.cos(angle) * this.size;
+      const ey = Math.sin(angle) * this.size;
+      ctx.lineTo(ex, ey);
+      ctx.strokeStyle = `rgba(${g[0]},${g[1]},${g[2]},${0.4 * alpha * pulse})`;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // Tip bead
+      ctx.beginPath();
+      ctx.arc(ex, ey, 2, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(${g[0]},${g[1]},${g[2]},${0.5 * alpha})`;
+      ctx.fill();
+    }
+    // Center node
+    ctx.beginPath();
+    ctx.arc(0, 0, 3, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(${g[0]},${g[1]+30},${g[2]},${0.3 * alpha * pulse})`;
+    ctx.fill();
+    // Connection lines to neighbors
+    for (const n of this.cruciNeighbors) {
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(n.x - this.x, n.y - this.y);
+      ctx.strokeStyle = `rgba(${g[0]},${g[1]},${g[2]},${0.06 * alpha})`;
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+  }
+
+  drawRorschach(pulse, alpha) {
+    const g = this.spec.glow;
+    // Massive amorphous body - Rorschach inkblot style
+    const points = 24;
+    ctx.beginPath();
+    for (let i = 0; i <= points; i++) {
+      const a = (i / points) * Math.PI * 2;
+      const r = this.size * (0.7 + Math.sin(a * 3 + this.phase) * 0.15 +
+                Math.sin(a * 7 + this.phase * 0.5) * 0.1 +
+                Math.sin(a * 2 - this.phase * 0.3) * 0.2);
+      const px = Math.cos(a) * r;
+      const py = Math.sin(a) * r;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = `rgba(${g[0]},${g[1]},${g[2]},${0.04 * alpha})`;
+    ctx.fill();
+    ctx.strokeStyle = `rgba(${g[0]},${g[1]},${g[2]},${0.15 * alpha * pulse})`;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // Internal structure - like a space station corridor
+    for (let ring = 1; ring <= 3; ring++) {
+      ctx.beginPath();
+      const rr = this.size * ring * 0.25;
+      ctx.arc(0, 0, rr, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(${g[0]},${g[1]},${g[2]},${0.05 * alpha})`;
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+    // Gravitational field visualization
+    for (let i = 0; i < 8; i++) {
+      const a = i * Math.PI / 4 + this.phase * 0.1;
+      ctx.beginPath();
+      for (let r = this.size; r < this.size * 3; r += 5) {
+        const spiral = a + r * 0.005;
+        const px = Math.cos(spiral) * r;
+        const py = Math.sin(spiral) * r;
+        if (r === this.size) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.strokeStyle = `rgba(${g[0]},${g[1]},${g[2]},${0.03 * alpha})`;
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+  }
+
+  drawChimaera(pulse, alpha) {
+    const g = this.spec.glow;
+    // Small spiky parasite
+    const spikes = 6;
+    ctx.beginPath();
+    for (let i = 0; i <= spikes * 2; i++) {
+      const a = (i / (spikes * 2)) * Math.PI * 2;
+      const r = i % 2 === 0 ? this.size : this.size * 0.4;
+      const px = Math.cos(a) * r;
+      const py = Math.sin(a) * r;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = `rgba(${g[0]},${g[1]},${g[2]},${0.15 * alpha})`;
+    ctx.fill();
+    ctx.strokeStyle = `rgba(${g[0]},${g[1]},${g[2]},${0.4 * alpha * pulse})`;
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+    // Feeding tendril to host
+    if (this.attached) {
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      const hx = this.attached.x - this.x, hy = this.attached.y - this.y;
+      ctx.lineTo(hx, hy);
+      ctx.strokeStyle = `rgba(${g[0]},${g[1]},${g[2]},${0.2 * alpha * pulse})`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  }
+
+  drawFirefly(pulse, alpha) {
+    const g = this.spec.glow;
+    const syncPulse = Math.sin(this.pulsePhase) * 0.5 + 0.5;
+    // Tiny glowing dot
+    ctx.beginPath();
+    ctx.arc(0, 0, this.size * (0.8 + syncPulse * 0.4), 0, Math.PI*2);
+    ctx.fillStyle = `rgba(${g[0]},${g[1]},${g[2]},${0.4 * alpha * syncPulse})`;
+    ctx.fill();
+    // Bright core during pulse
+    if (syncPulse > 0.7) {
+      ctx.beginPath();
+      ctx.arc(0, 0, this.size * 0.5, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(${Math.min(255,g[0]+100)},${Math.min(255,g[1]+100)},${g[2]},${0.8 * alpha})`;
+      ctx.fill();
+    }
+  }
+}
+
+// ============================================================
+// PARTICLES (death/birth effects)
+// ============================================================
+
+function spawnParticles(x, y, color, count) {
+  for (let i = 0; i < count; i++) {
+    particles.push({
+      x, y,
+      vx: (Math.random()-0.5) * 3,
+      vy: (Math.random()-0.5) * 3,
+      life: 1,
+      color,
+      size: 1 + Math.random() * 2
+    });
+  }
+}
+
+// ============================================================
+// ENVIRONMENT (deep ocean effects)
+// ============================================================
+
+let caustics = [];
+for (let i = 0; i < 30; i++) {
+  caustics.push({
+    x: Math.random() * 2000,
+    y: Math.random() * 2000,
+    size: 50 + Math.random() * 150,
+    speed: 0.2 + Math.random() * 0.3,
+    phase: Math.random() * Math.PI * 2
+  });
+}
+
+function drawEnvironment(t) {
+  // Deep ocean gradient
+  const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+  bgGrad.addColorStop(0, '#020808');
+  bgGrad.addColorStop(0.3, '#010505');
+  bgGrad.addColorStop(0.7, '#010404');
+  bgGrad.addColorStop(1, '#020606');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Subtle caustic light patterns
+  for (const c of caustics) {
+    const cx = (c.x + Math.sin(t * 0.001 * c.speed + c.phase) * 100) % (W + 200) - 100;
+    const cy = (c.y + Math.cos(t * 0.001 * c.speed * 0.7 + c.phase) * 80) % (H + 200) - 100;
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, c.size);
+    grad.addColorStop(0, `rgba(10,30,25,${0.02 + Math.sin(t*0.002+c.phase)*0.01})`);
+    grad.addColorStop(1, 'transparent');
+    ctx.fillStyle = grad;
+    ctx.fillRect(cx - c.size, cy - c.size, c.size * 2, c.size * 2);
+  }
+
+  // Marine snow (falling particles)
+  ctx.fillStyle = 'rgba(20,40,35,0.15)';
+  for (let i = 0; i < 50; i++) {
+    const sx = (i * 137.5 + t * 0.05 * (0.5 + (i%3)*0.3)) % W;
+    const sy = (i * 89.3 + t * 0.15 * (0.3 + (i%5)*0.2)) % H;
+    ctx.fillRect(sx, sy, 1, 1);
+  }
+
+  // Depth pressure lines
+  ctx.strokeStyle = 'rgba(15,35,28,0.04)';
+  ctx.lineWidth = 0.5;
+  for (let y = 0; y < H; y += 80) {
+    ctx.beginPath();
+    ctx.moveTo(0, y + Math.sin(t * 0.001 + y) * 3);
+    for (let x = 0; x < W; x += 20) {
+      ctx.lineTo(x, y + Math.sin(t * 0.001 + y + x * 0.01) * 3);
+    }
+    ctx.stroke();
+  }
+}
+
+// ============================================================
+// SEED ECOSYSTEM
+// ============================================================
+
+function seed() {
+  organisms = [];
+  // Drifters - most common
+  for (let i = 0; i < 15; i++) organisms.push(new Organism('DRIFTER'));
+  // Fireflies - swarm
+  for (let i = 0; i < 25; i++) organisms.push(new Organism('FIREFLY'));
+  // Cruciforms - colonial
+  for (let i = 0; i < 10; i++) organisms.push(new Organism('CRUCIFORM'));
+  // Scramblers - predators (fewer)
+  for (let i = 0; i < 4; i++) organisms.push(new Organism('SCRAMBLER'));
+  // Chimaera - parasites
+  for (let i = 0; i < 3; i++) organisms.push(new Organism('CHIMAERA'));
+  // Rorschach - apex sessile (rare)
+  for (let i = 0; i < 2; i++) organisms.push(new Organism('RORSCHACH'));
+}
+
+seed();
+
+// ============================================================
+// MAIN LOOP
+// ============================================================
+
+let lastTime = 0;
+let frame = 0;
+
+function loop(time) {
+  const dt = Math.min((time - lastTime) / 16, 3);
+  lastTime = time;
+  frame++;
+  epoch = Math.floor(time / 30000);
+
+  drawEnvironment(time);
+
+  // Update organisms
+  const newOrgs = [];
+  for (let i = organisms.length - 1; i >= 0; i--) {
+    const o = organisms[i];
+    const child = o.update(dt, organisms);
+    if (child && organisms.length < 150) newOrgs.push(child);
+    // Death conditions
+    if (o.energy <= 0 || o.age > o.maxAge) {
+      spawnParticles(o.x, o.y, o.spec.glow, 8);
+      totalDeaths++;
+      organisms.splice(i, 1);
+    }
+  }
+  organisms.push(...newOrgs);
+
+  // Population control - reseed if too low
+  if (organisms.length < 10 && frame % 60 === 0) {
+    const types = ['DRIFTER','FIREFLY','CRUCIFORM','DRIFTER','FIREFLY'];
+    const type = types[Math.floor(Math.random() * types.length)];
+    organisms.push(new Organism(type));
+  }
+  // Occasional new scrambler
+  if (organisms.filter(o => o.type === 'SCRAMBLER').length < 2 && Math.random() < 0.001) {
+    organisms.push(new Organism('SCRAMBLER'));
+  }
+  // Occasional new rorschach
+  if (organisms.filter(o => o.type === 'RORSCHACH').length < 1 && Math.random() < 0.0005) {
+    organisms.push(new Organism('RORSCHACH'));
+  }
+
+  // Draw organisms (back to front by size)
+  organisms.sort((a, b) => b.size - a.size);
+  for (const o of organisms) o.draw();
+
+  // Draw particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vx *= 0.96;
+    p.vy *= 0.96;
+    p.life -= 0.02;
+    if (p.life <= 0) { particles.splice(i, 1); continue; }
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(${p.color[0]},${p.color[1]},${p.color[2]},${p.life * 0.5})`;
+    ctx.fill();
+  }
+
+  // Find nearest organism to cursor for info panel
+  nearestOrg = null;
+  let nearestD = Infinity;
+  for (const o of organisms) {
+    const dx = mx - o.x, dy = my - o.y;
+    const d = Math.sqrt(dx*dx + dy*dy);
+    if (d < nearestD) { nearestD = d; nearestOrg = o; }
+  }
+
+  // Cursor indicator
+  if (nearestD < 100) {
+    cursor.classList.add('near');
+    info.classList.add('visible');
+    info.innerHTML = nearestOrg.spec.desc.replace(/\n/g,'<br>') +
+      `<br><br>ENERGY: ${nearestOrg.energy.toFixed(2)}` +
+      `<br>GEN: ${nearestOrg.gen} | AGE: ${Math.floor(nearestOrg.age)}` +
+      (nearestOrg.mutations.length ? `<br>MUTATIONS: ${nearestOrg.mutations.join(', ')}` : '') +
+      (nearestOrg.attached ? '<br>STATUS: ATTACHED TO HOST' : '');
+  } else {
+    cursor.classList.remove('near');
+    info.classList.remove('visible');
+  }
+
+  // Depth gauge
+  depthMarker.style.top = (my / H * 190) + 'px';
+
+  // HUD
+  const biomass = organisms.reduce((s,o) => s + o.energy * o.size, 0);
+  const maxGen = organisms.reduce((m,o) => Math.max(m, o.gen), 0);
+  document.getElementById('pop').textContent = `POP: ${organisms.length}`;
+  document.getElementById('gen').textContent = `GEN: ${maxGen}`;
+  document.getElementById('biomass').textContent = `BIOMASS: ${biomass.toFixed(1)}`;
+  document.getElementById('entropy').textContent = `ENTROPY: ${(totalDeaths * 0.01).toFixed(2)}`;
+  document.getElementById('epoch').textContent = `EPOCH: ${epoch}`;
+  document.getElementById('hud').className = nearestD < 200 ? 'active' : '';
+
+  // Scan line effect
+  const scanY = (time * 0.1) % H;
+  ctx.fillStyle = 'rgba(20,80,60,0.01)';
+  ctx.fillRect(0, scanY, W, 2);
+
+  // Vignette
+  const vig = ctx.createRadialGradient(W/2, H/2, W*0.3, W/2, H/2, W*0.8);
+  vig.addColorStop(0, 'transparent');
+  vig.addColorStop(1, 'rgba(0,0,0,0.4)');
+  ctx.fillStyle = vig;
+  ctx.fillRect(0, 0, W, H);
+
+  requestAnimationFrame(loop);
+}
+
+boot();
+</script>
+</body>
+</html>

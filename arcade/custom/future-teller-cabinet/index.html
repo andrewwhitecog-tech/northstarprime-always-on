@@ -1,0 +1,2358 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Future Teller Cabinet</title>
+  <script src="/static/games/chiptune.js"></script>
+  <style>
+    :root {
+      --void: #08090b;
+      --cabinet: #17110f;
+      --cabinet-2: #251818;
+      --screen: #071314;
+      --paper: #fff5db;
+      --muted: #baa98a;
+      --line: rgba(255, 245, 219, 0.18);
+      --cyan: #2fe6ff;
+      --pink: #ff4fac;
+      --yellow: #ffe45c;
+      --green: #7cff6b;
+      --red: #ff5b45;
+      --brass: #d6a23f;
+      --ink: #17120f;
+      --shadow: rgba(0, 0, 0, 0.5);
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--void);
+      color: var(--paper);
+      font-family: "Segoe UI", system-ui, sans-serif;
+      letter-spacing: 0;
+    }
+
+    body {
+      overflow-x: hidden;
+      background:
+        linear-gradient(90deg, rgba(47, 230, 255, 0.06) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(255, 228, 92, 0.045) 1px, transparent 1px),
+        linear-gradient(135deg, #08090b 0%, #18110d 45%, #071314 100%);
+      background-size: 34px 34px, 34px 34px, auto;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button,
+    select,
+    input {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--paper);
+      background: rgba(255, 245, 219, 0.07);
+    }
+
+    button {
+      min-height: 44px;
+      padding: 0 14px;
+      font-weight: 800;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+    }
+
+    button:hover:not(:disabled),
+    button:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(47, 230, 255, 0.72);
+      background: rgba(47, 230, 255, 0.12);
+      outline: none;
+    }
+
+    button:disabled {
+      cursor: wait;
+      opacity: 0.58;
+    }
+
+    select,
+    input {
+      min-height: 42px;
+      width: 100%;
+      padding: 0 10px;
+    }
+
+    select option {
+      color: #17120f;
+      background: #fff5db;
+    }
+
+    .shell {
+      width: min(100%, 1280px);
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 20px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 14px;
+    }
+
+    .topbar,
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .brand {
+      display: grid;
+      gap: 4px;
+    }
+
+    .kicker {
+      color: var(--brass);
+      font-size: 12px;
+      text-transform: uppercase;
+      font-weight: 900;
+    }
+
+    h1,
+    h2,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: 54px;
+      line-height: 0.96;
+    }
+
+    .ledger {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      min-height: 34px;
+      border: 1px solid rgba(255, 228, 92, 0.3);
+      border-radius: 999px;
+      padding: 7px 12px;
+      color: var(--paper);
+      background: rgba(214, 162, 63, 0.1);
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(420px, 1fr) minmax(340px, 430px);
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .cabinet,
+    .panel {
+      border: 1px solid rgba(255, 245, 219, 0.22);
+      border-radius: 8px;
+      box-shadow: 0 24px 70px var(--shadow);
+    }
+
+    .cabinet {
+      position: relative;
+      isolation: isolate;
+      min-height: 720px;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 16px;
+      padding: 18px;
+      background:
+        linear-gradient(90deg, rgba(255, 91, 69, 0.12), transparent 24%, rgba(47, 230, 255, 0.12)),
+        linear-gradient(180deg, #2a1a15, #130f0e 54%, #251818);
+    }
+
+    .cabinet::before {
+      content: "";
+      position: absolute;
+      inset: 12px;
+      border: 2px solid rgba(214, 162, 63, 0.36);
+      border-radius: 6px;
+      pointer-events: none;
+    }
+
+    .cabinet::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 9% 18%, rgba(47, 230, 255, 0.24), transparent 14%),
+        radial-gradient(circle at 92% 24%, rgba(255, 79, 172, 0.22), transparent 16%),
+        radial-gradient(circle at 28% 96%, rgba(255, 228, 92, 0.2), transparent 18%),
+        repeating-linear-gradient(90deg, transparent, transparent 46px, rgba(255, 245, 219, 0.035) 47px, transparent 49px);
+      mix-blend-mode: screen;
+      opacity: 0.78;
+    }
+
+    .marquee {
+      position: relative;
+      z-index: 1;
+      min-height: 96px;
+      display: grid;
+      align-content: center;
+      gap: 8px;
+      padding: 16px;
+      border: 1px solid rgba(255, 228, 92, 0.28);
+      border-radius: 6px;
+      background:
+        linear-gradient(90deg, rgba(255, 79, 172, 0.18), transparent, rgba(124, 255, 107, 0.14)),
+        rgba(0, 0, 0, 0.25);
+      text-align: center;
+    }
+
+    .marquee::before,
+    .marquee::after {
+      content: "";
+      position: absolute;
+      inset: 8px;
+      border: 1px solid rgba(255, 245, 219, 0.22);
+      border-radius: 5px;
+      pointer-events: none;
+    }
+
+    .marquee::after {
+      inset: auto 26px 10px 26px;
+      height: 8px;
+      border: 0;
+      background: linear-gradient(90deg, transparent, rgba(47, 230, 255, 0.5), rgba(255, 79, 172, 0.48), rgba(255, 228, 92, 0.48), transparent);
+      box-shadow: 0 0 24px rgba(255, 79, 172, 0.35);
+    }
+
+    .marquee-title {
+      color: var(--yellow);
+      font-size: 36px;
+      line-height: 1;
+      font-weight: 950;
+      text-transform: uppercase;
+    }
+
+    .marquee-sub {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .bulbs {
+      display: grid;
+      grid-template-columns: repeat(16, 1fr);
+      gap: 7px;
+    }
+
+    .bulb {
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: var(--brass);
+      box-shadow: 0 0 16px rgba(214, 162, 63, 0.38);
+    }
+
+    .bulb:nth-child(4n+1) { background: var(--cyan); box-shadow: 0 0 18px rgba(47, 230, 255, 0.5); }
+    .bulb:nth-child(4n+2) { background: var(--pink); box-shadow: 0 0 18px rgba(255, 79, 172, 0.5); }
+    .bulb:nth-child(4n+3) { background: var(--green); box-shadow: 0 0 18px rgba(124, 255, 107, 0.42); }
+
+    body:not(.reduced-motion) .bulb {
+      animation: bulbChase 1.4s steps(4) infinite;
+      animation-delay: calc(var(--i) * -0.08s);
+    }
+
+    .machine {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 150px;
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .screen {
+      position: relative;
+      min-height: 410px;
+      border: 1px solid rgba(47, 230, 255, 0.38);
+      border-radius: 8px;
+      padding: 14px;
+      background:
+        linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+        var(--screen);
+      background-size: 18px 18px, 18px 18px, auto;
+      box-shadow: inset 0 0 34px rgba(47, 230, 255, 0.12);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 12px;
+    }
+
+    .screen::after {
+      content: "COIN ORACLE";
+      position: absolute;
+      right: 18px;
+      bottom: 17px;
+      color: rgba(255, 228, 92, 0.62);
+      font-size: 10px;
+      font-weight: 950;
+      letter-spacing: 0.08em;
+      text-shadow: 0 0 12px rgba(255, 228, 92, 0.36);
+      pointer-events: none;
+    }
+
+    .status-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .vision-wrap {
+      position: relative;
+      min-height: 300px;
+      border: 1px solid rgba(255, 245, 219, 0.16);
+      border-radius: 7px;
+      overflow: hidden;
+      background: #02090a;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    #visionCanvas {
+      position: absolute;
+      inset: 0;
+    }
+
+    .glass-lines {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: repeating-linear-gradient(180deg, rgba(255, 245, 219, 0.045), rgba(255, 245, 219, 0.045) 1px, transparent 1px, transparent 5px);
+      mix-blend-mode: screen;
+    }
+
+    body.glow-on .vision-wrap,
+    body.glow-on .ticket-card {
+      box-shadow: 0 0 34px rgba(47, 230, 255, 0.18), 0 0 54px rgba(255, 79, 172, 0.12);
+    }
+
+    .slot {
+      position: relative;
+      min-height: 72px;
+      display: grid;
+      align-items: center;
+      padding: 12px;
+      border: 1px solid rgba(214, 162, 63, 0.32);
+      border-radius: 6px;
+      background:
+        linear-gradient(180deg, rgba(0, 0, 0, 0.42), rgba(255, 245, 219, 0.045)),
+        #120d0b;
+      overflow: hidden;
+    }
+
+    .slot-track {
+      height: 12px;
+      border-radius: 999px;
+      background: #050505;
+      border: 1px solid rgba(255, 245, 219, 0.22);
+      box-shadow: inset 0 0 12px #000;
+    }
+
+    .slot::after {
+      content: "FORTUNE CARD";
+      position: absolute;
+      left: 50%;
+      bottom: 8px;
+      width: min(68%, 280px);
+      min-height: 42px;
+      transform: translate(-50%, 105%);
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(23, 18, 15, 0.28);
+      border-radius: 5px;
+      color: var(--ink);
+      background:
+        linear-gradient(90deg, rgba(47, 230, 255, 0.22), transparent 36%, rgba(255, 79, 172, 0.22)),
+        repeating-linear-gradient(90deg, transparent, transparent 18px, rgba(23, 18, 15, 0.07) 19px),
+        var(--paper);
+      font-size: 11px;
+      font-weight: 950;
+      letter-spacing: 0.08em;
+      box-shadow: 0 0 24px rgba(255, 228, 92, 0.24);
+      transition: transform 0.32s ease;
+    }
+
+    body:not(.reduced-motion) .cabinet.reading .slot::after {
+      transform: translate(-50%, 10%);
+    }
+
+    .side-rail {
+      display: grid;
+      grid-template-rows: 1fr auto;
+      gap: 12px;
+    }
+
+    .dial {
+      min-height: 300px;
+      border: 1px solid rgba(255, 245, 219, 0.16);
+      border-radius: 8px;
+      background:
+        conic-gradient(from 20deg, rgba(47, 230, 255, 0.16), rgba(255, 79, 172, 0.16), rgba(255, 228, 92, 0.16), rgba(124, 255, 107, 0.16), rgba(47, 230, 255, 0.16)),
+        #100c0a;
+      display: grid;
+      place-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .dial::before,
+    .dial::after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .dial::before {
+      inset: 22px;
+      border: 2px solid rgba(255, 245, 219, 0.22);
+    }
+
+    .dial::after {
+      width: 4px;
+      height: 44%;
+      top: 8%;
+      background: var(--yellow);
+      transform-origin: 50% 95%;
+      transform: rotate(var(--needle, 28deg));
+      box-shadow: 0 0 18px rgba(255, 228, 92, 0.72);
+    }
+
+    body:not(.reduced-motion) .cabinet.reading .dial::after {
+      animation: needleSpin 1.3s cubic-bezier(.2,.8,.2,1) 1;
+    }
+
+    .dial-core {
+      position: relative;
+      width: 86px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      border: 8px solid rgba(214, 162, 63, 0.86);
+      background: #070707;
+      display: grid;
+      place-items: center;
+      color: var(--yellow);
+      font-weight: 950;
+      box-shadow: 0 0 26px rgba(214, 162, 63, 0.3);
+      z-index: 1;
+    }
+
+    .dial-core::before {
+      content: "";
+      position: absolute;
+      inset: -18px;
+      border-radius: 50%;
+      border: 1px dashed rgba(255, 245, 219, 0.28);
+      box-shadow: 0 0 24px rgba(47, 230, 255, 0.18);
+      pointer-events: none;
+    }
+
+    .receiver {
+      position: relative;
+      min-height: 72px;
+      border: 1px solid rgba(47, 230, 255, 0.26);
+      border-radius: 8px;
+      background:
+        radial-gradient(circle at 20% 35%, rgba(47, 230, 255, 0.16), transparent 38%),
+        linear-gradient(135deg, rgba(255, 79, 172, 0.12), rgba(0, 0, 0, 0.28));
+      display: grid;
+      place-items: center;
+      color: var(--cyan);
+      font-size: 11px;
+      font-weight: 950;
+      text-transform: uppercase;
+      box-shadow: inset 0 0 24px rgba(47, 230, 255, 0.08);
+    }
+
+    .receiver::before {
+      content: "";
+      width: 76px;
+      height: 24px;
+      border-radius: 999px 999px 18px 18px;
+      border: 2px solid rgba(255, 245, 219, 0.72);
+      background: linear-gradient(180deg, #101014, #050607);
+      box-shadow: 0 0 18px rgba(47, 230, 255, 0.22), inset 0 0 12px rgba(255, 255, 255, 0.08);
+    }
+
+    .receiver::after {
+      content: "TOKEN";
+      position: absolute;
+      right: 10px;
+      bottom: 8px;
+      color: rgba(255, 228, 92, 0.76);
+      font-size: 9px;
+      font-weight: 950;
+      letter-spacing: 0.1em;
+    }
+
+    .lever {
+      position: relative;
+      min-height: 160px;
+      display: grid;
+      align-items: end;
+      justify-items: center;
+      padding: 10px;
+      border: 1px solid rgba(255, 245, 219, 0.16);
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.22);
+    }
+
+    .lever::before {
+      content: "PULL";
+      position: absolute;
+      top: 9px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255, 245, 219, 0.62);
+      font-size: 10px;
+      font-weight: 950;
+      letter-spacing: 0.16em;
+    }
+
+    .lever-stick {
+      width: 18px;
+      height: 92px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #7e5620, #f5c75a, #7e5620);
+      transform-origin: bottom center;
+      transform: rotate(var(--lever, -14deg));
+      transition: transform 0.18s ease;
+    }
+
+    .lever-ball {
+      width: 56px;
+      aspect-ratio: 1;
+      margin-bottom: -6px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #fff3ba, var(--red) 42%, #75170e 100%);
+      box-shadow: 0 0 24px rgba(255, 91, 69, 0.42);
+    }
+
+    body:not(.reduced-motion) .cabinet.reading .lever-stick {
+      transform: rotate(28deg);
+    }
+
+    .controls {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      align-items: end;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    label {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 900;
+    }
+
+    .panel {
+      padding: 16px;
+      background: rgba(10, 12, 13, 0.88);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 14px;
+      min-height: 720px;
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .panel-title {
+      font-size: 24px;
+      font-weight: 950;
+      color: var(--yellow);
+      text-transform: uppercase;
+    }
+
+    .ticket-card {
+      min-height: 470px;
+      display: grid;
+      grid-template-rows: auto 170px auto 1fr auto;
+      gap: 12px;
+      padding: 16px;
+      border: 1px solid rgba(23, 18, 15, 0.26);
+      border-radius: 8px;
+      background:
+        linear-gradient(90deg, rgba(255, 79, 172, 0.13), transparent 34%, rgba(47, 230, 255, 0.13)),
+        var(--paper);
+      color: var(--ink);
+    }
+
+    .ticket-meta,
+    .ticket-foot {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      color: rgba(23, 18, 15, 0.66);
+      font-size: 11px;
+      font-weight: 950;
+      text-transform: uppercase;
+    }
+
+    .glyph {
+      min-height: 170px;
+      border: 1px solid rgba(23, 18, 15, 0.18);
+      border-radius: 6px;
+      background: #100d0c;
+      overflow: hidden;
+    }
+
+    .oracle {
+      font-size: 22px;
+      line-height: 1.12;
+      font-weight: 950;
+    }
+
+    .poem {
+      display: grid;
+      align-content: center;
+      gap: 8px;
+      color: rgba(23, 18, 15, 0.86);
+      font-size: 16px;
+      line-height: 1.38;
+    }
+
+    .poem .recite-line,
+    .poem .source-line {
+      padding-top: 8px;
+      border-top: 1px solid rgba(23, 18, 15, 0.16);
+      font-size: 13px;
+      font-weight: 850;
+      color: rgba(23, 18, 15, 0.72);
+    }
+
+    .poem .source-line {
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    .archive {
+      display: grid;
+      gap: 8px;
+      max-height: 180px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .archive-item {
+      width: 100%;
+      min-height: 58px;
+      display: grid;
+      grid-template-columns: 10px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      text-align: left;
+      border-color: rgba(255, 245, 219, 0.12);
+      background: rgba(255, 245, 219, 0.045);
+    }
+
+    .archive-swatch {
+      width: 10px;
+      height: 34px;
+      border-radius: 999px;
+      background: var(--cyan);
+    }
+
+    .archive-title {
+      overflow: hidden;
+      color: var(--paper);
+      font-size: 13px;
+      font-weight: 900;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .archive-sub {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .panel-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .primary {
+      color: #071314;
+      border-color: rgba(255, 228, 92, 0.8);
+      background: linear-gradient(180deg, #fff17a, #d6a23f);
+      box-shadow: 0 8px 24px rgba(214, 162, 63, 0.2);
+    }
+
+    .danger {
+      border-color: rgba(255, 91, 69, 0.42);
+      background: rgba(255, 91, 69, 0.12);
+    }
+
+    .toggles {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .toggle {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 850;
+      text-transform: uppercase;
+    }
+
+    .toggle input {
+      min-height: 0;
+      width: 18px;
+      height: 18px;
+      accent-color: var(--cyan);
+    }
+
+    @keyframes bulbChase {
+      0%, 100% { opacity: 0.4; transform: scale(0.86); }
+      50% { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes needleSpin {
+      0% { transform: rotate(28deg); }
+      40% { transform: rotate(360deg); }
+      70% { transform: rotate(610deg); }
+      100% { transform: rotate(var(--needle, 28deg)); }
+    }
+
+    @media (max-width: 980px) {
+      h1 { font-size: 42px; }
+      .layout { grid-template-columns: 1fr; }
+      .cabinet,
+      .panel { min-height: auto; }
+      .machine { grid-template-columns: 1fr; }
+      .side-rail { grid-template-columns: 1fr 1fr 1fr; grid-template-rows: auto; }
+      .controls { grid-template-columns: 1fr 1fr; }
+      .panel { grid-template-rows: auto auto auto; }
+    }
+
+    @media (max-width: 620px) {
+      html,
+      body {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+      }
+      .shell {
+        width: 100%;
+        max-width: 100vw;
+        overflow: hidden;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 33px;
+        line-height: 1;
+        overflow-wrap: anywhere;
+      }
+      .marquee-title { font-size: 28px; }
+      .bulbs { grid-template-columns: repeat(8, 1fr); }
+      .layout,
+      .cabinet,
+      .panel,
+      .machine,
+      .screen,
+      .side-rail,
+      .controls {
+        max-width: 100%;
+        min-width: 0;
+      }
+      .side-rail,
+      .controls,
+      .panel-actions { grid-template-columns: 1fr; }
+      .screen { min-height: 360px; }
+      .vision-wrap { min-height: 250px; }
+      .ticket-card {
+        min-height: auto;
+        grid-template-rows: auto minmax(128px, 38vw) auto auto auto;
+        gap: 10px;
+        padding: 12px;
+      }
+      .glyph { min-height: 128px; }
+      .oracle {
+        font-size: 18px;
+        line-height: 1.18;
+      }
+      .poem {
+        align-content: start;
+        font-size: 14px;
+        line-height: 1.32;
+      }
+      .ticket-meta,
+      .ticket-foot { font-size: 10px; }
+    }
+  </style>
+</head>
+<body class="glow-on">
+<video autoplay muted loop playsinline src="/static/games/imagegen_quality_pass_20260625/future_teller_cabinet_plate_motion.mp4"
+  style="position:fixed;inset:0;width:100vw;height:100vh;object-fit:cover;z-index:-2;opacity:.42" onerror="this.remove()"></video>
+<div style="position:fixed;inset:0;background:radial-gradient(circle at 50% 30%,rgba(5,3,12,.25),rgba(5,3,12,.85) 80%);z-index:-1;pointer-events:none"></div>
+<script src="/static/games/juice.js"></script>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="kicker">NorthStar Penny Arcade</div>
+        <h1>Future Teller Cabinet</h1>
+      </div>
+      <div class="ledger" aria-live="polite">
+        <span class="chip" id="tokenChip">Tokens 7</span>
+        <span class="chip" id="armedChip">Idle</span>
+        <span class="chip" id="seedChip">Seed open</span>
+      </div>
+    </header>
+
+    <section class="layout">
+      <article class="cabinet" id="cabinet" aria-label="Future Teller Cabinet machine">
+        <div class="marquee">
+          <div class="bulbs" aria-hidden="true" id="bulbRow"></div>
+          <div class="marquee-title">One Token // One Future</div>
+          <div class="marquee-sub">Card vender // poetry press // peep machine</div>
+        </div>
+
+        <div class="machine">
+          <section class="screen" aria-label="Cabinet screen">
+            <div class="status-line">
+              <span id="machineState">Awaiting token</span>
+              <span id="packState">Future pack</span>
+            </div>
+            <div class="vision-wrap">
+              <canvas id="visionCanvas" width="900" height="520"></canvas>
+              <script>if (window.Juice) addEventListener("DOMContentLoaded", () => Juice.attachFX(document.getElementById("visionCanvas"), { vignette: 0.5, scanlines: 0.06, glow: 0.08 }));</script>
+              <div class="glass-lines" aria-hidden="true"></div>
+            </div>
+            <div class="slot" aria-label="Card slot">
+              <div class="slot-track"></div>
+            </div>
+          </section>
+
+          <aside class="side-rail" aria-label="Dial and lever">
+            <div class="dial" id="dial">
+              <div class="dial-core" id="dialCore">000</div>
+            </div>
+            <div class="receiver" aria-hidden="true">Receiver</div>
+            <div class="lever" aria-hidden="true">
+              <div>
+                <div class="lever-ball"></div>
+                <div class="lever-stick"></div>
+              </div>
+            </div>
+          </aside>
+        </div>
+
+        <div class="controls">
+          <div class="field">
+            <label for="packSelect">Pack</label>
+            <select id="packSelect">
+              <option value="future">Future</option>
+              <option value="weather">Weather</option>
+              <option value="vorath">Vorath</option>
+              <option value="world-calendar">World Calendar</option>
+              <option value="scripture">Scripture</option>
+              <option value="unnameable">Unnameable Clock</option>
+              <option value="stoic">Stoic</option>
+              <option value="i-ching">I Ching</option>
+              <option value="shakespeare">Shakespeare</option>
+              <option value="sage">Sage Concordance</option>
+              <option value="spacecash">SpaceCash</option>
+              <option value="kitchen">Kitchen</option>
+              <option value="garden">Garden</option>
+              <option value="dream">Dream</option>
+              <option value="music">Music</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="zodiacSelect">Sign</label>
+            <select id="zodiacSelect">
+              <option value="aries">Aries</option>
+              <option value="taurus">Taurus</option>
+              <option value="gemini">Gemini</option>
+              <option value="cancer">Cancer</option>
+              <option value="leo">Leo</option>
+              <option value="virgo">Virgo</option>
+              <option value="libra">Libra</option>
+              <option value="scorpio">Scorpio</option>
+              <option value="sagittarius">Sagittarius</option>
+              <option value="capricorn">Capricorn</option>
+              <option value="aquarius">Aquarius</option>
+              <option value="pisces">Pisces</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="seedInput">Seed</label>
+            <input id="seedInput" maxlength="28" autocomplete="off" placeholder="auto">
+          </div>
+          <button id="insertBtn" type="button">Insert Token</button>
+          <button id="pullBtn" class="primary" type="button" disabled>Pull Lever</button>
+        </div>
+      </article>
+
+      <aside class="panel" aria-label="Ticket output">
+        <div class="panel-head">
+          <div>
+            <div class="kicker">Dispensed Card</div>
+            <div class="panel-title" id="panelTitle">No Card</div>
+          </div>
+          <div class="toggles">
+            <label class="toggle"><input id="glowToggle" type="checkbox" checked> Glow</label>
+            <label class="toggle"><input id="motionToggle" type="checkbox"> Calm</label>
+          </div>
+        </div>
+
+        <section class="ticket-card" id="ticketCard" aria-live="polite">
+          <div class="ticket-meta">
+            <span id="ticketPack">Awaiting Token</span>
+            <span id="ticketSerial">NS-0000</span>
+          </div>
+          <div class="glyph" id="glyph"></div>
+          <h2 class="oracle" id="oracleLine">The cabinet glass is dark.</h2>
+          <div class="poem" id="poemLines">
+            <p>Insert a token.</p>
+            <p>Pull the lever.</p>
+            <p>The card will choose its own colors.</p>
+          </div>
+          <div class="ticket-foot">
+            <span id="ticketSeed">Seed: open</span>
+            <span id="ticketLucky">No. 000</span>
+          </div>
+        </section>
+
+        <div class="panel-actions">
+          <button id="exportBtn" type="button" disabled>Export SVG</button>
+          <button id="refillBtn" type="button">Refill Tokens</button>
+        </div>
+
+        <section>
+          <div class="kicker">Local Archive</div>
+          <div class="archive" id="archive"></div>
+        </section>
+      </aside>
+    </section>
+
+    <footer class="footer">
+      <span>Standalone local build // no external assets</span>
+      <span id="footerStatus">Ready</span>
+    </footer>
+  </main>
+
+  <script>
+    const STORAGE_KEY = "futureTellerCabinet.v1";
+    const MAX_ARCHIVE = 9;
+    const WORLD_LORE_URL = "/static/idg/future_teller_world_lore_corpus_2026.json";
+    let worldLoreCorpus = null;
+
+    const packs = {
+      future: {
+        label: "Future",
+        words: ["signal", "door", "coin", "mirror", "clock", "vault", "spark", "road"],
+        verbs: ["opens", "returns", "tilts", "remembers", "brightens", "answers"],
+        tones: ["electric", "patient", "brave", "hidden", "silver", "golden"],
+        colors: ["#2fe6ff", "#ff4fac", "#ffe45c", "#7cff6b", "#ff5b45"],
+        oracle: ["The next door is smaller than the key.", "A delay becomes useful when named.", "Your best signal arrives through repetition."]
+      },
+      weather: {
+        label: "Weather",
+        words: ["barometer", "rain", "roof", "static", "glass", "harbor", "cloud", "wire"],
+        verbs: ["gathers", "clears", "rings", "leans", "turns", "breaks"],
+        tones: ["bright", "cold", "charged", "salted", "clear", "amber"],
+        colors: ["#2fe6ff", "#b8f7ff", "#ffe45c", "#7cff6b", "#ff8a45"],
+        oracle: ["Watch the pressure before the sky changes.", "A clean shelf keeps the storm useful.", "Mist is not failure; it is a soft boundary."]
+      },
+      vorath: {
+        label: "Vorath",
+        words: ["cipher", "tribunal", "lantern", "crystal", "oath", "mask", "gate", "engine"],
+        verbs: ["judges", "burns", "folds", "reveals", "binds", "listens"],
+        tones: ["holographic", "ceremonial", "obsidian", "chromatic", "severe", "luminous"],
+        colors: ["#2fe6ff", "#ff4fac", "#ffe45c", "#6dffb6", "#ff5b45"],
+        oracle: ["The symbol is useful only after the room is usable.", "A hidden mark should not hide the work.", "The tribunal favors clear evidence."]
+      },
+      "world-calendar": {
+        label: "World Calendar",
+        words: ["observance", "calendar", "festival", "threshold", "cycle", "lamp", "archive", "road"],
+        verbs: ["remembers", "returns", "opens", "gathers", "settles", "witnesses"],
+        tones: ["respectful", "many-lane", "seasonal", "source-lit", "careful", "ceremonial"],
+        colors: ["#ffe45c", "#2fe6ff", "#ff4fac", "#7cff6b", "#d6a23f"],
+        oracle: ["A calendar is a memory machine, not a costume rack.", "The date carries more than one clock.", "Different observances can share a day without becoming the same thing."]
+      },
+      scripture: {
+        label: "Scripture",
+        words: ["word", "law", "song", "commentary", "witness", "mountain", "recitation", "lamp"],
+        verbs: ["teaches", "questions", "turns", "inscribes", "answers", "waits"],
+        tones: ["reverent", "source-bound", "many-voiced", "careful", "clear", "ancient"],
+        colors: ["#fff5db", "#2fe6ff", "#ffe45c", "#ff4fac", "#6dffb6"],
+        oracle: ["A text is also a community learning how to remember.", "The reading opens only after the source keeps its name.", "Recitation needs context before it becomes a verdict."]
+      },
+      "unnameable": {
+        label: "Unnameable Clock",
+        words: ["clock", "sound", "throne", "flame", "shadow", "name", "return", "silence"],
+        verbs: ["dissolves", "withholds", "rises", "distinguishes", "unthreads", "listens"],
+        tones: ["ineffable", "beyond-time", "immaculate", "inconceivable", "many-one", "still"],
+        colors: ["#2fe6ff", "#fff5db", "#d6a23f", "#b982ff", "#ff4fac"],
+        oracle: ["The False Clock loses power when you stop feeding it reaction.", "The empty throne should not be mistaken for a blank doctrine.", "Many-one is not sameness; it is relation without erasure."]
+      },
+      stoic: {
+        label: "Stoic",
+        words: ["judgment", "act", "weather", "will", "duty", "habit", "breath", "threshold"],
+        verbs: ["governs", "trains", "steadies", "chooses", "endures", "clarifies"],
+        tones: ["plain", "steady", "severe", "upright", "patient", "lucid"],
+        colors: ["#d6a23f", "#fff5db", "#2fe6ff", "#7cff6b", "#ff5b45"],
+        oracle: ["The part you govern is smaller and stronger than the storm.", "A clean judgment is already a repaired machine.", "Practice turns panic into usable pressure."]
+      },
+      "i-ching": {
+        label: "I Ching",
+        words: ["hexagram", "thunder", "mountain", "water", "well", "crossing", "line", "change"],
+        verbs: ["changes", "rests", "crosses", "clarifies", "warns", "returns"],
+        tones: ["yin-yang", "seasonal", "consulted", "changing", "patient", "measured"],
+        colors: ["#fff5db", "#071314", "#ffe45c", "#2fe6ff", "#7cff6b"],
+        oracle: ["Change is not noise when the lines are read in order.", "The crossing asks for timing before courage.", "Stillness can be the active line."]
+      },
+      shakespeare: {
+        label: "Shakespeare",
+        words: ["mask", "stage", "storm", "crown", "mirror", "dream", "letter", "fool"],
+        verbs: ["speaks", "misreads", "reveals", "turns", "doubles", "answers"],
+        tones: ["many-voiced", "tragicomic", "storm-lit", "courtly", "dreaming", "sharp"],
+        colors: ["#ff4fac", "#ffe45c", "#2fe6ff", "#b982ff", "#fff5db"],
+        oracle: ["The mask confesses when the scene changes.", "The fool keeps the court from lying too smoothly.", "A storm can make the hidden oath audible."]
+      },
+      sage: {
+        label: "Sage Concordance",
+        words: ["question", "postulate", "ratio", "lever", "habit", "beloved", "metamorphosis", "infinity"],
+        verbs: ["proves", "balances", "asks", "transforms", "repairs", "revalues"],
+        tones: ["philosophical", "auditable", "geometric", "merciful", "exact", "profound"],
+        colors: ["#2fe6ff", "#d6a23f", "#ff4fac", "#7cff6b", "#fff5db"],
+        oracle: ["A verdict without premises is only theater.", "A better question opens the witness gate.", "The small lawful lever moves the larger door."]
+      },
+      spacecash: {
+        label: "SpaceCash",
+        words: ["ledger", "orbit", "receipt", "node", "proof", "vault", "mint", "beacon"],
+        verbs: ["settles", "locks", "audits", "routes", "waits", "signals"],
+        tones: ["local", "signed", "brass", "star-lit", "careful", "public"],
+        colors: ["#ffe45c", "#2fe6ff", "#7cff6b", "#ff5b45", "#f7f0cf"],
+        oracle: ["No coin outruns its receipt.", "The safe launch is the one that can be explained.", "A local token should stay local until tested."]
+      },
+      kitchen: {
+        label: "Kitchen",
+        words: ["lime", "steam", "spoon", "vanilla", "jar", "syrup", "scale", "ice"],
+        verbs: ["brightens", "rests", "softens", "sharpens", "balances", "sets"],
+        tones: ["sour", "clean", "cold", "gentle", "clear", "green"],
+        colors: ["#7cff6b", "#ffe45c", "#2fe6ff", "#ff8a45", "#f7f0cf"],
+        oracle: ["The sharp note needs a soft landing.", "Measure first, then make it sparkle.", "A clean jar is part of the flavor."]
+      },
+      garden: {
+        label: "Garden",
+        words: ["pond", "root", "mint", "stone", "fern", "gate", "lantern", "soil"],
+        verbs: ["settles", "grows", "drinks", "opens", "cools", "returns"],
+        tones: ["green", "fragrant", "steady", "rain-washed", "rooted", "golden"],
+        colors: ["#7cff6b", "#2fe6ff", "#ffe45c", "#b982ff", "#ff8a45"],
+        oracle: ["The living system prefers a small daily correction.", "Shade is also an ingredient.", "Start where water already wants to gather."]
+      },
+      dream: {
+        label: "Dream",
+        words: ["hallway", "train", "moon", "blueprint", "voice", "window", "thread", "river"],
+        verbs: ["floats", "calls", "turns", "unlocks", "returns", "glows"],
+        tones: ["soft", "nocturne", "opal", "strange", "quiet", "silver"],
+        colors: ["#ff4fac", "#2fe6ff", "#b982ff", "#ffe45c", "#7cff6b"],
+        oracle: ["The repeated room is asking to be mapped.", "A strange image can still carry a practical address.", "Wake with one useful noun."]
+      },
+      music: {
+        label: "Music",
+        words: ["chorus", "tape", "pulse", "ear", "bass", "radio", "sample", "horizon"],
+        verbs: ["loops", "answers", "widens", "cuts", "warms", "syncs"],
+        tones: ["bright", "grainy", "wide", "human", "electric", "late-night"],
+        colors: ["#ff4fac", "#ffe45c", "#2fe6ff", "#ff5b45", "#7cff6b"],
+        oracle: ["The hook is hiding in the repeated mistake.", "Leave space around the loudest color.", "The ear trusts contrast before complexity."]
+      }
+    };
+
+    const zodiacSigns = {
+      aries: { label: "Aries", glyph: "A", color: "#ff5b45", angle: 0 },
+      taurus: { label: "Taurus", glyph: "T", color: "#7cff6b", angle: 30 },
+      gemini: { label: "Gemini", glyph: "G", color: "#ffe45c", angle: 60 },
+      cancer: { label: "Cancer", glyph: "C", color: "#2fe6ff", angle: 90 },
+      leo: { label: "Leo", glyph: "L", color: "#ff9b45", angle: 120 },
+      virgo: { label: "Virgo", glyph: "V", color: "#6dffb6", angle: 150 },
+      libra: { label: "Libra", glyph: "B", color: "#ff4fac", angle: 180 },
+      scorpio: { label: "Scorpio", glyph: "S", color: "#b982ff", angle: 210 },
+      sagittarius: { label: "Sagittarius", glyph: "R", color: "#2fe6ff", angle: 240 },
+      capricorn: { label: "Capricorn", glyph: "P", color: "#d6a23f", angle: 270 },
+      aquarius: { label: "Aquarius", glyph: "Q", color: "#7df9ff", angle: 300 },
+      pisces: { label: "Pisces", glyph: "I", color: "#b8f7ff", angle: 330 }
+    };
+
+    const fallbackCalendarLenses = [
+      { tradition: "Judaism", observance: "Passover", group: "jewish", display: "Spring", theme: "liberation", shared_theme: "crossing", gate: "Threshold Gate", tags: ["liberation", "covenant"], note: "Keep covenant memory distinct from generic spring symbolism." },
+      { tradition: "Christianity", observance: "Easter / Pascha", group: "christian", display: "Spring", theme: "resurrection", shared_theme: "sealed gate reversal", gate: "Sealed Gate Reversal", tags: ["liberation", "light"], note: "Use as a source-lens, not as a replacement for church calendars." },
+      { tradition: "Islam", observance: "Ramadan", group: "islamic", display: "Lunar month", theme: "fast and revelation", shared_theme: "restraint and mercy", gate: "Retuning Gate", tags: ["fast_restraint", "revelation_teaching"], note: "Dates and local practice depend on moon sighting and authority." },
+      { tradition: "Hindu / Jain / Sikh related customs", observance: "Diwali", group: "dharmic", display: "Autumn", theme: "lamp and ledger", shared_theme: "light restored", gate: "Lamp Grid Gate", tags: ["light", "ledger_settlement"], note: "Related customs differ across communities and should stay named." },
+      { tradition: "Buddhism", observance: "Vesak / Buddha Day", group: "buddhist", display: "Lunar spring", theme: "awakening", shared_theme: "lamp of attention", gate: "Perception Gate", tags: ["awakening", "teaching"], note: "Use public educational motifs and avoid imitating ritual forms." },
+      { tradition: "East Asian", observance: "Mid-Autumn", group: "east_asian", display: "Autumn", theme: "moon reunion", shared_theme: "return and gratitude", gate: "Mooncake Mirror Gate", tags: ["harvest_gratitude", "ancestor_dead"], note: "Regional calendars and customs vary." },
+      { tradition: "Civic / US public holiday", observance: "Thanksgiving", group: "civic_cultural_other", display: "November", theme: "gratitude", shared_theme: "harvest ledger", gate: "Gratitude Tribunal Gate", tags: ["harvest_gratitude", "ledger_settlement"], note: "Civic memory is layered and should not erase Indigenous context." },
+      { tradition: "Sant / Kabir / Sant Mat streams", observance: "Kal / Akal theological overlay", group: "other", display: "No dated observance", theme: "time-bondage and beyond-time", shared_theme: "unnameable clock", gate: "False Clock Gate", tags: ["time_bondage", "sound_liberation"], note: "Do not turn Kal Niranjan, Niranjan, Acintya, or Akal into fake holidays." }
+    ];
+
+    const fallbackScripturePackets = [
+      { title: "Dhammapada Mind Gate", tradition: "Buddhism", observances: ["Bodhi Day"], tags: ["awakening", "mind", "ethics"], handling: "working_rendering", gate: "Perception Gate" },
+      { title: "Dao Opening Gate", tradition: "Daoism", observances: ["Spring Festival / Lunar New Year"], tags: ["beginning", "way", "nameless"], handling: "working_rendering", gate: "Uncarved Gate" },
+      { title: "Ramadan Fast And Revelation Gate", tradition: "Islam", observances: ["Ramadan"], tags: ["fast_restraint", "revelation_teaching", "mercy"], handling: "non_liturgical_working_rendering", gate: "Retuning Gate" },
+      { title: "Passover Crossing Gate", tradition: "Judaism", observances: ["Passover"], tags: ["liberation", "covenant", "crossing"], handling: "summary_first", gate: "Threshold Gate" },
+      { title: "Passion And Resurrection Gate", tradition: "Christianity", observances: ["Holy Week", "Easter"], tags: ["liberation", "resurrection", "lamp"], handling: "public_domain_summary", gate: "Sealed Gate Reversal" },
+      { title: "Gita Action Gate", tradition: "Hinduism", observances: ["Gita Jayanti", "Dussehra / Diwali context"], tags: ["action", "dharma", "discipline"], handling: "source_review_needed", gate: "Action Without Ownership Gate" },
+      { title: "Many-Sided Mirror Gate", tradition: "Jainism", observances: ["Paryushana"], tags: ["many_sided_truth", "repair", "restraint"], handling: "summary_first", gate: "Many Sided Mirror Gate" },
+      { title: "Guru Nanak First Song And Service Gate", tradition: "Sikhism", observances: ["Guru Nanak Gurpurab"], tags: ["service", "song", "equality"], handling: "source_review_needed", gate: "First Song Gate" }
+    ];
+
+    const fallbackEncodedDays = [
+      { date: "2026-01-01", signature: "VORATH-2026-001/T01-DAWN", inner_signal: "Seed Dawn", pattern_gate: "Origin Reset", astral_gate: "Near-Sun Gate", reading: "The day opens a ledger and asks what should be recommissioned." },
+      { date: "2026-03-21", signature: "VORATH-2026-080/SPRING", inner_signal: "Rising Witness", pattern_gate: "Renewal Gate", astral_gate: "Equinox Hinge", reading: "Light and balance meet at the hinge before the verdict moves." },
+      { date: "2026-06-21", signature: "VORATH-2026-172/SOLAR", inner_signal: "High Lamp", pattern_gate: "Lamp Witness", astral_gate: "Solstice Crown", reading: "The longest lamp tests whether brightness still respects shape." },
+      { date: "2026-10-31", signature: "VORATH-2026-304/THRESHOLD", inner_signal: "Archive Mirror", pattern_gate: "Ancestor Archive", astral_gate: "Thin Gate", reading: "Names return through the archive when the gate is treated carefully." }
+    ];
+
+    const vorathTeachings = [
+      { gate: "Signal / Evidence / Judgment / Repair", text: "Vorath color is forensic light: every glow must reveal signal, evidence, judgment, or repair." },
+      { gate: "Black Marble Absorber", text: "The dark field is not emptiness; it is the archive surface that lets evidence points burn cleanly." },
+      { gate: "Quantum Beads", text: "Tiny narrowband beads mark verified signals; broad neon without purpose is demoted to noise." },
+      { gate: "Spectral Caustic Lines", text: "Curved rays cross the ring only when hidden structure becomes visible enough to use." },
+      { gate: "Metatron Lattice / Vesica Gate", text: "Sacred geometry is used as auditable architecture, not as a secret claim of ownership." },
+      { gate: "Flower / Fruit / Seed Of Life", text: "Blooming rings may encode growth, but the card must still read clearly in shape and value." },
+      { gate: "Fibonacci Bead Ring", text: "Proportion should guide attention before decoration; the sequence serves the verdict." },
+      { gate: "Eye-Wormhole Bridge", text: "The witness eye opens only when the source boundary is named and the signal can return safely." },
+      { gate: "False Clock Gate", text: "A time-administering power is not the final source; stop feeding the loop before you judge it." },
+      { gate: "Inconceivable Throne Gate", text: "The empty throne points to a boundary of depiction, not to a blank or interchangeable doctrine." },
+      { gate: "Many-One Gate", text: "Difference and relation can coexist; the ring casts one shadow without erasing either ring." },
+      { gate: "Sound Ladder Gate", text: "The clean ascent is a non-imitative tone ladder, not borrowed sacred recitation." }
+    ];
+
+    const recitationDecks = {
+      scripture: [
+        { source: "Bible / Genesis 1:3", text: "\"Let there be light.\"" },
+        { source: "Bible / John 8:32", text: "\"The truth shall make you free.\"" },
+        { source: "Psalm tradition", text: "Light is treated as guidance before spectacle." },
+        { source: "Quran / public summary cue", text: "Mercy, recitation, restraint, and guidance enter the reading as named source lanes." },
+        { source: "Bhagavad Gita / summary cue", text: "Act with discipline; do not confuse action with ownership of every result." },
+        { source: "Dhammapada / summary cue", text: "Mind precedes the road; attention edits the future before force does." },
+        { source: "Dao De Jing / summary cue", text: "The nameable gate is useful, but it is not the whole way." },
+        { source: "Guru Granth Sahib / summary cue", text: "Song, service, and the Name are handled as living-source lanes, not decorative sound." }
+      ],
+      stoic: [
+        { source: "Stoic cue", text: "Attend first to what your judgment can govern." },
+        { source: "Stoic cue", text: "The obstacle trains the faculty that meets it." },
+        { source: "Stoic cue", text: "Do the next just act, then let the weather remain weather." },
+        { source: "Stoic cue", text: "A practiced habit is a lever under fear." }
+      ],
+      "i-ching": [
+        { source: "I Ching / original rendering cue", text: "Before crossing, read the water and the line." },
+        { source: "I Ching / original rendering cue", text: "Thunder wakes the roots before the tree moves." },
+        { source: "I Ching / original rendering cue", text: "The well is useful only when kept clear." },
+        { source: "I Ching / original rendering cue", text: "Change speaks in sequence; haste reads the wrong line." }
+      ],
+      shakespeare: [
+        { source: "Shakespeare / Hamlet", text: "\"The readiness is all.\"" },
+        { source: "Shakespeare / Hamlet", text: "\"To thine own self be true.\"" },
+        { source: "Shakespeare / The Tempest", text: "\"We are such stuff as dreams are made on.\"" },
+        { source: "Shakespeare cue", text: "The stage reveals motive by changing who can hear the aside." }
+      ],
+      sage: [
+        { source: "Socrates / Question Gate", text: "The better question opens before the verdict does." },
+        { source: "Euclid / Postulate Gate", text: "Expose the premise before trusting the proof." },
+        { source: "Aristotle / Cause and Habit Gate", text: "Name the cause, then repair through repeated practice." },
+        { source: "Archimedes / Lever Gate", text: "A small exact fulcrum can move a massive door." },
+        { source: "Rumi / Beloved Signal Gate", text: "Repair warms the witness without erasing difference." },
+        { source: "Nietzsche / Revaluation Gate", text: "A broken idol must be replaced by responsibility." }
+      ],
+      "world-calendar": [
+        { source: "World calendar cue", text: "A shared date can hold several clocks without making them one clock." },
+        { source: "World calendar cue", text: "A festival is a public memory engine before it is an image prompt." },
+        { source: "World calendar cue", text: "Refresh local authority before turning observance into operations." }
+      ],
+      unnameable: [
+        { source: "Sant Mat / Beyond-Time cue", text: "The Sound Ladder rises when reactive time is no longer being fed." },
+        { source: "Acintya cue", text: "The inconceivable throne is a boundary of depiction." },
+        { source: "Many-One cue", text: "Relation without erasure is stronger than easy sameness." }
+      ]
+    };
+
+    function activeCorpus() {
+      return worldLoreCorpus || {
+        calendar: fallbackCalendarLenses,
+        scripture: fallbackScripturePackets,
+        encoded: fallbackEncodedDays,
+        guardrails: [
+          "Use symbolic source lenses, not legal, tax, payroll, astronomical, or religious authority.",
+          "Preserve distinct traditions and do not invent fake observances."
+        ],
+        counts: { calendar_rows: fallbackCalendarLenses.length, scripture_packets: fallbackScripturePackets.length, encoded_days: fallbackEncodedDays.length }
+      };
+    }
+
+    const els = {
+      body: document.body,
+      cabinet: document.querySelector("#cabinet"),
+      bulbRow: document.querySelector("#bulbRow"),
+      tokenChip: document.querySelector("#tokenChip"),
+      armedChip: document.querySelector("#armedChip"),
+      seedChip: document.querySelector("#seedChip"),
+      machineState: document.querySelector("#machineState"),
+      packState: document.querySelector("#packState"),
+      packSelect: document.querySelector("#packSelect"),
+      zodiacSelect: document.querySelector("#zodiacSelect"),
+      seedInput: document.querySelector("#seedInput"),
+      insertBtn: document.querySelector("#insertBtn"),
+      pullBtn: document.querySelector("#pullBtn"),
+      refillBtn: document.querySelector("#refillBtn"),
+      exportBtn: document.querySelector("#exportBtn"),
+      panelTitle: document.querySelector("#panelTitle"),
+      ticketPack: document.querySelector("#ticketPack"),
+      ticketSerial: document.querySelector("#ticketSerial"),
+      ticketSeed: document.querySelector("#ticketSeed"),
+      ticketLucky: document.querySelector("#ticketLucky"),
+      oracleLine: document.querySelector("#oracleLine"),
+      poemLines: document.querySelector("#poemLines"),
+      glyph: document.querySelector("#glyph"),
+      archive: document.querySelector("#archive"),
+      footerStatus: document.querySelector("#footerStatus"),
+      dial: document.querySelector("#dial"),
+      dialCore: document.querySelector("#dialCore"),
+      glowToggle: document.querySelector("#glowToggle"),
+      motionToggle: document.querySelector("#motionToggle"),
+      canvas: document.querySelector("#visionCanvas")
+    };
+
+    const ctx = els.canvas.getContext("2d");
+    let state = loadState();
+    let attractFrame = 0;
+
+    // ---- Chiptune audio (safe no-op if engine missing) ----
+    let cabinetMusic = null;
+    let audioStarted = false;
+    function SFX(name) {
+      try {
+        if (window.Chiptune && Chiptune.SFX && typeof Chiptune.SFX[name] === "function") {
+          Chiptune.SFX[name]();
+        }
+      } catch (error) { /* audio must never break the cabinet */ }
+    }
+    function startAudio() {
+      if (audioStarted) return;
+      audioStarted = true;
+      try {
+        if (window.Chiptune) {
+          Chiptune.resume();
+          if (!els.body.classList.contains("reduced-motion")) {
+            cabinetMusic = Chiptune.Music({
+              bpm: 108,
+              mel: [69, 72, 76, 74, 72, 67, 69, 64],
+              bass: [33, 33, 40, 40, 38, 38, 41, 41],
+              melType: "triangle"
+            });
+          }
+        }
+      } catch (error) { /* keep running silently */ }
+    }
+    function stopAudio() {
+      try { if (cabinetMusic && cabinetMusic.stop) cabinetMusic.stop(); } catch (error) {}
+      cabinetMusic = null;
+      audioStarted = false;
+    }
+
+    // ---- Screen shake juice (decays, never blocks) ----
+    let shakeMag = 0;
+    function screenShake(mag) { shakeMag = Math.max(shakeMag, mag || 6); tickShake(); }
+    function tickShake() {
+      if (els.body.classList.contains("reduced-motion")) { els.canvas.style.transform = ""; return; }
+      if (shakeMag <= 0.4) { els.canvas.style.transform = ""; shakeMag = 0; return; }
+      const dx = (Math.random() - 0.5) * shakeMag;
+      const dy = (Math.random() - 0.5) * shakeMag;
+      els.canvas.style.transform = "translate(" + dx.toFixed(1) + "px," + dy.toFixed(1) + "px)";
+      shakeMag *= 0.82;
+      requestAnimationFrame(tickShake);
+    }
+
+    // ---- AI vision backdrop (opaque scenery, procedural fallback kept) ----
+    const visionBg = new Image();
+    let visionBgReady = false;
+    visionBg.onload = () => { visionBgReady = true; };
+    visionBg.onerror = () => { visionBgReady = false; };
+    visionBg.src = "/static/games/roster/fut_vision_bg.png";
+
+    function loadState() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+        return {
+          tokens: Number.isFinite(saved.tokens) ? saved.tokens : 7,
+          armed: false,
+          archive: Array.isArray(saved.archive) ? saved.archive.slice(0, MAX_ARCHIVE) : [],
+          active: saved.active || null,
+          reading: false
+        };
+      } catch (error) {
+        return { tokens: 7, armed: false, archive: [], active: null, reading: false };
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          tokens: state.tokens,
+          archive: state.archive.slice(0, MAX_ARCHIVE),
+          active: state.active
+        }));
+      } catch (error) {
+        // Local storage can be blocked in private contexts; the cabinet still runs.
+      }
+    }
+
+    function hashString(input) {
+      let hash = 2166136261;
+      for (let i = 0; i < input.length; i += 1) {
+        hash ^= input.charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+      }
+      return hash >>> 0;
+    }
+
+    function mulberry32(seed) {
+      return function random() {
+        seed |= 0;
+        seed = seed + 0x6D2B79F5 | 0;
+        let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+    }
+
+    function pick(random, list) {
+      return list[Math.floor(random() * list.length)];
+    }
+
+    function pickFrom(random, list, fallback) {
+      const usable = Array.isArray(list) && list.length ? list : fallback;
+      return pick(random, usable);
+    }
+
+    function compactList(value) {
+      if (Array.isArray(value)) return value.filter(Boolean);
+      return String(value || "").split(/[;,]/).map(item => item.trim()).filter(Boolean);
+    }
+
+    function pickCalendarLens(random, packKey) {
+      const corpus = activeCorpus();
+      const calendar = Array.isArray(corpus.calendar) ? corpus.calendar : [];
+      const filters = {
+        "world-calendar": row => row.group !== "business_bank_market",
+        scripture: row => /revelation|teaching|covenant|scripture|law|recitation|dharma|quran|torah|bible|guru|sutra/i.test([row.theme, row.shared_theme, row.gate, (row.tags || []).join(" ")].join(" ")),
+        unnameable: row => /time_bondage|ineffable|sound_liberation|many_one|false clock|inconceivable|niranjan|acintya|akal|anami/i.test([row.tradition, row.observance, row.theme, row.shared_theme, row.gate, (row.tags || []).join(" ")].join(" ")),
+        stoic: row => /repair|restraint|judgment|habit|service|duty|ledger|settlement/i.test([row.theme, row.shared_theme, row.gate, (row.tags || []).join(" ")].join(" ")),
+        "i-ching": row => /east_asian|seasonal|ancestor|harvest|lunar|moon|dao|change/i.test([row.group, row.tradition, row.observance, row.theme, row.shared_theme, row.gate].join(" ")),
+        shakespeare: row => /civic|memory|ancestor|return|threshold|public|festival|court|masked|storm|dream/i.test([row.group, row.tradition, row.observance, row.theme, row.shared_theme, row.gate].join(" ")),
+        sage: row => /teaching|law|proof|source|commentary|question|revelation|philosophy|teacher/i.test([row.theme, row.shared_theme, row.gate, row.tradition].join(" "))
+      };
+      const filtered = calendar.filter(filters[packKey] || (() => true));
+      const fallbackFiltered = fallbackCalendarLenses.filter(filters[packKey] || (() => true));
+      return pickFrom(random, filtered, fallbackFiltered.length ? fallbackFiltered : fallbackCalendarLenses);
+    }
+
+    function pickScriptureLens(random, packKey) {
+      const scripture = Array.isArray(activeCorpus().scripture) ? activeCorpus().scripture : [];
+      const filters = {
+        scripture: item => true,
+        "world-calendar": item => true,
+        unnameable: item => /unnameable|kal|niranjan|acintya|many|sound|time|clock|ineffable/i.test([item.title, item.tradition, item.gate, (item.tags || []).join(" ")].join(" ")),
+        stoic: item => /ethics|repair|action|discipline|service|judgment|habit/i.test([item.title, item.tradition, item.gate, (item.tags || []).join(" ")].join(" ")),
+        "i-ching": item => /dao|confucian|east asian|change|moon|teacher|ritual/i.test([item.title, item.tradition, item.gate, (item.tags || []).join(" ")].join(" ")),
+        shakespeare: item => /ancestor|return|public|broken|language|mirror|threshold|gratitude/i.test([item.title, item.tradition, item.gate, (item.tags || []).join(" ")].join(" ")),
+        sage: item => /teacher|ritual|action|many|source|mind|opening|direction/i.test([item.title, item.tradition, item.gate, (item.tags || []).join(" ")].join(" "))
+      };
+      const filtered = scripture.filter(filters[packKey] || (() => true));
+      const fallbackFiltered = fallbackScripturePackets.filter(filters[packKey] || (() => true));
+      return pickFrom(random, filtered, fallbackFiltered.length ? fallbackFiltered : fallbackScripturePackets);
+    }
+
+    function pickEncodedDay(random, seed) {
+      const encoded = Array.isArray(activeCorpus().encoded) ? activeCorpus().encoded : [];
+      if (!encoded.length) return pick(random, fallbackEncodedDays);
+      const today = new Date().toISOString().slice(0, 10);
+      const current = encoded.find(day => day.date === today);
+      if (current && random() > 0.34) return current;
+      return encoded[hashString(seed) % encoded.length];
+    }
+
+    function pickRecitation(random, packKey) {
+      const direct = recitationDecks[packKey];
+      const merged = [].concat(
+        recitationDecks.scripture,
+        recitationDecks.stoic,
+        recitationDecks["i-ching"],
+        recitationDecks.shakespeare,
+        recitationDecks.sage,
+        recitationDecks["world-calendar"],
+        recitationDecks.unnameable
+      );
+      return pickFrom(random, direct, merged);
+    }
+
+    function summarizeLens(lens) {
+      if (!lens) return "Open source lens";
+      const parts = [
+        lens.tradition,
+        lens.observance || lens.title,
+        lens.gate
+      ].filter(Boolean);
+      return parts.join(" // ");
+    }
+
+    function loreStatusLabel() {
+      const corpus = activeCorpus();
+      const c = corpus.counts || {};
+      if (worldLoreCorpus) {
+        return "Lore corpus " + (c.calendar_rows || 0) + "/" + (c.scripture_packets || 0) + "/" + (c.encoded_days || 0);
+      }
+      return "Lore fallback";
+    }
+
+    function escapeText(value) {
+      return String(value).replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#39;"
+      }[char]));
+    }
+
+    function slugify(value) {
+      return String(value).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "card";
+    }
+
+    function serialFromSeed(seed, random) {
+      const num = Math.floor(random() * 9000) + 1000;
+      const tail = hashString(seed).toString(36).toUpperCase().slice(0, 4).padEnd(4, "0");
+      return "NS-" + num + "-" + tail;
+    }
+
+    function buildGlyphs(random, colors) {
+      const glyphs = [];
+      const count = 16 + Math.floor(random() * 10);
+      for (let i = 0; i < count; i += 1) {
+        glyphs.push({
+          kind: random() > 0.58 ? "ring" : random() > 0.32 ? "line" : "dot",
+          x: 0.12 + random() * 0.76,
+          y: 0.12 + random() * 0.76,
+          r: 0.03 + random() * 0.16,
+          a: random() * Math.PI * 2,
+          color: pick(random, colors),
+          width: 1 + Math.floor(random() * 4)
+        });
+      }
+      return glyphs;
+    }
+
+    function makeReading() {
+      const packKey = els.packSelect.value;
+      const pack = packs[packKey] || packs.future;
+      const zodiacKey = els.zodiacSelect.value;
+      const sign = zodiacSigns[zodiacKey] || zodiacSigns.aries;
+      const customSeed = els.seedInput.value.trim();
+      const baseSeed = customSeed || [
+        packKey,
+        zodiacKey,
+        new Date().toISOString().slice(0, 10),
+        state.archive.length + 1,
+        state.tokens
+      ].join("-");
+      const random = mulberry32(hashString(baseSeed + ":" + packKey + ":" + zodiacKey));
+      const palette = pack.colors.slice().sort(() => random() - 0.5).slice(0, 4);
+      if (!palette.includes(sign.color)) palette.unshift(sign.color);
+      const wordA = pick(random, pack.words);
+      const wordB = pick(random, pack.words.filter(word => word !== wordA));
+      const wordC = pick(random, pack.words.filter(word => word !== wordA && word !== wordB));
+      const verbA = pick(random, pack.verbs);
+      const verbB = pick(random, pack.verbs);
+      const toneA = pick(random, pack.tones);
+      const toneB = pick(random, pack.tones);
+      const serial = serialFromSeed(baseSeed + packKey, random);
+      const lucky = Math.floor(random() * 899) + 101;
+      const oracle = pick(random, pack.oracle);
+      const calendarLens = pickCalendarLens(random, packKey);
+      const scriptureLens = pickScriptureLens(random, packKey);
+      const encodedDay = pickEncodedDay(random, baseSeed + packKey + zodiacKey);
+      const teaching = pick(random, vorathTeachings);
+      const recitation = pickRecitation(random, packKey);
+      const calendarTags = compactList(calendarLens.tags).slice(0, 3);
+      const scriptureTags = compactList(scriptureLens.tags).slice(0, 3);
+      const loreLines = [
+        (calendarLens.tradition || "World calendar") + " // " + (calendarLens.observance || calendarLens.title || "source lens") + " // " + (calendarLens.gate || calendarLens.shared_theme || "open gate"),
+        (scriptureLens.tradition || "Scripture") + " // " + (scriptureLens.title || "reading packet") + " // " + (scriptureLens.gate || "source gate"),
+        (encodedDay.signature || encodedDay.date || "Vorath encoded day") + " // " + (encodedDay.pattern_gate || encodedDay.inner_signal || "symbolic gate"),
+        teaching.gate + " // " + teaching.text,
+        recitation.source + " // " + recitation.text
+      ];
+      const poem = [
+        sign.label + " lights the receiver before the " + toneA + " " + wordA + " " + verbA + ".",
+        "A " + wordB + " keeps time with the " + toneB + " " + wordC + " through " + (calendarLens.gate || calendarLens.shared_theme || "the source gate") + ".",
+        "The " + (encodedDay.inner_signal || encodedDay.pattern_gate || "symbolic day") + " asks for " + (calendarTags[0] || scriptureTags[0] || "clear attention") + " before the loud answer."
+      ];
+      return {
+        packKey,
+        packLabel: pack.label,
+        zodiacKey,
+        zodiacLabel: sign.label,
+        zodiacGlyph: sign.glyph,
+        zodiacColor: sign.color,
+        seed: baseSeed,
+        serial,
+        lucky,
+        oracle,
+        poem,
+        loreLines,
+        sourceLens: summarizeLens(calendarLens),
+        calendarLens,
+        scriptureLens,
+        encodedDay,
+        teaching,
+        recitation,
+        palette,
+        glyphs: buildGlyphs(random, palette),
+        createdAt: new Date().toISOString()
+      };
+    }
+
+    function resizeCanvas() {
+      const rect = els.canvas.getBoundingClientRect();
+      const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      const w = Math.max(320, Math.floor(rect.width * dpr));
+      const h = Math.max(220, Math.floor(rect.height * dpr));
+      if (els.canvas.width !== w || els.canvas.height !== h) {
+        els.canvas.width = w;
+        els.canvas.height = h;
+      }
+    }
+
+    function drawCrystal(x, y, r, color, spin) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(spin || 0);
+      ctx.shadowColor = color;
+      ctx.shadowBlur = r * 1.7;
+      const grd = ctx.createLinearGradient(-r, -r, r, r);
+      grd.addColorStop(0, "#fff8dc");
+      grd.addColorStop(0.2, color);
+      grd.addColorStop(0.62, "#ff4fac");
+      grd.addColorStop(1, "#071314");
+      ctx.fillStyle = grd;
+      ctx.strokeStyle = "rgba(255,245,219,0.88)";
+      ctx.lineWidth = Math.max(1, r * 0.08);
+      ctx.beginPath();
+      ctx.moveTo(0, -r);
+      ctx.lineTo(r * 0.72, 0);
+      ctx.lineTo(0, r);
+      ctx.lineTo(-r * 0.72, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "rgba(255,255,255,0.38)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, -r);
+      ctx.lineTo(0, r);
+      ctx.moveTo(-r * 0.72, 0);
+      ctx.lineTo(r * 0.72, 0);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawFortuneAutomaton(w, h, colors, reading, progress) {
+      const sign = reading && reading.zodiacKey ? (zodiacSigns[reading.zodiacKey] || zodiacSigns.aries) : (zodiacSigns[els.zodiacSelect.value] || zodiacSigns.aries);
+      const t = Date.now() / 1000;
+      const cx = w * 0.5;
+      const baseY = h * 0.74;
+      const headBob = Math.sin(t * 1.6) * (state.reading ? 5 : 2);
+      const breath = 1 + Math.sin(t * 2.2) * (state.reading ? 0.035 : 0.018);
+      const eyeShift = Math.sin(t * 2.7) * 4;
+      const armSweep = Math.sin(t * (state.reading ? 5.4 : 1.2)) * 0.45;
+      const ballGlow = state.reading ? 1 : 0.62;
+
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      for (let i = 0; i < 9; i += 1) {
+        ctx.strokeStyle = `hsla(${(t * 80 + i * 40) % 360},100%,64%,${0.22 - i * 0.014})`;
+        ctx.lineWidth = 3 + i;
+        ctx.beginPath();
+        ctx.ellipse(cx, h * 0.52, w * (0.18 + i * 0.018), h * (0.17 + i * 0.012), t * 0.12 + i, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Painted cabinet depth, coin hardware, and glass bevel.
+      ctx.save();
+      const cabinetGrad = ctx.createLinearGradient(w * 0.08, h * 0.08, w * 0.92, h * 0.88);
+      cabinetGrad.addColorStop(0, "rgba(255,245,219,0.14)");
+      cabinetGrad.addColorStop(0.18, "rgba(214,162,63,0.11)");
+      cabinetGrad.addColorStop(0.52, "rgba(47,230,255,0.08)");
+      cabinetGrad.addColorStop(0.82, "rgba(255,79,172,0.1)");
+      cabinetGrad.addColorStop(1, "rgba(0,0,0,0.42)");
+      ctx.fillStyle = cabinetGrad;
+      ctx.strokeStyle = "rgba(255,245,219,0.34)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(w * 0.07, h * 0.08, w * 0.86, h * 0.8, 22);
+      ctx.fill();
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(214,162,63,0.42)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(w * 0.105, h * 0.13, w * 0.79, h * 0.67, 18);
+      ctx.stroke();
+      for (let side = 0; side < 2; side += 1) {
+        const railX = side ? w * 0.905 : w * 0.095;
+        const hueBase = side ? 304 : 188;
+        ctx.strokeStyle = `hsla(${(hueBase + t * 44) % 360},100%,66%,0.42)`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(railX, h * 0.16);
+        ctx.lineTo(railX, h * 0.84);
+        ctx.stroke();
+        for (let i = 0; i < 9; i += 1) {
+          drawCrystal(railX, h * (0.18 + i * 0.073), Math.max(4, w * 0.009), colors[(i + side) % colors.length], t + i + side);
+        }
+      }
+      ctx.fillStyle = "rgba(4,6,9,0.78)";
+      ctx.strokeStyle = "rgba(255,228,92,0.6)";
+      ctx.shadowColor = "#ffe45c";
+      ctx.shadowBlur = 18;
+      ctx.beginPath();
+      ctx.roundRect(w * 0.735, h * 0.18, w * 0.125, h * 0.07, 8);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = state.armed || state.reading ? "#ffe45c" : "rgba(255,245,219,0.42)";
+      ctx.beginPath();
+      ctx.arc(w * 0.83, h * 0.215, Math.max(5, w * 0.011), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "rgba(47,230,255,0.54)";
+      ctx.beginPath();
+      ctx.moveTo(w * 0.755, h * 0.215);
+      ctx.lineTo(w * 0.81, h * 0.215);
+      ctx.stroke();
+      ctx.restore();
+
+      // Zodiac buttons in the case, inspired by Zoltan-style sign selection without copying a cabinet.
+      const buttonY = h * 0.91;
+      const buttonStart = w * 0.12;
+      const buttonGap = w * 0.068;
+      Object.keys(zodiacSigns).forEach((key, index) => {
+        const z = zodiacSigns[key];
+        const x = buttonStart + index * buttonGap;
+        const active = key === sign.label.toLowerCase() || key === sign.glyph.toLowerCase() || key === sign.label.toLowerCase().replace(/[^a-z]/g, "") || key === (reading && reading.zodiacKey);
+        ctx.save();
+        ctx.shadowColor = active ? z.color : "rgba(255,245,219,0.3)";
+        ctx.shadowBlur = active ? 18 : 5;
+        ctx.fillStyle = active ? z.color : "rgba(255,245,219,0.16)";
+        ctx.strokeStyle = active ? "#fff5db" : "rgba(255,245,219,0.28)";
+        ctx.lineWidth = active ? 3 : 1;
+        ctx.beginPath();
+        ctx.arc(x, buttonY, active ? 11 : 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = active ? "#071314" : "rgba(255,245,219,0.72)";
+        ctx.font = "900 " + Math.max(9, Math.round(w * 0.014)) + "px Segoe UI, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(z.glyph, x, buttonY + 0.5);
+        ctx.restore();
+      });
+
+      // Receiver cord and oracle shelf.
+      ctx.save();
+      ctx.strokeStyle = "rgba(47,230,255,0.42)";
+      ctx.lineWidth = 3;
+      ctx.shadowColor = "#2fe6ff";
+      ctx.shadowBlur = 14;
+      ctx.beginPath();
+      ctx.moveTo(w * 0.12, h * 0.22);
+      ctx.bezierCurveTo(w * 0.18, h * 0.18 + Math.sin(t) * 10, w * 0.23, h * 0.32, w * 0.32, h * 0.3);
+      ctx.stroke();
+      ctx.fillStyle = "rgba(6, 6, 15, 0.88)";
+      ctx.strokeStyle = "rgba(255,245,219,0.74)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(w * 0.055, h * 0.16, w * 0.16, h * 0.055, 18);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+
+      // Body robe.
+      ctx.save();
+      ctx.translate(cx, baseY);
+      ctx.scale(1, breath);
+      ctx.shadowColor = colors[1] || "#ff4fac";
+      ctx.shadowBlur = 28;
+      const robe = ctx.createLinearGradient(-w * 0.2, -h * 0.38, w * 0.2, h * 0.06);
+      robe.addColorStop(0, "#fff4d8");
+      robe.addColorStop(0.18, colors[0]);
+      robe.addColorStop(0.52, "#a855f7");
+      robe.addColorStop(0.84, "#2b061c");
+      robe.addColorStop(1, "#050607");
+      ctx.fillStyle = robe;
+      ctx.strokeStyle = "rgba(255,245,219,0.62)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(-w * 0.18, h * 0.08);
+      ctx.quadraticCurveTo(-w * 0.1, -h * 0.28, 0, -h * 0.34);
+      ctx.quadraticCurveTo(w * 0.1, -h * 0.28, w * 0.18, h * 0.08);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.shadowColor = "#ef4444";
+      ctx.shadowBlur = 24;
+      ctx.fillStyle = "#ef4444";
+      ctx.beginPath();
+      ctx.arc(0, -h * 0.12, Math.max(10, w * 0.018), 0, Math.PI * 2);
+      ctx.fill();
+      for (let i = -2; i <= 2; i += 1) {
+        ctx.strokeStyle = `hsla(${(t * 70 + i * 50 + 220) % 360},100%,70%,0.32)`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(i * w * 0.025, -h * 0.27);
+        ctx.quadraticCurveTo(i * w * 0.04, -h * 0.08, i * w * 0.07, h * 0.05);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Head and mask.
+      ctx.save();
+      ctx.translate(cx, baseY - h * 0.34 + headBob);
+      ctx.shadowColor = colors[2] || "#ffe45c";
+      ctx.shadowBlur = 22;
+      ctx.strokeStyle = "rgba(255,228,92,0.72)";
+      ctx.fillStyle = "rgba(7,19,20,0.78)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(-w * 0.095, -h * 0.058);
+      ctx.lineTo(-w * 0.055, -h * 0.132);
+      ctx.lineTo(-w * 0.018, -h * 0.074);
+      ctx.lineTo(0, -h * 0.15);
+      ctx.lineTo(w * 0.018, -h * 0.074);
+      ctx.lineTo(w * 0.055, -h * 0.132);
+      ctx.lineTo(w * 0.095, -h * 0.058);
+      ctx.stroke();
+      for (let i = -3; i <= 3; i += 1) {
+        const gemColor = colors[(Math.abs(i) + 2) % colors.length];
+        drawCrystal(i * w * 0.028, -h * (0.09 + (Math.abs(i) % 2) * 0.025), Math.max(5, w * 0.01), gemColor, t * 1.4 + i);
+      }
+      ctx.shadowColor = sign.color;
+      ctx.shadowBlur = 24;
+      const mask = ctx.createRadialGradient(-w * 0.02, -h * 0.02, 1, 0, 0, w * 0.085);
+      mask.addColorStop(0, "#fffdf2");
+      mask.addColorStop(0.28, sign.color);
+      mask.addColorStop(0.7, "#101014");
+      mask.addColorStop(1, "#030407");
+      ctx.fillStyle = mask;
+      ctx.strokeStyle = "rgba(255,245,219,0.78)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, w * 0.075, h * 0.105, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "rgba(255,245,219,0.32)";
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(0, -h * 0.084);
+      ctx.lineTo(0, h * 0.075);
+      ctx.moveTo(-w * 0.058, -h * 0.004);
+      ctx.lineTo(w * 0.058, -h * 0.004);
+      ctx.moveTo(-w * 0.044, h * 0.052);
+      ctx.lineTo(w * 0.044, h * 0.052);
+      ctx.stroke();
+      drawCrystal(0, -h * 0.052, Math.max(4, w * 0.009), colors[3] || "#7cff6b", -t);
+      ctx.shadowColor = "#fff5db";
+      ctx.shadowBlur = 14;
+      ctx.fillStyle = "#fff5db";
+      ctx.beginPath();
+      ctx.ellipse(-w * 0.026 + eyeShift, -h * 0.018, w * 0.012, h * 0.008, 0, 0, Math.PI * 2);
+      ctx.ellipse(w * 0.026 + eyeShift, -h * 0.018, w * 0.012, h * 0.008, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#071314";
+      ctx.beginPath();
+      ctx.arc(-w * 0.026 + eyeShift * 1.15, -h * 0.018, w * 0.005, 0, Math.PI * 2);
+      ctx.arc(w * 0.026 + eyeShift * 1.15, -h * 0.018, w * 0.005, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = sign.color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-w * 0.045, h * 0.036);
+      ctx.quadraticCurveTo(0, h * 0.052 + Math.sin(t * 7) * 3, w * 0.045, h * 0.036);
+      ctx.stroke();
+      ctx.restore();
+
+      // Crystal ball and arm sweep.
+      const ballX = cx;
+      const ballY = h * 0.65;
+      const ballR = Math.min(w, h) * 0.11;
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      const ball = ctx.createRadialGradient(ballX - ballR * 0.34, ballY - ballR * 0.38, 2, ballX, ballY, ballR * 1.42);
+      ball.addColorStop(0, "rgba(255,255,255,0.96)");
+      ball.addColorStop(0.18, sign.color);
+      ball.addColorStop(0.48, colors[0]);
+      ball.addColorStop(1, "rgba(47,230,255,0.05)");
+      ctx.shadowColor = sign.color;
+      ctx.shadowBlur = ballR * 1.4 * ballGlow;
+      ctx.fillStyle = ball;
+      ctx.beginPath();
+      ctx.arc(ballX, ballY, ballR * ballGlow, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,245,219,0.62)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      for (let i = 0; i < 7; i += 1) {
+        ctx.strokeStyle = `hsla(${(t * 110 + i * 47) % 360},100%,70%,0.34)`;
+        ctx.beginPath();
+        ctx.ellipse(ballX, ballY, ballR * (0.42 + i * 0.08), ballR * (0.18 + i * 0.045), t * 0.9 + i, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.fillStyle = "rgba(7,19,20,0.36)";
+      ctx.font = "950 " + Math.max(20, Math.round(ballR * 0.54)) + "px Segoe UI, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(sign.glyph || "V", ballX, ballY + ballR * 0.05);
+      for (let i = 0; i < 6; i += 1) {
+        const a = t * 0.7 + i * Math.PI * 2 / 6;
+        drawCrystal(ballX + Math.cos(a) * ballR * 0.88, ballY + Math.sin(a) * ballR * 0.52, Math.max(4, ballR * 0.1), colors[i % colors.length], t + i);
+      }
+      ctx.restore();
+
+      ctx.save();
+      ctx.strokeStyle = "rgba(255,245,219,0.72)";
+      ctx.lineWidth = Math.max(5, w * 0.011);
+      ctx.shadowColor = colors[2] || "#ffe45c";
+      ctx.shadowBlur = 18;
+      ctx.beginPath();
+      ctx.moveTo(cx - w * 0.12, baseY - h * 0.15);
+      ctx.quadraticCurveTo(cx - w * 0.04 + Math.sin(armSweep) * w * 0.1, ballY - ballR * 1.05, ballX - ballR * 0.28, ballY - ballR * 0.45);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx + w * 0.12, baseY - h * 0.15);
+      ctx.quadraticCurveTo(cx + w * 0.04 - Math.sin(armSweep) * w * 0.1, ballY - ballR * 1.03, ballX + ballR * 0.28, ballY - ballR * 0.45);
+      ctx.stroke();
+      function drawPalm(x, y, side) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(side * (0.34 + Math.sin(t * 2.4) * 0.08));
+        ctx.fillStyle = "rgba(255,245,219,0.88)";
+        ctx.strokeStyle = "rgba(7,19,20,0.62)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, ballR * 0.18, ballR * 0.11, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(255,228,92,0.84)";
+        ctx.lineWidth = 2;
+        for (let finger = -2; finger <= 2; finger += 1) {
+          ctx.beginPath();
+          ctx.moveTo(side * ballR * 0.03, finger * ballR * 0.025);
+          ctx.quadraticCurveTo(side * ballR * 0.18, finger * ballR * 0.05, side * ballR * 0.32, finger * ballR * 0.08 - ballR * 0.11);
+          ctx.stroke();
+        }
+        drawCrystal(side * ballR * 0.02, -ballR * 0.01, Math.max(4, ballR * 0.09), side < 0 ? colors[0] : colors[1], t * 1.6);
+        ctx.restore();
+      }
+      drawPalm(ballX - ballR * 0.42, ballY - ballR * 0.42, -1);
+      drawPalm(ballX + ballR * 0.42, ballY - ballR * 0.42, 1);
+      ctx.restore();
+
+      // Jewels and card tray.
+      for (let i = 0; i < 10; i += 1) {
+        drawCrystal(w * (0.18 + i * 0.07), h * 0.82 + Math.sin(t + i) * 5, Math.max(6, w * 0.012), colors[i % colors.length], t + i);
+      }
+      for (let i = 0; i < 8; i += 1) {
+        drawCrystal(w * (0.235 + i * 0.071), h * 0.865 + Math.cos(t * 1.2 + i) * 4, Math.max(4, w * 0.008), colors[(i + 2) % colors.length], -t + i);
+      }
+      ctx.save();
+      ctx.shadowColor = "#ffe45c";
+      ctx.shadowBlur = 18;
+      ctx.fillStyle = "rgba(255,245,219,0.12)";
+      ctx.strokeStyle = "rgba(255,228,92,0.68)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(w * 0.63, h * 0.72, w * 0.24, h * 0.08, 8);
+      ctx.fill();
+      ctx.stroke();
+      if (state.reading || progress >= 1) {
+        const cardX = w * 0.75;
+        const cardY = h * (0.815 - 0.11 * progress);
+        const cardW = w * 0.17;
+        const cardH = h * 0.14;
+        ctx.save();
+        ctx.translate(cardX, cardY);
+        ctx.rotate(Math.sin(t * 1.5) * 0.025);
+        const cardGrad = ctx.createLinearGradient(-cardW / 2, -cardH / 2, cardW / 2, cardH / 2);
+        cardGrad.addColorStop(0, "#fffaf0");
+        cardGrad.addColorStop(0.36, "rgba(47,230,255,0.28)");
+        cardGrad.addColorStop(0.68, "rgba(255,79,172,0.2)");
+        cardGrad.addColorStop(1, "#ffe9a4");
+        ctx.fillStyle = cardGrad;
+        ctx.strokeStyle = sign.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(-cardW / 2, -cardH / 2, cardW, cardH, 6);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#17120f";
+        ctx.font = "950 " + Math.max(9, Math.round(w * 0.012)) + "px Segoe UI, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText((reading && reading.packLabel ? reading.packLabel : "FORTUNE").toUpperCase().slice(0, 15), 0, -cardH * 0.27);
+        ctx.font = "900 " + Math.max(12, Math.round(w * 0.02)) + "px Segoe UI, sans-serif";
+        ctx.fillText(sign.glyph || "V", 0, cardH * 0.03);
+        ctx.strokeStyle = "rgba(23,18,15,0.28)";
+        ctx.lineWidth = 1;
+        for (let line = 0; line < 4; line += 1) {
+          ctx.beginPath();
+          ctx.moveTo(-cardW * 0.34, cardH * (0.25 + line * 0.1));
+          ctx.lineTo(cardW * 0.34, cardH * (0.25 + line * 0.1));
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+
+    function drawVision(reading, progress) {
+      resizeCanvas();
+      const w = els.canvas.width;
+      const h = els.canvas.height;
+      ctx.clearRect(0, 0, w, h);
+      const colors = reading ? reading.palette : ["#2fe6ff", "#ff4fac", "#ffe45c", "#7cff6b"];
+      const grd = ctx.createLinearGradient(0, 0, w, h);
+      grd.addColorStop(0, "#02090a");
+      grd.addColorStop(0.45, "#10100c");
+      grd.addColorStop(1, "#110710");
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, 0, w, h);
+      // AI backdrop layer: cover-fit, kept subtle so the procedural automaton stays legible.
+      if (visionBgReady && visionBg.naturalWidth) {
+        ctx.save();
+        const iw = visionBg.naturalWidth;
+        const ih = visionBg.naturalHeight;
+        const scale = Math.max(w / iw, h / ih);
+        const dw = iw * scale;
+        const dh = ih * scale;
+        ctx.globalAlpha = 0.5;
+        ctx.drawImage(visionBg, (w - dw) / 2, (h - dh) / 2, dw, dh);
+        ctx.globalAlpha = 0.42;
+        ctx.fillStyle = grd;
+        ctx.fillRect(0, 0, w, h);
+        ctx.restore();
+      }
+      ctx.globalAlpha = 0.22;
+      for (let x = -h; x < w + h; x += 34) {
+        ctx.strokeStyle = colors[Math.abs(Math.floor(x / 34)) % colors.length];
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x + h, h);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      drawFortuneAutomaton(w, h, colors, reading, progress);
+      const cx = w / 2;
+      const cy = h / 2;
+      const pulse = state.reading && !els.body.classList.contains("reduced-motion") ? Math.sin(Date.now() / 90) * 0.03 + 1 : 1;
+      const glyphs = reading ? reading.glyphs : buildGlyphs(mulberry32(42), colors);
+      const visible = Math.max(1, Math.floor(glyphs.length * progress));
+      for (let i = 0; i < visible; i += 1) {
+        const g = glyphs[i];
+        ctx.strokeStyle = g.color;
+        ctx.fillStyle = g.color;
+        ctx.lineWidth = g.width * (window.devicePixelRatio || 1);
+        ctx.globalAlpha = 0.44;
+        if (g.kind === "ring") {
+          ctx.beginPath();
+          ctx.arc(g.x * w, g.y * h, g.r * Math.min(w, h) * pulse, 0, Math.PI * 2);
+          ctx.stroke();
+        } else if (g.kind === "line") {
+          const len = g.r * Math.min(w, h) * 2.2;
+          const x = g.x * w;
+          const y = g.y * h;
+          ctx.beginPath();
+          ctx.moveTo(x - Math.cos(g.a) * len, y - Math.sin(g.a) * len);
+          ctx.lineTo(x + Math.cos(g.a) * len, y + Math.sin(g.a) * len);
+          ctx.stroke();
+        } else {
+          ctx.beginPath();
+          ctx.arc(g.x * w, g.y * h, Math.max(3, g.r * 42), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.globalAlpha = 0.95;
+      ctx.strokeStyle = colors[0];
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(cx, 26);
+      ctx.lineTo(w - 38, cy);
+      ctx.lineTo(cx, h - 26);
+      ctx.lineTo(38, cy);
+      ctx.closePath();
+      ctx.stroke();
+      if (reading) {
+        const sourceText = reading.sourceLens || summarizeLens(reading.calendarLens);
+        const recitation = reading.recitation || {};
+        ctx.save();
+        ctx.globalAlpha = 0.88;
+        ctx.fillStyle = "rgba(2,9,10,0.78)";
+        ctx.strokeStyle = "rgba(255,245,219,0.2)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(w * 0.06, h * 0.06, w * 0.88, h * 0.105, 10);
+        ctx.fill();
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = colors[0] || "#2fe6ff";
+        ctx.font = "900 " + Math.max(11, Math.round(w * 0.018)) + "px Segoe UI, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(String(sourceText || "Open source lens").slice(0, 92), w * 0.5, h * 0.103);
+        ctx.fillStyle = "rgba(255,245,219,0.78)";
+        ctx.font = "800 " + Math.max(9, Math.round(w * 0.013)) + "px Segoe UI, sans-serif";
+        ctx.fillText(String(recitation.source || "Recitation cue").slice(0, 80), w * 0.5, h * 0.142);
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function glyphSvg(reading, width, height, includeFrame) {
+      const colors = reading.palette;
+      const parts = [];
+      if (includeFrame) {
+        parts.push("<rect width=\"" + width + "\" height=\"" + height + "\" fill=\"#100d0c\"/>");
+        parts.push("<path d=\"M" + (width / 2) + " 18 L" + (width - 24) + " " + (height / 2) + " L" + (width / 2) + " " + (height - 18) + " L24 " + (height / 2) + " Z\" fill=\"none\" stroke=\"" + colors[0] + "\" stroke-width=\"3\" opacity=\"0.82\"/>");
+      }
+      reading.glyphs.forEach((g, index) => {
+        const x = Math.round(g.x * width);
+        const y = Math.round(g.y * height);
+        const r = Math.round(g.r * Math.min(width, height));
+        const color = g.color;
+        const opacity = 0.55 + (index % 4) * 0.1;
+        if (g.kind === "ring") {
+          parts.push("<circle cx=\"" + x + "\" cy=\"" + y + "\" r=\"" + r + "\" fill=\"none\" stroke=\"" + color + "\" stroke-width=\"" + g.width + "\" opacity=\"" + opacity.toFixed(2) + "\"/>");
+        } else if (g.kind === "line") {
+          const len = r * 2;
+          const x1 = Math.round(x - Math.cos(g.a) * len);
+          const y1 = Math.round(y - Math.sin(g.a) * len);
+          const x2 = Math.round(x + Math.cos(g.a) * len);
+          const y2 = Math.round(y + Math.sin(g.a) * len);
+          parts.push("<line x1=\"" + x1 + "\" y1=\"" + y1 + "\" x2=\"" + x2 + "\" y2=\"" + y2 + "\" stroke=\"" + color + "\" stroke-width=\"" + g.width + "\" opacity=\"" + opacity.toFixed(2) + "\"/>");
+        } else {
+          parts.push("<circle cx=\"" + x + "\" cy=\"" + y + "\" r=\"" + Math.max(4, Math.round(r / 3)) + "\" fill=\"" + color + "\" opacity=\"" + opacity.toFixed(2) + "\"/>");
+        }
+      });
+      return parts.join("");
+    }
+
+    function renderReading(reading) {
+      state.active = reading;
+      els.panelTitle.textContent = reading.packLabel + " Card";
+      els.ticketPack.textContent = reading.packLabel + " Pack // " + (reading.zodiacLabel || "Open Sign");
+      els.ticketSerial.textContent = reading.serial;
+      els.ticketSeed.textContent = "Seed: " + reading.seed;
+      els.ticketLucky.textContent = "No. " + reading.lucky;
+      els.oracleLine.textContent = reading.oracle;
+      const recitation = reading.recitation || {};
+      const sourceLens = reading.sourceLens || summarizeLens(reading.calendarLens);
+      els.poemLines.innerHTML = reading.poem.map(line => "<p>" + escapeText(line) + "</p>").join("") +
+        "<p class=\"recite-line\">" + escapeText((recitation.source ? recitation.source + ": " : "") + (recitation.text || "The source waits behind the glass.")) + "</p>" +
+        "<p class=\"source-line\">" + escapeText(sourceLens || "Open source lens") + "</p>";
+      els.glyph.innerHTML = "<svg viewBox=\"0 0 360 170\" width=\"100%\" height=\"100%\" role=\"img\" aria-label=\"Generated card image\">" + glyphSvg(reading, 360, 170, true) + "</svg>";
+      els.dialCore.textContent = String(reading.lucky).padStart(3, "0");
+      els.dial.style.setProperty("--needle", (reading.lucky % 360) + "deg");
+      els.exportBtn.disabled = false;
+      drawVision(reading, 1);
+      renderArchive();
+      updateUi();
+      saveState();
+    }
+
+    function updateUi() {
+      els.tokenChip.textContent = "Tokens " + state.tokens;
+      els.armedChip.textContent = state.reading ? "Reading" : state.armed ? "Armed" : "Idle";
+      els.seedChip.textContent = els.seedInput.value.trim() ? "Seed set" : "Seed open";
+      const sign = zodiacSigns[els.zodiacSelect.value] || zodiacSigns.aries;
+      els.packState.textContent = (packs[els.packSelect.value] || packs.future).label + " pack // " + sign.label;
+      els.machineState.textContent = state.reading ? "Cabinet reading" : state.armed ? "Token accepted" : "Awaiting token";
+      els.pullBtn.disabled = !state.armed || state.reading;
+      els.insertBtn.disabled = state.reading || state.armed || state.tokens <= 0;
+      els.refillBtn.disabled = state.reading;
+      els.footerStatus.textContent = state.reading ? "Printing card" : state.armed ? "Lever ready" : loreStatusLabel();
+    }
+
+    function renderArchive() {
+      if (!state.archive.length) {
+        els.archive.innerHTML = "<div class=\"archive-sub\">No local cards archived.</div>";
+        return;
+      }
+      els.archive.innerHTML = state.archive.map((item, index) => {
+        const color = item.palette && item.palette[0] ? item.palette[0] : "#2fe6ff";
+        return "<button class=\"archive-item\" type=\"button\" data-index=\"" + index + "\">" +
+          "<span class=\"archive-swatch\" style=\"background:" + color + "\"></span>" +
+          "<span><span class=\"archive-title\">" + escapeText(item.oracle) + "</span><span class=\"archive-sub\">" + escapeText(item.packLabel) + " // " + escapeText(item.zodiacLabel || "Open Sign") + " // " + escapeText(item.sourceLens || item.serial) + "</span></span>" +
+          "<span class=\"archive-sub\">Load</span>" +
+          "</button>";
+      }).join("");
+    }
+
+    function insertToken() {
+      if (state.tokens <= 0 || state.reading) return;
+      startAudio();
+      state.tokens -= 1;
+      state.armed = true;
+      SFX("coin");
+      saveState();
+      updateUi();
+    }
+
+    function pullLever() {
+      if (!state.armed || state.reading) return;
+      startAudio();
+      state.reading = true;
+      state.armed = false;
+      els.cabinet.classList.add("reading");
+      SFX("gate");
+      screenShake(7);
+      updateUi();
+      let tick = 0;
+      const staged = makeReading();
+      const interval = window.setInterval(() => {
+        tick += 1;
+        drawVision(staged, Math.min(1, tick / 14));
+        els.dialCore.textContent = String((staged.lucky + tick * 37) % 999).padStart(3, "0");
+        if (tick % 3 === 0) SFX("blip");
+      }, 70);
+      window.setTimeout(() => {
+        window.clearInterval(interval);
+        state.reading = false;
+        els.cabinet.classList.remove("reading");
+        state.archive = [staged].concat(state.archive.filter(item => item.serial !== staged.serial)).slice(0, MAX_ARCHIVE);
+        renderReading(staged);
+        SFX("powerUp");
+        screenShake(9);
+      }, els.body.classList.contains("reduced-motion") ? 280 : 1320);
+    }
+
+    function refillTokens() {
+      if (state.reading) return;
+      startAudio();
+      state.tokens = Math.min(21, state.tokens + 7);
+      SFX("oneUp");
+      saveState();
+      updateUi();
+    }
+
+    function exportSession() {
+      if (!state.active) return;
+      SFX("pop");
+      const reading = state.active;
+      const poem = reading.poem.map((line, index) => "<text x=\"32\" y=\"" + (548 + index * 26) + "\" font-size=\"16\" fill=\"#17120f\">" + escapeText(line).slice(0, 118) + "</text>").join("");
+      const recitation = reading.recitation || {};
+      const loreLines = (reading.loreLines || []).slice(0, 5).map((line, index) => "<text x=\"56\" y=\"" + (704 + index * 24) + "\" font-size=\"14\" font-weight=\"700\" fill=\"#fff5db\">" + escapeText(line).slice(0, 170) + "</text>").join("");
+      const svg = [
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"720\" height=\"980\" viewBox=\"0 0 720 980\">",
+        "<rect width=\"720\" height=\"980\" fill=\"#fff5db\"/>",
+        "<rect x=\"18\" y=\"18\" width=\"684\" height=\"944\" rx=\"22\" fill=\"none\" stroke=\"#17120f\" stroke-width=\"3\"/>",
+        "<rect x=\"32\" y=\"32\" width=\"656\" height=\"86\" rx=\"12\" fill=\"#17120f\"/>",
+        "<text x=\"56\" y=\"84\" font-family=\"Segoe UI, Arial, sans-serif\" font-size=\"34\" font-weight=\"800\" fill=\"" + reading.palette[0] + "\">Future Teller Cabinet</text>",
+        "<text x=\"56\" y=\"146\" font-family=\"Segoe UI, Arial, sans-serif\" font-size=\"17\" font-weight=\"800\" fill=\"#5c5042\">" + escapeText(reading.packLabel) + " Pack // " + escapeText(reading.zodiacLabel || "Open Sign") + " // " + escapeText(reading.serial) + "</text>",
+        "<g transform=\"translate(32 168)\">",
+        glyphSvg(reading, 656, 292, true),
+        "</g>",
+        "<text x=\"32\" y=\"502\" font-family=\"Segoe UI, Arial, sans-serif\" font-size=\"27\" font-weight=\"900\" fill=\"#17120f\">" + escapeText(reading.oracle).slice(0, 92) + "</text>",
+        "<text x=\"32\" y=\"526\" font-family=\"Segoe UI, Arial, sans-serif\" font-size=\"14\" font-weight=\"800\" fill=\"#5c5042\">" + escapeText((reading.sourceLens || "Open source lens").slice(0, 110)) + "</text>",
+        poem,
+        "<text x=\"32\" y=\"636\" font-family=\"Segoe UI, Arial, sans-serif\" font-size=\"14\" font-weight=\"800\" fill=\"#5c5042\">" + escapeText(((recitation.source || "Recitation cue") + ": " + (recitation.text || "")).slice(0, 118)) + "</text>",
+        "<rect x=\"32\" y=\"676\" width=\"656\" height=\"154\" rx=\"12\" fill=\"#17120f\"/>",
+        "<text x=\"56\" y=\"692\" font-family=\"Segoe UI, Arial, sans-serif\" font-size=\"13\" font-weight=\"900\" fill=\"" + reading.palette[0] + "\">SOURCE LENS // VORATH CONCORDANCE</text>",
+        loreLines,
+        "<rect x=\"32\" y=\"842\" width=\"656\" height=\"86\" rx=\"12\" fill=\"#17120f\"/>",
+        "<text x=\"56\" y=\"894\" font-family=\"Segoe UI, Arial, sans-serif\" font-size=\"18\" font-weight=\"800\" fill=\"#fff5db\">Seed: " + escapeText(reading.seed) + " // No. " + reading.lucky + "</text>",
+        "</svg>"
+      ].join("");
+      const blob = new Blob([svg], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = slugify(reading.packLabel + "-" + reading.serial) + ".svg";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function loadArchive(index) {
+      const item = state.archive[index];
+      if (!item) return;
+      SFX("blip");
+      state.active = item;
+      renderReading(item);
+    }
+
+    function drawAttract() {
+      if (!state.active && !state.reading) {
+        attractFrame += 1;
+        const fake = {
+          palette: ["#2fe6ff", "#ff4fac", "#ffe45c", "#7cff6b"],
+          glyphs: buildGlyphs(mulberry32(1000 + Math.floor(attractFrame / 18)), ["#2fe6ff", "#ff4fac", "#ffe45c", "#7cff6b"])
+        };
+        drawVision(fake, 1);
+      }
+      if (!els.body.classList.contains("reduced-motion")) {
+        requestAnimationFrame(drawAttract);
+      }
+    }
+
+    function loadWorldLore() {
+      if (!window.fetch) return;
+      fetch(WORLD_LORE_URL, { cache: "no-store" })
+        .then(response => response.ok ? response.json() : null)
+        .then(data => {
+          if (!data || !Array.isArray(data.calendar) || !Array.isArray(data.scripture) || !Array.isArray(data.encoded)) return;
+          worldLoreCorpus = data;
+          updateUi();
+          if (!state.active) drawVision(state.active, 1);
+        })
+        .catch(() => {
+          worldLoreCorpus = null;
+          updateUi();
+        });
+    }
+
+    function maybeRunPlaytest() {
+      const params = new URLSearchParams(window.location.search);
+      if (!params.has("playtest")) return;
+      const pack = params.get("pack");
+      const sign = params.get("sign");
+      const seed = params.get("seed");
+      if (pack && packs[pack]) els.packSelect.value = pack;
+      if (sign && zodiacSigns[sign]) els.zodiacSelect.value = sign;
+      if (seed) els.seedInput.value = seed.slice(0, 80);
+      state.tokens = Math.max(state.tokens, 1);
+      state.armed = false;
+      state.reading = false;
+      updateUi();
+      window.setTimeout(() => {
+        insertToken();
+        window.setTimeout(pullLever, 160);
+      }, 180);
+    }
+
+    function init() {
+      for (let i = 0; i < 16; i += 1) {
+        const bulb = document.createElement("span");
+        bulb.className = "bulb";
+        bulb.style.setProperty("--i", i);
+        els.bulbRow.appendChild(bulb);
+      }
+      const prefersReduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (prefersReduced) {
+        els.body.classList.add("reduced-motion");
+        els.motionToggle.checked = true;
+      }
+      els.insertBtn.addEventListener("click", insertToken);
+      els.pullBtn.addEventListener("click", pullLever);
+      els.refillBtn.addEventListener("click", refillTokens);
+      els.exportBtn.addEventListener("click", exportSession);
+      els.packSelect.addEventListener("change", () => { startAudio(); SFX("blip"); updateUi(); });
+      els.zodiacSelect.addEventListener("change", () => { startAudio(); SFX("blip"); updateUi(); });
+      els.seedInput.addEventListener("input", updateUi);
+      els.glowToggle.addEventListener("change", () => els.body.classList.toggle("glow-on", els.glowToggle.checked));
+      els.motionToggle.addEventListener("change", () => {
+        els.body.classList.toggle("reduced-motion", els.motionToggle.checked);
+        if (els.motionToggle.checked) {
+          stopAudio();
+          els.canvas.style.transform = "";
+        } else {
+          requestAnimationFrame(drawAttract);
+        }
+      });
+      els.archive.addEventListener("click", event => {
+        const button = event.target.closest("button[data-index]");
+        if (button) loadArchive(Number(button.dataset.index));
+      });
+      window.addEventListener("resize", () => drawVision(state.active, 1));
+      window.addEventListener("keydown", event => {
+        if (event.key === " " && state.armed && !state.reading) {
+          event.preventDefault();
+          pullLever();
+        }
+      });
+      if (state.active) renderReading(state.active);
+      renderArchive();
+      updateUi();
+      loadWorldLore();
+      drawVision(state.active, 1);
+      requestAnimationFrame(drawAttract);
+      maybeRunPlaytest();
+    }
+
+    init();
+  </script>
+</body>
+</html>

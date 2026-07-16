@@ -1,0 +1,1667 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vorath Blade Tribunal</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #04050b;
+      --panel: rgba(5, 7, 16, 0.86);
+      --line: rgba(132, 236, 255, 0.28);
+      --text: #f8fbff;
+      --muted: #adbacb;
+      --ruby: #ff2e6d;
+      --emerald: #3dffad;
+      --cyan: #38e9ff;
+      --gold: #ffd75e;
+      --violet: #b760ff;
+      --orange: #ff9f43;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      min-height: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 18% 16%, rgba(255,46,109,0.24), transparent 31rem),
+        radial-gradient(circle at 82% 12%, rgba(56,233,255,0.22), transparent 29rem),
+        radial-gradient(circle at 50% 84%, rgba(255,215,94,0.16), transparent 26rem),
+        linear-gradient(135deg, #04050b 0%, #071527 34%, #180b24 64%, #05070e 100%);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0 1px, transparent 1px 44px),
+        repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 42px);
+      mask-image: radial-gradient(circle at center, black, transparent 83%);
+    }
+
+    .shell {
+      width: min(1460px, calc(100vw - 24px));
+      margin: 0 auto;
+      padding: 18px 0 28px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: end;
+      gap: 16px;
+      padding: 8px 2px 16px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 4.1vw, 5rem);
+      line-height: 0.9;
+      letter-spacing: 0;
+      text-transform: uppercase;
+      text-shadow: 0 0 18px rgba(183,96,255,0.72), 0 0 44px rgba(61,255,173,0.32);
+    }
+
+    .subtitle {
+      max-width: 980px;
+      margin: 10px 0 0;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(650px, 1fr) 340px;
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .arena-wrap,
+    .panel {
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(8,10,22,0.84), rgba(6,4,13,0.95));
+      box-shadow: 0 0 42px rgba(56,233,255,0.12), inset 0 0 44px rgba(255,46,109,0.11);
+      border-radius: 8px;
+    }
+
+    .arena-wrap {
+      position: relative;
+      min-height: 680px;
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: min(76vh, 780px);
+      min-height: 640px;
+      background: #04050b;
+      touch-action: none;
+    }
+
+    .panel {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .meters {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .meter,
+    .controls,
+    .move-list,
+    .log,
+    .note {
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px;
+      background: rgba(3,5,12,0.66);
+      padding: 10px;
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .value {
+      margin-top: 4px;
+      font-size: 1.26rem;
+      font-weight: 900;
+      color: var(--text);
+      text-shadow: 0 0 14px rgba(56,233,255,0.42);
+      overflow-wrap: anywhere;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    button {
+      appearance: none;
+      min-height: 42px;
+      border: 1px solid rgba(132,236,255,0.36);
+      border-radius: 8px;
+      color: var(--text);
+      background: linear-gradient(180deg, rgba(18, 30, 51, 0.96), rgba(6, 7, 16, 0.96));
+      box-shadow: inset 0 0 16px rgba(56,233,255,0.1), 0 0 13px rgba(56,233,255,0.08);
+      font-weight: 850;
+      cursor: pointer;
+    }
+
+    button:active,
+    button.is-down {
+      transform: translateY(1px);
+      border-color: rgba(61,255,173,0.82);
+      box-shadow: 0 0 22px rgba(61,255,173,0.24), inset 0 0 20px rgba(255,46,109,0.18);
+    }
+
+    .wide { grid-column: 1 / -1; }
+
+    .move-list {
+      display: grid;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.35;
+    }
+
+    .move-list strong { color: var(--emerald); }
+
+    .log {
+      min-height: 135px;
+      max-height: 220px;
+      overflow: auto;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.4;
+    }
+
+    .log p { margin: 0 0 8px; }
+    .log strong { color: var(--gold); }
+
+    .note {
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 1050px) {
+      .layout { grid-template-columns: 1fr; }
+      .arena-wrap { min-height: 610px; }
+      canvas { height: 650px; min-height: 600px; }
+      header { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 620px) {
+      .shell { width: min(100vw - 14px, 1460px); padding-top: 8px; }
+      .meters { grid-template-columns: 1fr; }
+      .controls { grid-template-columns: 1fr 1fr; }
+      canvas { height: 590px; min-height: 560px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div>
+        <h1>Vorath Blade Tribunal</h1>
+        <p class="subtitle">An original VORATH weapon-duel cabinet with crystal blade hitboxes, guard pressure, stamina, enemy AI, round judgment, aurora slash trails, jeweled armor, and local receipts.</p>
+      </div>
+      <button id="exportTop">Export Receipt</button>
+    </header>
+
+    <section class="layout" aria-label="Vorath Blade Tribunal playable cabinet">
+      <div class="arena-wrap">
+        <canvas id="game" width="1280" height="760"></canvas>
+<script src="/static/games/juice.js"></script>
+<script>addEventListener("DOMContentLoaded",function(){if(window.Juice){var c=document.getElementById("game");if(c)Juice.attachFX(c,{vignette:0.5,scanlines:0.04,glow:0.07});}});</script>
+      </div>
+
+      <aside class="panel">
+        <div class="meters">
+          <div class="meter">
+            <div class="label">Player HP</div>
+            <div class="value" id="playerHp">100</div>
+          </div>
+          <div class="meter">
+            <div class="label">Enemy HP</div>
+            <div class="value" id="enemyHp">100</div>
+          </div>
+          <div class="meter">
+            <div class="label">Stamina</div>
+            <div class="value" id="stamina">100</div>
+          </div>
+          <div class="meter">
+            <div class="label">Soul Charge</div>
+            <div class="value" id="charge">0</div>
+          </div>
+          <div class="meter">
+            <div class="label">Round</div>
+            <div class="value" id="round">1</div>
+          </div>
+          <div class="meter">
+            <div class="label">Judgment</div>
+            <div class="value" id="judgment">WAIT</div>
+          </div>
+        </div>
+
+        <div class="controls" aria-label="Blade Tribunal controls">
+          <button id="startBtn" class="wide">Start Duel</button>
+          <button id="leftBtn">Left A</button>
+          <button id="rightBtn">Right D</button>
+          <button id="slashBtn">Slash J</button>
+          <button id="heavyBtn">Heavy K</button>
+          <button id="guardBtn">Guard L</button>
+          <button id="dodgeBtn">Dodge Space</button>
+          <button id="exportBtn" class="wide">Export Receipt</button>
+        </div>
+
+        <div class="move-list">
+          <div><strong>A/D or Arrows:</strong> step and spacing</div>
+          <div><strong>J:</strong> prism slash, fast hitbox</div>
+          <div><strong>K:</strong> heavy crystal cleave, longer reach</div>
+          <div><strong>L:</strong> emerald guard, drains stamina</div>
+          <div><strong>Space:</strong> aurora dodge, invulnerable startup</div>
+        </div>
+
+        <div class="log" id="log" aria-live="polite">
+          <p><strong>Boot:</strong> Start the duel, control the emerald duelist, and break the red tribunal champion.</p>
+        </div>
+
+        <div class="note">
+          No protected weapon-fighter assets, names, characters, stages, move lists, animation data, logos, audio, or screenshots are used. This is an original VORATH weapon-duel built from public action-game grammar.
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const canvas = document.querySelector("#game");
+    let ctx = canvas.getContext("2d"); // let: temporarily retargeted while pre-rendering static layers
+    const motionPlate = document.createElement("video");
+    let motionPlateReady = false;
+    {
+      const still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (!still) {
+        motionPlate.muted = true; motionPlate.loop = true; motionPlate.playsInline = true; motionPlate.preload = "auto";
+        motionPlate.src = "/static/games/imagegen_quality_pass_20260625/vorath_blade_tribunal_plate_motion.mp4";
+        const go = () => { if (motionPlateReady) return; motionPlate.play().then(() => { motionPlateReady = true; }).catch(() => {}); };
+        motionPlate.addEventListener("canplaythrough", go, { once: true });
+        motionPlate.addEventListener("error", () => { motionPlateReady = false; });
+        window.addEventListener("pointerdown", go, { once: true });
+        window.addEventListener("keydown", go, { once: true });
+      }
+    }
+    const els = {
+      playerHp: document.querySelector("#playerHp"),
+      enemyHp: document.querySelector("#enemyHp"),
+      stamina: document.querySelector("#stamina"),
+      charge: document.querySelector("#charge"),
+      round: document.querySelector("#round"),
+      judgment: document.querySelector("#judgment"),
+      log: document.querySelector("#log"),
+      startBtn: document.querySelector("#startBtn"),
+      leftBtn: document.querySelector("#leftBtn"),
+      rightBtn: document.querySelector("#rightBtn"),
+      slashBtn: document.querySelector("#slashBtn"),
+      heavyBtn: document.querySelector("#heavyBtn"),
+      guardBtn: document.querySelector("#guardBtn"),
+      dodgeBtn: document.querySelector("#dodgeBtn"),
+      exportBtn: document.querySelector("#exportBtn"),
+      exportTop: document.querySelector("#exportTop")
+    };
+
+    const keys = new Set();
+    const view = { w: 1120, h: 700, dpr: 1, floor: 520 };
+    const state = {
+      running: false,
+      round: 1,
+      judgment: "WAIT",
+      last: 0,
+      hitStop: 0,
+      roundDelay: 0,
+      receipts: 0,
+      particles: [],
+      slashes: [],
+      echoes: [],
+      ghosts: [],
+      fadeIn: 1,
+      log: ["Blade tribunal glass online."],
+      aiTimer: 0,
+      aiIntent: "measure"
+    };
+
+    // FLUX AI-art fighter sprites, luminance-keyed (black bg -> transparent)
+    const SPR = {};
+    function keyBlack(img){ const c=document.createElement("canvas"); c.width=img.naturalWidth; c.height=img.naturalHeight; const g=c.getContext("2d"); g.drawImage(img,0,0); const d=g.getImageData(0,0,c.width,c.height), px=d.data; for(let i=0;i<px.length;i+=4){ const l=Math.max(px[i],px[i+1],px[i+2]); px[i+3]=Math.min(255,l*1.7); } g.putImageData(d,0,0); return c; }
+    function loadSprite(k,src){ const im=new Image(); im.onload=()=>{ try{ SPR[k]=keyBlack(im); }catch(_){} }; im.src=src; }
+    // AI-art multi-pose sets (Vorath DNA): idle / windup / strike / hurt per fighter (pre-keyed PNGs).
+    function loadPose(k,src){ const im=new Image(); im.onload=()=>{ SPR[k]=im; }; im.src=src; }
+    for (const who of ["emerald","ruby"]) for (const pose of ["idle","windup","strike","hurt"])
+      loadPose(who+"_"+pose, "/static/games/roster/blade_"+who+"_"+pose+".png");
+    loadSprite("emerald","/static/games/sprites/blade_emerald.png");
+    loadSprite("ruby","/static/games/sprites/blade_ruby.png");
+
+    // Seamless parallax arena backdrop (mirror-tiled, no hard seam).
+    const ARENA = new Image(); let ARENA_OK = false;
+    ARENA.onload = () => { ARENA_OK = true; }; ARENA.src = "/static/games/roster/blade_arena.png";
+    // Announcer voice (THE CONVERGENCE / ElevenLabs) — plays on duel start.
+    const announcer = new Audio("/static/games/roster/blade_announcer.mp3"); announcer.volume = 0.85;
+    // Ruby-side arena variant (alternates by round) + KO / round-call voices.
+    const ARENA_RUBY = new Image(); let ARENA_RUBY_OK = false;
+    ARENA_RUBY.onload = () => { ARENA_RUBY_OK = true; }; ARENA_RUBY.src = "/static/games/roster/blade_arena_ruby.png";
+    const voKO = new Audio("/static/games/roster/blade_ko.mp3"); voKO.volume = 0.9;
+    const voRound = { 2: new Audio("/static/games/roster/blade_round2.mp3"), 3: new Audio("/static/games/roster/blade_round3.mp3") };
+    Object.values(voRound).forEach(a => { a.volume = 0.85; });
+    // Procedural music bed (low drone + pentatonic arpeggio). Starts on duel, stops on match end.
+    let _music = null;
+    function startMusic(){ const a = AC(); if(!a || _music) return;
+      const master = a.createGain(); master.gain.value = 0.0001; master.connect(a.destination);
+      master.gain.exponentialRampToValueAtTime(0.085, a.currentTime + 2.5);
+      const lp = a.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 520; lp.connect(master);
+      const d1 = a.createOscillator(), d2 = a.createOscillator(), dg = a.createGain();
+      d1.type = "sawtooth"; d2.type = "sawtooth"; d1.frequency.value = 55; d2.frequency.value = 55.4; dg.gain.value = 0.5;
+      d1.connect(dg); d2.connect(dg); dg.connect(lp); d1.start(); d2.start();
+      const scale = [220, 261.63, 293.66, 349.23, 392, 523.25]; let step = 0;
+      const timer = setInterval(() => { const t = a.currentTime; const f = scale[step % scale.length] * (step % 12 < 6 ? 1 : 0.5); step++;
+        const o = a.createOscillator(), g = a.createGain(); o.type = "triangle"; o.frequency.value = f; o.connect(g); g.connect(master);
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+        o.start(t); o.stop(t + 0.55); }, 340);
+      _music = { master, nodes: [d1, d2], timer };
+    }
+    function stopMusic(){ if(!_music) return; const a = AC(); try { _music.master.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + 1.2); } catch(e){}
+      clearInterval(_music.timer); const m = _music; _music = null; setTimeout(() => { try { m.nodes.forEach(n => n.stop()); } catch(e){} }, 1400);
+    }
+    // Screen-shake accumulator.
+    let shakeAmt = 0;
+    // Procedural WebAudio combat SFX (reliable, no asset deps).
+    let _actx = null;
+    function AC(){ if(!_actx){ try{ _actx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } return _actx; }
+    function sfx(kind){ const a = AC(); if(!a) return; const t = a.currentTime;
+      const o = a.createOscillator(), g = a.createGain(); o.connect(g); g.connect(a.destination);
+      if(kind==="whoosh"){ o.type="sawtooth"; o.frequency.setValueAtTime(340,t); o.frequency.exponentialRampToValueAtTime(90,t+0.16);
+        g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.15,t+0.03); g.gain.exponentialRampToValueAtTime(0.0001,t+0.2); o.start(t); o.stop(t+0.22); }
+      else if(kind==="hit"){ o.type="square"; o.frequency.setValueAtTime(190,t); o.frequency.exponentialRampToValueAtTime(55,t+0.13);
+        g.gain.setValueAtTime(0.3,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.16); o.start(t); o.stop(t+0.18);
+        const n=a.createBuffer(1,(a.sampleRate*0.12)|0,a.sampleRate), d=n.getChannelData(0);
+        for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2);
+        const ns=a.createBufferSource(), ng=a.createGain(); ns.buffer=n; ng.gain.value=0.24; ns.connect(ng); ng.connect(a.destination); ns.start(t); }
+      else if(kind==="block"){ o.type="triangle"; o.frequency.setValueAtTime(900,t); o.frequency.exponentialRampToValueAtTime(320,t+0.1);
+        g.gain.setValueAtTime(0.2,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.14); o.start(t); o.stop(t+0.16); }
+    }
+
+    const player = {
+      id: "player",
+      name: "Emerald Votary",
+      x: 290,
+      y: 0,
+      vx: 0,
+      hp: 100,
+      stamina: 100,
+      charge: 0,
+      facing: 1,
+      action: "idle",
+      frame: 0,
+      cooldown: 0,
+      guard: false,
+      invuln: 0,
+      rounds: 0,
+      color: "#3dffad",
+      blade: "#38e9ff",
+      core: "#ff2e6d"
+    };
+
+    const enemy = {
+      id: "enemy",
+      name: "Ruby Mantis Regent",
+      x: 840,
+      y: 0,
+      vx: 0,
+      hp: 100,
+      stamina: 100,
+      charge: 0,
+      facing: -1,
+      action: "idle",
+      frame: 0,
+      cooldown: 0,
+      guard: false,
+      invuln: 0,
+      rounds: 0,
+      color: "#ff2e6d",
+      blade: "#ffd75e",
+      core: "#b760ff"
+    };
+
+    const attacks = {
+      slash: { cost: 12, damage: 10, reach: 96, activeStart: 5, activeEnd: 12, cooldown: 24, push: 42, label: "prism slash" },
+      heavy: { cost: 25, damage: 22, reach: 138, activeStart: 10, activeEnd: 20, cooldown: 44, push: 78, label: "crystal cleave" },
+      charged: { cost: 42, damage: 34, reach: 160, activeStart: 8, activeEnd: 18, cooldown: 52, push: 110, label: "soul-charge verdict" }
+    };
+
+    function resize() {
+      const rect = canvas.getBoundingClientRect();
+      view.dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      view.w = Math.max(620, rect.width);
+      view.h = Math.max(540, rect.height);
+      view.floor = view.h * 0.76;
+      canvas.width = Math.floor(view.w * view.dpr);
+      canvas.height = Math.floor(view.h * view.dpr);
+      ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+      player.y = view.floor;
+      enemy.y = view.floor;
+      clampFighter(player);
+      clampFighter(enemy);
+      buildStaticLayers();
+    }
+
+    function addLog(text) {
+      state.log.unshift(text);
+      state.log = state.log.slice(0, 8);
+      els.log.innerHTML = state.log.map((line, index) => `<p>${index === 0 ? "<strong>Now:</strong> " : ""}${line}</p>`).join("");
+    }
+
+    function startDuel() {
+      state.running = true;
+      try { const a = AC(); if (a && a.state === "suspended") a.resume(); } catch(e){}
+      try { announcer.currentTime = 0; announcer.play().catch(()=>{}); } catch(e){}
+      startMusic();
+      state.round = 1;
+      state.judgment = "FIGHT";
+      state.roundDelay = 0;
+      state.aiTimer = 0;
+      player.rounds = 0;
+      enemy.rounds = 0;
+      resetRound("First bell.");
+      addLog("Duel started. Emerald blade is yours.");
+    }
+
+    function resetRound(reason) {
+      player.x = view.w * 0.27;
+      enemy.x = view.w * 0.73;
+      for (const fighter of [player, enemy]) {
+        fighter.y = view.floor;
+        fighter.vx = 0;
+        fighter.hp = 100;
+        fighter.stamina = 100;
+        fighter.charge = 0;
+        fighter.action = "idle";
+        fighter.frame = 0;
+        fighter.cooldown = 0;
+        fighter.guard = false;
+        fighter.invuln = 0;
+      }
+      player.facing = 1;
+      enemy.facing = -1;
+      state.particles.length = 0;
+      state.slashes.length = 0;
+      state.echoes.length = 0;
+      state.ghosts.length = 0;
+      state.koFlash = 0;
+      state.koBanner = 0;
+      state.fadeIn = Math.max(state.fadeIn, 0.85);
+      state.judgment = "FIGHT";
+      addLog(reason);
+    }
+
+    function beginAction(fighter, type) {
+      if (!state.running || state.roundDelay > 0) return false;
+      if (fighter.cooldown > 0 || fighter.action !== "idle") return false;
+      if (type === "dodge") {
+        if (fighter.stamina < 18) return false;
+        fighter.action = "dodge";
+        fighter.frame = 0;
+        fighter.cooldown = 28;
+        fighter.invuln = 14;
+        fighter.stamina -= 18;
+        fighter.vx = -fighter.facing * 360;
+        addSlash(fighter, "rgba(56,233,255,0.58)", 58, 0.72);
+        return true;
+      }
+      const spec = attacks[type];
+      if (!spec || fighter.stamina < spec.cost) return false;
+      fighter.action = type;
+      fighter.frame = 0;
+      fighter.cooldown = spec.cooldown;
+      fighter.hitDone = false;
+      fighter.stamina -= spec.cost;
+      addSlash(fighter, fighter.blade, spec.reach, type === "heavy" ? 1.1 : 0.72);
+      sfx("whoosh");
+      return true;
+    }
+
+    function fighterInput() {
+      if (!state.running) return;
+      const left = keys.has("a") || keys.has("arrowleft") || els.leftBtn.classList.contains("is-down");
+      const right = keys.has("d") || keys.has("arrowright") || els.rightBtn.classList.contains("is-down");
+      player.guard = keys.has("l") || els.guardBtn.classList.contains("is-down");
+      if (player.guard && player.stamina > 4 && player.action === "idle") {
+        player.stamina -= 0.32;
+      } else if (!player.guard) {
+        player.stamina = Math.min(100, player.stamina + 0.28);
+      }
+      if (player.action === "idle" && !player.guard) {
+        player.vx = 0;
+        if (left) player.vx -= 250;
+        if (right) player.vx += 250;
+      }
+      if ((keys.has("j") || els.slashBtn.classList.contains("is-down"))) {
+        beginAction(player, player.charge >= 100 ? "charged" : "slash");
+        keys.delete("j");
+      }
+      if ((keys.has("k") || els.heavyBtn.classList.contains("is-down"))) {
+        beginAction(player, "heavy");
+        keys.delete("k");
+      }
+      if (keys.has(" ") || els.dodgeBtn.classList.contains("is-down")) {
+        beginAction(player, "dodge");
+        keys.delete(" ");
+      }
+    }
+
+    function enemyAI(dt) {
+      if (!state.running || state.roundDelay > 0) return;
+      state.aiTimer -= dt;
+      const dist = Math.abs(enemy.x - player.x);
+      enemy.guard = false;
+      if (state.aiTimer <= 0) {
+        if (enemy.hp < 34 && Math.random() < 0.22) state.aiIntent = "guard";
+        else if (dist > 230) state.aiIntent = "approach";
+        else if (dist < 92 && Math.random() < 0.3) state.aiIntent = "dodge";
+        else state.aiIntent = Math.random() < 0.64 ? "slash" : "heavy";
+        state.aiTimer = 16 + Math.random() * 26;
+      }
+      enemy.vx = 0;
+      if (enemy.action !== "idle") return;
+      if (state.aiIntent === "approach") {
+        enemy.vx = enemy.x > player.x ? -215 : 215;
+      } else if (state.aiIntent === "guard") {
+        enemy.guard = true;
+        enemy.stamina = Math.max(0, enemy.stamina - 0.24);
+      } else if (state.aiIntent === "dodge") {
+        beginAction(enemy, "dodge");
+      } else if (state.aiIntent === "slash" && dist < 170) {
+        beginAction(enemy, enemy.charge >= 100 ? "charged" : "slash");
+      } else if (state.aiIntent === "heavy" && dist < 210) {
+        beginAction(enemy, "heavy");
+      } else {
+        enemy.vx = enemy.x > player.x ? -180 : 180;
+      }
+      if (!enemy.guard) enemy.stamina = Math.min(100, enemy.stamina + 0.23);
+    }
+
+    function updateFighter(fighter, opponent, dt) {
+      fighter.facing = opponent.x >= fighter.x ? 1 : -1;
+      fighter.invuln = Math.max(0, fighter.invuln - dt);
+      fighter.hurtTime = Math.max(0, (fighter.hurtTime || 0) - dt);
+      fighter.cooldown = Math.max(0, fighter.cooldown - dt);
+      if (fighter.action !== "idle") {
+        fighter.frame += dt;
+        // Ghost afterimage trail on strike/dodge frames (drawn additively behind fighters).
+        fighter.ghostGap = (fighter.ghostGap || 0) - dt;
+        if (fighter.ghostGap <= 0 && (fighter.action === "dodge" || fighter.frame >= (attacks[fighter.action] ? attacks[fighter.action].activeStart * 0.6 : 0))) {
+          state.ghosts.push({ who: fighter.id === "player" ? "emerald" : "ruby", action: fighter.action, frame: fighter.frame, x: fighter.x, y: fighter.y, facing: fighter.facing, life: 11, max: 11, color: fighter.blade });
+          if (state.ghosts.length > 14) state.ghosts.splice(0, state.ghosts.length - 14);
+          fighter.ghostGap = 2.4;
+        }
+        const spec = attacks[fighter.action];
+        if (spec && fighter.frame >= spec.activeStart && fighter.frame <= spec.activeEnd && !fighter.hitDone) {
+          resolveHit(fighter, opponent, spec);
+          fighter.hitDone = true;
+        }
+        const endFrame = fighter.action === "dodge" ? 18 : (spec ? spec.cooldown * 0.72 : 20);
+        if (fighter.frame >= endFrame) {
+          fighter.action = "idle";
+          fighter.frame = 0;
+          fighter.hitDone = false;
+        }
+      }
+      fighter.x += fighter.vx * dt / 60;
+      fighter.vx *= fighter.action === "dodge" ? 0.92 : 0.78;
+      fighter.stamina = Math.min(100, fighter.stamina + 0.18 * dt);
+      fighter.charge = Math.min(100, fighter.charge + 0.04 * dt);
+      clampFighter(fighter);
+    }
+
+    function clampFighter(fighter) {
+      fighter.x = Math.max(70, Math.min(view.w - 70, fighter.x));
+      fighter.y = view.floor;
+    }
+
+    function resolveHit(attacker, defender, spec) {
+      if (defender.invuln > 0) {
+        addLog(`${defender.name} slipped through ${spec.label}.`);
+        addSlash(defender, "#38e9ff", 74, 0.52);
+        return;
+      }
+      const reach = spec.reach + (attacker.action === "charged" ? 24 : 0);
+      const dx = defender.x - attacker.x;
+      const inFront = Math.sign(dx || attacker.facing) === attacker.facing;
+      const distance = Math.abs(dx);
+      if (!inFront || distance > reach) return;
+      let damage = spec.damage;
+      let blocked = false;
+      if (defender.guard && defender.stamina > 8 && Math.sign(attacker.x - defender.x) === defender.facing) {
+        blocked = true;
+        damage = Math.ceil(damage * 0.22);
+        defender.stamina = Math.max(0, defender.stamina - spec.damage * 1.2);
+        attacker.charge = Math.min(100, attacker.charge + 8);
+        addLog(`${defender.name} guarded ${spec.label}.`);
+        burst(defender.x, defender.y - 118, 18, "#3dffad", 6);
+        state.hitStop = Math.max(state.hitStop, 2);
+        shakeAmt = Math.max(shakeAmt, 5); sfx("block");
+      } else {
+        defender.hp = Math.max(0, defender.hp - damage);
+        defender.vx += attacker.facing * spec.push;
+        defender.hurtTime = 16;
+        attacker.charge = Math.min(100, attacker.charge + 18);
+        defender.charge = Math.min(100, defender.charge + 7);
+        state.hitStop = spec.damage > 20 ? 5 : 3;
+        shakeAmt = Math.max(shakeAmt, spec.damage > 20 ? 16 : 9); sfx("hit");
+        addLog(`${attacker.name} lands ${spec.label} for ${damage}.`);
+        burst(defender.x, defender.y - 122, 26, attacker.blade, 8);
+      }
+      state.echoes.push({
+        text: blocked ? "GUARD" : `-${damage}`,
+        x: defender.x,
+        y: defender.y - 160,
+        vy: -1.8,
+        life: 42,
+        color: blocked ? "#3dffad" : attacker.blade
+      });
+      addSlash(attacker, attacker.blade, reach, attacker.action === "heavy" || attacker.action === "charged" ? 1.2 : 0.82);
+      checkRoundEnd();
+    }
+
+    function koMoment(loser) {
+      // Cinematic KO: freeze, big shake, white flash, slow-mo dwell + burst + announcer.
+      state.hitStop = 11;
+      shakeAmt = 30;
+      state.koFlash = 1;
+      state.koBanner = 82;
+      burst(loser.x, loser.y - 120, 60, loser.blade, 13);
+      burst(loser.x, loser.y - 120, 40, "#ffffff", 9);
+      try { voKO.currentTime = 0; voKO.play().catch(()=>{}); } catch(e){}
+    }
+
+    function checkRoundEnd() {
+      if (player.hp > 0 && enemy.hp > 0) return;
+      state.roundDelay = 110;
+      if (enemy.hp <= 0 && player.hp <= 0) {
+        state.judgment = "DOUBLE";
+        addLog("Double judgment. The tribunal refuses the easy answer.");
+        koMoment(enemy.hp <= player.hp ? enemy : player);
+      } else if (enemy.hp <= 0) {
+        player.rounds += 1;
+        state.judgment = "PLAYER";
+        addLog("Emerald votary wins the round.");
+        koMoment(enemy);
+      } else {
+        enemy.rounds += 1;
+        state.judgment = "ENEMY";
+        addLog("Ruby regent claims the round.");
+        koMoment(player);
+      }
+      if (player.rounds >= 2 || enemy.rounds >= 2) {
+        state.running = false;
+        state.judgment = player.rounds >= 2 ? "VOTARY" : "REGENT";
+        addLog(`${state.judgment} wins the match. Export the receipt.`);
+        stopMusic();
+      }
+    }
+
+    function addSlash(fighter, color, reach, thickness) {
+      state.slashes.push({
+        x: fighter.x,
+        y: fighter.y - 122,
+        facing: fighter.facing,
+        reach,
+        color,
+        life: 18,
+        thickness
+      });
+    }
+
+    function burst(x, y, count, color, power) {
+      for (let i = 0; i < count; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const s = (Math.random() * 1.8 + 0.8) * power;
+        state.particles.push({
+          x, y,
+          vx: Math.cos(a) * s,
+          vy: Math.sin(a) * s,
+          life: 28 + Math.random() * 28,
+          color,
+          size: 2 + Math.random() * 4
+        });
+      }
+      if (state.particles.length > 260) state.particles.splice(0, state.particles.length - 260);
+    }
+
+    function updateGame() {
+      const now = performance.now();
+      if (!state.last) state.last = now;
+      let dt = Math.min(2.4, Math.max(0.25, (now - state.last) / 16.667));
+      state.last = now;
+      if (state.hitStop > 0) {
+        state.hitStop -= dt;
+        dt *= 0.16;
+      }
+      if ((state.koBanner || 0) > 0) { state.koBanner -= 1; dt *= 0.5; }   // KO slow-mo dwell
+      if ((state.koFlash || 0) > 0) state.koFlash = Math.max(0, state.koFlash - 0.05);
+
+      fighterInput();
+      enemyAI(dt);
+      if (state.running && state.roundDelay <= 0) {
+        updateFighter(player, enemy, dt);
+        updateFighter(enemy, player, dt);
+      } else if (state.running && state.roundDelay > 0) {
+        state.roundDelay -= dt;
+        if (state.roundDelay <= 0 && player.rounds < 2 && enemy.rounds < 2) {
+          state.round += 1;
+          resetRound(`Round ${state.round}. The blade gate opens again.`);
+          try { const v = voRound[state.round]; if (v) { v.currentTime = 0; v.play().catch(()=>{}); } } catch(e){}
+        }
+      }
+
+      state.particles.forEach(p => {
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 0.08 * dt;
+        p.life -= dt;
+      });
+      state.particles = state.particles.filter(p => p.life > 0);
+      state.slashes.forEach(s => s.life -= dt);
+      state.slashes = state.slashes.filter(s => s.life > 0).slice(-18);
+      state.ghosts.forEach(g => g.life -= dt);
+      state.ghosts = state.ghosts.filter(g => g.life > 0);
+      state.echoes.forEach(e => {
+        e.y += e.vy * dt;
+        e.life -= dt;
+      });
+      state.echoes = state.echoes.filter(e => e.life > 0);
+
+      draw();
+      updateHud();
+      requestAnimationFrame(updateGame);
+    }
+
+    // Displayed HUD numbers ease toward their true values (score-tick feel).
+    const hudShown = { php: 100, ehp: 100, sta: 100, chg: 0 };
+    function tickToward(shown, target) {
+      const d = target - shown;
+      if (Math.abs(d) < 0.6) return target;
+      return shown + d * 0.18;
+    }
+    function updateHud() {
+      hudShown.php = tickToward(hudShown.php, player.hp);
+      hudShown.ehp = tickToward(hudShown.ehp, enemy.hp);
+      hudShown.sta = tickToward(hudShown.sta, player.stamina);
+      hudShown.chg = tickToward(hudShown.chg, player.charge);
+      els.playerHp.textContent = `${Math.ceil(hudShown.php)} / ${player.rounds}`;
+      els.enemyHp.textContent = `${Math.ceil(hudShown.ehp)} / ${enemy.rounds}`;
+      els.stamina.textContent = Math.ceil(hudShown.sta);
+      els.charge.textContent = Math.ceil(hudShown.chg);
+      els.round.textContent = String(state.round);
+      els.judgment.textContent = state.judgment;
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, view.w, view.h);
+      drawArena();
+      drawBars();
+      for (const slash of state.slashes) drawSlash(slash);
+      drawGhosts();
+      drawFighter(player);
+      drawFighter(enemy);
+      drawParticles();
+      drawEchoes();
+      drawRoundText();
+      drawFade();
+    }
+
+    // Additive sprite afterimages behind the fighters (strike/dodge trails).
+    function drawGhosts() {
+      if (!state.ghosts.length) return;
+      const scale = Math.max(0.88, Math.min(1.12, view.w / 1120));
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      for (const g of state.ghosts) {
+        let pose = "idle";
+        if (g.action === "slash" || g.action === "heavy" || g.action === "charged") {
+          const sp = attacks[g.action];
+          pose = (sp && g.frame < sp.activeStart) ? "windup" : "strike";
+        }
+        const spr = SPR[g.who + "_" + pose] || SPR[g.who + "_idle"] || SPR[g.who];
+        if (!spr) continue;
+        const t = Math.max(0, g.life / g.max);
+        ctx.globalAlpha = t * 0.22;
+        ctx.save();
+        ctx.translate(g.x, g.y);
+        ctx.scale(g.facing * scale, scale);
+        const sh = 300, sw = sh * spr.width / spr.height;
+        ctx.drawImage(spr, -sw / 2, 16 - sh, sw, sh);
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+
+    // Soft start / round-transition fade (state.fadeIn 1 -> 0).
+    function drawFade() {
+      if (state.fadeIn > 0.005) {
+        state.fadeIn = Math.max(0, state.fadeIn - 0.028);
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, state.fadeIn);
+        ctx.fillStyle = "#04050b";
+        ctx.fillRect(0, 0, view.w, view.h);
+        ctx.restore();
+      }
+      // Soft dip to dark at the tail of the round delay, released by resetRound's fadeIn.
+      if (state.running && state.roundDelay > 0 && state.roundDelay < 26 && (player.rounds < 2 && enemy.rounds < 2)) {
+        ctx.save();
+        ctx.globalAlpha = Math.min(0.85, (26 - state.roundDelay) / 26 * 0.85);
+        ctx.fillStyle = "#04050b";
+        ctx.fillRect(0, 0, view.w, view.h);
+        ctx.restore();
+      }
+    }
+
+    function drawArena() {
+      if (shakeAmt > 0.3) { canvas.style.transform = "translate(" + ((Math.random()-0.5)*shakeAmt).toFixed(1) + "px," + ((Math.random()-0.5)*shakeAmt).toFixed(1) + "px)"; shakeAmt *= 0.85; }
+      else if (shakeAmt !== 0) { shakeAmt = 0; canvas.style.transform = ""; }
+
+      ctx.drawImage(bgStatic, 0, 0, view.w, view.h);
+      const _useRuby = (state.round % 2 === 0) && ARENA_RUBY_OK;
+      const _bg = _useRuby ? ARENA_RUBY : ARENA;
+      const _bgOk = _useRuby ? ARENA_RUBY_OK : ARENA_OK;
+      if (_bgOk) {
+        // Seamless scroll: an [image][mirrored image] pair tiles with no hard seam (shared edge pixels).
+        const iw = _bg.width, ih = _bg.height, sc = Math.max(view.w / iw, (view.h * 0.94) / ih);
+        const dw = iw * sc, dh = ih * sc, yb = view.h - dh + 8, period = 2 * dw;
+        const scroll = (performance.now() * 0.012) % period;
+        ctx.save(); ctx.globalAlpha = 0.92;
+        for (let base = -scroll; base < view.w; base += period) {
+          ctx.drawImage(_bg, base, yb, dw, dh);
+          ctx.save(); ctx.translate(base + 2 * dw, 0); ctx.scale(-1, 1); ctx.drawImage(_bg, 0, yb, dw, dh); ctx.restore();
+        }
+        ctx.restore();
+      } else if (motionPlateReady && motionPlate.readyState >= 2) {
+        const vw = motionPlate.videoWidth, vh = motionPlate.videoHeight;
+        if (vw && vh) { const sc = Math.max(view.w / vw, view.h / vh);
+          ctx.save(); ctx.globalAlpha = 0.42;
+          ctx.drawImage(motionPlate, (view.w - vw * sc) / 2, (view.h - vh * sc) / 2, vw * sc, vh * sc); ctx.restore(); }
+      }
+      drawCausticField(0, 0, view.w, view.h, performance.now() * 0.00042);
+
+      // Static arena dressing (rings, arches, crystals, pillars, floor) pre-rendered on resize.
+      ctx.drawImage(fgStatic, 0, 0, view.w, view.h);
+
+      for (let i = 0; i < 15; i++) {
+        const x = view.w * (0.08 + i * 0.06);
+        const y = view.floor - 12 + Math.sin(i * 1.7 + performance.now() * 0.002) * 8;
+        const hue = (i * 29 + performance.now() * 0.015) % 360;
+        drawFacetGem(x, y, 7 + (i % 3), `hsl(${hue}, 100%, 64%)`, i * 0.32);
+      }
+    }
+
+    // ---- Pre-rendered static layers (rebuilt on resize; no per-frame gradients) ----
+    const bgStatic = document.createElement("canvas");
+    const fgStatic = document.createElement("canvas");
+
+    function paintSky() {
+      const sky = ctx.createLinearGradient(0, 0, view.w, view.h);
+      sky.addColorStop(0, "#061225");
+      sky.addColorStop(0.42, "#1a0b2a");
+      sky.addColorStop(0.72, "#081b17");
+      sky.addColorStop(1, "#05050b");
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, view.w, view.h);
+    }
+
+    function paintArenaDressing() {
+      for (let i = 0; i < 20; i++) {
+        ctx.strokeStyle = `hsla(${i * 21}, 100%, 62%, 0.12)`;
+        ctx.lineWidth = 1.3;
+        ctx.beginPath();
+        ctx.ellipse(view.w / 2, view.floor - 170, view.w * (0.1 + i * 0.026), view.h * (0.06 + i * 0.011), 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      ctx.save();
+      ctx.globalAlpha = 0.4;
+      for (let x = -80; x < view.w + 120; x += 80) {
+        ctx.strokeStyle = "rgba(255,215,94,0.22)";
+        ctx.beginPath();
+        ctx.moveTo(x, view.floor + 10);
+        ctx.lineTo(view.w / 2, view.floor - 250);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      drawCrystal(view.w * 0.14, view.floor - 50, 54, "#38e9ff", "#3dffad");
+      drawCrystal(view.w * 0.86, view.floor - 54, 58, "#ff2e6d", "#ffd75e");
+      drawCrystal(view.w * 0.5, view.floor - 245, 62, "#b760ff", "#ff2e6d");
+
+      const archY = view.floor - 236;
+      ctx.save();
+      ctx.lineCap = "round";
+      for (let side = -1; side <= 1; side += 2) {
+        const baseX = view.w * (side < 0 ? 0.08 : 0.92);
+        const innerX = view.w * (side < 0 ? 0.24 : 0.76);
+        const metal = ctx.createLinearGradient(baseX, archY - 120, innerX, view.floor + 30);
+        metal.addColorStop(0, "rgba(255,255,255,0.38)");
+        metal.addColorStop(0.25, side < 0 ? "rgba(56,233,255,0.42)" : "rgba(255,46,109,0.38)");
+        metal.addColorStop(1, "rgba(7,4,18,0.82)");
+        ctx.strokeStyle = metal;
+        ctx.lineWidth = 22;
+        ctx.shadowBlur = 18;
+        ctx.shadowColor = side < 0 ? "#38e9ff" : "#ff2e6d";
+        ctx.beginPath();
+        ctx.moveTo(baseX, view.floor + 18);
+        ctx.quadraticCurveTo(baseX + side * view.w * 0.04, archY - 80, innerX, archY);
+        ctx.stroke();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "rgba(255,255,255,0.46)";
+        for (let i = 0; i < 6; i++) {
+          const y = view.floor - 20 - i * 45;
+          ctx.beginPath();
+          ctx.moveTo(baseX - side * 18, y);
+          ctx.lineTo(baseX + side * 42, y - 10);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+
+      ctx.save();
+      ctx.globalAlpha = 0.55;
+      for (let i = 0; i < 12; i++) {
+        const x = view.w * (0.08 + i * 0.076);
+        const h = 74 + (i % 4) * 24;
+        const hue = (i * 37 + 180) % 360;
+        ctx.fillStyle = `hsla(${hue}, 88%, 54%, 0.12)`;
+        ctx.strokeStyle = `hsla(${hue}, 100%, 66%, 0.28)`;
+        roundRect(x - 16, view.floor - h - 18, 32, h, 8);
+        ctx.fill();
+        ctx.stroke();
+        drawFacetGem(x, view.floor - h - 24, 8 + (i % 2) * 3, `hsl(${hue}, 100%, 64%)`, i * 0.4);
+      }
+      ctx.restore();
+
+      const floor = ctx.createLinearGradient(0, view.floor - 8, 0, view.h);
+      floor.addColorStop(0, "rgba(61,255,173,0.34)");
+      floor.addColorStop(0.08, "rgba(255,255,255,0.18)");
+      floor.addColorStop(1, "rgba(0,0,0,0.72)");
+      ctx.fillStyle = floor;
+      ctx.fillRect(0, view.floor - 8, view.w, view.h - view.floor + 8);
+      ctx.strokeStyle = "rgba(143,255,231,0.64)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(0, view.floor - 8);
+      ctx.lineTo(view.w, view.floor - 8);
+      ctx.stroke();
+
+      ctx.save();
+      ctx.globalAlpha = 0.62;
+      ctx.strokeStyle = "rgba(56,233,255,0.2)";
+      for (let x = 0; x < view.w; x += 38) {
+        ctx.beginPath();
+        ctx.moveTo(x, view.floor - 8);
+        ctx.lineTo(x + 70, view.h);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function buildStaticLayers() {
+      const main = ctx;
+      for (const [cv, painter] of [[bgStatic, paintSky], [fgStatic, paintArenaDressing]]) {
+        cv.width = Math.max(1, Math.floor(view.w * view.dpr));
+        cv.height = Math.max(1, Math.floor(view.h * view.dpr));
+        ctx = cv.getContext("2d");
+        ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+        painter();
+      }
+      ctx = main;
+    }
+
+    function drawBars() {
+      // Glass plates behind each gauge cluster (flat fills, no per-frame gradients).
+      ctx.save();
+      ctx.fillStyle = "rgba(4,7,16,0.52)";
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "rgba(61,255,173,0.4)";
+      roundRect(20, 12, view.w * 0.36 + 24, 66, 10); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = "rgba(255,46,109,0.4)";
+      roundRect(view.w - view.w * 0.36 - 44, 12, view.w * 0.36 + 24, 66, 10); ctx.fill(); ctx.stroke();
+      ctx.restore();
+      drawGauge(32, 24, view.w * 0.36, 16, player.hp / 100, "#3dffad", "EMERALD VOTARY");
+      drawGauge(view.w - view.w * 0.36 - 32, 24, view.w * 0.36, 16, enemy.hp / 100, "#ff2e6d", "RUBY MANTIS REGENT");
+      drawGauge(32, 48, view.w * 0.27, 9, player.stamina / 100, "#38e9ff", "STAMINA");
+      drawGauge(view.w - view.w * 0.27 - 32, 48, view.w * 0.27, 9, enemy.stamina / 100, "#ffd75e", "AI STAMINA");
+    }
+
+    function drawGauge(x, y, w, h, pct, color, label) {
+      ctx.save();
+      ctx.fillStyle = "rgba(0,0,0,0.44)";
+      roundRect(x, y, w, h, h / 2);
+      ctx.fill();
+      ctx.fillStyle = color;
+      ctx.shadowBlur = 16;
+      ctx.shadowColor = color;
+      roundRect(x, y, Math.max(3, w * Math.max(0, pct)), h, h / 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "rgba(255,255,255,0.24)";
+      ctx.stroke();
+      ctx.fillStyle = "rgba(248,251,255,0.8)";
+      ctx.font = "800 10px ui-sans-serif";
+      ctx.textAlign = "left";
+      if ("letterSpacing" in ctx) ctx.letterSpacing = "1.5px";
+      ctx.fillText(label, x, y + h + 13);
+      if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
+      ctx.restore();
+    }
+
+    function drawFighter(fighter) {
+      const x = fighter.x;
+      const y = fighter.y;
+      const f = fighter.facing;
+      const scale = Math.max(0.88, Math.min(1.12, view.w / 1120));
+      const guardGlow = fighter.guard ? 1 : 0;
+      const dodgeGlow = fighter.invuln > 0 ? 1 : 0;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(f * scale, scale);
+      const pulse = 0.5 + Math.sin(performance.now() * 0.008 + x * 0.01) * 0.5;
+
+      ctx.fillStyle = "rgba(0,0,0,0.52)";
+      ctx.beginPath();
+      ctx.ellipse(0, 7, 94, 18, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = fighter.id === "player" ? "rgba(61,255,173,0.18)" : "rgba(255,46,109,0.16)";
+      ctx.beginPath();
+      ctx.ellipse(0, -4, 62, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (guardGlow) {
+        ctx.strokeStyle = fighter.id === "player" ? "#3dffad" : "#ffd75e";
+        ctx.lineWidth = 5;
+        ctx.shadowBlur = 30;
+        ctx.shadowColor = ctx.strokeStyle;
+        ctx.beginPath();
+        ctx.ellipse(8, -112, 50, 84, -0.14, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      if (dodgeGlow) {
+        ctx.strokeStyle = "#38e9ff";
+        ctx.lineWidth = 3;
+        ctx.shadowBlur = 28;
+        ctx.shadowColor = "#38e9ff";
+        ctx.beginPath();
+        ctx.ellipse(0, -94, 62, 34, 0.12, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // AI-art fighter sprite (falls back to the procedural crystal figure if not loaded yet)
+      // Pose from state: hurt > windup/strike (by attack phase) > idle. Procedural breathe + lunge sell the motion.
+      const _who = fighter.id === "player" ? "emerald" : "ruby";
+      let _pose = "idle";
+      if ((fighter.hurtTime || 0) > 0) _pose = "hurt";
+      else if (fighter.action === "slash" || fighter.action === "heavy" || fighter.action === "charged") {
+        const _sp = attacks[fighter.action];
+        _pose = (_sp && fighter.frame < _sp.activeStart) ? "windup" : "strike";
+      }
+      const _spr = SPR[_who + "_" + _pose] || SPR[_who + "_idle"] || (fighter.id === "player" ? SPR.emerald : SPR.ruby);
+      if (_spr) {
+        ctx.shadowBlur = 0;
+        const breathe = 1 + Math.sin(performance.now() * 0.003 + (fighter.id === "player" ? 0 : 1.6)) * 0.015;
+        const lunge = _pose === "strike" ? 1.07 : 1;
+        const sh = 300 * breathe * lunge, sw = sh * _spr.width / _spr.height;
+        const yOff = _pose === "hurt" ? -6 : 0;
+        ctx.drawImage(_spr, -sw / 2, 16 - sh + yOff, sw, sh);
+        if ((fighter.hurtTime || 0) > 0) {
+          ctx.globalAlpha = Math.min(0.75, fighter.hurtTime / 16 * 0.75); ctx.globalCompositeOperation = "lighter";
+          ctx.drawImage(_spr, -sw / 2, 16 - sh + yOff, sw, sh);
+          ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+        } else if (fighter.invuln > 0) { ctx.globalAlpha = 0.5; ctx.globalCompositeOperation = "lighter"; ctx.drawImage(_spr, -sw / 2, 16 - sh, sw, sh); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; }
+        ctx.restore();
+        return;
+      }
+
+      ctx.globalAlpha = 0.46;
+      ctx.fillStyle = fighter.id === "player" ? "rgba(56,233,255,0.26)" : "rgba(255,46,109,0.24)";
+      ctx.beginPath();
+      ctx.moveTo(-10, -132);
+      ctx.bezierCurveTo(-84, -190, -104, -78, -42, -50);
+      ctx.bezierCurveTo(-74, -82, -56, -150, -10, -132);
+      ctx.moveTo(10, -132);
+      ctx.bezierCurveTo(84, -190, 104, -78, 42, -50);
+      ctx.bezierCurveTo(74, -82, 56, -150, 10, -132);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      ctx.shadowBlur = 18;
+      ctx.shadowColor = fighter.color;
+      drawArmoredLimb(-22, -88, -58, -40, 18, fighter.color, fighter.core);
+      drawArmoredLimb(22, -88, 56, -42, 18, fighter.color, fighter.core);
+      drawArmoredLimb(-17, -50, -34, 0, 21, fighter.blade, fighter.color);
+      drawArmoredLimb(17, -50, 34, 0, 21, fighter.blade, fighter.color);
+
+      drawFacetGem(-54, -38, 8, fighter.color, -0.2);
+      drawFacetGem(54, -38, 8, fighter.color, 0.2);
+      drawFacetGem(-30, 0, 10, fighter.blade, 0.3);
+      drawFacetGem(30, 0, 10, fighter.blade, -0.3);
+      drawBoot(-34, -2, -1, fighter.blade, fighter.core);
+      drawBoot(34, -2, 1, fighter.blade, fighter.core);
+
+      const armor = ctx.createLinearGradient(-34, -158, 34, -38);
+      armor.addColorStop(0, "#ffffff");
+      armor.addColorStop(0.18, fighter.color);
+      armor.addColorStop(0.72, fighter.core);
+      armor.addColorStop(1, "#100416");
+      ctx.fillStyle = armor;
+      ctx.strokeStyle = "rgba(255,255,255,0.56)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, -154);
+      ctx.lineTo(36, -106);
+      ctx.lineTo(24, -54);
+      ctx.lineTo(0, -34);
+      ctx.lineTo(-24, -54);
+      ctx.lineTo(-36, -106);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      const tabard = ctx.createLinearGradient(0, -132, 0, -42);
+      tabard.addColorStop(0, "rgba(255,255,255,0.55)");
+      tabard.addColorStop(0.36, fighter.id === "player" ? "rgba(61,255,173,0.5)" : "rgba(255,215,94,0.48)");
+      tabard.addColorStop(1, "rgba(6,2,18,0.5)");
+      ctx.fillStyle = tabard;
+      ctx.beginPath();
+      ctx.moveTo(-12, -134);
+      ctx.lineTo(12, -134);
+      ctx.lineTo(18, -66);
+      ctx.lineTo(0, -40);
+      ctx.lineTo(-18, -66);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = fighter.core;
+      ctx.lineWidth = 1.1;
+      ctx.stroke();
+
+      ctx.strokeStyle = "rgba(255,255,255,0.34)";
+      ctx.lineWidth = 1.4;
+      for (const dx of [-0.46, -0.18, 0.18, 0.46]) {
+        ctx.beginPath();
+        ctx.moveTo(0, -150);
+        ctx.lineTo(34 * dx, -55);
+        ctx.stroke();
+      }
+      for (let plate = 0; plate < 4; plate++) {
+        ctx.fillStyle = plate % 2 ? "rgba(255,255,255,0.16)" : "rgba(0,0,0,0.18)";
+        ctx.beginPath();
+        ctx.moveTo(-26 + plate * 13, -126 + plate * 18);
+        ctx.lineTo(0, -114 + plate * 15);
+        ctx.lineTo(26 - plate * 13, -126 + plate * 18);
+        ctx.lineTo(18 - plate * 7, -112 + plate * 18);
+        ctx.lineTo(0, -104 + plate * 15);
+        ctx.lineTo(-18 + plate * 7, -112 + plate * 18);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      ctx.fillStyle = fighter.core;
+      ctx.shadowBlur = 26;
+      ctx.shadowColor = fighter.core;
+      ctx.beginPath();
+      ctx.arc(0, -102, 13, 0, Math.PI * 2);
+      ctx.fill();
+      drawFacetGem(0, -102, 11 + pulse * 3, fighter.core, pulse);
+
+      const helmet = ctx.createLinearGradient(0, -206, 0, -146);
+      helmet.addColorStop(0, fighter.id === "player" ? "#e9fff7" : "#ffe8f0");
+      helmet.addColorStop(0.55, fighter.color);
+      helmet.addColorStop(1, "#16031c");
+      ctx.fillStyle = helmet;
+      ctx.beginPath();
+      ctx.moveTo(-20, -172);
+      ctx.lineTo(0, -204);
+      ctx.lineTo(22, -172);
+      ctx.lineTo(14, -148);
+      ctx.lineTo(-14, -148);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.strokeStyle = fighter.core;
+      ctx.lineWidth = 2.5;
+      ctx.shadowBlur = 14;
+      ctx.shadowColor = fighter.core;
+      ctx.beginPath();
+      ctx.moveTo(-10, -182);
+      ctx.quadraticCurveTo(fighter.id === "player" ? -35 : -48, -222, -52, -196);
+      ctx.moveTo(10, -182);
+      ctx.quadraticCurveTo(fighter.id === "player" ? 35 : 48, -222, 52, -196);
+      ctx.stroke();
+      if (fighter.id === "enemy") {
+        ctx.fillStyle = "#ffd75e";
+        ctx.beginPath();
+        ctx.moveTo(-18, -154);
+        ctx.lineTo(-42, -136);
+        ctx.lineTo(-8, -142);
+        ctx.moveTo(18, -154);
+        ctx.lineTo(42, -136);
+        ctx.lineTo(8, -142);
+        ctx.fill();
+      }
+
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = fighter.core;
+      ctx.strokeStyle = "rgba(255,255,255,0.72)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-9, -170);
+      ctx.lineTo(9, -170);
+      ctx.moveTo(-7, -160);
+      ctx.lineTo(7, -160);
+      ctx.stroke();
+
+      const attacking = fighter.action === "slash" || fighter.action === "heavy" || fighter.action === "charged";
+      const bladeReach = attacking ? (fighter.action === "heavy" ? 140 : 108) : 92;
+      const bladeLift = attacking ? -132 : -104;
+      const bladeGradient = ctx.createLinearGradient(24, -118, bladeReach + 24, bladeLift - 26);
+      bladeGradient.addColorStop(0, "#ffffff");
+      bladeGradient.addColorStop(0.24, fighter.blade);
+      bladeGradient.addColorStop(0.72, fighter.core);
+      bladeGradient.addColorStop(1, "rgba(255,255,255,0.86)");
+      ctx.fillStyle = bladeGradient;
+      ctx.shadowBlur = 24;
+      ctx.shadowColor = fighter.blade;
+      ctx.beginPath();
+      ctx.moveTo(24, -118);
+      ctx.lineTo(bladeReach, bladeLift - 22);
+      ctx.lineTo(bladeReach + 20, bladeLift);
+      ctx.lineTo(32, -94);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(255,255,255,0.55)";
+      ctx.lineWidth = 1.2;
+      for (let i = 0; i < 5; i++) {
+        const t = i / 4;
+        ctx.beginPath();
+        ctx.moveTo(34 + bladeReach * t * 0.82, -96 + (bladeLift + 104) * t);
+        ctx.lineTo(44 + bladeReach * t * 0.84, -118 + (bladeLift + 88) * t);
+        ctx.stroke();
+      }
+      drawFacetGem(30, -106, 8, fighter.core, 0.25);
+
+      ctx.globalAlpha = 0.72;
+      ctx.fillStyle = fighter.id === "player" ? "rgba(56,233,255,0.36)" : "rgba(255,215,94,0.32)";
+      ctx.beginPath();
+      ctx.ellipse(-28, -120, 18, 64, 0.4, 0, Math.PI * 2);
+      ctx.ellipse(28, -120, 18, 64, -0.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function drawArmoredLimb(x1, y1, x2, y2, width, color, accent) {
+      drawLimb(x1, y1, x2, y2, width, color);
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const len = Math.max(1, Math.hypot(dx, dy));
+      const nx = -dy / len;
+      const ny = dx / len;
+      ctx.strokeStyle = "rgba(255,255,255,0.34)";
+      ctx.lineWidth = Math.max(2, width * 0.16);
+      ctx.beginPath();
+      ctx.moveTo(x1 + nx * width * 0.18, y1 + ny * width * 0.18);
+      ctx.lineTo(x2 + nx * width * 0.18, y2 + ny * width * 0.18);
+      ctx.stroke();
+      const joints = [0.28, 0.58, 0.84];
+      for (const t of joints) {
+        const x = x1 + dx * t;
+        const y = y1 + dy * t;
+        ctx.fillStyle = accent;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = accent;
+        ctx.beginPath();
+        ctx.ellipse(x, y, width * 0.34, width * 0.2, Math.atan2(dy, dx), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.shadowBlur = 0;
+    }
+
+    function drawBoot(x, y, side, color, accent) {
+      const boot = ctx.createLinearGradient(x - 16, y - 18, x + side * 36, y + 9);
+      boot.addColorStop(0, "rgba(255,255,255,0.7)");
+      boot.addColorStop(0.35, color);
+      boot.addColorStop(1, "#05040b");
+      ctx.fillStyle = boot;
+      ctx.strokeStyle = "rgba(255,255,255,0.5)";
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(x - side * 10, y - 18);
+      ctx.lineTo(x + side * 22, y - 10);
+      ctx.lineTo(x + side * 42, y + 1);
+      ctx.lineTo(x + side * 8, y + 8);
+      ctx.lineTo(x - side * 14, y + 3);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      drawFacetGem(x + side * 12, y - 4, 5, accent, side * 0.4);
+    }
+
+    function drawLimb(x1, y1, x2, y2, width, color) {
+      ctx.lineCap = "round";
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(255,255,255,0.38)";
+      ctx.lineWidth = Math.max(2, width * 0.22);
+      ctx.stroke();
+    }
+
+    function drawSlash(slash) {
+      ctx.save();
+      const alpha = Math.max(0, slash.life / 18);
+      ctx.globalAlpha = alpha;
+      ctx.translate(slash.x, slash.y);
+      ctx.scale(slash.facing, 1);
+      const grad = ctx.createLinearGradient(0, 0, slash.reach, -30);
+      grad.addColorStop(0, "rgba(255,255,255,0.9)");
+      grad.addColorStop(0.25, slash.color);
+      grad.addColorStop(1, "rgba(183,96,255,0)");
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 18 * slash.thickness;
+      ctx.lineCap = "round";
+      ctx.shadowBlur = 28;
+      ctx.shadowColor = slash.color;
+      ctx.beginPath();
+      ctx.moveTo(12, 18);
+      ctx.quadraticCurveTo(slash.reach * 0.58, -72, slash.reach, -8);
+      ctx.stroke();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = "rgba(255,255,255,0.82)";
+      ctx.stroke();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "rgba(255,255,255,0.42)";
+      for (let i = 0; i < 4; i++) {
+        const t = i / 4;
+        ctx.beginPath();
+        ctx.moveTo(22 + slash.reach * t, 16 - 12 * t);
+        ctx.quadraticCurveTo(slash.reach * (0.55 + t * 0.12), -54 - i * 4, slash.reach * 0.96, -8 - i * 6);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawParticles() {
+      for (const p of state.particles) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.life / 56);
+        ctx.fillStyle = p.color;
+        ctx.shadowBlur = 18;
+        ctx.shadowColor = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    function drawEchoes() {
+      for (const e of state.echoes) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, e.life / 42);
+        ctx.fillStyle = e.color;
+        ctx.shadowBlur = 16;
+        ctx.shadowColor = e.color;
+        ctx.font = "900 24px ui-sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(e.text, e.x, e.y);
+        ctx.restore();
+      }
+    }
+
+    function drawRoundText() {
+      // KO white flash overlay (fades via state.koFlash)
+      if ((state.koFlash || 0) > 0) {
+        ctx.save(); ctx.globalAlpha = Math.min(0.7, state.koFlash * 0.7); ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, view.w, view.h); ctx.restore();
+      }
+      ctx.save();
+      ctx.fillStyle = "rgba(248,251,255,0.84)";
+      ctx.shadowBlur = 18;
+      ctx.shadowColor = "#b760ff";
+      ctx.font = `900 ${Math.max(18, view.w * 0.026)}px ui-sans-serif`;
+      ctx.textAlign = "center";
+      const label = state.running ? `ROUND ${state.round} - ${state.judgment}` : "PRESS START DUEL";
+      ctx.fillText(label, view.w / 2, view.h - 34);
+      ctx.restore();
+      // Big pulsing K.O. during the slow-mo dwell
+      if ((state.koBanner || 0) > 0) {
+        ctx.save();
+        ctx.textAlign = "center";
+        const pulse = 1 + Math.sin(performance.now() * 0.014) * 0.07;
+        ctx.font = `900 ${Math.max(64, view.w * 0.14) * pulse}px ui-sans-serif`;
+        ctx.fillStyle = "#fff4d8";
+        ctx.shadowBlur = 42; ctx.shadowColor = "#ff2e6d";
+        ctx.fillText("K.O.", view.w / 2, view.h * 0.46);
+        ctx.restore();
+      }
+    }
+
+    function drawCrystal(x, y, size, top, bottom) {
+      ctx.save();
+      const g = ctx.createLinearGradient(x, y - size, x, y + size);
+      g.addColorStop(0, top);
+      g.addColorStop(1, bottom);
+      ctx.fillStyle = g;
+      ctx.shadowBlur = 30;
+      ctx.shadowColor = top;
+      ctx.beginPath();
+      ctx.moveTo(x, y - size);
+      ctx.lineTo(x + size * 0.58, y - size * 0.08);
+      ctx.lineTo(x + size * 0.28, y + size);
+      ctx.lineTo(x - size * 0.28, y + size);
+      ctx.lineTo(x - size * 0.58, y - size * 0.08);
+      ctx.closePath();
+      ctx.fill();
+      ctx.save();
+      ctx.clip();
+      ctx.strokeStyle = "rgba(255,255,255,0.7)";
+      ctx.lineWidth = Math.max(1.2, size * 0.035);
+      for (const dx of [-0.42, -0.16, 0.16, 0.42]) {
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.92);
+        ctx.lineTo(x + size * dx, y + size * 0.82);
+        ctx.stroke();
+      }
+      ctx.fillStyle = "rgba(255,255,255,0.18)";
+      ctx.beginPath();
+      ctx.moveTo(x - size * 0.34, y - size * 0.14);
+      ctx.lineTo(x, y - size * 0.82);
+      ctx.lineTo(x + size * 0.18, y - size * 0.08);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle = "rgba(255,255,255,0.62)";
+      ctx.beginPath();
+      ctx.moveTo(x, y - size);
+      ctx.lineTo(x + size * 0.58, y - size * 0.08);
+      ctx.lineTo(x + size * 0.28, y + size);
+      ctx.lineTo(x - size * 0.28, y + size);
+      ctx.lineTo(x - size * 0.58, y - size * 0.08);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawCausticField(x, y, w, h, phase) {
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      ctx.globalAlpha = 0.3;
+      for (let i = 0; i < 34; i++) {
+        const hue = (i * 23 + phase * 140) % 360;
+        ctx.strokeStyle = `hsla(${hue}, 100%, 65%, ${0.06 + (i % 5) * 0.018})`;
+        ctx.lineWidth = 0.8 + (i % 3) * 0.42;
+        const yy = y + ((i * 47 + phase * 100) % (h + 160)) - 80;
+        ctx.beginPath();
+        ctx.moveTo(x - 40, yy);
+        for (let px = x - 40; px <= x + w + 60; px += 54) {
+          ctx.lineTo(px, yy + Math.sin(px * 0.015 + i * 1.7 + phase * 6) * 24);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawFacetGem(x, y, size, color, rotation = 0) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rotation);
+      ctx.shadowBlur = size * 1.7;
+      ctx.shadowColor = color;
+      const g = ctx.createLinearGradient(-size, -size, size, size);
+      g.addColorStop(0, "#ffffff");
+      g.addColorStop(0.22, color);
+      g.addColorStop(1, "rgba(12,4,26,0.95)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      for (let i = 0; i < 8; i++) {
+        const a = -Math.PI / 2 + i * Math.PI / 4;
+        const r = i % 2 ? size * 0.7 : size;
+        ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.62)";
+      ctx.lineWidth = Math.max(1, size * 0.08);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(255,255,255,0.32)";
+      for (let i = 0; i < 4; i++) {
+        const a = -Math.PI / 2 + i * Math.PI / 2;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(a) * size * 0.86, Math.sin(a) * size * 0.86);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function roundRect(x, y, w, h, r) {
+      const radius = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.arcTo(x + w, y, x + w, y + h, radius);
+      ctx.arcTo(x + w, y + h, x, y + h, radius);
+      ctx.arcTo(x, y + h, x, y, radius);
+      ctx.arcTo(x, y, x + w, y, radius);
+      ctx.closePath();
+    }
+
+    function makeReceipt(reason = "manual_export") {
+      return {
+        cabinet: "Vorath Blade Tribunal",
+        route: "/arcade/custom/vorath-blade-tribunal",
+        reason,
+        round: state.round,
+        judgment: state.judgment,
+        player: { hp: player.hp, stamina: player.stamina, charge: player.charge, rounds: player.rounds },
+        enemy: { hp: enemy.hp, stamina: enemy.stamina, charge: enemy.charge, rounds: enemy.rounds },
+        gate: "BLADE",
+        visual_directive: "rainbows neon maximalism holographic gems jewels crystals alien insects glow blade trails",
+        noProtectedAssets: "No protected weapon-fighter assets, names, characters, stages, move lists, animation data, logos, audio, or screenshots are used.",
+        generatedAt: new Date().toISOString(),
+        log: state.log.slice(0, 6)
+      };
+    }
+
+    function exportReceipt() {
+      state.receipts += 1;
+      const receipt = makeReceipt("player_export");
+      const blob = new Blob([JSON.stringify(receipt, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `vorath-blade-tribunal-receipt-${String(state.receipts).padStart(2, "0")}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      addLog("Receipt exported with BLADE gate state.");
+    }
+
+    function bindHold(button) {
+      button.addEventListener("pointerdown", event => {
+        event.preventDefault();
+        try { button.setPointerCapture(event.pointerId); } catch (e) {}
+        button.classList.add("is-down");
+      });
+      button.addEventListener("pointerup", event => {
+        button.releasePointerCapture(event.pointerId);
+        button.classList.remove("is-down");
+      });
+      button.addEventListener("pointercancel", () => button.classList.remove("is-down"));
+      button.addEventListener("pointerleave", () => button.classList.remove("is-down"));
+    }
+
+    window.addEventListener("keydown", event => {
+      const key = event.key.toLowerCase();
+      if ([" ", "arrowleft", "arrowright"].includes(key)) event.preventDefault();
+      keys.add(key);
+    });
+
+    window.addEventListener("keyup", event => {
+      keys.delete(event.key.toLowerCase());
+    });
+
+    els.startBtn.addEventListener("click", startDuel);
+    els.exportBtn.addEventListener("click", exportReceipt);
+    els.exportTop.addEventListener("click", exportReceipt);
+    [els.leftBtn, els.rightBtn, els.slashBtn, els.heavyBtn, els.guardBtn, els.dodgeBtn].forEach(bindHold);
+    window.addEventListener("resize", resize);
+
+    resize();
+    updateHud();
+    draw();
+    requestAnimationFrame(updateGame);
+
+    window.vorathBladeTribunal = { startDuel, updateGame, exportReceipt, makeReceipt };
+    if (new URLSearchParams(window.location.search).has("playtest")) {
+      window.setTimeout(() => {
+        startDuel();
+        beginAction(player, "slash");
+        enemy.guard = true;
+        burst(view.w * 0.5, view.floor - 128, 24, "#38e9ff", 7);
+      }, 120);
+    }
+  </script>
+</body>
+</html>

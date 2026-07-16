@@ -17,6 +17,8 @@ ROOT = Path(__file__).resolve().parents[1]
 HTML_PATH = ROOT / "idc-programming" / "index.html"
 MANIFEST_PATH = ROOT / "static" / "idc_video" / "yt_manifest.json"
 MAX_GITHUB_BLOB = 100 * 1024 * 1024
+PRIVATE_PACKET_PATH = ROOT / "static" / "idc" / "idc_anthology_packet_2026-06-06.json"
+PRIVATE_PACKET_ROUTE = "/static/idc/idc_anthology_packet_2026-06-06.json"
 
 
 def git_output(*args: str) -> str:
@@ -45,6 +47,12 @@ def main() -> int:
         fail("privacy-enhanced YouTube embed code is missing")
     if "C:/Program Files/Git/" in html:
         fail("frozen Windows paths remain in HTML")
+    if PRIVATE_PACKET_ROUTE in html:
+        fail("owner-review IDC packet is still linked from the public page")
+    if PRIVATE_PACKET_PATH.exists():
+        fail("owner-review IDC packet is still present in the public tree")
+    if "Season file withheld pending owner review" not in html:
+        fail("public page is missing the owner-review withholding notice")
 
     tracked = set(git_output("ls-tree", "-r", "--name-only", "HEAD").splitlines())
     for stem, url in manifest.items():
@@ -119,7 +127,7 @@ def main() -> int:
         )
     else:
         print("SKIP: video size check needs a full clone or --network")
-    print("OK: no frozen Windows asset paths")
+    print("OK: no frozen Windows asset paths or owner-review IDC packet")
     return 0
 
 

@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SUBJECT 000-999 // The Test</title>
+<style>
+  :root{ --void:#0a0a0c; --paper:#e8e6df; --dim:#8a8a90; --amber:#e9c86a; --crimson:#c0392b; --clinic:#c9ccc4; }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;background:#08080a;color:var(--paper);
+    font-family:"Courier New",ui-monospace,monospace;overflow:hidden}
+  #stage-wrap{position:relative;width:100%;height:100vh;overflow:hidden}
+  #plate{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;opacity:.18}
+  #fx{position:absolute;inset:0;z-index:2;pointer-events:none}
+  .layer{position:absolute;inset:0;z-index:3;display:grid;place-items:center;padding:24px}
+  .frame{width:min(760px,100%);border:1px solid rgba(201,204,196,.22);background:rgba(12,12,16,.72);
+    border-radius:6px;padding:34px 30px;box-shadow:0 0 80px rgba(0,0,0,.6);transition:transform .4s}
+  .stamp{position:absolute;top:14px;right:18px;font-size:11px;letter-spacing:2px;color:var(--dim);z-index:4}
+  .stamp b{color:var(--crimson)}
+  .kicker{font-size:11px;letter-spacing:5px;text-transform:uppercase;color:var(--dim);margin-bottom:14px}
+  h1{margin:0 0 10px;font-size:30px;letter-spacing:2px;font-weight:700}
+  .q{font-size:20px;line-height:1.5;margin:0 0 26px;min-height:60px}
+  .clinical{color:var(--clinic)}
+  .answers{display:grid;gap:10px}
+  .ans{text-align:left;font:inherit;font-size:15px;padding:13px 15px;border:1px solid rgba(201,204,196,.28);
+    border-radius:4px;background:rgba(201,204,196,.05);color:var(--paper);cursor:pointer;transition:.2s}
+  .ans:hover{border-color:var(--amber);background:rgba(233,200,106,.09);transform:translateX(3px)}
+  .meterline{margin-top:22px;font-size:11px;letter-spacing:1px;color:var(--dim);display:flex;justify-content:space-between}
+  .dosebar{height:4px;background:rgba(201,204,196,.14);border-radius:3px;margin-top:6px;overflow:hidden}
+  .dosebar > span{display:block;height:100%;background:linear-gradient(90deg,var(--amber),var(--crimson));width:0;transition:width .5s}
+  .center{text-align:center}
+  .btn{display:inline-block;margin-top:18px;font:inherit;font-size:14px;letter-spacing:2px;padding:13px 26px;
+    border:1px solid var(--amber);border-radius:5px;background:rgba(233,200,106,.08);color:var(--amber);cursor:pointer}
+  .btn:hover{background:rgba(233,200,106,.16)}
+  .verdict-plate{background:#0c0a08;border:1px solid var(--amber);border-radius:6px;padding:30px;text-align:center}
+  .verdict-plate .redact{background:#000;color:#000;padding:0 6px;user-select:none}
+  .hidden{display:none!important}
+  .flicker{animation:flick 6s infinite}
+  @keyframes flick{0%,97%,100%{opacity:1}98%{opacity:.6}99%{opacity:.85}}
+</style>
+</head>
+<body>
+<div id="stage-wrap">
+  <video id="plate" autoplay muted loop playsinline src="/static/games/imagegen_quality_pass_20260625/subject_000999_plate_motion.mp4" onerror="this.remove()"></video>
+  <canvas id="fx"></canvas>
+  <div class="stamp flicker">FILE <b>000-999</b> &middot; <span id="clearance">CLASSIFIED</span></div>
+
+  <!-- intake -->
+  <div class="layer" id="intake">
+    <div class="frame center">
+      <div class="kicker">Division of Applied Perception &middot; Session 000-999</div>
+      <h1>THE TEST</h1>
+      <p class="q clinical" style="min-height:auto">You have volunteered. You will be asked a series of questions.
+        Answer honestly. The room is stable. The light is only a light.
+        <br><br>There is no wrong answer. That is the first thing we will teach you.</p>
+      <button class="btn" id="beginBtn" type="button">I consent</button>
+      <p style="font-size:11px;color:var(--dim);margin-top:16px">An interactive art experience about perception and the machinery of consent.<br>Fictional. No substances depicted or endorsed.</p>
+    </div>
+  </div>
+
+  <!-- questionnaire -->
+  <div class="layer hidden" id="quiz">
+    <div class="frame" id="qframe">
+      <div class="kicker" id="qphase">Baseline</div>
+      <p class="q" id="qtext"></p>
+      <div class="answers" id="qans"></div>
+      <div class="meterline"><span id="qcount">Question 1</span><span id="qdose">Dose 0.0 &mu;g</span></div>
+      <div class="dosebar"><span id="qbar"></span></div>
+    </div>
+  </div>
+
+  <!-- tribunal verdict -->
+  <div class="layer hidden" id="tribunal">
+    <div class="frame verdict-plate">
+      <div class="kicker">The Tribunal of Applied Perception</div>
+      <h1 id="verdictTitle">THE FILE IS SEALED</h1>
+      <p class="q" id="verdictBody" style="min-height:auto"></p>
+      <div id="evidence" style="text-align:left;font-size:13px;line-height:1.9;color:var(--dim);margin:14px 0"></div>
+      <p style="font-size:12px;color:var(--dim)">The experiment is entered into evidence against itself.</p>
+      <button class="btn" id="againBtn" type="button">Begin again as a new subject</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/games/juice.js"></script>
+<script>
+(() => {
+  "use strict";
+  const fx = document.getElementById("fx"), fctx = fx.getContext("2d");
+  function resize() { fx.width = innerWidth; fx.height = innerHeight; }
+  resize(); addEventListener("resize", resize);
+
+  fetch("https://app.northstarprime.net/api/founders").then(r => r.json()).then(d => {
+    const names = (d.founders || []).map(f => f.name).filter(Boolean);
+    if (names.length) document.getElementById("clearance").textContent = "WITNESSED BY " + names[0].toUpperCase();
+  }).catch(() => {});
+
+  // ---------- questions: escalate clinical -> personal -> the room speaks ----------
+  const QUESTIONS = [
+    { phase: "Baseline", clinical: true,
+      q: "State your designation.",
+      a: ["I am Subject 000-999.", "I have a name.", "I don't remember.", "Whatever you need me to be."] },
+    { phase: "Baseline", clinical: true,
+      q: "The wall in front of you — is it moving?",
+      a: ["No. Walls don't move.", "Slightly.", "I'd rather not say.", "It was never a wall."] },
+    { phase: "Baseline", clinical: true,
+      q: "On a scale you cannot see, how afraid are you?",
+      a: ["Zero.", "The scale is the fear.", "Ask the light.", "Yes."] },
+    { phase: "Onset",
+      q: "The color of the room has a temperature now. What is it saying?",
+      a: ["Nothing. Colors don't speak.", "It says 'stay'.", "It's counting.", "It's sorry."] },
+    { phase: "Onset",
+      q: "Your hands. Whose are they?",
+      a: ["Mine.", "The chair's.", "Everyone before me.", "I'll find out when I let go."] },
+    { phase: "Onset",
+      q: "We are going to show you a memory that isn't yours. Do you accept it?",
+      a: ["Yes.", "No.", "I already have.", "It was mine first."] },
+    { phase: "Bloom",
+      q: "THE ROOM ASKS: why do you keep answering me?",
+      a: ["Because you're asking.", "To keep the walls up.", "I've stopped.", "You're me."] },
+    { phase: "Bloom",
+      q: "THE ROOM ASKS: if the door was never locked, what were you afraid of?",
+      a: ["Leaving.", "Staying.", "The hallway is worse.", "There is no door."] },
+    { phase: "Bloom",
+      q: "THE ROOM ASKS: which of your earlier answers was the lie?",
+      a: ["The first.", "All of them.", "The honest one.", "This one."] },
+    { phase: "Dissolution",
+      q: "̸t̷h̸e̷r̴e̷ ̶i̸s̷ ̴n̸o̷ ̶q̴u̸e̷s̶t̸i̷o̴n̷ ̶l̸e̷f̴t̸ ̷—̴ ̶o̸n̷l̴y̸ ̷t̶h̸e̴ ̷s̸p̶a̸c̷e̴ ̸w̷h̶e̸r̷e̴ ̸i̷t̶ ̸w̷a̴s̷",
+      a: ["…", "I am still here.", "Let me out.", "Thank you."] },
+  ];
+
+  const S = { i: 0, dose: 0, answers: [], phase: 0, running: false, orbs: [] };
+
+  const $ = id => document.getElementById(id);
+  function showLayer(id) { ["intake", "quiz", "tribunal"].forEach(l => $(l).classList.toggle("hidden", l !== id)); }
+
+  // ---------- audio: clinician drone that degrades ----------
+  let actx = null, master = null, drone = null;
+  function ensureAudio() {
+    if (!actx) { actx = new (window.AudioContext || window.webkitAudioContext)(); master = actx.createGain(); master.gain.value = 0.5; master.connect(actx.destination); }
+    if (actx.state === "suspended") actx.resume();
+  }
+  function startDrone() {
+    if (drone) return;
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = "sine"; o.frequency.value = 110; g.gain.value = 0.05;
+    o.connect(g); g.connect(master); o.start(); drone = { o, g };
+  }
+  function warpDrone() { // detune + add a shimmer per dose
+    if (!drone) return;
+    drone.o.frequency.exponentialRampToValueAtTime(110 - S.dose * 6 + Math.random() * S.dose * 4, actx.currentTime + 0.6);
+    const o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime;
+    o.type = ["sine", "triangle", "sawtooth"][Math.min(2, S.phase)];
+    o.frequency.setValueAtTime(220 + S.dose * 40, t);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.04, t + 0.05); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.2);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + 1.3);
+  }
+
+  function renderQuestion() {
+    const Q = QUESTIONS[S.i];
+    S.phase = ["Baseline", "Onset", "Bloom", "Dissolution"].indexOf(Q.phase);
+    $("qphase").textContent = Q.phase;
+    $("qtext").className = "q" + (Q.clinical ? " clinical" : "");
+    $("qtext").textContent = Q.q;
+    $("qcount").textContent = "Question " + (S.i + 1) + " / " + QUESTIONS.length;
+    $("qdose").textContent = "Dose " + S.dose.toFixed(1) + " μg";
+    $("qbar").style.width = Math.min(100, S.dose * 9) + "%";
+    const box = $("qans"); box.innerHTML = "";
+    Q.a.forEach((text, idx) => {
+      const b = document.createElement("button");
+      b.className = "ans"; b.textContent = text;
+      b.onclick = () => answer(idx, text);
+      box.appendChild(b);
+    });
+    // clearance downgrades as you dissolve
+    $("clearance").textContent = ["CLASSIFIED", "OBSERVED", "UNRELIABLE", "DISSOLVED"][S.phase] || "DISSOLVED";
+  }
+
+  function answer(idx, text) {
+    S.answers.push(text);
+    S.dose += 1 + S.phase * 0.4;
+    warpDrone();
+    if (window.Juice && S.phase >= 2) Juice.flash("hsla(" + (S.dose * 40 % 360) + ",80%,55%,0.12)", 300);
+    // spawn dissolving orbs scaled to dose
+    for (let k = 0; k < 4 + S.phase * 3; k++) S.orbs.push({ x: Math.random() * fx.width, y: Math.random() * fx.height, r: 20 + Math.random() * 60, hue: S.dose * 30 + Math.random() * 60, life: 1, vx: (Math.random() - .5) * 2, vy: (Math.random() - .5) * 2 });
+    S.i++;
+    if (S.i >= QUESTIONS.length) return tribunal();
+    renderQuestion();
+  }
+
+  function tribunal() {
+    S.running = true; // keep fx running under verdict
+    showLayer("tribunal");
+    // verdict from answer pattern (index-of-last-answers heuristic; purely flavor)
+    const last = S.answers[S.answers.length - 1] || "";
+    let title, body;
+    if (last === "Thank you." || last === "…") { title = "THE SUBJECT WAS ALREADY FREE"; body = "You stopped defending the walls. The tribunal finds the room guilty of pretending to be a room. You are released — you were never held."; }
+    else if (last === "Let me out.") { title = "THE DOOR OPENS INWARD"; body = "You asked to leave at the exact moment leaving became possible. The tribunal notes the timing was not an accident. Nothing here was."; }
+    else { title = "THE FILE IS SEALED"; body = "Your answers have been entered as evidence. The experiment is charged with the crime of asking. The verdict, like the door, was always open."; }
+    $("verdictTitle").textContent = title;
+    $("verdictBody").textContent = body;
+    // playback: your answers, half redacted
+    $("evidence").innerHTML = S.answers.map((a, i) => {
+      const redact = i % 3 === 1;
+      return "EXHIBIT " + String(i + 1).padStart(2, "0") + ": " +
+        (redact ? '<span class="redact">' + a + '</span>' : '"' + a + '"');
+    }).join("<br>");
+    if (window.Juice) Juice.flash("rgba(233,200,106,.18)", 800);
+  }
+
+  // ---------- dissolution fx overlay ----------
+  function loop(ms) {
+    const t = ms / 1000;
+    fctx.clearRect(0, 0, fx.width, fx.height);
+    // warp intensity from dose
+    const d = Math.min(1, S.dose / 12);
+    // breathing color wash
+    if (d > 0.05) {
+      fctx.globalCompositeOperation = "screen";
+      for (let i = 0; i < 3; i++) {
+        const bx = fx.width * (0.5 + 0.4 * Math.sin(t * 0.2 + i * 2)), by = fx.height * (0.5 + 0.4 * Math.cos(t * 0.17 + i * 1.6));
+        const g = fctx.createRadialGradient(bx, by, 10, bx, by, 180 + d * 320);
+        g.addColorStop(0, "hsla(" + ((t * 40 + i * 120) % 360) + ",85%,55%," + (d * 0.10) + ")");
+        g.addColorStop(1, "transparent");
+        fctx.fillStyle = g; fctx.fillRect(0, 0, fx.width, fx.height);
+      }
+      fctx.globalCompositeOperation = "source-over";
+    }
+    // dissolving orbs
+    S.orbs.forEach(o => { o.x += o.vx; o.y += o.vy; o.r *= 1.006; o.life -= 0.006; });
+    S.orbs = S.orbs.filter(o => o.life > 0);
+    fctx.globalCompositeOperation = "screen";
+    for (const o of S.orbs) {
+      const g = fctx.createRadialGradient(o.x, o.y, 1, o.x, o.y, o.r);
+      g.addColorStop(0, "hsla(" + (o.hue % 360) + ",90%,60%," + (o.life * 0.5) + ")");
+      g.addColorStop(1, "transparent");
+      fctx.fillStyle = g; fctx.beginPath(); fctx.arc(o.x, o.y, o.r, 0, Math.PI * 2); fctx.fill();
+    }
+    fctx.globalCompositeOperation = "source-over";
+    // warp the question frame with CSS as dose climbs
+    if (!document.getElementById("quiz").classList.contains("hidden")) {
+      // melt the QUESTION TEXT (not the answer buttons — those stay clickable)
+      const qt = document.getElementById("qtext");
+      if (qt) {
+        const wob = Math.sin(t * 1.4) * d * 6;
+        qt.style.transform = "perspective(700px) rotateX(" + (Math.sin(t * 0.8) * d * 6) + "deg) skewX(" + (wob * 0.4) + "deg)";
+        qt.style.filter = d > 0.2 ? "hue-rotate(" + (t * 26 * d) + "deg) blur(" + (d * 0.7) + "px)" : "none";
+        qt.style.textShadow = d > 0.3 ? ("2px 0 hsla(" + (t*60%360) + ",90%,60%,.5), -2px 0 hsla(" + ((t*60+180)%360) + ",90%,60%,.5)") : "none";
+      }
+      // the frame breathes gently (no click-blocking rotation/scale)
+      const qf = document.getElementById("qframe");
+      if (qf) qf.style.filter = d > 0.4 ? "hue-rotate(" + (t * 8 * d) + "deg)" : "none";
+      const plate = document.getElementById("plate");
+      if (plate) plate.style.opacity = (0.18 + d * 0.5).toString();
+    }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  // ---------- flow ----------
+  $("beginBtn").onclick = () => { ensureAudio(); startDrone(); showLayer("quiz"); S.i = 0; S.dose = 0; S.answers = []; renderQuestion(); };
+  $("againBtn").onclick = () => { S.orbs = []; S.dose = 0; showLayer("intake"); const plate = document.getElementById("plate"); if (plate) plate.style.opacity = ".18"; };
+})();
+</script>
+</body>
+</html>

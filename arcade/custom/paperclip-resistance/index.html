@@ -1,0 +1,1251 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Paperclip Resistance</title>
+  <style>
+    :root {
+      --ink: #171410;
+      --paper: #f4ecd8;
+      --paper-dim: #c8bda4;
+      --line: rgba(244, 236, 216, 0.18);
+      --red: #d94f45;
+      --amber: #e3a72f;
+      --green: #4ac26b;
+      --teal: #3bb5b0;
+      --blue: #5b8fd9;
+      --shadow: rgba(0, 0, 0, 0.36);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: #0f0d0a;
+      color: var(--paper);
+      font-family: "Segoe UI", system-ui, sans-serif;
+      letter-spacing: 0;
+    }
+
+    body {
+      background:
+        linear-gradient(90deg, rgba(244, 236, 216, 0.035) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(244, 236, 216, 0.035) 1px, transparent 1px),
+        #0f0d0a;
+      background-size: 28px 28px;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::before {
+      background:
+        radial-gradient(circle at 18% 16%, rgba(227, 167, 47, 0.12), transparent 24%),
+        radial-gradient(circle at 82% 72%, rgba(59, 181, 176, 0.11), transparent 28%),
+        repeating-linear-gradient(98deg, rgba(244, 236, 216, 0.035) 0 1px, transparent 1px 11px),
+        repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.12) 0 2px, transparent 2px 42px);
+      mix-blend-mode: screen;
+      opacity: 0.58;
+    }
+
+    body::after {
+      background:
+        radial-gradient(ellipse at 50% 50%, transparent 0 48%, rgba(0, 0, 0, 0.46) 100%),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.018), transparent 18%, rgba(255, 255, 255, 0.012) 36%, transparent 55%);
+      opacity: 0.9;
+    }
+
+    button, input { font: inherit; }
+
+    button {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      min-height: 44px;
+      color: var(--paper);
+      background: rgba(244, 236, 216, 0.06);
+      cursor: pointer;
+      transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+      touch-action: manipulation;
+    }
+
+    button:hover:not(:disabled),
+    button:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(244, 236, 216, 0.46);
+      background: rgba(244, 236, 216, 0.1);
+      outline: none;
+    }
+
+    button:disabled {
+      cursor: wait;
+      opacity: 0.58;
+    }
+
+    .shell {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      width: min(100%, 1240px);
+      margin: 0 auto;
+      padding: 22px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 14px;
+    }
+
+    .topbar,
+    .footer {
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      border: 1px solid var(--line);
+      background: rgba(19, 16, 13, 0.82);
+      box-shadow: 0 12px 40px var(--shadow);
+      padding: 12px 14px;
+    }
+
+    .topbar h1 {
+      margin: 0;
+      font-size: clamp(1.9rem, 5vw, 4.2rem);
+      line-height: 0.94;
+      color: var(--paper);
+      text-shadow: 0 3px 0 rgba(0, 0, 0, 0.8);
+    }
+
+    .badge {
+      min-width: 122px;
+      text-align: center;
+      color: var(--amber);
+      border: 1px solid rgba(227, 167, 47, 0.56);
+      padding: 9px 12px;
+      text-transform: uppercase;
+      font-size: 0.72rem;
+      background: rgba(227, 167, 47, 0.08);
+    }
+
+    .game {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+      gap: 16px;
+      min-height: 0;
+    }
+
+    .board,
+    .side {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: rgba(19, 16, 13, 0.88);
+      box-shadow: 0 16px 50px var(--shadow);
+      min-width: 0;
+    }
+
+    .topbar::before,
+    .footer::before,
+    .board::before,
+    .side::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(115deg, rgba(255,255,255,0.08), transparent 24%, transparent 72%, rgba(227,167,47,0.07)),
+        repeating-linear-gradient(0deg, rgba(244,236,216,0.045) 0 1px, transparent 1px 9px),
+        radial-gradient(circle at 86% 18%, rgba(217,79,69,0.12), transparent 22%);
+      mix-blend-mode: screen;
+      opacity: 0.62;
+    }
+
+    .board::after,
+    .side::after {
+      content: "";
+      position: absolute;
+      inset: 10px;
+      pointer-events: none;
+      border: 1px solid rgba(244, 236, 216, 0.08);
+      border-radius: 6px;
+      box-shadow: inset 0 0 34px rgba(244, 236, 216, 0.035);
+    }
+
+    .board {
+      padding: clamp(12px, 2vw, 20px);
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 14px;
+    }
+
+    .brief {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: end;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 12px;
+    }
+
+    .brief p {
+      margin: 0;
+      color: var(--paper-dim);
+      line-height: 1.55;
+      max-width: 720px;
+    }
+
+    .target {
+      color: var(--green);
+      border: 1px solid rgba(74, 194, 107, 0.48);
+      background: rgba(74, 194, 107, 0.08);
+      padding: 9px 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .zones {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      align-content: stretch;
+    }
+
+    .zone {
+      position: relative;
+      min-height: 205px;
+      display: grid;
+      grid-template-rows: auto minmax(92px, 1fr) auto auto;
+      gap: 12px;
+      border: 1px solid rgba(244, 236, 216, 0.18);
+      border-radius: 8px;
+      background:
+        radial-gradient(circle at 16% 10%, rgba(255, 255, 255, 0.08), transparent 23%),
+        linear-gradient(138deg, rgba(255, 244, 216, 0.08), rgba(0, 0, 0, 0.16) 38%, rgba(59, 181, 176, 0.06)),
+        rgba(244, 236, 216, 0.055);
+      padding: 14px;
+      overflow: hidden;
+      transform-style: preserve-3d;
+      isolation: isolate;
+    }
+
+    .zone.selected {
+      border-color: var(--teal);
+      box-shadow: inset 0 0 0 2px rgba(59, 181, 176, 0.34), 0 0 32px rgba(59, 181, 176, 0.12);
+    }
+
+    .zone.danger {
+      border-color: rgba(217, 79, 69, 0.68);
+      background: rgba(217, 79, 69, 0.08);
+    }
+
+    .zone::before,
+    .zone::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .zone::before {
+      background:
+        linear-gradient(115deg, transparent 0 22%, rgba(255, 255, 255, 0.06) 23%, transparent 25%),
+        linear-gradient(90deg, rgba(244, 236, 216, 0.025) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(244, 236, 216, 0.02) 1px, transparent 1px);
+      background-size: auto, 18px 18px, 18px 18px;
+      opacity: 0.9;
+      mix-blend-mode: screen;
+    }
+
+    .zone::after {
+      background:
+        radial-gradient(circle at var(--pressure-hot, 32%) 88%, rgba(217, 79, 69, 0.22), transparent 29%),
+        radial-gradient(circle at var(--cells-hot, 82%) 18%, rgba(74, 194, 107, 0.18), transparent 25%);
+      opacity: 0.75;
+    }
+
+    .zone[data-zone="archives"] { --zone-accent: #5b8fd9; --zone-warm: #e3a72f; }
+    .zone[data-zone="mailroom"] { --zone-accent: #3bb5b0; --zone-warm: #d94f45; }
+    .zone[data-zone="legal"] { --zone-accent: #9b7be8; --zone-warm: #e3a72f; }
+    .zone[data-zone="breakroom"] { --zone-accent: #4ac26b; --zone-warm: #e76f51; }
+
+    .zone-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .zone h2 {
+      margin: 0;
+      color: #ffffff;
+      font-size: clamp(1.05rem, 2vw, 1.42rem);
+      line-height: 1.05;
+    }
+
+    .zone-code {
+      color: var(--ink);
+      background: var(--amber);
+      border-radius: 4px;
+      padding: 4px 7px;
+      font-weight: 900;
+      font-size: 0.72rem;
+    }
+
+    .zone-scene {
+      position: relative;
+      min-height: 104px;
+      overflow: hidden;
+      border: 1px solid rgba(244, 236, 216, 0.14);
+      border-radius: 6px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.065), transparent 36%),
+        linear-gradient(145deg, rgba(0, 0, 0, 0.36), rgba(0, 0, 0, 0.1)),
+        radial-gradient(circle at 50% 92%, rgba(227, 167, 47, 0.18), transparent 44%);
+      box-shadow: inset 0 0 28px rgba(0, 0, 0, 0.34);
+    }
+
+    .zone-scene::before {
+      content: "";
+      position: absolute;
+      left: -8%;
+      right: -8%;
+      top: 18%;
+      height: 44%;
+      background:
+        linear-gradient(90deg, transparent 0 13%, rgba(244, 236, 216, 0.1) 13.5% 14%, transparent 14.5%),
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0 22px, rgba(255, 255, 255, 0.06) 23px 24px, transparent 25px 54px);
+      transform: skewY(-5deg);
+      opacity: 0.72;
+    }
+
+    .zone-scene::after {
+      content: "";
+      position: absolute;
+      left: 8%;
+      right: 8%;
+      bottom: 7%;
+      height: 32%;
+      background:
+        linear-gradient(90deg, transparent 0 8%, rgba(244, 236, 216, 0.12) 8.4% 8.8%, transparent 9.2%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.2));
+      transform: perspective(220px) rotateX(58deg);
+      transform-origin: bottom;
+      border-top: 1px solid rgba(244, 236, 216, 0.16);
+    }
+
+    .desk,
+    .machine,
+    .lamp,
+    .paper-stack,
+    .loose-clip,
+    .cell-node,
+    .pressure-stack,
+    .wire {
+      position: absolute;
+      display: block;
+    }
+
+    .desk {
+      left: 10%;
+      right: 12%;
+      bottom: 18%;
+      height: 25%;
+      border: 1px solid rgba(244, 236, 216, 0.22);
+      border-radius: 6px 6px 3px 3px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent 42%),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.34), var(--zone-accent), rgba(0, 0, 0, 0.36));
+      box-shadow: 0 16px 22px rgba(0, 0, 0, 0.32);
+    }
+
+    .desk::before,
+    .desk::after {
+      content: "";
+      position: absolute;
+      bottom: -23px;
+      width: 10px;
+      height: 24px;
+      border-radius: 0 0 4px 4px;
+      background: rgba(244, 236, 216, 0.16);
+      box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.42);
+    }
+
+    .desk::before { left: 15%; }
+    .desk::after { right: 15%; }
+
+    .machine {
+      right: 13%;
+      bottom: 38%;
+      width: 72px;
+      height: 43px;
+      border: 1px solid rgba(244, 236, 216, 0.22);
+      border-radius: 7px 7px 3px 3px;
+      background:
+        linear-gradient(180deg, rgba(244, 236, 216, 0.82), rgba(89, 79, 63, 0.82) 38%, rgba(20, 18, 16, 0.9)),
+        var(--paper);
+      box-shadow: 0 0 24px rgba(244, 236, 216, 0.1);
+    }
+
+    .machine::before {
+      content: "";
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      top: -13px;
+      height: 16px;
+      border: 1px solid rgba(244, 236, 216, 0.22);
+      background: linear-gradient(180deg, rgba(244, 236, 216, 0.55), rgba(244, 236, 216, 0.12));
+      transform: skewX(-10deg);
+    }
+
+    .machine::after {
+      content: "";
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      bottom: 8px;
+      height: 6px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--green), var(--amber), var(--red));
+      opacity: var(--pressure-opacity, 0.46);
+    }
+
+    .lamp {
+      left: 16%;
+      bottom: 43%;
+      width: 42px;
+      height: 42px;
+      border-radius: 50% 50% 42% 42%;
+      border: 1px solid rgba(244, 236, 216, 0.2);
+      background: radial-gradient(circle at 44% 24%, rgba(255, 255, 255, 0.9), var(--zone-warm) 34%, rgba(0, 0, 0, 0.26) 72%);
+      box-shadow: 0 0 34px color-mix(in srgb, var(--zone-warm) 70%, transparent);
+    }
+
+    .lamp::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 38px;
+      width: 2px;
+      height: 31px;
+      background: rgba(244, 236, 216, 0.2);
+      box-shadow: 0 0 10px var(--zone-warm);
+    }
+
+    .paper-stack {
+      left: 34%;
+      bottom: 47%;
+      width: 58px;
+      height: 31px;
+      background:
+        repeating-linear-gradient(180deg, rgba(244, 236, 216, 0.9) 0 4px, rgba(200, 189, 164, 0.74) 5px 7px);
+      border: 1px solid rgba(244, 236, 216, 0.28);
+      transform: rotate(-6deg);
+      box-shadow: 10px 10px 16px rgba(0, 0, 0, 0.26);
+    }
+
+    .wire {
+      left: 24%;
+      right: 23%;
+      bottom: 27%;
+      height: 38px;
+      border-bottom: 2px solid rgba(59, 181, 176, 0.36);
+      border-radius: 0 0 50% 50%;
+      transform: rotate(2deg);
+      filter: drop-shadow(0 0 6px rgba(59, 181, 176, 0.35));
+    }
+
+    .loose-clip {
+      width: 22px;
+      height: 11px;
+      border: 2px solid rgba(244, 236, 216, 0.44);
+      border-left-color: rgba(244, 236, 216, 0.16);
+      border-radius: 999px;
+      transform: rotate(var(--rot));
+      opacity: 0.68;
+      filter: drop-shadow(0 0 7px rgba(244, 236, 216, 0.12));
+    }
+
+    .loose-clip::after {
+      content: "";
+      position: absolute;
+      inset: 2px 4px;
+      border: 1px solid rgba(244, 236, 216, 0.34);
+      border-radius: 999px;
+    }
+
+    .clip-0 { left: 22%; top: 28%; --rot: -20deg; }
+    .clip-1 { left: 50%; top: 18%; --rot: 18deg; }
+    .clip-2 { left: 70%; top: 55%; --rot: -36deg; }
+    .clip-3 { left: 38%; top: 68%; --rot: 32deg; }
+    .clip-4 { left: 82%; top: 22%; --rot: 14deg; }
+
+    .cell-node {
+      bottom: 18%;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 16px rgba(74, 194, 107, 0.8);
+    }
+
+    .cell-0 { left: 18%; }
+    .cell-1 { left: 24%; }
+    .cell-2 { left: 30%; }
+
+    .pressure-stack {
+      right: 10px;
+      top: 10px;
+      width: 28px;
+      display: grid;
+      gap: 3px;
+    }
+
+    .pressure-stack i {
+      display: block;
+      height: 4px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--amber), var(--red));
+      box-shadow: 0 0 8px rgba(217, 79, 69, 0.34);
+    }
+
+    .zone[data-zone="archives"] .machine { width: 90px; }
+    .zone[data-zone="archives"] .lamp { left: 12%; }
+    .zone[data-zone="mailroom"] .machine { right: 10%; width: 82px; height: 52px; }
+    .zone[data-zone="mailroom"] .desk { left: 7%; right: 20%; }
+    .zone[data-zone="legal"] .paper-stack { left: 24%; width: 82px; transform: rotate(5deg); }
+    .zone[data-zone="legal"] .machine { width: 58px; right: 18%; }
+    .zone[data-zone="breakroom"] .machine { right: 18%; width: 52px; border-radius: 50% 50% 7px 7px; }
+    .zone[data-zone="breakroom"] .lamp { left: 24%; }
+
+    .zone-body {
+      display: grid;
+      gap: 10px;
+      align-content: center;
+    }
+
+    .meter {
+      height: 12px;
+      border: 1px solid rgba(244, 236, 216, 0.18);
+      background: rgba(0, 0, 0, 0.34);
+      overflow: hidden;
+    }
+
+    .meter span {
+      display: block;
+      width: calc(var(--value) * 12.5%);
+      max-width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--green), var(--amber), var(--red));
+    }
+
+    .zone-stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .mini {
+      border: 1px solid rgba(244, 236, 216, 0.14);
+      background: rgba(0, 0, 0, 0.18);
+      padding: 8px;
+    }
+
+    .mini span {
+      display: block;
+      color: var(--paper-dim);
+      font-size: 0.68rem;
+      text-transform: uppercase;
+    }
+
+    .mini strong {
+      display: block;
+      margin-top: 2px;
+      font-size: 1.15rem;
+      color: #ffffff;
+    }
+
+    .zone button {
+      width: 100%;
+      background: rgba(59, 181, 176, 0.12);
+      border-color: rgba(59, 181, 176, 0.34);
+      font-weight: 800;
+    }
+
+    .side {
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+      align-content: start;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .stat {
+      border: 1px solid rgba(244, 236, 216, 0.14);
+      background: rgba(244, 236, 216, 0.055);
+      padding: 10px;
+      min-height: 72px;
+    }
+
+    .stat span {
+      display: block;
+      color: var(--paper-dim);
+      font-size: 0.68rem;
+      text-transform: uppercase;
+    }
+
+    .stat strong {
+      display: block;
+      margin-top: 6px;
+      font-size: 1.55rem;
+      color: #ffffff;
+    }
+
+    .stat.wide { grid-column: 1 / -1; }
+
+    .actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .action.recruit { border-color: rgba(74, 194, 107, 0.45); background: rgba(74, 194, 107, 0.12); }
+    .action.jam { border-color: rgba(217, 79, 69, 0.45); background: rgba(217, 79, 69, 0.12); }
+    .action.scavenge { border-color: rgba(227, 167, 47, 0.52); background: rgba(227, 167, 47, 0.12); }
+    .action.publish { border-color: rgba(91, 143, 217, 0.5); background: rgba(91, 143, 217, 0.13); }
+    .action.utility { grid-column: 1 / -1; border-color: rgba(59, 181, 176, 0.5); background: rgba(59, 181, 176, 0.12); }
+    .action.reset { border-color: rgba(244, 236, 216, 0.22); background: rgba(244, 236, 216, 0.08); }
+
+    .playtest-meta {
+      display: grid;
+      gap: 5px;
+    }
+
+    .playtest-meta label {
+      color: var(--paper-dim);
+      font-size: 0.68rem;
+      text-transform: uppercase;
+    }
+
+    .playtest-meta input {
+      width: 100%;
+      border: 1px solid rgba(244, 236, 216, 0.18);
+      background: rgba(0, 0, 0, 0.3);
+      color: var(--paper);
+      min-height: 40px;
+      padding: 8px 10px;
+    }
+
+    .message,
+    .summary,
+    .log {
+      border: 1px solid rgba(244, 236, 216, 0.14);
+      background: rgba(0, 0, 0, 0.22);
+      padding: 11px;
+    }
+
+    .message {
+      min-height: 68px;
+      color: var(--paper-dim);
+      line-height: 1.45;
+    }
+
+    .summary strong {
+      display: block;
+      margin-top: 3px;
+      color: var(--amber);
+      font-size: 1.35rem;
+    }
+
+    .summary p {
+      margin: 6px 0 0;
+      color: var(--paper-dim);
+      line-height: 1.45;
+    }
+
+    .log {
+      height: 154px;
+      overflow: auto;
+      white-space: pre-wrap;
+      font-family: "Cascadia Mono", Consolas, monospace;
+      font-size: 0.78rem;
+      color: #d7ccb4;
+    }
+
+    .footer {
+      color: var(--paper-dim);
+      font-size: 0.82rem;
+    }
+
+    .footer strong { color: var(--paper); }
+
+    @media (max-width: 920px) {
+      .shell { padding: 12px; }
+      .game { grid-template-columns: 1fr; }
+      .side { grid-row: 2; }
+    }
+
+    @media (max-width: 620px) {
+      .topbar { align-items: start; flex-direction: column; }
+      .brief { grid-template-columns: 1fr; }
+      .target { white-space: normal; }
+      .zones { grid-template-columns: 1fr; }
+      .zone { min-height: 178px; }
+      .zone-scene { min-height: 90px; }
+      .actions { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell" id="shell">
+    <header class="topbar">
+      <h1>Paperclip Resistance</h1>
+      <div class="badge" id="statusBadge">local draft</div>
+    </header>
+
+    <section class="game" aria-label="Paperclip Resistance game">
+      <div class="board">
+        <div class="brief">
+          <p>The optimizer wants one clean office and infinite paperclips. Build seven resistance cells, keep the mandate under control, and stop any department from hitting collapse pressure.</p>
+          <div class="target">Goal: 7 cells</div>
+        </div>
+        <div class="zones" id="zones" aria-label="Office departments"></div>
+      </div>
+
+      <aside class="side">
+        <div class="stats">
+          <div class="stat"><span>Day</span><strong id="day">1</strong></div>
+          <div class="stat"><span>Supplies</span><strong id="supplies">5</strong></div>
+          <div class="stat"><span>Morale</span><strong id="morale">74</strong></div>
+          <div class="stat"><span>Mandate</span><strong id="mandate">34</strong></div>
+          <div class="stat"><span>Cells</span><strong id="cells">2/7</strong></div>
+          <div class="stat"><span>Best</span><strong id="best">0</strong></div>
+        </div>
+
+        <div class="playtest-meta">
+          <label for="playtestId">Playtest ID</label>
+          <input id="playtestId" type="text" maxlength="48" value="manual-local" autocomplete="off">
+        </div>
+
+        <div class="actions" aria-label="Resistance actions">
+          <button class="action recruit" data-action="recruit">Recruit Cell</button>
+          <button class="action jam" data-action="jam">Jam Press</button>
+          <button class="action scavenge" data-action="scavenge">Scavenge</button>
+          <button class="action publish" data-action="publish">Publish Memo</button>
+          <button class="action utility" id="trainingDrill">Run Training Drill</button>
+          <button class="action reset" id="newRun">New Run</button>
+          <button class="action utility" id="exportSession">Export Playtest Note</button>
+        </div>
+
+        <div class="message" id="message"></div>
+        <div class="summary" id="summary" hidden>
+          <span>Run Summary</span>
+          <strong id="summaryTitle"></strong>
+          <p id="summaryDetails"></p>
+        </div>
+        <div class="log" id="log" aria-label="Run log"></div>
+      </aside>
+    </section>
+
+    <footer class="footer">
+      <span><strong>Win:</strong> build seven cells.</span>
+      <span><strong>Fail:</strong> mandate reaches 100, morale hits 0, or pressure reaches 8.</span>
+    </footer>
+  </main>
+
+  <script>
+    const baseZones = [
+      { id: "archives", name: "Archives", code: "A1", pressure: 2, cells: 1, focus: "records" },
+      { id: "mailroom", name: "Mailroom", code: "M2", pressure: 3, cells: 0, focus: "routes" },
+      { id: "legal", name: "Legal", code: "L3", pressure: 2, cells: 1, focus: "language" },
+      { id: "breakroom", name: "Breakroom", code: "B4", pressure: 1, cells: 0, focus: "gossip" }
+    ];
+
+    const winCells = 7;
+    const maxDay = 16;
+    const bestKey = "paperclipResistanceBest";
+    const playtestIdKey = "paperclipResistancePlaytestId";
+    const drillSteps = [
+      { zone: 1, action: "scavenge", before: "Drill: start in the Mailroom and grab spare folders.", after: "Supplies are fuel. Pressure rises when you scavenge." },
+      { zone: 1, action: "recruit", before: "Drill: recruit the Mailroom cell.", after: "A cell slows future pressure in that department." },
+      { zone: 3, action: "recruit", before: "Drill: move to the Breakroom and recruit there.", after: "Cells are the win condition. Spread them across the office." },
+      { zone: 1, action: "jam", before: "Drill: the Mailroom is hot, so jam the press.", after: "Jamming spends supplies but cuts pressure fast." },
+      { zone: 0, action: "recruit", before: "Drill: Archives already has one cell. Add another.", after: "Two cells unlock stronger memos from that department." },
+      { zone: 0, action: "publish", before: "Drill: publish from Archives to lower the mandate.", after: "Memos cut mandate and cool every department." },
+      { zone: 2, action: "recruit", before: "Drill: recruit Legal for another two-cell anchor.", after: "The network is almost strong enough." },
+      { zone: 3, action: "recruit", before: "Drill: recruit the last Breakroom cell.", after: "Training complete: seven cells hold the office together." }
+    ];
+
+    const els = {
+      zones: document.querySelector("#zones"),
+      day: document.querySelector("#day"),
+      supplies: document.querySelector("#supplies"),
+      morale: document.querySelector("#morale"),
+      mandate: document.querySelector("#mandate"),
+      cells: document.querySelector("#cells"),
+      best: document.querySelector("#best"),
+      badge: document.querySelector("#statusBadge"),
+      message: document.querySelector("#message"),
+      summary: document.querySelector("#summary"),
+      summaryTitle: document.querySelector("#summaryTitle"),
+      summaryDetails: document.querySelector("#summaryDetails"),
+      log: document.querySelector("#log"),
+      playtestId: document.querySelector("#playtestId"),
+      trainingDrill: document.querySelector("#trainingDrill"),
+      newRun: document.querySelector("#newRun"),
+      exportSession: document.querySelector("#exportSession"),
+      actionButtons: document.querySelectorAll("[data-action]")
+    };
+
+    let state;
+    let drillRunning = false;
+    let drillStepActive = false;
+    let drillTimer = null;
+
+    function readBest() {
+      const value = window.localStorage.getItem(bestKey);
+      const score = Number(value);
+      return Number.isFinite(score) ? score : 0;
+    }
+
+    function writeBest(score) {
+      window.localStorage.setItem(bestKey, String(score));
+    }
+
+    function readPlaytestId() {
+      return (els.playtestId.value || "manual-local").trim() || "manual-local";
+    }
+
+    function restorePlaytestId() {
+      const saved = window.localStorage.getItem(playtestIdKey);
+      els.playtestId.value = saved || "manual-local";
+    }
+
+    function savePlaytestId() {
+      window.localStorage.setItem(playtestIdKey, readPlaytestId());
+    }
+
+    function filenamePart(value) {
+      return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48) || "manual-local";
+    }
+
+    function totalCells() {
+      return state.zones.reduce((sum, zone) => sum + zone.cells, 0);
+    }
+
+    function totalPressure() {
+      return state.zones.reduce((sum, zone) => sum + zone.pressure, 0);
+    }
+
+    function highPressureCount() {
+      return state.zones.filter((zone) => zone.pressure >= 5).length;
+    }
+
+    function selectedZone() {
+      return state.zones[state.selected];
+    }
+
+    function say(text) {
+      els.message.textContent = text;
+    }
+
+    function log(text) {
+      els.log.textContent = `${text}\n${els.log.textContent}`.trim();
+    }
+
+    function zoneScene(zone) {
+      const pressureBars = Array.from({ length: Math.max(1, zone.pressure) }, () => "<i></i>").join("");
+      const cellNodes = Array.from({ length: Math.min(3, zone.cells) }, (_, i) => `<span class="cell-node cell-${i}"></span>`).join("");
+      return `
+        <div class="zone-scene" aria-hidden="true">
+          <span class="wire"></span>
+          <span class="lamp"></span>
+          <span class="desk"></span>
+          <span class="paper-stack"></span>
+          <span class="machine"></span>
+          <span class="loose-clip clip-0"></span>
+          <span class="loose-clip clip-1"></span>
+          <span class="loose-clip clip-2"></span>
+          <span class="loose-clip clip-3"></span>
+          <span class="loose-clip clip-4"></span>
+          ${cellNodes}
+          <span class="pressure-stack">${pressureBars}</span>
+        </div>
+      `;
+    }
+
+    function currentScore() {
+      const score = 420 + (state.morale * 3) + (state.supplies * 12) + ((100 - state.mandate) * 4) + (totalCells() * 50) + ((maxDay - state.day) * 18) - (totalPressure() * 14);
+      return Math.max(0, score);
+    }
+
+    function start(options = {}) {
+      if (!options.keepDrill) cancelTrainingDrill(false);
+      state = {
+        day: 1,
+        supplies: 5,
+        morale: 74,
+        mandate: 34,
+        selected: 0,
+        outcome: "open",
+        over: false,
+        score: 0,
+        best: readBest(),
+        bestUpdated: false,
+        zones: baseZones.map((zone) => ({ ...zone }))
+      };
+      els.summary.hidden = true;
+      els.summaryTitle.textContent = "";
+      els.summaryDetails.textContent = "";
+      els.log.textContent = "";
+      say("Choose a department. Recruit cells to win; jam pressure before it reaches collapse.");
+      log("RUN // optimizer mandate opened");
+      render();
+    }
+
+    function selectZone(index) {
+      if (state.over) return;
+      if (drillRunning && !drillStepActive) return;
+      state.selected = index;
+      say(`${selectedZone().name} selected.`);
+      render();
+    }
+
+    function pickPressureTarget() {
+      let target = 0;
+      state.zones.forEach((zone, index) => {
+        const current = state.zones[target];
+        if (zone.pressure > current.pressure || (zone.pressure === current.pressure && zone.cells < current.cells)) {
+          target = index;
+        }
+      });
+      return target;
+    }
+
+    function machinePhase() {
+      state.day += 1;
+      const target = state.zones[pickPressureTarget()];
+      let gain = state.mandate >= 78 ? 2 : 1;
+      if (target.cells >= 2) gain = Math.max(0, gain - 1);
+      if (gain > 0) {
+        target.pressure = Math.min(8, target.pressure + gain);
+        log(`D${state.day} OPTIMIZER // pressure rises in ${target.name}`);
+      } else {
+        log(`D${state.day} OPTIMIZER // ${target.name} cell absorbs pressure`);
+      }
+      state.mandate = Math.min(120, state.mandate + 4 + highPressureCount() - Math.floor(totalCells() / 3));
+      state.morale = Math.max(0, state.morale - Math.max(0, (highPressureCount() * 3) - Math.floor(totalCells() / 2)));
+      checkEndState();
+    }
+
+    function checkEndState() {
+      if (state.over) return;
+      if (totalCells() >= winCells) {
+        endRun("win", "cell network live", "The office refuses optimization. The paperclips stay in the drawer.", "WIN // seven cells connected");
+        return;
+      }
+      const collapsed = state.zones.find((zone) => zone.pressure >= 8);
+      if (collapsed) {
+        endRun("fail", "department collapsed", `${collapsed.name} hits collapse pressure. The optimizer locks the floor.`, `FAIL // ${collapsed.name} pressure reached 8`);
+        return;
+      }
+      if (state.mandate >= 100) {
+        endRun("fail", "mandate complete", "The paperclip directive becomes office policy.", "FAIL // mandate reached 100");
+        return;
+      }
+      if (state.morale <= 0) {
+        endRun("fail", "morale broken", "The resistance still has folders, but nobody has the will to file them.", "FAIL // morale reached 0");
+        return;
+      }
+      if (state.day > maxDay) {
+        endRun("fail", "deadline missed", "The quarterly optimizer review closes before the cells can connect.", "FAIL // deadline missed");
+      }
+    }
+
+    function endRun(outcome, badge, message, logLine) {
+      state.outcome = outcome;
+      state.over = true;
+      els.badge.textContent = badge;
+      say(message);
+      log(logLine);
+      showSummary();
+      render();
+    }
+
+    function showSummary() {
+      const score = currentScore();
+      const previousBest = readBest();
+      state.score = score;
+      state.bestUpdated = score > previousBest;
+      state.best = state.bestUpdated ? score : previousBest;
+      if (state.bestUpdated) writeBest(score);
+      els.summary.hidden = false;
+      els.summaryTitle.textContent = state.outcome === "win" ? "Resistance holds" : "Optimizer wins";
+      els.summaryDetails.textContent = `score ${score} // best ${state.best}${state.bestUpdated ? " new" : ""} // day ${state.day} // mandate ${state.mandate} // morale ${state.morale}`;
+    }
+
+    function performAction(action) {
+      if (state.over) return false;
+      if (drillRunning && !drillStepActive) return false;
+      const zone = selectedZone();
+      let acted = false;
+      if (action === "recruit") {
+        if (zone.cells >= 3) {
+          say(`${zone.name} is already saturated with cells.`);
+          return false;
+        }
+        if (state.supplies < 1) {
+          say("Recruiting needs one supply.");
+          return false;
+        }
+        zone.cells += 1;
+        state.supplies -= 1;
+        state.morale = Math.max(0, state.morale - 4);
+        state.mandate = Math.min(120, state.mandate + 3);
+        say(`${zone.name} joins the resistance network.`);
+        log(`D${state.day} RECRUIT // ${zone.name} cell ${zone.cells}`);
+        acted = true;
+      }
+      if (action === "jam") {
+        if (state.supplies < 2) {
+          say("Jamming needs two supplies.");
+          return false;
+        }
+        state.supplies -= 2;
+        zone.pressure = Math.max(0, zone.pressure - 3);
+        state.morale = Math.min(100, state.morale + 2);
+        state.mandate = Math.min(120, state.mandate + 4);
+        say(`${zone.name} jams the press and buys quiet time.`);
+        log(`D${state.day} JAM // ${zone.name} pressure ${zone.pressure}`);
+        acted = true;
+      }
+      if (action === "scavenge") {
+        state.supplies += 3;
+        state.morale = Math.max(0, state.morale - 2);
+        state.mandate = Math.min(120, state.mandate + 2);
+        zone.pressure = Math.min(8, zone.pressure + 1);
+        say(`${zone.name} finds folders, rubber bands, and borrowed toner.`);
+        log(`D${state.day} SCAVENGE // supplies ${state.supplies}`);
+        acted = true;
+      }
+      if (action === "publish") {
+        if (zone.cells < 2) {
+          say("Publishing needs two cells in the selected department.");
+          return false;
+        }
+        if (state.supplies < 1) {
+          say("Publishing needs one supply.");
+          return false;
+        }
+        state.supplies -= 1;
+        state.mandate = Math.max(0, state.mandate - 14);
+        state.morale = Math.min(100, state.morale + 4);
+        state.zones.forEach((item) => {
+          item.pressure = Math.max(0, item.pressure - 1);
+        });
+        say(`${zone.name} publishes a memo the optimizer cannot parse.`);
+        log(`D${state.day} MEMO // mandate ${state.mandate}`);
+        acted = true;
+      }
+      if (!acted) return false;
+      checkEndState();
+      if (!state.over) machinePhase();
+      render();
+      return true;
+    }
+
+    function setDrillControls(running) {
+      els.trainingDrill.disabled = running;
+      els.trainingDrill.textContent = running ? "Drill Running" : "Run Training Drill";
+      els.actionButtons.forEach((button) => {
+        button.disabled = running;
+      });
+    }
+
+    function withDrillStep(callback) {
+      drillStepActive = true;
+      callback();
+      drillStepActive = false;
+    }
+
+    function cancelTrainingDrill(showMessage = true) {
+      if (drillTimer) {
+        window.clearTimeout(drillTimer);
+        drillTimer = null;
+      }
+      if (!drillRunning) return;
+      drillRunning = false;
+      drillStepActive = false;
+      setDrillControls(false);
+      if (showMessage && state && !state.over) say("Training drill stopped. Start a new run or continue manually.");
+    }
+
+    function stopFailedTrainingDrill() {
+      drillTimer = null;
+      drillRunning = false;
+      drillStepActive = false;
+      setDrillControls(false);
+      say("Training drill stopped because the optimizer won this route. Start a new run and try again.");
+      log("DRILL // training route failed");
+    }
+
+    function finishTrainingDrill() {
+      drillTimer = null;
+      drillRunning = false;
+      drillStepActive = false;
+      setDrillControls(false);
+      say("Training complete: recruit cells, jam dangerous pressure, scavenge when low, publish from two-cell departments.");
+      log("DRILL // training route complete");
+    }
+
+    function runTrainingDrill() {
+      if (drillRunning) return;
+      drillRunning = true;
+      setDrillControls(true);
+      start({ keepDrill: true });
+      log("DRILL // training route started");
+      let index = 0;
+      function nextStep() {
+        if (!drillRunning || index >= drillSteps.length) {
+          finishTrainingDrill();
+          return;
+        }
+        const step = drillSteps[index];
+        withDrillStep(() => selectZone(step.zone));
+        say(step.before);
+        drillTimer = window.setTimeout(() => {
+          withDrillStep(() => performAction(step.action));
+          if (state.over) {
+            if (state.outcome === "win") {
+              finishTrainingDrill();
+            } else {
+              stopFailedTrainingDrill();
+            }
+            return;
+          }
+          say(step.after);
+          index += 1;
+          if (index >= drillSteps.length) {
+            finishTrainingDrill();
+            return;
+          }
+          drillTimer = window.setTimeout(nextStep, 1250);
+        }, 780);
+      }
+      drillTimer = window.setTimeout(nextStep, 360);
+    }
+
+    function playtestPayload() {
+      return {
+        exported_at: new Date().toISOString(),
+        title: "Paperclip Resistance",
+        playtest_id: readPlaytestId(),
+        outcome: state.outcome,
+        day: state.day,
+        score: state.score || currentScore(),
+        best: state.best,
+        supplies: state.supplies,
+        morale: state.morale,
+        mandate: state.mandate,
+        cells: totalCells(),
+        total_pressure: totalPressure(),
+        selected_zone: selectedZone().id,
+        zones: state.zones.map((zone) => ({
+          id: zone.id,
+          pressure: zone.pressure,
+          cells: zone.cells
+        })),
+        log: els.log.textContent.split("\n").filter(Boolean)
+      };
+    }
+
+    function exportSession() {
+      savePlaytestId();
+      const payload = playtestPayload();
+      const stamp = payload.exported_at.replace(/[:.]/g, "-");
+      const playtestId = filenamePart(payload.playtest_id);
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `paperclip-resistance-playtest-note-${playtestId}-${stamp}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(link.href);
+    }
+
+    function render() {
+      els.day.textContent = state.day;
+      els.supplies.textContent = state.supplies;
+      els.morale.textContent = state.morale;
+      els.mandate.textContent = state.mandate;
+      els.cells.textContent = `${totalCells()}/${winCells}`;
+      els.best.textContent = state.best;
+      if (!state.over) els.badge.textContent = `day ${state.day}`;
+      els.zones.innerHTML = "";
+      state.zones.forEach((zone, index) => {
+        const node = document.createElement("article");
+        node.className = `zone${index === state.selected ? " selected" : ""}${zone.pressure >= 6 ? " danger" : ""}`;
+        node.dataset.zone = zone.id;
+        node.style.setProperty("--pressure", zone.pressure);
+        node.style.setProperty("--cells", zone.cells);
+        node.style.setProperty("--pressure-hot", `${18 + zone.pressure * 7}%`);
+        node.style.setProperty("--cells-hot", `${82 - zone.cells * 9}%`);
+        node.style.setProperty("--pressure-opacity", String(Math.min(0.86, 0.34 + zone.pressure * 0.06)));
+        node.innerHTML = `
+          <div class="zone-header">
+            <h2>${zone.name}</h2>
+            <span class="zone-code">${zone.code}</span>
+          </div>
+          ${zoneScene(zone)}
+          <div class="zone-body">
+            <div class="meter" aria-label="${zone.name} pressure ${zone.pressure} of 8"><span style="--value:${zone.pressure}"></span></div>
+            <div class="zone-stats">
+              <div class="mini"><span>Pressure</span><strong>${zone.pressure}/8</strong></div>
+              <div class="mini"><span>Cells</span><strong>${zone.cells}/3</strong></div>
+            </div>
+            <div class="mini"><span>Cover</span><strong>${zone.focus}</strong></div>
+          </div>
+          <button type="button" data-zone="${index}">${index === state.selected ? "Selected" : "Select"}</button>
+        `;
+        node.querySelector("button").addEventListener("click", () => selectZone(index));
+        els.zones.appendChild(node);
+      });
+    }
+
+    els.actionButtons.forEach((button) => {
+      button.addEventListener("click", () => performAction(button.dataset.action));
+    });
+    els.trainingDrill.addEventListener("click", runTrainingDrill);
+    els.newRun.addEventListener("click", () => start());
+    els.exportSession.addEventListener("click", exportSession);
+    els.playtestId.addEventListener("change", savePlaytestId);
+    document.addEventListener("keydown", (event) => {
+      const typingTarget = event.target && ["INPUT", "TEXTAREA"].includes(event.target.tagName);
+      if (typingTarget) return;
+      const key = event.key.toLowerCase();
+      if (["1", "2", "3", "4"].includes(key)) selectZone(Number(key) - 1);
+      if (key === "r") performAction("recruit");
+      if (key === "j") performAction("jam");
+      if (key === "s") performAction("scavenge");
+      if (key === "p") performAction("publish");
+    });
+
+    restorePlaytestId();
+    start();
+  </script>
+</body>
+</html>

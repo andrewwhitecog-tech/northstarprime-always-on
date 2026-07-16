@@ -31,20 +31,32 @@ Verified 2026-07-15.
 - YouTube IDs are mirrored in static/idc_video/yt_manifest.json.
 - All 25 MP4 files are below GitHub's 100 MB per-file limit.
 
+## Continuity Atlas route
+
+- Source: continuity-atlas/index.html
+- Canonical public path: /continuity-atlas/
+- The viewer, styles, and versioned graph snapshot are bundled locally.
+- The graph preserves evidence grades and outbound source citations; the
+  always-on copy does not require Flask or a third-party JavaScript CDN.
+
 ## Failover boundary
 
 The homepage, founders surface, mystery-school route, health marker, Season One
-catalogue, YouTube players, MP4 backups, and direct static assets survive a
-Render outage. Dynamic features still require app.northstarprime.net and
-degrade to ordinary links when that service is unavailable.
+catalogue, YouTube players, MP4 backups, Continuity Atlas, and direct static
+assets survive a Render outage. Dynamic features still require
+app.northstarprime.net and degrade to ordinary links when that service is
+unavailable.
 
 ## Verification
 
     python tools/verify_home_static.py
     python tools/verify_idc_static.py
+    python tools/verify_continuity_atlas_static.py
     python tools/verify_idc_static.py --network
 
 The home verifier checks the full-page guard, manifest hashes, all 22 media
 assets, local filesystem leakage, and dangling local routes. The IDC verifier
 checks the HTML/manifest mapping, tracked MP4 inventory and sizes, broken local
 Windows paths, embed code, and optionally all nine YouTube oEmbed endpoints.
+The atlas verifier checks the complete self-contained bundle, local references,
+home discoverability, source-linked data marker, and rights-safe Jeopardy gate.

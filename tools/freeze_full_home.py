@@ -24,6 +24,7 @@ HREF_RE = re.compile(r"href=(?P<quote>['\"])(?P<path>/[^'\"]*)(?P=quote)", re.IG
 MIRRORED_PREFIXES = (
     "/static/",
     "/idc-programming",
+    "/continuity-atlas/",
     "/founders",
     "/mystery-school",
     "/health",
@@ -114,6 +115,7 @@ def main() -> None:
         "invariants": [
             "No local filesystem paths in the frozen homepage",
             "Every referenced static media asset exists in this repository",
+            "The Continuity Atlas remains on the always-on apex",
             "Dynamic features are enhancements; core identity remains visible without them",
         ],
     }

@@ -13,7 +13,14 @@ ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "HOME_FREEZE_MANIFEST.json"
 LOCAL_REF_RE = re.compile(r"file://|[A-Z]:\\", re.IGNORECASE)
 HREF_RE = re.compile(r"href=['\"](?P<path>/[^'\"]*)['\"]", re.IGNORECASE)
-ALLOWED_LOCAL = ("/static/", "/idc-programming", "/founders", "/mystery-school", "/health")
+ALLOWED_LOCAL = (
+    "/static/",
+    "/idc-programming",
+    "/continuity-atlas/",
+    "/founders",
+    "/mystery-school",
+    "/health",
+)
 
 
 def digest(path: Path) -> str:
@@ -37,6 +44,8 @@ def main() -> None:
         raise SystemExit("Homepage is not the full frozen NSP home")
     if LOCAL_REF_RE.search(html):
         raise SystemExit("Homepage contains a local filesystem reference")
+    if 'href="/continuity-atlas/"' not in html:
+        raise SystemExit("Homepage does not expose the always-on Continuity Atlas")
 
     bad_routes = []
     for match in HREF_RE.finditer(html):

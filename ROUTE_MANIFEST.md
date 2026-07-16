@@ -39,6 +39,12 @@ Verified 2026-07-15.
 - The graph preserves evidence grades and outbound source citations; the
   always-on copy does not require Flask or a third-party JavaScript CDN.
 
+## Contact and security routes
+
+The `/contact/` route and `/.well-known/security.txt` remain available on the
+apex. They expose only branded contact aliases, not the private forwarding
+destination, and the security policy canonically identifies its always-on URL.
+
 ## Failover boundary
 
 The homepage, founders surface, mystery-school route, health marker, Season One
@@ -52,6 +58,7 @@ unavailable.
     python tools/verify_home_static.py
     python tools/verify_idc_static.py
     python tools/verify_continuity_atlas_static.py
+    python tools/verify_contact_security_static.py
     python tools/verify_idc_static.py --network
 
 The home verifier checks the full-page guard, manifest hashes, all 22 media

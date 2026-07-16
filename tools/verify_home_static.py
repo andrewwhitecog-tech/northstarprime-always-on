@@ -17,6 +17,7 @@ ALLOWED_LOCAL = (
     "/static/",
     "/idc-programming",
     "/continuity-atlas/",
+    "/contact/",
     "/founders",
     "/mystery-school",
     "/health",
@@ -46,6 +47,8 @@ def main() -> None:
         raise SystemExit("Homepage contains a local filesystem reference")
     if 'href="/continuity-atlas/"' not in html:
         raise SystemExit("Homepage does not expose the always-on Continuity Atlas")
+    if 'href="/contact/"' not in html:
+        raise SystemExit("Homepage does not expose the always-on contact desk")
 
     bad_routes = []
     for match in HREF_RE.finditer(html):

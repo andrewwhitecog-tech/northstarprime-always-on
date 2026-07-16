@@ -15,11 +15,16 @@ television, and Jeopardy evidence graph. Its HTML, CSS, graph snapshot, and
 JavaScript viewer are stored in this repository, so the atlas remains usable
 when the dynamic service or Andre's computer is offline.
 
+The `/contact/` route and `/.well-known/security.txt` provide an always-on
+branded mail fallback and security contact policy without exposing the private
+forwarding destination.
+
 Run the zero-dependency release check before publishing:
 
     python tools/verify_home_static.py
     python tools/verify_idc_static.py
     python tools/verify_continuity_atlas_static.py
+    python tools/verify_contact_security_static.py
 
 Add --network to the IDC verifier to test every YouTube oEmbed endpoint as
 well. See ROUTE_MANIFEST.md and HOME_FREEZE_MANIFEST.json for routing,

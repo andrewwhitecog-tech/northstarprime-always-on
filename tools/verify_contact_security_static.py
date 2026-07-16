@@ -11,11 +11,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CONTACT = ROOT / "contact" / "index.html"
 SECURITY = ROOT / ".well-known" / "security.txt"
+NOJEKYLL = ROOT / ".nojekyll"
 
 
 def main() -> None:
     html = CONTACT.read_text(encoding="utf-8")
     policy = SECURITY.read_text(encoding="utf-8")
+    if not NOJEKYLL.is_file():
+        raise SystemExit("Missing .nojekyll; GitHub Pages would omit .well-known")
     if "contact@northstarprime.net" not in html:
         raise SystemExit("Contact page is missing the branded address")
     if "mailto:contact@northstarprime.net" not in html:

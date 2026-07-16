@@ -38,9 +38,13 @@ def main() -> None:
         raise SystemExit("Unexpected or missing home-freeze schema")
 
     index = ROOT / str(payload["index"]["relative_path"])
-    html = index.read_text(encoding="utf-8")
-    if digest(index) != payload["index"]["sha256"]:
-        raise SystemExit("Homepage hash does not match manifest")
+    index_bytes = index.read_bytes()
+    normalized_index_bytes = index_bytes.replace(b"\r\n", b"\n")
+    if hashlib.sha256(normalized_index_bytes).hexdigest() != payload["index"]["sha256"]:
+        raise SystemExit("Homepage hash does not match manifest after newline normalization")
+    if len(normalized_index_bytes) != payload["index"]["bytes"]:
+        raise SystemExit("Homepage byte count does not match manifest after newline normalization")
+    html = normalized_index_bytes.decode("utf-8")
     if len(html) < 50_000 or "<title>Home — NorthStar Prime</title>" not in html:
         raise SystemExit("Homepage is not the full frozen NSP home")
     if LOCAL_REF_RE.search(html):

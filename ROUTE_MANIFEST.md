@@ -47,6 +47,14 @@ The `/contact/` route and `/.well-known/security.txt` remain available on the
 apex. They expose only branded contact aliases, not the private forwarding
 destination, and the security policy canonically identifies its always-on URL.
 
+## Verified links directory
+
+- Source: links/index.html
+- Canonical public path: /links/
+- Provides one tracker-free, always-on directory for NSP experiences and the
+  verified TikTok, YouTube, Instagram, Reddit, and Moltbook profiles.
+- The homepage navigation and social footer both expose this route.
+
 ## Arcade route
 
 - Source: arcade/index.html
@@ -117,6 +125,8 @@ published-size calculation.
     python tools/verify_idc_static.py
     python tools/verify_continuity_atlas_static.py
     python tools/verify_contact_security_static.py
+    python tools/verify_links_static.py --network
+    python tools/smoke_links_browser.py
     python tools/verify_arcade_static.py
     python tools/verify_idr_static.py --network
     python tools/verify_services_static.py --network

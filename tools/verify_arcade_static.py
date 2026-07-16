@@ -16,6 +16,7 @@ MOTION_PREFIX = "static/games/imagegen_quality_pass_20260625/"
 MOTION_RECIPE = "ffmpeg-libx264-crf25-medium-yuv420p-faststart-noaudio-v1"
 LORE_CORPUS_PATH = "static/idg/future_teller_world_lore_corpus_2026.json"
 LORE_RECIPE = "json-private-provenance-redaction-v1"
+TEXT_SUFFIXES = {".html", ".js", ".json", ".svg", ".md", ".css", ".txt"}
 LOCAL_LEAK = re.compile(
     r"(?:file:///?)?[A-Za-z]:[\\/](?:Users|Documents|Desktop|tmp|Windows)(?:[\\/]|\b)",
     re.I,
@@ -30,23 +31,28 @@ STATIC_TOKEN = re.compile(r"/static/[A-Za-z0-9_./%+@-]+")
 LOCAL_CUSTOM = re.compile(r"(?<![A-Za-z0-9.])(?P<route>/arcade/custom/(?P<slug>[a-z0-9-]+))")
 
 
-def digest(path: Path) -> str:
-    value = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            value.update(chunk)
-    return value.hexdigest()
+def verified_manifest_bytes(path: Path, row: dict[str, object]) -> int | None:
+    """Accept raw bytes or Git's canonical LF form for tracked text files."""
+    expected_bytes = int(row["bytes"] if "bytes" in row else row["output_bytes"])
+    expected_hash = str(row["sha256"] if "sha256" in row else row["output_sha256"])
+    raw = path.read_bytes()
+    candidates = (
+        (raw, raw.replace(b"\r\n", b"\n"))
+        if path.suffix.lower() in TEXT_SUFFIXES
+        else (raw,)
+    )
+    for payload in candidates:
+        if len(payload) == expected_bytes and hashlib.sha256(payload).hexdigest() == expected_hash:
+            return expected_bytes
+    return None
 
 
 def check_row(row: dict[str, object], label: str) -> Path:
     path = ROOT / str(row["relative_path"] if "relative_path" in row else row["output_relative"])
     if not path.is_file():
         raise SystemExit(f"Missing {label}: {path.relative_to(ROOT)}")
-    if path.stat().st_size != int(row["bytes"] if "bytes" in row else row["output_bytes"]):
-        raise SystemExit(f"Size mismatch for {label}: {path.relative_to(ROOT)}")
-    expected = str(row["sha256"] if "sha256" in row else row["output_sha256"])
-    if digest(path) != expected:
-        raise SystemExit(f"Hash mismatch for {label}: {path.relative_to(ROOT)}")
+    if verified_manifest_bytes(path, row) is None:
+        raise SystemExit(f"Canonical size/hash mismatch for {label}: {path.relative_to(ROOT)}")
     if path.stat().st_size > MAX_FILE:
         raise SystemExit(f"Git-hosting file limit exceeded: {path.relative_to(ROOT)}")
     return path
@@ -81,13 +87,9 @@ def main() -> None:
         raise SystemExit("Asset count mismatch")
 
     landing_row = payload["landing"]
-    landing_path = ROOT / str(landing_row["relative_path"])
-    if not landing_path.is_file() or landing_path.stat().st_size != landing_row["bytes"] or digest(landing_path) != landing_row["sha256"]:
-        raise SystemExit("Landing hash/size mismatch")
+    landing_path = check_row(landing_row, "arcade landing")
     catalog_row = payload["catalog"]
-    catalog_path = ROOT / str(catalog_row["relative_path"])
-    if not catalog_path.is_file() or catalog_path.stat().st_size != catalog_row["bytes"] or digest(catalog_path) != catalog_row["sha256"]:
-        raise SystemExit("Catalog hash/size mismatch")
+    catalog_path = check_row(catalog_row, "arcade catalog")
     public_catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
     if public_catalog.get("count") != payload.get("catalog_game_count"):
         raise SystemExit("Frozen public catalog count mismatch")
@@ -130,7 +132,7 @@ def main() -> None:
     redacted = 0
     for row in assets:
         path = check_row(row, f"asset {row['relative_path']}")
-        total += path.stat().st_size
+        total += int(row["bytes"])
         source_total += int(row.get("source_bytes", row["bytes"]))
         transform = str(row.get("transform", "copy"))
         if transform != "copy":

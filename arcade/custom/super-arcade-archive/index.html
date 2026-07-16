@@ -1,0 +1,1639 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Super Arcade Archive</title>
+  <style>
+    :root {
+      --void: #07090d;
+      --panel: #10161b;
+      --panel-2: #17110f;
+      --paper: #fff3d7;
+      --muted: #b7a98e;
+      --line: rgba(255, 243, 215, 0.16);
+      --cyan: #37d8ff;
+      --pink: #ff4ca8;
+      --yellow: #ffe15a;
+      --green: #80ff71;
+      --red: #ff684f;
+      --brass: #d49d3b;
+      --shadow: rgba(0, 0, 0, 0.48);
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      max-width: 100%;
+      min-height: 100%;
+      overflow-x: hidden;
+      background: var(--void);
+      color: var(--paper);
+      font-family: "Segoe UI", system-ui, sans-serif;
+      letter-spacing: 0;
+    }
+
+    body {
+      overflow-x: hidden;
+      background:
+        linear-gradient(90deg, rgba(55, 216, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(255, 225, 90, 0.035) 1px, transparent 1px),
+        linear-gradient(135deg, rgba(255, 76, 168, 0.08), transparent 34%),
+        linear-gradient(225deg, rgba(128, 255, 113, 0.06), transparent 32%),
+        #07090d;
+      background-size: 32px 32px, 32px 32px, auto, auto, auto;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .shell {
+      width: min(100%, 1280px);
+      min-width: 0;
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 20px;
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      gap: 14px;
+    }
+
+    .topbar,
+    .footer,
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .topbar,
+    .footer {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .brand {
+      display: grid;
+      gap: 4px;
+    }
+
+    .kicker {
+      color: var(--brass);
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      color: var(--paper);
+      font-size: 50px;
+      line-height: 0.96;
+    }
+
+    h2 {
+      font-size: 22px;
+      color: var(--yellow);
+      text-transform: uppercase;
+    }
+
+    .chip {
+      min-height: 34px;
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid rgba(255, 225, 90, 0.32);
+      border-radius: 999px;
+      padding: 7px 12px;
+      color: var(--paper);
+      background: rgba(212, 157, 59, 0.1);
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .toolbar {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      min-width: 0;
+      padding: 12px;
+      background: rgba(16, 22, 27, 0.84);
+      box-shadow: 0 18px 42px var(--shadow);
+    }
+
+    .filters {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    button,
+    input {
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--paper);
+      background: rgba(255, 243, 215, 0.06);
+    }
+
+    button {
+      padding: 0 12px;
+      font-weight: 850;
+      cursor: pointer;
+    }
+
+    button.active,
+    button:hover,
+    button:focus-visible {
+      border-color: rgba(55, 216, 255, 0.72);
+      background: rgba(55, 216, 255, 0.12);
+      outline: none;
+    }
+
+    input {
+      width: min(100%, 310px);
+      padding: 0 12px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.22fr) minmax(330px, 0.78fr);
+      gap: 14px;
+      align-items: start;
+      min-width: 0;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      min-width: 0;
+      padding: 14px;
+      background: rgba(16, 22, 27, 0.88);
+      box-shadow: 0 18px 42px var(--shadow);
+    }
+
+    .visual {
+      min-height: 220px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      min-width: 0;
+      margin-bottom: 14px;
+    }
+
+    .crt,
+    .cabinet {
+      position: relative;
+      min-height: 220px;
+      overflow: hidden;
+      border: 1px solid rgba(55, 216, 255, 0.28);
+      border-radius: 8px;
+      background: #04080a;
+    }
+
+    .crt::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        repeating-linear-gradient(180deg, rgba(255, 243, 215, 0.08), rgba(255, 243, 215, 0.08) 1px, transparent 1px, transparent 5px),
+        radial-gradient(circle at 50% 50%, rgba(55, 216, 255, 0.14), transparent 55%);
+      pointer-events: none;
+    }
+
+    .crt-grid {
+      position: absolute;
+      inset: 18px;
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      grid-template-rows: repeat(7, 1fr);
+      gap: 6px;
+    }
+
+    .crt-grid span {
+      border: 1px solid rgba(255, 243, 215, 0.1);
+      border-radius: 3px;
+      background: rgba(55, 216, 255, 0.08);
+    }
+
+    .crt-grid span:nth-child(4n) { background: rgba(255, 76, 168, 0.16); }
+    .crt-grid span:nth-child(7n) { background: rgba(255, 225, 90, 0.14); }
+    .crt-grid span:nth-child(11n) { background: rgba(128, 255, 113, 0.13); }
+
+    .cabinet {
+      border-color: rgba(212, 157, 59, 0.36);
+      background:
+        linear-gradient(180deg, #301812, #110c0b 52%, #261713),
+        #150f0d;
+    }
+
+    .slot {
+      position: absolute;
+      left: 18%;
+      right: 18%;
+      bottom: 34px;
+      height: 18px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 243, 215, 0.22);
+      background: #020202;
+    }
+
+    .marquee {
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      top: 18px;
+      min-height: 62px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255, 225, 90, 0.28);
+      border-radius: 6px;
+      color: var(--yellow);
+      font-weight: 950;
+      text-align: center;
+      text-transform: uppercase;
+      background: rgba(0, 0, 0, 0.28);
+    }
+
+    .dial {
+      position: absolute;
+      width: 86px;
+      height: 86px;
+      left: calc(50% - 43px);
+      top: 96px;
+      border-radius: 50%;
+      border: 8px solid var(--brass);
+      background: conic-gradient(var(--cyan), var(--pink), var(--yellow), var(--green), var(--cyan));
+      box-shadow: 0 0 34px rgba(212, 157, 59, 0.24);
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(110px, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .metric {
+      min-height: 82px;
+      display: grid;
+      align-content: center;
+      gap: 4px;
+      border: 1px solid rgba(255, 243, 215, 0.12);
+      border-radius: 7px;
+      padding: 10px;
+      background: rgba(255, 243, 215, 0.045);
+    }
+
+    .metric small {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .metric strong {
+      color: var(--paper);
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 10px;
+    }
+
+    .card {
+      min-height: 162px;
+      display: grid;
+      gap: 9px;
+      border: 1px solid rgba(255, 243, 215, 0.12);
+      border-radius: 8px;
+      padding: 12px;
+      background:
+        linear-gradient(135deg, rgba(55, 216, 255, 0.08), transparent 52%),
+        rgba(255, 243, 215, 0.04);
+    }
+
+    .card h3 {
+      color: var(--paper);
+      font-size: 18px;
+      line-height: 1.1;
+    }
+
+    .card p {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .card a {
+      width: fit-content;
+      min-height: 34px;
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid rgba(55, 216, 255, 0.36);
+      border-radius: 6px;
+      padding: 6px 10px;
+      color: var(--paper);
+      background: rgba(55, 216, 255, 0.09);
+      font-size: 12px;
+      font-weight: 900;
+      text-decoration: none;
+      text-transform: uppercase;
+    }
+
+    .tag-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: end;
+    }
+
+    .tag {
+      border-radius: 999px;
+      padding: 4px 8px;
+      color: #071014;
+      background: var(--yellow);
+      font-size: 10px;
+      font-weight: 950;
+      text-transform: uppercase;
+    }
+
+    .tag.private { background: var(--red); color: #fff3d7; }
+    .tag.review { background: var(--cyan); color: #071014; }
+    .tag.fusion { background: var(--green); color: #071014; }
+
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid rgba(255, 243, 215, 0.1);
+      border-radius: 8px;
+    }
+
+    table {
+      width: 100%;
+      min-width: 640px;
+      border-collapse: collapse;
+      font-size: 13px;
+      table-layout: fixed;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid rgba(255, 243, 215, 0.1);
+      padding: 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--yellow);
+      font-size: 11px;
+      text-transform: uppercase;
+    }
+
+    td {
+      color: var(--paper);
+      overflow-wrap: anywhere;
+    }
+
+    th:nth-child(1),
+    td:nth-child(1) { width: 18%; }
+
+    th:nth-child(2),
+    td:nth-child(2) { width: 9%; }
+
+    th:nth-child(3),
+    td:nth-child(3) { width: 10%; }
+
+    th:nth-child(4),
+    td:nth-child(4) { width: 21%; }
+
+    th:nth-child(5),
+    td:nth-child(5) { width: 42%; }
+
+    td:nth-child(4) {
+      color: var(--muted);
+    }
+
+    .side-stack {
+      display: grid;
+      gap: 14px;
+    }
+
+    .list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .list-item {
+      border-left: 4px solid var(--cyan);
+      padding: 8px 10px;
+      background: rgba(255, 243, 215, 0.045);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .list-item strong {
+      display: block;
+      color: var(--paper);
+      margin-bottom: 3px;
+    }
+
+    @media (max-width: 960px) {
+      h1 { font-size: 38px; }
+      .grid,
+      .visual { grid-template-columns: 1fr; }
+      .summary { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 560px) {
+      .shell {
+        width: 100%;
+        max-width: 100vw;
+        overflow: hidden;
+        padding: 12px;
+      }
+      h1 { font-size: 32px; }
+      .panel { overflow: hidden; }
+      .toolbar {
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+      .filters {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+      }
+      .filters button {
+        width: 100%;
+        padding: 0 8px;
+      }
+      .summary { grid-template-columns: 1fr; }
+      input { width: 100%; }
+      .table-wrap {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+      }
+      table {
+        width: 100%;
+        min-width: 0;
+        font-size: 10px;
+      }
+      th,
+      td {
+        padding: 6px 4px;
+      }
+      .tag {
+        padding: 2px 4px;
+        font-size: 8px;
+      }
+    }
+  </style>
+
+<style id="northstar-neon-skin">
+@keyframes nsNeonHue { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
+@keyframes nsNeonSweep { 0% { transform: translateX(-140%) skewX(-18deg); opacity: 0; } 28% { opacity: .55; } 56% { opacity: 0; } 100% { transform: translateX(140%) skewX(-18deg); opacity: 0; } }
+@keyframes nsVorathHeart { 0%, 100% { transform: scale(.92); box-shadow: 0 0 12px rgba(248,113,113,.65), 0 0 24px rgba(245,197,66,.28); } 50% { transform: scale(1.12); box-shadow: 0 0 18px rgba(248,113,113,.95), 0 0 36px rgba(16,185,129,.42); } }
+@keyframes nsVorathMandala { 0% { transform: rotate(0deg) scale(1); } 100% { transform: rotate(360deg) scale(1.02); } }
+@keyframes nsVorathPulse { 0% { opacity: .28; transform: scale(.96); } 45% { opacity: .72; transform: scale(1.03); } 100% { opacity: .28; transform: scale(.96); } }
+:root {
+  --ns-cyan: #22d3ee;
+  --ns-pink: #ec4899;
+  --ns-purple: #a855f7;
+  --ns-gold: #f5c542;
+  --ns-green: #10b981;
+  --ns-crimson: #ef4444;
+  --ns-ivory: #f8efe0;
+  --ns-vorath-charge: 12%;
+  --ns-vorath-pulse: .18;
+}
+html {
+  background:
+    radial-gradient(circle at 50% -12%, rgba(245,197,66,.22), transparent 30%),
+    radial-gradient(circle at 12% 18%, rgba(16,185,129,.18), transparent 29%),
+    radial-gradient(circle at 88% 22%, rgba(236,72,153,.18), transparent 30%),
+    repeating-conic-gradient(from 12deg at 50% 18%, rgba(245,197,66,.075) 0 8deg, transparent 8deg 20deg),
+    repeating-linear-gradient(116deg, rgba(34,211,238,.11) 0 1px, transparent 1px 46px),
+    repeating-linear-gradient(64deg, rgba(236,72,153,.10) 0 1px, transparent 1px 54px),
+    linear-gradient(135deg, #02030a, #090817 38%, #03111d 72%, #16020d);
+}
+html::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2147483600;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(245,197,66,.08), transparent 22%),
+    repeating-radial-gradient(circle at 50% 18%, transparent 0 26px, rgba(245,197,66,.035) 27px 28px, transparent 29px 64px),
+    repeating-linear-gradient(115deg, rgba(34,211,238,.08) 0 1px, transparent 1px 58px),
+    repeating-linear-gradient(64deg, rgba(236,72,153,.075) 0 1px, transparent 1px 64px),
+    linear-gradient(90deg, transparent, rgba(245,197,66,.07), transparent);
+  mix-blend-mode: screen;
+  opacity: .24;
+  animation: nsVorathMandala 42s linear infinite;
+}
+html[data-ns-visual-family="pinball"]::before,
+html[data-ns-visual-family="stacker"]::before,
+html[data-ns-visual-family="shooter"]::before,
+html[data-ns-visual-family="circus"]::before,
+html[data-ns-visual-family="creature"]::before {
+  opacity: .1;
+  animation: none;
+}
+html::after {
+  content: "";
+  position: fixed;
+  inset: 8px;
+  border-radius: 12px;
+  pointer-events: none;
+  z-index: 2147483601;
+  border: 2px solid rgba(255,255,255,.12);
+  box-shadow:
+    inset 0 0 26px rgba(34,211,238,.22),
+    inset 0 0 46px rgba(236,72,153,.18),
+    inset 0 0 64px rgba(245,197,66,.12),
+    0 0 22px rgba(34,211,238,.38),
+    0 0 38px rgba(236,72,153,.28),
+    0 0 54px rgba(245,197,66,.16);
+  animation: nsNeonHue 14s linear infinite;
+}
+body {
+  background-color: transparent;
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2147483599;
+  background:
+    radial-gradient(circle at 50% 78%, rgba(239,68,68,.12), transparent 18%),
+    radial-gradient(circle at 50% 16%, rgba(16,185,129,.13), transparent 24%),
+    linear-gradient(180deg, transparent 0 58%, rgba(0,0,0,.16));
+  mix-blend-mode: screen;
+  opacity: .32;
+}
+html[data-ns-visual-family="pinball"] body::before,
+html[data-ns-visual-family="stacker"] body::before,
+html[data-ns-visual-family="shooter"] body::before,
+html[data-ns-visual-family="circus"] body::before,
+html[data-ns-visual-family="creature"] body::before {
+  opacity: .12;
+}
+body > * {
+  position: relative;
+}
+canvas, svg, .game, .board, .screen, #screen, #game, #c {
+  border: 1px solid rgba(245,197,66,.22) !important;
+  border-radius: 8px;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.06),
+    0 0 14px rgba(34,211,238,.16),
+    0 0 24px rgba(236,72,153,.10),
+    inset 0 0 22px rgba(245,197,66,.055) !important;
+  filter: saturate(1.06) contrast(1.02) drop-shadow(0 0 6px rgba(34,211,238,.12));
+}
+button, a, input, select {
+  text-shadow: 0 0 10px rgba(255,255,255,.24), 0 0 18px rgba(34,211,238,.24);
+}
+.panel, .card, .hud, .modal, .meter, .bar, .score, .controls {
+  box-shadow:
+    0 0 18px rgba(34,211,238,.14),
+    0 0 28px rgba(236,72,153,.10),
+    inset 0 0 24px rgba(245,197,66,.055);
+}
+.panel::before, .card::before, .modal::before {
+  content: "";
+  position: absolute;
+  top: -28%;
+  bottom: -28%;
+  left: 0;
+  width: 38%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.18), transparent);
+  transform: translateX(-140%) skewX(-18deg);
+  animation: nsNeonSweep 6.4s ease-in-out infinite;
+  pointer-events: none;
+}
+#northstar-vorath-gate {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  z-index: 2147483641;
+  width: min(286px, calc(100vw - 132px));
+  min-width: 168px;
+  pointer-events: none;
+  color: var(--ns-ivory);
+  font-family: Consolas, 'Courier New', monospace;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+}
+#northstar-vorath-gate .vg-shell {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(245,197,66,.38);
+  border-radius: 8px;
+  padding: 10px;
+  background:
+    radial-gradient(circle at 12% 50%, rgba(239,68,68,.18), transparent 26%),
+    radial-gradient(circle at 88% 16%, rgba(16,185,129,.18), transparent 30%),
+    linear-gradient(135deg, rgba(5,7,16,.94), rgba(13,8,24,.91));
+  box-shadow:
+    0 0 22px rgba(34,211,238,.20),
+    0 0 34px rgba(236,72,153,.14),
+    inset 0 0 28px rgba(245,197,66,.08);
+}
+#northstar-vorath-gate .vg-orbit {
+  position: absolute;
+  inset: -58px -28px auto auto;
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  border: 1px solid rgba(245,197,66,.24);
+  background: repeating-conic-gradient(from 0deg, rgba(245,197,66,.18) 0 5deg, transparent 5deg 13deg);
+  opacity: .62;
+  animation: nsVorathMandala 18s linear infinite;
+}
+#northstar-vorath-gate .vg-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 18px 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+#northstar-vorath-gate .vg-heart {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 36%, #fff7ed 0 13%, #ef4444 14% 52%, #7f1d1d 53% 100%);
+  animation: nsVorathHeart 1.8s ease-in-out infinite;
+}
+#northstar-vorath-gate .vg-title {
+  min-width: 0;
+  color: #fff7ed;
+  font-size: 10px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#northstar-vorath-gate .vg-gate {
+  color: #bbf7d0;
+  font-size: 9px;
+}
+#northstar-vorath-gate .vg-meter {
+  position: relative;
+  height: 7px;
+  margin-top: 9px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(255,255,255,.08);
+  box-shadow: inset 0 0 12px rgba(0,0,0,.62);
+}
+#northstar-vorath-gate .vg-fill {
+  width: var(--ns-vorath-charge);
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ef4444, #f5c542 42%, #10b981 78%, #22d3ee);
+  box-shadow: 0 0 18px rgba(16,185,129,.55);
+  transition: width .24s ease;
+}
+#northstar-vorath-gate .vg-meta {
+  margin-top: 7px;
+  color: rgba(232,228,217,.70);
+  font-size: 9px;
+  line-height: 1.3;
+}
+html[data-vorath-flare="1"] canvas,
+html[data-vorath-flare="1"] .screen,
+html[data-vorath-flare="1"] #game {
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.10),
+    0 0 18px rgba(16,185,129,.22),
+    0 0 30px rgba(245,197,66,.14),
+    inset 0 0 24px rgba(239,68,68,.08) !important;
+  filter: saturate(1.16) contrast(1.04) drop-shadow(0 0 10px rgba(16,185,129,.18));
+}
+@media (prefers-reduced-motion: reduce) {
+  html::before, html::after, .panel::before, .card::before, .modal::before, #northstar-vorath-gate .vg-orbit, #northstar-vorath-gate .vg-heart { animation: none; }
+}
+@media (max-width: 560px) {
+  #northstar-vorath-gate {
+    left: auto;
+    right: 8px;
+    top: 82px;
+    bottom: auto;
+    width: 170px;
+  }
+  #northstar-vorath-gate .vg-shell { padding: 6px 8px; }
+  #northstar-vorath-gate .vg-row {
+    grid-template-columns: 14px 1fr auto;
+    gap: 5px;
+    align-items: center;
+  }
+  #northstar-vorath-gate .vg-heart { width: 10px; height: 10px; }
+  #northstar-vorath-gate .vg-title { font-size: 8px; white-space: nowrap; }
+  #northstar-vorath-gate .vg-gate { font-size: 8px; }
+  #northstar-vorath-gate .vg-meter { height: 5px; margin-top: 5px; }
+  #northstar-vorath-gate .vg-orbit,
+  #northstar-vorath-gate .vg-caption,
+  #northstar-vorath-gate .vg-meta { display: none; }
+}
+</style>
+<script id="northstar-vorath-gameplay-layer">
+(function(){
+  if (window.__northstarVorathLayerLoaded) return;
+  window.__northstarVorathLayerLoaded = true;
+  var gates = ["QUESTION", "POSTULATE", "HARMONIC", "METAMORPHOSIS", "CAUSE", "LEVER", "BELOVED", "REVALUATION", "COMMENTARY", "LIMIT"];
+  var state = {
+    charge: 12,
+    pulses: 0,
+    approvals: 0,
+    heart: 1,
+    gate: gates[0],
+    last_input: "boot",
+    started_at: new Date().toISOString()
+  };
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+  function root() {
+    return document.documentElement;
+  }
+  function draw() {
+    var node = document.getElementById("northstar-vorath-gate");
+    var pulse = clamp(state.charge / 100, .08, 1);
+    root().style.setProperty("--ns-vorath-charge", state.charge.toFixed(0) + "%");
+    root().style.setProperty("--ns-vorath-pulse", pulse.toFixed(2));
+    root().setAttribute("data-vorath-gate", state.gate.toLowerCase());
+    if (!node) return;
+    var gate = node.querySelector(".vg-gate");
+    var title = node.querySelector(".vg-title");
+    var meta = node.querySelector(".vg-meta");
+    if (gate) gate.textContent = state.gate;
+    if (title) title.textContent = "VORATH GATE " + state.charge.toFixed(0) + "%";
+    if (meta) meta.textContent = "heart " + state.heart.toFixed(1) + " | approval " + state.approvals + " | " + state.last_input;
+  }
+  function pulse(kind, amount) {
+    state.pulses += 1;
+    state.last_input = String(kind || "signal").slice(0, 36);
+    state.charge = clamp(state.charge + (amount || 7), 0, 100);
+    state.heart = clamp(state.heart + .18, 1, 9.9);
+    state.gate = gates[Math.floor(state.pulses / 3) % gates.length];
+    if (state.charge >= 100) {
+      state.approvals += 1;
+      state.charge = 38;
+      state.gate = "LIMIT";
+    }
+    root().setAttribute("data-vorath-flare", "1");
+    window.setTimeout(function(){ root().removeAttribute("data-vorath-flare"); }, 220);
+    draw();
+    return publicState();
+  }
+  function publicState() {
+    return {
+      charge: Math.round(state.charge),
+      pulses: state.pulses,
+      approvals: state.approvals,
+      heart: Number(state.heart.toFixed(2)),
+      gate: state.gate,
+      last_input: state.last_input,
+      started_at: state.started_at
+    };
+  }
+  function mount() {
+    if (document.getElementById("northstar-vorath-gate")) return;
+    var host = document.createElement("div");
+    host.id = "northstar-vorath-gate";
+    host.setAttribute("aria-hidden", "true");
+    host.innerHTML = '<div class="vg-shell"><div class="vg-orbit"></div><div class="vg-row"><div class="vg-heart"></div><div class="vg-title">VORATH GATE</div><div class="vg-gate">QUESTION</div></div><div class="vg-meter"><div class="vg-fill"></div></div><div class="vg-meta">heart 1.0 | approval 0 | boot</div></div>';
+    document.body.appendChild(host);
+    draw();
+  }
+  document.addEventListener("keydown", function(event) {
+    var key = event && event.key ? event.key : "key";
+    pulse("key:" + key, key.toLowerCase() === "v" ? 18 : 6);
+  }, { passive: true });
+  document.addEventListener("pointerdown", function(event) {
+    pulse("pointer:" + (event && event.pointerType ? event.pointerType : "mouse"), 8);
+  }, { passive: true });
+  document.addEventListener("touchstart", function() {
+    pulse("touch", 8);
+  }, { passive: true });
+  window.northstarVorathPulse = pulse;
+  window.northstarVorathState = publicState;
+  window.setInterval(function(){
+    state.charge = clamp(state.charge - .9, 8, 100);
+    state.heart = clamp(state.heart - .04, 1, 9.9);
+    draw();
+  }, 900);
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mount);
+  else mount();
+})();
+</script>
+
+<style id="northstar-arcade-accessibility-guard">
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-name: none !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+.play-btn.disabled {
+  color: rgba(248,250,252,.74) !important;
+  border-color: rgba(148,163,184,.58) !important;
+}
+.back-btn {
+  color: #35f28f !important;
+  border-color: rgba(53,242,143,.78) !important;
+  background: rgba(0,0,0,.46) !important;
+}
+.tab {
+  color: #cbd5e1 !important;
+  border-color: rgba(148,163,184,.66) !important;
+}
+.tab.active, .tab:hover {
+  color: #00ff88 !important;
+  border-color: #00ff88 !important;
+}
+#monitor span:not(.stat-val), #stats span:not(.stat-val), .stats span:not(.stat-val), .hud span:not(.stat-val) {
+  color: #9ee6b5 !important;
+}
+#monitor .stat-val, #stats .stat-val, .stat-val {
+  color: #f3ffe8 !important;
+}
+button.primary, .primary, button.btn, .btn.bet-btn, input[type="button"], input[type="submit"] {
+  color: #f8fafc !important;
+}
+h1, h2, h3, .section-title, .panel-title {
+  color: #f8fafc !important;
+}
+.tag.private {
+  color: #111827 !important;
+  background: #ffb15a !important;
+  font-weight: 800 !important;
+}
+#pop, #gen, #biomass, #entropy, #epoch, .label, #stats-bar, #stats-bar span {
+  color: #9ee6b5 !important;
+}
+#oracleLine, .oracle {
+  color: #071314 !important;
+  text-shadow: none !important;
+}
+</style>
+<script id="northstar-arcade-accessibility-guard-script">
+document.documentElement.setAttribute("data-northstar-arcade-a11y", "1");
+</script>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="kicker">NorthStar Super Arcade</div>
+        <h1>Archive Control</h1>
+      </div>
+      <div>
+        <span class="chip">Local catalog</span>
+        <span class="chip">No binary serving</span>
+      </div>
+    </header>
+
+    <section class="toolbar" aria-label="Archive filters">
+      <div class="filters" id="filters"></div>
+      <input id="search" autocomplete="off" placeholder="Search platform, note, route">
+    </section>
+
+    <section class="grid">
+      <div class="panel">
+        <div class="visual" aria-hidden="true">
+          <div class="crt"><div class="crt-grid" id="crtGrid"></div></div>
+          <div class="cabinet">
+            <div class="marquee">Curate // Clone // Fuse</div>
+            <div class="dial"></div>
+            <div class="slot"></div>
+          </div>
+        </div>
+
+        <div class="summary">
+          <div class="metric"><small>Files classified</small><strong id="fileTotal">0</strong></div>
+          <div class="metric"><small>Estimated GB</small><strong id="gbTotal">0</strong></div>
+          <div class="metric"><small>Private refs</small><strong>12</strong></div>
+          <div class="metric"><small>Hostable now</small><strong>0</strong></div>
+        </div>
+
+        <h2>Platform Inventory</h2>
+        <div class="table-wrap" style="margin-top:10px">
+          <table>
+            <thead>
+              <tr>
+                <th>Platform</th>
+                <th>Count</th>
+                <th>Total GB</th>
+                <th>Decision</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody id="platformRows"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <aside class="side-stack">
+        <section class="panel">
+          <div class="kicker">Policy</div>
+          <h2>NSP Routing</h2>
+          <div class="list" style="margin-top:10px">
+            <div class="list-item"><strong>Public NSP</strong> Metadata cards, platform counts, local presence, clone/fusion notes. No ROM/ISO/WBFS/PKG download links.</div>
+            <div class="list-item"><strong>Local NSP</strong> Private launcher/catalog can point at local paths after explicit operator action.</div>
+            <div class="list-item"><strong>Public Playables</strong> Original Vorathic games inspired by mechanics, not protected assets, names, audio, or level layouts.</div>
+            <div class="list-item"><strong>License Gate</strong> Homebrew/freeware/public-domain only after redistribution rights are documented.</div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="kicker">Build Queue</div>
+          <h2>Vorathic Fusions</h2>
+          <div class="cards" id="fusionCards" style="margin-top:10px"></div>
+        </section>
+
+        <section class="panel">
+          <div class="kicker">Roots</div>
+          <h2>Local Paths</h2>
+          <div class="list" style="margin-top:10px" id="rootList"></div>
+        </section>
+      </aside>
+    </section>
+
+    <footer class="footer">
+      <span>Generated from the 2026-06-14 external drive audit</span>
+      <span id="visibleCount">0 visible</span>
+    </footer>
+  </main>
+
+  <script>
+    const platforms = [
+      ["Wii", 258, 373.68, "private_reference_or_clone_fusion", "Strong WBFS archive; do not publicly host binaries."],
+      ["Disc_or_unknown", 1886, 163.60, "review_needed", "Mixed disc/data material; platform-specific pass needed."],
+      ["GameCube", 67, 65.79, "private_reference_or_clone_fusion", "Clear Dolphin target and strong clone/fusion source."],
+      ["Unknown", 2649, 8.87, "review_needed", "Classification cleanup needed."],
+      ["SNES", 2371, 7.44, "private_reference_or_clone_fusion", "Classic ROM mechanics reference; public clones only."],
+      ["NES", 9638, 5.96, "private_reference_or_clone_fusion", "Large classic ROM mechanics reference; public clones only."],
+      ["NintendoDS", 567, 5.55, "private_reference_or_clone_fusion", "Handheld set; private reference."],
+      ["N64", 138, 2.05, "private_reference_or_clone_fusion", "Manageable set; private reference."],
+      ["GameBoy", 289, 1.15, "private_reference_or_clone_fusion", "GB/GBC/GBA mixed."],
+      ["Arcade_MAME", 1604, 0.83, "private_reference_or_clone_fusion", "Best arcade mechanics source; public clones/fusions preferred."],
+      ["PCEngine", 1434, 0.25, "private_reference_or_clone_fusion", "Strong arcade action mechanics reference."],
+      ["Sega", 1082, 0.12, "private_reference_or_clone_fusion", "MegaDrive/Genesis and related material."],
+      ["PS1_or_disc", 306, 0, "review_needed", "Under-counted by bytes; PS1 bin/cue material likely classified as Disc_or_unknown."]
+    ];
+
+    const roots = [
+      "G:\\Games",
+      "G:\\Games\\Nintendo GameCube",
+      "G:\\Games\\Wii",
+      "G:\\Games\\wbfs",
+      "G:\\Play\\Emulation",
+      "G:\\Play\\GAMES\\GAMING_LIBRARY_FROM_F_2026-04-20",
+      "G:\\Play\\GAMES\\GAMING_LIBRARY_FROM_F_2026-04-20\\G_Roms\\PS3"
+    ];
+
+    const fusions = [
+      ["Hypernova Swarm", "MAME / NES / PCEngine formation shooter grammar.", "Original neon formation shooter with daily seeds, boss waves, and run receipts.", "playable", "/arcade/custom/hypernova-swarm"],
+      ["Signal Gallery", "Wii rail/light-gun and target-gallery mechanics.", "Mouse/touch target cabinet with reload pressure, signal integrity, wave contracts, and run receipts.", "playable", "/arcade/custom/signal-gallery"],
+      ["Prism Drift", "GameCube/Wii racing and time-trial structure.", "Generated prism circuits with drift scoring, boost heat, integrity pressure, and run receipts.", "playable", "/arcade/custom/prism-drift"],
+      ["Static House", "Fixed-camera survival horror and inventory pressure.", "Original fixed-camera survival-puzzle cabinet with six rooms, four-slot inventory pressure, fuse-line restoration, static/focus drain, and ending receipts.", "playable", "/arcade/custom/static-house"],
+      ["Crystal Tactics Arena", "Turn tactics and party RPG battle language.", "Short tactical arcade runs with crystal status effects.", "queue", ""],
+      ["IDR Tracker Cabinet", "PS1 music-creation / tracker workflows.", "Browser-native 16-step tracker toy with generated WebAudio voices, preset mutation, and JSON pattern receipts.", "playable", "/arcade/custom/idr-tracker-cabinet"]
+    ];
+
+    let active = "all";
+
+    const filters = [
+      ["all", "All"],
+      ["private_reference_or_clone_fusion", "Private refs"],
+      ["review_needed", "Review"],
+      ["GameCube", "GameCube"],
+      ["Wii", "Wii"],
+      ["Arcade_MAME", "MAME"]
+    ];
+
+    function escapeText(value) {
+      return String(value).replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"
+      }[char]));
+    }
+
+    function decisionTag(decision) {
+      if (decision === "review_needed") return "<span class=\"tag review\">review</span>";
+      return "<span class=\"tag private\">private</span><span class=\"tag fusion\">fusion</span>";
+    }
+
+    function renderFilters() {
+      document.querySelector("#filters").innerHTML = filters.map(([id, label]) =>
+        "<button type=\"button\" data-filter=\"" + id + "\" class=\"" + (active === id ? "active" : "") + "\">" + label + "</button>"
+      ).join("");
+    }
+
+    function render() {
+      const q = document.querySelector("#search").value.trim().toLowerCase();
+      const rows = platforms.filter(row => {
+        const blob = row.join(" ").toLowerCase();
+        const filterOk = active === "all" || row[0] === active || row[3] === active;
+        return filterOk && (!q || blob.includes(q));
+      });
+      document.querySelector("#platformRows").innerHTML = rows.map(row =>
+        "<tr><td><strong>" + escapeText(row[0]) + "</strong></td><td>" + row[1] + "</td><td>" + row[2] + "</td><td>" + decisionTag(row[3]) + "</td><td>" + escapeText(row[4]) + "</td></tr>"
+      ).join("");
+      const totalFiles = platforms.reduce((sum, row) => sum + row[1], 0);
+      const totalGb = platforms.reduce((sum, row) => sum + row[2], 0);
+      document.querySelector("#fileTotal").textContent = totalFiles.toLocaleString();
+      document.querySelector("#gbTotal").textContent = Math.round(totalGb).toLocaleString();
+      document.querySelector("#visibleCount").textContent = rows.length + " visible";
+      renderFilters();
+    }
+
+    function initStatic() {
+      document.querySelector("#crtGrid").innerHTML = Array.from({ length: 70 }, () => "<span></span>").join("");
+      document.querySelector("#rootList").innerHTML = roots.map(root =>
+        "<div class=\"list-item\"><strong>Local root</strong>" + escapeText(root) + "</div>"
+      ).join("");
+      document.querySelector("#fusionCards").innerHTML = fusions.map(([title, source, target, status, route]) =>
+        "<article class=\"card\"><div class=\"tag-row\"><span class=\"tag fusion\">" + (status === "playable" ? "playable" : "build") + "</span><span class=\"tag review\">" + (status === "playable" ? "staged" : "source study") + "</span></div><h3>" + escapeText(title) + "</h3><p>" + escapeText(source) + "</p><p>" + escapeText(target) + "</p>" + (route ? "<a href=\"" + escapeText(route) + "\">Open playable</a>" : "") + "</article>"
+      ).join("");
+    }
+
+    document.querySelector("#filters").addEventListener("click", event => {
+      const button = event.target.closest("button[data-filter]");
+      if (!button) return;
+      active = button.dataset.filter;
+      render();
+    });
+    document.querySelector("#search").addEventListener("input", render);
+
+    initStatic();
+    render();
+  </script>
+
+
+<style id="northstar-route-visual-skin">
+html[data-ns-game-stem="super_arcade_archive"],
+html[data-ns-game-stem="super_arcade_archive"] body {
+  --void: #03050d;
+  --panel: rgba(19, 18, 12, 0.92);
+  --cyan: #facc15;
+  --pink: #38bdf8;
+  --nsp-game-accent: #facc15;
+  --nsp-game-accent-2: #38bdf8;
+  --nsp-game-panel: rgba(19, 18, 12, 0.92);
+  min-height: 100%;
+  background: repeating-linear-gradient(90deg, rgba(250,204,21,.07) 0 1px, transparent 1px 18px), radial-gradient(circle at 22% 20%, rgba(250,204,21,.19), transparent 20rem), radial-gradient(circle at 80% 78%, rgba(56,189,248,.16), transparent 26rem), linear-gradient(135deg, #0b0b08, #17150e 48%, #06080d) !important;
+  background-attachment: fixed !important;
+  color-scheme: dark;
+  overflow-x: hidden;
+}
+@keyframes nsAnniversaryRain {
+  0% { background-position: 0 -220px, 0 0, 0 0; opacity: .30; }
+  45% { opacity: .52; }
+  100% { background-position: 0 220px, 180px 0, -140px 0; opacity: .30; }
+}
+@keyframes nsCabinetBloom {
+  0%, 100% { filter: saturate(1.12) contrast(1.04); }
+  50% { filter: saturate(1.34) contrast(1.10); }
+}
+html[data-ns-game-stem="super_arcade_archive"] body {
+  position: relative;
+}
+html[data-ns-game-stem="super_arcade_archive"] body::before,
+html[data-ns-game-stem="super_arcade_archive"] body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2147482000;
+}
+html[data-ns-game-stem="super_arcade_archive"] body::before {
+  background:
+    repeating-linear-gradient(180deg, color-mix(in srgb, var(--nsp-game-accent) 14%, transparent) 0 1px, transparent 1px 14px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.055) 0 1px, transparent 1px 54px),
+    radial-gradient(circle at 50% 18%, color-mix(in srgb, var(--nsp-game-accent-2) 20%, transparent), transparent 36%);
+  mix-blend-mode: screen;
+  opacity: .42;
+  animation: nsAnniversaryRain 16s linear infinite;
+}
+html[data-ns-game-stem="super_arcade_archive"] body::after {
+  inset: 10px;
+  border: 1px solid color-mix(in srgb, var(--nsp-game-accent) 42%, rgba(255,255,255,.12));
+  border-radius: 14px;
+  box-shadow:
+    inset 0 0 48px color-mix(in srgb, var(--nsp-game-accent) 18%, transparent),
+    inset 0 0 120px rgba(0,0,0,.32),
+    0 0 38px color-mix(in srgb, var(--nsp-game-accent-2) 18%, transparent);
+  mix-blend-mode: screen;
+  opacity: .56;
+}
+html[data-ns-game-stem="super_arcade_archive"] main,
+html[data-ns-game-stem="super_arcade_archive"] .shell,
+html[data-ns-game-stem="super_arcade_archive"] .cabinet,
+html[data-ns-game-stem="super_arcade_archive"] .game-panel,
+html[data-ns-game-stem="super_arcade_archive"] .side-panel,
+html[data-ns-game-stem="super_arcade_archive"] .panel,
+html[data-ns-game-stem="super_arcade_archive"] .tracker-panel {
+  border-color: color-mix(in srgb, var(--nsp-game-accent) 44%, rgba(255,255,255,.16)) !important;
+  background-image:
+    linear-gradient(180deg, rgba(255,255,255,.07), transparent 28%),
+    radial-gradient(circle at 18% 16%, color-mix(in srgb, var(--nsp-game-accent) 18%, transparent), transparent 26rem),
+    radial-gradient(circle at 82% 72%, color-mix(in srgb, var(--nsp-game-accent-2) 14%, transparent), transparent 28rem) !important;
+  box-shadow: 0 28px 90px rgba(0,0,0,.58), 0 0 48px color-mix(in srgb, var(--nsp-game-accent) 34%, transparent), 0 0 86px color-mix(in srgb, var(--nsp-game-accent-2) 18%, transparent), inset 0 1px 0 rgba(255,255,255,.10), inset 0 0 44px rgba(255,255,255,.035) !important;
+  transform: translateZ(0);
+}
+html[data-ns-game-stem="super_arcade_archive"] canvas,
+html[data-ns-game-stem="super_arcade_archive"] .stage,
+html[data-ns-game-stem="super_arcade_archive"] .screen,
+html[data-ns-game-stem="super_arcade_archive"] .canvas-wrap,
+html[data-ns-game-stem="super_arcade_archive"] #gameWrap,
+html[data-ns-game-stem="super_arcade_archive"] #game-wrap {
+  outline: 1px solid color-mix(in srgb, var(--nsp-game-accent) 48%, rgba(255,255,255,.08));
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--nsp-game-accent) 20%, transparent), transparent 42%),
+    linear-gradient(135deg, rgba(255,255,255,.035), rgba(0,0,0,.22)) !important;
+  box-shadow: 0 0 34px color-mix(in srgb, var(--nsp-game-accent) 30%, transparent), 0 0 68px color-mix(in srgb, var(--nsp-game-accent-2) 20%, transparent), inset 0 0 38px rgba(255,255,255,.045) !important;
+  animation: nsCabinetBloom 7.5s ease-in-out infinite;
+  image-rendering: auto;
+}
+html[data-ns-game-stem="super_arcade_archive"] .overlay,
+html[data-ns-game-stem="super_arcade_archive"] .modal {
+  border-color: color-mix(in srgb, var(--nsp-game-accent-2) 44%, rgba(255,255,255,.18)) !important;
+}
+html[data-ns-game-stem="super_arcade_archive"] button,
+html[data-ns-game-stem="super_arcade_archive"] a,
+html[data-ns-game-stem="super_arcade_archive"] .score,
+html[data-ns-game-stem="super_arcade_archive"] .hud,
+html[data-ns-game-stem="super_arcade_archive"] .stat {
+  text-shadow: 0 0 10px color-mix(in srgb, var(--nsp-game-accent) 58%, transparent), 0 0 18px color-mix(in srgb, var(--nsp-game-accent-2) 30%, transparent);
+}
+</style>
+<script id="northstar-route-visual-skin-script">
+(function(){
+  document.documentElement.setAttribute("data-ns-game-stem", "super_arcade_archive");
+  document.documentElement.setAttribute("data-ns-game-visual", "route-specific");
+  document.documentElement.setAttribute("data-ns-remaster-pass", "anniversary-archive");
+})();
+</script>
+
+<script id="northstar-canvas-depth-script">
+(function(){
+  if (!window.CanvasRenderingContext2D || window.__northstarCanvasDepthInstalled) return;
+  window.__northstarCanvasDepthInstalled = true;
+  var cfg = {"stem": "super_arcade_archive", "accent": "#facc15", "accent2": "#38bdf8"};
+  var originalFillRect = CanvasRenderingContext2D.prototype.fillRect;
+  var originalClearRect = CanvasRenderingContext2D.prototype.clearRect;
+  function rgba(hex, alpha){
+    var value = String(hex || '#22d3ee').replace('#','').trim();
+    if (value.length === 3) value = value.split('').map(function(ch){ return ch + ch; }).join('');
+    var num = parseInt(value.slice(0, 6), 16);
+    if (!isFinite(num)) num = 0x22d3ee;
+    return 'rgba(' + ((num >> 16) & 255) + ',' + ((num >> 8) & 255) + ',' + (num & 255) + ',' + alpha + ')';
+  }
+  function parseHex(style){
+    var value = String(style || '').trim().toLowerCase();
+    var match = value.match(/^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/);
+    if (!match) return null;
+    var hex = match[1];
+    if (hex.length === 3) hex = hex.split('').map(function(ch){ return ch + ch; }).join('');
+    var rgb = parseInt(hex.slice(0, 6), 16);
+    var alpha = hex.length === 8 ? parseInt(hex.slice(6, 8), 16) / 255 : 1;
+    return { r: (rgb >> 16) & 255, g: (rgb >> 8) & 255, b: rgb & 255, a: alpha };
+  }
+  function parseRgb(style){
+    var match = String(style || '').trim().toLowerCase().match(/^rgba?\(([^)]+)\)$/);
+    if (!match) return null;
+    var parts = match[1].split(',').map(function(part){ return Number(String(part).trim().replace('%','')); });
+    if (parts.length < 3 || parts.some(function(v){ return !isFinite(v); })) return null;
+    return { r: parts[0], g: parts[1], b: parts[2], a: parts.length > 3 ? parts[3] : 1 };
+  }
+  function isOpaqueDark(style){
+    var value = String(style || '').trim().toLowerCase();
+    if (value === 'black') return true;
+    var parsed = parseHex(value) || parseRgb(value);
+    if (!parsed) return false;
+    return parsed.a >= 0.72 && Math.max(parsed.r, parsed.g, parsed.b) <= 42;
+  }
+  function isFullCanvas(ctx, x, y, w, h){
+    var canvas = ctx && ctx.canvas;
+    if (!canvas || canvas.width < 96 || canvas.height < 96) return false;
+    return Math.abs(Number(x)) <= 1 && Math.abs(Number(y)) <= 1 &&
+      Math.abs(Number(w) - canvas.width) <= 2 && Math.abs(Number(h) - canvas.height) <= 2;
+  }
+  function seedFor(stem){
+    var hash = 2166136261;
+    for (var i = 0; i < stem.length; i++) {
+      hash ^= stem.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    return hash >>> 0;
+  }
+  function paintDepth(ctx){
+    var canvas = ctx.canvas;
+    var w = canvas.width;
+    var h = canvas.height;
+    var seed = seedFor(cfg.stem || location.pathname || 'arcade');
+    var randState = seed;
+    function rand(){
+      randState = (Math.imul(randState, 1664525) + 1013904223) >>> 0;
+      return randState / 4294967296;
+    }
+    ctx.save();
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+    var bg = ctx.createLinearGradient(0, 0, w, h);
+    bg.addColorStop(0, '#02040b');
+    bg.addColorStop(0.45, seed % 2 ? '#071424' : '#120817');
+    bg.addColorStop(1, seed % 3 ? '#030814' : '#130b04');
+    ctx.fillStyle = bg;
+    originalFillRect.call(ctx, 0, 0, w, h);
+    function radial(x, y, r, color){
+      var glow = ctx.createRadialGradient(x, y, 0, x, y, r);
+      glow.addColorStop(0, color);
+      glow.addColorStop(0.62, color.replace(/,[^,]+\)$/, ',0.07)'));
+      glow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = glow;
+      originalFillRect.call(ctx, 0, 0, w, h);
+    }
+    radial(w * (0.18 + rand() * 0.22), h * (0.12 + rand() * 0.28), Math.max(w, h) * 0.44, rgba(cfg.accent, 0.28));
+    radial(w * (0.62 + rand() * 0.22), h * (0.48 + rand() * 0.34), Math.max(w, h) * 0.48, rgba(cfg.accent2, 0.22));
+    ctx.lineWidth = Math.max(1, Math.min(w, h) / 420);
+    for (var lane = 0; lane < 9; lane++) {
+      var y = h * (0.12 + lane * 0.095) + (rand() - 0.5) * h * 0.06;
+      ctx.strokeStyle = lane % 2 ? rgba(cfg.accent2, 0.15) : rgba(cfg.accent, 0.17);
+      ctx.beginPath();
+      ctx.moveTo(-w * 0.08, y);
+      ctx.bezierCurveTo(w * (0.22 + rand() * 0.12), y - h * (0.12 + rand() * 0.10), w * (0.62 + rand() * 0.18), y + h * (0.08 + rand() * 0.12), w * 1.08, y + (rand() - 0.5) * h * 0.18);
+      ctx.stroke();
+    }
+    ctx.lineWidth = Math.max(1, Math.min(w, h) / 600);
+    for (var ring = 0; ring < 4; ring++) {
+      ctx.strokeStyle = ring % 2 ? rgba(cfg.accent2, 0.16) : rgba(cfg.accent, 0.18);
+      ctx.beginPath();
+      ctx.ellipse(w * (0.30 + rand() * 0.42), h * (0.28 + rand() * 0.42), w * (0.12 + rand() * 0.18), h * (0.06 + rand() * 0.12), rand() * Math.PI, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    for (var star = 0; star < 70; star++) {
+      var sparkle = rand();
+      ctx.fillStyle = sparkle > 0.55 ? rgba(cfg.accent, 0.24 + rand() * 0.30) : rgba(cfg.accent2, 0.18 + rand() * 0.24);
+      originalFillRect.call(ctx, rand() * w, rand() * h, 0.7 + rand() * 2.2, 0.7 + rand() * 2.2);
+    }
+    ctx.fillStyle = 'rgba(0,0,0,0.20)';
+    originalFillRect.call(ctx, 0, 0, w, h);
+    ctx.restore();
+    window.__northstarCanvasDepthPaints = (window.__northstarCanvasDepthPaints || 0) + 1;
+  }
+  CanvasRenderingContext2D.prototype.fillRect = function(x, y, w, h){
+    if (isFullCanvas(this, x, y, w, h) && isOpaqueDark(this.fillStyle)) {
+      paintDepth(this);
+      return;
+    }
+    return originalFillRect.apply(this, arguments);
+  };
+  CanvasRenderingContext2D.prototype.clearRect = function(x, y, w, h){
+    if (isFullCanvas(this, x, y, w, h)) {
+      paintDepth(this);
+      return;
+    }
+    return originalClearRect.apply(this, arguments);
+  };
+})();
+</script>
+
+
+<style id="northstar-playtest-kit-style">
+#northstar-playtest-kit { position: fixed; right: 12px; bottom: 12px; z-index: 2147483642; font-family: Consolas, 'Courier New', monospace; color: #f8fafc; }
+#northstar-playtest-kit * { box-sizing: border-box; }
+#northstar-playtest-toggle, #northstar-playtest-kit a, #northstar-playtest-kit button { min-height: 34px; border: 1px solid rgba(34,211,238,.42); border-radius: 6px; background: rgba(4,8,18,.92); color: #f8fafc; cursor: pointer; text-decoration: none; font: 700 11px/1.2 Consolas, 'Courier New', monospace; letter-spacing: 1.4px; text-transform: uppercase; box-shadow: 0 0 16px rgba(34,211,238,.18); }
+#northstar-playtest-toggle { min-width: 96px; padding: 0 10px; }
+#northstar-playtest-panel { width: min(300px, calc(100vw - 24px)); margin-top: 8px; padding: 10px; border: 1px solid rgba(245,197,66,.34); border-radius: 8px; background: rgba(3,5,14,.96); box-shadow: 0 0 28px rgba(34,211,238,.20), 0 0 36px rgba(236,72,153,.14); }
+#northstar-playtest-panel[hidden] { display: none; }
+#northstar-playtest-panel strong { display: block; margin-bottom: 4px; color: #fff; font-size: 12px; overflow-wrap: anywhere; }
+#northstar-playtest-panel span { display: block; margin-bottom: 8px; color: rgba(232,228,217,.64); font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; }
+#northstar-first-minute { margin: 8px 0; padding: 8px; border: 1px solid rgba(6,214,160,.28); border-radius: 7px; background: rgba(6,214,160,.06); }
+#northstar-first-minute b { display:block; margin-bottom: 5px; color:#06d6a0; font-size:10px; letter-spacing:1.2px; text-transform:uppercase; }
+#northstar-first-minute p { margin: 0 0 6px; color: rgba(248,250,252,.86); font-size: 11px; line-height: 1.35; }
+#northstar-first-minute ol { margin: 0 0 0 18px; padding: 0; color: rgba(232,228,217,.78); font-size: 11px; line-height: 1.35; }
+#northstar-playtest-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+#northstar-playtest-status { display:block; min-height: 14px; margin-top: 7px; color: rgba(6,214,160,.88); font-size: 10px; line-height: 1.3; overflow-wrap: anywhere; }
+#northstar-playtest-actions a, #northstar-playtest-actions button { display: inline-flex; align-items: center; justify-content: center; padding: 0 8px; text-align: center; }
+canvas[data-northstar-keyboard-focus="1"]:focus-visible { outline: 3px solid rgba(34,211,238,.95) !important; outline-offset: 4px !important; box-shadow: 0 0 0 6px rgba(4,8,18,.78), 0 0 20px rgba(34,211,238,.45) !important; }
+button:not(#northstar-playtest-kit button), input:not(#northstar-playtest-kit input), select:not(#northstar-playtest-kit select), textarea:not(#northstar-playtest-kit textarea), [role="button"]:not(#northstar-playtest-kit [role="button"]) { min-height: 30px; }
+input[type="checkbox"], input[type="radio"] { min-width: 30px !important; min-height: 30px !important; width: 30px !important; height: 30px !important; accent-color: #22d3ee; }
+@media (max-width: 900px) {
+  canvas, video, svg { max-width: calc(100vw - 16px) !important; height: auto !important; }
+}
+@media (max-width: 560px) {
+  html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+  canvas, video, svg { max-width: calc(100vw - 16px) !important; height: auto !important; }
+  #wrap, .wrap, .game-wrap, .game-container, .container, main, .shell { max-width: 100vw !important; min-width: 0 !important; overflow-x: hidden !important; }
+  header, section, aside, .grid, .layout, .panel, .table-wrap, .arena-wrap, .machine-wrap, .cabinet, .game-panel, .side-panel { min-width: 0 !important; max-width: 100% !important; overflow-x: hidden !important; }
+  #wrap { flex-wrap: wrap !important; justify-content: center !important; }
+  #northstar-playtest-kit { right: 8px; bottom: 8px; }
+  #northstar-playtest-actions { grid-template-columns: 1fr; }
+}
+</style>
+<script id="northstar-playtest-kit-script">
+(function(){
+  if (window.__northstarPlaytestKitLoaded) return;
+  window.__northstarPlaytestKitLoaded = true;
+  var meta = {"title": "Super Arcade Archive", "source": "super_arcade_archive.html", "route": "/arcade/custom/super-arcade-archive", "controls": "Search/filter -> inspect metadata -> clone/fusion routing", "checks": ["metadata only", "private labels", "search/filter", "no binary links"], "first_minute": {"objective": "Start playing, make one visible state change, then export a receipt.", "controls": "Search/filter -> inspect metadata -> clone/fusion routing", "steps": ["Open the launcher or start control.", "Use the listed controls until score, position, timer, inventory, or state changes.", "Export a receipt after visible progress."], "success": "A player can identify the goal, controls, progress signal, and receipt action without external notes."}, "vorath": {"gate": "ARCHIVE", "directive": "Use the archive as a private-to-original routing console, not a public ROM shelf.", "mechanic": "Search, filter, and metadata routing should make the fusion path visible.", "visual": "catalog glass, gold checksum lines, emerald private labels, cyan route paths", "receipt_check": "archive routing state captured", "stem": "super_arcade_archive"}};
+  function safeFilename(value) {
+    return String(value || "custom-game").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || "custom-game";
+  }
+  function receiptId(data) {
+    var stamp = (data && data.exported_at ? data.exported_at : new Date().toISOString()).replace(/[:.]/g, "-");
+    return "arcade-" + safeFilename((data && data.title) || meta.title || location.pathname) + "-" + stamp;
+  }
+  function rewardEventType() {
+    var title = String((meta && meta.title) || location.pathname || "").toLowerCase();
+    var route = String(location.pathname || "").toLowerCase();
+    var directive = String((meta && meta.vorath && meta.vorath.directive) || "").toLowerCase();
+    var blob = title + " " + route + " " + directive;
+    return /fortune|future|oracle|teller|tarot|divination/.test(blob) ? "fortune_oracle" : "game_achievement";
+  }
+  function stateScore(state) {
+    if (!state) return null;
+    if (state.fields && state.fields.score !== undefined && state.fields.score !== null) return state.fields.score;
+    if (state.hud && state.hud.score) return state.hud.score;
+    return null;
+  }
+  function setQueueStatus(message, isError) {
+    var node = document.getElementById("northstar-playtest-status");
+    if (!node) return;
+    node.textContent = message || "";
+    node.style.color = isError ? "#fb7185" : "#06d6a0";
+  }
+  function queuePayload(data) {
+    var rewardType = data.reward_event_type || rewardEventType();
+    var payload = {
+      event_type: rewardType,
+      receipt_id: data.receipt_id || receiptId(data),
+      title: data.title,
+      route: data.route,
+      url: data.url,
+      exported_at: data.exported_at,
+      score: stateScore(data.game_state),
+      receipt: data
+    };
+    if (rewardType === "fortune_oracle") {
+      payload.oracle_seed = data.oracle_seed || ("oracle-" + payload.receipt_id);
+      payload.free_or_earned = true;
+    } else {
+      payload.achievement_id = data.achievement_id || ("arcade:" + safeFilename(data.route || data.title) + ":receipt-export");
+    }
+    return payload;
+  }
+  function queueRewardReceipt(data) {
+    data = data || receipt();
+    if (!data.receipt_id) data.receipt_id = receiptId(data);
+    if (!data.reward_event_type) data.reward_event_type = rewardEventType();
+    var payload = queuePayload(data);
+    if (!window.fetch) {
+      setQueueStatus("Reward queue unavailable: fetch missing", true);
+      return Promise.resolve(null);
+    }
+    setQueueStatus("Queueing reward review...", false);
+    return fetch("/api/nsp/rewards/completions/browser-receipts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify(payload)
+    }).then(function(response) {
+      return response.json().then(function(body) {
+        if (!response.ok) throw new Error(body.error || "Reward queue request failed");
+        return body;
+      });
+    }).then(function(body) {
+      var event = body.event || {};
+      setQueueStatus("Queued: " + (event.status || "review") + " " + (event.completion_id || ""), false);
+      try { window.dispatchEvent(new CustomEvent("northstar:reward-receipt-queued", { detail: body })); } catch (err) {}
+      return body;
+    }).catch(function(err) {
+      setQueueStatus(err.message || "Reward queue failed", true);
+      return null;
+    });
+  }
+  function readGameField(name) {
+    try {
+      return Function("return (typeof " + name + " === 'undefined') ? null : " + name)();
+    } catch (err) {
+      return null;
+    }
+  }
+  function simplifyGameValue(value) {
+    if (value === null || value === undefined) return null;
+    var type = typeof value;
+    if (type === "number" || type === "string" || type === "boolean") return value;
+    if (type === "function" || type === "symbol") return null;
+    if (Array.isArray(value)) return { type: "array", length: value.length };
+    if (type === "object") {
+      var summary = { type: "object" };
+      try { summary.keys = Object.keys(value).slice(0, 16); } catch (err) { summary.keys = []; }
+      if (typeof value.length === "number") summary.length = value.length;
+      [
+        "score", "lives", "level", "lines", "wave", "running", "paused",
+        "over", "mode", "state", "trust", "chaos", "budget", "index",
+        "selected", "gameStarted", "vehicleSelectActive", "dreamFlow",
+        "speed", "selectedVehicle", "tokenTotalCount", "hp", "stamina",
+        "rage", "gateOpen"
+      ].forEach(function(key) {
+        try {
+          var item = value[key];
+          var itemType = typeof item;
+          if (item === null || item === undefined) return;
+          if (itemType === "number" || itemType === "string" || itemType === "boolean") summary[key] = item;
+        } catch (err) {}
+      });
+      return summary;
+    }
+    return null;
+  }
+  function readHudText(id) {
+    var node = document.getElementById(id);
+    return node ? node.textContent.trim() : null;
+  }
+  function playtestState() {
+    var fields = {};
+    [
+      "state", "gameState", "score", "lives", "level", "wave", "lines",
+      "portals", "frameCount", "tokens", "shots", "integrity", "lap",
+      "speed", "room", "gameOver", "paused", "launched", "game",
+      "player", "organisms", "tokenTotalCount", "dreamFlow",
+      "gameStarted", "vehicleSelectActive", "selectedVehicle"
+    ].forEach(function(name) {
+      var value = simplifyGameValue(readGameField(name));
+      if (value !== null) fields[name] = value;
+    });
+    var canvas = document.querySelector("canvas");
+    return {
+      fields: fields,
+      hud: {
+        score: readHudText("score"),
+        lives: readHudText("lives"),
+        level: readHudText("level"),
+        wave: readHudText("wave"),
+        lines: readHudText("lines"),
+        portals: readHudText("portals"),
+        p1: readHudText("p1"),
+        p2: readHudText("p2")
+      },
+      vorath: (typeof window.northstarVorathState === "function") ? window.northstarVorathState() : null,
+      canvas: canvas ? {
+        width: canvas.width || canvas.clientWidth || 0,
+        height: canvas.height || canvas.clientHeight || 0
+      } : null
+    };
+  }
+  window.northstarArcadeState = playtestState;
+  function receipt() {
+    var storageKeys = [];
+    var exportedAt = new Date().toISOString();
+    var rewardType = rewardEventType();
+    try { storageKeys = Object.keys(window.localStorage || {}).slice(0, 60); } catch (err) { storageKeys = ["localStorage unavailable"]; }
+    return {
+      exported_at: exportedAt,
+      receipt_id: receiptId({ title: meta.title, exported_at: exportedAt }),
+      reward_event_type: rewardType,
+      achievement_id: rewardType === "game_achievement" ? "arcade:" + safeFilename(location.pathname) + ":receipt-export" : null,
+      oracle_seed: rewardType === "fortune_oracle" ? "oracle-" + safeFilename(location.pathname) + "-" + exportedAt.replace(/[:.]/g, "-") : null,
+      title: meta.title,
+      route: location.pathname,
+      url: location.href,
+      source: meta.source,
+      vorath_directive: meta.vorath || null,
+      viewport: {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        doc_width: document.documentElement.scrollWidth,
+        doc_height: document.documentElement.scrollHeight
+      },
+      game_state: playtestState(),
+      storage_keys: storageKeys,
+      checks: [
+        "route loads",
+        "controls respond",
+        "score or state changes",
+        "Vorath gate charge reacts to input",
+        "red-core/emerald approval state captured",
+        (meta.vorath && meta.vorath.receipt_check) ? meta.vorath.receipt_check : "VORATH directive captured in receipt",
+        "no obvious layout overflow",
+        "notes captured by tester"
+      ]
+    };
+  }
+  function exportReceipt() {
+    var data = receipt();
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    var link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute("data-northstar-receipt-download", "1");
+    link.download = safeFilename(data.title) + "-playtest-" + data.exported_at.replace(/[:.]/g, "-") + ".json";
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(function() { URL.revokeObjectURL(link.href); link.remove(); }, 250);
+    queueRewardReceipt(data);
+  }
+  window.northstarArcadeReceipt = receipt;
+  window.northstarArcadeExportReceipt = exportReceipt;
+  function improveAccessibility() {
+    try {
+      if (!document.documentElement.getAttribute("lang")) document.documentElement.setAttribute("lang", "en");
+      if (!document.querySelector('meta[name="viewport" i]')) {
+        var viewport = document.createElement("meta");
+        viewport.name = "viewport";
+        viewport.content = "width=device-width, initial-scale=1.0";
+        (document.head || document.documentElement).appendChild(viewport);
+      }
+      var pageTitle = meta.title || document.title || "NorthStar arcade game";
+      Array.prototype.forEach.call(document.querySelectorAll("canvas"), function(canvas, index) {
+        if (!canvas.getAttribute("aria-label") && !canvas.getAttribute("aria-labelledby") && !canvas.getAttribute("title")) {
+          canvas.setAttribute("role", canvas.getAttribute("role") || "img");
+          canvas.setAttribute("aria-label", pageTitle + " playfield canvas " + (index + 1));
+        }
+        var rect = canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : { width: 0, height: 0 };
+        var width = Math.max(Number(rect.width) || 0, Number(canvas.clientWidth) || 0, Number(canvas.width) || 0);
+        var height = Math.max(Number(rect.height) || 0, Number(canvas.clientHeight) || 0, Number(canvas.height) || 0);
+        if (width >= 30 && height >= 30) {
+          if (!canvas.hasAttribute("tabindex")) canvas.setAttribute("tabindex", "0");
+          canvas.setAttribute("data-northstar-keyboard-focus", "1");
+        }
+      });
+      Array.prototype.forEach.call(document.querySelectorAll("button,a,input,select,textarea,[role='button']"), function(control, index) {
+        var label = (control.textContent || control.value || control.getAttribute("aria-label") || control.getAttribute("title") || "").trim();
+        if (!label && !control.getAttribute("aria-labelledby")) {
+          control.setAttribute("aria-label", pageTitle + " control " + (index + 1));
+        }
+      });
+    } catch (err) {}
+  }
+  function mount() {
+    improveAccessibility();
+    if (document.getElementById("northstar-playtest-kit")) return;
+    var host = document.createElement("div");
+    host.id = "northstar-playtest-kit";
+    host.setAttribute("data-ns-playtest-kit", "1");
+    host.innerHTML = '<button id="northstar-playtest-toggle" type="button" aria-expanded="false">Playtest</button><div id="northstar-playtest-panel" hidden><strong></strong><span></span><div id="northstar-first-minute" data-northstar-first-minute="1"><b>First minute</b><p data-first-minute-objective></p><p data-first-minute-controls></p><ol data-first-minute-steps></ol><p data-first-minute-success></p></div><div id="northstar-playtest-actions"><a href="/arcade/playtest">Launcher</a><button id="northstar-playtest-export" type="button">Export Receipt</button><button id="northstar-playtest-queue" type="button">Queue Reward</button></div><small id="northstar-playtest-status" aria-live="polite"></small></div>';
+    document.body.appendChild(host);
+    var toggle = document.getElementById("northstar-playtest-toggle");
+    var panel = document.getElementById("northstar-playtest-panel");
+    panel.querySelector("strong").textContent = meta.title || document.title || "Custom Game";
+    var directive = meta.vorath ? " | " + meta.vorath.gate + ": " + meta.vorath.directive : "";
+    panel.querySelector("span").textContent = location.pathname + " | route receipt available" + directive;
+    var firstMinute = meta.first_minute || {};
+    var objective = panel.querySelector("[data-first-minute-objective]");
+    var controls = panel.querySelector("[data-first-minute-controls]");
+    var steps = panel.querySelector("[data-first-minute-steps]");
+    var success = panel.querySelector("[data-first-minute-success]");
+    if (objective) objective.textContent = "Goal: " + (firstMinute.objective || "Start play and make visible progress.");
+    if (controls) controls.textContent = "Controls: " + (firstMinute.controls || meta.controls || "Use the visible start/play controls.");
+    if (steps) {
+      var stepList = Array.isArray(firstMinute.steps) && firstMinute.steps.length ? firstMinute.steps : ["Start the game.", "Make one visible state change.", "Export a receipt."];
+      steps.innerHTML = "";
+      stepList.forEach(function(step) {
+        var item = document.createElement("li");
+        item.textContent = step;
+        steps.appendChild(item);
+      });
+    }
+    if (success) success.textContent = "Success: " + (firstMinute.success || "Visible progress and receipt action are clear.");
+    toggle.addEventListener("click", function() {
+      var next = panel.hasAttribute("hidden");
+      if (next) panel.removeAttribute("hidden"); else panel.setAttribute("hidden", "");
+      toggle.setAttribute("aria-expanded", next ? "true" : "false");
+    });
+    document.getElementById("northstar-playtest-export").addEventListener("click", exportReceipt);
+    document.getElementById("northstar-playtest-queue").addEventListener("click", function() { queueRewardReceipt(receipt()); });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mount);
+  else mount();
+})();
+</script>
+</body>
+</html>

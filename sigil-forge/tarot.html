@@ -116,11 +116,20 @@ function forge(){
 }
 document.getElementById('forge').onclick=()=>{salt='I';forge();};
 document.getElementById('reseed').onclick=()=>{salt=Math.random().toString(36).slice(2,6).toUpperCase();forge();};
+const PRINT_SCALE=3;  // 500x850 -> 1500x2550 (~300 DPI for a 5x8.5 card, trim to taste)
+function renderPrintCard(num,name){
+  const c=document.createElement('canvas');c.width=CW*PRINT_SCALE;c.height=CH*PRINT_SCALE;
+  const x=c.getContext('2d');x.scale(PRINT_SCALE,PRINT_SCALE);
+  drawCard(x,num,name,name+'::'+salt);return c;
+}
 document.getElementById('dl').onclick=()=>{
-  document.querySelectorAll('#deck canvas').forEach((cv,i)=>{
-    const a=document.createElement('a');a.download=`vorath_tarot_${String(i).padStart(2,'0')}_${cv.dataset.name.replace(/\\s+/g,'_')}.png`;
-    a.href=cv.toDataURL('image/png');setTimeout(()=>a.click(),i*120);});
-  document.getElementById('status').textContent='downloading 22 cards…';
+  document.getElementById('status').textContent='rendering 22 print-ready cards…';
+  ARCANA.forEach(([num,name],i)=>setTimeout(()=>{
+    const c=renderPrintCard(num,name);
+    const a=document.createElement('a');a.download=`vorath_tarot_${String(i).padStart(2,'0')}_${name.replace(/\s+/g,'_')}.png`;
+    a.href=c.toDataURL('image/png');a.click();
+    if(i===ARCANA.length-1)document.getElementById('status').textContent='22 print-ready cards downloaded ('+(CW*PRINT_SCALE)+'x'+(CH*PRINT_SCALE)+')';
+  },i*180));
 };
 forge();
 </script>

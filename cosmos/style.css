@@ -1,0 +1,306 @@
+/* CUBIC COSMOS — NorthStar Prime transmission
+   gold #d4af37 accents · deep space blacks · aurora gradients */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: #04030a;
+  font-family: Georgia, "Times New Roman", serif;
+  color: #e8dfc8;
+  user-select: none;
+}
+
+#scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+
+/* ---------- overlays ---------- */
+.overlay {
+  position: fixed; inset: 0; z-index: 20;
+  display: flex; align-items: center; justify-content: center;
+  background:
+    radial-gradient(ellipse at 50% 120%, rgba(64, 20, 90, .35), transparent 60%),
+    radial-gradient(ellipse at 50% -20%, rgba(20, 90, 80, .25), transparent 60%),
+    rgba(4, 3, 10, .82);
+  backdrop-filter: blur(3px);
+}
+.hidden { display: none !important; }
+
+/* gold guilloché-style frame: layered double borders */
+.frame {
+  padding: 6px;
+  border: 1px solid rgba(212, 175, 55, .85);
+  background:
+    linear-gradient(135deg, rgba(212,175,55,.12), rgba(212,175,55,.02) 40%, rgba(212,175,55,.12));
+  box-shadow: 0 0 40px rgba(212, 175, 55, .12), inset 0 0 30px rgba(0,0,0,.6);
+  max-width: 620px; width: calc(100% - 40px);
+}
+.frame-inner {
+  border: 1px solid rgba(212, 175, 55, .45);
+  outline: 1px solid rgba(212, 175, 55, .18);
+  outline-offset: 3px;
+  padding: 38px 34px 30px;
+  text-align: center;
+  background: rgba(6, 4, 14, .75);
+}
+.frame.small .frame-inner { padding: 28px 30px 24px; }
+
+.sigil {
+  color: #d4af37; font-size: 26px; letter-spacing: 8px;
+  text-shadow: 0 0 14px rgba(212,175,55,.7);
+  margin-bottom: 8px;
+}
+
+h1 {
+  font-size: clamp(34px, 6vw, 56px);
+  font-weight: normal;
+  letter-spacing: .28em;
+  color: #f0e2b6;
+  text-shadow: 0 0 22px rgba(212, 175, 55, .45), 0 2px 0 rgba(0,0,0,.8);
+}
+h2 {
+  font-size: 26px; font-weight: normal; letter-spacing: .3em;
+  color: #f0e2b6; margin-bottom: 18px;
+  text-shadow: 0 0 18px rgba(212, 175, 55, .4);
+}
+
+.sub {
+  margin-top: 8px;
+  letter-spacing: .42em;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #d4af37;
+}
+.lore {
+  margin: 22px auto 26px;
+  font-style: italic;
+  line-height: 1.7;
+  font-size: 15px;
+  color: #b9c4d8;
+  max-width: 46ch;
+}
+.hint {
+  margin-top: 20px;
+  font-size: 11.5px;
+  letter-spacing: .08em;
+  color: #8d8468;
+}
+
+.btn-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+
+.gold-btn {
+  font-family: inherit;
+  font-size: 14px;
+  letter-spacing: .24em;
+  padding: 12px 26px;
+  cursor: pointer;
+  color: #14100a;
+  background: linear-gradient(180deg, #f0d888, #d4af37 55%, #a8842a);
+  border: 1px solid #f4e2a0;
+  box-shadow: 0 0 18px rgba(212,175,55,.35), inset 0 1px 0 rgba(255,255,255,.5);
+  transition: filter .15s ease, transform .1s ease;
+}
+.gold-btn:hover { filter: brightness(1.12); transform: translateY(-1px); }
+.gold-btn.ghost {
+  color: #d4af37;
+  background: transparent;
+  border: 1px solid rgba(212,175,55,.6);
+  box-shadow: none;
+}
+.gold-btn.ghost:hover { background: rgba(212,175,55,.1); }
+
+.controls {
+  margin: 0 auto 22px;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+.controls td { padding: 5px 14px; text-align: left; }
+.controls td:first-child {
+  color: #d4af37; letter-spacing: .12em; text-align: right;
+  border-right: 1px solid rgba(212,175,55,.3);
+}
+.controls td:last-child { color: #b9c4d8; font-style: italic; }
+
+/* ---------- HUD ---------- */
+#hud { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
+
+#crosshair {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  color: rgba(212, 175, 55, .85);
+  font-size: 18px;
+  text-shadow: 0 0 6px rgba(0,0,0,.9);
+}
+
+/* thin gold signal meter (top center) */
+#signal-wrap {
+  position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 10px;
+}
+.signal-label {
+  font-size: 10px; letter-spacing: .4em; color: #d4af37;
+  text-shadow: 0 1px 2px rgba(0,0,0,.9);
+}
+#signal-track {
+  width: 220px; height: 4px;
+  background: rgba(212,175,55,.15);
+  border: 1px solid rgba(212,175,55,.45);
+  box-shadow: 0 0 8px rgba(0,0,0,.6);
+}
+#signal-fill {
+  height: 100%; width: 100%;
+  background: linear-gradient(90deg, #d4af37, #f6e6a8);
+  box-shadow: 0 0 10px rgba(212,175,55,.8);
+  transition: width .3s ease;
+}
+
+/* diamond-rotated matter selector (bottom center) */
+#selector {
+  position: absolute; bottom: 34px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; gap: 26px;
+  align-items: center;
+}
+.swatch {
+  width: 30px; height: 30px;
+  transform: rotate(45deg);
+  border: 1px solid rgba(212,175,55,.5);
+  box-shadow: 0 0 8px rgba(0,0,0,.7), inset 0 0 8px rgba(0,0,0,.35);
+  position: relative;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.swatch .num {
+  position: absolute; inset: 0;
+  transform: rotate(-45deg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: rgba(255,255,255,.75);
+  text-shadow: 0 1px 2px rgba(0,0,0,.9);
+}
+.swatch.sel {
+  transform: rotate(45deg) scale(1.35);
+  border-color: #f6e6a8;
+  box-shadow: 0 0 16px rgba(212,175,55,.9), inset 0 0 8px rgba(255,255,255,.25);
+}
+.swatch-name {
+  position: absolute; bottom: -26px; left: 50%;
+  transform: translateX(-50%) rotate(0deg);
+  white-space: nowrap;
+  font-size: 10px; letter-spacing: .25em; color: #d4af37;
+  text-shadow: 0 1px 3px rgba(0,0,0,.95);
+  opacity: 0; transition: opacity .2s;
+}
+.swatch.sel .swatch-name { opacity: 1; }
+
+/* ---------- phase 2: gems / wardens / events ---------- */
+
+/* gem cache counter (top right) */
+#gems-wrap {
+  position: absolute; top: 14px; right: 20px;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 15px; letter-spacing: .18em; color: #f0e2b6;
+  text-shadow: 0 1px 3px rgba(0,0,0,.9);
+}
+#gems-wrap .gem-icon {
+  color: #46e8c0; font-size: 17px;
+  text-shadow: 0 0 10px rgba(70,232,192,.8);
+}
+
+/* [E] commune prompt */
+#npc-prompt {
+  position: absolute; bottom: 150px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 13px; letter-spacing: .2em; color: #d4af37;
+  text-shadow: 0 0 10px rgba(212,175,55,.6), 0 1px 3px rgba(0,0,0,.9);
+  border: 1px solid rgba(212,175,55,.4);
+  background: rgba(6,4,14,.72);
+  padding: 7px 18px;
+}
+#npc-prompt .prompt-name { color: #f0e2b6; }
+
+/* dialogue / trivia transmission panels */
+.comm-panel {
+  position: absolute; bottom: 120px; left: 50%;
+  transform: translateX(-50%);
+  width: min(640px, calc(100% - 48px));
+  border: 1px solid rgba(212,175,55,.85);
+  outline: 1px solid rgba(212,175,55,.25);
+  outline-offset: 3px;
+  background: rgba(6,4,14,.9);
+  box-shadow: 0 0 34px rgba(212,175,55,.16), inset 0 0 26px rgba(0,0,0,.6);
+  padding: 18px 24px 14px;
+  text-align: left;
+}
+.comm-head {
+  display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(212,175,55,.3);
+  padding-bottom: 8px;
+}
+#npc-name, .trivia-title {
+  font-size: 15px; letter-spacing: .3em; color: #d4af37;
+  text-shadow: 0 0 12px rgba(212,175,55,.5);
+}
+#npc-persona {
+  font-size: 11.5px; font-style: italic; color: #8d8468;
+  letter-spacing: .06em;
+}
+#npc-text, #trivia-q {
+  font-size: 14.5px; line-height: 1.65; font-style: italic;
+  color: #e8dfc8; margin-bottom: 10px;
+}
+#npc-choices .npc-choice, #trivia-choices .npc-choice {
+  font-size: 13px; color: #b9c4d8; padding: 4px 0 4px 4px;
+  letter-spacing: .05em;
+}
+.npc-choice .key {
+  display: inline-block; min-width: 18px; margin-right: 10px;
+  color: #d4af37; border: 1px solid rgba(212,175,55,.5);
+  text-align: center; font-size: 11px; padding: 1px 4px;
+}
+.npc-choice.correct { color: #7de0b4; }
+.npc-choice.correct .key { color: #7de0b4; border-color: rgba(125,224,180,.7); }
+.npc-choice.wrong { color: #e07d7d; }
+.npc-choice.wrong .key { color: #e07d7d; border-color: rgba(224,125,125,.7); }
+.comm-hint {
+  margin-top: 10px; font-size: 10.5px; letter-spacing: .22em;
+  color: #8d8468; text-transform: uppercase;
+}
+
+/* pantheon whisper banner (screen-bottom transmission) */
+#banner {
+  position: absolute; bottom: 8px; left: 50%;
+  transform: translate(-50%, 120%);
+  max-width: min(860px, calc(100% - 40px));
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-size: 12.5px; font-style: italic; letter-spacing: .1em;
+  color: #b9c4d8;
+  border-top: 1px solid rgba(212,175,55,.4);
+  background: linear-gradient(180deg, rgba(6,4,14,.85), rgba(6,4,14,.6));
+  padding: 8px 26px 10px;
+  opacity: 0;
+  transition: transform .6s ease, opacity .6s ease;
+}
+#banner.show { transform: translate(-50%, 0); opacity: 1; }
+#banner .banner-sigil { color: #d4af37; }
+#banner .banner-name { color: #d4af37; letter-spacing: .24em; font-style: normal; font-size: 11px; }
+
+/* signal surge gold flash */
+#flash {
+  position: fixed; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 45%, rgba(212,175,55,.4), rgba(212,175,55,.08) 60%, transparent 80%);
+  opacity: 0;
+  transition: opacity .55s ease;
+}
+#flash.on { opacity: 1; transition: opacity .12s ease; }
+
+/* toast messages */
+#toast {
+  position: absolute; bottom: 110px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 13px; font-style: italic; letter-spacing: .12em;
+  color: #f0e2b6;
+  text-shadow: 0 0 10px rgba(212,175,55,.5), 0 1px 3px rgba(0,0,0,.9);
+  opacity: 0; transition: opacity .5s ease;
+  text-align: center;
+}
+#toast.show { opacity: 1; }

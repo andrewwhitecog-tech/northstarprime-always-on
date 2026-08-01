@@ -43,6 +43,7 @@ Run the zero-dependency release check before publishing:
     python tools/verify_idc_static.py
     python tools/verify_continuity_atlas_static.py
     python tools/verify_contact_security_static.py
+    python tools/verify_meet_creator_redirect.py --network
     python tools/verify_arcade_static.py
     python tools/verify_idr_static.py --network
     python tools/verify_services_static.py --network

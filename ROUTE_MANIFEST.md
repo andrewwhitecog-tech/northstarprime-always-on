@@ -55,6 +55,20 @@ destination, and the security policy canonically identifies its always-on URL.
   verified TikTok, YouTube, Instagram, Reddit, and Moltbook profiles.
 - The homepage navigation and social footer both expose this route.
 
+## Creator route
+
+- Source: meet-the-creator/index.html
+- Canonical apex path: /meet-the-creator/
+- Delegated application path: https://app.northstarprime.net/meet-the-creator
+- Social preview asset: static/creator/meet-the-creator-og.jpg
+- The preview is the exact 1200x630 JPEG served by the live application at
+  https://app.northstarprime.net/static/creator/meet-the-creator-og.jpg
+  (157,127 bytes; SHA-256
+  359d633d503b83d4c98a2e3c1d29c5c266668d026308bd7221c3c75b06418d67).
+- The lightweight GitHub Pages shim preserves query strings and fragments while
+  routing the creator link to the live application. The route was locally
+  verified on 2026-08-01; deployment remains a separate release action.
+
 ## Arcade route
 
 - Source: arcade/index.html
@@ -125,6 +139,7 @@ published-size calculation.
     python tools/verify_idc_static.py
     python tools/verify_continuity_atlas_static.py
     python tools/verify_contact_security_static.py
+    python tools/verify_meet_creator_redirect.py --network
     python tools/verify_links_static.py --network
     python tools/smoke_links_browser.py
     python tools/verify_arcade_static.py
@@ -138,7 +153,9 @@ The home verifier checks the full-page guard, manifest hashes, all 22 media
 assets, local filesystem leakage, and dangling local routes. The IDC verifier
 checks the HTML/manifest mapping, tracked MP4 inventory and sizes, broken local
 Windows paths, embed code, and optionally all nine YouTube oEmbed endpoints.
-The atlas verifier checks the complete self-contained bundle, local references,
+The creator-route verifier checks the app target, canonical/refresh/fallback
+contract, query-and-fragment preservation, sitemap entry, and existing creator
+navigation. The atlas verifier checks the complete self-contained bundle, local references,
 home discoverability, source-linked data marker, and rights-safe Jeopardy gate.
 The arcade, IDR, and services verifiers enforce their route dispositions,
 hashes, local-runtime dependencies, cloud boundaries, and representative

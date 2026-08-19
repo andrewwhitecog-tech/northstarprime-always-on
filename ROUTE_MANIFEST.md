@@ -111,6 +111,15 @@ destination, and the security policy canonically identifies its always-on URL.
 - SERVICES_FREEZE_MANIFEST.json and SERVICES_ROUTE_PROVENANCE.md record the
   transformation and routing contract.
 
+## XMR and Warband capture routes
+
+- /xmr/ is a static, outage-resistant receiving page with separate donation
+  and payment addresses, local QR assets, and no exchange or redemption claim.
+- /warband/ remains static, but its launch-list form waits for the durable
+  allowlisted API at app.northstarprime.net before showing success.
+- The capture API owns duplicate handling, validation, and persistent storage;
+  the apex page does not keep a misleading browser-only fallback.
+
 ## Failover boundary
 
 The homepage, founders surface, mystery-school route, health marker, Season One

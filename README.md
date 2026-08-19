@@ -37,6 +37,11 @@ now-playing snapshot. Links that need server state, checkout, member state, or
 API behavior are explicitly sent to app.northstarprime.net. Two references to
 the owner-review IDC packet are visibly disabled rather than published.
 
+The /xmr/ route publishes separate self-custody Monero addresses for donations
+and payments, including locally hosted QR codes and explicit SpaceCash
+boundaries. The /warband/ form posts to the durable allowlisted capture API at
+app.northstarprime.net and reports success only after the server confirms it.
+
 Run the zero-dependency release check before publishing:
 
     python tools/verify_home_static.py
@@ -47,6 +52,7 @@ Run the zero-dependency release check before publishing:
     python tools/verify_arcade_static.py
     python tools/verify_idr_static.py --network
     python tools/verify_services_static.py --network
+    python tools/verify_xmr_warband_static.py --network
     python tools/check_pages_budget.py
     python tools/verify_http_mirror.py
 

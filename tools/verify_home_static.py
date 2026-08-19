@@ -23,7 +23,11 @@ ALLOWED_LOCAL = (
     "/founders",
     "/mystery-school",
     "/services",
+    "/xmr/",
     "/links/",
+    "/lost/",
+    "/realm/",
+    "/sigil-forge/",
     "/site.webmanifest",
     "/health",
 )

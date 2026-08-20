@@ -47,6 +47,17 @@ The `/contact/` route and `/.well-known/security.txt` remain available on the
 apex. They expose only branded contact aliases, not the private forwarding
 destination, and the security policy canonically identifies its always-on URL.
 
+## Harm-reduction card route
+
+- Source: `harm-reduction/index.html`
+- Canonical public path: `/harm-reduction/`
+- Publishes 22 owner-authorized V08 cards as 44 full-dimension WebP previews.
+- `HARM_REDUCTION_FREEZE_MANIFEST.json` records every published file and hash.
+- The public receipt preserves the owner authorization and explicitly excludes
+  stickers, new medical claims, credential activation, and unrelated work.
+- The page links current CDC, FDA, and Poison Help sources and keeps emergency
+  language educational rather than diagnostic or treatment-oriented.
+
 ## Verified links directory
 
 - Source: links/index.html
@@ -148,6 +159,7 @@ published-size calculation.
     python tools/verify_idc_static.py
     python tools/verify_continuity_atlas_static.py
     python tools/verify_contact_security_static.py
+    python tools/verify_harm_reduction_static.py
     python tools/verify_meet_creator_redirect.py --network
     python tools/verify_links_static.py --network
     python tools/smoke_links_browser.py

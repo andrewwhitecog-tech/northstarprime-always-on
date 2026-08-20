@@ -21,6 +21,11 @@ branded mail fallback and security contact policy without exposing the private
 forwarding destination. The root `.nojekyll` marker ensures GitHub Pages
 publishes the `.well-known` directory verbatim.
 
+The `/harm-reduction/` route publishes the owner-authorized V08 two-sided art
+deck as 44 web-optimized previews derived from hash-verified masters. Its
+freeze manifest, public-release receipt, official-source links, and emergency
+boundary remain available even when the dynamic application is offline.
+
 The /arcade/ route contains the full public catalog and 47 locally mirrored
 games. One private-inventory surface is explicitly delegated to the cloud app.
 Every mirrored runtime dependency is local; eight decorative motion plates are
@@ -48,6 +53,7 @@ Run the zero-dependency release check before publishing:
     python tools/verify_idc_static.py
     python tools/verify_continuity_atlas_static.py
     python tools/verify_contact_security_static.py
+    python tools/verify_harm_reduction_static.py
     python tools/verify_meet_creator_redirect.py --network
     python tools/verify_arcade_static.py
     python tools/verify_idr_static.py --network

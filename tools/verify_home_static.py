@@ -20,6 +20,7 @@ ALLOWED_LOCAL = (
     "/idr",
     "/continuity-atlas/",
     "/contact/",
+    "/harm-reduction/",
     "/founders",
     "/mystery-school",
     "/services",
@@ -69,6 +70,8 @@ def main() -> None:
         raise SystemExit("Homepage does not expose the always-on Continuity Atlas")
     if 'href="/contact/"' not in html:
         raise SystemExit("Homepage does not expose the always-on contact desk")
+    if 'href="/harm-reduction/"' not in html:
+        raise SystemExit("Homepage does not expose the harm-reduction card deck")
     for route in ('href="/arcade/"', 'href="/idr/"', 'href="/services/"'):
         if route not in html:
             raise SystemExit(f"Homepage does not expose the always-on route: {route}")

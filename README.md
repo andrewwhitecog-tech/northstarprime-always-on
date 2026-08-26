@@ -47,6 +47,11 @@ Its first complete public novel is *The Obituary Engine*, available as a
 full browser reader and a downloadable 6x9 PDF alongside eight clearly labeled
 concept-collection mockups. No store listing, pricing, or ISBN claim is implied.
 
+The `/ckd-kitchen/` route is the single always-on home for the free Digital
+MasterCook Book. It supports in-browser search and a printable PDF; the older
+`/cookbook/` path is retained only as a continuity redirect. Nutrition figures
+are clearly described as estimates rather than personal renal targets.
+
 The /xmr/ route publishes separate self-custody Monero addresses for donations
 and payments, including locally hosted QR codes and explicit SpaceCash
 boundaries. The /warband/ form posts to the durable allowlisted capture API at
@@ -59,6 +64,7 @@ Run the zero-dependency release check before publishing:
     python tools/verify_continuity_atlas_static.py
     python tools/verify_contact_security_static.py
     python tools/verify_harm_reduction_static.py
+    python tools/verify_mastercook_static.py
     python tools/verify_meet_creator_redirect.py --network
     python tools/verify_arcade_static.py
     python tools/verify_idr_static.py --network

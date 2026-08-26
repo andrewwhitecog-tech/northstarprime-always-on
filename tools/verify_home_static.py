@@ -16,6 +16,8 @@ HREF_RE = re.compile(r"href=['\"](?P<path>/[^'\"]*)['\"]", re.IGNORECASE)
 ALLOWED_LOCAL = (
     "/static/",
     "/arcade",
+    "/ckd-kitchen",
+    "/cookbook",
     "/idc-programming",
     "/idr",
     "/literature/",

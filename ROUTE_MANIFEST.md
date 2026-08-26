@@ -58,6 +58,16 @@ destination, and the security policy canonically identifies its always-on URL.
 - The page links current CDC, FDA, and Poison Help sources and keeps emergency
   language educational rather than diagnostic or treatment-oriented.
 
+## CKD Kitchen and Digital MasterCook routes
+
+- Source: `ckd-kitchen/index.html`
+- Canonical public path: `/ckd-kitchen/`
+- Continuity alias: `/cookbook/`
+- The full freeware edition remains searchable without a download and is also
+  available as a printable PDF.
+- Recipe nutrition figures are labeled as estimates, not personal targets;
+  the route does not claim clinician endorsement or medical certification.
+
 ## Verified links directory
 
 - Source: links/index.html
@@ -160,6 +170,7 @@ published-size calculation.
     python tools/verify_continuity_atlas_static.py
     python tools/verify_contact_security_static.py
     python tools/verify_harm_reduction_static.py
+    python tools/verify_mastercook_static.py
     python tools/verify_meet_creator_redirect.py --network
     python tools/verify_links_static.py --network
     python tools/smoke_links_browser.py

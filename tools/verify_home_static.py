@@ -18,6 +18,7 @@ ALLOWED_LOCAL = (
     "/arcade",
     "/idc-programming",
     "/idr",
+    "/literature/",
     "/continuity-atlas/",
     "/contact/",
     "/harm-reduction/",
@@ -72,7 +73,7 @@ def main() -> None:
         raise SystemExit("Homepage does not expose the always-on contact desk")
     if 'href="/harm-reduction/"' not in html:
         raise SystemExit("Homepage does not expose the harm-reduction card deck")
-    for route in ('href="/arcade/"', 'href="/idr/"', 'href="/services/"'):
+    for route in ('href="/arcade/"', 'href="/idr/"', 'href="/literature/"', 'href="/services/"'):
         if route not in html:
             raise SystemExit(f"Homepage does not expose the always-on route: {route}")
     if 'href="/links/"' not in html:

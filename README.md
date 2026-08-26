@@ -42,6 +42,11 @@ now-playing snapshot. Links that need server state, checkout, member state, or
 API behavior are explicitly sent to app.northstarprime.net. Two references to
 the owner-review IDC packet are visibly disabled rather than published.
 
+The `/literature/` route is the always-on Interdimensional Literature shelf.
+Its first complete public novel is *The Obituary Engine*, available as a
+full browser reader and a downloadable 6x9 PDF alongside eight clearly labeled
+concept-collection mockups. No store listing, pricing, or ISBN claim is implied.
+
 The /xmr/ route publishes separate self-custody Monero addresses for donations
 and payments, including locally hosted QR codes and explicit SpaceCash
 boundaries. The /warband/ form posts to the durable allowlisted capture API at
@@ -59,6 +64,7 @@ Run the zero-dependency release check before publishing:
     python tools/verify_idr_static.py --network
     python tools/verify_services_static.py --network
     python tools/verify_xmr_warband_static.py --network
+    python tools/verify_idl_static.py
     python tools/check_pages_budget.py
     python tools/verify_http_mirror.py
 

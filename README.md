@@ -21,10 +21,13 @@ branded mail fallback and security contact policy without exposing the private
 forwarding destination. The root `.nojekyll` marker ensures GitHub Pages
 publishes the `.well-known` directory verbatim.
 
-The `/harm-reduction/` route publishes the owner-authorized V08 two-sided art
-deck as 44 web-optimized previews derived from hash-verified masters. Its
-freeze manifest, public-release receipt, official-source links, and emergency
-boundary remain available even when the dynamic application is offline.
+The `/harm-reduction/` route delegates to the current reviewed application
+safety guide. The illustrated V08 draft and its stale authorization artifacts
+are absent from this public mirror while clinical review is unresolved; the
+freeze manifest is an explicit inactive tombstone.
+
+The `/coloring-studio/` and `/payments/` continuity routes delegate to their
+canonical application surfaces while preserving query strings and fragments.
 
 The /arcade/ route contains the full public catalog and 47 locally mirrored
 games. One private-inventory surface is explicitly delegated to the cloud app.

@@ -1,6 +1,6 @@
 # NorthStar Prime static recovery manifest
 
-Verified 2026-07-15.
+Verified 2026-08-27.
 
 ## Canonical service
 
@@ -47,16 +47,23 @@ The `/contact/` route and `/.well-known/security.txt` remain available on the
 apex. They expose only branded contact aliases, not the private forwarding
 destination, and the security policy canonically identifies its always-on URL.
 
-## Harm-reduction card route
+## Harm-reduction safety route
 
 - Source: `harm-reduction/index.html`
-- Canonical public path: `/harm-reduction/`
-- Publishes 22 owner-authorized V08 cards as 44 full-dimension WebP previews.
-- `HARM_REDUCTION_FREEZE_MANIFEST.json` records every published file and hash.
-- The public receipt preserves the owner authorization and explicitly excludes
-  stickers, new medical claims, credential activation, and unrelated work.
-- The page links current CDC, FDA, and Poison Help sources and keeps emergency
-  language educational rather than diagnostic or treatment-oriented.
+- Apex continuity path: `/harm-reduction/`
+- Canonical reviewed guide: `https://app.northstarprime.net/harm-reduction`.
+- The illustrated V08 draft and its authorization artifacts are absent from the
+  public mirror because the application release gate marks that deck unapproved.
+- `HARM_REDUCTION_FREEZE_MANIFEST.json` is an explicit inactive tombstone.
+- Prior files remain recoverable from hash-preserved private review evidence and
+  repository history; no clinical wording was silently altered.
+
+## Coloring Studio and payment bridges
+
+- `/coloring-studio/` delegates to the reviewed application Coloring Studio.
+- `/payments/` delegates to the canonical application Payment Desk.
+- Both bridges preserve query strings and fragments and keep dynamic state on
+  the Render-backed application rather than fabricating static functionality.
 
 ## CKD Kitchen and Digital MasterCook routes
 

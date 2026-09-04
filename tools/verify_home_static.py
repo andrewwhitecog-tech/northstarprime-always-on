@@ -77,8 +77,11 @@ def main() -> None:
     revenue_checks = {
         'id="hire-northstar"': "Homepage revenue bridge is missing",
         'id="hire-northstar-title"': "Homepage revenue bridge heading is missing",
-        "Map the failure in three business days.": "Homepage revenue promise is missing",
-        "$2,500 Failure Map": "Homepage entry offer is missing",
+        "Bring us the system that refuses to work.": "Homepage revenue hook is missing",
+        "One fixed scope:": "Homepage entry offer is missing",
+        "Send the problem": "Homepage direct inquiry CTA is missing",
+        "NorthStar%20Failure%20Map%20inquiry": "Homepage inquiry is not pre-addressed",
+        "Business%20impact%3A": "Homepage inquiry lacks qualification prompts",
         "utm_campaign=revenue_sprint": "Homepage revenue links are not campaign-tagged",
         "https://app.northstarprime.net/hire/failure-map?": "Homepage does not link to the exact Failure Map scope",
     }

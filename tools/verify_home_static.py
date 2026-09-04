@@ -67,9 +67,11 @@ def main() -> None:
         raise SystemExit("Homepage does not expose the always-on contact desk")
     if 'href="/harm-reduction/"' not in html:
         raise SystemExit("Homepage does not expose the harm-reduction card deck")
-    for route in ('href="/arcade/"', 'href="/idr/"', 'href="/literature/"', 'href="/services/"'):
+    for route in ('href="/arcade/"', 'href="/idr/"', 'href="/literature/"'):
         if route not in html:
             raise SystemExit(f"Homepage does not expose the always-on route: {route}")
+    if "https://app.northstarprime.net/services?utm_source=northstarprime.net" not in html:
+        raise SystemExit("Homepage does not expose the canonical customer service studio")
     if 'href="/links/"' not in html:
         raise SystemExit("Homepage does not expose the verified links directory")
     revenue_checks = {

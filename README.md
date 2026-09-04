@@ -7,9 +7,11 @@ all 22 referenced media assets stored here. Links that still need server-side
 behavior go to app.northstarprime.net, the verified Render service.
 
 The /idc-programming/ route contains the complete Season One catalogue, nine
-verified YouTube players, direct MP4 backups, and sixteen direct-hosted channel
-bumpers. The owner-review anthology packet is deliberately withheld from the
-public tree until it receives a separate release decision.
+verified YouTube players, direct MP4 backups, and sixteen channel bumpers. The
+repository preserves the video source copies; the curated Pages artifact omits
+those duplicate 384 MB and routes playback to the identical files on
+app.northstarprime.net. The owner-review anthology packet is deliberately
+withheld from the public tree until it receives a separate release decision.
 
 The `/continuity-atlas/` route is a self-contained, source-linked film,
 television, and Jeopardy evidence graph. Its HTML, CSS, graph snapshot, and
@@ -40,10 +42,11 @@ covers, navigation, PWA metadata, and deterministic time-seeded dock stay on
 the apex. Audio streams from the independent NSP asset host, so the catalog
 does not inflate this Pages repository by another half-gigabyte.
 
-The /services/ route is a frozen public service catalog with a local
-now-playing snapshot. Links that need server state, checkout, member state, or
-API behavior are explicitly sent to app.northstarprime.net. Two references to
-the owner-review IDC packet are visibly disabled rather than published.
+The `/services/` route is a search-safe continuity bridge to the canonical
+customer service studio at `app.northstarprime.net/services`. It replaces the
+retired internal operations freeze, preserves incoming campaign parameters,
+and exposes direct fallbacks for creative services, fixed-scope AI offers, the
+Failure Map, and the free readiness scorecard.
 
 The `/literature/` route is the always-on Interdimensional Literature shelf.
 Its first complete public novel is *The Obituary Engine*, available as a
@@ -74,8 +77,17 @@ Run the zero-dependency release check before publishing:
     python tools/verify_services_static.py --network
     python tools/verify_xmr_warband_static.py --network
     python tools/verify_idl_static.py
-    python tools/check_pages_budget.py
     python tools/verify_http_mirror.py
+
+GitHub Pages publishes a curated Actions artifact rather than the entire source
+branch. Build and verify the exact artifact locally with:
+
+    python tools/build_pages_artifact.py --output output/pages-artifact
+    python tools/verify_pages_artifact.py --artifact output/pages-artifact --network
+
+`python tools/check_pages_budget.py` audits the complete archival source tree;
+it is expected to reject legacy whole-branch publishing. The curated artifact
+verifier is the release capacity gate.
 
 Add --network to the IDC verifier to test every YouTube oEmbed endpoint as
 well. See ROUTE_MANIFEST.md, the route-specific freeze manifests, and

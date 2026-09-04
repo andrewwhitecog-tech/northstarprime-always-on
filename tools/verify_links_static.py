@@ -26,9 +26,9 @@ LOCAL_ROUTES = (
     "/idc-programming/",
     "/arcade/",
     "/idr/",
-    "/services/",
     "/contact/",
 )
+CANONICAL_SERVICE_LINK = "https://app.northstarprime.net/services?utm_source=northstarprime.net&amp;utm_medium=owned_directory&amp;utm_campaign=services_visibility"
 
 
 def main() -> None:
@@ -60,6 +60,8 @@ def main() -> None:
     missing = [value for value in (*EXPECTED, *LOCAL_ROUTES) if f'href="{value}"' not in html]
     if missing:
         raise SystemExit(f"Missing expected link targets: {missing}")
+    if f'href="{CANONICAL_SERVICE_LINK}"' not in html:
+        raise SystemExit("Links page does not expose the campaign-tagged canonical service studio")
 
     match = re.search(
         r'<script type="application/ld\+json">\s*(.*?)\s*</script>',
@@ -85,7 +87,7 @@ def main() -> None:
                 raise SystemExit(f"Profile returned HTTP {exc.code}: {url}") from exc
 
     print("OK: links directory is self-contained and tracker-free")
-    print(f"OK: {len(EXPECTED)} verified profile targets and {len(LOCAL_ROUTES)} local routes")
+    print(f"OK: {len(EXPECTED)} verified profile targets, {len(LOCAL_ROUTES)} local routes, and canonical services")
     print("OK: homepage discoverability and Organization JSON-LD")
 
 

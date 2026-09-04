@@ -29,24 +29,25 @@
 1. If using bamboo skewers, soak in water 20 minutes.  
 2. Whisk honey, oil, lime juice, zest, chili-garlic sauce, garlic, paprika, and salt. Toss shrimp in half the marinade; reserve the rest for brushing. Marinate refrigerated 15–20 minutes (not hours—acid firms shrimp).  
 3. Thread shrimp onto skewers. Discard used marinade that touched raw shrimp.  
-4. Heat a grill pan or broiler to high. Cook skewers 2–3 minutes per side, brushing with reserved clean marinade, until shrimp are **opaque and pink** throughout and firm.  
+4. Heat a grill pan or broiler to high. Cook skewers 2–3 minutes per side, brushing with reserved clean marinade, until a **food thermometer** in the thickest shrimp reads **145°F (62.8°C)**. The shrimp should also be opaque and pink; do not rely on color alone.  
 5. Rest 1 minute. Scatter green onions; serve with lime wedges. Eat while the glaze still shines.
 
 ## Allergen notes
 
-Contains **shellfish** (shrimp). Chili-garlic sauces may contain **soy**, **wheat**, or **sesame**—read labels. Honey is not recommended for infants; this is an 18+ section anyway.
+Contains **shellfish** (shrimp). Chili-garlic sauces may contain **soy**, **wheat**, or **sesame**—read labels.
 
 ## Safe storage / reheat
 
 - Refrigerate leftovers within 2 hours; use within 1–2 days.  
-- Reheat leftovers to **165°F (74°C)**.  
+- Reheat leftovers to **165°F (73.9°C)**.  
 - USDA FSIS leftovers: https://www.fsis.usda.gov/food-safety/safe-food-handling-and-preparation/food-safety-basics/leftovers-and-food-safety  
 - Safe temperature chart: https://www.fsis.usda.gov/food-safety/safe-food-handling-and-preparation/food-safety-basics/safe-temperature-chart
 
 ## Temperature citations
 
-- Cook shrimp until opaque/pink and firm; leftover reheat **165°F (74°C)** — USDA FSIS: https://www.fsis.usda.gov/food-safety/safe-food-handling-and-preparation/food-safety-basics/safe-temperature-chart  
-- Leftovers guidance: https://www.fsis.usda.gov/food-safety/safe-food-handling-and-preparation/food-safety-basics/leftovers-and-food-safety
+- Fish and shellfish: **145°F (62.8°C)** measured with a food thermometer — USDA FSIS Safe Temperature Chart: https://www.fsis.usda.gov/food-safety/safe-food-handling-and-preparation/food-safety-basics/safe-temperature-chart  
+- Leftovers: **165°F (73.9°C)** — same chart.  
+- General leftovers guidance: https://www.fsis.usda.gov/food-safety/safe-food-handling-and-preparation/food-safety-basics/leftovers-and-food-safety
 
 ## Editorial / renal note
 

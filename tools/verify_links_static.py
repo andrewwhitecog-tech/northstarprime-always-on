@@ -26,6 +26,8 @@ LOCAL_ROUTES = (
     "/idc-programming/",
     "/arcade/",
     "/idr/",
+    "/portfolio/",
+    "/hire/",
     "/contact/",
 )
 CANONICAL_SERVICE_LINK = "https://app.northstarprime.net/services?utm_source=northstarprime.net&amp;utm_medium=owned_directory&amp;utm_campaign=services_visibility"

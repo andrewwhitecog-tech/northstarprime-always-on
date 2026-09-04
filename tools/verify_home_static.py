@@ -25,6 +25,7 @@ ALLOWED_LOCAL = (
     "/contact/",
     "/harm-reduction/",
     "/hire/",
+    "/portfolio/",
     "/founders",
     "/mystery-school",
     "/services",
@@ -88,6 +89,8 @@ def main() -> None:
         "https://app.northstarprime.net/hire/ai-incident-readiness?": "Homepage does not expose the free readiness scorecard",
         "utm_content=free_scorecard": "Homepage scorecard link lacks distinct attribution",
         'href="/hire/?utm_source=northstarprime.net': "Homepage does not expose the indexable Hire doorway",
+        'href="/portfolio/?utm_source=northstarprime.net': "Homepage does not expose the selected-work portfolio",
+        "utm_content=portfolio_previews": "Homepage portfolio link lacks distinct attribution",
     }
     for needle, message in revenue_checks.items():
         if needle not in html:

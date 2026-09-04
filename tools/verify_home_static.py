@@ -87,6 +87,16 @@ def main() -> None:
             raise SystemExit(message)
     if html.count("utm_campaign=revenue_sprint") < 5:
         raise SystemExit("Homepage does not route every primary Hire entry through the revenue campaign")
+    product_checks = {
+        "Explore 23 audited product archives": "Homepage does not explain the public product archive",
+        "utm_campaign=product_discovery": "Homepage product links are not campaign-tagged",
+        "utm_content=gift_shop": "Homepage gift-shop card lacks distinct attribution",
+    }
+    for needle, message in product_checks.items():
+        if needle not in html:
+            raise SystemExit(message)
+    if html.count("utm_campaign=product_discovery") < 3:
+        raise SystemExit("Homepage does not attribute every primary product entry")
 
     bad_routes = []
     for match in HREF_RE.finditer(html):

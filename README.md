@@ -48,6 +48,11 @@ retired internal operations freeze, preserves incoming campaign parameters,
 and exposes direct fallbacks for creative services, fixed-scope AI offers, the
 Failure Map, and the free readiness scorecard.
 
+The `/hire/` route is the indexable, always-on NorthStar Digital doorway. It
+keeps the paid service ladder, direct inquiry path, commercial boundaries, and
+structured offer data on the apex while exact scopes and interactive readiness
+tools remain on the verified application host.
+
 The `/literature/` route is the always-on Interdimensional Literature shelf.
 Its first complete public novel is *The Obituary Engine*, available as a
 full browser reader and a downloadable 6x9 PDF alongside eight clearly labeled
@@ -75,6 +80,7 @@ Run the zero-dependency release check before publishing:
     python tools/verify_arcade_static.py
     python tools/verify_idr_static.py --network
     python tools/verify_services_static.py --network
+    python tools/verify_hire_static.py
     python tools/verify_xmr_warband_static.py --network
     python tools/verify_idl_static.py
     python tools/verify_http_mirror.py

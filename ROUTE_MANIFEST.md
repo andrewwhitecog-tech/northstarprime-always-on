@@ -139,6 +139,15 @@ destination, and the security policy canonically identifies its always-on URL.
 - SERVICES_FREEZE_MANIFEST.json and SERVICES_ROUTE_PROVENANCE.md record the
   transformation and routing contract.
 
+## Hire route
+
+- Source: hire/index.html
+- Canonical public path: /hire/
+- This indexable apex doorway presents the verified fixed-scope service ladder,
+  direct branded inquiry, free readiness entry, and explicit commercial limits.
+- Exact offer detail and interactive scorecard routes remain on
+  app.northstarprime.net with owned-campaign attribution.
+
 ## XMR and Warband capture routes
 
 - /xmr/ is a static, outage-resistant receiving page with separate donation
@@ -184,6 +193,7 @@ published-size calculation.
     python tools/verify_arcade_static.py
     python tools/verify_idr_static.py --network
     python tools/verify_services_static.py --network
+    python tools/verify_hire_static.py
     python tools/check_pages_budget.py
     python tools/verify_http_mirror.py
     python tools/verify_idc_static.py --network

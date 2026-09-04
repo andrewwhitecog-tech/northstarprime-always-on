@@ -84,6 +84,8 @@ def main() -> None:
         "Business%20impact%3A": "Homepage inquiry lacks qualification prompts",
         "utm_campaign=revenue_sprint": "Homepage revenue links are not campaign-tagged",
         "https://app.northstarprime.net/hire/failure-map?": "Homepage does not link to the exact Failure Map scope",
+        "https://app.northstarprime.net/hire/ai-incident-readiness?": "Homepage does not expose the free readiness scorecard",
+        "utm_content=free_scorecard": "Homepage scorecard link lacks distinct attribution",
     }
     for needle, message in revenue_checks.items():
         if needle not in html:

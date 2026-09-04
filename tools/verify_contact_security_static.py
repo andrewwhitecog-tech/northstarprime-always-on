@@ -25,6 +25,10 @@ def main() -> None:
         raise SystemExit("Contact page is missing its mailto fallback")
     if "private forwarding destination is never exposed" not in html:
         raise SystemExit("Contact privacy boundary is not disclosed")
+    if "https://app.northstarprime.net/hire/ai-incident-readiness?" not in html:
+        raise SystemExit("Contact page does not expose the free readiness scorecard")
+    if "utm_medium=owned_contact" not in html or "utm_content=free_scorecard" not in html:
+        raise SystemExit("Contact scorecard link lacks distinct owned attribution")
     if re.search(r"file://|[A-Z]:\\", html, re.IGNORECASE):
         raise SystemExit("Contact page contains a local filesystem reference")
     required = {

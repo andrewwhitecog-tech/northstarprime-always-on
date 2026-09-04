@@ -24,6 +24,7 @@ def main() -> None:
         "Continuity Atlas",
         "NorthStar Digital",
         "The Obituary Engine",
+        "VORATH Dreams",
         "9 episodes",
         "47 mirrored games",
         "96,036 words",
@@ -43,12 +44,12 @@ def main() -> None:
     if payload.get("@type") != "CollectionPage":
         raise SystemExit("Portfolio structured data is not CollectionPage")
     items = payload.get("mainEntity", {}).get("itemListElement", [])
-    if len(items) != 6 or [row.get("position") for row in items] != list(range(1, 7)):
+    if len(items) != 7 or [row.get("position") for row in items] != list(range(1, 8)):
         raise SystemExit("Portfolio structured item list is incomplete")
     for source in re.findall(r'<img[^>]+src="([^"]+)"', html):
         if source.startswith("/") and not (ROOT / source.lstrip("/")).is_file():
             raise SystemExit(f"Portfolio image is missing: {source}")
-    print("OK: six-project image-led portfolio, local assets, and structured work list")
+    print("OK: seven-project image-led portfolio, local assets, and structured work list")
 
 
 if __name__ == "__main__":

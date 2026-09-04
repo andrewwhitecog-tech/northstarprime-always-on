@@ -24,6 +24,7 @@ ALLOWED_LOCAL = (
     "/continuity-atlas/",
     "/contact/",
     "/harm-reduction/",
+    "/hire/",
     "/founders",
     "/mystery-school",
     "/services",
@@ -86,12 +87,15 @@ def main() -> None:
         "https://app.northstarprime.net/hire/failure-map?": "Homepage does not link to the exact Failure Map scope",
         "https://app.northstarprime.net/hire/ai-incident-readiness?": "Homepage does not expose the free readiness scorecard",
         "utm_content=free_scorecard": "Homepage scorecard link lacks distinct attribution",
+        'href="/hire/?utm_source=northstarprime.net': "Homepage does not expose the indexable Hire doorway",
     }
     for needle, message in revenue_checks.items():
         if needle not in html:
             raise SystemExit(message)
     if html.count("utm_campaign=revenue_sprint") < 5:
         raise SystemExit("Homepage does not route every primary Hire entry through the revenue campaign")
+    if html.count('href="/hire/?') < 3:
+        raise SystemExit("Homepage general Hire entries do not use the apex Hire doorway")
     product_checks = {
         "Explore 23 audited product archives": "Homepage does not explain the public product archive",
         "utm_campaign=product_discovery": "Homepage product links are not campaign-tagged",

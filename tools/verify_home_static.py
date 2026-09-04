@@ -37,14 +37,6 @@ ALLOWED_LOCAL = (
 )
 
 
-def digest(path: Path) -> str:
-    value = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            value.update(chunk)
-    return value.hexdigest()
-
-
 def main() -> None:
     payload = json.loads(MANIFEST.read_text(encoding="utf-8"))
     if payload.get("schema") != "nsp.always-on-home-freeze.v1":
@@ -80,6 +72,19 @@ def main() -> None:
             raise SystemExit(f"Homepage does not expose the always-on route: {route}")
     if 'href="/links/"' not in html:
         raise SystemExit("Homepage does not expose the verified links directory")
+    revenue_checks = {
+        'id="hire-northstar"': "Homepage revenue bridge is missing",
+        'id="hire-northstar-title"': "Homepage revenue bridge heading is missing",
+        "Map the failure in three business days.": "Homepage revenue promise is missing",
+        "$2,500 Failure Map": "Homepage entry offer is missing",
+        "utm_campaign=revenue_sprint": "Homepage revenue links are not campaign-tagged",
+        "https://app.northstarprime.net/hire/failure-map?": "Homepage does not link to the exact Failure Map scope",
+    }
+    for needle, message in revenue_checks.items():
+        if needle not in html:
+            raise SystemExit(message)
+    if html.count("utm_campaign=revenue_sprint") < 5:
+        raise SystemExit("Homepage does not route every primary Hire entry through the revenue campaign")
 
     bad_routes = []
     for match in HREF_RE.finditer(html):
@@ -97,11 +102,14 @@ def main() -> None:
         path = ROOT / str(row["relative_path"])
         if not path.is_file():
             raise SystemExit(f"Missing homepage asset: {row['relative_path']}")
-        if path.stat().st_size != row["bytes"]:
+        asset_bytes = path.read_bytes()
+        if path.suffix.lower() in {".css", ".js", ".json", ".svg"}:
+            asset_bytes = asset_bytes.replace(b"\r\n", b"\n")
+        if len(asset_bytes) != row["bytes"]:
             raise SystemExit(f"Asset size mismatch: {row['relative_path']}")
-        if digest(path) != row["sha256"]:
+        if hashlib.sha256(asset_bytes).hexdigest() != row["sha256"]:
             raise SystemExit(f"Asset hash mismatch: {row['relative_path']}")
-        total += path.stat().st_size
+        total += len(asset_bytes)
     if total != payload.get("referenced_asset_bytes"):
         raise SystemExit("Total homepage asset bytes do not match manifest")
 

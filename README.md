@@ -53,6 +53,10 @@ keeps the paid service ladder, direct inquiry path, commercial boundaries, and
 structured offer data on the apex while exact scopes and interactive readiness
 tools remain on the verified application host.
 
+The `/portfolio/` route is an image-led selected-work surface rather than a
+redirect. It presents six live public systems with exact, locally verifiable
+proof points and a direct path into the Hire doorway.
+
 The `/literature/` route is the always-on Interdimensional Literature shelf.
 Its first complete public novel is *The Obituary Engine*, available as a
 full browser reader and a downloadable 6x9 PDF alongside eight clearly labeled
@@ -81,6 +85,7 @@ Run the zero-dependency release check before publishing:
     python tools/verify_idr_static.py --network
     python tools/verify_services_static.py --network
     python tools/verify_hire_static.py
+    python tools/verify_portfolio_static.py
     python tools/verify_xmr_warband_static.py --network
     python tools/verify_idl_static.py
     python tools/verify_http_mirror.py

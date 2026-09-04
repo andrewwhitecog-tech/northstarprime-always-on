@@ -148,6 +148,14 @@ destination, and the security policy canonically identifies its always-on URL.
 - Exact offer detail and interactive scorecard routes remain on
   app.northstarprime.net with owned-campaign attribution.
 
+## Portfolio route
+
+- Source: portfolio/index.html
+- Canonical public path: /portfolio/
+- Six public, live NorthStar systems replace the former application redirect.
+- All portfolio imagery is already mirrored locally; proof points are limited
+  to facts enforced by route-specific verification or the public artifacts.
+
 ## XMR and Warband capture routes
 
 - /xmr/ is a static, outage-resistant receiving page with separate donation
@@ -194,6 +202,7 @@ published-size calculation.
     python tools/verify_idr_static.py --network
     python tools/verify_services_static.py --network
     python tools/verify_hire_static.py
+    python tools/verify_portfolio_static.py
     python tools/check_pages_budget.py
     python tools/verify_http_mirror.py
     python tools/verify_idc_static.py --network

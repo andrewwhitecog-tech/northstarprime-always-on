@@ -10,6 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PAGE = ROOT / "renalshield" / "index.html"
+HOME = ROOT / "index.html"
 APP_LINK = (
     "https://www.renalshield.com/?utm_source=northstarprime.net"
     "&amp;utm_medium=owned_site&amp;utm_campaign=renalshield_discovery"
@@ -22,6 +23,7 @@ SUPPORT_LINK = (
 
 def main() -> None:
     html = PAGE.read_text(encoding="utf-8")
+    home = HOME.read_text(encoding="utf-8")
     required = (
         "RenalShield — Free Kidney-Aware Food Screener | NorthStar Prime",
         '<meta name="robots" content="index,follow">',
@@ -71,9 +73,14 @@ def main() -> None:
         raise SystemExit("RenalShield free-access promise changed")
     if application.get("offers", {}).get("price") != "0":
         raise SystemExit("RenalShield free offer structured data changed")
+    if 'href="/renalshield/"' not in home:
+        raise SystemExit("Homepage does not pass internal authority to the RenalShield project page")
+    if 'href="https://www.renalshield.com"' not in home:
+        raise SystemExit("Homepage no longer preserves a direct free-app route")
 
     print("OK: indexable NorthStar-to-RenalShield discovery bridge")
     print("OK: tagged free-app and pricing/support routes")
+    print("OK: homepage authority path and direct free-app route")
     print("OK: medical boundary, tracker-free page, and free-offer structured data")
 
 

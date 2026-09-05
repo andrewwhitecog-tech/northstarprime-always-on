@@ -26,6 +26,7 @@ ALLOWED_LOCAL = (
     "/harm-reduction/",
     "/hire/",
     "/portfolio/",
+    "/renalshield/",
     "/founders",
     "/mystery-school",
     "/services",
@@ -76,6 +77,8 @@ def main() -> None:
         raise SystemExit("Homepage does not expose the canonical customer service studio")
     if 'href="/links/"' not in html:
         raise SystemExit("Homepage does not expose the verified links directory")
+    if 'href="/renalshield/"' not in html:
+        raise SystemExit("Homepage does not expose the indexable RenalShield project page")
     revenue_checks = {
         'id="hire-northstar"': "Homepage revenue bridge is missing",
         'id="hire-northstar-title"': "Homepage revenue bridge heading is missing",

@@ -15,8 +15,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_ARTIFACT = ROOT / "output" / "pages-artifact"
 APP_ORIGIN = "https://app.northstarprime.net"
-APP_VIDEO_BASE = f"{APP_ORIGIN}/static/idc_video/"
-LOCAL_VIDEO_RE = re.compile(r"(?<!https://app\.northstarprime\.net)/static/idc_video/")
+MEDIA_VIDEO_BASE = "https://assets.northstarprime.net/idc-continuity-v1-20260906/"
+LOCAL_VIDEO_RE = re.compile(r"/static/idc_video/")
 # Keep 80 MB below the 1 GB provider limit; Maison Gooch adds 8.9 MB.
 RELEASE_GUARD_BYTES = 920_000_000
 FILE_LIMIT_BYTES = 100_000_000
@@ -129,7 +129,7 @@ def verify(artifact: Path, network: bool) -> dict:
             r"(?:href|src|poster)\s*=\s*[\"'](?:file://|[A-Z]:\\)", text, re.IGNORECASE
         ):
             local_drive_refs.append(relative)
-        externalized_videos.update(re.findall(re.escape(APP_VIDEO_BASE) + r"[^\"'\s<>)]+", text))
+        externalized_videos.update(re.findall(re.escape(MEDIA_VIDEO_BASE) + r"[^\"'\s<>)]+", text))
         if path.suffix.lower() != ".html":
             continue
         parser = ReferenceParser()
@@ -142,9 +142,9 @@ def verify(artifact: Path, network: bool) -> dict:
     if local_video_refs:
         failures.append(f"Local IDC video references remain: {local_video_refs[:10]}")
     else:
-        checks.append("IDC video references externalized to canonical app")
+        checks.append("IDC video references use independent media storage")
     if not externalized_videos:
-        failures.append("No canonical app IDC video references found")
+        failures.append("No independent IDC media references found")
     if local_drive_refs:
         failures.append(f"Local filesystem references found: {local_drive_refs[:10]}")
     if unresolved:
@@ -165,9 +165,9 @@ def verify(artifact: Path, network: bool) -> dict:
             sample_urls = sorted(externalized_videos)[:3]
             for url in sample_urls:
                 if network_status(url) != 200:
-                    failures.append(f"Canonical app video did not return 200: {url}")
+                    failures.append(f"Independent media did not return 200: {url}")
             if not failures:
-                checks.append(f"canonical app health and {len(sample_urls)} video samples HTTP 200")
+                checks.append(f"app health and {len(sample_urls)} independent media samples HTTP 200")
         except Exception as exc:
             failures.append(f"Network verification failed: {type(exc).__name__}: {exc}")
 

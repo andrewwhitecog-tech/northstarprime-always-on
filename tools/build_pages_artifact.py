@@ -2,8 +2,8 @@
 """Build the curated NorthStar Prime GitHub Pages artifact.
 
 The branch remains the complete source archive. The Pages artifact omits the
-large IDC video copies and rewrites their public URLs to the identical files on
-the canonical NorthStar application host.
+large IDC video copies and rewrites their public URLs to verified copies in
+NorthStar's independent media bucket, which stays available during app deploys.
 """
 
 from __future__ import annotations
@@ -20,7 +20,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = ROOT / "output" / "pages-artifact"
-APP_VIDEO_BASE = "https://app.northstarprime.net/static/idc_video/"
+MEDIA_VIDEO_BASE = "https://assets.northstarprime.net/idc-continuity-v1-20260906/"
+LEGACY_APP_VIDEO_BASE = "https://app.northstarprime.net/static/idc_video/"
 LOCAL_VIDEO_BASE = "/static/idc_video/"
 PUBLISHED_LIMIT_BYTES = 1_000_000_000
 # Keep 80 MB below the 1 GB provider limit; Maison Gooch adds 8.9 MB.
@@ -87,7 +88,8 @@ def build(output: Path) -> dict:
             raw = source.read_text(encoding="utf-8")
             count = raw.count(LOCAL_VIDEO_BASE)
             if count:
-                raw = raw.replace(LOCAL_VIDEO_BASE, APP_VIDEO_BASE)
+                raw = raw.replace(LEGACY_APP_VIDEO_BASE, MEDIA_VIDEO_BASE)
+                raw = raw.replace(LOCAL_VIDEO_BASE, MEDIA_VIDEO_BASE)
                 rewrites += count
             destination.write_text(raw, encoding="utf-8", newline="\n")
             shutil.copymode(source, destination)
@@ -122,7 +124,7 @@ def build(output: Path) -> dict:
             "path": "static/idc_video",
             "file_count": len(video_files),
             "bytes": omitted_video_bytes,
-            "replacement_base_url": APP_VIDEO_BASE,
+            "replacement_base_url": MEDIA_VIDEO_BASE,
             "rewritten_references": rewrites,
         },
         "critical_files": {

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -46,22 +47,29 @@ def main() -> int:
     digest = hashlib.sha256(VIDEO.read_bytes()).hexdigest().upper()
     if digest != EXPECTED_SHA256:
         fail(f"video hash mismatch: {digest}")
-    probe = json.loads(subprocess.check_output([
-        "ffprobe", "-v", "error", "-count_frames",
-        "-show_entries", "format=duration:stream=codec_name,width,height,pix_fmt,r_frame_rate,nb_read_frames,sample_rate,channels",
-        "-of", "json", str(VIDEO),
-    ], text=True))
-    streams = probe["streams"]
-    video = next(item for item in streams if item.get("width"))
-    audio = next(item for item in streams if item.get("sample_rate"))
-    expected_video = {"codec_name": "h264", "width": 1080, "height": 1920, "pix_fmt": "yuv420p", "r_frame_rate": "30/1", "nb_read_frames": "360"}
-    if any(video.get(key) != value for key, value in expected_video.items()):
-        fail(f"video probe mismatch: {video}")
-    if audio.get("codec_name") != "aac" or audio.get("sample_rate") != "48000" or audio.get("channels") != 2:
-        fail(f"audio probe mismatch: {audio}")
-    if abs(float(probe["format"]["duration"]) - 12.0) > 0.001:
-        fail(f"duration mismatch: {probe['format']['duration']}")
-    print(f"PASS: MIDNIGHT LOOM gated release, media contract, 6.3 MB allocation, and SHA-256 {digest}")
+    ffprobe = shutil.which("ffprobe")
+    if ffprobe:
+        probe = json.loads(subprocess.check_output([
+            ffprobe, "-v", "error", "-count_frames",
+            "-show_entries", "format=duration:stream=codec_name,width,height,pix_fmt,r_frame_rate,nb_read_frames,sample_rate,channels",
+            "-of", "json", str(VIDEO),
+        ], text=True))
+        streams = probe["streams"]
+        video = next(item for item in streams if item.get("width"))
+        audio = next(item for item in streams if item.get("sample_rate"))
+        expected_video = {"codec_name": "h264", "width": 1080, "height": 1920, "pix_fmt": "yuv420p", "r_frame_rate": "30/1", "nb_read_frames": "360"}
+        if any(video.get(key) != value for key, value in expected_video.items()):
+            fail(f"video probe mismatch: {video}")
+        if audio.get("codec_name") != "aac" or audio.get("sample_rate") != "48000" or audio.get("channels") != 2:
+            fail(f"audio probe mismatch: {audio}")
+        if abs(float(probe["format"]["duration"]) - 12.0) > 0.001:
+            fail(f"duration mismatch: {probe['format']['duration']}")
+        probe_status = "ffprobe media contract verified"
+    else:
+        # GitHub's minimal Pages runner does not ship FFmpeg. The exact video
+        # hash binds CI to the locally decoded and probed master.
+        probe_status = "exact hash verified; ffprobe unavailable on runner"
+    print(f"PASS: MIDNIGHT LOOM gated release, {probe_status}, 6.3 MB allocation, and SHA-256 {digest}")
     return 0
 
 

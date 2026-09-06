@@ -1,0 +1,34 @@
+name: Public visitor availability
+
+on:
+  schedule:
+    - cron: '3-58/5 * * * *'
+  workflow_dispatch:
+  workflow_run:
+    workflows: [Deploy curated NorthStar Pages]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-availability
+  cancel-in-progress: false
+
+jobs:
+  public-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: tools
+      - name: Check anonymous visitor routes and app health
+        run: python tools/check_public_availability.py --output output/public-availability.json
+      - name: Keep availability evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-availability-${{ github.run_id }}
+          path: output/public-availability.json
+          retention-days: 14

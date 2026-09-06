@@ -15,6 +15,7 @@ LOCAL_REF_RE = re.compile(r"file://|[A-Z]:\\", re.IGNORECASE)
 HREF_RE = re.compile(r"href=['\"](?P<path>/[^'\"]*)['\"]", re.IGNORECASE)
 ALLOWED_LOCAL = (
     "/static/",
+    "/stickerforge/",
     "/arcade",
     "/ckd-kitchen",
     "/cookbook",
@@ -112,6 +113,12 @@ def main() -> None:
             raise SystemExit(message)
     if html.count("utm_campaign=product_discovery") < 3:
         raise SystemExit("Homepage does not attribute every primary product entry")
+
+    for app_path in ('idg', 'stickerforge'):
+        if f'href="https://app.northstarprime.net/{app_path}"' in html:
+            raise SystemExit(f"Homepage sends mirrored browsing to restart-prone app: {app_path}")
+    if 'href="/stickerforge/"' not in html or 'href="#tiers"' not in html:
+        raise SystemExit("Homepage continuity links missing")
 
     bad_routes = []
     for match in HREF_RE.finditer(html):

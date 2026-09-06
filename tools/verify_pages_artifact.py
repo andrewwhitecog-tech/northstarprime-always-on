@@ -17,7 +17,8 @@ DEFAULT_ARTIFACT = ROOT / "output" / "pages-artifact"
 APP_ORIGIN = "https://app.northstarprime.net"
 APP_VIDEO_BASE = f"{APP_ORIGIN}/static/idc_video/"
 LOCAL_VIDEO_RE = re.compile(r"(?<!https://app\.northstarprime\.net)/static/idc_video/")
-RELEASE_GUARD_BYTES = 900_000_000
+# Keep 80 MB below the 1 GB provider limit; Maison Gooch adds 8.9 MB.
+RELEASE_GUARD_BYTES = 920_000_000
 FILE_LIMIT_BYTES = 100_000_000
 TEXT_SUFFIXES = {".html", ".css", ".js", ".json", ".xml", ".txt", ".webmanifest"}
 

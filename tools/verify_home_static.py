@@ -15,6 +15,7 @@ LOCAL_REF_RE = re.compile(r"file://|[A-Z]:\\", re.IGNORECASE)
 HREF_RE = re.compile(r"href=['\"](?P<path>/[^'\"]*)['\"]", re.IGNORECASE)
 ALLOWED_LOCAL = (
     "/static/",
+    "/store/",
     "/stickerforge/",
     "/arcade",
     "/ckd-kitchen",

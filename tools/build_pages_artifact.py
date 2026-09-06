@@ -23,9 +23,10 @@ DEFAULT_OUTPUT = ROOT / "output" / "pages-artifact"
 APP_VIDEO_BASE = "https://app.northstarprime.net/static/idc_video/"
 LOCAL_VIDEO_BASE = "/static/idc_video/"
 PUBLISHED_LIMIT_BYTES = 1_000_000_000
-RELEASE_GUARD_BYTES = 900_000_000
+# Keep 80 MB below the 1 GB provider limit; Maison Gooch adds 8.9 MB.
+RELEASE_GUARD_BYTES = 920_000_000
 GIT_BLOB_LIMIT_BYTES = 100_000_000
-SKIP_TOP_LEVEL = {".git", ".github", "output", "tools", "__pycache__", ".pytest_cache"}
+SKIP_TOP_LEVEL = {".git", ".github", "output", "tools", "__pycache__", ".pytest_cache", ".playwright-cli", ".playwright"}
 TEXT_SUFFIXES = {".html", ".css", ".js", ".json", ".xml", ".txt", ".webmanifest"}
 
 

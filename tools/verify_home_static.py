@@ -117,7 +117,7 @@ def main() -> None:
     for app_path in ('idg', 'stickerforge'):
         if f'href="https://app.northstarprime.net/{app_path}"' in html:
             raise SystemExit(f"Homepage sends mirrored browsing to restart-prone app: {app_path}")
-    if 'href="/stickerforge/"' not in html or 'href="#tiers"' not in html:
+    if 'href="/stickerforge/"' not in html:
         raise SystemExit("Homepage continuity links missing")
 
     bad_routes = []

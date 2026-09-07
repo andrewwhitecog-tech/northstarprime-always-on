@@ -3,7 +3,7 @@
 
 The branch remains the complete source archive. The Pages artifact omits the
 large IDC video copies and rewrites their public URLs to the identical files on
-the canonical NorthStar application host. Little Light reading pages reference
+the canonical NorthStar application host. Little Light and new cookbook pages reference
 immutable-named WebP exports in the public source repository; those image copies
 are also excluded from the capacity-limited Pages artifact.
 """
@@ -28,7 +28,7 @@ PUBLISHED_LIMIT_BYTES = 1_000_000_000
 # Keep 80 MB below the 1 GB provider limit; Maison Gooch adds 8.9 MB.
 RELEASE_GUARD_BYTES = 920_000_000
 GIT_BLOB_LIMIT_BYTES = 100_000_000
-SKIP_TOP_LEVEL = {".git", ".github", "output", "tools", "__pycache__", ".pytest_cache", ".playwright-cli", ".playwright", "little-light-media"}
+SKIP_TOP_LEVEL = {".git", ".github", "output", "tools", "__pycache__", ".pytest_cache", ".playwright-cli", ".playwright", "little-light-media", "cookbook-media"}
 TEXT_SUFFIXES = {".html", ".css", ".js", ".json", ".xml", ".txt", ".webmanifest"}
 
 
@@ -132,6 +132,12 @@ def build(output: Path) -> dict:
             "delivery": "raw.githubusercontent.com public repository, content-hashed filenames",
             "file_count": sum(1 for path in (ROOT / "little-light-media").rglob("*") if path.is_file()),
             "bytes": sum(path.stat().st_size for path in (ROOT / "little-light-media").rglob("*") if path.is_file()),
+        },
+        "cookbook_media": {
+            "path": "cookbook-media",
+            "delivery": "raw.githubusercontent.com public repository, content-hashed filenames",
+            "file_count": sum(1 for path in (ROOT / "cookbook-media").rglob("*") if path.is_file()),
+            "bytes": sum(path.stat().st_size for path in (ROOT / "cookbook-media").rglob("*") if path.is_file()),
         },
         "critical_files": {
             relative: sha256(output / relative)

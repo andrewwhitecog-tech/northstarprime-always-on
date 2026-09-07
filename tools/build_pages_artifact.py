@@ -3,7 +3,9 @@
 
 The branch remains the complete source archive. The Pages artifact omits the
 large IDC video copies and rewrites their public URLs to the identical files on
-the canonical NorthStar application host.
+the canonical NorthStar application host. Little Light reading pages reference
+immutable-named WebP exports in the public source repository; those image copies
+are also excluded from the capacity-limited Pages artifact.
 """
 
 from __future__ import annotations
@@ -26,7 +28,7 @@ PUBLISHED_LIMIT_BYTES = 1_000_000_000
 # Keep 80 MB below the 1 GB provider limit; Maison Gooch adds 8.9 MB.
 RELEASE_GUARD_BYTES = 920_000_000
 GIT_BLOB_LIMIT_BYTES = 100_000_000
-SKIP_TOP_LEVEL = {".git", ".github", "output", "tools", "__pycache__", ".pytest_cache", ".playwright-cli", ".playwright"}
+SKIP_TOP_LEVEL = {".git", ".github", "output", "tools", "__pycache__", ".pytest_cache", ".playwright-cli", ".playwright", "little-light-media"}
 TEXT_SUFFIXES = {".html", ".css", ".js", ".json", ".xml", ".txt", ".webmanifest"}
 
 
@@ -124,6 +126,12 @@ def build(output: Path) -> dict:
             "bytes": omitted_video_bytes,
             "replacement_base_url": APP_VIDEO_BASE,
             "rewritten_references": rewrites,
+        },
+        "little_light_media": {
+            "path": "little-light-media",
+            "delivery": "raw.githubusercontent.com public repository, content-hashed filenames",
+            "file_count": sum(1 for path in (ROOT / "little-light-media").rglob("*") if path.is_file()),
+            "bytes": sum(path.stat().st_size for path in (ROOT / "little-light-media").rglob("*") if path.is_file()),
         },
         "critical_files": {
             relative: sha256(output / relative)

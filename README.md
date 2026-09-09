@@ -31,11 +31,16 @@ freeze manifest is an explicit inactive tombstone.
 The `/coloring-studio/` and `/payments/` continuity routes delegate to their
 canonical application surfaces while preserving query strings and fragments.
 
-The /arcade/ route contains the full public catalog and 48 locally mirrored
+The /arcade/ route contains the full public catalog and 49 locally mirrored
 games. One private-inventory surface is explicitly delegated to the cloud app.
 Every mirrored runtime dependency is local; eight decorative motion plates are
 recompressed for the web without changing game logic. Private source-workspace
 provenance is redacted from the one public lore corpus that needs it.
+
+`/arcade/custom/ladder/` is The Ninefold Relay: nine original Boolean puzzles
+with exhaustive input tests, replayable counterexamples, saved progress, hints,
+and live 3D instruments. The reviewed artwork and all runtime dependencies are
+local. Physical controller and Safari/iPhone testing remain pending.
 
 The /idr/ route contains the complete 50-track station catalog. Its page,
 covers, navigation, PWA metadata, and deterministic time-seeded dock stay on

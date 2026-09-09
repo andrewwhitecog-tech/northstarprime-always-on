@@ -29,6 +29,7 @@ LOCAL_ROUTES = (
     "/portfolio/",
     "/hire/",
     "/contact/",
+    "/software/",
 )
 CANONICAL_SERVICE_LINK = "https://app.northstarprime.net/services?utm_source=northstarprime.net&amp;utm_medium=owned_directory&amp;utm_campaign=services_visibility"
 

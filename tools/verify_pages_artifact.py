@@ -17,8 +17,9 @@ DEFAULT_ARTIFACT = ROOT / "output" / "pages-artifact"
 APP_ORIGIN = "https://app.northstarprime.net"
 APP_VIDEO_BASE = f"{APP_ORIGIN}/static/idc_video/"
 LOCAL_VIDEO_RE = re.compile(r"(?<!https://app\.northstarprime\.net)/static/idc_video/")
-# Keep 80 MB below the 1 GB provider limit; Maison Gooch adds 8.9 MB.
-RELEASE_GUARD_BYTES = 920_000_000
+# Keep 70 MB below the 1 GB published-site ceiling after the 4.45 MB
+# Chronosphere and Side Street addition to the existing 919.9 MB payload.
+RELEASE_GUARD_BYTES = 930_000_000
 FILE_LIMIT_BYTES = 100_000_000
 TEXT_SUFFIXES = {".html", ".css", ".js", ".json", ".xml", ".txt", ".webmanifest"}
 
@@ -89,6 +90,11 @@ def verify(artifact: Path, network: bool) -> dict:
         "sitemap.xml",
         "robots.txt",
         "nsp-pages-artifact.json",
+        "software/index.html",
+        "chronosphere/index.html",
+        "CHRONOSPHERE_RELEASE_MANIFEST.json",
+        "arcade/custom/side-street/index.html",
+        "SIDE_STREET_RELEASE_MANIFEST.json",
     )
     missing = [name for name in required if not (artifact / name).is_file()]
     if missing:

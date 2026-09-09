@@ -31,7 +31,7 @@ freeze manifest is an explicit inactive tombstone.
 The `/coloring-studio/` and `/payments/` continuity routes delegate to their
 canonical application surfaces while preserving query strings and fragments.
 
-The /arcade/ route contains the full public catalog and 47 locally mirrored
+The /arcade/ route contains the full public catalog and 48 locally mirrored
 games. One private-inventory surface is explicitly delegated to the cloud app.
 Every mirrored runtime dependency is local; eight decorative motion plates are
 recompressed for the web without changing game logic. Private source-workspace
@@ -104,3 +104,5 @@ Add --network to the IDC verifier to test every YouTube oEmbed endpoint as
 well. See ROUTE_MANIFEST.md, the route-specific freeze manifests, and
 PAGES_CAPACITY_BUDGET.json for routing, provenance, hashes, failover details,
 and the enforced GitHub Pages capacity ceiling.
+
+The `/software/` catalog introduces the open-source Chronosphere app with its browser demo, Windows download, source repository, prerequisites and release links. `/chronosphere/` contains the complete, byte-identical 1.0.0 browser release with all eleven worlds and bundled artwork. No private workstation service or credentials are needed. `CHRONOSPHERE_RELEASE_MANIFEST.json` records each browser file and the source/Windows archive identities. Run `python tools/verify_chronosphere_static.py --artifact output/pages-artifact`; add `--network` after the GitHub release exists to verify its public download URLs.

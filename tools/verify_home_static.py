@@ -34,6 +34,7 @@ ALLOWED_LOCAL = (
     "/services",
     "/xmr/",
     "/links/",
+    "/software/",
     "/lost/",
     "/realm/",
     "/sigil-forge/",

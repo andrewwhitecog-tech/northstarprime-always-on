@@ -101,7 +101,7 @@ destination, and the security policy canonically identifies its always-on URL.
 
 - Source: arcade/index.html
 - Canonical public path: /arcade/
-- Forty-seven of forty-eight catalog games are fully static mirrors with 365
+- Forty-eight of forty-nine catalog games are fully static mirrors with 370
   hashed runtime assets and no CDN dependency.
 - Eight large decorative motion plates are locally recompressed for web
   delivery, saving 88,810,171 bytes while keeping the games self-contained.
@@ -220,3 +220,18 @@ hashes, local-runtime dependencies, cloud boundaries, and representative
 network health. The capacity guard prevents an oversized Pages release.
 The HTTP mirror verifier HEAD-checks every intended published file and, on a
 local origin, confirms the served byte length matches the frozen artifact.
+
+## Chronosphere and open-source software
+
+- Catalog and product doorway: `/software/`, discoverable from the homepage and `/links/`.
+- Complete browser application: `/chronosphere/`, with eleven clock worlds, local artwork, lore, interactions and opt-in synthesized sound.
+- Windows x64 and source downloads: the public `andrewwhitecog-tech/chronosphere` GitHub `v1.0.0` release. The catalog states the unsigned-build status and .NET Desktop/WebView2 prerequisites.
+- Every application file matches the reviewed community source release byte-for-byte; identities are in `CHRONOSPHERE_RELEASE_MANIFEST.json`. The artifact verifier checks every hash.
+- No private service, health configuration, fleet topology or credential is deployed. The generic local health adapter is downloadable source, not a public endpoint.
+- GitHub release and Pages deployment verification are separate release receipts; preparation does not itself prove either destination is live.
+
+## Side Street original puzzle
+
+`/arcade/custom/side-street/` is an original experimental route puzzle with twelve boards, ordered stops, exact-turn goals, undo and hints. Its UTC daily selection repeats after twelve days. The five browser runtime files match the reviewed prototype byte-for-byte; no research notes, talk captions or third-party puzzle material are deployed. `SIDE_STREET_RELEASE_MANIFEST.json` and the updated arcade catalog/asset manifest record this addition.
+
+The combined addition is approximately 4.45 MB. The prior curated payload was already 919.9 MB against a 920 MB release guard. The curated builder and verifier now share a 930 MB guard, retaining 70 MB below the configured 1 GB published-site ceiling and the existing 100 MB per-file limit. The older PAGES_CAPACITY_BUDGET.json is an archival whole-branch audit, not the curated artifact's current byte count; nsp-pages-artifact.json records each actual deployment artifact.

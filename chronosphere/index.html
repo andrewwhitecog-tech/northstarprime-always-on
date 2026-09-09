@@ -1,0 +1,1680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src http://127.0.0.1:* http://[::1]:*; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CHRONOSPHERE</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Courier New',monospace}
+.low-power *, .low-power *::before, .low-power *::after{
+  animation-play-state:paused!important;
+  transition:none!important;
+}
+
+/* ══════════════════════════════════════════
+   THEME 1 — STATION 108
+══════════════════════════════════════════ */
+#theme-dharma{
+  display:none;width:100vw;height:100vh;background:linear-gradient(180deg,#0205034a,#020503c7),url("chronosphere-assets/station-108.webp") center/cover no-repeat;
+  align-items:center;justify-content:center;flex-direction:column;
+  color:#00ff41;text-shadow:0 0 8px #00ff41;
+}
+#theme-dharma.active{display:flex}
+.dharma-outer{
+  position:relative;width:480px;height:480px;
+  clip-path:polygon(30% 0%,70% 0%,100% 30%,100% 70%,70% 100%,30% 100%,0% 70%,0% 30%);
+  background:linear-gradient(145deg,#030b07ee,#07130ee6);border:1px solid #d8bd68;
+  box-shadow:0 0 0 5px #030806cc,0 22px 90px #000b,0 0 40px #00ff4166,inset 0 0 40px #00ff4133;backdrop-filter:blur(12px);
+  display:flex;align-items:center;justify-content:center;flex-direction:column;
+}
+.dharma-face{
+  position:relative;width:380px;height:380px;border-radius:50%;
+  border:2px solid #00aa2a;
+}
+.dharma-number{
+  position:absolute;font-size:22px;font-weight:bold;color:#00ff41;
+  text-shadow:0 0 10px #00ff41;transform-origin:190px 190px;
+}
+#dharma-time{font-size:72px;font-weight:bold;letter-spacing:6px;margin-top:12px;text-shadow:0 0 20px #00ff41}
+#dharma-date{font-size:18px;opacity:.7;margin-top:6px}
+#dharma-countdown{font-size:28px;margin-top:16px;color:#44ff44}
+#dharma-countdown span{color:#ff4444}
+.dharma-station-label{
+  font-size:13px;letter-spacing:8px;text-transform:uppercase;
+  margin-top:20px;opacity:.6;
+  animation:dharma-rotate 20s linear infinite;
+  display:inline-block;
+}
+@keyframes dharma-rotate{
+  0%{letter-spacing:8px}50%{letter-spacing:12px}100%{letter-spacing:8px}
+}
+.scanline{
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,65,.03) 2px,rgba(0,255,65,.03) 4px);
+  pointer-events:none;z-index:999;
+}
+.crt-flicker{animation:flicker 8s infinite}
+@keyframes flicker{0%,100%{opacity:1}92%{opacity:1}93%{opacity:.97}94%{opacity:1}97%{opacity:.98}98%{opacity:1}}
+
+/* ══════════════════════════════════════════
+   THEME 2 — GLYPHOMETER
+══════════════════════════════════════════ */
+#theme-alethiometer{
+  display:none;width:100vw;height:100vh;
+  background:linear-gradient(180deg,#0d07004d,#060301bd),url("chronosphere-assets/glyphometer.webp") center/cover no-repeat;
+  align-items:center;justify-content:center;flex-direction:column;
+  color:#c9a84c;
+}
+#theme-alethiometer.active{display:flex}
+.aleth-face{
+  position:relative;width:440px;height:440px;border-radius:50%;
+  background:radial-gradient(circle,#130e05ee 0%,#120b02ec 60%,#050301f2 100%);backdrop-filter:blur(8px);
+  box-shadow:
+    0 0 0 6px #c9a84c,
+    0 0 0 10px #8b6914,
+    0 0 0 14px #c9a84c,
+    0 0 0 20px #4a3800,
+    0 0 0 24px #c9a84c,
+    0 0 60px #c9a84c55,
+    inset 0 0 40px #c9a84c22;
+}
+.aleth-symbol{
+  position:absolute;font-size:20px;color:#c9a84c;
+  text-shadow:0 0 6px #c9a84c;
+  transform-origin:220px 220px;
+}
+.aleth-center{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  text-align:center;
+}
+#aleth-time{font-size:52px;font-family:Georgia,serif;color:#f0d060;text-shadow:0 0 15px #c9a84c}
+#aleth-date{font-size:16px;color:#8b6914;margin-top:4px;font-family:Georgia,serif}
+.hand{position:absolute;bottom:50%;left:50%;transform-origin:50% 100%;border-radius:4px}
+.hand-hour{width:6px;height:120px;margin-left:-3px;background:linear-gradient(to top,#c9a84c,#f0d060);box-shadow:0 0 8px #c9a84c}
+.hand-min{width:4px;height:160px;margin-left:-2px;background:linear-gradient(to top,#8b6914,#c9a84c);box-shadow:0 0 6px #c9a84c}
+.hand-sec{width:2px;height:180px;margin-left:-1px;background:#ff6600;box-shadow:0 0 8px #ff6600}
+.aleth-center-dot{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:14px;height:14px;border-radius:50%;background:#c9a84c;
+  box-shadow:0 0 10px #c9a84c;z-index:10;
+}
+#aleth-label{margin-top:24px;font-size:14px;letter-spacing:6px;color:#8b6914;font-family:Georgia,serif}
+
+/* ══════════════════════════════════════════
+   THEME 3 — SIGNAL LIBRARY
+══════════════════════════════════════════ */
+#theme-lcars{
+  display:none;width:100vw;height:100vh;background:linear-gradient(180deg,#01010652,#010106bc),url("chronosphere-assets/signal-library.webp") center/cover no-repeat;
+  padding:20px;
+}
+#theme-lcars.active{display:grid}
+#theme-lcars{
+  grid-template-columns:180px 1fr 180px;
+  grid-template-rows:80px 1fr 80px;
+}
+.lcars-top-bar{
+  grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:0 20px;
+}
+.lcars-btn{
+  border-radius:30px;height:48px;display:flex;align-items:center;
+  justify-content:center;font-size:12px;font-weight:bold;
+  letter-spacing:2px;color:#000;padding:0 20px;
+}
+.lcars-left{
+  display:flex;flex-direction:column;gap:10px;padding:10px 0;
+}
+.lcars-right{
+  display:flex;flex-direction:column;gap:10px;padding:10px 0;
+  align-items:flex-end;
+}
+.lcars-panel{
+  border-radius:50px 0 0 50px;height:40px;display:flex;
+  align-items:center;padding-left:20px;font-size:11px;
+  font-weight:bold;letter-spacing:2px;color:#000;width:160px;
+}
+.lcars-panel-r{
+  border-radius:0 50px 50px 0;height:40px;display:flex;
+  align-items:center;justify-content:flex-end;padding-right:20px;
+  font-size:11px;font-weight:bold;letter-spacing:2px;color:#000;width:160px;
+}
+.lcars-center{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+}
+.lcars-clock-box{
+  border:3px solid #ff9900;border-radius:8px;padding:24px 48px;
+  text-align:center;position:relative;overflow:hidden;background:#03030bd9;box-shadow:0 18px 70px #000b;backdrop-filter:blur(12px);
+}
+#lcars-time{font-size:88px;color:#ff9900;font-family:'Courier New',monospace;font-weight:bold;letter-spacing:8px}
+#lcars-date{font-size:18px;color:#cc99cc;letter-spacing:4px;margin-top:8px}
+#signal-index{font-size:22px;color:#9999ff;letter-spacing:3px;margin-top:6px}
+.lcars-scan-bar{
+  position:absolute;left:0;top:0;width:4px;height:100%;
+  background:linear-gradient(to bottom,transparent,#ff990088,transparent);
+  animation:scan 3s ease-in-out infinite;
+}
+@keyframes scan{0%{left:-4px}100%{left:100%}}
+.lcars-readout{
+  border:2px solid #9999ff;border-radius:4px;padding:8px 20px;
+  color:#9999ff;font-size:13px;letter-spacing:3px;min-width:320px;text-align:center;
+}
+.lcars-bottom-bar{
+  grid-column:1/-1;display:flex;align-items:center;gap:12px;
+  padding:0 20px;justify-content:flex-end;
+}
+.orange{background:#ff9900}.purple{background:#cc99cc}
+.blue{background:#9999ff}.red{background:#ff9966}
+.lcars-corner-tl{
+  border-radius:50px 0 0 0;background:#ff9900;height:100%;
+  display:flex;flex-direction:column;justify-content:flex-end;
+  padding:0 0 10px 20px;
+}
+.lcars-corner-tr{
+  border-radius:0 50px 0 0;background:#cc99cc;height:100%;
+}
+.lcars-corner-bl{border-radius:0 0 0 50px;background:#ff9966;height:100%}
+.lcars-corner-br{border-radius:0 0 50px 0;background:#9999ff;height:100%}
+
+/* ══════════════════════════════════════════
+   THEME 4 — CHRONO RIFT
+══════════════════════════════════════════ */
+#theme-vortex{
+  display:none;width:100vw;height:100vh;
+  background:linear-gradient(180deg,#0005082e,#00050891),url("chronosphere-assets/chrono-rift.webp") center/cover no-repeat;
+  align-items:center;justify-content:center;
+  overflow:hidden;position:relative;
+}
+#theme-vortex.active{display:flex}
+.vortex-canvas{position:absolute;top:0;left:0;width:100%;height:100%}
+.vortex-center{position:relative;z-index:10;display:flex;flex-direction:column;align-items:center}
+.vortex-face{
+  width:340px;height:340px;border-radius:50%;
+  background:radial-gradient(circle,#001833e8 0%,#001020e8 100%);backdrop-filter:blur(10px);
+  box-shadow:0 0 0 2px #d6bd72,0 0 30px #00bfff66,0 22px 90px #000b,0 0 80px #003b6f44;
+  position:relative;
+}
+.vortex-hand{position:absolute;bottom:50%;left:50%;transform-origin:50% 100%;border-radius:4px}
+.vortex-hour{width:7px;height:100px;margin-left:-3.5px;background:#00bfff;box-shadow:0 0 12px #00bfff}
+.vortex-min{width:4px;height:135px;margin-left:-2px;background:#80dfff;box-shadow:0 0 8px #80dfff}
+.vortex-sec{width:2px;height:155px;margin-left:-1px;background:#ffffff;box-shadow:0 0 10px #ffffff}
+.vortex-dot{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:16px;height:16px;border-radius:50%;background:#00bfff;
+  box-shadow:0 0 20px #00bfff;z-index:5;
+}
+#vortex-time{font-size:52px;color:#00bfff;text-shadow:0 0 20px #00bfff,0 0 40px #0066ff;margin-top:20px;letter-spacing:4px}
+#vortex-date{font-size:16px;color:#4499cc;margin-top:8px;letter-spacing:3px}
+.vortex-ring{
+  position:absolute;top:50%;left:50%;border-radius:50%;
+  border:1px solid rgba(0,191,255,.3);transform:translate(-50%,-50%);
+}
+
+/* ══════════════════════════════════════════
+   THEME 5 — SERAPHIM ORACLE
+══════════════════════════════════════════ */
+#theme-seraphim{
+  display:none;width:100vw;height:100vh;
+  background:linear-gradient(180deg,#02030a21,#02030a85),url("chronosphere-assets/seraphim-oracle.webp") center/cover no-repeat;
+  position:relative;overflow:hidden;
+}
+#theme-seraphim.active{display:block}
+#theme-seraphim canvas{position:absolute;top:0;left:0;width:100%;height:100%}
+#sera-starfield{z-index:0}
+#sera-metatron{z-index:1;opacity:0.08;pointer-events:none}
+#sera-wings{z-index:6;pointer-events:none}
+#sera-merkaba{z-index:12;pointer-events:none;
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+}
+#sera-eyes{z-index:14;pointer-events:none}
+#sera-particles{z-index:2;pointer-events:none}
+.sera-vignette{
+  position:absolute;inset:0;z-index:50;pointer-events:none;
+  background:radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,0.7) 100%);
+}
+.sera-clock-overlay{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  z-index:20;text-align:center;pointer-events:none;padding:28px 38px;border:1px solid #f7d96b88;border-radius:24px;background:#030510c2;box-shadow:0 20px 90px #000b,0 0 60px #6948c255;backdrop-filter:blur(12px);
+}
+#sera-time{
+  font-size:56px;font-weight:bold;color:#ffd700;
+  text-shadow:0 0 20px rgba(255,215,0,0.8),0 0 40px rgba(255,215,0,0.4),0 0 80px rgba(139,92,246,0.3);
+  letter-spacing:6px;font-family:'Courier New',monospace;
+}
+#sera-date{
+  font-size:15px;color:#c9a84c;letter-spacing:4px;margin-top:6px;
+  text-shadow:0 0 10px rgba(255,215,0,0.4);font-family:'Courier New',monospace;
+}
+.sera-oracle-status{
+  margin-top:18px;font-size:11px;letter-spacing:3px;
+  color:#ffd700;opacity:0.7;
+  text-shadow:0 0 10px rgba(255,215,0,0.5);
+  font-family:'Courier New',monospace;text-transform:uppercase;
+}
+#sera-status-bar{
+  position:absolute;bottom:20px;left:50%;transform:translateX(-50%);
+  color:#ffd700;font-size:11px;letter-spacing:3px;text-transform:uppercase;
+  z-index:100;opacity:0.7;text-shadow:0 0 10px rgba(255,215,0,0.5);
+  white-space:nowrap;font-family:'Courier New',monospace;
+}
+.sera-halo{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:500px;height:500px;border-radius:50%;
+  background:radial-gradient(ellipse,rgba(255,215,0,0.12) 0%,rgba(139,92,246,0.05) 40%,transparent 70%);
+  animation:sera-halo-pulse 4s ease-in-out infinite;
+  z-index:8;pointer-events:none;
+}
+@keyframes sera-halo-pulse{
+  0%,100%{transform:translate(-50%,-50%) scale(1);opacity:0.8}
+  50%{transform:translate(-50%,-50%) scale(1.15);opacity:1}
+}
+
+/* ══════════════════════════════════════════
+   THEME 6 — RING SENTINEL
+══════════════════════════════════════════ */
+#theme-halo{display:none;width:100vw;height:100vh;position:relative;overflow:hidden;align-items:center;justify-content:center;color:#d7f7ff;background:linear-gradient(180deg,#01070a55,#020609b8),url("chronosphere-assets/ring-sentinel.webp") center/cover no-repeat}
+#theme-halo.active{display:flex}
+#theme-halo::before{content:"";position:absolute;inset:-25%;background:repeating-radial-gradient(circle at 50% 50%,transparent 0 38px,#63e6d512 39px 40px);animation:halo-drift 24s linear infinite}
+.halo-ringworld{position:absolute;width:min(1040px,115vw);height:min(420px,48vw);border:clamp(18px,3vw,42px) solid #76989c;border-radius:50%;transform:rotateX(66deg) rotateZ(-12deg);box-shadow:0 0 25px #8fffe966,inset 0 0 38px #b8fff377;animation:halo-orbit 18s ease-in-out infinite alternate}
+.halo-ringworld::after{content:"";position:absolute;inset:-12px;border:2px dashed #d8fff799;border-radius:50%}
+.halo-hud{position:relative;z-index:4;width:min(780px,86vw);padding:clamp(22px,5vw,58px);text-align:center;border:1px solid #d5fff0aa;background:linear-gradient(135deg,#02090ee8,#092123c7);clip-path:polygon(4% 0,96% 0,100% 18%,100% 82%,96% 100%,4% 100%,0 82%,0 18%);box-shadow:0 0 0 1px #64ffe033,0 24px 90px #000b,0 0 55px #36e1c52b;backdrop-filter:blur(14px) saturate(1.25)}
+.halo-kicker,.halo-status{font-size:clamp(10px,1.3vw,14px);letter-spacing:.38em;color:#89f7df}
+#halo-time{font:700 clamp(52px,11vw,112px)/1 'Courier New',monospace;letter-spacing:.09em;text-shadow:0 0 24px #89f7df99;margin:20px 0 10px}
+#halo-date{letter-spacing:.22em;color:#b8d9db}
+.halo-reticle{position:absolute;width:64px;height:64px;border:1px solid #89f7df88;border-radius:50%;top:12%;right:9%;animation:halo-spin 8s linear infinite}.halo-reticle::before,.halo-reticle::after{content:"";position:absolute;background:#89f7df88}.halo-reticle::before{width:86px;height:1px;left:-12px;top:31px}.halo-reticle::after{width:1px;height:86px;left:31px;top:-12px}
+@keyframes halo-drift{to{transform:rotate(360deg)}}@keyframes halo-spin{to{transform:rotate(-360deg)}}@keyframes halo-orbit{to{transform:rotateX(70deg) rotateZ(7deg) scale(1.04)}}
+
+/* ══════════════════════════════════════════
+   THEME 7 — IRON OMEN
+══════════════════════════════════════════ */
+#theme-gears{display:none;width:100vw;height:100vh;position:relative;overflow:hidden;align-items:center;justify-content:center;color:#e9dfca;background:linear-gradient(180deg,#03030344,#050303b8),url("chronosphere-assets/iron-omen.webp") center/cover no-repeat}
+#theme-gears.active{display:flex}
+#theme-gears::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(115deg,transparent 0 34px,#ffffff08 35px 36px),linear-gradient(#20000033,#0000 40%,#40000044);mix-blend-mode:screen}
+.gear{position:absolute;border:18px dashed #665d52;border-radius:50%;box-shadow:0 0 0 8px #211f1c,inset 0 0 0 8px #211f1c;opacity:.55;animation:gear-turn 22s linear infinite}.gear.g1{width:330px;height:330px;left:-90px;top:-70px}.gear.g2{width:260px;height:260px;right:-45px;bottom:-35px;animation-direction:reverse;animation-duration:17s}.gear.g3{width:160px;height:160px;right:12%;top:12%;border-width:11px;animation-duration:12s}
+.gears-console{position:relative;z-index:3;width:min(800px,88vw);padding:clamp(28px,6vw,70px);text-align:center;background:linear-gradient(180deg,#171412ee,#090807e8);border:1px solid #aa936f;border-radius:5px;box-shadow:inset 0 0 0 3px #0a0908,inset 0 0 35px #000,0 0 0 7px #201c17cc,0 28px 100px #000;backdrop-filter:blur(11px)}
+.gears-console::before{content:"";position:absolute;top:-12px;left:6%;right:6%;height:10px;background:repeating-linear-gradient(135deg,#a01919 0 18px,#151515 18px 36px)}
+.gears-kicker{letter-spacing:.28em;color:#c7352f}.gears-status{letter-spacing:.2em;color:#988c7d;font-size:12px}
+#gears-time{font:900 clamp(54px,11vw,116px)/1 Impact,'Arial Black',sans-serif;letter-spacing:.06em;margin:18px 0 8px;color:#e4d9c4;text-shadow:4px 5px 0 #411,0 0 30px #a00}
+#gears-date{letter-spacing:.2em}.gears-bloodline{height:3px;margin:20px auto;width:70%;background:linear-gradient(90deg,transparent,#b6221e,transparent);box-shadow:0 0 18px #d21b16}
+@keyframes gear-turn{to{transform:rotate(360deg)}}
+
+/* ══════════════════════════════════════════
+   THEME 8 — ELECTRIC GARDEN
+══════════════════════════════════════════ */
+#theme-hippie{display:none;width:100vw;height:100vh;position:relative;overflow:hidden;align-items:center;justify-content:center;color:#fff;background:linear-gradient(180deg,#05001c1f,#05001c82),url("chronosphere-assets/electric-garden.webp") center/cover no-repeat}
+#theme-hippie.active{display:flex}
+.lava{position:absolute;border-radius:46% 54% 62% 38%;filter:blur(8px);mix-blend-mode:screen;animation:lava-float 11s ease-in-out infinite alternate}.lava.l1{width:38vw;height:52vh;left:-8vw;top:5vh;background:#ff3c8ccc}.lava.l2{width:32vw;height:45vh;right:-6vw;bottom:-4vh;background:#00efc8aa;animation-delay:-4s}.lava.l3{width:24vw;height:36vh;left:42vw;bottom:-14vh;background:#ffb800aa;animation-delay:-7s}
+.hippie-mandala{position:absolute;width:min(720px,86vw);aspect-ratio:1;border-radius:50%;background:repeating-conic-gradient(from 12deg,#ff4ba522 0 10deg,#00ffd522 10deg 20deg,#ffe94b22 20deg 30deg);animation:halo-spin 38s linear infinite;box-shadow:inset 0 0 90px #ff65d955}
+.hippie-clock{position:relative;z-index:3;text-align:center;padding:42px;width:min(760px,88vw);border-radius:44px;background:linear-gradient(135deg,#12062be8,#041f2bd4);border:1px solid #ffe59b;box-shadow:inset 0 0 45px #b9388f33,0 0 25px #ff4baa,0 22px 80px #02000dcc;backdrop-filter:blur(14px) saturate(1.3)}
+.hippie-icons{font-size:clamp(12px,1.8vw,18px);font-weight:700;letter-spacing:.3em;color:#ffe899;text-transform:uppercase;filter:drop-shadow(0 0 10px #ff4bb8)}
+#hippie-time{font:900 clamp(54px,12vw,122px)/1 'Arial Rounded MT Bold',Arial,sans-serif;letter-spacing:.04em;margin:18px 0;background:linear-gradient(90deg,#ff5dad,#ffe46a,#65ffd3,#8ba6ff,#ff5dad);background-size:240% 100%;-webkit-background-clip:text;color:transparent;animation:hippie-rainbow 7s linear infinite}
+#hippie-date{letter-spacing:.18em;color:#fff2a8}.hippie-status{margin-top:16px;color:#7dffdc;letter-spacing:.18em}
+@keyframes lava-float{to{transform:translate(12vw,-8vh) rotate(45deg) scale(1.22)}}@keyframes hippie-rainbow{to{background-position:240% 0}}
+
+/* ══════════════════════════════════════════
+   THEME 9 — WITNESS CHAMBER
+══════════════════════════════════════════ */
+#theme-saw{display:none;width:100vw;height:100vh;position:relative;overflow:hidden;align-items:center;justify-content:center;color:#d8ded0;background:linear-gradient(180deg,#0206044d,#010202c4),url("chronosphere-assets/witness-chamber.webp") center/cover no-repeat}
+#theme-saw.active{display:flex}
+#theme-saw::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 3px,#b7ffb008 4px 5px),radial-gradient(circle at 20% 20%,#c00a 0 3px,transparent 4px);animation:saw-flicker 4s steps(2) infinite}
+.saw-chain{position:absolute;width:130%;height:10px;background:repeating-linear-gradient(90deg,#151a15 0 18px,#697067 19px 24px,#151a15 25px 43px);transform:rotate(-12deg);top:18%;box-shadow:0 8px 15px #000}
+.saw-pendulum{position:absolute;top:-10vh;left:17%;width:5px;height:58vh;background:#5e645b;transform-origin:top;animation:saw-swing 5s ease-in-out infinite alternate}.saw-pendulum::after{content:"";position:absolute;bottom:-46px;left:-44px;width:92px;height:92px;border-radius:50%;background:repeating-conic-gradient(#5b605b 0 9deg,#161a16 9deg 18deg);box-shadow:0 0 22px #000}
+.saw-console{position:relative;z-index:3;width:min(760px,86vw);padding:clamp(28px,6vw,64px);text-align:center;border:1px solid #7f8f7f;background:#030806ee;box-shadow:inset 0 0 70px #000,0 0 0 5px #030503cc,0 24px 90px #000,0 0 55px #73000066;backdrop-filter:blur(10px)}
+.saw-rec{position:absolute;top:12px;right:16px;color:#ff2828;letter-spacing:.18em;animation:saw-rec 1s steps(1) infinite}
+.saw-kicker{color:#a2b79e;letter-spacing:.3em}.saw-status{color:#b2342e;letter-spacing:.2em;font-size:12px}
+#saw-time{font:700 clamp(56px,12vw,124px)/1 'Courier New',monospace;letter-spacing:.08em;color:#d6e3ce;text-shadow:2px 0 #700,-2px 0 #164b22;margin:20px 0 8px}#saw-date{letter-spacing:.2em;color:#879486}
+@keyframes saw-swing{to{transform:rotate(23deg)}}@keyframes saw-rec{50%{opacity:.2}}@keyframes saw-flicker{50%{filter:brightness(.82) contrast(1.18)}}
+
+/* THEME 10 — ASTRAL HALL */
+#theme-wizard{display:none;width:100vw;height:100vh;position:relative;overflow:hidden;align-items:center;justify-content:center;color:#f4ddb0;background:linear-gradient(180deg,#04040b33,#04040b9c),url("chronosphere-assets/astral-hall.webp") center/cover no-repeat}
+#theme-wizard.active{display:flex}
+.wizard-stars{position:absolute;inset:0;background-image:radial-gradient(circle,#fff9d5 0 1px,transparent 1.6px),radial-gradient(circle,#cfb9ff 0 1px,transparent 1.8px);background-size:71px 67px,113px 109px;background-position:0 0,27px 41px;animation:halo-drift 80s linear infinite}
+.wizard-orrery{position:absolute;width:min(760px,88vw);aspect-ratio:1;border:1px solid #d6b85f66;border-radius:50%;animation:halo-spin 42s linear infinite}.wizard-orrery::before,.wizard-orrery::after{content:"";position:absolute;inset:13%;border:2px dotted #bb95ff66;border-radius:50%;transform:rotate(62deg)}.wizard-orrery::after{inset:28%;border-style:solid;transform:rotate(-34deg)}
+.wizard-clock{position:relative;z-index:3;width:min(740px,90vw);padding:clamp(28px,6vw,68px);text-align:center;background:linear-gradient(145deg,#0d0b18e8,#21170fe3);border:3px double #dfc476;box-shadow:0 0 50px #8e6fff44,inset 0 0 50px #000,0 26px 90px #000b;backdrop-filter:blur(12px)}
+.wizard-candles{font-size:clamp(12px,1.7vw,17px);font-weight:700;letter-spacing:.28em;color:#f7dda0;filter:drop-shadow(0 0 12px #ffbd55)}.wizard-kicker{letter-spacing:.28em;color:#bca4ff}.wizard-status{letter-spacing:.18em;color:#d9bd72;font-size:12px}
+#wizard-time{font:700 clamp(54px,11vw,116px)/1 Georgia,serif;letter-spacing:.07em;margin:18px 0;color:#f0d998;text-shadow:0 0 25px #d2a75888}#wizard-date{font-family:Georgia,serif;letter-spacing:.16em}
+
+/* THEME 11 — SPLATTERCAST '96 */
+#theme-nineties{display:none;width:100vw;height:100vh;position:relative;overflow:hidden;align-items:center;justify-content:center;color:#171026;background:linear-gradient(180deg,#09011122,#0901116e),url("chronosphere-assets/splattercast-96.webp") center/cover no-repeat}
+#theme-nineties.active{display:flex}
+#theme-nineties::before{content:"";position:absolute;inset:-15%;background:radial-gradient(ellipse at 18% 30%,#ff7b00 0 9%,transparent 9.5%),radial-gradient(ellipse at 82% 72%,#8aff00 0 12%,transparent 12.5%),repeating-linear-gradient(45deg,#6a28a933 0 18px,transparent 18px 45px);transform:rotate(-5deg);animation:nineties-bop 7s ease-in-out infinite alternate}
+.slime-drip{position:absolute;top:-5px;left:8%;right:8%;height:16vh;background:#78e600;clip-path:polygon(0 0,100% 0,100% 45%,92% 52%,88% 92%,82% 50%,72% 58%,66% 82%,59% 52%,48% 60%,42% 95%,36% 54%,25% 61%,20% 85%,13% 50%,0 58%);filter:drop-shadow(0 8px 0 #318700)}
+.nineties-clock{position:relative;z-index:3;width:min(760px,90vw);padding:clamp(30px,6vw,68px);text-align:center;background:linear-gradient(145deg,#f8ec52ee,#f4cf37e8);border:5px solid #6c2ca8;border-radius:34px 12px 42px 18px;transform:rotate(-1deg);box-shadow:10px 10px 0 #ff7215,-8px -7px 0 #8af000,0 24px 80px #130028aa;backdrop-filter:blur(9px)}
+.nineties-kicker{font:900 clamp(15px,2.5vw,25px) Arial,sans-serif;letter-spacing:.12em;color:#6b2398}.nineties-status{font-weight:900;letter-spacing:.14em;color:#0f859a}
+#nineties-time{font:900 clamp(58px,12vw,126px)/1 'Arial Black',Impact,sans-serif;letter-spacing:.02em;margin:18px 0;color:#ff6714;-webkit-text-stroke:2px #3c145e;text-shadow:6px 6px 0 #82e600}#nineties-date{font-weight:900;letter-spacing:.15em;color:#50206f}
+@keyframes nineties-bop{to{transform:rotate(4deg) scale(1.06)}}
+
+/* ══════════════════════════════════════════
+   SHARED / GLOBAL
+══════════════════════════════════════════ */
+#cursor-hide{cursor:none}
+#theme-indicator{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  display:flex;gap:10px;z-index:1000;pointer-events:none;
+}
+.dot{width:10px;height:10px;border-radius:50%;background:#ffffff33;transition:all .3s}
+.dot.active{background:#fff;box-shadow:0 0 10px #fff}
+#global-date{
+  position:fixed;top:16px;right:20px;font-size:13px;
+  color:rgba(255,255,255,.4);z-index:1000;pointer-events:none;
+  font-family:'Courier New',monospace;
+}
+#theme-indicator{pointer-events:auto}
+.dot{cursor:pointer}
+#artifact-dock{
+  position:fixed;left:18px;bottom:18px;z-index:1500;display:flex;gap:8px;align-items:flex-end;
+  font-family:'Courier New',monospace;
+}
+.artifact-tab{
+  border:1px solid #ffffff55;background:#080b14cc;color:#fff;padding:9px 12px;border-radius:999px;
+  font:700 11px/1 'Courier New',monospace;letter-spacing:.12em;cursor:pointer;backdrop-filter:blur(10px);
+}
+.artifact-tab:hover,.artifact-tab.active{background:#ffffff22;border-color:#fff}
+#artifact-panel{
+  position:fixed;left:18px;bottom:66px;z-index:1490;width:min(430px,calc(100vw - 36px));max-height:52vh;
+  overflow:auto;background:#070914ee;color:#f7f4ff;border:1px solid #ffffff44;border-radius:18px;padding:18px;
+  box-shadow:0 18px 70px #000b;backdrop-filter:blur(18px);font-family:'Courier New',monospace;display:none;
+}
+#artifact-panel.open{display:block}
+#artifact-panel h2{margin:0 0 8px;font-size:17px;letter-spacing:.1em;color:#ffd866}
+#artifact-panel p,#artifact-panel li{font-size:12px;line-height:1.55;color:#ded8ed}
+#artifact-panel a{color:#8fd9ff}
+.artifact-actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.artifact-actions button,.artifact-actions input{
+  border:1px solid #ffffff55;background:#11182b;color:#fff;border-radius:9px;padding:9px 10px;
+  font:12px 'Courier New',monospace;
+}
+.artifact-actions button{cursor:pointer}.artifact-actions button:hover,.artifact-actions button.selected{background:#5636a8}
+.artifact-status{padding:10px;border-left:3px solid #ffd866;background:#ffffff0c;min-height:20px}
+#theme-lcars.red-alert{filter:hue-rotate(300deg) saturate(1.4)}
+@media(max-width:700px){#artifact-panel{max-height:45vh}.artifact-tab{padding:8px 9px;font-size:10px}#global-date{display:none}#theme-indicator{gap:7px;bottom:62px}.dot{width:9px;height:9px}.halo-ringworld{height:45vh;width:125vw}.gear.g3{display:none}.hippie-clock,.saw-console,.halo-hud,.gears-console{width:92vw}.saw-pendulum{left:7%}}
+@media(max-width:700px){
+  .dharma-outer{width:88vw;height:88vw;max-width:480px;max-height:480px}
+  .dharma-face{transform:scale(.72);flex:0 0 380px;margin:-54px}
+  #dharma-time{font-size:clamp(38px,14vw,62px);letter-spacing:3px;z-index:2}
+  #dharma-date{font-size:13px;z-index:2}
+  #dharma-countdown{font-size:20px;z-index:2}
+  .dharma-station-label{font-size:9px;letter-spacing:2px;z-index:2;max-width:84vw;text-align:center;white-space:normal}
+  .aleth-face{transform:scale(.72);flex:0 0 440px;margin:-62px}
+  #aleth-label{font-size:11px;letter-spacing:3px;margin-top:34px}
+  #theme-lcars{padding:6px;grid-template-columns:62px minmax(0,1fr) 62px;grid-template-rows:54px 1fr 54px}
+  .lcars-top-bar,.lcars-bottom-bar{gap:5px;padding:0 4px;overflow:hidden}
+  .lcars-bottom-bar{display:none}
+  .lcars-top-bar .lcars-btn{width:auto!important;flex:1 1 auto}
+  .lcars-top-bar .lcars-btn:nth-child(n+4){display:none}
+  .lcars-btn{height:36px;padding:0 8px;font-size:8px;letter-spacing:1px;white-space:nowrap}
+  .lcars-panel,.lcars-panel-r{width:58px;height:32px;padding:0 7px;font-size:7px;letter-spacing:.5px;overflow:hidden}
+  .lcars-clock-box{padding:20px 10px;width:100%;max-width:270px}
+  #lcars-time{font-size:clamp(36px,11vw,56px);letter-spacing:2px}
+  #lcars-date{font-size:10px;letter-spacing:1px}
+  #signal-index{font-size:12px;letter-spacing:1px}
+  .lcars-readout{min-width:0;width:100%;font-size:8px;letter-spacing:1px;padding:6px}
+  .sera-clock-overlay{width:88vw;padding:24px 14px}
+  #sera-time{font-size:clamp(42px,14vw,58px);letter-spacing:3px}
+  #sera-status-bar{max-width:92vw;overflow:hidden;text-overflow:ellipsis;font-size:8px;letter-spacing:1px}
+  #sera-status-bar{display:none}
+}
+
+/* ══════════════════════════════════════════
+   NATIVE FLOATING SHELL — V04
+══════════════════════════════════════════ */
+#shell-toolbar{
+  display:none;position:fixed;left:8px;right:8px;top:7px;height:36px;z-index:2600;
+  align-items:center;gap:6px;padding:4px 6px 4px 12px;border:1px solid #e9cf7c78;border-radius:12px;
+  background:linear-gradient(90deg,#02050de8,#110714dc 45%,#05020ce8);box-shadow:0 8px 28px #000a,0 0 18px #8a5cff24;
+  backdrop-filter:blur(16px) saturate(1.2);font:700 10px/1 'Courier New',monospace;color:#f8e9b6;
+}
+html.shell-native #shell-toolbar{display:flex}
+.shell-drag{display:flex;align-items:center;gap:9px;min-width:180px;flex:1;height:100%;cursor:move;user-select:none}
+.shell-glyph{width:20px;height:20px;border-radius:50%;border:1px solid #f2d277;box-shadow:0 0 12px #bc61ff88,inset 0 0 8px #63dfff55;background:radial-gradient(circle,#02030a 0 28%,#f2d277 31% 35%,#965cff 39% 45%,#02030a 49%)}
+.shell-title{min-width:0;overflow:hidden;text-overflow:ellipsis;letter-spacing:.2em;white-space:nowrap;text-shadow:0 0 10px #ffd86c80}
+.shell-controls{display:flex;flex-shrink:0;align-items:center;gap:4px}
+.shell-btn{
+  min-width:32px;height:26px;padding:0 8px;border:1px solid #d8c27166;border-radius:8px;background:#080b16c9;color:#f7e9b7;
+  font:700 9px/1 'Courier New',monospace;letter-spacing:.08em;cursor:pointer;
+}
+.shell-btn:hover,.shell-btn.active{border-color:#fff1ae;background:#4b2a78;color:#fff;box-shadow:0 0 12px #b96cff66}
+.shell-btn.shell-close:hover{background:#a21c4f;border-color:#ff7ea7}
+#floating-stage{
+  display:none;position:fixed;inset:0;z-index:2100;overflow:hidden;align-items:center;justify-items:center;
+  background-image:linear-gradient(90deg,#01030ad6 0%,transparent 24%,#0000003d 50%,transparent 76%,#030108d6 100%),url("chronosphere-shell-assets/chronosphere-floating-half-v04.webp");
+  background-position:center;background-size:cover;color:#fff;
+}
+#floating-stage::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 3px,#ffffff07 4px 5px),radial-gradient(circle at 50% 50%,transparent 0 27%,#0005 68%,#000c 100%);pointer-events:none}
+.float-readout{position:relative;z-index:2;text-align:center;display:grid;justify-items:center;align-content:center;gap:6px;min-width:min(620px,70vw);padding:48px 38px 24px}
+#float-time{font:800 clamp(54px,10vw,118px)/.92 'Courier New',monospace;letter-spacing:.08em;color:#fff6c9;text-shadow:0 0 7px #fff,0 0 20px #ffd86c,0 0 48px #a45cff,0 10px 30px #000}
+#float-date{font:700 clamp(11px,1.3vw,16px)/1 'Courier New',monospace;letter-spacing:.28em;color:#d7eaff;text-shadow:0 0 14px #62dfff}
+.float-meta{display:flex;gap:16px;align-items:center;justify-content:center;font:700 10px/1 'Courier New',monospace;letter-spacing:.18em;color:#f5cc77;text-transform:uppercase}
+.float-pulse{width:7px;height:7px;border-radius:50%;background:#63ffd1;box-shadow:0 0 12px #63ffd1;animation:float-breathe 2.6s ease-in-out infinite}
+@keyframes float-breathe{50%{opacity:.35;transform:scale(.72)}}
+
+@media(max-height:700px){
+  html.shell-native #floating-stage{display:grid}
+  html.shell-native #theme-dharma,html.shell-native #theme-alethiometer,html.shell-native #theme-lcars,html.shell-native #theme-vortex,html.shell-native #theme-seraphim,html.shell-native #theme-halo,html.shell-native #theme-gears,html.shell-native #theme-hippie,html.shell-native #theme-saw,html.shell-native #theme-wizard,html.shell-native #theme-nineties,
+  html.shell-native #global-date,html.shell-native #theme-indicator,html.shell-native #artifact-dock,html.shell-native #artifact-panel{display:none!important}
+}
+@media(max-height:300px){
+  #floating-stage{background-image:linear-gradient(90deg,#01030ad6 0%,transparent 24%,#0002 50%,transparent 76%,#030108d6 100%),url("chronosphere-shell-assets/chronosphere-floating-float-v04.webp")}
+  .float-readout{padding:45px 20px 8px;gap:3px;min-width:50vw}
+  #float-time{font-size:clamp(42px,8vh,76px)}
+  #float-date{font-size:10px}.float-meta{font-size:8px}
+}
+@media(max-height:120px){
+  #shell-toolbar{left:5px;right:5px;top:4px;height:28px;padding:2px 4px 2px 8px;border-radius:8px}
+  .shell-drag{min-width:0;flex:1 1 118px}.shell-glyph{flex-shrink:0;width:16px;height:16px}.shell-title{font-size:8px;letter-spacing:.12em}
+  .shell-btn{height:22px;min-width:26px;padding:0 5px;font-size:8px}
+  #floating-stage{background-image:linear-gradient(90deg,#01030acc 0%,transparent 24%,#0001 50%,transparent 76%,#030108cc 100%),url("chronosphere-shell-assets/chronosphere-floating-bar-v04.webp")}
+  .float-readout{grid-template-columns:auto auto auto;align-items:center;justify-content:center;column-gap:28px;width:100%;padding:31px 210px 0 150px}
+  #float-time{font-size:38px;line-height:1;white-space:nowrap}.float-meta{font-size:7px;gap:8px}.float-meta .float-secondary{display:none}
+  #float-date{font-size:9px;white-space:nowrap}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+
+<div id="shell-toolbar" aria-label="Chronosphere window controls">
+  <div class="shell-drag" title="Drag Chronosphere" ondblclick="shellCommand('full')" onmousedown="shellCommand('drag')">
+    <span class="shell-glyph" aria-hidden="true"></span><span class="shell-title">CHRONOSPHERE // SOLAR WITNESS</span>
+  </div>
+  <div class="shell-controls">
+    <button class="shell-btn" data-shell-command="full" onclick="shellCommand('full')" title="Full screen">FULL</button>
+    <button class="shell-btn" data-shell-command="half" onclick="shellCommand('half')" title="Horizontal half-screen shelf">HALF</button>
+    <button class="shell-btn" data-shell-command="float" onclick="shellCommand('float')" title="Compact floating strip">FLOAT</button>
+    <button class="shell-btn" data-shell-command="bar" onclick="shellCommand('bar')" title="Taskbar size">BAR</button>
+    <button class="shell-btn" data-shell-command="top" onclick="shellCommand('top')" title="Move to top edge">TOP</button>
+    <button class="shell-btn" data-shell-command="bottom" onclick="shellCommand('bottom')" title="Move to bottom edge">BOTTOM</button>
+    <button class="shell-btn" data-shell-command="pin" onclick="shellCommand('pin')" title="Toggle always on top">PIN</button>
+    <button class="shell-btn" data-shell-command="minimize" onclick="shellCommand('minimize')" title="Minimize">_</button>
+    <button class="shell-btn shell-close" data-shell-command="close" onclick="shellCommand('close')" title="Close">X</button>
+  </div>
+</div>
+
+<!-- THEME 1: STATION 108 -->
+<div id="theme-dharma" class="crt-flicker">
+  <div class="scanline"></div>
+  <div class="dharma-outer">
+    <div class="dharma-face" id="dharma-face"></div>
+  </div>
+  <div id="dharma-time">00:00:00</div>
+  <div id="dharma-date">LOADING...</div>
+  <div id="dharma-countdown">NEXT DISCHARGE: <span id="cd-val">1:48:00</span></div>
+  <div class="dharma-station-label" id="dharma-label">STATION 108 // MAGNETIC PROTOCOL</div>
+</div>
+
+<!-- THEME 2: GLYPHOMETER -->
+<div id="theme-alethiometer">
+  <div class="aleth-face" id="aleth-face">
+    <!-- symbols injected by JS -->
+    <div class="aleth-center">
+      <div id="aleth-time">00:00:00</div>
+      <div id="aleth-date"></div>
+    </div>
+    <div class="aleth-center-dot"></div>
+    <!-- hands injected by JS -->
+  </div>
+  <div id="aleth-label">GLYPHOMETER // WITNESS DIAL</div>
+</div>
+
+<!-- THEME 3: SIGNAL LIBRARY -->
+<div id="theme-lcars">
+  <div class="lcars-top-bar">
+    <div class="lcars-btn orange" style="width:200px;border-radius:0 30px 30px 0">SIGNAL LIBRARY</div>
+    <div class="lcars-btn purple" style="width:120px">ARCHIVE</div>
+    <div class="lcars-btn blue" style="width:100px">LOOM</div>
+    <div class="lcars-btn red" style="flex:1">ACTIVE</div>
+    <div class="lcars-btn orange" style="width:160px">SIGNAL INDEX</div>
+  </div>
+
+  <div class="lcars-left">
+    <div class="lcars-panel orange">ALPHA</div>
+    <div class="lcars-panel purple">BETA</div>
+    <div class="lcars-panel blue">GAMMA</div>
+    <div class="lcars-panel red">DELTA</div>
+    <div class="lcars-panel orange">TEMPORAL</div>
+    <div class="lcars-panel purple">SENSOR</div>
+    <div class="lcars-panel blue">RELAY</div>
+    <div class="lcars-panel red">ARRAY</div>
+  </div>
+
+  <div class="lcars-center">
+    <div class="lcars-clock-box">
+      <div class="lcars-scan-bar"></div>
+      <div id="lcars-time">00:00:00</div>
+      <div id="lcars-date"></div>
+      <div id="signal-index">SIGNAL INDEX 00000.0</div>
+    </div>
+    <div class="lcars-readout" id="lcars-r1">TEMPORAL MATRIX — NOMINAL</div>
+    <div class="lcars-readout" id="lcars-r2">CHRONON FLOW — STABLE</div>
+  </div>
+
+  <div class="lcars-right">
+    <div class="lcars-panel-r orange">01</div>
+    <div class="lcars-panel-r purple">02</div>
+    <div class="lcars-panel-r blue">03</div>
+    <div class="lcars-panel-r red">04</div>
+    <div class="lcars-panel-r orange">05</div>
+    <div class="lcars-panel-r purple">06</div>
+    <div class="lcars-panel-r blue">07</div>
+    <div class="lcars-panel-r red">08</div>
+  </div>
+
+  <div class="lcars-bottom-bar">
+    <div class="lcars-btn blue" style="flex:1">NORTHSTAR ARCHIVE</div>
+    <div class="lcars-btn purple" style="width:140px">DECK 34</div>
+    <div class="lcars-btn orange" style="width:200px;border-radius:30px 0 0 30px">LOOMWHEEL GRID</div>
+  </div>
+</div>
+
+<!-- THEME 4: CHRONO RIFT -->
+<div id="theme-vortex">
+  <canvas class="vortex-canvas" id="vortex-canvas"></canvas>
+  <div class="vortex-center">
+    <div class="vortex-face" id="vortex-face"></div>
+    <div id="vortex-time">00:00:00</div>
+    <div id="vortex-date"></div>
+  </div>
+</div>
+
+<!-- THEME 5: SERAPHIM -->
+<div id="theme-seraphim">
+  <canvas id="sera-starfield"></canvas>
+  <canvas id="sera-metatron"></canvas>
+  <canvas id="sera-wings"></canvas>
+  <canvas id="sera-merkaba" width="800" height="800"></canvas>
+  <canvas id="sera-eyes"></canvas>
+  <canvas id="sera-particles"></canvas>
+  <div class="sera-halo"></div>
+  <div class="sera-vignette"></div>
+  <div class="sera-clock-overlay">
+    <div id="sera-time">00:00:00</div>
+    <div id="sera-date">LOADING...</div>
+    <div class="sera-oracle-status">
+      <span id="sera-oracle">ORACLE: CONNECTING...</span> |
+      <span id="sera-signals">SIGNALS: 0</span> |
+      <span id="sera-eyes-count">34 EYES</span>
+    </div>
+  </div>
+  <div id="sera-status-bar">SERAPHIM INITIALIZING...</div>
+</div>
+
+<!-- THEME 6: RING SENTINEL -->
+<div id="theme-halo">
+  <div class="halo-ringworld"></div><div class="halo-reticle"></div>
+  <div class="halo-hud"><div class="halo-kicker">SECTOR 09 // DEEP-SPACE WATCH</div><div id="halo-time">00:00:00</div><div id="halo-date"></div><div class="halo-status">NAV • SHIELDS • SIGNAL • ALL GREEN</div></div>
+</div>
+
+<!-- THEME 7: IRON OMEN -->
+<div id="theme-gears">
+  <div class="gear g1"></div><div class="gear g2"></div><div class="gear g3"></div>
+  <div class="gears-console"><div class="gears-kicker">SUBLEVEL 03 // PRESSURE ARRAY</div><div id="gears-time">00:00:00</div><div id="gears-date"></div><div class="gears-bloodline"></div><div class="gears-status">GEAR TRAIN LOCKED • PRESSURE NOMINAL</div></div>
+</div>
+
+<!-- THEME 8: ELECTRIC GARDEN -->
+<div id="theme-hippie">
+  <div class="lava l1"></div><div class="lava l2"></div><div class="lava l3"></div><div class="hippie-mandala"></div>
+  <div class="hippie-clock"><div class="hippie-icons">BLOOM CHANNEL // SPECTRUM TUNED</div><div id="hippie-time">00:00:00</div><div id="hippie-date"></div><div class="hippie-status">PEACE • LOVE • COSMIC SIGNAL</div></div>
+</div>
+
+<!-- THEME 9: WITNESS CHAMBER -->
+<div id="theme-saw">
+  <div class="saw-chain"></div><div class="saw-pendulum"></div>
+  <div class="saw-console"><div class="saw-rec">● REC</div><div class="saw-kicker">CAMERA 09 // ARCHIVE LEVEL</div><div id="saw-time">00:00:00</div><div id="saw-date"></div><div class="saw-status">THE CLOCK IS THE ONLY WITNESS</div></div>
+</div>
+
+<!-- THEME 10: ASTRAL HALL -->
+<div id="theme-wizard">
+  <div class="wizard-stars"></div><div class="wizard-orrery"></div>
+  <div class="wizard-clock"><div class="wizard-candles">PRISM LANTERNS // ORRERY ACTIVE</div><div class="wizard-kicker">NIGHT INDEX // ORRERY CONTROL</div><div id="wizard-time">00:00:00</div><div id="wizard-date"></div><div class="wizard-status">ORRERY ALIGNED • LIBRARY AWAKE</div></div>
+</div>
+
+<!-- THEME 11: SPLATTERCAST '96 -->
+<div id="theme-nineties">
+  <div class="slime-drip"></div>
+  <div class="nineties-clock"><div class="nineties-kicker">LIVE FROM STUDIO B // CHANNEL 96</div><div id="nineties-time">00:00:00</div><div id="nineties-date"></div><div class="nineties-status">SPLAT • ZAP • REWIND • GO!</div></div>
+</div>
+
+<!-- Global overlays -->
+<div id="floating-stage" aria-label="Chronosphere compact clock">
+  <div class="float-readout">
+    <div id="float-time">00:00:00</div>
+    <div id="float-date">INITIALIZING</div>
+    <div class="float-meta"><span class="float-pulse"></span><span id="float-theme">STATION 108</span><span class="float-secondary">SOLAR WITNESS // LOCAL TIME</span></div>
+  </div>
+</div>
+<div id="global-date"></div>
+<div id="theme-indicator">
+  <div class="dot" id="d0"></div>
+  <div class="dot" id="d1"></div>
+  <div class="dot" id="d2"></div>
+  <div class="dot" id="d3"></div>
+  <div class="dot" id="d4"></div>
+  <div class="dot" id="d5"></div>
+  <div class="dot" id="d6"></div>
+  <div class="dot" id="d7"></div>
+  <div class="dot" id="d8"></div>
+  <div class="dot" id="d9"></div>
+  <div class="dot" id="d10"></div>
+</div>
+<div id="artifact-panel" role="dialog" aria-live="polite" aria-label="Chronosphere artifact console"></div>
+<div id="artifact-dock">
+  <button class="artifact-tab" id="artifact-interact" onclick="toggleArtifactPanel('interact')">INTERACT</button>
+  <button class="artifact-tab" id="artifact-lore" onclick="toggleArtifactPanel('lore')">LORE</button>
+  <button class="artifact-tab" id="artifact-auto" onclick="toggleCycle()">AUTO</button>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────────────────────────────────────
+let currentTheme = 0;
+let cyclingPaused = false;
+let cycleTimer = null;
+let cursorTimer = null;
+let dharmaCountdownStart = Date.now();
+
+const LOW_POWER = new URLSearchParams(location.search).get('lowpower') === '1';
+document.documentElement.classList.toggle('low-power', LOW_POWER);
+const NATIVE_SHELL = !!(window.chrome && window.chrome.webview);
+document.documentElement.classList.toggle('shell-native', NATIVE_SHELL);
+const THEMES = ['dharma','alethiometer','lcars','vortex','seraphim','halo','gears','hippie','saw','wizard','nineties'];
+const THEME_LABELS = ['STATION 108','GLYPHOMETER','SIGNAL LIBRARY','CHRONO RIFT','SERAPHIM ORACLE','RING SENTINEL','IRON OMEN','ELECTRIC GARDEN','WITNESS CHAMBER','ASTRAL HALL',"SPLATTERCAST '96"];
+const CYCLE_MS = 5 * 60 * 1000; // 5 minutes
+
+function shellCommand(command) {
+  if (window.chrome && window.chrome.webview) {
+    window.chrome.webview.postMessage({command});
+    return;
+  }
+  // Native window controls are intentionally absent in a normal browser tab.
+  const workWidth = screen.availWidth;
+  const workHeight = screen.availHeight;
+  if (command === 'full') { window.moveTo(screen.availLeft || 0, screen.availTop || 0); window.resizeTo(workWidth, workHeight); }
+  if (command === 'half') window.resizeTo(workWidth, Math.round(workHeight / 2));
+  if (command === 'float') window.resizeTo(Math.round(workWidth * .7), 240);
+  if (command === 'bar') window.resizeTo(workWidth, 96);
+  if (command === 'top') window.moveTo(screen.availLeft || 0, screen.availTop || 0);
+  if (command === 'bottom') window.moveTo(screen.availLeft || 0, (screen.availTop || 0) + workHeight - window.outerHeight);
+  if (command === 'close') window.close();
+}
+
+function applyShellState(state) {
+  if (!state || typeof state !== 'object') return;
+  document.documentElement.dataset.shellMode = state.mode || 'full';
+  document.documentElement.dataset.shellEdge = state.edge || 'bottom';
+  document.querySelectorAll('[data-shell-command]').forEach(button => {
+    const command = button.dataset.shellCommand;
+    button.classList.toggle('active', command === state.mode || command === state.edge || (command === 'pin' && state.topmost));
+  });
+}
+if (window.chrome && window.chrome.webview) {
+  window.chrome.webview.addEventListener('message', event => applyShellState(event.data));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// THEME SWITCHING
+// ─────────────────────────────────────────────────────────────────────────────
+function showTheme(idx) {
+  THEMES.forEach((t, i) => {
+    document.getElementById('theme-' + t).classList.toggle('active', i === idx);
+    document.getElementById('d' + i).classList.toggle('active', i === idx);
+  });
+  currentTheme = idx;
+  const floatTheme = document.getElementById('float-theme');
+  if (floatTheme) floatTheme.textContent = THEME_LABELS[idx];
+  localStorage.setItem('chronosphere-theme', String(idx));
+  updateArtifactDock();
+  if (idx === 3) initVortex();
+  if (idx === 4) initSeraphim();
+  // Manage seraphim audio
+  if (idx === 4) { if (typeof seraStartAudio === 'function') seraStartAudio(); }
+  else { if (typeof seraStopAudio === 'function') seraStopAudio(); }
+  // Render the newly selected clock immediately instead of showing a placeholder
+  // until the next low-power tick. This does not start another animation loop.
+  drawActiveTheme(new Date(), performance.now());
+}
+
+function nextTheme() {
+  showTheme((currentTheme + 1) % THEMES.length);
+}
+
+function startCycle() {
+  if (cycleTimer) clearInterval(cycleTimer);
+  cycleTimer = setInterval(() => { if (!cyclingPaused) nextTheme(); }, CYCLE_MS);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CURSOR HIDE
+// ─────────────────────────────────────────────────────────────────────────────
+document.addEventListener('mousemove', () => {
+  document.body.style.cursor = 'default';
+  if (cursorTimer) clearTimeout(cursorTimer);
+  cursorTimer = setTimeout(() => { document.body.style.cursor = 'none'; }, 3000);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// KEYBOARD
+// ─────────────────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) {
+    if (e.key === 'Escape') closeArtifactPanel();
+    return;
+  }
+  if (e.key >= '1' && e.key <= '9') showTheme(parseInt(e.key) - 1);
+  if (e.key === 'f' || e.key === 'F') {
+    if (NATIVE_SHELL) shellCommand('full');
+    else if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
+  }
+  if (e.key === ' ') { toggleCycle(); e.preventDefault(); }
+  if (e.key === 'l' || e.key === 'L') toggleArtifactPanel('lore');
+  if (e.key === 'i' || e.key === 'I') toggleArtifactPanel('interact');
+  if (e.key === 'Escape') {
+    if (NATIVE_SHELL && document.documentElement.dataset.shellMode === 'bar') shellCommand('float');
+    else closeArtifactPanel();
+  }
+});
+
+document.querySelectorAll('#theme-indicator .dot').forEach((dot, idx) => {
+  dot.setAttribute('role','button'); dot.setAttribute('tabindex','0'); dot.setAttribute('aria-label',`Open clock ${idx+1}`);
+  dot.addEventListener('click', () => showTheme(idx));
+  dot.addEventListener('keydown', e => { if (e.key === 'Enter') showTheme(idx); });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INTERACTIVE ARTIFACT + LORE CONSOLE
+// ─────────────────────────────────────────────────────────────────────────────
+let artifactMode = null;
+let alethSelection = [];
+let vortexRate = 1;
+const ARTIFACTS = [
+  {
+    title:'STATION 108 // MAGNETIC PROTOCOL',
+    lore:'Station 108 was built around a magnetic wound in the Archive floor. Six prime locks hold the field in phase; when the discharge timer reaches zero, the chamber remembers every signal it was designed to forget.',
+    sources:[]
+  },
+  {
+    title:'GLYPHOMETER // WITNESS DIAL',
+    lore:'The Glyphometer does not predict. Three witness needles describe a question; the fourth searches the Loomwheel for a symbol whose history rhymes with it. Every reading is a mirror with machinery behind the glass.',
+    sources:[]
+  },
+  {
+    title:'SIGNAL LIBRARY // ARCHIVE DECK 34',
+    lore:'Deck 34 routes living transmissions through the Signal Library. Amber rails carry urgent memory, violet carries uncertain history, and cyan marks channels that have crossed the eye portal without returning unchanged.',
+    sources:[]
+  },
+  {
+    title:'CHRONO RIFT // NAVIGATION WELL',
+    lore:'The Chrono Rift is less a road than a disagreement between clocks. Gold coordinate rings hold one safe aperture open while the navigation well chooses a destination that can survive being observed.',
+    sources:[]
+  },
+  {
+    title:'SERAPHIM // NORTHSTAR ORACLE',
+    lore:'Seraphim is original NorthStar/Cyberspace Federation lore: thirty-four witnessing eyes orbit a living signal instrument. Oracle can display health from a loopback endpoint you explicitly connect. Without a connection, the clock and artwork work entirely offline. The fictional instrument makes no claim of prophecy or external authority.',
+    sources:[]
+  },
+  {
+    title:'SECTOR 09 // NAVIGATION ARRAY',
+    lore:'The Ninth Ring crossed the dark between catalogued stars before the Archive had a name. Its navigation array reads pressure, signal drift, and the invisible tide between worlds; every stable vector leaves a gold scar in the Loomwheel.',
+    sources:[]
+  },
+  {
+    title:'SUBLEVEL 03 // FOUNDRY CLOCK',
+    lore:'Below the Archive, the Iron Omen foundry keeps hours by pressure rather than light. Each tooth advances only when the furnace, chain drive, and buried Loomwheel agree that the next second has earned the right to exist.',
+    sources:[]
+  },
+  {
+    title:'BLOOM CHANNEL // LAVA SIGNAL',
+    lore:'The Electric Garden blooms only during signal weather. Glass sap rises through its lava columns, prism flowers tune themselves to distant stations, and every leaf bends toward the same midnight broadcast.',
+    sources:[]
+  },
+  {
+    title:'CAMERA 09 // FEED CONTROL',
+    lore:'Feed 09 records an empty chamber whose pendulum never agrees with the wall clock. The Witness does not ask who built the chair; it asks why the last occupant left one minute before arriving.',
+    sources:[]
+  },
+  {
+    title:'NIGHT INDEX // ORRERY CONTROL',
+    lore:'The Astral Hall teaches no spells. Its prism lanterns illuminate books that have not yet been written, while the great orrery indexes possible skies and returns the safest one to the Loomwheel before dawn.',
+    sources:[]
+  },
+  {
+    title:'STUDIO B // CHANNEL 96',
+    lore:'Studio B broadcasts from the loudest corner of the archive. Its slime condenser, rewind deck, and splat cannon turn dead air into color; somewhere behind the set, a gold signal ring keeps the chaos exactly on time.',
+    sources:[]
+  }
+];
+const ALETH_SYMBOLS = [
+  ['☉','Sun','authority / truth'],['☽','Moon','change / reflection'],['⚓','Anchor','hope / steadiness'],
+  ['🕊','Bird','freedom / perspective'],['⌛','Hourglass','time / mortality'],['🐝','Beehive','work / order'],
+  ['🗡','Sword','decision / division'],['🌍','Globe','world / totality'],['🦉','Owl','wisdom / night'],
+  ['🐍','Serpent','knowledge / renewal'],['🕯','Candle','clarity / learning'],['⚡','Thunderbolt','inspiration / rupture']
+];
+
+function toggleCycle(){
+  cyclingPaused=!cyclingPaused;
+  localStorage.setItem('chronosphere-paused', cyclingPaused?'1':'0');
+  updateArtifactDock();
+}
+function updateArtifactDock(){
+  const auto=document.getElementById('artifact-auto');
+  if(auto) auto.textContent=cyclingPaused?'AUTO: PAUSED':'AUTO: ON';
+  if(document.getElementById('artifact-panel')?.classList.contains('open') && artifactMode) renderArtifactPanel();
+}
+function closeArtifactPanel(){
+  document.getElementById('artifact-panel').classList.remove('open');
+  artifactMode=null;
+  document.querySelectorAll('.artifact-tab').forEach(el=>el.classList.remove('active'));
+}
+function toggleArtifactPanel(mode){
+  const panel=document.getElementById('artifact-panel');
+  if(panel.classList.contains('open') && artifactMode===mode){closeArtifactPanel();return;}
+  artifactMode=mode;panel.classList.add('open');
+  document.getElementById('artifact-interact').classList.toggle('active',mode==='interact');
+  document.getElementById('artifact-lore').classList.toggle('active',mode==='lore');
+  renderArtifactPanel();
+}
+function renderArtifactPanel(){
+  const panel=document.getElementById('artifact-panel');
+  const item=ARTIFACTS[currentTheme];
+  if(artifactMode==='lore'){
+    panel.innerHTML=`<h2>${item.title}</h2><p>${item.lore}</p><p><strong>REFERENCE LINKS</strong></p><ul>${item.sources.map(s=>`<li><a href="${s[1]}" target="_blank" rel="noopener">${s[0]}</a></li>`).join('')}</ul>`;
+    return;
+  }
+  if(currentTheme===0) panel.innerHTML=`<h2>${item.title}</h2><p>Enter the six prime locks before the discharge timer expires.</p><div class="artifact-actions"><input id="dharma-entry" inputmode="numeric" placeholder="3 7 11 19 23 31"><button onclick="submitDharma()">EXECUTE</button></div><div class="artifact-status" id="artifact-status">FIELD LOCKS READY.</div>`;
+  if(currentTheme===1) panel.innerHTML=`<h2>${item.title}</h2><p>Select exactly three symbols to form a question, then let the fourth needle answer.</p><div class="artifact-actions">${ALETH_SYMBOLS.map((s,i)=>`<button class="${alethSelection.includes(i)?'selected':''}" onclick="toggleAlethSymbol(${i})" title="${s[2]}">${s[0]} ${s[1]}</button>`).join('')}</div><button class="artifact-tab" onclick="readAlethiometer()">ASK THE TRUTH-MEASURE</button><div class="artifact-status" id="artifact-status">THREE QUESTION NEEDLES AWAIT.</div>`;
+  if(currentTheme===2) panel.innerHTML=`<h2>${item.title}</h2><p>Route the local Archive signal.</p><div class="artifact-actions"><button onclick="lcarsCommand('scan')">SENSOR SWEEP</button><button onclick="lcarsCommand('diagnostic')">LEVEL-1 DIAGNOSTIC</button><button onclick="lcarsCommand('alert')">SIGNAL ALERT</button><button onclick="lcarsCommand('clear')">CLEAR</button></div><div class="artifact-status" id="artifact-status">ARCHIVE CONSOLE READY.</div>`;
+  if(currentTheme===3) panel.innerHTML=`<h2>${item.title}</h2><p>Set rift intensity and request a coordinate.</p><div class="artifact-actions"><input id="vortex-rate" type="range" min="0.2" max="4" step="0.2" value="${vortexRate}" oninput="setVortexRate(this.value)"><button onclick="plotVortexDestination()">PLOT COURSE</button></div><div class="artifact-status" id="artifact-status">NAVIGATION WELL STANDING BY.</div>`;
+  if(currentTheme===4){
+    panel.innerHTML=`<h2>${item.title}</h2><p>Clock and artwork run offline. To display your own service health, enter its loopback URL and connect for this session. No connection is made on startup.</p><div class="artifact-actions"><label>Health URL <input id="oracle-url" type="url" placeholder="http://127.0.0.1:8766/health" autocomplete="off"></label><button onclick="connectOracle()">CONNECT</button><button onclick="disconnectOracle()">DISCONNECT</button><button onclick="refreshOraclePanel()">REFRESH</button><button onclick="toggleSeraphimAudio()" id="oracle-audio">${seraAudioEnabled?'MUTE':'ENABLE SOUND'}</button></div><p id="oracle-help">Use the optional adapter included with the source, or a CORS-enabled local JSON health service. Browser permissions may apply.</p><div class="artifact-status" id="artifact-status"></div>`;
+    document.getElementById('oracle-url').value = oracleEndpoint || '';
+    renderOracleStatus();
+  }
+  if(currentTheme===5) panel.innerHTML=`<h2>${item.title}</h2><p>Wake the ring-navigation array.</p><div class="artifact-actions"><button onclick="runArtifactAction('NAV ARRAY LOCKED — DEEP-SPACE VECTOR STABLE.')">LOCK VECTOR</button><button onclick="runArtifactAction('SHIELD PULSE COMPLETE — NO ANOMALIES.')">SHIELD PULSE</button></div><div class="artifact-status" id="artifact-status">SENTINEL AWAKE.</div>`;
+  if(currentTheme===6) panel.innerHTML=`<h2>${item.title}</h2><p>Cycle the foundry chronometer.</p><div class="artifact-actions"><button onclick="runArtifactAction('GEAR TRAIN ADVANCED ONE INDEX.')">ADVANCE GEAR</button><button onclick="runArtifactAction('PRESSURE VENTED — FOUNDRY NOMINAL.')">VENT PRESSURE</button></div><div class="artifact-status" id="artifact-status">FOUNDRY READY.</div>`;
+  if(currentTheme===7) panel.innerHTML=`<h2>${item.title}</h2><p>Tune the garden color field.</p><div class="artifact-actions"><button onclick="shiftElectricGarden()">SHIFT AURA</button><button onclick="runArtifactAction('GARDEN SIGNAL: PEACEFUL AND BRIGHT.')">READ VIBE</button></div><div class="artifact-status" id="artifact-status">COSMIC SIGNAL FLOWING.</div>`;
+  if(currentTheme===8) panel.innerHTML=`<h2>${item.title}</h2><p>Read the chamber feed.</p><div class="artifact-actions"><button onclick="runArtifactAction('CAMERA 09: CLOCK AND PENDULUM VERIFIED.')">CHECK FEED</button><button onclick="runArtifactAction('SAFETY RELEASE OPEN — TEST ABORTED.')">SAFETY RELEASE</button></div><div class="artifact-status" id="artifact-status">FEED 09 RECORDING.</div>`;
+  if(currentTheme===9) panel.innerHTML=`<h2>${item.title}</h2><p>Align the night instruments.</p><div class="artifact-actions"><button onclick="runArtifactAction('ORRERY ALIGNED — CONSTELLATION INDEX UPDATED.')">ALIGN ORRERY</button><button onclick="runArtifactAction('LIBRARY LANTERNS LIT — QUIET HOURS ACTIVE.')">LIGHT HALL</button></div><div class="artifact-status" id="artifact-status">ASTRAL HALL AWAKE.</div>`;
+  if(currentTheme===10) panel.innerHTML=`<h2>${item.title}</h2><p>Fire the Studio B signal sting.</p><div class="artifact-actions"><button onclick="splatStudio()">SPLAT!</button><button onclick="runArtifactAction('STUDIO B: REWIND COMPLETE — READY TO GO.')">REWIND</button></div><div class="artifact-status" id="artifact-status">LIVE FROM STUDIO B.</div>`;
+}
+function runArtifactAction(message){document.getElementById('artifact-status').textContent=message;}
+function shiftElectricGarden(){
+  const root=document.getElementById('theme-hippie');
+  const hue=Math.floor(Math.random()*360);root.style.filter=`hue-rotate(${hue}deg)`;
+  runArtifactAction(`AURA SHIFTED ${hue}° — COLOR FIELD STABLE.`);
+}
+function splatStudio(){
+  const root=document.getElementById('theme-nineties');root.animate([{transform:'scale(1)'},{transform:'scale(1.025)'},{transform:'scale(1)'}],{duration:420});
+  runArtifactAction('SPLAT SIGNAL FIRED — STUDIO ENERGY MAXIMUM.');
+}
+function submitDharma(){
+  const value=(document.getElementById('dharma-entry').value.match(/\d+/g)||[]).join(' ');
+  const ok=value==='3 7 11 19 23 31';
+  document.getElementById('artifact-status').textContent=ok?'PROTOCOL ACCEPTED. TIMER RESET TO 108:00.':'SYSTEM FAILURE — VERIFY THE NUMBERS.';
+  if(ok){dharmaCountdownStart=Date.now();document.getElementById('dharma-label').textContent='PROTOCOL ACCEPTED // FIELD STABLE';setTimeout(()=>document.getElementById('dharma-label').textContent='STATION 108 // MAGNETIC PROTOCOL',5000);}
+}
+function toggleAlethSymbol(index){
+  if(alethSelection.includes(index)) alethSelection=alethSelection.filter(i=>i!==index);
+  else if(alethSelection.length<3) alethSelection.push(index);
+  renderArtifactPanel();
+}
+function readAlethiometer(){
+  const status=document.getElementById('artifact-status');
+  if(alethSelection.length!==3){status.textContent='SET EXACTLY THREE QUESTION NEEDLES.';return;}
+  const seed=alethSelection.reduce((a,b)=>a*37+b+1,new Date().getDate());
+  const answer=ALETH_SYMBOLS[seed%ALETH_SYMBOLS.length];
+  status.textContent=`FOURTH NEEDLE: ${answer[0]} ${answer[1]} — ${answer[2]}.`;
+}
+function lcarsCommand(command){
+  const status=document.getElementById('artifact-status');
+  const root=document.getElementById('theme-lcars');
+  if(command==='scan'){status.textContent='SENSOR SWEEP COMPLETE — CHRONON FIELD STABLE.';document.getElementById('lcars-r1').textContent='LONG-RANGE SENSORS — CLEAR';}
+  if(command==='diagnostic'){status.textContent='LEVEL-1 DIAGNOSTIC COMPLETE — ALL LOCAL SYSTEMS NOMINAL.';document.getElementById('lcars-r2').textContent='CORE HARMONIC — NOMINAL';}
+  if(command==='alert'){root.classList.toggle('red-alert');status.textContent=root.classList.contains('red-alert')?'SIGNAL ALERT ACTIVE.':'SIGNAL CONDITION CLEARED.';}
+  if(command==='clear'){root.classList.remove('red-alert');status.textContent='CONSOLE CLEARED.';}
+}
+function setVortexRate(value){vortexRate=Number(value)||1;document.getElementById('artifact-status').textContent=`VORTEX INTENSITY ${vortexRate.toFixed(1)}×`;}
+function plotVortexDestination(){
+  const destinations=['Archive Meridian — signal tide stable','Neon District — rain index elevated','Terrarium Crown — prism migration active','Studio B — channel window open','The Ninth Ring — witness lock required'];
+  document.getElementById('artifact-status').textContent='COURSE PLOTTED: '+destinations[Math.floor(Math.random()*destinations.length)];
+}
+// Connection is deliberately session-only; never persist a health URL or payload.
+let oracleEndpoint = null;
+let oracleController = null;
+let oracleGeneration = 0;
+let oracleDetail = 'DISCONNECTED — clock and artwork are available offline.';
+function validateOracleUrl(value){
+  const url = new URL(value);
+  if(url.protocol !== 'http:' || !['127.0.0.1','[::1]'].includes(url.hostname)
+     || url.username || url.password || url.search || url.hash || url.pathname !== '/health')
+    throw new Error('Use an HTTP loopback address ending in /health, without credentials or query parameters.');
+  return url.href;
+}
+function renderOracleStatus(){
+  const status = document.getElementById('artifact-status');
+  if(currentTheme === 4 && artifactMode === 'interact' && status) status.textContent = oracleDetail;
+}
+function connectOracle(){
+  try {
+    const endpoint = validateOracleUrl(document.getElementById('oracle-url').value.trim());
+    disconnectOracle(); oracleEndpoint = endpoint;
+    oracleDetail = 'CONNECTING…'; renderOracleStatus(); seraFetchOracle();
+  } catch(error){ oracleDetail = error.message; renderOracleStatus(); }
+}
+function disconnectOracle(){
+  oracleGeneration++; oracleController?.abort(); oracleController=null; oracleEndpoint=null;
+  seraOracleStatus='DISCONNECTED'; seraSignalCount=0;
+  oracleDetail='DISCONNECTED — clock and artwork are available offline.'; renderOracleStatus();
+}
+function refreshOraclePanel(){seraFetchOracle();renderOracleStatus();}
+function toggleSeraphimAudio(){
+  seraAudioEnabled=!seraAudioEnabled;
+  if(seraAudioEnabled) seraStartAudio(); else seraStopAudio();
+  const button=document.getElementById('oracle-audio');
+  if(button) button.textContent=seraAudioEnabled?'MUTE':'ENABLE SOUND';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+function pad2(n) { return String(n).padStart(2, '0'); }
+
+function fmtTime(d) { return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`; }
+
+function fmtDate(d) {
+  const days = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  return `${days[d.getDay()]} ${pad2(d.getDate())} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function signalIndex(d) {
+  const diff = d - new Date('2026-01-01T00:00:00');
+  const base = 10800 + (diff / (24 * 3600 * 1000)) * 2.7379;
+  return base.toFixed(1);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DHARMA SETUP
+// ─────────────────────────────────────────────────────────────────────────────
+const DHARMA_NUMS = [3, 7, 11, 19, 23, 31, 3, 7, 11, 19, 23, 31];
+const DHARMA_12 = DHARMA_NUMS;
+(function buildDharmaFace() {
+  const face = document.getElementById('dharma-face');
+  const r = 170;
+  DHARMA_12.forEach((num, i) => {
+    const angle = (i / 12) * 2 * Math.PI - Math.PI / 2;
+    const x = 190 + r * Math.cos(angle) - 16;
+    const y = 190 + r * Math.sin(angle) - 12;
+    const el = document.createElement('div');
+    el.className = 'dharma-number';
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    el.style.transform = 'none';
+    el.style.transformOrigin = 'unset';
+    el.textContent = num;
+    face.appendChild(el);
+  });
+})();
+
+function updateDharma(now) {
+  document.getElementById('dharma-time').textContent = fmtTime(now);
+  document.getElementById('dharma-date').textContent = fmtDate(now);
+
+  // 108-minute countdown (resets every 108 minutes)
+  const elapsed = (Date.now() - dharmaCountdownStart) / 1000;
+  const total = 108 * 60;
+  const remaining = total - (elapsed % total);
+  const mm = Math.floor(remaining / 60);
+  const ss = Math.floor(remaining % 60);
+  document.getElementById('cd-val').textContent = `${pad2(mm)}:${pad2(ss)}`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ALETHIOMETER SETUP
+// ─────────────────────────────────────────────────────────────────────────────
+const ALCH_SYMBOLS = ['☉','☽','♃','♄','♂','♀','☿','⊕','♆','♅','♇','🜁'];
+(function buildAleth() {
+  const face = document.getElementById('aleth-face');
+  const r = 190;
+  ALCH_SYMBOLS.forEach((sym, i) => {
+    const angle = (i / 12) * 2 * Math.PI - Math.PI / 2;
+    const x = 220 + r * Math.cos(angle) - 10;
+    const y = 220 + r * Math.sin(angle) - 12;
+    const el = document.createElement('div');
+    el.className = 'aleth-symbol';
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    el.textContent = sym;
+    face.appendChild(el);
+  });
+
+  // Create hands
+  ['hand-hour hand', 'hand-min hand', 'hand-sec hand'].forEach((cls, i) => {
+    const h = document.createElement('div');
+    h.className = cls;
+    h.id = ['aleth-hour','aleth-min','aleth-sec'][i];
+    face.appendChild(h);
+  });
+})();
+
+function updateAleth(now) {
+  document.getElementById('aleth-time').textContent = fmtTime(now);
+  document.getElementById('aleth-date').textContent = fmtDate(now);
+
+  const h = now.getHours() % 12;
+  const m = now.getMinutes();
+  const s = now.getSeconds();
+  const ms = now.getMilliseconds();
+
+  const sDeg = (s + ms / 1000) * 6;
+  const mDeg = (m + s / 60) * 6;
+  const hDeg = (h + m / 60) * 30;
+
+  document.getElementById('aleth-sec').style.transform = `rotate(${sDeg}deg)`;
+  document.getElementById('aleth-min').style.transform = `rotate(${mDeg}deg)`;
+  document.getElementById('aleth-hour').style.transform = `rotate(${hDeg}deg)`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LCARS UPDATE
+// ─────────────────────────────────────────────────────────────────────────────
+const LCARS_READOUTS = [
+  ['TEMPORAL MATRIX — NOMINAL','TEMPORAL MATRIX — SCANNING','TEMPORAL MATRIX — LOCKED'],
+  ['CHRONON FLOW — STABLE','CHRONON FLOW — FLUCTUATING','CHRONON FLOW — OPTIMAL'],
+];
+let lcarsReadoutIdx = 0;
+function updateLCARS(now) {
+  document.getElementById('lcars-time').textContent = fmtTime(now);
+  document.getElementById('lcars-date').textContent = fmtDate(now);
+  document.getElementById('signal-index').textContent = 'SIGNAL INDEX ' + signalIndex(now);
+  if (now.getSeconds() % 5 === 0 && now.getMilliseconds() < 100) {
+    document.getElementById('lcars-r1').textContent = LCARS_READOUTS[0][Math.floor(Math.random() * 3)];
+    document.getElementById('lcars-r2').textContent = LCARS_READOUTS[1][Math.floor(Math.random() * 3)];
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHRONO RIFT
+// ─────────────────────────────────────────────────────────────────────────────
+let vortexInitDone = false;
+
+function initVortex() {
+  if (vortexInitDone) return;
+  vortexInitDone = true;
+  const face = document.getElementById('vortex-face');
+
+  // Create hands
+  ['vortex-hour vortex-hand','vortex-min vortex-hand','vortex-sec vortex-hand'].forEach((cls, i) => {
+    const h = document.createElement('div');
+    h.className = cls;
+    h.id = ['vx-hour','vx-min','vx-sec'][i];
+    face.appendChild(h);
+  });
+
+  // Center dot
+  const dot = document.createElement('div');
+  dot.className = 'vortex-dot';
+  face.appendChild(dot);
+}
+
+let vortexAngle = 0;
+function drawVortex(now) {
+  const canvas = document.getElementById('vortex-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width = window.innerWidth;
+  const H = canvas.height = window.innerHeight;
+  const cx = W / 2, cy = H / 2;
+
+  ctx.clearRect(0, 0, W, H);
+  vortexAngle += 0.005 * vortexRate;
+
+  const maxR = Math.max(W, H) * 0.8;
+  for (let i = 12; i >= 1; i--) {
+    const r = (i / 12) * maxR;
+    const offset = vortexAngle * (i % 2 === 0 ? 1 : -1) * (i * 0.3);
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    const alpha = 0.04 + (i / 12) * 0.06;
+    ctx.strokeStyle = `rgba(0,${100 + i * 10},${200 + i * 4},${alpha})`;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  // Radial gradient
+  const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR * 0.5);
+  grad.addColorStop(0, 'rgba(0,30,80,0)');
+  grad.addColorStop(0.5, 'rgba(0,59,111,0.1)');
+  grad.addColorStop(1, 'rgba(0,0,20,0.3)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function updateVortex(now) {
+  document.getElementById('vortex-time').textContent = fmtTime(now);
+  document.getElementById('vortex-date').textContent = fmtDate(now);
+
+  const h = now.getHours() % 12;
+  const m = now.getMinutes();
+  const s = now.getSeconds();
+  const ms = now.getMilliseconds();
+
+  const sDeg = (s + ms / 1000) * 6;
+  const mDeg = (m + s / 60) * 6;
+  const hDeg = (h + m / 60) * 30;
+
+  const sec = document.getElementById('vx-sec');
+  const min = document.getElementById('vx-min');
+  const hour = document.getElementById('vx-hour');
+  if (sec) sec.style.transform = `rotate(${sDeg}deg)`;
+  if (min) min.style.transform = `rotate(${mDeg}deg)`;
+  if (hour) hour.style.transform = `rotate(${hDeg}deg)`;
+
+  drawVortex(now);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN LOOP
+// ─────────────────────────────────────────────────────────────────────────────
+let tickLast = 0;
+function scheduleTick() {
+  if (LOW_POWER) setTimeout(() => requestAnimationFrame(tick), 125);
+  else requestAnimationFrame(tick);
+}
+function tick(frameTime = performance.now()) {
+  scheduleTick();
+  if (document.hidden) return;
+
+  // The Seraphim and Vortex themes need motion, but repainting every layer at
+  // 60 FPS wastes CPU. Clock-only themes only need a few updates per second.
+  const compactShell = NATIVE_SHELL && window.innerHeight <= 700;
+  const frameInterval = compactShell ? 250 : LOW_POWER ?
+    (currentTheme >= 3 ? 125 : 1000) :
+    (currentTheme === 4 ? (1000 / 24) : (currentTheme === 3 ? (1000 / 30) : 250));
+  if (frameTime - tickLast < frameInterval) return;
+  tickLast = frameTime;
+
+  const now = new Date();
+  document.getElementById('global-date').textContent = fmtDate(now) + '  ' + fmtTime(now);
+  document.getElementById('float-time').textContent = fmtTime(now);
+  document.getElementById('float-date').textContent = fmtDate(now);
+
+  if (compactShell) return;
+
+  drawActiveTheme(now, frameTime);
+}
+
+function drawActiveTheme(now, frameTime) {
+  if (currentTheme === 0) updateDharma(now);
+  else if (currentTheme === 1) updateAleth(now);
+  else if (currentTheme === 2) updateLCARS(now);
+  else if (currentTheme === 3) updateVortex(now);
+  else if (currentTheme === 4) updateSeraphim(now, frameTime);
+  else if (currentTheme >= 5) updateArtifactClock(now, THEMES[currentTheme]);
+}
+
+function updateArtifactClock(now, prefix) {
+  const time=document.getElementById(prefix+'-time');
+  const date=document.getElementById(prefix+'-date');
+  if(time) time.textContent=fmtTime(now);
+  if(date) date.textContent=fmtDate(now);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERAPHIM THEME
+// ─────────────────────────────────────────────────────────────────────────────
+let seraInitDone = false;
+let seraStars = [];
+let seraDataParticles = [];
+let seraEyes = [];
+let seraOracleStatus = 'DISCONNECTED';
+let seraSignalCount = 0;
+let seraStartTime = Date.now();
+let seraAudioCtx = null;
+let seraOscillator = null;
+let seraGainNode = null;
+let seraLfoNode = null;
+let seraAudioStarted = false;
+let seraOracleTimer = null;
+let seraAudioEnabled = false;
+
+// Colors
+const SERA_GOLD = [255,215,0];
+const SERA_DIVINE_WHITE = [240,240,255];
+const SERA_HOLY_FIRE = [255,107,53];
+const SERA_COSMIC_PURPLE = [139,92,246];
+const SERA_SPECTRUM = [SERA_GOLD, SERA_HOLY_FIRE, SERA_COSMIC_PURPLE, SERA_DIVINE_WHITE, [0,200,255]];
+const SERA_TAU = Math.PI * 2;
+const SERA_PI = Math.PI;
+
+function seraRgba(c, a) { return `rgba(${c[0]},${c[1]},${c[2]},${a})`; }
+function seraLerpColor(a, b, t) {
+  return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
+}
+
+function seraResizeCanvas(canvas) {
+  const par = canvas.parentElement;
+  canvas.width = par.clientWidth;
+  canvas.height = par.clientHeight;
+}
+
+// Tetrahedron geometry
+const SERA_TETRA_UP = [
+  [0,1,0],
+  [Math.sqrt(8/9),-1/3,0],
+  [-Math.sqrt(2/9),-1/3,Math.sqrt(2/3)],
+  [-Math.sqrt(2/9),-1/3,-Math.sqrt(2/3)]
+];
+const SERA_TETRA_DOWN = SERA_TETRA_UP.map(v => [-v[0],-v[1],-v[2]]);
+const SERA_TETRA_EDGES = [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]];
+
+function seraRotateY(v,a){const c=Math.cos(a),s=Math.sin(a);return[v[0]*c+v[2]*s,v[1],-v[0]*s+v[2]*c];}
+function seraRotateX(v,a){const c=Math.cos(a),s=Math.sin(a);return[v[0],v[1]*c-v[2]*s,v[1]*s+v[2]*c];}
+function seraRotateZ(v,a){const c=Math.cos(a),s=Math.sin(a);return[v[0]*c-v[1]*s,v[0]*s+v[1]*c,v[2]];}
+function seraProject(v,scale,cx,cy){const p=4;const f=p/(p+v[2]);return[cx+v[0]*scale*f,cy-v[1]*scale*f];}
+
+// SeraphimEye class
+class SeraEye {
+  constructor(angle, distance, size, blinkOffset) {
+    this.angle=angle; this.distance=distance; this.size=size; this.blinkOffset=blinkOffset;
+    this.lidOpenness=1; this.irisHue=Math.random()*SERA_TAU; this.lookAngle=0;
+    this.lookRadius=size*0.1;
+  }
+  update(t) {
+    const bc=((t*0.001+this.blinkOffset*7)%8);
+    if(bc<0.15){this.lidOpenness=Math.max(0,1-(1-Math.abs(bc-0.075)/0.075));}
+    else{this.lidOpenness=1;}
+    this.irisHue=(t*0.0003+this.blinkOffset*3)%1;
+    this.lookAngle=Math.sin(t*0.0004+this.blinkOffset*5)*SERA_PI*0.3;
+  }
+  draw(ctx,cx,cy,t) {
+    const x=cx+Math.cos(this.angle+t*0.00008)*this.distance;
+    const y=cy+Math.sin(this.angle+t*0.00008)*this.distance;
+    const w=this.size, h=this.size*0.55;
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.rotate(this.angle+t*0.00008);
+    ctx.beginPath();
+    ctx.ellipse(0,0,w,h,0,0,SERA_TAU);
+    ctx.shadowBlur=15;ctx.shadowColor=seraRgba(SERA_GOLD,0.4);
+    ctx.strokeStyle=seraRgba(SERA_GOLD,0.7);ctx.lineWidth=1.2;ctx.stroke();
+    ctx.save();ctx.clip();
+    ctx.fillStyle=seraRgba(SERA_DIVINE_WHITE,0.08);ctx.fill();
+    const ic=seraLerpColor(
+      SERA_SPECTRUM[Math.floor(this.irisHue*SERA_SPECTRUM.length)%SERA_SPECTRUM.length],
+      SERA_SPECTRUM[(Math.floor(this.irisHue*SERA_SPECTRUM.length)+1)%SERA_SPECTRUM.length],
+      (this.irisHue*SERA_SPECTRUM.length)%1
+    );
+    const lx=Math.cos(this.lookAngle)*this.lookRadius;
+    const ly=Math.sin(this.lookAngle)*this.lookRadius*0.3;
+    const ir=h*0.7;
+    ctx.beginPath();ctx.arc(lx,ly,ir,0,SERA_TAU);
+    ctx.fillStyle=seraRgba(ic,0.9);ctx.shadowBlur=10;ctx.shadowColor=seraRgba(ic,0.8);ctx.fill();
+    ctx.beginPath();ctx.arc(lx,ly,ir*0.4,0,SERA_TAU);ctx.fillStyle='#000';ctx.fill();
+    ctx.beginPath();ctx.arc(lx-ir*0.15,ly-ir*0.15,ir*0.12,0,SERA_TAU);
+    ctx.fillStyle=seraRgba(SERA_DIVINE_WHITE,0.7);ctx.fill();
+    ctx.restore();
+    if(this.lidOpenness<1){
+      const lidH=h*2*(1-this.lidOpenness);
+      ctx.fillStyle='#0a0a0f';
+      ctx.beginPath();ctx.ellipse(0,-h+lidH/2,w+2,lidH/2+2,0,0,SERA_TAU);ctx.fill();
+      ctx.beginPath();ctx.ellipse(0,h-lidH/2,w+2,lidH/2+2,0,0,SERA_TAU);ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+// Data particle class
+class SeraParticle {
+  constructor(cw,ch){this.reset(cw,ch);}
+  reset(cw,ch){
+    this.x=cw*0.2+Math.random()*cw*0.6;this.y=ch+10;
+    this.speed=0.5+Math.random()*1.5;this.alpha=0.2+Math.random()*0.5;
+    this.isText=Math.random()>0.6;
+    const frags=['ORACLE','FEED','SYNC','PARSE','QUERY','STREAM','0x7F','0xAE','>>>','<<<',
+      'BIO','WAVE','PULSE','NODE','LINK','AUTH','CLOCK','ACK','SYN','EYE.34','WING.6','HALO'];
+    this.text=frags[Math.floor(Math.random()*frags.length)];
+    this.size=this.isText?0:1+Math.random()*2;
+    this.wobble=Math.random()*SERA_TAU;this.wobbleSpeed=0.001+Math.random()*0.003;
+    this.color=Math.random()>0.5?SERA_GOLD:(Math.random()>0.5?SERA_COSMIC_PURPLE:SERA_HOLY_FIRE);
+  }
+  update(t,cw,ch){
+    this.y-=this.speed;this.x+=Math.sin(t*this.wobbleSpeed+this.wobble)*0.3;
+    const d=Math.abs(this.y-ch/2);if(d<100)this.alpha*=0.98;
+    if(this.y<ch*0.3||this.alpha<0.01)this.reset(cw,ch);
+  }
+  draw(ctx){
+    if(this.isText){ctx.font='9px Courier New';ctx.fillStyle=seraRgba(this.color,this.alpha*0.6);ctx.fillText(this.text,this.x,this.y);}
+    else{ctx.beginPath();ctx.arc(this.x,this.y,this.size,0,SERA_TAU);ctx.fillStyle=seraRgba(this.color,this.alpha);ctx.shadowBlur=6;ctx.shadowColor=seraRgba(this.color,this.alpha*0.5);ctx.fill();ctx.shadowBlur=0;}
+  }
+}
+
+function initSeraphim() {
+  if (seraInitDone) return;
+  seraInitDone = true;
+  seraStartTime = Date.now();
+
+  // Init stars
+  const sc = document.getElementById('sera-starfield');
+  seraResizeCanvas(sc);
+  seraStars = [];
+  const starCount = LOW_POWER ? 140 : 400;
+  for (let i=0;i<starCount;i++){
+    seraStars.push({x:Math.random()*sc.width,y:Math.random()*sc.height,
+      r:Math.random()*1.5+0.3,brightness:Math.random(),speed:Math.random()*0.0005+0.0002});
+  }
+
+  // Init eyes (34 total)
+  seraEyes = [];
+  for(let i=0;i<6;i++) seraEyes.push(new SeraEye(i*SERA_TAU/6,80,14,i*0.4));
+  for(let i=0;i<12;i++) seraEyes.push(new SeraEye(i*SERA_TAU/12+0.13,160,18,i*0.3+1));
+  for(let i=0;i<10;i++) seraEyes.push(new SeraEye(i*SERA_TAU/10+0.07,260,22,i*0.5+2));
+  for(let i=0;i<6;i++) seraEyes.push(new SeraEye(i*SERA_TAU/6+SERA_PI/6,380,28,i*0.6+3));
+
+  // Init particles
+  const pc = document.getElementById('sera-particles');
+  seraResizeCanvas(pc);
+  for (const id of ['sera-merkaba','sera-eyes','sera-wings']) {
+    const canvas = document.getElementById(id);
+    if (canvas) seraResizeCanvas(canvas);
+  }
+  seraDataParticles = [];
+  const particleCount = LOW_POWER ? 36 : 120;
+  for(let i=0;i<particleCount;i++){const p=new SeraParticle(pc.width,pc.height);p.y=Math.random()*pc.height;seraDataParticles.push(p);}
+
+  // Draw Metatron's Cube (static)
+  seraDrawMetatron();
+
+  // Start Oracle polling
+  seraFetchOracle();
+  if (!seraOracleTimer) seraOracleTimer = setInterval(seraFetchOracle, 30000);
+
+  // Init audio context (will start on user interaction or theme switch)
+  seraInitAudio();
+}
+
+function seraDrawMetatron() {
+  const mc = document.getElementById('sera-metatron');
+  seraResizeCanvas(mc);
+  const ctx = mc.getContext('2d');
+  const cx=mc.width/2, cy=mc.height/2;
+  const R=Math.min(mc.width,mc.height)*0.3;
+  ctx.clearRect(0,0,mc.width,mc.height);
+  ctx.strokeStyle=seraRgba(SERA_GOLD,0.6);ctx.lineWidth=0.5;
+  const centers=[{x:cx,y:cy}];
+  for(let i=0;i<6;i++){const a=i*(SERA_TAU/6)-SERA_PI/2;centers.push({x:cx+(R/2)*Math.cos(a),y:cy+(R/2)*Math.sin(a)});}
+  for(let i=0;i<6;i++){const a=i*(SERA_TAU/6)-SERA_PI/2;centers.push({x:cx+R*Math.cos(a),y:cy+R*Math.sin(a)});}
+  for(const c of centers){ctx.beginPath();ctx.arc(c.x,c.y,R/2,0,SERA_TAU);ctx.stroke();}
+  for(let i=0;i<centers.length;i++){for(let j=i+1;j<centers.length;j++){ctx.beginPath();ctx.moveTo(centers[i].x,centers[i].y);ctx.lineTo(centers[j].x,centers[j].y);ctx.stroke();}}
+}
+
+function seraDrawStars(t) {
+  const sc=document.getElementById('sera-starfield');
+  const ctx=sc.getContext('2d');
+  ctx.fillStyle='#0a0a0f';ctx.fillRect(0,0,sc.width,sc.height);
+  for(const s of seraStars){
+    const flicker=0.5+0.5*Math.sin(t*s.speed*1000+s.brightness*SERA_TAU);
+    const a=s.brightness*0.4+flicker*0.3;
+    ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,SERA_TAU);
+    ctx.fillStyle=seraRgba(SERA_DIVINE_WHITE,a);ctx.fill();
+  }
+}
+
+function seraDrawMerkaba(t) {
+  const mc=document.getElementById('sera-merkaba');
+  const ctx=mc.getContext('2d');
+  const w=mc.width,h=mc.height,cx=w/2,cy=h/2;
+  const scale=Math.min(w,h)*0.22;
+  ctx.clearRect(0,0,w,h);
+  const angleUp=t*0.0003, angleDown=-t*0.0003;
+  const tiltX=Math.sin(t*0.0001)*0.15;
+  const breathe=1+0.04*Math.sin(t*0.0008);
+
+  function drawTetra(verts,angle,color,glowColor){
+    const transformed=verts.map(v=>{let r=[v[0]*breathe,v[1]*breathe,v[2]*breathe];r=seraRotateY(r,angle);r=seraRotateX(r,tiltX);r=seraRotateZ(r,0.1);return r;});
+    const projected=transformed.map(v=>seraProject(v,scale,cx,cy));
+    ctx.save();ctx.shadowBlur=20;ctx.shadowColor=glowColor;ctx.strokeStyle=color;ctx.lineWidth=1.5;
+    for(const[a,b]of SERA_TETRA_EDGES){ctx.beginPath();ctx.moveTo(projected[a][0],projected[a][1]);ctx.lineTo(projected[b][0],projected[b][1]);ctx.stroke();}
+    ctx.restore();
+    ctx.strokeStyle=color;ctx.lineWidth=0.8;
+    for(const[a,b]of SERA_TETRA_EDGES){ctx.beginPath();ctx.moveTo(projected[a][0],projected[a][1]);ctx.lineTo(projected[b][0],projected[b][1]);ctx.stroke();}
+    for(const p of projected){ctx.beginPath();ctx.arc(p[0],p[1],3,0,SERA_TAU);ctx.fillStyle=color;ctx.fill();}
+  }
+
+  drawTetra(SERA_TETRA_UP,angleUp,seraRgba(SERA_GOLD,0.9),seraRgba(SERA_GOLD,0.6));
+  drawTetra(SERA_TETRA_DOWN,angleDown,seraRgba(SERA_COSMIC_PURPLE,0.8),seraRgba(SERA_COSMIC_PURPLE,0.5));
+
+  // Seed of Life
+  const seedAngle=t*0.0002;
+  ctx.save();ctx.globalAlpha=0.15;ctx.strokeStyle=seraRgba(SERA_DIVINE_WHITE,0.5);ctx.lineWidth=0.5;
+  const seedR=scale*0.35;
+  ctx.beginPath();ctx.arc(cx,cy,seedR,0,SERA_TAU);ctx.stroke();
+  for(let i=0;i<6;i++){const a=seedAngle+i*(SERA_TAU/6);ctx.beginPath();ctx.arc(cx+seedR*Math.cos(a),cy+seedR*Math.sin(a),seedR,0,SERA_TAU);ctx.stroke();}
+  ctx.restore();
+}
+
+function seraDrawEyes(t) {
+  const ec=document.getElementById('sera-eyes');
+  const ctx=ec.getContext('2d');
+  ctx.clearRect(0,0,ec.width,ec.height);
+  const cx=ec.width/2,cy=ec.height/2;
+  for(const eye of seraEyes){eye.update(t);eye.draw(ctx,cx,cy,t);}
+}
+
+function seraDrawWing(ctx,cx,cy,angle,length,width,t,pair) {
+  ctx.save();ctx.translate(cx,cy);ctx.rotate(angle);
+  let bo=0;
+  if(pair===0)bo=Math.sin(t*0.001)*0.08;
+  else if(pair===1)bo=Math.sin(t*0.0008+1)*0.06;
+  else bo=Math.sin(t*0.0012+2)*0.12;
+  ctx.rotate(bo);
+  const segments=20, featherLayers=5;
+  for(let layer=featherLayers;layer>=0;layer--){
+    const lr=layer/featherLayers;
+    const ll=length*(0.5+0.5*lr), lw=width*(0.3+0.7*lr);
+    const alpha=0.04+0.06*(1-lr);
+    ctx.beginPath();ctx.moveTo(0,0);
+    for(let i=0;i<=segments;i++){const f=i/segments;const x=f*ll;const sp=Math.sin(f*SERA_PI)*lw;const z=(i%2===0?1:0.92)*sp;ctx.lineTo(x,z);}
+    for(let i=segments;i>=0;i--){const f=i/segments;const x=f*ll;const sp=Math.sin(f*SERA_PI)*lw;const z=(i%2===0?1:0.92)*sp;ctx.lineTo(x,-z);}
+    ctx.closePath();
+    const color=seraLerpColor(SERA_GOLD,SERA_COSMIC_PURPLE,lr*0.5);
+    ctx.fillStyle=seraRgba(color,alpha);ctx.fill();
+    if(layer===0){
+      ctx.strokeStyle=seraRgba(SERA_GOLD,0.12);ctx.lineWidth=0.5;
+      for(let i=1;i<segments;i+=2){const f=i/segments;const x=f*ll;const sp=Math.sin(f*SERA_PI)*lw*0.9;ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,sp);ctx.stroke();ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,-sp);ctx.stroke();}
+      ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(ll,0);ctx.strokeStyle=seraRgba(SERA_GOLD,0.2);ctx.lineWidth=1;ctx.stroke();
+    }
+  }
+  ctx.shadowBlur=20;ctx.shadowColor=seraRgba(SERA_GOLD,0.2);ctx.strokeStyle=seraRgba(SERA_GOLD,0.1);ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(0,0);
+  for(let i=0;i<=segments;i++){const f=i/segments;ctx.lineTo(f*length,Math.sin(f*SERA_PI)*width);}
+  ctx.stroke();
+  ctx.restore();
+}
+
+function seraDrawWings(t) {
+  const wc=document.getElementById('sera-wings');
+  const ctx=wc.getContext('2d');
+  ctx.clearRect(0,0,wc.width,wc.height);
+  const cx=wc.width/2,cy=wc.height/2;
+  const wl=Math.min(wc.width,wc.height)*0.38, ww=wl*0.22;
+  seraDrawWing(ctx,cx,cy,-SERA_PI/2-0.3,wl*0.7,ww*0.8,t,0);
+  seraDrawWing(ctx,cx,cy,-SERA_PI/2+0.3,wl*0.7,ww*0.8,t,0);
+  seraDrawWing(ctx,cx,cy,SERA_PI/2-0.3,wl*0.7,ww*0.8,t,1);
+  seraDrawWing(ctx,cx,cy,SERA_PI/2+0.3,wl*0.7,ww*0.8,t,1);
+  seraDrawWing(ctx,cx,cy,-0.05,wl,ww,t,2);
+  seraDrawWing(ctx,cx,cy,SERA_PI+0.05,wl,ww,t,2);
+}
+
+function seraDrawParticles(t) {
+  const pc=document.getElementById('sera-particles');
+  const ctx=pc.getContext('2d');
+  ctx.clearRect(0,0,pc.width,pc.height);
+  const gradient=ctx.createLinearGradient(pc.width/2,pc.height,pc.width/2,pc.height*0.35);
+  gradient.addColorStop(0,seraRgba(SERA_GOLD,0.03));gradient.addColorStop(0.5,seraRgba(SERA_COSMIC_PURPLE,0.02));gradient.addColorStop(1,'transparent');
+  ctx.fillStyle=gradient;ctx.fillRect(pc.width*0.35,0,pc.width*0.3,pc.height);
+  for(const p of seraDataParticles){p.update(t,pc.width,pc.height);p.draw(ctx);}
+}
+
+// Oracle fetch
+async function seraFetchOracle() {
+  if(!oracleEndpoint || oracleController) return;
+  const generation=oracleGeneration, controller=new AbortController();
+  oracleController=controller;
+  const timeout=setTimeout(()=>controller.abort(),5000);
+  try {
+    const response=await fetch(oracleEndpoint,{signal:controller.signal,cache:'no-store',credentials:'omit',redirect:'error'});
+    if(!response.ok) throw new Error('HTTP '+response.status);
+    const reader=response.body.getReader();
+    const chunks=[]; let length=0;
+    while(true){
+      const {done,value}=await reader.read(); if(done) break;
+      length+=value.byteLength;
+      if(length>65536){await reader.cancel();throw new Error('Health response exceeds 64 KiB.');}
+      chunks.push(value);
+    }
+    const bytes=new Uint8Array(length); let offset=0;
+    for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}
+    const text=new TextDecoder().decode(bytes);
+    const data=JSON.parse(text);
+    if(typeof data.overall_ok !== 'boolean' || !data.clients || typeof data.clients !== 'object' || Array.isArray(data.clients))
+      throw new Error('Expected overall_ok boolean and clients object.');
+    const clients=Object.entries(data.clients).slice(0,50);
+    const running=clients.filter(([,s])=>s && s.running===true).length;
+    if(generation!==oracleGeneration) return;
+    seraOracleStatus=data.overall_ok?'ONLINE':'DEGRADED'; seraSignalCount=running;
+    const descriptions=clients.map(([name,s])=>name.slice(0,60)+': '+(s?.running===true?'RUNNING':s?.ready===true?'READY':'OFFLINE'));
+    oracleDetail='ORACLE '+seraOracleStatus+' — '+running+'/'+clients.length+' clients — '+descriptions.join(' · ');
+  } catch(error) {
+    if(generation!==oracleGeneration) return;
+    seraOracleStatus='OFFLINE'; seraSignalCount=0;
+    oracleDetail='ORACLE OFFLINE — '+(error.name==='AbortError'?'request timed out':error.message)+'. Check the endpoint and browser permissions.';
+  } finally {
+    clearTimeout(timeout);
+    if(oracleController===controller) oracleController=null;
+    renderOracleStatus();
+  }
+}
+
+function seraHandleResize() {
+  if (!seraInitDone) return;
+  for (const id of ['sera-starfield','sera-metatron','sera-merkaba','sera-eyes','sera-wings','sera-particles']) {
+    const canvas = document.getElementById(id);
+    if (canvas) seraResizeCanvas(canvas);
+  }
+  seraDrawMetatron();
+  const sc = document.getElementById('sera-starfield');
+  seraStars = [];
+  const starCount = LOW_POWER ? 140 : 400;
+  for (let i=0;i<starCount;i++) seraStars.push({x:Math.random()*sc.width,y:Math.random()*sc.height,
+    r:Math.random()*1.5+0.3,brightness:Math.random(),speed:Math.random()*0.0005+0.0002});
+}
+window.addEventListener('resize', seraHandleResize);
+
+// Singing bowl audio (136.1 Hz OM frequency)
+function seraInitAudio() {
+  // Defer actual start until user gesture or theme activation
+}
+
+function seraStartAudio() {
+  if (!seraAudioEnabled || seraAudioStarted) return;
+  try {
+    seraAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Main oscillator — 136.1 Hz (OM frequency)
+    seraOscillator = seraAudioCtx.createOscillator();
+    seraOscillator.type = 'sine';
+    seraOscillator.frequency.setValueAtTime(136.1, seraAudioCtx.currentTime);
+
+    // Second harmonic for richness
+    const osc2 = seraAudioCtx.createOscillator();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(136.1 * 2, seraAudioCtx.currentTime);
+    const gain2 = seraAudioCtx.createGain();
+    gain2.gain.setValueAtTime(0.03, seraAudioCtx.currentTime);
+
+    // Third partial (Tibetan bowl overtone)
+    const osc3 = seraAudioCtx.createOscillator();
+    osc3.type = 'sine';
+    osc3.frequency.setValueAtTime(136.1 * 3.01, seraAudioCtx.currentTime);
+    const gain3 = seraAudioCtx.createGain();
+    gain3.gain.setValueAtTime(0.015, seraAudioCtx.currentTime);
+
+    // Master gain (low volume)
+    seraGainNode = seraAudioCtx.createGain();
+    seraGainNode.gain.setValueAtTime(0.06, seraAudioCtx.currentTime);
+
+    // LFO for volume oscillation synced to Merkaba breathing (8s cycle)
+    seraLfoNode = seraAudioCtx.createOscillator();
+    seraLfoNode.type = 'sine';
+    seraLfoNode.frequency.setValueAtTime(1/8, seraAudioCtx.currentTime); // 8 second cycle
+    const lfoGain = seraAudioCtx.createGain();
+    lfoGain.gain.setValueAtTime(0.025, seraAudioCtx.currentTime);
+
+    seraLfoNode.connect(lfoGain);
+    lfoGain.connect(seraGainNode.gain);
+
+    seraOscillator.connect(seraGainNode);
+    osc2.connect(gain2);
+    gain2.connect(seraGainNode);
+    osc3.connect(gain3);
+    gain3.connect(seraGainNode);
+    seraGainNode.connect(seraAudioCtx.destination);
+
+    seraOscillator.start();
+    osc2.start();
+    osc3.start();
+    seraLfoNode.start();
+    seraAudioStarted = true;
+  } catch(e) { /* Web Audio not available */ }
+}
+
+function seraStopAudio() {
+  if (!seraAudioStarted || !seraAudioCtx) return;
+  try {
+    seraAudioCtx.close();
+    seraAudioCtx = null;
+    seraAudioStarted = false;
+  } catch(e) {}
+}
+
+function updateSeraphim(now, t) {
+  document.getElementById('sera-time').textContent = fmtTime(now);
+  document.getElementById('sera-date').textContent = fmtDate(now);
+  document.getElementById('sera-oracle').textContent = 'ORACLE: ' + seraOracleStatus;
+  document.getElementById('sera-signals').textContent = 'SIGNALS: ' + seraSignalCount;
+  document.getElementById('sera-eyes-count').textContent = '34 EYES';
+
+  // Status bar
+  const uptime = Math.floor((Date.now() - seraStartTime) / 1000);
+  const uh=Math.floor(uptime/3600), um=Math.floor((uptime%3600)/60), us=uptime%60;
+  const uptimeStr=pad2(uh)+':'+pad2(um)+':'+pad2(us);
+  document.getElementById('sera-status-bar').textContent =
+    'SERAPHIM ONLINE \u2502 34 EYES \u2502 ORACLE ' + seraOracleStatus + ' \u2502 UPTIME ' + uptimeStr + ' \u2502 LOCAL CLOCK';
+
+  // Draw all canvas layers
+  seraDrawStars(t);
+  seraDrawMerkaba(t);
+  seraDrawEyes(t);
+  seraDrawWings(t);
+  seraDrawParticles(t);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────────────────────────────────
+cyclingPaused = localStorage.getItem('chronosphere-paused') === '1';
+const savedTheme = Number.parseInt(localStorage.getItem('chronosphere-theme') || '0', 10);
+const requestedTheme = new URLSearchParams(location.search).get('theme');
+const requestedNumber = Number.parseInt(requestedTheme || '', 10);
+const requestedIndex = THEMES.includes(requestedTheme) ? THEMES.indexOf(requestedTheme) : requestedNumber;
+const initialTheme = Number.isFinite(requestedIndex) && requestedIndex >= 0 && requestedIndex < THEMES.length
+  ? requestedIndex
+  : (Number.isFinite(savedTheme) && savedTheme >= 0 && savedTheme < THEMES.length ? savedTheme : 0);
+showTheme(initialTheme);
+startCycle();
+tick();
+</script>
+</body>
+</html>

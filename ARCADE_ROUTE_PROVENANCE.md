@@ -2,10 +2,10 @@
 
 This deterministic static freeze comes from the healthy local public catalog. Dynamic-only routes are explicit fallbacks to `https://app.northstarprime.net`.
 
-- Catalog routes: 48
-- Static mirrored games: 47
+- Catalog routes: 49
+- Static mirrored games: 48
 - Delegated routes: 1
-- Hashed assets: 365 (317041670 bytes)
+- Hashed assets: 370 (317185521 bytes)
 - Optimized motion plates: 8 (saved 88810171 bytes)
 - Public provenance redactions: 1
 
@@ -59,9 +59,12 @@ This deterministic static freeze comes from the healthy local public catalog. Dy
 | `/arcade/custom/vorath-signal-crown` | static mirror | `nsp_repo_arcade:vorath_signal_crown.html` |
 | `/arcade/custom/vorath-souls` | static mirror | `workshop_arcade:vorath_souls.html` |
 | `/arcade/custom/vorathic-reef-tank` | static mirror | `workshop_arcade:vorathic_reef_tank.html` |
+| `/arcade/custom/side-street/` | original experimental release | `nsp_original_puzzle_study:prototype/index.html`, five runtime files preserved byte-for-byte |
 
 ## Limits
 
 - Server telemetry, live radio selection, prediction-bot APIs, activation, purchases, and smoke dashboards remain on the dynamic app origin.
 - The private Super Arcade Archive is intentionally not copied because its source enumerates local drive paths.
 - Static pages cannot reproduce server-side account, payment, or mutation flows.
+
+Four existing text-asset output hashes were reconciled to Git's canonical LF representation on September 9, 2026. Reconstructing CRLF reproduced each prior manifest hash exactly; original source hashes were retained and asset contents were not changed. The per-asset manifest entries preserve the prior identities.

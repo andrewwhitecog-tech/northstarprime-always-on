@@ -25,8 +25,9 @@ DEFAULT_OUTPUT = ROOT / "output" / "pages-artifact"
 APP_VIDEO_BASE = "https://app.northstarprime.net/static/idc_video/"
 LOCAL_VIDEO_BASE = "/static/idc_video/"
 PUBLISHED_LIMIT_BYTES = 1_000_000_000
-# Keep 80 MB below the 1 GB provider limit; Maison Gooch adds 8.9 MB.
-RELEASE_GUARD_BYTES = 920_000_000
+# Chronosphere and Side Street add about 4.45 MB to the 919.9 MB artifact.
+# Keep 70 MB below the configured 1 GB published-site ceiling.
+RELEASE_GUARD_BYTES = 930_000_000
 GIT_BLOB_LIMIT_BYTES = 100_000_000
 SKIP_TOP_LEVEL = {".git", ".github", "output", "tools", "__pycache__", ".pytest_cache", ".playwright-cli", ".playwright", "little-light-media", "cookbook-media"}
 TEXT_SUFFIXES = {".html", ".css", ".js", ".json", ".xml", ".txt", ".webmanifest"}
@@ -141,7 +142,7 @@ def build(output: Path) -> dict:
         },
         "critical_files": {
             relative: sha256(output / relative)
-            for relative in ("index.html", "services/index.html", "links/index.html", "sitemap.xml")
+            for relative in ("index.html", "services/index.html", "links/index.html", "sitemap.xml", "software/index.html", "chronosphere/index.html", "CHRONOSPHERE_RELEASE_MANIFEST.json", "arcade/custom/side-street/index.html", "SIDE_STREET_RELEASE_MANIFEST.json")
         },
     }
     (output / "nsp-pages-artifact.json").write_text(

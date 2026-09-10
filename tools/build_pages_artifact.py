@@ -29,7 +29,7 @@ PUBLISHED_LIMIT_BYTES = 1_000_000_000
 # Keep 70 MB below the configured 1 GB published-site ceiling.
 RELEASE_GUARD_BYTES = 930_000_000
 GIT_BLOB_LIMIT_BYTES = 100_000_000
-SKIP_TOP_LEVEL = {".git", ".github", "output", "tools", "__pycache__", ".pytest_cache", ".playwright-cli", ".playwright", "little-light-media", "cookbook-media"}
+SKIP_TOP_LEVEL = {".git", ".github", "output", "tools", "__pycache__", ".pytest_cache", ".playwright-cli", ".playwright", "little-light-media", "cookbook-media", "stickerforge-media"}
 TEXT_SUFFIXES = {".html", ".css", ".js", ".json", ".xml", ".txt", ".webmanifest"}
 
 

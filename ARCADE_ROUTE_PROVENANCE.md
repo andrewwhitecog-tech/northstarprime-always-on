@@ -68,3 +68,7 @@ This deterministic static freeze comes from the healthy local public catalog. Dy
 - Static pages cannot reproduce server-side account, payment, or mutation flows.
 
 Four existing text-asset output hashes were reconciled to Git's canonical LF representation on September 9, 2026. Reconstructing CRLF reproduced each prior manifest hash exactly; original source hashes were retained and asset contents were not changed. The per-asset manifest entries preserve the prior identities.
+
+## Logic Foundry / The Six Signals
+
+Original six-circuit Boolean puzzle at `/arcade/custom/logic-foundry/`. Local runtime assets and the retained Three.js MIT library are bundled. The source has independent model, state-transition and Chrome gameplay QA. Runtime hashes are in `LOGIC_FOUNDRY_RELEASE_MANIFEST.json`.

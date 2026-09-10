@@ -1,0 +1,1281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NorthStar Logic Foundry — Aurora Instrument Edition</title>
+<style>
+  :root {
+    --bg-deep: #07090e;
+    --bg-surface: #0e1320;
+    --panel: #131b2e;
+    --panel-border: #233050;
+    --slot-bg: #090e18;
+    --slot-border: #1f2b45;
+    --gold: #f3c766;
+    --gold-dim: #997830;
+    --aurora-cyan: #49e0ff;
+    --aurora-teal: #3de8b0;
+    --aurora-magenta: #e066ff;
+    --text-bright: #f0f4fc;
+    --text-dim: #8b99b5;
+    --danger: #ff6565;
+    --success: #38ef7d;
+    --focus-ring: 0 0 0 2px #49e0ff, 0 0 12px rgba(73, 224, 255, 0.45);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    min-height: 100%;
+    background: radial-gradient(1200px 700px at 70% -10%, #15223e 0%, transparent 65%), var(--bg-deep);
+    color: var(--text-bright);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-size: 15px;
+    line-height: 1.45;
+  }
+  #app {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 16px;
+  }
+  header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--panel-border);
+    padding-bottom: 10px;
+  }
+  h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  h1 .g { color: var(--gold); text-shadow: 0 0 12px rgba(243, 199, 102, 0.4); }
+  h1 .c { color: var(--aurora-cyan); text-shadow: 0 0 12px rgba(73, 224, 255, 0.4); }
+  .tag { color: var(--text-dim); font-size: 13px; }
+  .campaign-progress {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .badge {
+    background: #182239;
+    border: 1px solid #2e3e63;
+    color: var(--gold);
+    border-radius: 6px;
+    padding: 3px 9px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  #stage {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 16px;
+    align-items: start;
+  }
+  @media(max-width: 860px) {
+    #stage { grid-template-columns: 1fr; }
+  }
+  .frame {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  }
+  canvas {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 8px;
+    background: #080c14;
+    border: 1px solid #1c273e;
+  }
+  .status-strip {
+    margin-top: 10px;
+    min-height: 24px;
+    font-size: 13.5px;
+    color: var(--text-dim);
+  }
+  .status-strip strong { color: var(--gold); }
+  .failing-card {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: rgba(255, 101, 101, 0.08);
+    border: 1px solid rgba(255, 101, 101, 0.35);
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .failing-card.success {
+    background: rgba(56, 239, 125, 0.08);
+    border-color: rgba(56, 239, 125, 0.35);
+  }
+  .failing-title {
+    font-weight: 700;
+    color: var(--danger);
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .failing-card.success .failing-title { color: var(--success); }
+  .vector-spec {
+    font-family: ui-monospace, Consolas, monospace;
+    background: rgba(0,0,0,0.3);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--aurora-cyan);
+  }
+  h3 {
+    margin: 2px 0 8px;
+    font-size: 11.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  .palette {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  button.btn {
+    background: #182239;
+    border: 1px solid #2e3e63;
+    color: var(--text-bright);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13.5px;
+    cursor: pointer;
+    transition: border-color 0.15s, background-color 0.15s, transform 0.08s;
+  }
+  button.btn:hover:not(:disabled) {
+    border-color: var(--aurora-cyan);
+    transform: translateY(-1px);
+    background: #1e2c4c;
+  }
+  button.btn:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+  button.btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  button.gate-btn {
+    font-family: ui-monospace, Consolas, monospace;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--gold);
+  }
+  .slots-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 10px 0;
+  }
+  .slot-row {
+    background: var(--slot-bg);
+    border: 1px dashed var(--slot-border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .slot-row.active {
+    border: 1px solid var(--aurora-cyan);
+    box-shadow: 0 0 10px rgba(73, 224, 255, 0.15) inset;
+  }
+  .slot-label {
+    font-size: 12px;
+    color: var(--text-dim);
+    display: flex;
+    flex-direction: column;
+  }
+  .slot-name {
+    font-weight: 600;
+    color: var(--text-bright);
+  }
+  .slot-chip-display {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .chip-pill {
+    background: #182239;
+    border: 1px solid #3d4d70;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--aurora-cyan);
+  }
+  .chip-pill.unset {
+    color: var(--text-dim);
+    border-style: dashed;
+    font-style: italic;
+  }
+  .row-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .row-actions button {
+    flex: 1;
+    padding: 10px 12px;
+    font-weight: 600;
+  }
+  #verifyBtn {
+    background: #13442e;
+    border-color: #24754f;
+    color: #49f39e;
+  }
+  #verifyBtn:hover:not(:disabled) {
+    background: #1b5b3e;
+    border-color: #3fe290;
+  }
+  .truth-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 12.5px;
+  }
+  .truth-table th, .truth-table td {
+    padding: 4px 8px;
+    text-align: center;
+    border: 1px solid #202d47;
+  }
+  .truth-table th {
+    background: #101726;
+    color: var(--gold);
+    font-family: ui-monospace, monospace;
+  }
+  .truth-table tr.fail {
+    background: rgba(255, 101, 101, 0.15);
+    color: #ffa3a3;
+  }
+  .truth-table tr.pass {
+    background: rgba(56, 239, 125, 0.08);
+  }
+  .nav-strip {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+    font-size: 13px;
+  }
+  .instructions-box {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-top: 12px;
+    border-top: 1px solid var(--panel-border);
+    padding-top: 8px;
+    line-height: 1.4;
+  }
+  .keyboard-legend {
+    margin-top: 8px;
+    font-size: 11.5px;
+    color: #6c7a96;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .kbd {
+    background: #090e18;
+    border: 1px solid #283652;
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: var(--aurora-cyan);
+  }
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 7, 12, 0.8);
+    backdrop-filter: blur(4px);
+    display: none;
+    place-items: center;
+    z-index: 999;
+    padding: 16px;
+  }
+  .modal-box {
+    background: var(--panel);
+    border: 1px solid var(--gold);
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 440px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.8), 0 0 20px rgba(243,199,102,0.2);
+  }
+  .modal-box h2 { margin: 0 0 8px; color: var(--gold); }
+  .modal-box p { font-size: 14px; color: var(--text-bright); line-height: 1.45; }
+</style>
+<link rel="stylesheet" href="/static/games/logic_foundry_v14/polish.css">
+</head>
+<body>
+<div class="foundry-world" aria-hidden="true"></div>
+<div class="topbar"><a href="/arcade/">NORTHSTAR / IDG</a><span>THE SIX SIGNALS</span><span id="renderStatus">Circuit workshop</span></div>
+<section class="intro"><div class="intro-copy"><p class="eyebrow">VORATH · LOGIC FOUNDRY</p><h1>Give the signal<br><em>a way through.</em></h1><p>Six silent machines. One clear idea at a time.<br>Choose the gates. Trace the current. Restore the Foundry.</p><a class="intro-cta" href="#stage">Enter the workshop ↓</a></div><div id="foundry3d" aria-label="Live three-dimensional logic cartridges"></div></section>
+<div class="workshop-tools"><span id="controllerStatus">Keyboard · mouse · touch</span><button id="soundToggle" class="btn" aria-pressed="false">Sound off</button><label class="volume">Level <input id="soundVolume" type="range" min="0" max="100" value="40" aria-label="Sound volume"></label><button id="motionToggle" class="btn" aria-pressed="false">Motion</button><button id="pauseToggle" class="btn">Pause</button></div>
+
+<div id="app">
+  <header>
+    <h1><span class="g">NorthStar</span> Logic <span class="c">Foundry</span></h1>
+    <span class="tag">Build a circuit. Find the failing case.</span>
+    <div class="campaign-progress">
+      <span class="badge" id="levelBadge">Level 1 / 6</span>
+      <span class="badge" id="scoreBadge">Local progress</span>
+    </div>
+  </header>
+
+  <nav id="campaignNav" aria-label="Choose circuit"></nav>
+<div id="stage">
+    <div class="frame">
+      <div class="panel-kicker">01 / SIGNAL PATH <span id="probeSummary">Choose a gate to begin</span></div><div id="probeControls" aria-label="Test inputs"></div><canvas id="circuitCanvas" width="640" height="380" aria-label="Logic Circuit Schematic Canvas"></canvas>
+      <div class="probe-actions"><button id="replayFailure" class="btn" disabled>Load failing input</button><button id="undoGate" class="btn" disabled>Undo gate</button></div><div class="status-strip" id="statusStrip" role="status" aria-live="polite"></div>
+      <div id="failingReport" class="failing-card" style="display:none;"></div>
+      <table class="truth-table" id="truthTable" aria-label="Truth Table Verification">
+        <thead>
+          <tr id="tableHeadRow"></tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+
+    <div class="frame">
+      <p class="panel-kicker">02 / BUILD THE CIRCUIT</p><h3>Choose a gate.</h3><p class="hint">Select a socket, then choose a compatible gate. Disabled gates need a different number of inputs.</p>
+      <div class="palette" id="palette" role="toolbar" aria-label="Available Gate Library"></div>
+
+      <h3 style="margin-top:14px;">Synthesized Sockets</h3>
+      <div class="slots-container" id="slotsContainer" role="region" aria-label="Circuit Gate Sockets"></div>
+
+      <div class="row-actions">
+        <button id="verifyBtn" class="btn">⚡ Verify Circuit</button>
+        <button id="resetBtn" class="btn">↺ Reset Slots</button>
+      </div>
+
+      <div class="nav-strip">
+        <button id="prevLevelBtn" class="btn">‹ Prev</button>
+        <button id="clearStorageBtn" class="btn" style="font-size:12px;padding:4px 8px;">Reset Progress</button>
+        <button id="nextLevelBtn" class="btn">Next ›</button>
+      </div>
+
+      <div class="instructions-box">
+        <div id="levelObjective"></div>
+        <div class="keyboard-legend">
+          <span><span class="kbd">Tab</span> / <span class="kbd">Shift+Tab</span> Focus Sockets</span>
+          <span><span class="kbd">1-6</span> Quick Gate</span>
+          <span><span class="kbd">Space</span> / <span class="kbd">Enter</span> Cycle Gate</span>
+          <span><span class="kbd">V</span> Verify</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal-box">
+    <h2 id="modalTitle">Synthesis Complete</h2>
+    <p id="modalBody">All truth vector permutations verified successfully against specification.</p>
+    <button id="modalNextBtn" class="btn" style="background:#13442e;border-color:#3fe290;color:#fff;margin-top:10px;padding:8px 24px;font-weight:700;">Proceed</button>
+  </div>
+</div>
+
+<div id="pauseOverlay" class="pause-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="pauseTitle"><div><p class="eyebrow">THE SIGNAL CAN WAIT</p><h2 id="pauseTitle">Workshop paused</h2><p>Your circuits are saved on this device.</p><button id="resumeGame" class="btn">Resume workshop</button></div></div>
+<script>
+(() => {
+  'use strict';
+
+  // Audio synthesis for premium instrument feedback
+  let audioCtx = null, soundEnabled = false, soundVolume = .4, paused = false;
+  let reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  try { const prefs=JSON.parse(localStorage.getItem('NORTHSTAR_FOUNDRY_PREFS')||'{}'); reducedMotion=typeof prefs.reducedMotion==='boolean'?prefs.reducedMotion:reducedMotion; soundVolume=Number.isFinite(prefs.volume)?Math.max(0,Math.min(1,prefs.volume)):.4; } catch {}
+  function savePrefs(){try{localStorage.setItem('NORTHSTAR_FOUNDRY_PREFS',JSON.stringify({reducedMotion,volume:soundVolume}));}catch{}}
+
+  function playTone(freq, duration, type, gainVol) {
+    if (!soundEnabled || paused || document.hidden || soundVolume === 0) return;
+    try {
+      const AudioCtor = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtor) return;
+      audioCtx = audioCtx || new AudioCtor();
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      gain.gain.setValueAtTime(Math.max(.0001,(gainVol ?? 0.05)*soundVolume), audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    } catch (e) {}
+  }
+
+  const Sound = {
+    click: () => playTone(540, 0.04, 'triangle', 0.03),
+    switchGate: () => playTone(680, 0.05, 'sine', 0.04),
+    pass: () => {
+      [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+        setTimeout(() => playTone(f, 0.14, 'triangle', 0.05), i * 75);
+      });
+    },
+    fail: () => {
+      playTone(180, 0.2, 'sawtooth', 0.06);
+      setTimeout(() => playTone(130, 0.25, 'sawtooth', 0.06), 90);
+    }
+  };
+
+  // Gate Definitions
+  const GATES = {
+    BUFFER: { name: 'BUFFER', arity: 1, fn: (a) => a & 1 },
+    NOT:    { name: 'NOT',    arity: 1, fn: (a) => (~a) & 1 },
+    AND:    { name: 'AND',    arity: 2, fn: (a, b) => (a & b) & 1 },
+    OR:     { name: 'OR',     arity: 2, fn: (a, b) => (a | b) & 1 },
+    XOR:    { name: 'XOR',    arity: 2, fn: (a, b) => (a ^ b) & 1 },
+    NAND:   { name: 'NAND',   arity: 2, fn: (a, b) => (~(a & b)) & 1 },
+    NOR:    { name: 'NOR',    arity: 2, fn: (a, b) => (~(a | b)) & 1 },
+    XNOR:   { name: 'XNOR',   arity: 2, fn: (a, b) => (~(a ^ b)) & 1 }
+  };
+
+  // 6-Level Logic Engineering Campaign
+  const CAMPAIGN = [
+    {
+      id: 'level_1',
+      title: 'Inverter Array',
+      subtitle: 'Single gate negation',
+      desc: 'Route input signal A to output Y inverted. Place an active NOT gate into socket S1.',
+      inputs: ['A'],
+      outputs: ['Y'],
+      allowedGates: ['BUFFER', 'NOT', 'AND', 'OR'],
+      sockets: [
+        { id: 'S1', inputs: ['A'], arity: 1, pos: { x: 300, y: 190 } }
+      ],
+      wireOutputs: { Y: 'S1' },
+      targetFn: (inputs) => ({ Y: (~inputs.A) & 1 })
+    },
+    {
+      id: 'level_2',
+      title: 'Interlock Conjunction',
+      subtitle: 'Two-input logic',
+      desc: 'Output Y must engage only when both security rails A and B are energized simultaneously (AND).',
+      inputs: ['A', 'B'],
+      outputs: ['Y'],
+      allowedGates: ['AND', 'OR', 'XOR', 'NAND'],
+      sockets: [
+        { id: 'S1', inputs: ['A', 'B'], arity: 2, pos: { x: 320, y: 190 } }
+      ],
+      wireOutputs: { Y: 'S1' },
+      targetFn: (inputs) => ({ Y: (inputs.A & inputs.B) & 1 })
+    },
+    {
+      id: 'level_3',
+      title: 'Difference Detector (XOR)',
+      subtitle: 'Construct XOR from primitive universal gates',
+      desc: 'Synthesize parity difference: Y is 1 when inputs differ. Combine available gates across two tiers.',
+      inputs: ['A', 'B'],
+      outputs: ['Y'],
+      allowedGates: ['AND', 'OR', 'NOT', 'NAND', 'XOR'],
+      sockets: [
+        { id: 'S1', inputs: ['A', 'B'], arity: 2, pos: { x: 240, y: 140 } },
+        { id: 'S2', inputs: ['A', 'B'], arity: 2, pos: { x: 240, y: 240 } },
+        { id: 'S3', inputs: ['S1', 'S2'], arity: 2, pos: { x: 420, y: 190 } }
+      ],
+      wireOutputs: { Y: 'S3' },
+      targetFn: (inputs) => ({ Y: (inputs.A ^ inputs.B) & 1 })
+    },
+    {
+      id: 'level_4',
+      title: 'Half Adder Matrix',
+      subtitle: 'Simultaneous Sum and Carry calculation',
+      desc: 'Compute binary sum of bits A and B. S (Sum) outputs modulo-2 sum; C (Carry) outputs bit conjunction.',
+      inputs: ['A', 'B'],
+      outputs: ['S', 'C'],
+      allowedGates: ['AND', 'OR', 'XOR', 'NAND', 'NOR'],
+      sockets: [
+        { id: 'S1', inputs: ['A', 'B'], arity: 2, pos: { x: 320, y: 140 } },
+        { id: 'S2', inputs: ['A', 'B'], arity: 2, pos: { x: 320, y: 240 } }
+      ],
+      wireOutputs: { S: 'S1', C: 'S2' },
+      targetFn: (inputs) => ({
+        S: (inputs.A ^ inputs.B) & 1,
+        C: (inputs.A & inputs.B) & 1
+      })
+    },
+    {
+      id: 'level_5',
+      title: '2:1 Multiplexer (Data Selector)',
+      subtitle: 'Routing conditional bus signals',
+      desc: 'Select bus line: When Select S=0, output Y=A. When S=1, output Y=B. Construct using AND/OR/NOT logic.',
+      inputs: ['A', 'B', 'SEL'],
+      outputs: ['Y'],
+      allowedGates: ['AND', 'OR', 'NOT', 'NAND'],
+      sockets: [
+        { id: 'S1', inputs: ['SEL'], arity: 1, pos: { x: 220, y: 110 } },
+        { id: 'S2', inputs: ['A', 'S1'], arity: 2, pos: { x: 340, y: 130 } },
+        { id: 'S3', inputs: ['B', 'SEL'], arity: 2, pos: { x: 340, y: 250 } },
+        { id: 'S4', inputs: ['S2', 'S3'], arity: 2, pos: { x: 460, y: 190 } }
+      ],
+      wireOutputs: { Y: 'S4' },
+      targetFn: (inputs) => ({
+        Y: (inputs.SEL === 0 ? inputs.A : inputs.B) & 1
+      })
+    },
+    {
+      id: 'level_6',
+      title: 'Aurora Majority Arbiter',
+      subtitle: 'Triple Modular Redundancy (TMR)',
+      desc: 'Safety critical vote: Output Y=1 if at least two of the three input sensors (A, B, C) are high.',
+      inputs: ['A', 'B', 'C'],
+      outputs: ['Y'],
+      allowedGates: ['AND', 'OR', 'XOR', 'NAND', 'NOR'],
+      sockets: [
+        { id: 'S1', inputs: ['A', 'B'], arity: 2, pos: { x: 240, y: 120 } },
+        { id: 'S2', inputs: ['B', 'C'], arity: 2, pos: { x: 240, y: 200 } },
+        { id: 'S3', inputs: ['A', 'C'], arity: 2, pos: { x: 240, y: 280 } },
+        { id: 'S4', inputs: ['S1', 'S2'], arity: 2, pos: { x: 380, y: 150 } },
+        { id: 'S5', inputs: ['S4', 'S3'], arity: 2, pos: { x: 480, y: 200 } }
+      ],
+      wireOutputs: { Y: 'S5' },
+      targetFn: (inputs) => ({
+        Y: ((inputs.A & inputs.B) | (inputs.B & inputs.C) | (inputs.A & inputs.C)) & 1
+      })
+    }
+  ];
+
+  // Application State
+  let currentLevelIdx = 0;
+  let socketAssignments = {};
+  let activeSocketId = null;
+  let lastVerificationResult = null;
+  let completionTimer = null;
+  let completedLevels = [], boards = {}, probeInputs = {}, undoAssignments = null;
+  function invalidateVerification() {
+    clearTimeout(completionTimer);
+    lastVerificationResult = null;
+    document.getElementById('replayFailure').disabled = true;
+    document.getElementById('modalOverlay').style.display = 'none';
+    renderTruthTableBody([]);
+    hideFailingReport();
+    updateStatusStrip('Circuit changed. Verify again to check this configuration.');
+  }
+
+  const STORAGE_KEY = 'NORTHSTAR_LOGIC_FOUNDRY_V1';
+
+  function saveProgress() {
+    try {
+      boards[currentLevelIdx]={...socketAssignments};
+      const payload = {
+        boards,
+        levelIdx: currentLevelIdx,
+        completedLevels,
+        savedAssignments: socketAssignments,
+        timestamp: Date.now()
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      document.getElementById('scoreBadge').textContent = `Saved · ${completedLevels.length}/${CAMPAIGN.length} verified`;
+    } catch (e) { document.getElementById('scoreBadge').textContent = 'Saving unavailable'; }
+  }
+
+  function loadProgress() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      const saved = JSON.parse(raw);
+      if (!saved || !Number.isInteger(saved.levelIdx) || saved.levelIdx < 0 || saved.levelIdx >= CAMPAIGN.length) return null;
+      completedLevels = Array.isArray(saved.completedLevels) ? [...new Set(saved.completedLevels.filter(i => Number.isInteger(i) && i >= 0 && i < CAMPAIGN.length))] : [];
+      boards = saved.boards && typeof saved.boards === 'object' && !Array.isArray(saved.boards) ? saved.boards : {};
+      return saved;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Evaluation engine: computes circuit outputs given input vector and gate assignments
+  function evaluateCircuit(level, assignments, inputValues) {
+    const nodeValues = { ...inputValues };
+
+    // Topologically evaluate sockets
+    for (const socket of level.sockets) {
+      const gateType = assignments[socket.id];
+      if (!gateType || !Object.hasOwn(GATES, gateType) || !level.allowedGates.includes(gateType)) {
+        return { error: `Socket ${socket.id} has no gate assigned.` };
+      }
+      const gateDef = GATES[gateType];
+      if (gateDef.arity !== socket.arity) return {error: `Socket ${socket.id} requires a ${socket.arity}-input gate.`};
+      const args = socket.inputs.map(inpId => {
+        if (nodeValues[inpId] !== undefined) {
+          return nodeValues[inpId];
+        }
+        return null;
+      });
+      if (args.some(v => v === null)) {
+        return { error: `Unresolved dependency for socket ${socket.id}` };
+      }
+      nodeValues[socket.id] = gateDef.fn(...args);
+    }
+
+    const outputs = {};
+    for (const [outName, sourceId] of Object.entries(level.wireOutputs)) {
+      outputs[outName] = nodeValues[sourceId];
+    }
+    return { outputs, nodeValues };
+  }
+
+  // Verify complete truth table against expected specifications
+  function runFullVerification(level, assignments) {
+    const numInputs = level.inputs.length;
+    const totalCases = 1 << numInputs;
+    const rows = [];
+    let failingCase = null;
+
+    for (let i = 0; i < totalCases; i++) {
+      const inputVector = {};
+      level.inputs.forEach((inp, bitIdx) => {
+        // bitIdx from left to right (MSB first)
+        const shift = numInputs - 1 - bitIdx;
+        inputVector[inp] = (i >> shift) & 1;
+      });
+
+      const expectedOutputs = level.targetFn(inputVector);
+      const evalRes = evaluateCircuit(level, assignments, inputVector);
+
+      let matches = false;
+      if (!evalRes.error) {
+        matches = level.outputs.every(outKey => evalRes.outputs[outKey] === expectedOutputs[outKey]);
+      }
+
+      const row = {
+        inputs: inputVector,
+        expected: expectedOutputs,
+        actual: evalRes.error ? null : evalRes.outputs,
+        error: evalRes.error || null,
+        passed: matches
+      };
+      rows.push(row);
+
+      if (!matches && !failingCase) {
+        failingCase = row;
+      }
+    }
+
+    return {
+      allPassed: failingCase === null,
+      failingCase,
+      rows
+    };
+  }
+
+  // DOM & UI Rendering
+  const canvas = document.getElementById('circuitCanvas');
+  const ctx = canvas.getContext('2d');
+
+  function getActiveLevel() {
+    return CAMPAIGN[currentLevelIdx];
+  }
+
+  function initLevel(index, restoreAssignments = null) {
+    if (paused) return;
+    if (restoreAssignments === null) restoreAssignments = boards[index];
+    undoAssignments = null;
+    document.getElementById('undoGate').disabled=true;
+    document.getElementById('replayFailure').disabled=true;
+
+    clearTimeout(completionTimer);
+    document.getElementById('modalOverlay').style.display = 'none';
+    currentLevelIdx = Number.isInteger(index) ? Math.max(0, Math.min(index, CAMPAIGN.length - 1)) : 0;
+    const level = getActiveLevel();
+    probeInputs=Object.fromEntries(level.inputs.map(k=>[k,0]));
+    // Populate initial assignments
+    socketAssignments = {};
+    if (restoreAssignments && typeof restoreAssignments === 'object') {
+      level.sockets.forEach(s => {
+        if (restoreAssignments[s.id] && level.allowedGates.includes(restoreAssignments[s.id]) && GATES[restoreAssignments[s.id]].arity === s.arity) {
+          socketAssignments[s.id] = restoreAssignments[s.id];
+        } else {
+          socketAssignments[s.id] = null;
+        }
+      });
+    } else {
+      level.sockets.forEach(s => { socketAssignments[s.id] = null; });
+    }
+
+    activeSocketId = level.sockets[0]?.id || null;
+    lastVerificationResult = null;
+
+    document.getElementById('levelBadge').textContent = `Level ${currentLevelIdx + 1} / ${CAMPAIGN.length}`;
+    document.getElementById('levelObjective').innerHTML = `<strong>${level.title}</strong>: ${level.desc}`;
+
+    renderPalette();
+    renderSocketsList();
+    renderTruthTableHead();
+    renderTruthTableBody([]);
+    hideFailingReport();
+    updateStatusStrip('Select sockets and synthesize gate logic. Press Verify when ready.');
+    drawCircuit();
+    saveProgress();
+    renderCampaign();
+  }
+
+  function renderPalette() {
+    const level = getActiveLevel();
+    const container = document.getElementById('palette');
+    container.innerHTML = '';
+
+    level.allowedGates.forEach((gateName, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'btn gate-btn';
+      btn.textContent = `[${i + 1}] ${gateName}`;
+      btn.title = `Equip ${gateName} to current selected socket`;
+      btn.disabled = GATES[gateName].arity !== level.sockets.find(s => s.id === activeSocketId)?.arity;
+      btn.onclick = () => {
+        Sound.switchGate();
+        assignActiveSocket(gateName);
+      };
+      container.appendChild(btn);
+    });
+  }
+
+  function renderSocketsList() {
+    const level = getActiveLevel();
+    const container = document.getElementById('slotsContainer');
+    const focusId = container.contains(document.activeElement) ? document.activeElement.id : null;
+    container.innerHTML = '';
+
+    level.sockets.forEach(socket => {
+      const row = document.createElement('div');
+      row.className = `slot-row ${socket.id === activeSocketId ? 'active' : ''}`;
+      row.tabIndex = 0;
+      row.id = 'socket-' + socket.id;
+      row.onfocus = () => {
+        activeSocketId = socket.id;
+        container.querySelectorAll('.slot-row').forEach(r => r.classList.toggle('active', r.id === row.id));
+        renderPalette();
+        drawCircuit();
+      };
+      row.setAttribute('role', 'group');
+      row.setAttribute('aria-label', `Socket ${socket.id}, current gate: ${socketAssignments[socket.id] || 'Unassigned'}`);
+
+      const label = document.createElement('div');
+      label.className = 'slot-label';
+      label.innerHTML = `<span class="slot-name">Socket ${socket.id}</span><span>Inputs: ${socket.inputs.join(', ')}</span>`;
+
+      const right = document.createElement('div');
+      right.className = 'slot-chip-display';
+
+      const pill = document.createElement('span');
+      const assigned = socketAssignments[socket.id];
+      pill.className = `chip-pill ${assigned ? '' : 'unset'}`;
+      pill.textContent = assigned || 'Empty';
+      right.appendChild(pill);
+
+      const cycleBtn = document.createElement('button');
+      cycleBtn.id = 'cycle-' + socket.id;
+      cycleBtn.setAttribute('aria-label', 'Cycle gate in socket ' + socket.id);
+      cycleBtn.className = 'btn';
+      cycleBtn.style.padding = '4px 8px';
+      cycleBtn.style.fontSize = '12px';
+      cycleBtn.textContent = 'Cycle';
+      cycleBtn.onclick = (e) => {
+        e.stopPropagation();
+        cycleSocketGate(socket.id);
+      };
+      right.appendChild(cycleBtn);
+
+      row.onclick = () => {
+        activeSocketId = socket.id;
+        Sound.click();
+        renderSocketsList();
+        drawCircuit();
+      };
+
+      row.onkeydown = (e) => {
+        if (e.target === row && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          cycleSocketGate(socket.id);
+        }
+      };
+
+      row.appendChild(label);
+      row.appendChild(right);
+      container.appendChild(row);
+    });
+    if (focusId) document.getElementById(focusId)?.focus();
+    renderPalette();
+  }
+
+  function assignActiveSocket(gateName) {
+    if (paused) return;
+    if (!activeSocketId || GATES[gateName]?.arity !== getActiveLevel().sockets.find(s => s.id === activeSocketId)?.arity) return;
+    rememberGate();
+    invalidateVerification();
+    socketAssignments[activeSocketId] = gateName;
+    renderSocketsList();
+    drawCircuit();
+    saveProgress();
+  }
+
+  function cycleSocketGate(sockId) {
+    if (paused) return;
+    rememberGate();
+    const level = getActiveLevel();
+    invalidateVerification();
+    const allowed = level.allowedGates.filter(g => GATES[g].arity === level.sockets.find(s => s.id === sockId).arity);
+    const current = socketAssignments[sockId];
+    const nextIdx = current ? (allowed.indexOf(current) + 1) % allowed.length : 0;
+    socketAssignments[sockId] = allowed[nextIdx];
+    activeSocketId = sockId;
+    Sound.switchGate();
+    renderSocketsList();
+    drawCircuit();
+    saveProgress();
+  }
+
+  function renderTruthTableHead() {
+    const level = getActiveLevel();
+    const tr = document.getElementById('tableHeadRow');
+    tr.innerHTML = '';
+    level.inputs.forEach(inp => {
+      const th = document.createElement('th');
+      th.textContent = inp;
+      tr.appendChild(th);
+    });
+    level.outputs.forEach(out => {
+      const th = document.createElement('th');
+      th.textContent = `Target ${out}`;
+      tr.appendChild(th);
+    });
+    level.outputs.forEach(out => {
+      const th = document.createElement('th');
+      th.textContent = `Actual ${out}`;
+      tr.appendChild(th);
+    });
+    const statusTh = document.createElement('th');
+    statusTh.textContent = 'State';
+    tr.appendChild(statusTh);
+  }
+
+  function renderTruthTableBody(rows) {
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = '';
+    const level = getActiveLevel();
+
+    if (!rows || rows.length === 0) {
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = level.inputs.length + (level.outputs.length * 2) + 1;
+      td.style.color = 'var(--text-dim)';
+      td.style.padding = '12px';
+      td.textContent = 'Truth table pending verification run.';
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+      return;
+    }
+
+    rows.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.className = r.passed ? 'pass' : 'fail';
+
+      level.inputs.forEach(inp => {
+        const td = document.createElement('td');
+        td.textContent = r.inputs[inp];
+        tr.appendChild(td);
+      });
+      level.outputs.forEach(out => {
+        const td = document.createElement('td');
+        td.textContent = r.expected[out];
+        tr.appendChild(td);
+      });
+      level.outputs.forEach(out => {
+        const td = document.createElement('td');
+        td.textContent = r.actual ? r.actual[out] : 'ERR';
+        tr.appendChild(td);
+      });
+      const tdStatus = document.createElement('td');
+      tdStatus.textContent = r.passed ? 'PASS' : 'FAIL';
+      tdStatus.style.fontWeight = 'bold';
+      tdStatus.style.color = r.passed ? 'var(--success)' : 'var(--danger)';
+      tr.appendChild(tdStatus);
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  function showFailingReport(failCase) {
+    const card = document.getElementById('failingReport');
+    card.style.display = 'block';
+    card.className = 'failing-card';
+
+    const level = getActiveLevel();
+    const inStr = level.inputs.map(k => `${k}=${failCase.inputs[k]}`).join(', ');
+    const expStr = level.outputs.map(k => `${k}=${failCase.expected[k]}`).join(', ');
+    const actStr = failCase.actual ? level.outputs.map(k => `${k}=${failCase.actual[k]}`).join(', ') : 'ERROR';
+
+    card.innerHTML = `
+      <div class="failing-title">
+        <span>⚠ Circuit Fault Detected</span>
+        <span class="vector-spec">Repro Case: ${inStr}</span>
+      </div>
+      <div>For input test pattern <strong>${inStr}</strong>, expected output <strong>${expStr}</strong>, but synthesized output was <strong style="color:var(--danger);">${actStr}</strong>.</div>
+      <div style="font-size:12px;margin-top:4px;color:var(--text-dim);">Check inverted rails and component gate identities along the signal path.</div>
+    `;
+  }
+
+  function hideFailingReport() {
+    const card = document.getElementById('failingReport');
+    card.style.display = 'none';
+  }
+
+  function updateStatusStrip(msg) {
+    document.getElementById('statusStrip').innerHTML = msg;
+  }
+
+  // Canvas Drawing for Gold/Aurora Instrument Schematic
+  function drawCircuit() {
+    renderProbe();
+
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    // Background grid lines (oscilloscope/instrument style)
+    ctx.strokeStyle = '#121927';
+    ctx.lineWidth = 1;
+    const step = 20;
+    for (let x = 0; x < w; x += step) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+    }
+    for (let y = 0; y < h; y += step) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    }
+
+    const level = getActiveLevel();
+
+    // Coordinates mapping
+    const inputPositions = {};
+    const inSpacing = h / (level.inputs.length + 1);
+    level.inputs.forEach((inp, idx) => {
+      inputPositions[inp] = { x: 50, y: inSpacing * (idx + 1) };
+    });
+
+    const outputPositions = {};
+    const outSpacing = h / (level.outputs.length + 1);
+    level.outputs.forEach((out, idx) => {
+      outputPositions[out] = { x: w - 50, y: outSpacing * (idx + 1) };
+    });
+
+    const socketPositions = {};
+    level.sockets.forEach(s => {
+      socketPositions[s.id] = s.pos;
+    });
+
+    // Draw connection lines
+    level.sockets.forEach(s => {
+      const destPos = socketPositions[s.id];
+      s.inputs.forEach((inpId, portIdx) => {
+        const srcPos = inputPositions[inpId] || socketPositions[inpId];
+        if (!srcPos) return;
+        const inOffset = (portIdx - (s.inputs.length - 1) / 2) * 14;
+        drawTrace(srcPos.x + (inputPositions[inpId] ? 14 : 32), srcPos.y, destPos.x - 32, destPos.y + inOffset, evaluateCircuit(level,socketAssignments,probeInputs).nodeValues?.[inpId] ?? probeInputs[inpId]);
+      });
+    });
+
+    Object.entries(level.wireOutputs).forEach(([outKey, srcId]) => {
+      const srcPos = socketPositions[srcId];
+      const destPos = outputPositions[outKey];
+      if (srcPos && destPos) {
+        drawTrace(srcPos.x + 32, srcPos.y, destPos.x - 14, destPos.y, evaluateCircuit(level,socketAssignments,probeInputs).nodeValues?.[srcId]);
+      }
+    });
+
+    // Draw Input Terminals
+    level.inputs.forEach(inp => {
+      const p = inputPositions[inp];
+      ctx.fillStyle = '#101626';
+      ctx.strokeStyle = '#49e0ff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#49e0ff';
+      ctx.font = 'bold 12px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(inp, p.x, p.y);
+      ctx.fillText(String(probeInputs[inp]||0),p.x,p.y+25);
+    });
+
+    // Draw Output Terminals
+    level.outputs.forEach(out => {
+      const p = outputPositions[out];
+      ctx.fillStyle = '#101626';
+      ctx.strokeStyle = '#f3c766';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#f3c766';
+      ctx.font = 'bold 12px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(out, p.x, p.y);
+      ctx.fillText(String(evaluateCircuit(level,socketAssignments,probeInputs).outputs?.[out] ?? "?"),p.x,p.y+25);
+    });
+
+    // Draw Sockets
+    level.sockets.forEach(s => {
+      const p = socketPositions[s.id];
+      const isActive = s.id === activeSocketId;
+      const assigned = socketAssignments[s.id];
+
+      ctx.save();
+      ctx.translate(p.x, p.y);
+
+      // Socket body
+      ctx.fillStyle = isActive ? '#1b263f' : '#0e1627';
+      ctx.strokeStyle = isActive ? '#49e0ff' : (assigned ? '#f3c766' : '#293959');
+      ctx.lineWidth = isActive ? 2.5 : 1.5;
+
+      roundRect(ctx, -32, -22, 64, 44, 8);
+      ctx.fill();
+      ctx.stroke();
+
+      if (isActive) {
+        ctx.strokeStyle = 'rgba(73, 224, 255, 0.4)';
+        ctx.lineWidth = 1;
+        roundRect(ctx, -36, -26, 72, 52, 11);
+        ctx.stroke();
+      }
+
+      // Socket ID label
+      ctx.fillStyle = '#8b99b5';
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText(s.id, 0, -18);
+
+      // Gate identity
+      ctx.fillStyle = assigned ? '#f3c766' : '#576785';
+      ctx.font = 'bold 12px monospace';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(assigned || '---', 0, 16);
+
+      ctx.restore();
+    });
+  }
+
+  function drawTrace(x1, y1, x2, y2, signal) {
+    ctx.save();
+    ctx.strokeStyle = signal===1 ? '#e4bd72' : '#466276';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    const midX = (x1 + x2) / 2;
+    ctx.bezierCurveTo(midX, y1, midX, y2, x2, y2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  // Interaction Handlers
+  document.getElementById('verifyBtn').onclick = () => {
+    if (paused) return;
+    const level = getActiveLevel();
+    const unassigned = level.sockets.filter(s => !socketAssignments[s.id]);
+    if (unassigned.length > 0) {
+      Sound.fail();
+      updateStatusStrip(`<span style="color:var(--danger)">Synthesis Incomplete: Fill socket ${unassigned[0].id} before verification.</span>`);
+      return;
+    }
+
+    const result = runFullVerification(level, socketAssignments);
+    lastVerificationResult = result;
+    document.getElementById('replayFailure').disabled=result.allPassed;
+    probeInputs={...(result.failingCase?.inputs||probeInputs)};
+    drawCircuit();
+    renderTruthTableBody(result.rows);
+
+    if (result.allPassed) {
+      Sound.pass();
+      hideFailingReport();
+      updateStatusStrip('<span style="color:var(--success);font-weight:bold;">✓ Circuit Verified! All truth vectors match specification.</span>');
+
+      if (!completedLevels.includes(currentLevelIdx)) completedLevels.push(currentLevelIdx);
+      renderCampaign();
+      saveProgress();
+      clearTimeout(completionTimer);
+      completionTimer = setTimeout(() => {
+        const isLast = currentLevelIdx === CAMPAIGN.length - 1;
+        document.getElementById('modalTitle').textContent = completedLevels.length === CAMPAIGN.length ? 'Campaign Completed' : 'Level Complete';
+        document.getElementById('modalBody').textContent = isLast
+          ? `Verified ${completedLevels.length} of ${CAMPAIGN.length} circuits. Use Prev to revisit any remaining challenges.`
+          : `Level ${currentLevelIdx + 1} successfully verified. Proceed to next challenge.`;
+        document.getElementById('modalNextBtn').textContent = isLast ? 'Review Campaign' : 'Next Level';
+        document.getElementById('modalOverlay').style.display = 'grid';
+        document.getElementById('modalNextBtn').focus();
+      }, 400);
+    } else {
+      Sound.fail();
+      showFailingReport(result.failingCase);
+      updateStatusStrip('<span style="color:var(--danger);font-weight:bold;">✗ Verification Failed: Circuit produced incorrect output for test vector.</span>');
+    }
+  };
+
+  document.getElementById('resetBtn').onclick = () => {
+    if(paused)return;rememberGate();
+    invalidateVerification();
+    const level = getActiveLevel();
+    level.sockets.forEach(s => { socketAssignments[s.id] = null; });
+    renderSocketsList();
+    renderTruthTableBody([]);
+    hideFailingReport();
+    drawCircuit();
+    Sound.click();
+    saveProgress();
+    updateStatusStrip('Sockets reset for current schematic.');
+  };
+
+  document.getElementById('prevLevelBtn').onclick = () => {
+    if (currentLevelIdx > 0) {
+      initLevel(currentLevelIdx - 1);
+    }
+  };
+
+  document.getElementById('nextLevelBtn').onclick = () => {
+    if (currentLevelIdx < CAMPAIGN.length - 1) {
+      initLevel(currentLevelIdx + 1);
+    }
+  };
+
+  document.getElementById('clearStorageBtn').onclick = () => {
+    if (confirm('Reset campaign progress and start at Level 1?')) {
+      try { localStorage.removeItem(STORAGE_KEY); } catch {}
+      completedLevels = [];boards={};
+      initLevel(0);
+    }
+  };
+
+  document.getElementById('modalNextBtn').onclick = () => {
+    document.getElementById('modalOverlay').style.display = 'none';
+    if (currentLevelIdx < CAMPAIGN.length - 1) {
+      initLevel(currentLevelIdx + 1);
+    }
+  };
+
+  // Keyboard Accessibility
+  window.addEventListener('keydown', (e) => {
+    if(e.key==='Escape'){if(document.getElementById('modalOverlay').style.display!=='grid'){setPaused(!paused);return;}}
+    if(paused){if(e.key==='Tab'){e.preventDefault();document.getElementById('resumeGame').focus();}return;}
+    if (document.getElementById('modalOverlay').style.display === 'grid') {
+      if (e.key === 'Tab') { e.preventDefault(); document.getElementById('modalNextBtn').focus(); }
+      if (e.key === 'Escape') { document.getElementById('modalOverlay').style.display = 'none'; document.getElementById('verifyBtn').focus(); }
+      return;
+    }
+    if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+    const level = getActiveLevel();
+
+    // Number keys 1-6 for quick gate pick
+    if (e.key >= '1' && e.key <= '9') {
+      const idx = parseInt(e.key, 10) - 1;
+      if (idx < level.allowedGates.length) {
+        assignActiveSocket(level.allowedGates[idx]);
+        Sound.switchGate();
+      }
+    } else if (e.key === 'v' || e.key === 'V') {
+      document.getElementById('verifyBtn').click();
+    } else if (e.key === 'r' || e.key === 'R') {
+      document.getElementById('resetBtn').click();
+    }
+  });
+
+  // Canvas Click to Select Sockets
+  canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const clickX = (e.clientX - rect.left) * scaleX;
+    const clickY = (e.clientY - rect.top) * scaleY;
+
+    const level = getActiveLevel();
+    for (const socket of level.sockets) {
+      const p = socket.pos;
+      if (Math.abs(clickX - p.x) <= 32 && Math.abs(clickY - p.y) <= 22) {
+        activeSocketId = socket.id;
+        Sound.click();
+        renderSocketsList();
+        drawCircuit();
+        break;
+      }
+    }
+  });
+
+  function rememberGate(){undoAssignments={...socketAssignments};document.getElementById('undoGate').disabled=false;}
+  function renderCampaign(){
+    const nav=document.getElementById('campaignNav');nav.replaceChildren();
+    CAMPAIGN.forEach((level,index)=>{const button=document.createElement('button');button.className='circuit-tab';button.textContent=(completedLevels.includes(index)?'✓ ':'')+String(index+1).padStart(2,'0')+' / '+level.title.split(' (')[0];button.setAttribute('aria-current',index===currentLevelIdx?'step':'false');button.onclick=()=>initLevel(index);nav.append(button);});
+  }
+  function renderProbe(){
+    const level=getActiveLevel(),box=document.getElementById('probeControls');
+    const focusId=box.contains(document.activeElement)?document.activeElement.id:null;box.replaceChildren();
+    level.inputs.forEach(key=>{const button=document.createElement('button');button.id='probe-'+key;button.className='input-switch';button.textContent=key+' · '+(probeInputs[key]?'1 / HIGH':'0 / LOW');button.setAttribute('aria-pressed',String(!!probeInputs[key]));button.onclick=()=>{if(paused)return;probeInputs[key]=probeInputs[key]?0:1;Sound.switchGate();drawCircuit();};box.append(button);});
+    if(focusId)document.getElementById(focusId)?.focus();
+    const evaluated=evaluateCircuit(level,socketAssignments,probeInputs),target=level.targetFn(probeInputs);
+    document.getElementById('probeSummary').textContent=level.outputs.map(key=>key+': '+(evaluated.outputs?.[key]??'?')+' / target '+target[key]).join(' · ');
+    window.dispatchEvent(new CustomEvent('foundry:state',{detail:{level:currentLevelIdx,active:level.sockets.findIndex(s=>s.id===activeSocketId),gates:level.sockets.map(s=>socketAssignments[s.id]||''),signals:level.sockets.map(s=>evaluated.nodeValues?.[s.id]||0),completed:completedLevels.length,motion:!reducedMotion,paused}}));
+  }
+  document.getElementById('replayFailure').onclick=()=>{if(lastVerificationResult?.failingCase){probeInputs={...lastVerificationResult.failingCase.inputs};drawCircuit();updateStatusStrip('Failing input loaded. Follow the HIGH and LOW signals.');}};
+  document.getElementById('undoGate').onclick=()=>{if(paused||!undoAssignments)return;socketAssignments=undoAssignments;undoAssignments=null;invalidateVerification();document.getElementById('undoGate').disabled=true;renderSocketsList();drawCircuit();saveProgress();};
+  function setPaused(value){paused=value;document.getElementById('pauseOverlay').hidden=!paused;document.getElementById('stage').inert=paused;document.getElementById('campaignNav').inert=paused;if(paused){audioCtx?.suspend();document.getElementById('resumeGame').focus();}else document.getElementById('pauseToggle').focus();drawCircuit();}
+  document.getElementById('pauseToggle').onclick=()=>setPaused(!paused);
+  document.getElementById('resumeGame').onclick=()=>setPaused(false);
+  document.getElementById('soundVolume').value=String(soundVolume*100);
+  document.getElementById('soundVolume').oninput=e=>{soundVolume=Number(e.target.value)/100;savePrefs();};
+  document.getElementById('soundToggle').onclick=()=>{soundEnabled=!soundEnabled;document.getElementById('soundToggle').textContent=soundEnabled?'Sound on':'Sound off';document.getElementById('soundToggle').setAttribute('aria-pressed',String(soundEnabled));if(soundEnabled)Sound.click();else audioCtx?.suspend();};
+  function showMotion(){document.getElementById('motionToggle').textContent=reducedMotion?'Still display':'Motion on';document.getElementById('motionToggle').setAttribute('aria-pressed',String(!reducedMotion));document.body.classList.toggle('still',reducedMotion);}
+  document.getElementById('motionToggle').onclick=()=>{reducedMotion=!reducedMotion;showMotion();savePrefs();drawCircuit();};showMotion();
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)audioCtx?.suspend();});
+  window.addEventListener('foundry:ready',()=>drawCircuit());
+  window.addEventListener('foundry:select',event=>{const socket=getActiveLevel().sockets[event.detail];if(socket&&!paused){activeSocketId=socket.id;renderSocketsList();drawCircuit();}});
+  let previousButtons=[],lastController=0;
+  function pollController(time){requestAnimationFrame(pollController);if(document.hidden||time-lastController<30)return;lastController=time;const gamepad=Array.from(navigator.getGamepads?.()||[]).find(p=>p?.mapping==='standard');if(!gamepad){previousButtons=[];document.getElementById('controllerStatus').textContent='Keyboard · mouse · touch';return;}document.getElementById('controllerStatus').textContent='Controller · A cycle · X verify · B undo · D-pad socket';const buttons=gamepad.buttons.map(b=>b.pressed);const pressed=i=>buttons[i]&&!previousButtons[i];
+    if(pressed(9))setPaused(!paused);
+    if(!paused){const modal=document.getElementById('modalOverlay').style.display==='grid';if(modal){if(pressed(0))document.getElementById('modalNextBtn').click();}else{const sockets=getActiveLevel().sockets;let index=sockets.findIndex(s=>s.id===activeSocketId);if(pressed(14)||pressed(15)){index=(index+(pressed(14)?-1:1)+sockets.length)%sockets.length;activeSocketId=sockets[index].id;renderSocketsList();document.getElementById('socket-'+activeSocketId).focus();drawCircuit();}if(pressed(0)||pressed(12)||pressed(13))cycleSocketGate(activeSocketId);if(pressed(2))document.getElementById('verifyBtn').click();if(pressed(1))document.getElementById('undoGate').click();}}
+    previousButtons=buttons;
+  }requestAnimationFrame(pollController);
+
+  // Initialize
+  const saved = loadProgress();
+  if (saved && saved.levelIdx !== undefined) {
+    initLevel(saved.levelIdx, saved.savedAssignments);
+  } else {
+    initLevel(0);
+  }
+})();
+</script>
+<script type="module" src="/static/games/logic_foundry_v14/scene.mjs"></script>
+</body>
+</html>

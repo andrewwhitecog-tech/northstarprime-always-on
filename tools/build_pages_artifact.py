@@ -3,9 +3,11 @@
 
 The branch remains the complete source archive. The Pages artifact omits the
 large IDC video copies and rewrites their public URLs to the identical files on
-the canonical NorthStar application host. Little Light and new cookbook pages reference
-immutable-named WebP exports in the public source repository; those image copies
-are also excluded from the capacity-limited Pages artifact.
+the canonical NorthStar application host. Little Light, cookbook, and StickerForge
+preview exports stay in the public source repository and out of this artifact.
+Full-resolution StickerForge masters stay in the repository too, and the artifact
+rewrites their URLs to raw.githubusercontent.com so new sticker packs do not
+consume the 1 GB Pages ceiling.
 """
 
 from __future__ import annotations
@@ -31,6 +33,42 @@ RELEASE_GUARD_BYTES = 930_000_000
 GIT_BLOB_LIMIT_BYTES = 100_000_000
 SKIP_TOP_LEVEL = {".git", ".github", "output", "tools", "__pycache__", ".pytest_cache", ".playwright-cli", ".playwright", "little-light-media", "cookbook-media", "stickerforge-media"}
 TEXT_SUFFIXES = {".html", ".css", ".js", ".json", ".xml", ".txt", ".webmanifest"}
+
+RAW_STICKER_BASE = "https://raw.githubusercontent.com/andrewwhitecog-tech/northstarprime-always-on/main/"
+STICKER_MEDIA_SUFFIXES = {".png", ".webp", ".jpg", ".jpeg", ".gif", ".avif"}
+
+
+def external_sticker_master(relative: Path) -> bool:
+    """Full sticker art stays in git and is served from the raw repository."""
+    if not relative.parts or relative.parts[0] != "stickerforge":
+        return False
+    if relative.suffix.lower() not in STICKER_MEDIA_SUFFIXES:
+        return False
+    return "assets" in relative.parts or (len(relative.parts) > 1 and relative.parts[1] == "crucifix")
+
+
+def rewrite_sticker_refs(raw: str, relative: Path) -> str:
+    import re
+    abs_re = re.compile(
+        r"(?<!main)(?:https://northstarprime\.net)?(/stickerforge/[^\s\"\'<>]+?\.(?:png|webp|jpg|jpeg|gif|avif))",
+        re.IGNORECASE,
+    )
+    raw = abs_re.sub(lambda match: RAW_STICKER_BASE + match.group(1).lstrip("/"), raw)
+    if relative.suffix.lower() not in {".html", ".css"}:
+        return raw
+    rel_re = re.compile(
+        r"(?<![A-Za-z0-9_./-])(?:\./)?(assets/[^\s\"\'<>]+?\.(?:png|webp|jpg|jpeg|gif|avif))",
+        re.IGNORECASE,
+    )
+
+    def replace_relative(match: re.Match) -> str:
+        target = (ROOT / relative.parent / match.group(1)).resolve()
+        if not target.is_file() or not target.is_relative_to(ROOT):
+            return match.group(0)
+        return RAW_STICKER_BASE + target.relative_to(ROOT).as_posix()
+
+    return rel_re.sub(replace_relative, raw)
+
 
 
 def sha256(path: Path) -> str:
@@ -69,6 +107,8 @@ def iter_source_files():
             continue
         if relative.parts[:2] == ("static", "idc_video"):
             continue
+        if external_sticker_master(relative):
+            continue
         yield path, relative
 
 
@@ -76,6 +116,14 @@ def build(output: Path) -> dict:
     video_root = ROOT / "static" / "idc_video"
     video_files = sorted(path for path in video_root.rglob("*") if path.is_file())
     omitted_video_bytes = sum(path.stat().st_size for path in video_files)
+    omitted_stickers = [
+        path for path, relative in (
+            (path, path.relative_to(ROOT))
+            for path in ROOT.rglob("*")
+            if path.is_file() and external_sticker_master(path.relative_to(ROOT))
+        )
+    ]
+    omitted_sticker_bytes = sum(path.stat().st_size for path in omitted_stickers)
 
     if output.exists():
         shutil.rmtree(output)
@@ -92,6 +140,7 @@ def build(output: Path) -> dict:
             if count:
                 raw = raw.replace(LOCAL_VIDEO_BASE, APP_VIDEO_BASE)
                 rewrites += count
+            raw = rewrite_sticker_refs(raw, relative)
             destination.write_text(raw, encoding="utf-8", newline="\n")
             shutil.copymode(source, destination)
         else:
@@ -127,6 +176,12 @@ def build(output: Path) -> dict:
             "bytes": omitted_video_bytes,
             "replacement_base_url": APP_VIDEO_BASE,
             "rewritten_references": rewrites,
+        },
+        "sticker_masters": {
+            "delivery": "raw.githubusercontent.com public repository, paths unchanged",
+            "file_count": len(omitted_stickers),
+            "bytes": omitted_sticker_bytes,
+            "base_url": RAW_STICKER_BASE,
         },
         "little_light_media": {
             "path": "little-light-media",

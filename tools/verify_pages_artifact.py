@@ -107,6 +107,26 @@ def verify(artifact: Path, network: bool) -> dict:
     else:
         checks.append("duplicate IDC video payload excluded")
 
+    sticker_suffixes = {".png", ".webp", ".jpg", ".jpeg", ".gif", ".avif"}
+    leaked_stickers = []
+    for path in artifact.rglob("*"):
+        if not path.is_file():
+            continue
+        rel = path.relative_to(artifact)
+        if not rel.parts or rel.parts[0] != "stickerforge" or path.suffix.lower() not in sticker_suffixes:
+            continue
+        if "assets" in rel.parts or (len(rel.parts) > 1 and rel.parts[1] == "crucifix"):
+            leaked_stickers.append(rel.as_posix())
+    if leaked_stickers:
+        failures.append(f"Sticker masters leaked into curated artifact: {leaked_stickers[:8]}")
+    else:
+        checks.append("full-resolution sticker masters excluded")
+    sticker_index = artifact / "stickerforge" / "index.html"
+    if sticker_index.is_file() and "raw.githubusercontent.com/andrewwhitecog-tech/northstarprime-always-on/main/stickerforge/" not in sticker_index.read_text(encoding="utf-8"):
+        failures.append("Sticker catalog was not rewritten to the raw repository")
+    else:
+        checks.append("sticker masters served from the raw repository")
+
     files = [path for path in artifact.rglob("*") if path.is_file()]
     total_bytes = sum(path.stat().st_size for path in files)
     oversized = [path.relative_to(artifact).as_posix() for path in files if path.stat().st_size > FILE_LIMIT_BYTES]

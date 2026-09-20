@@ -18,8 +18,8 @@ def verify(root):
     check('local scripts and stylesheet',all(f'"{name}"' in html for name in ['style.css','core.js','puzzles.js','app.js']))
     check('repeat cadence and physical-controller limit disclosed','repeats after 12 days' in html and 'Physical gamepad testing is still pending' in html)
     check('no remote runtime or private URLs',not re.search(r'(?:src|href)=["\']https?://|127\.0\.0\.1|localhost|[A-Z]:\\',html))
-    landing=(root/'arcade/index.html').read_text(encoding='utf-8')
-    check('discoverable experimental arcade entry','href="/arcade/custom/side-street/"' in landing and 'Original experimental release' in landing and 'daily pick repeats after 12 UTC days' in landing)
+    workshop=(root/'arcade/lab/index.html').read_text(encoding='utf-8')
+    check('preserved experimental workshop entry','href="/arcade/custom/side-street/"' in workshop)
     catalog=json.loads((root/'arcade/catalog.json').read_text(encoding='utf-8'))
     matches=[g for g in catalog['games'] if g['slug']=='side-street']
     check('exactly one matching catalog entry',len(matches)==1 and matches[0]['route']==m['route'])

@@ -11,9 +11,9 @@ def verify(root):
   if p.suffix in {'.html','.css','.js','.mjs'}:
    text=data.decode();assert not re.search(r'https?://(?:127\.0\.0\.1|localhost)|[A-Z]:[\\/](?:Users|Windows)|(?:src|href)=[\"\']https?://',text),row['path']
    for asset in re.findall(r'/static/(?:games/logic_foundry_v14|vendor/three/0\.160\.0)/[a-zA-Z0-9_./-]+',text):assert (root/asset.lstrip('/')).is_file(),asset
- assert 'href="'+m['route']+'"' in (root/'arcade/index.html').read_text(encoding='utf-8')
+ assert any(link.rstrip('/')==m['route'].rstrip('/') for link in re.findall(r'href="([^"]+)"',(root/'arcade/lab/index.html').read_text(encoding='utf-8')))
  catalog=json.loads((root/'arcade/catalog.json').read_text(encoding='utf-8'));assert sum(g['slug']=='logic-foundry' and g['route']==m['route'] for g in catalog['games'])==1
  assert 'https://northstarprime.net'+m['route'] in (root/'sitemap.xml').read_text(encoding='utf-8')
- print(json.dumps({'status':'PASS','exact_runtime_files':len(m['files']),'discovery':'landing, catalog and sitemap'}))
+ print(json.dumps({'status':'PASS','exact_runtime_files':len(m['files']),'discovery':'workshop, catalog and sitemap'}))
 if __name__=='__main__':
  parser=argparse.ArgumentParser();parser.add_argument('--artifact',type=Path,default=ROOT);args=parser.parse_args();verify(args.artifact.resolve())

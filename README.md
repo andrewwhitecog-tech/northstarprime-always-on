@@ -2,8 +2,8 @@
 Always-on NorthStar Prime mirror for northstarprime.net.
 
 The apex and www hostnames are served by GitHub Pages and do not depend on
-Andre's computer. The homepage is a frozen copy of the full NSP experience with
-all 22 referenced media assets stored here. Links that still need server-side
+Andre's computer. The homepage is a lightweight guest entrance with original still art,
+clear listening, viewing and workshop routes. Links that still need server-side
 behavior go to app.northstarprime.net, the verified Render service.
 
 The /idc-programming/ route contains the complete Season One catalogue, nine
@@ -31,8 +31,8 @@ freeze manifest is an explicit inactive tombstone.
 The `/coloring-studio/` and `/payments/` continuity routes delegate to their
 canonical application surfaces while preserving query strings and fragments.
 
-The /arcade/ route contains the full public catalog and 49 locally mirrored
-games. One private-inventory surface is explicitly delegated to the cloud app.
+The /arcade/ route explains the gameplay rebuild and links to /arcade/lab/,
+which preserves the current experimental collection and 50 locally mirrored games. One private-inventory surface is explicitly delegated to the cloud app.
 Every mirrored runtime dependency is local; eight decorative motion plates are
 recompressed for the web without changing game logic. Private source-workspace
 provenance is redacted from the one public lore corpus that needs it.
@@ -43,8 +43,8 @@ and live 3D instruments. The reviewed artwork and all runtime dependencies are
 local. Physical controller and Safari/iPhone testing remain pending.
 
 The /idr/ route contains the complete 50-track station catalog. Its page,
-covers, navigation, PWA metadata, and deterministic time-seeded dock stay on
-the apex. Audio streams from the independent NSP asset host, so the catalog
+navigation and one visitor-controlled player stay on the apex. The 39 songs
+and 11 station sounds have distinct queues, filtering and recovery controls. Audio streams from the independent NSP asset host, so the catalog
 does not inflate this Pages repository by another half-gigabyte.
 
 The `/services/` route is a search-safe continuity bridge to the canonical
@@ -111,3 +111,9 @@ PAGES_CAPACITY_BUDGET.json for routing, provenance, hashes, failover details,
 and the enforced GitHub Pages capacity ceiling.
 
 The `/software/` catalog introduces the open-source Chronosphere app with its browser demo, Windows download, source repository, prerequisites and release links. `/chronosphere/` contains the complete, byte-identical 1.0.0 browser release with all eleven worlds and bundled artwork. No private workstation service or credentials are needed. `CHRONOSPHERE_RELEASE_MANIFEST.json` records each browser file and the source/Windows archive identities. Run `python tools/verify_chronosphere_static.py --artifact output/pages-artifact`; add `--network` after the GitHub release exists to verify its public download URLs.
+
+## Customer experience rebuild — September 20, 2026
+
+`/access/` explains free public access and scoped paid work. `/hire/` prioritizes organizational assessments, pilots and licensing without claiming institutional clients. `/mystery-school/` has an independent identity and a complete free attention exercise. `/family/` and its three contained readers preserve reviewed Little Light stories with no general catalogue or social-feed exits. This is a curated family collection, not a family-suitability claim for all legacy NSP media.
+
+Run `python tools/verify_family_static.py`, `python tools/verify_idr_static.py`, and `node tools/test_idr_player.cjs` with the existing release checks. Source validation and media availability are separate from actual browser/play/listening review.

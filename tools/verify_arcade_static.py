@@ -8,6 +8,11 @@ import json
 import re
 from pathlib import Path
 
+from verify_home_static import (
+    ORIGIN, check_asset_manifest, check_identity, check_local_links,
+    collect_local_assets, contained_path, read_page,
+)
+
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "ARCADE_FREEZE_MANIFEST.json"
 SCHEMA = "nsp.always-on-arcade-freeze.v1"
@@ -48,7 +53,7 @@ def verified_manifest_bytes(path: Path, row: dict[str, object]) -> int | None:
 
 
 def check_row(row: dict[str, object], label: str) -> Path:
-    path = ROOT / str(row["relative_path"] if "relative_path" in row else row["output_relative"])
+    path = contained_path(ROOT, str(row["relative_path"] if "relative_path" in row else row["output_relative"]))
     if not path.is_file():
         raise SystemExit(f"Missing {label}: {path.relative_to(ROOT)}")
     if verified_manifest_bytes(path, row) is None:
@@ -70,6 +75,37 @@ def assert_static_tokens_resolve(html: str, label: str) -> None:
         raise SystemExit(f"Dangling static reference in {label}: {token}")
 
 
+def check_catalog_dispositions(games: list[dict], delegated: list[dict], public_catalog: dict) -> None:
+    """Keep one disposition for every legacy catalog entry, including the fallback."""
+    expected = games + delegated
+    public = public_catalog.get("games", [])
+    for label, rows in (("manifest", expected), ("public catalog", public)):
+        for field in ("slug", "route"):
+            values = [str(row.get(field, "")) for row in rows]
+            if not all(values) or len(values) != len(set(values)):
+                raise SystemExit(f"Missing or duplicate {field} in {label}")
+    if public_catalog.get("count") != len(public):
+        raise SystemExit("Frozen public catalog count mismatch")
+    dispositions = {(row["slug"], row["route"]) for row in expected}
+    catalog = {(row["slug"], row["route"]) for row in public}
+    if dispositions != catalog:
+        raise SystemExit("Frozen catalog and route dispositions differ")
+
+
+def check_workshop_links(links: list[str], games: list[dict], delegated: list[dict]) -> None:
+    # Trailing slashes are equivalent for mirrored Pages routes. Delegated URLs
+    # must be the explicit fallback, never a plausible local stub.
+    destinations = {link.rstrip("/") for link in links}
+    for row in games:
+        if str(row["route"]).rstrip("/") not in destinations:
+            raise SystemExit(f"Workshop omits mirrored game: {row['route']}")
+    for row in delegated:
+        if str(row["fallback_url"]).rstrip("/") not in destinations:
+            raise SystemExit(f"Workshop omits explicit fallback: {row['route']}")
+        if str(row["route"]).rstrip("/") in destinations:
+            raise SystemExit(f"Workshop disguises delegated route as local: {row['route']}")
+
+
 def main() -> None:
     payload = json.loads(MANIFEST.read_text(encoding="utf-8"))
     if payload.get("schema") != SCHEMA:
@@ -85,20 +121,30 @@ def main() -> None:
         raise SystemExit("Delegated game count mismatch")
     if payload.get("asset_count") != len(assets):
         raise SystemExit("Asset count mismatch")
+    asset_paths = [row["relative_path"] for row in assets]
+    if len(set(asset_paths)) != len(asset_paths):
+        raise SystemExit("Duplicate arcade asset inventory entry")
 
     landing_row = payload["landing"]
+    if landing_row["relative_path"] != "arcade/index.html":
+        raise SystemExit("Arcade landing path mismatch")
     landing_path = check_row(landing_row, "arcade landing")
+    workshop_row = payload["workshop"]
+    if workshop_row["relative_path"] != "arcade/lab/index.html":
+        raise SystemExit("Arcade workshop path mismatch")
+    workshop_path = check_row(workshop_row, "arcade workshop")
     catalog_row = payload["catalog"]
     catalog_path = check_row(catalog_row, "arcade catalog")
     public_catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
     if public_catalog.get("count") != payload.get("catalog_game_count"):
         raise SystemExit("Frozen public catalog count mismatch")
+    check_catalog_dispositions(games, delegated, public_catalog)
 
     mirrored = {str(row["slug"]) for row in games}
     delegated_slugs = {str(row["slug"]) for row in delegated}
     if mirrored & delegated_slugs:
         raise SystemExit("A route is both mirrored and delegated")
-    all_html = [("arcade landing", landing_path)]
+    all_html = [("arcade landing", landing_path), ("arcade workshop", workshop_path)]
     for row in games:
         path = check_row(row, f"game {row['slug']}")
         all_html.append((f"game {row['slug']}", path))
@@ -114,16 +160,21 @@ def main() -> None:
             if match.group("slug") not in mirrored:
                 raise SystemExit(f"Unmirrored local route in {label}: {match.group('route')}")
 
-    landing = landing_path.read_text(encoding="utf-8")
-    if "<title>Super Arcade — NorthStar Prime</title>" not in landing or len(landing) < 100_000:
-        raise SystemExit("Landing is not the full arcade catalog")
-    catalog_routes = {str(row.get("route", "")) for row in public_catalog.get("games", [])}
-    for row in games:
-        if str(row["route"]) not in catalog_routes:
-            raise SystemExit(f"Mirrored route is absent from frozen catalog: {row['route']}")
-    for row in delegated:
-        if str(row["fallback_url"]) not in landing:
-            raise SystemExit(f"Delegated route lacks explicit fallback: {row['route']}")
+    landing_page = read_page(landing_path)
+    workshop_page = read_page(workshop_path)
+    check_identity(landing_page, "Play — NorthStar Prime", ORIGIN + "/arcade/")
+    check_identity(workshop_page, "The Game Workshop — NorthStar Prime", ORIGIN + "/arcade/lab/")
+    if "/arcade/lab/" not in landing_page.links or "/arcade/" not in workshop_page.links:
+        raise SystemExit("Arcade/workshop navigation is incomplete")
+    check_workshop_links(workshop_page.links, games, delegated)
+    journey_resources = set()
+    for path, page in ((landing_path, landing_page), (workshop_path, workshop_page)):
+        check_local_links(ROOT, path, page)
+        journey_resources.update(collect_local_assets(ROOT, path, page))
+    journey_assets = payload.get("journey_assets", [])
+    journey_bytes = check_asset_manifest(ROOT, journey_assets, journey_resources)
+    if len(journey_assets) != payload.get("journey_asset_count") or journey_bytes != payload.get("journey_asset_bytes"):
+        raise SystemExit("Arcade journey resource totals mismatch")
 
     total = 0
     source_total = 0
@@ -184,6 +235,7 @@ def main() -> None:
     print(f"OK: {len(assets)} hashed assets / {total} bytes")
     print(f"OK: {optimized} local motion optimizations / {optimized_saved} bytes saved")
     print(f"OK: {redacted} public provenance redactions")
+    print(f"OK: workshop navigation and {len(journey_assets)} frozen journey resources")
     print("OK: no local filesystem leakage, dangling static refs, or remote CDN resources")
     print("OK: every catalog route has exactly one static-or-dynamic disposition")
 

@@ -126,8 +126,15 @@ def build(output: Path) -> dict:
     omitted_sticker_bytes = sum(path.stat().st_size for path in omitted_stickers)
 
     if output.exists():
-        shutil.rmtree(output)
-    output.mkdir(parents=True)
+        def _on_rm_error(func, path, exc_info):
+            import stat
+            try:
+                os.chmod(path, stat.S_IWRITE)
+                func(path)
+            except Exception:
+                pass
+        shutil.rmtree(output, onexc=_on_rm_error)
+    output.mkdir(parents=True, exist_ok=True)
 
     rewrites = 0
     copied = 0

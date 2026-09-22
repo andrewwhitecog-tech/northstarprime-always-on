@@ -5,7 +5,7 @@
   // Vector Originals (25 Canonical Masterworks)
   const VECTOR_ORIGINALS = [
     { id: 'vec_blazin_beaver', name: "Blazin' Beaver Mascot Crest", file: 'vectors/blazin_beaver_holographic_crest.svg', collection: 'Holographic Vectors' },
-    { id: 'vec_cdc_apothecary', name: 'CDC Apothecary Botanical Seal', file: 'vectors/cdc_apothecary_botanical_seal.svg', collection: 'Holographic Vectors' },
+    { id: 'vec_nsp_apothecary', name: 'NorthStar Apothecary Botanical Seal', file: 'vectors/nsp_apothecary_botanical_seal.svg', collection: 'Holographic Vectors' },
     { id: 'vec_cyberpunk_skull', name: 'Cyberpunk 90s Holographic Skull', file: 'vectors/cyberpunk_90s_holographic_skull.svg', collection: 'Holographic Vectors' },
     { id: 'vec_galactic_license', name: 'Galactic Federation Dispensary License', file: 'vectors/galactic_federation_dispensary_license.svg', collection: 'Holographic Vectors' },
     { id: 'vec_keep_on_grass', name: 'Keep On The Grass Oregon Sign', file: 'vectors/keep_on_the_grass_oregon_park_sign.svg', collection: 'Holographic Vectors' },

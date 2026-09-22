@@ -1,1 +1,507 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Watch IDC — NorthStar Prime</title><link rel="canonical" href="https://app.northstarprime.net/idc-programming"><meta http-equiv="refresh" content="0;url=https://app.northstarprime.net/idc-programming"></head><body style="background:#07070d;color:#e8cf7a;font:16px system-ui;display:grid;place-items:center;min-height:100vh;margin:0;text-align:center"><p>Opening <a style="color:#67e8f9" href="https://app.northstarprime.net/idc-programming">IDC Programming</a>, the canonical Watch experience.</p><script>location.replace('https://app.northstarprime.net/idc-programming'+location.search+location.hash)</script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Cinema &amp; Video Theater — NorthStar Prime</title>
+  <meta name="description" content="Watch original NorthStar Prime cinema, Google Flow Ultra Veo 3.1 4-hero films, master music video animatics, and IDC programming.">
+  <link rel="canonical" href="https://northstarprime.net/watch/">
+  <meta name="theme-color" content="#080c16">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="NorthStar Prime">
+  <meta property="og:title" content="Cinema &amp; Video Theater — NorthStar Prime">
+  <meta property="og:description" content="Original cinema, 16:9 Google Flow Ultra Veo 3.1 masterworks, music video animatics, and original programming.">
+  <meta property="og:url" content="https://northstarprime.net/watch/">
+  <meta property="og:image" content="https://northstarprime.net/static/brand/nsp_vorath_wallpaper_perf.webp">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="/static/customer-experience.css">
+  <style>
+    :root {
+      --void: #050712;
+      --gold: #f5c542;
+      --cyan: #22d3ee;
+      --pink: #ec4899;
+      --line: rgba(245, 197, 66, 0.2);
+    }
+    body {
+      background: radial-gradient(ellipse at 50% 10%, rgba(34,211,238,0.12), transparent 45%),
+                  radial-gradient(ellipse at 80% 50%, rgba(236,72,153,0.1), transparent 45%),
+                  #050712;
+      color: #e2e8f0;
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      margin: 0;
+      line-height: 1.6;
+    }
+    .cinema-wrap {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 5rem;
+    }
+    .cinema-hero {
+      text-align: center;
+      padding: 3rem 1rem 2.5rem;
+    }
+    .cinema-hero .eyebrow {
+      color: var(--cyan);
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+    }
+    .cinema-hero h1 {
+      font-size: clamp(2.2rem, 5vw, 4rem);
+      margin: 0 0 1rem;
+      letter-spacing: -1px;
+      color: #fff;
+      text-transform: uppercase;
+    }
+    .cinema-hero h1 span {
+      background: linear-gradient(90deg, #f5c542, #22d3ee, #ec4899, #f5c542);
+      background-size: 260% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shimmer 8s linear infinite;
+    }
+    @keyframes shimmer { 0% { background-position: 0% center; } 100% { background-position: 260% center; } }
+    .cinema-hero p {
+      max-width: 760px;
+      margin: 0 auto;
+      color: #94a3b8;
+      font-size: 1.1rem;
+    }
+    .player-deck {
+      background: rgba(11, 15, 29, 0.85);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 1.25rem;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.6), 0 0 40px rgba(34,211,238,0.1);
+      margin-bottom: 4rem;
+    }
+    .video-viewport {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+    }
+    .video-viewport video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      background: #000;
+    }
+    .player-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      justify-content: center;
+      margin-top: 1.25rem;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+    .clip-btn {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: #cbd5e1;
+      padding: 0.6rem 1.1rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .clip-btn:hover, .clip-btn.active {
+      background: rgba(34,211,238,0.15);
+      border-color: var(--cyan);
+      color: #fff;
+      box-shadow: 0 0 15px rgba(34,211,238,0.25);
+    }
+    .clip-btn.active {
+      background: linear-gradient(135deg, rgba(245,197,66,0.25), rgba(34,211,238,0.2));
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+    .clip-meta {
+      text-align: center;
+      margin-top: 1rem;
+    }
+    .clip-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 0.25rem;
+    }
+    .clip-desc {
+      font-size: 0.9rem;
+      color: #94a3b8;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    .cinema-section {
+      margin-top: 4rem;
+    }
+    .section-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .section-header h2 {
+      font-size: 2rem;
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 0.5rem;
+    }
+    .section-header p {
+      color: #94a3b8;
+      font-size: 1rem;
+    }
+    .video-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+    }
+    .video-card {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      overflow: hidden;
+      transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
+      display: flex;
+      flex-direction: column;
+    }
+    .video-card:hover {
+      transform: translateY(-5px);
+      border-color: rgba(34,211,238,0.4);
+      box-shadow: 0 15px 35px rgba(0,0,0,0.5), 0 0 20px rgba(34,211,238,0.15);
+    }
+    .card-thumb-wrap {
+      position: relative;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      overflow: hidden;
+    }
+    .card-thumb-wrap img, .card-thumb-wrap video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .card-badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--line);
+      color: var(--gold);
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .card-content {
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+    }
+    .card-content h3 {
+      font-size: 1.15rem;
+      color: #fff;
+      margin: 0 0 0.5rem;
+    }
+    .card-content p {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      line-height: 1.5;
+      margin-bottom: 1rem;
+      flex-grow: 1;
+    }
+    .card-actions {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+    .card-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.5rem 0.9rem;
+      background: rgba(34,211,238,0.1);
+      border: 1px solid rgba(34,211,238,0.3);
+      color: #fff;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .card-btn:hover {
+      background: var(--cyan);
+      color: #000;
+    }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="site-header wrap">
+    <a class="wordmark" href="/">
+      <span class="star" aria-hidden="true">✦</span>
+      <span>NorthStar Prime<small>An independent universe</small></span>
+    </a>
+    <nav aria-label="Primary">
+      <a href="/idr/">Listen</a>
+      <a href="/arcade/">Play</a>
+      <a href="/watch/" aria-current="page">Watch</a>
+      <a href="/gallery/">Art &amp; Drops</a>
+      <a href="/access/">Access</a>
+    </nav>
+  </header>
+
+  <main id="main" class="cinema-wrap">
+    <section class="cinema-hero">
+      <p class="eyebrow">NorthStar Cinema Theater</p>
+      <h1>Visual Stories &amp; <span>Motion Masters</span></h1>
+      <p>Original films, Google Flow Ultra Veo 3.1 16:9 cinematography, music video animatics, and interdimensional programming. Fully streamable in guest mode with zero accounts.</p>
+    </section>
+
+    <!-- Master 16:9 Video Deck -->
+    <section class="player-deck" aria-label="Featured Cinema Player">
+      <div class="video-viewport">
+        <video id="main-video" controls playsinline preload="metadata" poster="/static/brand/nsp_vorath_wallpaper_perf.webp">
+          <source id="video-source" src="/static/videos/vorath_veo31_i2v_lineup_safe_16x9.mp4" type="video/mp4">
+          Your browser does not support HTML5 video.
+        </video>
+      </div>
+
+      <div class="clip-meta">
+        <div class="clip-title" id="active-title">Clip 1: Warband Lineup Procession</div>
+        <div class="clip-desc" id="active-desc">Full 9-model Warband procession rendered in Google Flow Ultra (Veo 3.1 Fast). Studio acrylic illumination with safe margins and zero overlaid text.</div>
+      </div>
+
+      <div class="player-controls">
+        <button type="button" class="clip-btn active" data-src="/static/videos/vorath_veo31_i2v_lineup_safe_16x9.mp4" data-title="Clip 1: Warband Lineup Procession" data-desc="Full 9-model Warband procession rendered in Google Flow Ultra (Veo 3.1 Fast). Studio acrylic illumination with safe margins and zero overlaid text.">✦ 1. Warband Lineup</button>
+        <button type="button" class="clip-btn" data-src="/static/videos/vorath_veo31_i2v_prism_saint_solo_16x9.mp4" data-title="Clip 2: Prism Saint Solo Centerpiece" data-desc="Solo hero centerpiece in 16:9 widescreen. Liturgical crystal refraction, gold filigree, and authentic tabletop resin miniature fidelity.">✦ 2. Prism Saint</button>
+        <button type="button" class="clip-btn" data-src="/static/videos/vorath_veo31_i2v_censer_reveler_16x9.mp4" data-title="Clip 3: Censer Reveler Incense Swirl" data-desc="Atmospheric incense swirls rising from the swinging censer. Volumetric candlelit cathedral shadows and immaculate acrylic edge-highlights.">✦ 3. Censer Reveler</button>
+        <button type="button" class="clip-btn" data-src="/static/videos/vorath_veo31_i2v_crystal_mutant_16x9.mp4" data-title="Clip 4: Crystal Mutant Penitent Blade" data-desc="The penitent mutant blade master pushing forward in 1080p widescreen photoreal miniature cinematography.">✦ 4. Crystal Mutant</button>
+        <button type="button" class="clip-btn" data-src="/static/videos/vorath_official_cinematic_trailer_60s_web.mp4" data-title="Official Vorath Campaign Trailer (60s Master)" data-desc="Official 60-second campaign trailer with David VO liturgical performance, 360-degree turntable camera vectors, and orchestral master score.">✦ 5. Campaign Trailer</button>
+      </div>
+    </section>
+
+    <!-- Master Music Video Animatics Section -->
+    <section class="cinema-section" aria-labelledby="music-videos-title">
+      <div class="section-header">
+        <h2 id="music-videos-title">7 Master Music Video Animatics</h2>
+        <p>Storyboard-first pre-vis cinematic animatics conformed to master soundtracks.</p>
+      </div>
+
+      <div class="video-grid">
+        <article class="video-card">
+          <div class="card-thumb-wrap">
+            <span class="card-badge">32 Keyframes · 4m 24s</span>
+            <img src="/static/idc_covers/hero_16x9/idr_tracker_cabinet_16x9_hero_built_in_fresh_20260702_v01_perf.webp" alt="Codeine Dreaming Storyboard Cover" loading="lazy">
+          </div>
+          <div class="card-content">
+            <h3>01. Codeine Dreaming</h3>
+            <p>Kodak Black ft. Lil Wayne. Complete 32-shot cinematic animatic conformed to master audio. Psychedelic underwater and cosmic cathedral cinematography.</p>
+            <div class="card-actions">
+              <a class="card-btn" href="/idr/">Listen in IDR →</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="video-card">
+          <div class="card-thumb-wrap">
+            <span class="card-badge">12 Keyframes · 2m 36s</span>
+            <img src="/static/brand/nsp_vorath_wallpaper_perf.webp" alt="Salamander Storyboard Cover" loading="lazy">
+          </div>
+          <div class="card-content">
+            <h3>02. Salamander</h3>
+            <p>Mac Miller. 12 locked keyframes conforming to authentic master track. Neon reptile surrealism in Cascadia old-growth forest.</p>
+            <div class="card-actions">
+              <a class="card-btn" href="/idr/">Listen in IDR →</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="video-card">
+          <div class="card-thumb-wrap">
+            <span class="card-badge">8 Keyframes · 2m 18s</span>
+            <img src="/static/brand/vorathic_clock.png" alt="Purple Storyboard Cover" loading="lazy">
+          </div>
+          <div class="card-content">
+            <h3>03. Purple</h3>
+            <p>Nas. 8-shot visual sequence exploring 90s Queensbridge rain, vintage tape delay, and purple haze lighting.</p>
+            <div class="card-actions">
+              <a class="card-btn" href="/idr/">Listen in IDR →</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="video-card">
+          <div class="card-thumb-wrap">
+            <span class="card-badge">5 Keyframes · 2m 10s</span>
+            <img src="/warband/clean_assets/01_hero_procession_clean.jpg" alt="Darkside Justice Storyboard Cover" loading="lazy">
+          </div>
+          <div class="card-content">
+            <h3>04. 120 Darkside Justice</h3>
+            <p>Jedi Mind Tricks / AOTP. Underground gothic hip-hop visual animatic with cloaked battle monks and ruined cityscapes.</p>
+            <div class="card-actions">
+              <a class="card-btn" href="/idr/">Listen in IDR →</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="video-card">
+          <div class="card-thumb-wrap">
+            <span class="card-badge">8 Keyframes · 3m 41s</span>
+            <img src="/warband/clean_assets/02_warband_lineup_clean.jpg" alt="Bully Storyboard Cover" loading="lazy">
+          </div>
+          <div class="card-content">
+            <h3>05. Bully</h3>
+            <p>Jarren Benton ft. Vinnie Paz (prod. Kato). High-octane animatic restored from canonical shotlist and conformed to 48kHz master audio.</p>
+            <div class="card-actions">
+              <a class="card-btn" href="/idr/">Listen in IDR →</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="video-card">
+          <div class="card-thumb-wrap">
+            <span class="card-badge">5 Keyframes · 3m 00s</span>
+            <img src="/static/idc_covers/hero_16x9/vorath_cabinet_row_16x9_hero_built_in_fresh_20260702_v01_perf.webp" alt="Original AV Composer Cover" loading="lazy">
+          </div>
+          <div class="card-content">
+            <h3>06. Original AV Composer</h3>
+            <p>NorthStar Synthesizer. Pure procedural synthesis and reactive visual harmonics conformed to 48kHz stereo master audio.</p>
+            <div class="card-actions">
+              <a class="card-btn" href="/idr/">Listen in IDR →</a>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- IDC Programming Season One -->
+    <section class="cinema-section" aria-labelledby="idc-title">
+      <div class="section-header">
+        <h2 id="idc-title">IDC Programming — Season One</h2>
+        <p>9 complete broadcasts with privacy-enhanced playback and direct static backups.</p>
+      </div>
+      <div class="video-grid">
+        <article class="video-card">
+          <div class="card-thumb-wrap">
+            <span class="card-badge">Episode 01 · 18 MB</span>
+            <img src="/static/idc_covers/episodes/e01_cover.png" alt="IDC Arrival" loading="lazy">
+          </div>
+          <div class="card-content">
+            <h3>Episode 01: Arrival</h3>
+            <p>The first signal received from beyond the perimeter. Cosmic noise, anomalous telemetry, and the discovery of the Vorath register.</p>
+            <div class="card-actions">
+              <a class="card-btn" href="/idc-programming/">Watch Broadcast →</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="video-card">
+          <div class="card-thumb-wrap">
+            <span class="card-badge">Episode 02 · 20 MB</span>
+            <img src="/static/idc_covers/episodes/e02_cover.png" alt="IDC Misread Signal" loading="lazy">
+          </div>
+          <div class="card-content">
+            <h3>Episode 02: Misread Signal</h3>
+            <p>Decoding the distorted harmonics. When standard telecommunications intercept something that refuses to resolve into binary.</p>
+            <div class="card-actions">
+              <a class="card-btn" href="/idc-programming/">Watch Broadcast →</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="video-card">
+          <div class="card-thumb-wrap">
+            <span class="card-badge">Season Teaser · 34 MB</span>
+            <img src="/static/idc_covers/episodes/e03_cover.png" alt="Season One Teaser" loading="lazy">
+          </div>
+          <div class="card-content">
+            <h3>Season One Teaser &amp; All Episodes</h3>
+            <p>Explore the complete 9-episode anthology broadcast with full episode transcripts and high-definition streams.</p>
+            <div class="card-actions">
+              <a class="card-btn" href="/idc-programming/">Full IDC Programming ↗</a>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer wrap">
+    <div class="footer-grid">
+      <div>
+        <a class="wordmark" href="/">NorthStar Prime</a>
+        <p class="quiet">Original work. Open curiosity.<br>Something worth your time.</p>
+        <a href="/mystery-school/" aria-label="Enter Mystery School">✦ There is another door.</a>
+      </div>
+      <div>
+        <h2>Explore</h2>
+        <ul>
+          <li><a href="/arcade/">The Arcade · 51 Games</a></li>
+          <li><a href="/idr/">Listen in IDR</a></li>
+          <li><a href="/gallery/">Art &amp; Solarium Drops</a></li>
+          <li><a href="/stickerforge/">StickerForge Catalog</a></li>
+          <li><a href="/links/">All Destinations</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>NorthStar, beyond entertainment</h2>
+        <ul>
+          <li><a href="/hire/">NorthStar Digital</a></li>
+          <li><a href="/renalshield/">RenalShield</a></li>
+          <li><a href="/meet-the-creator/">Meet the Creator</a></li>
+          <li><a href="/contact/">Contact &amp; Support</a></li>
+        </ul>
+      </div>
+    </div>
+    <p class="footer-note">Public cinema, games and radio are open to all guests. <a href="/access/">Free &amp; premium access.</a></p>
+  </footer>
+
+  <script>
+    const player = document.getElementById('main-video');
+    const source = document.getElementById('video-source');
+    const titleEl = document.getElementById('active-title');
+    const descEl = document.getElementById('active-desc');
+    const buttons = document.querySelectorAll('.clip-btn');
+
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        buttons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        const newSrc = btn.getAttribute('data-src');
+        const newTitle = btn.getAttribute('data-title');
+        const newDesc = btn.getAttribute('data-desc');
+
+        titleEl.textContent = newTitle;
+        descEl.textContent = newDesc;
+
+        source.src = newSrc;
+        player.load();
+        player.play().catch(() => {});
+      });
+    });
+  </script>
+</body>
+</html>

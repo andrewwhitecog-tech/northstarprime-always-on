@@ -63,9 +63,9 @@ def rewrite_sticker_refs(raw: str, relative: Path) -> str:
 
     def replace_relative(match: re.Match) -> str:
         target = (ROOT / relative.parent / match.group(1)).resolve()
-        if not target.is_file() or not target.is_relative_to(ROOT):
+        if not target.is_relative_to(ROOT):
             return match.group(0)
-        return RAW_STICKER_BASE + target.relative_to(ROOT).as_posix()
+        return RAW_STICKER_BASE + (relative.parent / match.group(1)).as_posix()
 
     return rel_re.sub(replace_relative, raw)
 

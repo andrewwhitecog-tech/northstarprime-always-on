@@ -293,6 +293,9 @@
         <button type="button" class="pill" data-filter="terrarium">Living Terrariums</button>
         <button type="button" class="pill" data-filter="noir">Strategy &amp; Noir</button>
       </div>
+      <div id="arcade-count" style="text-align:center; font-size:0.85rem; color:#94a3b8; font-weight:600; letter-spacing:0.5px">
+        Showing <span id="visible-count" style="color:var(--cyan)">51</span> of 51 cabinets
+      </div>
     </div>
 
     <!-- 51 Playable Game Cards Grid -->
@@ -961,6 +964,13 @@
       </article>
     </div>
 
+    <!-- Empty search result state -->
+    <div id="no-games-found" style="display:none; text-align:center; padding: 4rem 1rem; background: rgba(15,23,42,0.4); border-radius: 14px; border: 1px dashed rgba(255,255,255,0.1); margin: 2rem 0;">
+      <p style="font-size:1.35rem; font-weight:700; color:var(--gold); margin-bottom:0.5rem">✦ No arcade cabinets matched your query</p>
+      <p style="color:#94a3b8; margin-bottom:1.5rem">Try searching for a different keyword, mechanic, or genre.</p>
+      <button type="button" id="reset-arcade-btn" class="pill active" style="margin:0 auto; cursor:pointer;">Reset Search &amp; Show All 51 Games</button>
+    </div>
+
     <!-- Raw Prototype Lab Callout (preserving navigation requirement) -->
     <div class="lab-footer-callout">
       <p>Looking for raw prototype directory indexes and testing logs?</p>
@@ -1002,11 +1012,15 @@
     const searchInput = document.getElementById('game-search');
     const pills = document.querySelectorAll('.pill');
     const cards = document.querySelectorAll('.game-card');
+    const noGamesEl = document.getElementById('no-games-found');
+    const resetBtn = document.getElementById('reset-arcade-btn');
+    const countEl = document.getElementById('visible-count');
 
     let currentFilter = 'all';
 
     function filterCards() {
       const query = (searchInput.value || '').toLowerCase().trim();
+      let visible = 0;
 
       cards.forEach(card => {
         const category = card.getAttribute('data-category');
@@ -1017,10 +1031,14 @@
 
         if (matchesFilter && matchesQuery) {
           card.style.display = 'flex';
+          visible++;
         } else {
           card.style.display = 'none';
         }
       });
+
+      if (countEl) countEl.textContent = visible;
+      if (noGamesEl) noGamesEl.style.display = visible === 0 ? 'block' : 'none';
     }
 
     searchInput.addEventListener('input', filterCards);
@@ -1033,6 +1051,16 @@
         filterCards();
       });
     });
+
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        currentFilter = 'all';
+        pills.forEach(p => p.classList.remove('active'));
+        pills[0].classList.add('active');
+        filterCards();
+      });
+    }
   </script>
 </body>
 </html>

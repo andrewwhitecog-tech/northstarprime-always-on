@@ -258,6 +258,149 @@
       background: var(--gold);
       color: #000;
     }
+    /* Lightbox Modal */
+    .lightbox-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+      background: rgba(5, 7, 18, 0.88);
+      backdrop-filter: blur(14px);
+      padding: 1.5rem;
+    }
+    .lightbox-modal.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .lightbox-backdrop {
+      position: absolute;
+      inset: 0;
+    }
+    .lightbox-container {
+      position: relative;
+      max-width: 1000px;
+      width: 100%;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #0d1222;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.8), 0 0 30px rgba(245,197,66,0.15);
+      z-index: 1;
+    }
+    .lightbox-media {
+      width: 100%;
+      max-height: 68vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #060812;
+      overflow: hidden;
+    }
+    .lightbox-media img {
+      max-width: 100%;
+      max-height: 68vh;
+      object-fit: contain;
+      display: block;
+    }
+    .lightbox-caption {
+      width: 100%;
+      padding: 1.25rem 1.75rem;
+      background: #0d1222;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      text-align: left;
+    }
+    .lightbox-caption h3 {
+      margin: 0 0 0.35rem;
+      font-size: 1.25rem;
+      color: #fff;
+    }
+    .lightbox-caption p {
+      margin: 0;
+      color: #94a3b8;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+    .lightbox-close {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.7);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff;
+      font-size: 1.2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      transition: all 0.2s;
+    }
+    .lightbox-close:hover {
+      background: var(--gold);
+      color: #000;
+      border-color: var(--gold);
+    }
+    .lightbox-nav-btn {
+      position: absolute;
+      top: 40%;
+      transform: translateY(-50%);
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.65);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff;
+      font-size: 1.5rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      transition: all 0.2s;
+    }
+    .lightbox-nav-btn:hover {
+      background: var(--gold);
+      color: #000;
+      border-color: var(--gold);
+    }
+    .lightbox-prev { left: 14px; }
+    .lightbox-next { right: 14px; }
+    .product-thumb { cursor: pointer; }
+    .product-thumb::after {
+      content: '⤢';
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.7);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: var(--gold);
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      opacity: 0;
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none;
+    }
+    .product-card:hover .product-thumb::after {
+      opacity: 1;
+      transform: scale(1.05);
+    }
   </style>
 </head>
 <body>
@@ -561,5 +704,96 @@
     </div>
     <p class="footer-note">All drops, art, and concept mockups are verified originals. <a href="/access/">Free &amp; premium access.</a></p>
   </footer>
+  <div id="gallery-lightbox" class="lightbox-modal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="lightbox-backdrop" id="lightbox-backdrop"></div>
+    <div class="lightbox-container">
+      <button type="button" class="lightbox-close" id="lightbox-close" aria-label="Close image viewer">✕</button>
+      <button type="button" class="lightbox-nav-btn lightbox-prev" id="lightbox-prev" aria-label="Previous artwork">‹</button>
+      <div class="lightbox-media">
+        <img id="lightbox-img" src="" alt="">
+      </div>
+      <button type="button" class="lightbox-nav-btn lightbox-next" id="lightbox-next" aria-label="Next artwork">›</button>
+      <div class="lightbox-caption">
+        <h3 id="lightbox-title"></h3>
+        <p id="lightbox-desc"></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const modal = document.getElementById('gallery-lightbox');
+      const backdrop = document.getElementById('lightbox-backdrop');
+      const closeBtn = document.getElementById('lightbox-close');
+      const prevBtn = document.getElementById('lightbox-prev');
+      const nextBtn = document.getElementById('lightbox-next');
+      const imgEl = document.getElementById('lightbox-img');
+      const titleEl = document.getElementById('lightbox-title');
+      const descEl = document.getElementById('lightbox-desc');
+
+      const cards = Array.from(document.querySelectorAll('.product-card'));
+      const items = cards.map(card => {
+        const img = card.querySelector('.product-thumb img');
+        const title = card.querySelector('h3');
+        const desc = card.querySelector('.product-body p');
+        return {
+          src: img ? img.getAttribute('src') : '',
+          alt: img ? img.getAttribute('alt') : '',
+          title: title ? title.textContent.trim() : '',
+          desc: desc ? desc.textContent.trim() : ''
+        };
+      }).filter(item => item.src);
+
+      let currentIndex = -1;
+
+      function openLightbox(index) {
+        if (index < 0 || index >= items.length) return;
+        currentIndex = index;
+        const item = items[currentIndex];
+        imgEl.src = item.src;
+        imgEl.alt = item.alt;
+        titleEl.textContent = item.title;
+        descEl.textContent = item.desc;
+        modal.classList.add('active');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeLightbox() {
+        modal.classList.remove('active');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+      }
+
+      function showPrev() {
+        if (items.length === 0) return;
+        openLightbox((currentIndex - 1 + items.length) % items.length);
+      }
+
+      function showNext() {
+        if (items.length === 0) return;
+        openLightbox((currentIndex + 1) % items.length);
+      }
+
+      cards.forEach((card, idx) => {
+        const thumb = card.querySelector('.product-thumb');
+        if (thumb) {
+          thumb.addEventListener('click', () => openLightbox(idx));
+        }
+      });
+
+      closeBtn.addEventListener('click', closeLightbox);
+      backdrop.addEventListener('click', closeLightbox);
+      prevBtn.addEventListener('click', showPrev);
+      nextBtn.addEventListener('click', showNext);
+
+      window.addEventListener('keydown', (e) => {
+        if (!modal.classList.contains('active')) return;
+        if (e.key === 'Escape') closeLightbox();
+        else if (e.key === 'ArrowLeft') showPrev();
+        else if (e.key === 'ArrowRight') showNext();
+      });
+    })();
+  </script>
 </body>
 </html>

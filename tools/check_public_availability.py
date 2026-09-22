@@ -19,6 +19,7 @@ import urllib.request
 
 APEX = "https://northstarprime.net"
 APP = "https://app.northstarprime.net"
+RAW_STICKER_BASE = "https://raw.githubusercontent.com/andrewwhitecog-tech/northstarprime-always-on/main/"
 CHECKS = [
     ("home", APEX + "/", "html"),
     ("arcade", APEX + "/arcade/", "html"),
@@ -29,7 +30,7 @@ CHECKS = [
     ("stickers", APEX + "/stickerforge/", "html"),
     ("hire", APEX + "/hire/", "html"),
     ("contact", APEX + "/contact/", "html"),
-    ("sticker_image", APEX + "/stickerforge/assets/01_uncle_vorath_portal.png", "image"),
+    ("sticker_image", RAW_STICKER_BASE + "stickerforge/assets/01_uncle_vorath_portal.png", "image"),
     ("radio_audio", "https://assets.northstarprime.net/idr_audio/hiphop/hiphop_ident.wav", "audio"),
     ("watch_video", APP + "/static/idc_video/idc_anthology_e08_final_transmission.mp4", "video"),
     ("app_health", APP + "/health", "health"),

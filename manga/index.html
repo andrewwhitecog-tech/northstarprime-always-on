@@ -312,17 +312,47 @@
       // Preload next and prev pages
       if (currentPage + 1 < totalPages) {
         const nextImg = new Image();
-        nextImg.src = getPageUrl(currentPage + 1);
+        nextImg.src = getPageSrc(currentPage + 1);
       }
       if (currentPage > 0) {
         const prevImg = new Image();
-        prevImg.src = getPageUrl(currentPage - 1);
+        prevImg.src = getPageSrc(currentPage - 1);
       }
+
+      // Persist reading position to localStorage and URL
+      try {
+        localStorage.setItem('nsp_manga_last_page', String(currentPage));
+        const url = new URL(window.location);
+        url.searchParams.set('page', currentPage);
+        window.history.replaceState({}, '', url.toString());
+      } catch (e) {}
+    }
+
+    // Subtle Procedural Page-Turn Audio
+    let audioCtx = null;
+    function playPageTurnSound() {
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(320, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.08);
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.08);
+      } catch(e) {}
     }
 
     function nextPage() {
       if (currentPage < totalPages - 1) {
         currentPage++;
+        playPageTurnSound();
         updatePage();
       }
     }
@@ -330,13 +360,17 @@
     function prevPage() {
       if (currentPage > 0) {
         currentPage--;
+        playPageTurnSound();
         updatePage();
       }
     }
 
     function goToPage(idx) {
-      currentPage = idx;
-      updatePage();
+      if (idx >= 0 && idx < totalPages && idx !== currentPage) {
+        currentPage = idx;
+        playPageTurnSound();
+        updatePage();
+      }
     }
 
     function setFlow(flow) {
@@ -369,6 +403,24 @@
       }
     }
 
+    function restoreSavedPage() {
+      const params = new URLSearchParams(window.location.search);
+      const qp = parseInt(params.get('page'), 10);
+      if (!isNaN(qp) && qp >= 0 && qp < totalPages) {
+        currentPage = qp;
+        return;
+      }
+      try {
+        const saved = localStorage.getItem('nsp_manga_last_page');
+        if (saved !== null) {
+          const p = parseInt(saved, 10);
+          if (!isNaN(p) && p >= 0 && p < totalPages) {
+            currentPage = p;
+          }
+        }
+      } catch (e) {}
+    }
+
     document.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowRight' || e.key === 'PageDown') handleNavRight();
       else if (e.key === 'ArrowLeft' || e.key === 'PageUp') handleNavLeft();
@@ -380,6 +432,7 @@
       }
     });
 
+    restoreSavedPage();
     renderThumbs();
     updatePage();
   </script>

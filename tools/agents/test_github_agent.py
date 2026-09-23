@@ -1,12 +1,18 @@
-#!/usr/bin/env python3
-"""Unit tests for GitHubAgent."""
-
 import json
+import os
 from pathlib import Path
+import sys
 import unittest
 from unittest.mock import MagicMock, patch
 
-from tools.agents.github_agent import GitHubAgent, SCHEMA_VERSION
+CURRENT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = CURRENT_DIR.parent.parent
+if str(CURRENT_DIR) not in sys.path:
+    sys.path.insert(0, str(CURRENT_DIR))
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from github_agent import GitHubAgent, SCHEMA_VERSION
 
 
 class TestGitHubAgent(unittest.TestCase):

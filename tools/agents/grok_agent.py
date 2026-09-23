@@ -92,20 +92,30 @@ class GrokAgent:
                     "error": f"grok executable not found at {self.grok_exe}",
                     "prompt_sha256": prompt_hash,
                 }
+            import tempfile
+            temp_prompt = None
             try:
+                with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".txt", delete=False) as tf:
+                    tf.write(full_prompt)
+                    temp_prompt = Path(tf.name)
+
                 # Dispatch grok CLI command with explicit headless flags
                 cmd = [
                     str(self.grok_exe),
-                    "-p", full_prompt,
+                    "--prompt-file", str(temp_prompt),
                     "--output-format", "plain",
+                    "--effort", "low",
                     "--no-alt-screen",
                     "--disable-web-search",
                     "--no-subagents",
                 ]
                 proc = subprocess.run(
                     cmd,
+                    stdin=subprocess.DEVNULL,
                     capture_output=True,
                     text=True,
+                    encoding="utf-8",
+                    errors="replace",
                     timeout=timeout_seconds,
                     check=False,
                 )
@@ -121,6 +131,12 @@ class GrokAgent:
             except Exception as e:
                 response_text = str(e)
                 status = "execution_exception"
+            finally:
+                if temp_prompt and temp_prompt.exists():
+                    try:
+                        temp_prompt.unlink()
+                    except Exception:
+                        pass
 
         receipt = {
             "schema": RECEIPT_SCHEMA,

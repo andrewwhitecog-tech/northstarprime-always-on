@@ -486,6 +486,23 @@
     }
   };
 
+  function getLiveSkyChart(lat = 45.3001, lon = -122.9732, tzOffset = -7) {
+    const now = new Date();
+    const localNow = new Date(now.getTime() + tzOffset * 3600000);
+    const chartData = {
+      name: `Real-Time Transit Sky (${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`,
+      year: localNow.getUTCFullYear(),
+      month: localNow.getUTCMonth() + 1,
+      day: localNow.getUTCDate(),
+      hour: localNow.getUTCHours(),
+      minute: localNow.getUTCMinutes(),
+      lat,
+      lon,
+      tzOffset
+    };
+    return generateChart(chartData);
+  }
+
   return {
     ZODIAC_SIGNS,
     PLANET_META,
@@ -493,6 +510,7 @@
     PRESETS,
     generateChart,
     compareCharts,
+    getLiveSkyChart,
     degToSign,
     getAspect
   };

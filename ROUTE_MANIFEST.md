@@ -235,3 +235,10 @@ local origin, confirms the served byte length matches the frozen artifact.
 `/arcade/custom/side-street/` is an original experimental route puzzle with twelve boards, ordered stops, exact-turn goals, undo and hints. Its UTC daily selection repeats after twelve days. The five browser runtime files match the reviewed prototype byte-for-byte; no research notes, talk captions or third-party puzzle material are deployed. `SIDE_STREET_RELEASE_MANIFEST.json` and the updated arcade catalog/asset manifest record this addition.
 
 The combined addition is approximately 4.45 MB. The prior curated payload was already 919.9 MB against a 920 MB release guard. The curated builder and verifier now share a 930 MB guard, retaining 70 MB below the configured 1 GB published-site ceiling and the existing 100 MB per-file limit. The older PAGES_CAPACITY_BUDGET.json is an archival whole-branch audit, not the curated artifact's current byte count; nsp-pages-artifact.json records each actual deployment artifact.
+
+## Sovereign TCG, Manga, and Comics Vault routes
+
+- **Trading Card Vault (TCG)**: `/tcg/` (`tcg/index.html`), 3D Holographic Card Binder and interactive deckbuilder sandbox indexing 71 master cards across 7 archetypes. Features real-time cursor/gyro rainbow foil sheen shader and synthesized Web Audio sound engine.
+- **Underground Comix & Graphic Novel Vault**: `/comics/` (`comics/index.html`), indexing all 7 canonical arcs across Blazin' Beaver Series 1–4, Uncle Vorath Mysteries Seasons 1–2, and Duel Zexal.
+- **Duel Zexal Tankobon Manga Reader**: `/manga/` (`manga/index.html`), 24-page authentic Japanese Right-to-Left (RTL) manga web reader with single/spread viewing, thumbnail filmstrip, and full tankobon master delivery.
+

@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Duel Zexal: Iconic Spirits // Vol. 1 Jump Comics Tankobon Reader</title>
+  <meta name="description" content="Authentic Japanese Right-to-Left (RTL) manga web reader for Duel Zexal: Iconic Spirits Volume 01. Complete 24-page Tankobon Master.">
+  <link rel="canonical" href="https://northstarprime.net/manga/">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <style>
+    :root {
+      --bg: #07090e;
+      --panel-bg: #0d121d;
+      --border: rgba(234, 179, 8, 0.25);
+      --gold: #f59e0b;
+      --gold-glow: rgba(245, 158, 11, 0.4);
+      --cyan: #00f0ff;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+    header {
+      background: var(--panel-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .brand-block {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-badge {
+      background: linear-gradient(135deg, #b45309, #f59e0b);
+      color: #000;
+      font-weight: 900;
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 6px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #fff;
+    }
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border);
+      color: #fff;
+      padding: 7px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 600;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn:hover {
+      background: var(--gold);
+      color: #000;
+      border-color: var(--gold);
+      box-shadow: 0 0 12px var(--gold-glow);
+    }
+    .btn-tcg {
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+    .btn-tcg:hover {
+      background: var(--cyan);
+      color: #000;
+      border-color: var(--cyan);
+    }
+    .nav-bar {
+      background: rgba(13, 18, 29, 0.9);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 10px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .page-indicator {
+      font-family: monospace;
+      font-size: 0.9rem;
+      color: var(--gold);
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      padding: 4px 12px;
+      border-radius: 6px;
+    }
+    .mode-toggle {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .mode-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text-muted);
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .mode-btn.active {
+      background: rgba(245, 158, 11, 0.2);
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    /* MANGA VIEWER STAGE */
+    main {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      padding: 24px 16px;
+      user-select: none;
+      background: radial-gradient(circle at center, #0e1422 0%, #05070c 100%);
+    }
+    .viewer-wrap {
+      max-width: 1100px;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+    .manga-page-img {
+      max-width: 100%;
+      max-height: 85vh;
+      height: auto;
+      object-fit: contain;
+      border-radius: 6px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      cursor: pointer;
+      transition: opacity 0.15s ease;
+    }
+    .nav-zone {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 18%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      color: rgba(255, 255, 255, 0.2);
+      cursor: pointer;
+      transition: all 0.2s;
+      z-index: 20;
+    }
+    .nav-zone:hover {
+      background: rgba(0, 0, 0, 0.4);
+      color: var(--gold);
+    }
+    .nav-zone.left { left: 0; }
+    .nav-zone.right { right: 0; }
+
+    /* THUMB TRAY */
+    footer {
+      height: 90px;
+      background: var(--panel-bg);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 20px;
+      overflow-x: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--gold) transparent;
+    }
+    .thumb {
+      height: 70px;
+      aspect-ratio: 1200 / 1680;
+      object-fit: cover;
+      border-radius: 4px;
+      cursor: pointer;
+      opacity: 0.45;
+      border: 2px solid transparent;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .thumb:hover {
+      opacity: 0.85;
+      transform: translateY(-2px);
+    }
+    .thumb.active {
+      opacity: 1;
+      border-color: var(--gold);
+      box-shadow: 0 0 10px var(--gold-glow);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand-block">
+      <span class="brand-badge">JUMP TANKOBON</span>
+      <span class="brand-title">Duel Zexal: Iconic Spirits // Vol. 1</span>
+    </div>
+    <div class="toolbar-actions">
+      <a href="/tcg/" class="btn btn-tcg">
+        TCG Holo Binder (71 Cards) &rarr;
+      </a>
+      <a href="/comics/" class="btn">Comics Vault &rarr;</a>
+      <a href="/" class="btn">&larr; Home</a>
+    </div>
+  </header>
+
+  <div class="nav-bar">
+    <div style="display:flex; align-items:center; gap:12px;">
+      <button class="btn" onclick="prevPage()">&#9664; Prev</button>
+      <div class="page-indicator" id="page-indicator">Cover (Page 1 of 24)</div>
+      <button class="btn" onclick="nextPage()">Next &#9654;</button>
+    </div>
+
+    <div class="mode-toggle">
+      <span>READING FLOW:</span>
+      <button class="mode-btn active" id="flow-rtl" onclick="setFlow('RTL')">RTL (Japanese Traditional)</button>
+      <button class="mode-btn" id="flow-ltr" onclick="setFlow('LTR')">LTR (Western)</button>
+    </div>
+  </div>
+
+  <main>
+    <div class="viewer-wrap">
+      <div class="nav-zone left" id="nav-left" onclick="handleNavLeft()">&#9664;</div>
+      <img id="manga-img" src="/manga/assets/tankobon_vol_01/Cover.webp" alt="Manga Page" class="manga-page-img" onclick="handlePageClick()">
+      <div class="nav-zone right" id="nav-right" onclick="handleNavRight()">&#9654;</div>
+    </div>
+  </main>
+
+  <footer id="thumb-tray">
+    <!-- Populated dynamically via JS -->
+  </footer>
+
+  <script>
+    const totalPages = 24;
+    let currentPage = 0;
+    let readingFlow = 'RTL'; // RTL: right goes to previous, left goes to next
+
+    function getPageSrc(idx) {
+      if (idx === 0) return '/manga/assets/tankobon_vol_01/Cover.webp';
+      const numStr = String(idx).padStart(2, '0');
+      return `/manga/assets/tankobon_vol_01/Page_${numStr}.webp`;
+    }
+
+    function renderThumbs() {
+      const tray = document.getElementById('thumb-tray');
+      tray.innerHTML = '';
+      for (let i = 0; i < totalPages; i++) {
+        const img = document.createElement('img');
+        img.src = getPageSrc(i);
+        img.className = 'thumb' + (i === currentPage ? ' active' : '');
+        img.title = i === 0 ? 'Cover' : `Page ${i}`;
+        img.onclick = () => goToPage(i);
+        tray.appendChild(img);
+      }
+    }
+
+    function updatePage() {
+      const img = document.getElementById('manga-img');
+      img.style.opacity = '0.5';
+      img.src = getPageSrc(currentPage);
+      img.onload = () => { img.style.opacity = '1'; };
+
+      const label = currentPage === 0 ? 'Cover' : `Page ${currentPage} of 23`;
+      document.getElementById('page-indicator').innerText = `${label} (Sheet ${currentPage + 1} of ${totalPages})`;
+
+      document.querySelectorAll('.thumb').forEach((th, idx) => {
+        if (idx === currentPage) {
+          th.classList.add('active');
+          th.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        } else {
+          th.classList.remove('active');
+        }
+      });
+    }
+
+    function nextPage() {
+      if (currentPage < totalPages - 1) {
+        currentPage++;
+        updatePage();
+      }
+    }
+
+    function prevPage() {
+      if (currentPage > 0) {
+        currentPage--;
+        updatePage();
+      }
+    }
+
+    function goToPage(idx) {
+      currentPage = idx;
+      updatePage();
+    }
+
+    function setFlow(flow) {
+      readingFlow = flow;
+      document.getElementById('flow-rtl').classList.toggle('active', flow === 'RTL');
+      document.getElementById('flow-ltr').classList.toggle('active', flow === 'LTR');
+    }
+
+    // In RTL flow, clicking Left advances the page (traditional Japanese manga)
+    function handleNavLeft() {
+      if (readingFlow === 'RTL') nextPage();
+      else prevPage();
+    }
+
+    function handleNavRight() {
+      if (readingFlow === 'RTL') prevPage();
+      else nextPage();
+    }
+
+    function handlePageClick() {
+      if (readingFlow === 'RTL') handleNavLeft();
+      else handleNavRight();
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') handleNavRight();
+      if (e.key === 'ArrowLeft') handleNavLeft();
+    });
+
+    renderThumbs();
+    updatePage();
+  </script>
+</body>
+</html>

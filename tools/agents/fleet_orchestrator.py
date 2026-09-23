@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Autonomous Fleet Orchestrator for NorthStar Prime.
 
-Coordinates execution across all 6 autonomous agents:
+Coordinates execution across all 7 autonomous agents:
 1. GitHub Sentinel (tools/agents/github_agent.py)
 2. Grok Bot Orchestrator (tools/agents/grok_agent.py)
 3. Cloudflare Edge Ops (tools/agents/cloudflare_agent.py)
 4. DeepSeek Edge Researcher (tools/agents/deepseek_agent.py)
 5. Microsoft 365 Copilot (automation/local_ai_fleet/m365_agent.py)
 6. Super Grok WebUI (automation/local_ai_fleet/super_grok_webui_agent.py)
+7. Crypto Asset Banker & SpaceCash Sentinel (tools/agents/crypto_agent.py)
 
 Gathers cryptographic receipts and exports live telemetry to the Desktop Command Center.
 """
@@ -37,6 +38,7 @@ from github_agent import GitHubAgent
 from grok_agent import GrokAgent
 from cloudflare_agent import CloudflareAgent
 from deepseek_agent import DeepSeekAgent
+from crypto_agent import CryptoAgent
 
 try:
     from m365_agent import M365Agent
@@ -62,6 +64,7 @@ class FleetOrchestrator:
         self.grok_agent = GrokAgent()
         self.cf_agent = CloudflareAgent(repo_path=self.repo_path)
         self.deepseek_agent = DeepSeekAgent()
+        self.crypto_agent = CryptoAgent()
         self.m365_agent = M365Agent() if M365Agent else None
         self.webui_agent = SuperGrokWebUIAgent() if SuperGrokWebUIAgent else None
 
@@ -179,6 +182,26 @@ class FleetOrchestrator:
                 results["super_grok_webui"] = {"status": "error", "error": str(e)}
         else:
             results["super_grok_webui"] = {"status": "module_offline"}
+
+        # 7. Crypto Asset Banker & SpaceCash Sentinel Probe
+        try:
+            crypto_res = self.crypto_agent.generate_report(
+                contract_id="KX-PROB-01",
+                market_price=0.45,
+                model_prob=0.55,
+                bankroll=1000.0,
+                dry_run=dry_run,
+            )
+            results["crypto_asset_banker"] = {
+                "status": "online",
+                "receipt_hash": crypto_res.get("receipt_hash"),
+                "total_equity_usd": crypto_res.get("portfolio", {}).get("total_portfolio_equity"),
+                "spacecash_vault": crypto_res.get("portfolio", {}).get("platforms", {}).get("SpaceCash_Treasury", {}).get("vault_reserve"),
+                "risk_guard": "CAPPED_QUARTER_KELLY_5PCT_MAX",
+                "invariants": crypto_res.get("safety_invariants"),
+            }
+        except Exception as e:
+            results["crypto_asset_banker"] = {"status": "error", "error": str(e)}
 
         # Master Sweep Compilation
         master_receipt = {

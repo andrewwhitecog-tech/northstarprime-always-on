@@ -141,8 +141,7 @@ def build(output: Path) -> dict:
                     os.rmdir(p)
                 except Exception:
                     pass
-    else:
-        output.mkdir(parents=True, exist_ok=True)
+    output.mkdir(parents=True, exist_ok=True)
 
     rewrites = 0
     copied = 0

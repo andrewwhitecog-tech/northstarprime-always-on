@@ -418,6 +418,49 @@
       background: #ef4444;
       border-color: #ef4444;
     }
+
+    .test-hand-container {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      max-width: 1050px;
+      width: 100%;
+      padding: 28px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .test-hand-cards {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+      min-height: 260px;
+      align-items: center;
+    }
+    .hand-card {
+      width: 160px;
+      aspect-ratio: 2.5 / 3.5;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid rgba(0, 240, 255, 0.4);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.8);
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+    .hand-card:hover {
+      transform: translateY(-8px) scale(1.05);
+      border-color: var(--cyan);
+      box-shadow: 0 16px 36px rgba(0, 240, 255, 0.4);
+    }
+    .hand-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -431,6 +474,7 @@
       </div>
     </div>
     <div class="nav-actions">
+      <a href="/comics/reader/" class="nav-btn" style="border-color:var(--cyan); color:var(--cyan);">✦ Comics Reader &rarr;</a>
       <a href="/manga/" class="nav-btn">Duel Zexal Manga &rarr;</a>
       <a href="/comics/" class="nav-btn">Comics Vault &rarr;</a>
       <a href="/" class="nav-btn">&larr; Home</a>
@@ -443,9 +487,11 @@
       <span class="counter-badge" id="main-deck-count">Main Deck: 0 / 40</span>
       <span class="counter-badge" style="color:var(--purple); border-color:var(--purple); background:rgba(192,132,252,0.12);" id="extra-deck-count">Extra Deck: 0 / 15</span>
     </div>
-    <div style="display:flex; gap:8px;">
-      <button class="nav-btn" onclick="clearDeck()">Clear Deck</button>
-      <button class="nav-btn" style="border-color:var(--emerald); color:var(--emerald);" onclick="exportDeck()">Export Decklist</button>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button class="nav-btn nav-btn-highlight" onclick="openTestHand()">✦ Test Hand (5)</button>
+      <button class="nav-btn" style="border-color:var(--amber); color:var(--amber);" onclick="saveDeck()">Save Deck</button>
+      <button class="nav-btn" onclick="clearDeck()">Clear</button>
+      <button class="nav-btn" style="border-color:var(--emerald); color:var(--emerald);" onclick="exportDeck()">Export</button>
     </div>
   </div>
 
@@ -459,6 +505,8 @@
     <button class="filter-tag" onclick="setCategory('egypt', this)">Ancient Egyptian</button>
     <button class="filter-tag" onclick="setCategory('sports', this)">Alt Sports &amp; Art</button>
     <button class="filter-tag" onclick="setCategory('outlaws', this)">Outlaws &amp; Cults</button>
+    <button class="filter-tag" onclick="setStars(5, this)">5★ Archons</button>
+    <button class="filter-tag" onclick="setStars(4, this)">4★ Vanguard</button>
   </div>
 
   <main class="binder-container">
@@ -491,11 +539,37 @@
     </div>
   </div>
 
+  <!-- TEST HAND MODAL -->
+  <div class="modal" id="test-hand-modal" onclick="closeTestHand(event)">
+    <div class="test-hand-container" onclick="event.stopPropagation()">
+      <button class="modal-close" onclick="closeTestHand()">✕</button>
+      <div>
+        <span style="font-family:monospace; color:var(--cyan); font-size:0.8rem;">SOVEREIGN SIMULATOR // OPENING DRAW</span>
+        <h2 style="font-size:1.5rem; color:#fff; margin:4px 0;">Competitive Turn 1 Test Hand</h2>
+        <p style="color:var(--text-muted); font-size:0.85rem;" id="hand-subtext">5 random cards drawn from your active deck.</p>
+      </div>
+
+      <div class="test-hand-cards" id="test-hand-cards">
+        <!-- Rendered cards -->
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; border-top:1px solid rgba(255,255,255,0.1); padding-top:16px;">
+        <div style="display:flex; gap:10px;">
+          <button class="nav-btn nav-btn-highlight" onclick="mulliganTestHand()">✦ Mulligan (New 5)</button>
+          <button class="nav-btn" style="border-color:var(--cyan); color:var(--cyan);" onclick="drawOneCard()">+ Draw 1 Card</button>
+        </div>
+        <button class="nav-btn" onclick="closeTestHand()">Close</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const cardsData = [{"code": "NSP-EN001", "title": "2 Chainz The Trap Aristocrat", "filename": "2_Chainz_The_Trap_Aristocrat_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN001.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN002", "title": "Aleister Crowley The Great Beast 666", "filename": "Aleister_Crowley_The_Great_Beast_666_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN002.webp", "folder": "YuGiOh_Music_Cards", "tag": "occult", "tag_label": "Occult & Esoteric", "archetype": "ALCHEMICAL-TRANSMUTATION", "rarity": "Ghost Rare", "stars": 5}, {"code": "NSP-EN003", "title": "Army Of The Pharaohs The Unholy Legion", "filename": "Army_Of_The_Pharaohs_The_Unholy_Legion_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN003.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN004", "title": "BLP Kosher Authentic", "filename": "BLP_Kosher_Authentic_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN004.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN005", "title": "Babalon The Scarlet Empress", "filename": "Babalon_The_Scarlet_Empress_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN005.webp", "folder": "YuGiOh_Music_Cards", "tag": "occult", "tag_label": "Occult & Esoteric", "archetype": "ALCHEMICAL-TRANSMUTATION", "rarity": "Ghost Rare", "stars": 5}, {"code": "NSP-EN006", "title": "Baphomet The Sabbatic Hierophant", "filename": "Baphomet_The_Sabbatic_Hierophant_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN006.webp", "folder": "YuGiOh_Music_Cards", "tag": "occult", "tag_label": "Occult & Esoteric", "archetype": "ALCHEMICAL-TRANSMUTATION", "rarity": "Ghost Rare", "stars": 5}, {"code": "NSP-EN007", "title": "Behemoth Nergal The Luciferian Archon", "filename": "Behemoth_Nergal_The_Luciferian_Archon_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN007.webp", "folder": "YuGiOh_Music_Cards", "tag": "occult", "tag_label": "Occult & Esoteric", "archetype": "ALCHEMICAL-TRANSMUTATION", "rarity": "Ghost Rare", "stars": 5}, {"code": "NSP-EN008", "title": "Between The Buried And Me Tommy Rogers", "filename": "Between_The_Buried_And_Me_Tommy_Rogers_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN008.webp", "folder": "YuGiOh_Music_Cards", "tag": "metal", "tag_label": "Rock & Metal Archons", "archetype": "HIGH-AMPLITUDE", "rarity": "Secret Rare", "stars": 5}, {"code": "NSP-EN009", "title": "Birdman Number One Stunna", "filename": "Birdman_Number_One_Stunna_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN009.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN010", "title": "Bring Me The Horizon Oli Sykes", "filename": "Bring_Me_The_Horizon_Oli_Sykes_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN010.webp", "folder": "YuGiOh_Music_Cards", "tag": "metal", "tag_label": "Rock & Metal Archons", "archetype": "HIGH-AMPLITUDE", "rarity": "Secret Rare", "stars": 5}, {"code": "NSP-EN011", "title": "DJ Snake The Sub Bass Pharaoh", "filename": "DJ_Snake_The_Sub_Bass_Pharaoh_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN011.webp", "folder": "YuGiOh_Music_Cards", "tag": "edm", "tag_label": "EDM & Bass Titans", "archetype": "SUB-BASS-FREQ", "rarity": "Prismatic Secret", "stars": 5}, {"code": "NSP-EN012", "title": "David Bowie Ziggy Stardust", "filename": "David_Bowie_Ziggy_Stardust_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN012.webp", "folder": "YuGiOh_Music_Cards", "tag": "metal", "tag_label": "Rock & Metal Archons", "archetype": "HIGH-AMPLITUDE", "rarity": "Secret Rare", "stars": 5}, {"code": "NSP-EN013", "title": "David Guetta The Titanium Anthem King", "filename": "David_Guetta_The_Titanium_Anthem_King_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN013.webp", "folder": "YuGiOh_Music_Cards", "tag": "edm", "tag_label": "EDM & Bass Titans", "archetype": "SUB-BASS-FREQ", "rarity": "Prismatic Secret", "stars": 5}, {"code": "NSP-EN014", "title": "Dr Dre The GFunk Alchemist", "filename": "Dr_Dre_The_GFunk_Alchemist_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN014.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN015", "title": "Easy Mac Blue Slide Revolution", "filename": "Easy_Mac_Blue_Slide_Revolution.jpg", "rel_path": "/tcg/assets/cards/NSP-EN015.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN016", "title": "GRiZ The Funk Transcendent", "filename": "GRiZ_The_Funk_Transcendent_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN016.webp", "folder": "YuGiOh_Music_Cards", "tag": "edm", "tag_label": "EDM & Bass Titans", "archetype": "SUB-BASS-FREQ", "rarity": "Prismatic Secret", "stars": 5}, {"code": "NSP-EN017", "title": "Ganja White Night Wobble", "filename": "Ganja_White_Night_Wobble_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN017.webp", "folder": "YuGiOh_Music_Cards", "tag": "edm", "tag_label": "EDM & Bass Titans", "archetype": "SUB-BASS-FREQ", "rarity": "Prismatic Secret", "stars": 5}, {"code": "NSP-EN018", "title": "Gojira The Oceanic Leviathan", "filename": "Gojira_The_Oceanic_Leviathan_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN018.webp", "folder": "YuGiOh_Music_Cards", "tag": "metal", "tag_label": "Rock & Metal Archons", "archetype": "HIGH-AMPLITUDE", "rarity": "Secret Rare", "stars": 5}, {"code": "NSP-EN019", "title": "Gorilla Nems FYL Mayor Of Coney Island", "filename": "Gorilla_Nems_FYL_Mayor_Of_Coney_Island.jpg", "rel_path": "/tcg/assets/cards/NSP-EN019.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN020", "title": "Gorilla Twins Ill Bill And Nems", "filename": "Gorilla_Twins_Ill_Bill_And_Nems_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN020.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN021", "title": "Gravekeepers Commandant", "filename": "Gravekeepers_Commandant_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN021.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN022", "title": "Gravekeepers Spy", "filename": "Gravekeepers_Spy_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN022.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN023", "title": "Gravekeepers Supernaturalist", "filename": "Gravekeepers_Supernaturalist_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN023.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN024", "title": "Heavy Metal Kings Paz And Bill", "filename": "Heavy_Metal_Kings_Paz_And_Bill_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN024.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN025", "title": "Ice Cube The West Coast Predator", "filename": "Ice_Cube_The_West_Coast_Predator_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN025.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN026", "title": "Ill Bill Cult Leader Of Glenwood", "filename": "Ill_Bill_Cult_Leader_Of_Glenwood_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN026.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN027", "title": "Ill Bill The Cannibal Hulk", "filename": "Ill_Bill_The_Cannibal_Hulk_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN027.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN028", "title": "Inzo The Overthinker", "filename": "Inzo_The_Overthinker_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN028.webp", "folder": "YuGiOh_Music_Cards", "tag": "edm", "tag_label": "EDM & Bass Titans", "archetype": "SUB-BASS-FREQ", "rarity": "Prismatic Secret", "stars": 5}, {"code": "NSP-EN029", "title": "Jimi Hendrix Voodoo Child", "filename": "Jimi_Hendrix_Voodoo_Child_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN029.webp", "folder": "YuGiOh_Music_Cards", "tag": "metal", "tag_label": "Rock & Metal Archons", "archetype": "HIGH-AMPLITUDE", "rarity": "Secret Rare", "stars": 5}, {"code": "NSP-EN030", "title": "Kauket Lady Of Primordial Night", "filename": "Kauket_Lady_Of_Primordial_Night_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN030.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN031", "title": "Kek Primordial Lord Of Darkness", "filename": "Kek_Primordial_Lord_Of_Darkness_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN031.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN032", "title": "Khepri The Celestial Dawn Scarab", "filename": "Khepri_The_Celestial_Dawn_Scarab_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN032.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN033", "title": "Leviathan The Abyssal Ouroboros", "filename": "Leviathan_The_Abyssal_Ouroboros_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN033.webp", "folder": "YuGiOh_Music_Cards", "tag": "occult", "tag_label": "Occult & Esoteric", "archetype": "ALCHEMICAL-TRANSMUTATION", "rarity": "Ghost Rare", "stars": 5}, {"code": "NSP-EN034", "title": "Lil Wayne The Martian", "filename": "Lil_Wayne_The_Martian_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN034.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN035", "title": "Lilith Queen Of Sitra Achra", "filename": "Lilith_Queen_Of_Sitra_Achra_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN035.webp", "folder": "YuGiOh_Music_Cards", "tag": "occult", "tag_label": "Occult & Esoteric", "archetype": "ALCHEMICAL-TRANSMUTATION", "rarity": "Ghost Rare", "stars": 5}, {"code": "NSP-EN036", "title": "Lord Goat The Gore Elohim", "filename": "Lord_Goat_The_Gore_Elohim_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN036.webp", "folder": "YuGiOh_Music_Cards", "tag": "occult", "tag_label": "Occult & Esoteric", "archetype": "ALCHEMICAL-TRANSMUTATION", "rarity": "Ghost Rare", "stars": 5}, {"code": "NSP-EN037", "title": "Lucifer The Morning Star", "filename": "Lucifer_The_Morning_Star_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN037.webp", "folder": "YuGiOh_Music_Cards", "tag": "occult", "tag_label": "Occult & Esoteric", "archetype": "ALCHEMICAL-TRANSMUTATION", "rarity": "Ghost Rare", "stars": 5}, {"code": "NSP-EN038", "title": "Luh Tyler The Florida Visionary", "filename": "Luh_Tyler_The_Florida_Visionary_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN038.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN039", "title": "Mac Miller Celestial Swimmer", "filename": "Mac_Miller_Celestial_Swimmer.jpg", "rel_path": "/tcg/assets/cards/NSP-EN039.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN040", "title": "Mac Miller Macadelic Astral Transcendence", "filename": "Mac_Miller_Macadelic_Astral_Transcendence.jpg", "rel_path": "/tcg/assets/cards/NSP-EN040.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN041", "title": "Mac Miller Master Of Faces", "filename": "Mac_Miller_Master_Of_Faces.jpg", "rel_path": "/tcg/assets/cards/NSP-EN041.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN042", "title": "Mastodon The Leviathan Beast", "filename": "Mastodon_The_Leviathan_Beast_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN042.webp", "folder": "YuGiOh_Music_Cards", "tag": "metal", "tag_label": "Rock & Metal Archons", "archetype": "HIGH-AMPLITUDE", "rarity": "Secret Rare", "stars": 5}, {"code": "NSP-EN043", "title": "Medjed The Concealed Smiter", "filename": "Medjed_The_Concealed_Smiter_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN043.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN044", "title": "Mudvayne Chad Gray LD50", "filename": "Mudvayne_Chad_Gray_LD50_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN044.webp", "folder": "YuGiOh_Music_Cards", "tag": "metal", "tag_label": "Rock & Metal Archons", "archetype": "HIGH-AMPLITUDE", "rarity": "Secret Rare", "stars": 5}, {"code": "NSP-EN045", "title": "Necrovalley The Sacred Tomb City", "filename": "Necrovalley_The_Sacred_Tomb_City_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN045.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN046", "title": "Non Phixion Ill Bill And Lord Goat", "filename": "Non_Phixion_Ill_Bill_And_Lord_Goat.jpg", "rel_path": "/tcg/assets/cards/NSP-EN046.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN047", "title": "Non Phixion The Future Is Now", "filename": "Non_Phixion_The_Future_Is_Now_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN047.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN048", "title": "Queen Freddie Mercury Bohemian Rhapsody", "filename": "Queen_Freddie_Mercury_Bohemian_Rhapsody_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN048.webp", "folder": "YuGiOh_Music_Cards", "tag": "metal", "tag_label": "Rock & Metal Archons", "archetype": "HIGH-AMPLITUDE", "rarity": "Secret Rare", "stars": 5}, {"code": "NSP-EN049", "title": "Rezz The Spiral Hypnotist", "filename": "Rezz_The_Spiral_Hypnotist_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN049.webp", "folder": "YuGiOh_Music_Cards", "tag": "edm", "tag_label": "EDM & Bass Titans", "archetype": "SUB-BASS-FREQ", "rarity": "Prismatic Secret", "stars": 5}, {"code": "NSP-EN050", "title": "Sabac Red The Revolutionary Voice", "filename": "Sabac_Red_The_Revolutionary_Voice_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN050.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN051", "title": "The Black Dahlia Murder Trevor Strnad", "filename": "The_Black_Dahlia_Murder_Trevor_Strnad_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN051.webp", "folder": "YuGiOh_Music_Cards", "tag": "metal", "tag_label": "Rock & Metal Archons", "archetype": "HIGH-AMPLITUDE", "rarity": "Secret Rare", "stars": 5}, {"code": "NSP-EN052", "title": "The Emerald Tablet Hermetic Spell", "filename": "The_Emerald_Tablet_Hermetic_Spell_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN052.webp", "folder": "YuGiOh_Music_Cards", "tag": "occult", "tag_label": "Occult & Esoteric", "archetype": "ALCHEMICAL-TRANSMUTATION", "rarity": "Ghost Rare", "stars": 5}, {"code": "NSP-EN053", "title": "The Millennium Eye Gaze Of The Mind", "filename": "The_Millennium_Eye_Gaze_Of_The_Mind_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN053.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN054", "title": "The Millennium Puzzle Vessel Of The Pharaoh", "filename": "The_Millennium_Puzzle_Vessel_Of_The_Pharaoh_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN054.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN055", "title": "The Millennium Ring Compass Of The Shadow Realm", "filename": "The_Millennium_Ring_Compass_Of_The_Shadow_Realm_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN055.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN056", "title": "The Millennium Scarab Heart Of The Eternal Sun", "filename": "The_Millennium_Scarab_Heart_Of_The_Eternal_Sun_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN056.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN057", "title": "The Millennium Uraeus Flame Of Wadjet", "filename": "The_Millennium_Uraeus_Flame_Of_Wadjet_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN057.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN058", "title": "Thoth Scribe Of Maat And Hermopolis", "filename": "Thoth_Scribe_Of_Maat_And_Hermopolis_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN058.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN059", "title": "Tool Maynard The Transcendental Vocalist", "filename": "Tool_Maynard_The_Transcendental_Vocalist_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN059.webp", "folder": "YuGiOh_Music_Cards", "tag": "metal", "tag_label": "Rock & Metal Archons", "archetype": "HIGH-AMPLITUDE", "rarity": "Secret Rare", "stars": 5}, {"code": "NSP-EN060", "title": "Trapland Pat Authentic", "filename": "Trapland_Pat_Authentic_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN060.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN061", "title": "Vinnie Paz Boxcutter Pazzy", "filename": "Vinnie_Paz_Boxcutter_Pazzy_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN061.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN062", "title": "Wepwawet The Opener Of The Ways", "filename": "Wepwawet_The_Opener_Of_The_Ways_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN062.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN063", "title": "Pro Bowling PBA 300 Cracked Ice", "filename": "Pro_Bowling_PBA_300_Cracked_Ice.jpg", "rel_path": "/tcg/assets/cards/NSP-EN063.webp", "folder": "Alt_Sports_Fine_Art", "tag": "sports", "tag_label": "Alt Sports & Fine Art", "archetype": "PRO-LEAGUE", "rarity": "Secret Rare", "stars": 4}, {"code": "NSP-EN064", "title": "trading card fine art vangogh 1789476059280", "filename": "trading_card_fine_art_vangogh_1789476059280.jpg", "rel_path": "/tcg/assets/cards/NSP-EN064.webp", "folder": "Alt_Sports_Fine_Art", "tag": "sports", "tag_label": "Alt Sports & Fine Art", "archetype": "PRO-LEAGUE", "rarity": "Secret Rare", "stars": 4}, {"code": "NSP-EN065", "title": "trading card pro billiards 1789476027055", "filename": "trading_card_pro_billiards_1789476027055.jpg", "rel_path": "/tcg/assets/cards/NSP-EN065.webp", "folder": "Alt_Sports_Fine_Art", "tag": "sports", "tag_label": "Alt Sports & Fine Art", "archetype": "PRO-LEAGUE", "rarity": "Secret Rare", "stars": 4}, {"code": "NSP-EN066", "title": "trading card pro cornhole 1789475993173", "filename": "trading_card_pro_cornhole_1789475993173.jpg", "rel_path": "/tcg/assets/cards/NSP-EN066.webp", "folder": "Alt_Sports_Fine_Art", "tag": "sports", "tag_label": "Alt Sports & Fine Art", "archetype": "PRO-LEAGUE", "rarity": "Secret Rare", "stars": 4}, {"code": "NSP-EN067", "title": "trading card pro pickleball 1789475950171", "filename": "trading_card_pro_pickleball_1789475950171.jpg", "rel_path": "/tcg/assets/cards/NSP-EN067.webp", "folder": "Alt_Sports_Fine_Art", "tag": "sports", "tag_label": "Alt Sports & Fine Art", "archetype": "PRO-LEAGUE", "rarity": "Secret Rare", "stars": 4}, {"code": "NSP-EN068", "title": "Al Capone Chicago Outfit Gold Refractor", "filename": "Al_Capone_Chicago_Outfit_Gold_Refractor.jpg", "rel_path": "/tcg/assets/cards/NSP-EN068.webp", "folder": "Infamous_Outlaws_Cults", "tag": "outlaws", "tag_label": "Infamous Outlaws & Cults", "archetype": "OUTLAW-SYNDICATE", "rarity": "Prizm Foil", "stars": 5}, {"code": "NSP-EN069", "title": "Billy The Kid Wild West Prizm", "filename": "Billy_The_Kid_Wild_West_Prizm.jpg", "rel_path": "/tcg/assets/cards/NSP-EN069.webp", "folder": "Infamous_Outlaws_Cults", "tag": "outlaws", "tag_label": "Infamous Outlaws & Cults", "archetype": "OUTLAW-SYNDICATE", "rarity": "Prizm Foil", "stars": 5}, {"code": "NSP-EN070", "title": "Grigori Rasputin Mad Monk Relic Foil", "filename": "Grigori_Rasputin_Mad_Monk_Relic_Foil.jpg", "rel_path": "/tcg/assets/cards/NSP-EN070.webp", "folder": "Infamous_Outlaws_Cults", "tag": "outlaws", "tag_label": "Infamous Outlaws & Cults", "archetype": "OUTLAW-SYNDICATE", "rarity": "Prizm Foil", "stars": 5}, {"code": "NSP-EN071", "title": "Ill Bill Heavy Metal Kings Relic Prizm", "filename": "Ill_Bill_Heavy_Metal_Kings_Relic_Prizm.jpg", "rel_path": "/tcg/assets/cards/NSP-EN071.webp", "folder": "Infamous_Outlaws_Cults", "tag": "outlaws", "tag_label": "Infamous Outlaws & Cults", "archetype": "OUTLAW-SYNDICATE", "rarity": "Prizm Foil", "stars": 5}];
     let activeCategory = 'all';
+    let activeStars = 0;
     let userDeck = [];
     let currentModalCard = null;
+    let testHandDeck = [];
 
     // Web Audio Sound Synthesis for Card Hologram & Flip
     let audioCtx = null;
@@ -525,8 +599,9 @@
 
       const filtered = cardsData.filter(c => {
         const matchCat = (activeCategory === 'all' || c.tag === activeCategory);
+        const matchStars = (activeStars === 0 || c.stars === activeStars);
         const matchQuery = (c.title.toLowerCase().includes(query) || c.code.toLowerCase().includes(query) || c.archetype.toLowerCase().includes(query));
-        return matchCat && matchQuery;
+        return matchCat && matchStars && matchQuery;
       });
 
       filtered.forEach(c => {
@@ -577,8 +652,23 @@
 
     function setCategory(cat, btn) {
       activeCategory = cat;
+      activeStars = 0;
       document.querySelectorAll('.filter-tag').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
+      renderCards();
+    }
+
+    function setStars(stars, btn) {
+      if (activeStars === stars) {
+        activeStars = 0;
+        btn.classList.remove('active');
+      } else {
+        activeStars = stars;
+        document.querySelectorAll('.filter-tag').forEach(b => {
+          if (b.innerText.includes('★')) b.classList.remove('active');
+        });
+        btn.classList.add('active');
+      }
       renderCards();
     }
 
@@ -615,6 +705,9 @@
         userDeck.push(c);
         playCardChime();
         updateDeckCounter();
+        try {
+          localStorage.setItem('nsp_sovereign_deck', JSON.stringify(userDeck.map(x => x.code)));
+        } catch (e) {}
       }
     }
 
@@ -630,8 +723,98 @@
     }
 
     function clearDeck() {
+      if (userDeck.length === 0) return;
       userDeck = [];
       updateDeckCounter();
+      try {
+        localStorage.removeItem('nsp_sovereign_deck');
+      } catch (e) {}
+    }
+
+    function saveDeck() {
+      if (userDeck.length === 0) {
+        alert('Cannot save an empty deck. Add cards first!');
+        return;
+      }
+      try {
+        localStorage.setItem('nsp_sovereign_deck', JSON.stringify(userDeck.map(x => x.code)));
+        playCardChime();
+        alert(`Deck saved successfully (${userDeck.length} cards persisted in browser storage)!`);
+      } catch (e) {
+        alert('Could not persist deck to localStorage.');
+      }
+    }
+
+    function loadSavedDeck() {
+      try {
+        const saved = localStorage.getItem('nsp_sovereign_deck');
+        if (saved) {
+          const codes = JSON.parse(saved);
+          if (Array.isArray(codes) && codes.length > 0) {
+            userDeck = [];
+            codes.forEach(cd => {
+              const found = cardsData.find(c => c.code === cd);
+              if (found) userDeck.push(found);
+            });
+            updateDeckCounter();
+          }
+        }
+      } catch (e) {}
+    }
+
+    // TEST HAND SIMULATOR
+    function openTestHand() {
+      if (userDeck.length < 5) {
+        alert(`Add at least 5 cards to your deck to test opening hands! Current deck: ${userDeck.length}`);
+        return;
+      }
+      mulliganTestHand();
+      document.getElementById('test-hand-modal').classList.add('active');
+    }
+
+    function closeTestHand() {
+      document.getElementById('test-hand-modal').classList.remove('active');
+    }
+
+    function mulliganTestHand() {
+      playCardChime();
+      testHandDeck = [...userDeck];
+      // Fisher-Yates shuffle
+      for (let i = testHandDeck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [testHandDeck[i], testHandDeck[j]] = [testHandDeck[j], testHandDeck[i]];
+      }
+
+      const handCards = document.getElementById('test-hand-cards');
+      handCards.innerHTML = '';
+      const initialHand = testHandDeck.splice(0, 5);
+      initialHand.forEach(c => {
+        const el = document.createElement('div');
+        el.className = 'hand-card';
+        el.title = `${c.title} (${c.code})`;
+        el.innerHTML = `<img src="${c.rel_path}" alt="${c.title}">`;
+        el.onclick = () => openModal(c.code);
+        handCards.appendChild(el);
+      });
+
+      document.getElementById('hand-subtext').innerText = `5 cards drawn for Turn 1. Remaining in library: ${testHandDeck.length} cards.`;
+    }
+
+    function drawOneCard() {
+      if (testHandDeck.length === 0) {
+        alert('Library is depleted! No more cards to draw.');
+        return;
+      }
+      playCardChime();
+      const nextCard = testHandDeck.shift();
+      const handCards = document.getElementById('test-hand-cards');
+      const el = document.createElement('div');
+      el.className = 'hand-card';
+      el.title = `${nextCard.title} (${nextCard.code})`;
+      el.innerHTML = `<img src="${nextCard.rel_path}" alt="${nextCard.title}">`;
+      el.onclick = () => openModal(nextCard.code);
+      handCards.appendChild(el);
+      document.getElementById('hand-subtext').innerText = `Drew ${nextCard.title}. Remaining in library: ${testHandDeck.length} cards.`;
     }
 
     function exportDeck() {
@@ -648,7 +831,8 @@
       a.click();
     }
 
-    // Initial Render
+    // Initial Load & Render
+    loadSavedDeck();
     renderCards();
   </script>
 </body>

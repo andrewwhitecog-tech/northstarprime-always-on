@@ -240,6 +240,7 @@ The combined addition is approximately 4.45 MB. The prior curated payload was al
 
 - **Trading Card Vault (TCG)**: `/tcg/` (`tcg/index.html`), 3D Holographic Card Binder and interactive deckbuilder sandbox indexing 71 master cards across 7 archetypes. Features real-time cursor/gyro rainbow foil sheen shader and synthesized Web Audio sound engine.
 - **Underground Comix & Graphic Novel Vault**: `/comics/` (`comics/index.html`), indexing all 7 canonical arcs across Blazin' Beaver Series 1–4, Uncle Vorath Mysteries Seasons 1–2, and Duel Zexal.
+- **Graphic Novel Web Reader**: `/comics/reader/` (`comics/reader/index.html`), universal in-browser reader supporting Blazin' Beaver Series 4, Uncle Vorath Mysteries Season 2, and Duel Zexal with LTR/RTL toggle, two-page spread, and fullscreen.
 - **Duel Zexal Tankobon Manga Reader**: `/manga/` (`manga/index.html`), 24-page authentic Japanese Right-to-Left (RTL) manga web reader with single/spread viewing, thumbnail filmstrip, and full tankobon master delivery.
 
 ## Aetheria Astrological Studio & Matrix routes

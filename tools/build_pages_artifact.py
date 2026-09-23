@@ -126,15 +126,23 @@ def build(output: Path) -> dict:
     omitted_sticker_bytes = sum(path.stat().st_size for path in omitted_stickers)
 
     if output.exists():
-        def _on_rm_error(func, path, exc_info):
-            import stat
-            try:
-                os.chmod(path, stat.S_IWRITE)
-                func(path)
-            except Exception:
-                pass
-        shutil.rmtree(output, onexc=_on_rm_error)
-    output.mkdir(parents=True, exist_ok=True)
+        import stat
+        for root, dirs, files in os.walk(output, topdown=False):
+            for f in files:
+                p = os.path.join(root, f)
+                try:
+                    os.chmod(p, stat.S_IWRITE)
+                    os.unlink(p)
+                except Exception:
+                    pass
+            for d in dirs:
+                p = os.path.join(root, d)
+                try:
+                    os.rmdir(p)
+                except Exception:
+                    pass
+    else:
+        output.mkdir(parents=True, exist_ok=True)
 
     rewrites = 0
     copied = 0
@@ -151,7 +159,15 @@ def build(output: Path) -> dict:
             destination.write_text(raw, encoding="utf-8", newline="\n")
             shutil.copymode(source, destination)
         else:
-            shutil.copy2(source, destination)
+            for attempt in range(5):
+                try:
+                    shutil.copy2(source, destination)
+                    break
+                except PermissionError:
+                    if attempt == 4:
+                        raise
+                    import time
+                    time.sleep(0.1)
         copied += 1
 
     payload_files = [path for path in output.rglob("*") if path.is_file()]

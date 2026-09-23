@@ -231,6 +231,8 @@
       <span class="brand-title">Duel Zexal: Iconic Spirits // Vol. 1</span>
     </div>
     <div class="toolbar-actions">
+      <button class="btn" onclick="toggleFullscreen()" aria-label="Toggle Fullscreen">&#9210; Fullscreen</button>
+      <a href="/comics/reader/?series=duel_zexal" class="btn">Comics Reader &rarr;</a>
       <a href="/tcg/" class="btn btn-tcg">
         TCG Holo Binder (71 Cards) &rarr;
       </a>
@@ -306,6 +308,16 @@
           th.classList.remove('active');
         }
       });
+
+      // Preload next and prev pages
+      if (currentPage + 1 < totalPages) {
+        const nextImg = new Image();
+        nextImg.src = getPageUrl(currentPage + 1);
+      }
+      if (currentPage > 0) {
+        const prevImg = new Image();
+        prevImg.src = getPageUrl(currentPage - 1);
+      }
     }
 
     function nextPage() {
@@ -349,9 +361,23 @@
       else handleNavRight();
     }
 
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowRight') handleNavRight();
-      if (e.key === 'ArrowLeft') handleNavLeft();
+      if (e.key === 'ArrowRight' || e.key === 'PageDown') handleNavRight();
+      else if (e.key === 'ArrowLeft' || e.key === 'PageUp') handleNavLeft();
+      else if (e.key === ' ' || e.key === 'Spacebar') {
+        e.preventDefault();
+        handlePageClick();
+      } else if (e.key === 'f' || e.key === 'F') {
+        toggleFullscreen();
+      }
     });
 
     renderThumbs();

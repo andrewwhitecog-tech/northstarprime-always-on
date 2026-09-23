@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Graphic Novel Reader // NorthStar Sovereign Comix</title>
+  <meta name="description" content="Universal high-resolution in-browser reader for NorthStar graphic novels, underground comics, and manga. Featuring Blazin' Beaver, Uncle Vorath Mysteries, and Duel Zexal.">
+  <link rel="canonical" href="https://northstarprime.net/comics/reader/">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <style>
+    :root {
+      --bg: #07090e;
+      --panel-bg: #0d121d;
+      --border: rgba(0, 240, 255, 0.2);
+      --cyan: #00f0ff;
+      --gold: #f59e0b;
+      --accent: #10b981;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --font-mono: "SF Mono", "Consolas", "Roboto Mono", monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* HEADER */
+    header {
+      background: var(--panel-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      gap: 16px;
+    }
+    .brand-block {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-sigil {
+      color: var(--cyan);
+      font-size: 1.2rem;
+    }
+    .brand-titles h1 {
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      color: #fff;
+    }
+    .brand-titles .subtitle {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      letter-spacing: 0.8px;
+    }
+
+    /* TOOLBAR CONTROLS */
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .series-select {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border);
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      cursor: pointer;
+      outline: none;
+    }
+    .series-select option {
+      background: var(--panel-bg);
+      color: #fff;
+    }
+    .series-select:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+    }
+
+    .btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border);
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 600;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+    }
+    .btn:hover {
+      background: var(--cyan);
+      color: #07090e;
+      border-color: var(--cyan);
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
+    }
+    .btn-gold {
+      border-color: rgba(245, 158, 11, 0.4);
+      color: var(--gold);
+    }
+    .btn-gold:hover {
+      background: var(--gold);
+      color: #000;
+      border-color: var(--gold);
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+    }
+
+    /* SUB-NAV BAR */
+    .nav-bar {
+      background: rgba(13, 18, 29, 0.95);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 8px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .page-indicator-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .page-select {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--cyan);
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      outline: none;
+      cursor: pointer;
+    }
+    .page-select option {
+      background: var(--panel-bg);
+      color: #fff;
+    }
+    .mode-group {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .mode-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text-muted);
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      transition: all 0.2s;
+    }
+    .mode-btn:hover {
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+    .mode-btn.active {
+      background: rgba(0, 240, 255, 0.18);
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+
+    /* READER STAGE */
+    main {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      padding: 20px 16px;
+      user-select: none;
+      background: radial-gradient(circle at center, #0c1220 0%, #05070c 100%);
+      min-height: calc(100vh - 190px);
+    }
+    .viewer-stage {
+      max-width: 1200px;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      position: relative;
+    }
+    .comic-page-img {
+      max-width: 100%;
+      max-height: 80vh;
+      height: auto;
+      object-fit: contain;
+      border-radius: 6px;
+      box-shadow: 0 16px 50px rgba(0, 0, 0, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      cursor: pointer;
+      transition: opacity 0.15s ease;
+    }
+    .viewer-stage.spread .comic-page-img {
+      max-width: 48%;
+    }
+
+    /* CLICK NAVIGATION ZONES */
+    .nav-zone {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 16%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.2rem;
+      color: rgba(255, 255, 255, 0.2);
+      cursor: pointer;
+      transition: all 0.2s;
+      z-index: 20;
+    }
+    .nav-zone:hover {
+      background: rgba(0, 0, 0, 0.35);
+      color: var(--cyan);
+    }
+    .nav-zone.left { left: 0; }
+    .nav-zone.right { right: 0; }
+
+    /* THUMBNAIL FILMSTRIP */
+    footer {
+      height: 96px;
+      background: var(--panel-bg);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 20px;
+      overflow-x: auto;
+      scroll-behavior: smooth;
+    }
+    footer::-webkit-scrollbar {
+      height: 6px;
+    }
+    footer::-webkit-scrollbar-thumb {
+      background: rgba(0, 240, 255, 0.3);
+      border-radius: 3px;
+    }
+    .thumb-item {
+      height: 72px;
+      flex-shrink: 0;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 2px solid transparent;
+      cursor: pointer;
+      opacity: 0.6;
+      transition: all 0.2s;
+      position: relative;
+    }
+    .thumb-item:hover {
+      opacity: 0.9;
+      transform: translateY(-2px);
+    }
+    .thumb-item.active {
+      opacity: 1;
+      border-color: var(--cyan);
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+    }
+    .thumb-item img {
+      height: 100%;
+      width: auto;
+      display: block;
+    }
+    .thumb-badge {
+      position: absolute;
+      bottom: 2px;
+      right: 2px;
+      background: rgba(0, 0, 0, 0.75);
+      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      padding: 1px 4px;
+      border-radius: 2px;
+    }
+
+    /* FULLSCREEN ADJUSTMENT */
+    :fullscreen main {
+      height: 100vh;
+      min-height: 100vh;
+      padding: 0;
+    }
+    :fullscreen .comic-page-img {
+      max-height: 96vh;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP HEADER -->
+  <header>
+    <div class="brand-block">
+      <div class="brand-sigil">✦</div>
+      <div class="brand-titles">
+        <h1 id="headerTitle">The Sovereign Comix Reader</h1>
+        <div class="subtitle" id="headerSubtitle">BLAZIN' BEAVER // SERIES 4: THE MYCELIAL GATEWAY</div>
+      </div>
+    </div>
+    <div class="toolbar-actions">
+      <select id="seriesSelect" class="series-select" aria-label="Select Comic Series">
+        <option value="blazin_beaver_s4">Blazin' Beaver S4: The Mycelial Gateway (Issue 1)</option>
+        <option value="vorath_s2">Uncle Vorath Mysteries S2: Starmap Deposition (Issue 1)</option>
+        <option value="duel_zexal">Duel Zexal: Iconic Spirits (Tankobon Vol. 1)</option>
+      </select>
+      <button id="btnFullscreen" type="button" class="btn" aria-label="Toggle Fullscreen">
+        <span>⛶</span> Fullscreen
+      </button>
+      <a href="/tcg/" class="btn btn-gold">3D TCG Binder &rarr;</a>
+      <a href="/comics/" class="btn">&larr; Vault</a>
+    </div>
+  </header>
+
+  <!-- SUB-NAVIGATION CONTROLS -->
+  <div class="nav-bar">
+    <div class="page-indicator-wrap">
+      <button id="btnPrev" type="button" class="btn" style="padding:4px 10px;">◀ Prev</button>
+      <select id="pageSelect" class="page-select" aria-label="Jump to page"></select>
+      <button id="btnNext" type="button" class="btn" style="padding:4px 10px;">Next ▶</button>
+    </div>
+
+    <div class="mode-group">
+      <span style="font-size:0.75rem; color:var(--text-muted); font-family:var(--font-mono);">Flow:</span>
+      <button id="dirLtr" type="button" class="mode-btn active" title="Left to Right (Western Comic)">LTR</button>
+      <button id="dirRtl" type="button" class="mode-btn" title="Right to Left (Japanese Manga)">RTL</button>
+
+      <span style="font-size:0.75rem; color:var(--text-muted); font-family:var(--font-mono); margin-left:8px;">View:</span>
+      <button id="viewSingle" type="button" class="mode-btn active">Single</button>
+      <button id="viewSpread" type="button" class="mode-btn">Spread</button>
+    </div>
+  </div>
+
+  <!-- MAIN READER STAGE -->
+  <main id="readerStage">
+    <div class="nav-zone left" id="zoneLeft" title="Previous page">◀</div>
+    <div class="viewer-stage" id="viewerStage">
+      <img id="mainPageImg" class="comic-page-img" src="" alt="Comic Page">
+      <img id="secondPageImg" class="comic-page-img" src="" alt="Facing Page" style="display:none;">
+    </div>
+    <div class="nav-zone right" id="zoneRight" title="Next page">▶</div>
+  </main>
+
+  <!-- BOTTOM THUMBNAIL TRAY -->
+  <footer id="thumbTray" aria-label="Page thumbnails">
+    <!-- Rendered dynamically -->
+  </footer>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // Series Manifests
+      const SERIES_DATA = {
+        blazin_beaver_s4: {
+          title: "Blazin' Beaver S4: The Mycelial Gateway",
+          subtitle: "ISSUE 01: SUB-BASS RESONANCE // 9 PAGES // CMYK MASTER",
+          defaultDir: "LTR",
+          basePath: "/comics/assets/blazin_beaver_s4/",
+          pages: [
+            { file: "Cover.webp", label: "Cover" },
+            { file: "Page_01.webp", label: "Page 1" },
+            { file: "Page_02.webp", label: "Page 2" },
+            { file: "Page_03.webp", label: "Page 3" },
+            { file: "Page_04.webp", label: "Page 4" },
+            { file: "Page_05.webp", label: "Page 5" },
+            { file: "Page_06.webp", label: "Page 6" },
+            { file: "Page_07.webp", label: "Page 7" },
+            { file: "Page_08.webp", label: "Page 8" }
+          ]
+        },
+        vorath_s2: {
+          title: "Uncle Vorath Mysteries S2: Starmap Deposition",
+          subtitle: "ISSUE 01: THE CELESTIAL AFFIDAVIT // 9 PAGES // NOIR MASTER",
+          defaultDir: "LTR",
+          basePath: "/comics/assets/vorath_s2/",
+          pages: [
+            { file: "Cover.webp", label: "Cover" },
+            { file: "Page_01.webp", label: "Page 1" },
+            { file: "Page_02.webp", label: "Page 2" },
+            { file: "Page_03.webp", label: "Page 3" },
+            { file: "Page_04.webp", label: "Page 4" },
+            { file: "Page_05.webp", label: "Page 5" },
+            { file: "Page_06.webp", label: "Page 6" },
+            { file: "Page_07.webp", label: "Page 7" },
+            { file: "Page_08.webp", label: "Page 8" }
+          ]
+        },
+        duel_zexal: {
+          title: "Duel Zexal: Iconic Spirits Vol. 1",
+          subtitle: "JUMP COMICS TANKOBON // CHAPTER 01: ASTRAL DUELIST // 25 PAGES",
+          defaultDir: "RTL",
+          basePath: "/manga/assets/tankobon_vol_01/",
+          pages: [
+            { file: "Cover.webp", label: "Cover" },
+            ...Array.from({ length: 24 }, (_, i) => ({
+              file: `Page_${String(i + 1).padStart(2, '0')}.webp`,
+              label: `Page ${i + 1}`
+            }))
+          ]
+        }
+      };
+
+      // State
+      let currentSeriesKey = "blazin_beaver_s4";
+      let currentIndex = 0;
+      let isSpread = false;
+      let flowDirection = "LTR"; // 'LTR' or 'RTL'
+
+      // DOM Elements
+      const headerTitle = document.getElementById('headerTitle');
+      const headerSubtitle = document.getElementById('headerSubtitle');
+      const seriesSelect = document.getElementById('seriesSelect');
+      const pageSelect = document.getElementById('pageSelect');
+      const btnPrev = document.getElementById('btnPrev');
+      const btnNext = document.getElementById('btnNext');
+      const zoneLeft = document.getElementById('zoneLeft');
+      const zoneRight = document.getElementById('zoneRight');
+      const mainPageImg = document.getElementById('mainPageImg');
+      const secondPageImg = document.getElementById('secondPageImg');
+      const viewerStage = document.getElementById('viewerStage');
+      const thumbTray = document.getElementById('thumbTray');
+      const dirLtr = document.getElementById('dirLtr');
+      const dirRtl = document.getElementById('dirRtl');
+      const viewSingle = document.getElementById('viewSingle');
+      const viewSpread = document.getElementById('viewSpread');
+      const btnFullscreen = document.getElementById('btnFullscreen');
+      const readerStage = document.getElementById('readerStage');
+
+      // Initialize from URL query / hash
+      function readUrlParams() {
+        const params = new URLSearchParams(window.location.search);
+        const seriesParam = params.get('series') || params.get('comic');
+        if (seriesParam && SERIES_DATA[seriesParam]) {
+          currentSeriesKey = seriesParam;
+        }
+        const pageParam = parseInt(params.get('page'), 10);
+        if (!isNaN(pageParam) && pageParam >= 1) {
+          currentIndex = pageParam - 1;
+        }
+      }
+
+      function updateUrl() {
+        const url = new URL(window.location);
+        url.searchParams.set('series', currentSeriesKey);
+        url.searchParams.set('page', currentIndex + 1);
+        window.history.replaceState({}, '', url.toString());
+      }
+
+      function loadSeries(key) {
+        if (!SERIES_DATA[key]) return;
+        currentSeriesKey = key;
+        seriesSelect.value = key;
+        const series = SERIES_DATA[key];
+
+        headerTitle.textContent = series.title;
+        headerSubtitle.textContent = series.subtitle;
+        flowDirection = series.defaultDir;
+        updateDirButtons();
+
+        // Populate page select
+        pageSelect.innerHTML = '';
+        series.pages.forEach((p, idx) => {
+          const opt = document.createElement('option');
+          opt.value = idx;
+          opt.textContent = `${p.label} / ${series.pages.length}`;
+          pageSelect.appendChild(opt);
+        });
+
+        // Populate thumbnail tray
+        thumbTray.innerHTML = '';
+        series.pages.forEach((p, idx) => {
+          const div = document.createElement('div');
+          div.className = 'thumb-item';
+          div.innerHTML = `
+            <img src="${series.basePath}${p.file}" alt="${p.label}" loading="lazy">
+            <span class="thumb-badge">${idx === 0 ? 'CVR' : idx}</span>
+          `;
+          div.addEventListener('click', () => goToPage(idx));
+          thumbTray.appendChild(div);
+        });
+
+        if (currentIndex >= series.pages.length) {
+          currentIndex = 0;
+        }
+        renderPage();
+      }
+
+      function updateDirButtons() {
+        if (flowDirection === 'RTL') {
+          dirRtl.classList.add('active');
+          dirLtr.classList.remove('active');
+        } else {
+          dirLtr.classList.add('active');
+          dirRtl.classList.remove('active');
+        }
+      }
+
+      function renderPage() {
+        const series = SERIES_DATA[currentSeriesKey];
+        if (!series || !series.pages[currentIndex]) return;
+
+        pageSelect.value = currentIndex;
+        updateUrl();
+
+        // Render Page 1
+        const curPage = series.pages[currentIndex];
+        mainPageImg.src = series.basePath + curPage.file;
+        mainPageImg.alt = `${series.title} - ${curPage.label}`;
+
+        // Spread handling
+        if (isSpread && currentIndex > 0 && currentIndex + 1 < series.pages.length) {
+          viewerStage.classList.add('spread');
+          secondPageImg.style.display = 'block';
+          const nextP = series.pages[currentIndex + 1];
+
+          if (flowDirection === 'RTL') {
+            mainPageImg.src = series.basePath + nextP.file;
+            secondPageImg.src = series.basePath + curPage.file;
+          } else {
+            mainPageImg.src = series.basePath + curPage.file;
+            secondPageImg.src = series.basePath + nextP.file;
+          }
+        } else {
+          viewerStage.classList.remove('spread');
+          secondPageImg.style.display = 'none';
+        }
+
+        // Active thumbnail sync
+        const thumbs = thumbTray.querySelectorAll('.thumb-item');
+        thumbs.forEach((t, i) => {
+          t.classList.toggle('active', i === currentIndex || (isSpread && i === currentIndex + 1));
+        });
+        const activeThumb = thumbs[currentIndex];
+        if (activeThumb) {
+          activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+
+        // Preload adjacent images
+        preloadAdjacent();
+      }
+
+      function preloadAdjacent() {
+        const series = SERIES_DATA[currentSeriesKey];
+        const nextIdx = currentIndex + (isSpread ? 2 : 1);
+        const prevIdx = currentIndex - (isSpread ? 2 : 1);
+        if (series.pages[nextIdx]) {
+          const imgNext = new Image();
+          imgNext.src = series.basePath + series.pages[nextIdx].file;
+        }
+        if (series.pages[prevIdx]) {
+          const imgPrev = new Image();
+          imgPrev.src = series.basePath + series.pages[prevIdx].file;
+        }
+      }
+
+      function advance() {
+        const series = SERIES_DATA[currentSeriesKey];
+        const step = (isSpread && currentIndex > 0) ? 2 : 1;
+        if (currentIndex + step < series.pages.length) {
+          currentIndex += step;
+          renderPage();
+        }
+      }
+
+      function retreat() {
+        const step = (isSpread && currentIndex > 1) ? 2 : 1;
+        if (currentIndex - step >= 0) {
+          currentIndex -= step;
+          renderPage();
+        } else if (currentIndex > 0) {
+          currentIndex = 0;
+          renderPage();
+        }
+      }
+
+      function stepForward() {
+        // Forward according to reading direction
+        if (flowDirection === 'RTL') {
+          retreat();
+        } else {
+          advance();
+        }
+      }
+
+      function stepBackward() {
+        if (flowDirection === 'RTL') {
+          advance();
+        } else {
+          retreat();
+        }
+      }
+
+      function goToPage(idx) {
+        const series = SERIES_DATA[currentSeriesKey];
+        if (idx >= 0 && idx < series.pages.length) {
+          currentIndex = idx;
+          renderPage();
+        }
+      }
+
+      // Listeners
+      seriesSelect.addEventListener('change', (e) => {
+        currentIndex = 0;
+        loadSeries(e.target.value);
+      });
+
+      pageSelect.addEventListener('change', (e) => {
+        goToPage(parseInt(e.target.value, 10));
+      });
+
+      btnPrev.addEventListener('click', stepBackward);
+      btnNext.addEventListener('click', stepForward);
+
+      zoneLeft.addEventListener('click', () => {
+        // Left zone: in LTR this is backward; in RTL this is forward
+        if (flowDirection === 'RTL') advance();
+        else retreat();
+      });
+
+      zoneRight.addEventListener('click', () => {
+        // Right zone: in LTR this is forward; in RTL this is backward
+        if (flowDirection === 'RTL') retreat();
+        else advance();
+      });
+
+      mainPageImg.addEventListener('click', stepForward);
+      secondPageImg.addEventListener('click', stepForward);
+
+      dirLtr.addEventListener('click', () => {
+        flowDirection = 'LTR';
+        updateDirButtons();
+        renderPage();
+      });
+
+      dirRtl.addEventListener('click', () => {
+        flowDirection = 'RTL';
+        updateDirButtons();
+        renderPage();
+      });
+
+      viewSingle.addEventListener('click', () => {
+        isSpread = false;
+        viewSingle.classList.add('active');
+        viewSpread.classList.remove('active');
+        renderPage();
+      });
+
+      viewSpread.addEventListener('click', () => {
+        isSpread = true;
+        viewSpread.classList.add('active');
+        viewSingle.classList.remove('active');
+        renderPage();
+      });
+
+      // Fullscreen
+      btnFullscreen.addEventListener('click', () => {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        } else {
+          document.exitFullscreen().catch(() => {});
+        }
+      });
+
+      // Keyboard navigation
+      window.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
+
+        if (e.key === 'ArrowRight' || e.key === 'PageDown') {
+          if (flowDirection === 'RTL') retreat();
+          else advance();
+        } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+          if (flowDirection === 'RTL') advance();
+          else retreat();
+        } else if (e.key === ' ' || e.key === 'Spacebar') {
+          e.preventDefault();
+          stepForward();
+        } else if (e.key === 'Home') {
+          goToPage(0);
+        } else if (e.key === 'End') {
+          const s = SERIES_DATA[currentSeriesKey];
+          goToPage(s.pages.length - 1);
+        } else if (e.key === 'f' || e.key === 'F') {
+          btnFullscreen.click();
+        }
+      });
+
+      // Touch swipe support
+      let touchStartX = 0;
+      readerStage.addEventListener('touchstart', (e) => {
+        touchStartX = e.changedTouches[0].clientX;
+      }, { passive: true });
+
+      readerStage.addEventListener('touchend', (e) => {
+        const touchEndX = e.changedTouches[0].clientX;
+        const diffX = touchEndX - touchStartX;
+        if (Math.abs(diffX) > 40) {
+          if (diffX < 0) {
+            // Swipe left (forward in LTR)
+            if (flowDirection === 'RTL') retreat();
+            else advance();
+          } else {
+            // Swipe right (backward in LTR)
+            if (flowDirection === 'RTL') advance();
+            else retreat();
+          }
+        }
+      }, { passive: true });
+
+      // Init
+      readUrlParams();
+      loadSeries(currentSeriesKey);
+
+    })();
+  </script>
+</body>
+</html>

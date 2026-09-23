@@ -218,6 +218,16 @@
     .viewer-stage.spread .comic-page-img {
       max-width: 48%;
     }
+    .viewer-stage.fit-width {
+      max-width: 960px;
+    }
+    .viewer-stage.fit-width .comic-page-img {
+      max-height: none;
+      width: 100%;
+    }
+    .viewer-stage.fit-width.spread .comic-page-img {
+      max-width: 49%;
+    }
 
     /* CLICK NAVIGATION ZONES */
     .nav-zone {
@@ -349,6 +359,12 @@
       <span style="font-size:0.75rem; color:var(--text-muted); font-family:var(--font-mono); margin-left:8px;">View:</span>
       <button id="viewSingle" type="button" class="mode-btn active">Single</button>
       <button id="viewSpread" type="button" class="mode-btn">Spread</button>
+
+      <span style="font-size:0.75rem; color:var(--text-muted); font-family:var(--font-mono); margin-left:8px;">Fit:</span>
+      <button id="fitHeight" type="button" class="mode-btn active" title="Fit height to viewport">Height</button>
+      <button id="fitWidth" type="button" class="mode-btn" title="Fit width to screen">Width</button>
+
+      <button id="btnSound" type="button" class="mode-btn active" style="margin-left:8px;" title="Toggle page-turn audio">Sound: ON</button>
     </div>
   </div>
 
@@ -445,19 +461,63 @@
       const dirRtl = document.getElementById('dirRtl');
       const viewSingle = document.getElementById('viewSingle');
       const viewSpread = document.getElementById('viewSpread');
+      const fitHeight = document.getElementById('fitHeight');
+      const fitWidth = document.getElementById('fitWidth');
+      const btnSound = document.getElementById('btnSound');
       const btnFullscreen = document.getElementById('btnFullscreen');
       const readerStage = document.getElementById('readerStage');
 
-      // Initialize from URL query / hash
+      // Audio & Sound FX
+      let soundEnabled = true;
+      let audioCtx = null;
+      function playPageTurnSound() {
+        if (!soundEnabled) return;
+        try {
+          if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          }
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(340, audioCtx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(110, audioCtx.currentTime + 0.08);
+          gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.08);
+        } catch(e) {}
+      }
+
+      // Initialize from URL query / hash / localStorage
       function readUrlParams() {
         const params = new URLSearchParams(window.location.search);
         const seriesParam = params.get('series') || params.get('comic');
         if (seriesParam && SERIES_DATA[seriesParam]) {
           currentSeriesKey = seriesParam;
+        } else {
+          try {
+            const lastSeries = localStorage.getItem('nsp_reader_last_series');
+            if (lastSeries && SERIES_DATA[lastSeries]) {
+              currentSeriesKey = lastSeries;
+            }
+          } catch(e) {}
         }
+
         const pageParam = parseInt(params.get('page'), 10);
         if (!isNaN(pageParam) && pageParam >= 1) {
           currentIndex = pageParam - 1;
+        } else {
+          try {
+            const savedP = localStorage.getItem('nsp_reader_page_' + currentSeriesKey);
+            if (savedP !== null) {
+              const p = parseInt(savedP, 10);
+              if (!isNaN(p) && p >= 0 && p < SERIES_DATA[currentSeriesKey].pages.length) {
+                currentIndex = p;
+              }
+            }
+          } catch(e) {}
         }
       }
 
@@ -466,9 +526,14 @@
         url.searchParams.set('series', currentSeriesKey);
         url.searchParams.set('page', currentIndex + 1);
         window.history.replaceState({}, '', url.toString());
+
+        try {
+          localStorage.setItem('nsp_reader_last_series', currentSeriesKey);
+          localStorage.setItem('nsp_reader_page_' + currentSeriesKey, String(currentIndex));
+        } catch(e) {}
       }
 
-      function loadSeries(key) {
+      function loadSeries(key, preservePage = false) {
         if (!SERIES_DATA[key]) return;
         currentSeriesKey = key;
         seriesSelect.value = key;
@@ -501,6 +566,24 @@
           thumbTray.appendChild(div);
         });
 
+        if (!preservePage) {
+          try {
+            const savedP = localStorage.getItem('nsp_reader_page_' + currentSeriesKey);
+            if (savedP !== null) {
+              const p = parseInt(savedP, 10);
+              if (!isNaN(p) && p >= 0 && p < series.pages.length) {
+                currentIndex = p;
+              } else {
+                currentIndex = 0;
+              }
+            } else {
+              currentIndex = 0;
+            }
+          } catch(e) {
+            currentIndex = 0;
+          }
+        }
+
         if (currentIndex >= series.pages.length) {
           currentIndex = 0;
         }
@@ -514,6 +597,18 @@
         } else {
           dirLtr.classList.add('active');
           dirRtl.classList.remove('active');
+        }
+      }
+
+      function setFitMode(mode) {
+        if (mode === 'width') {
+          viewerStage.classList.add('fit-width');
+          fitWidth.classList.add('active');
+          fitHeight.classList.remove('active');
+        } else {
+          viewerStage.classList.remove('fit-width');
+          fitHeight.classList.add('active');
+          fitWidth.classList.remove('active');
         }
       }
 
@@ -580,6 +675,7 @@
         const step = (isSpread && currentIndex > 0) ? 2 : 1;
         if (currentIndex + step < series.pages.length) {
           currentIndex += step;
+          playPageTurnSound();
           renderPage();
         }
       }
@@ -588,9 +684,11 @@
         const step = (isSpread && currentIndex > 1) ? 2 : 1;
         if (currentIndex - step >= 0) {
           currentIndex -= step;
+          playPageTurnSound();
           renderPage();
         } else if (currentIndex > 0) {
           currentIndex = 0;
+          playPageTurnSound();
           renderPage();
         }
       }
@@ -614,20 +712,29 @@
 
       function goToPage(idx) {
         const series = SERIES_DATA[currentSeriesKey];
-        if (idx >= 0 && idx < series.pages.length) {
+        if (idx >= 0 && idx < series.pages.length && idx !== currentIndex) {
           currentIndex = idx;
+          playPageTurnSound();
           renderPage();
         }
       }
 
       // Listeners
       seriesSelect.addEventListener('change', (e) => {
-        currentIndex = 0;
-        loadSeries(e.target.value);
+        loadSeries(e.target.value, false);
       });
 
       pageSelect.addEventListener('change', (e) => {
         goToPage(parseInt(e.target.value, 10));
+      });
+
+      fitHeight.addEventListener('click', () => setFitMode('height'));
+      fitWidth.addEventListener('click', () => setFitMode('width'));
+
+      btnSound.addEventListener('click', () => {
+        soundEnabled = !soundEnabled;
+        btnSound.textContent = soundEnabled ? 'Sound: ON' : 'Sound: OFF';
+        btnSound.classList.toggle('active', soundEnabled);
       });
 
       btnPrev.addEventListener('click', stepBackward);
@@ -730,7 +837,7 @@
 
       // Init
       readUrlParams();
-      loadSeries(currentSeriesKey);
+      loadSeries(currentSeriesKey, true);
 
     })();
   </script>

@@ -221,6 +221,75 @@
       border-color: var(--gold);
       box-shadow: 0 0 10px var(--gold-glow);
     }
+
+    /* SPIRITS MODAL */
+    .modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(4, 7, 14, 0.88);
+      backdrop-filter: blur(12px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal.active { display: flex; }
+    .modal-card-box {
+      background: #0d121d;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      max-width: 880px;
+      width: 100%;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 24px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
+      position: relative;
+    }
+    .modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-weight: 800;
+    }
+    .spirits-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 18px;
+      margin-top: 18px;
+    }
+    .spirit-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(245, 158, 11, 0.25);
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: all 0.2s;
+    }
+    .spirit-card:hover {
+      border-color: var(--gold);
+      box-shadow: 0 0 16px var(--gold-glow);
+      transform: translateY(-3px);
+    }
+    .spirit-card img {
+      width: 100%;
+      aspect-ratio: 2.5 / 3.5;
+      object-fit: cover;
+      border-radius: 6px;
+    }
   </style>
 </head>
 <body>
@@ -232,6 +301,7 @@
     </div>
     <div class="toolbar-actions">
       <button class="btn" onclick="toggleFullscreen()" aria-label="Toggle Fullscreen">&#9210; Fullscreen</button>
+      <button class="btn" style="border-color:var(--gold); color:var(--gold);" onclick="openSpiritsModal()">✦ Featured Spirits (8 Cards)</button>
       <a href="/comics/reader/?series=duel_zexal" class="btn">Comics Reader &rarr;</a>
       <a href="/tcg/" class="btn btn-tcg">
         TCG Holo Binder (71 Cards) &rarr;
@@ -266,6 +336,22 @@
   <footer id="thumb-tray">
     <!-- Populated dynamically via JS -->
   </footer>
+
+  <!-- FEATURED SPIRITS MODAL -->
+  <div class="modal" id="spirits-modal" onclick="closeSpiritsModal(event)">
+    <div class="modal-card-box" onclick="event.stopPropagation()">
+      <button class="modal-close" onclick="closeSpiritsModal()">✕</button>
+      <div>
+        <span style="font-family:monospace; color:var(--gold); font-size:0.8rem; letter-spacing:1px;">DUEL SPIRITS DATABASE // TANKOBON VOL. 1</span>
+        <h2 style="font-size:1.5rem; color:#fff; margin:4px 0;">Canonical Spirits Featured in Chapter 1</h2>
+        <p style="color:var(--text-muted); font-size:0.85rem;">Official playable cards from the NorthStar Sovereign TCG appearing in this volume.</p>
+      </div>
+
+      <div class="spirits-grid" id="spirits-grid">
+        <!-- Rendered dynamically via JS -->
+      </div>
+    </div>
+  </div>
 
   <script>
     const totalPages = 24;
@@ -431,6 +517,60 @@
         toggleFullscreen();
       }
     });
+
+    const featuredSpirits = [
+      { code: "NSP-EN037", title: "Lucifer The Morning Star", role: "Vector's Primordial Spirit (Climax Summon)", rarity: "Ghost Rare 5★", path: "/tcg/assets/cards/NSP-EN037.webp" },
+      { code: "NSP-EN011", title: "DJ Snake The Sub Bass Pharaoh", role: "Astral Resonance Harmonic Overdrive", rarity: "Prismatic Secret 5★", path: "/tcg/assets/cards/NSP-EN011.webp" },
+      { code: "NSP-EN054", title: "The Millennium Puzzle Vessel", role: "Yuto's Relic Conduit", rarity: "Collector's Rare 5★", path: "/tcg/assets/cards/NSP-EN054.webp" },
+      { code: "NSP-EN033", title: "Leviathan The Abyssal Ouroboros", role: "Subterranean Temporal Guardian", rarity: "Ghost Rare 5★", path: "/tcg/assets/cards/NSP-EN033.webp" },
+      { code: "NSP-EN029", title: "Jimi Hendrix Voodoo Child", role: "High-Amplitude Electric Shaman", rarity: "Secret Rare 5★", path: "/tcg/assets/cards/NSP-EN029.webp" },
+      { code: "NSP-EN053", title: "The Millennium Eye Gaze", role: "Vector's Mind-Reading Artifact", rarity: "Collector's Rare 5★", path: "/tcg/assets/cards/NSP-EN053.webp" },
+      { code: "NSP-EN002", title: "Aleister Crowley The Great Beast", role: "Forbidden Astral Transmutation", rarity: "Ghost Rare 5★", path: "/tcg/assets/cards/NSP-EN002.webp" },
+      { code: "NSP-EN049", title: "Rezz The Spiral Hypnotist", role: "Hypnotic Bass Frequency Manifest", rarity: "Prismatic Secret 5★", path: "/tcg/assets/cards/NSP-EN049.webp" }
+    ];
+
+    function openSpiritsModal() {
+      const grid = document.getElementById('spirits-grid');
+      grid.innerHTML = '';
+      featuredSpirits.forEach(s => {
+        const div = document.createElement('div');
+        div.className = 'spirit-card';
+        div.innerHTML = `
+          <img src="${s.path}" alt="${s.title}" loading="lazy">
+          <div>
+            <div style="font-size:0.7rem; color:var(--cyan); font-family:monospace;">${s.code} • ${s.rarity}</div>
+            <div style="font-weight:700; color:#fff; font-size:0.9rem; margin:2px 0;">${s.title}</div>
+            <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.4;">${s.role}</div>
+          </div>
+          <button class="btn" style="border-color:var(--cyan); color:var(--cyan); justify-content:center; padding:6px; font-size:0.75rem; margin-top:4px;" onclick="addSpiritCardToDeck('${s.code}')">+ Add to TCG Deck</button>
+        `;
+        grid.appendChild(div);
+      });
+      playPageTurnSound();
+      document.getElementById('spirits-modal').classList.add('active');
+    }
+
+    function closeSpiritsModal() {
+      document.getElementById('spirits-modal').classList.remove('active');
+    }
+
+    function addSpiritCardToDeck(code) {
+      try {
+        let deck = [];
+        const saved = localStorage.getItem('nsp_sovereign_deck');
+        if (saved) deck = JSON.parse(saved);
+        if (deck.length >= 60) {
+          alert('Deck is at maximum capacity (60 cards)!');
+          return;
+        }
+        deck.push(code);
+        localStorage.setItem('nsp_sovereign_deck', JSON.stringify(deck));
+        playPageTurnSound();
+        alert(`✦ Added card ${code} to your active Sovereign TCG Deck! (Total: ${deck.length} cards)`);
+      } catch(e) {
+        alert('Could not update deck.');
+      }
+    }
 
     restoreSavedPage();
     renderThumbs();

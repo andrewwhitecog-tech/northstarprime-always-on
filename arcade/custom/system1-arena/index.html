@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>System 1 Neural AI & Tactical Arena — NorthStar Prime Game R&D</title>
+  <style>
+    :root {
+      --bg-dark: #07090e;
+      --panel-bg: rgba(13, 17, 26, 0.88);
+      --border-gold: #f59e0b;
+      --border-subtle: rgba(245, 158, 11, 0.25);
+      --accent-cyan: #06b6d4;
+      --accent-pink: #ec4899;
+      --accent-emerald: #10b981;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --crt-glow: rgba(16, 185, 129, 0.4);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", monospace;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Navigation & Status Bar */
+    header {
+      height: 48px;
+      background: linear-gradient(180deg, rgba(20, 24, 36, 0.95) 0%, rgba(13, 17, 26, 0.9) 100%);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      z-index: 50;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--border-gold);
+    }
+
+    .brand span {
+      background: #1e293b;
+      color: #38bdf8;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-header {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      font-size: 12px;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .btn-header:hover {
+      border-color: var(--border-gold);
+      background: rgba(245, 158, 11, 0.15);
+      color: #fff;
+    }
+
+    .btn-header.active {
+      background: var(--border-gold);
+      color: #000;
+      font-weight: 600;
+    }
+
+    /* Main Game Layout */
+    #main-container {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      height: calc(100vh - 48px);
+      display: flex;
+    }
+
+    #gameCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: crosshair;
+    }
+
+    /* In-Game HUD Overlays */
+    .hud-panel {
+      position: absolute;
+      background: var(--panel-bg);
+      border: 1px solid var(--border-subtle);
+      backdrop-filter: blur(8px);
+      border-radius: 6px;
+      padding: 12px;
+      pointer-events: auto;
+      z-index: 20;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    }
+
+    /* Top Left: System 1 AI Diagnostics */
+    #hud-ai-diagnostics {
+      top: 14px;
+      left: 14px;
+      width: 320px;
+    }
+
+    .hud-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--border-gold);
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(245, 158, 11, 0.2);
+      padding-bottom: 4px;
+    }
+
+    .ai-agent-item {
+      background: rgba(15, 23, 42, 0.6);
+      border-left: 3px solid var(--accent-emerald);
+      padding: 6px 8px;
+      margin-bottom: 6px;
+      border-radius: 0 4px 4px 0;
+      font-size: 12px;
+    }
+
+    .ai-agent-item.flank { border-color: var(--accent-cyan); }
+    .ai-agent-item.suppress { border-color: var(--border-gold); }
+    .ai-agent-item.charge { border-color: var(--accent-pink); }
+    .ai-agent-item.retreat { border-color: #ef4444; }
+
+    .agent-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 3px;
+      font-weight: 600;
+    }
+
+    .agent-sub {
+      display: flex;
+      justify-content: space-between;
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+
+    .badge-latency {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 10px;
+    }
+
+    /* Top Right: AI Director Pacing Monitor */
+    #hud-director {
+      top: 14px;
+      right: 14px;
+      width: 290px;
+    }
+
+    .director-gauge-container {
+      margin: 8px 0;
+    }
+
+    .gauge-bar-bg {
+      width: 100%;
+      height: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 5px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .gauge-bar-fill {
+      height: 100%;
+      width: 20%;
+      background: linear-gradient(90deg, #10b981 0%, #f59e0b 60%, #ef4444 100%);
+      transition: width 0.3s ease;
+    }
+
+    .director-stats-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      margin-top: 6px;
+    }
+
+    #directorWaveformCanvas {
+      width: 100%;
+      height: 48px;
+      background: rgba(10, 15, 25, 0.8);
+      border-radius: 4px;
+      margin-top: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    /* Bottom Left: Decoupled EventBus Log */
+    #hud-events {
+      bottom: 14px;
+      left: 14px;
+      width: 320px;
+      max-height: 160px;
+      overflow: hidden;
+    }
+
+    .event-line {
+      font-size: 10px;
+      font-family: monospace;
+      color: #94a3b8;
+      padding: 2px 0;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      animation: fadeIn 0.15s ease-out;
+    }
+
+    .event-line span.hl {
+      color: var(--accent-cyan);
+      font-weight: 600;
+    }
+
+    /* Bottom Center: Player Combat Status */
+    #hud-player-status {
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      background: var(--panel-bg);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 10px 24px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    }
+
+    .player-bars {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .hp-container {
+      width: 180px;
+    }
+
+    .hp-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #34d399;
+      margin-bottom: 2px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .hp-bar-bg {
+      width: 100%;
+      height: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .hp-bar-fill {
+      height: 100%;
+      width: 100%;
+      background: #10b981;
+      transition: width 0.15s ease;
+    }
+
+    .ammo-pips {
+      display: flex;
+      gap: 3px;
+    }
+
+    .pip {
+      width: 6px;
+      height: 14px;
+      background: var(--border-gold);
+      border-radius: 2px;
+    }
+
+    .pip.spent {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .dash-indicator {
+      font-size: 11px;
+      color: var(--accent-cyan);
+      font-weight: 600;
+    }
+
+    /* Diegetic Matrix Terminal Overlay */
+    #terminal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(5, 12, 10, 0.94);
+      z-index: 100;
+      display: none;
+      flex-direction: column;
+      padding: 30px;
+      font-family: "Courier New", Courier, monospace;
+      color: #4ade80;
+      box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.9);
+    }
+
+    #terminal-overlay::before {
+      content: " ";
+      display: block;
+      position: absolute;
+      top: 0; left: 0; bottom: 0; right: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+      z-index: 101;
+      background-size: 100% 3px, 3px 100%;
+      pointer-events: none;
+    }
+
+    .terminal-header {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid #16a34a;
+      padding-bottom: 10px;
+      margin-bottom: 15px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .terminal-output {
+      flex: 1;
+      overflow-y: auto;
+      font-size: 13px;
+      line-height: 1.5;
+      padding-bottom: 10px;
+    }
+
+    .terminal-input-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-top: 1px solid rgba(22, 163, 74, 0.4);
+      padding-top: 10px;
+    }
+
+    .terminal-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #86efac;
+      font-family: inherit;
+      font-size: 14px;
+    }
+
+    /* SKANNERZ Barcode Scanner Modal */
+    #scanner-modal {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 480px;
+      background: rgba(15, 20, 32, 0.96);
+      border: 1px solid var(--border-gold);
+      border-radius: 8px;
+      padding: 24px;
+      z-index: 90;
+      display: none;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+    }
+
+    .scanner-ecg-canvas {
+      width: 100%;
+      height: 90px;
+      background: #020617;
+      border: 1px solid rgba(6, 182, 212, 0.4);
+      border-radius: 4px;
+      margin: 12px 0;
+    }
+
+    .scanner-controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .scanner-input {
+      flex: 1;
+      background: #1e293b;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 13px;
+      outline: none;
+    }
+
+    .scanner-input:focus {
+      border-color: var(--border-gold);
+    }
+
+    .btn-scan {
+      background: var(--border-gold);
+      color: #000;
+      font-weight: 700;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .btn-spawn-scanned {
+      width: 100%;
+      background: #06b6d4;
+      color: #000;
+      font-weight: 700;
+      border: none;
+      padding: 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-3px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <header>
+    <div class="brand">
+      NORTHSTAR PRIME <span>GAME R&amp;D</span>
+      <span style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border-color: rgba(245, 158, 11, 0.3);">
+        SYSTEM 1 NEURAL TACTICAL ARENA
+      </span>
+    </div>
+
+    <div class="header-controls">
+      <button class="btn-header" id="btnDebugVision" title="Toggle AI decision vectors and raycasts">
+        👁️ Debug Vectors [D]
+      </button>
+      <button class="btn-header" id="btnBarcodeScanner" title="Open SKANNERZ Barcode Synthesizer">
+        🏷️ Barcode Scanner [B]
+      </button>
+      <button class="btn-header" id="btnTerminal" title="Open Matrix Hacking Terminal">
+        💻 Terminal [`]
+      </button>
+      <button class="btn-header" id="btnAudioMute">
+        🔊 Audio: ON [M]
+      </button>
+      <button class="btn-header active" id="btnRestart">
+        🔄 Reset Arena
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Game Canvas Area -->
+  <div id="main-container">
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Top Left HUD: System 1 AI Real-Time Diagnostics -->
+    <div class="hud-panel" id="hud-ai-diagnostics">
+      <div class="hud-title">
+        <span>System 1 Neural Agents</span>
+        <span class="badge-latency" id="hudAvgLatency">0.18 ms</span>
+      </div>
+      <div id="aiAgentsList">
+        <!-- Live populated by render loop -->
+      </div>
+    </div>
+
+    <!-- Top Right HUD: AI Director Pacing Monitor -->
+    <div class="hud-panel" id="hud-director">
+      <div class="hud-title">
+        <span>AI Director Pacing</span>
+        <span id="hudDirectorPhase" style="color: #38bdf8; font-weight: 700;">BUILD_UP</span>
+      </div>
+      <div class="director-gauge-container">
+        <div class="gauge-bar-bg">
+          <div class="gauge-bar-fill" id="directorTensionFill"></div>
+        </div>
+      </div>
+      <div class="director-stats-row">
+        <span>Tension: <strong id="hudTensionVal">24%</strong></span>
+        <span>Wave: <strong id="hudWaveVal">1</strong></span>
+        <span>Kills: <strong id="hudKillsVal">0</strong></span>
+      </div>
+      <canvas id="directorWaveformCanvas"></canvas>
+    </div>
+
+    <!-- Bottom Left HUD: Decoupled EventBus Log -->
+    <div class="hud-panel" id="hud-events">
+      <div class="hud-title">
+        <span>Decoupled EventBus Feed</span>
+        <span style="font-size: 10px; color: #64748b;">@fullstackpeter pub/sub</span>
+      </div>
+      <div id="eventLogFeed">
+        <!-- Live event stream -->
+      </div>
+    </div>
+
+    <!-- Bottom Center HUD: Player Status -->
+    <div id="hud-player-status">
+      <div class="player-bars">
+        <div class="hp-container">
+          <div class="hp-label">
+            <span>SHIELD INTEGRITY</span>
+            <span id="playerHpText">100 / 100</span>
+          </div>
+          <div class="hp-bar-bg">
+            <div class="hp-bar-fill" id="playerHpFill"></div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+          <div class="ammo-pips" id="ammoPipsContainer">
+            <!-- 8 ammo pips -->
+          </div>
+          <div class="dash-indicator" id="dashStatusText">DASH READY [SPACE]</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Diegetic Matrix Hacking Terminal Overlay -->
+    <div id="terminal-overlay">
+      <div class="terminal-header">
+        <span>NORTHSTAR PRIME // ENTER THE MATRIX DOS OPERATOR</span>
+        <span style="font-size: 11px; color: #86efac;">PRESS [`] OR TYPE 'EXIT' TO CLOSE</span>
+      </div>
+      <div class="terminal-output" id="terminalOutput"></div>
+      <div class="terminal-input-row">
+        <span style="color: #22c55e;">OPERATOR@NODE:~$</span>
+        <input type="text" class="terminal-input" id="terminalInput" autocomplete="off" spellcheck="false" autofocus>
+      </div>
+    </div>
+
+    <!-- SKANNERZ Barcode Scanner Modal -->
+    <div id="scanner-modal">
+      <div class="hud-title" style="margin-bottom: 12px;">
+        <span>SKANNERZ BARCODE ENTITY SYNTHESIZER</span>
+        <span style="cursor: pointer; color: #ef4444;" id="btnCloseScanner">✕ CLOSE</span>
+      </div>
+      <p style="font-size: 12px; color: #94a3b8; margin-bottom: 12px;">
+        Type any UPC barcode, serial number, or phrase. The entropy engine calculates vitality, ECG heartbeat, and procedural combat attributes.
+      </p>
+
+      <div class="scanner-controls">
+        <input type="text" class="scanner-input" id="barcodeInput" placeholder="e.g. 012345678905 or VOID_TITAN" value="792BAEE5-NSP">
+        <button class="btn-scan" id="btnTriggerScan">SCAN [ENTER]</button>
+      </div>
+
+      <canvas class="scanner-ecg-canvas" id="scannerEcgCanvas"></canvas>
+
+      <div id="scannerResultDetails" style="font-size: 12px; color: #cbd5e1; line-height: 1.6; background: rgba(0,0,0,0.4); padding: 10px; border-radius: 4px;">
+        <em>Ready for scan input...</em>
+      </div>
+
+      <button class="btn-spawn-scanned" id="btnSpawnScannedBot" style="display: none;">
+        ⚡ SPAWN SYNTHESIZED ENTITY INTO ARENA
+      </button>
+    </div>
+  </div>
+
+  <!-- Engine Scripts -->
+  <script src="src/EventBus.js"></script>
+  <script src="src/System1NeuralAgent.js"></script>
+  <script src="src/AIDirector.js"></script>
+  <script src="src/BarcodeEntropyScanner.js"></script>
+  <script src="src/AudioSynthesizer.js"></script>
+  <script src="src/DiegeticTerminal.js"></script>
+
+  <!-- Master Game Loop & Integration -->
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      // 1. Initialize Core Systems
+      const eventBus = new EventBus();
+      const audio = new AudioSynthesizer(eventBus);
+      const barcodeScanner = new BarcodeEntropyScanner(eventBus);
+
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+
+      // Resize canvas to match display window
+      function resizeCanvas() {
+        canvas.width = canvas.parentElement.clientWidth;
+        canvas.height = canvas.parentElement.clientHeight;
+      }
+      window.addEventListener('resize', resizeCanvas);
+      resizeCanvas();
+
+      // Arena bounds and Cover Obstacles
+      const arenaBounds = {
+        x: 40,
+        y: 40,
+        width: canvas.width - 80,
+        height: canvas.height - 80
+      };
+
+      // Procedural cover geometry pillars
+      function generateCoverObstacles() {
+        const obstacles = [];
+        const nodes = [];
+        const cols = 3;
+        const rows = 2;
+        const stepX = arenaBounds.width / (cols + 1);
+        const stepY = arenaBounds.height / (rows + 1);
+
+        for (let c = 1; c <= cols; c++) {
+          for (let r = 1; r <= rows; r++) {
+            const ox = arenaBounds.x + c * stepX - 45 + (Math.random() - 0.5) * 40;
+            const oy = arenaBounds.y + r * stepY - 35 + (Math.random() - 0.5) * 40;
+            const ow = 70 + Math.random() * 20;
+            const oh = 70 + Math.random() * 20;
+
+            obstacles.push({ x: ox, y: oy, width: ow, height: oh });
+
+            // 4 cover standing points around each pillar
+            nodes.push({ x: ox - 25, y: oy + oh / 2 });
+            nodes.push({ x: ox + ow + 25, y: oy + oh / 2 });
+            nodes.push({ x: ox + ow / 2, y: oy - 25 });
+            nodes.push({ x: ox + ow / 2, y: oy + oh + 25 });
+          }
+        }
+        return { obstacles, nodes };
+      }
+
+      let { obstacles, nodes: coverNodes } = generateCoverObstacles();
+
+      // Game State
+      const gameState = {
+        arenaBounds,
+        obstacles,
+        coverNodes,
+        player: {
+          x: canvas.width / 2,
+          y: canvas.height / 2,
+          vx: 0,
+          vy: 0,
+          radius: 18,
+          rotation: 0,
+          maxHealth: 100,
+          health: 100,
+          ammo: 8,
+          maxAmmo: 8,
+          isReloading: false,
+          reloadTimer: 0,
+          reloadDuration: 1.1,
+          dashCooldown: 1.2,
+          dashTimer: 0,
+          isDashing: false,
+          dashDuration: 0.18,
+          dashActiveTime: 0,
+          isGodmode: false,
+          isAlive: true
+        },
+        agents: [],
+        bullets: [],
+        particles: [],
+        pickups: [],
+        debugVision: true
+      };
+
+      const director = new AIDirector(eventBus, arenaBounds, coverNodes);
+      const terminal = new DiegeticTerminal(eventBus, gameState, director, barcodeScanner);
+
+      // Spawn initial 2 System 1 agents
+      director.spawnReinforcement(gameState);
+      director.spawnReinforcement(gameState);
+
+      // 2. Input Handling
+      const keys = {};
+      const mouse = { x: canvas.width / 2, y: canvas.height / 2, isDown: false };
+
+      window.addEventListener('keydown', (e) => {
+        // First user gesture triggers Web Audio Context
+        audio.initAudioContext();
+
+        if (e.key === '`' || e.key === '~') {
+          e.preventDefault();
+          terminal.toggle();
+          return;
+        }
+
+        if (terminal.isOpen) {
+          if (e.key === 'Enter') {
+            const input = document.getElementById('terminalInput');
+            terminal.execute(input.value);
+            input.value = '';
+          }
+          return;
+        }
+
+        keys[e.key.toLowerCase()] = true;
+
+        if (e.key.toLowerCase() === 'd') {
+          gameState.debugVision = !gameState.debugVision;
+          document.getElementById('btnDebugVision').classList.toggle('active', gameState.debugVision);
+        }
+        if (e.key.toLowerCase() === 'b') {
+          toggleScannerModal();
+        }
+        if (e.key.toLowerCase() === 'm') {
+          const muted = audio.toggleMute();
+          document.getElementById('btnAudioMute').innerText = muted ? '🔇 Audio: OFF [M]' : '🔊 Audio: ON [M]';
+        }
+        if (e.key.toLowerCase() === 'r' && !gameState.player.isReloading && gameState.player.ammo < gameState.player.maxAmmo) {
+          gameState.player.isReloading = true;
+          gameState.player.reloadTimer = 0;
+        }
+        if (e.code === 'Space' && gameState.player.dashTimer <= 0 && !gameState.player.isDashing) {
+          triggerPlayerDash();
+        }
+      });
+
+      window.addEventListener('keyup', (e) => {
+        keys[e.key.toLowerCase()] = false;
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        mouse.x = e.clientX - rect.left;
+        mouse.y = e.clientY - rect.top;
+      });
+
+      window.addEventListener('mousedown', (e) => {
+        if (terminal.isOpen) return;
+        audio.initAudioContext();
+        if (e.button === 0) mouse.isDown = true;
+      });
+
+      window.addEventListener('mouseup', (e) => {
+        if (e.button === 0) mouse.isDown = false;
+      });
+
+      // Header Buttons
+      document.getElementById('btnDebugVision').addEventListener('click', () => {
+        gameState.debugVision = !gameState.debugVision;
+        document.getElementById('btnDebugVision').classList.toggle('active', gameState.debugVision);
+      });
+      document.getElementById('btnBarcodeScanner').addEventListener('click', toggleScannerModal);
+      document.getElementById('btnCloseScanner').addEventListener('click', toggleScannerModal);
+      document.getElementById('btnTerminal').addEventListener('click', () => terminal.toggle());
+      document.getElementById('btnAudioMute').addEventListener('click', () => {
+        audio.initAudioContext();
+        const muted = audio.toggleMute();
+        document.getElementById('btnAudioMute').innerText = muted ? '🔇 Audio: OFF [M]' : '🔊 Audio: ON [M]';
+      });
+      document.getElementById('btnRestart').addEventListener('click', resetArena);
+
+      function resetArena() {
+        gameState.player.health = 100;
+        gameState.player.ammo = 8;
+        gameState.player.isAlive = true;
+        gameState.agents = [];
+        gameState.bullets = [];
+        gameState.particles = [];
+        director.phase = 'BUILD_UP';
+        director.tension = 0.2;
+        director.currentWave = 1;
+        director.totalKills = 0;
+        director.spawnReinforcement(gameState);
+        director.spawnReinforcement(gameState);
+      }
+
+      function triggerPlayerDash() {
+        const p = gameState.player;
+        p.isDashing = true;
+        p.dashActiveTime = 0;
+        p.dashTimer = p.dashCooldown;
+
+        // Dash vector towards movement direction or aim
+        let dx = (keys['d'] ? 1 : 0) - (keys['a'] ? 1 : 0);
+        let dy = (keys['s'] ? 1 : 0) - (keys['w'] ? 1 : 0);
+        if (dx === 0 && dy === 0) {
+          dx = Math.cos(p.rotation);
+          dy = Math.sin(p.rotation);
+        }
+        const len = Math.hypot(dx, dy) || 1;
+        p.vx = (dx / len) * 520;
+        p.vy = (dy / len) * 520;
+
+        eventBus.publish('PLAYER_DASH', { x: p.x, y: p.y });
+
+        // Spawn afterimage ghost particles
+        for (let i = 0; i < 6; i++) {
+          gameState.particles.push({
+            x: p.x + (Math.random() - 0.5) * 10,
+            y: p.y + (Math.random() - 0.5) * 10,
+            vx: -p.vx * 0.1,
+            vy: -p.vy * 0.1,
+            radius: p.radius,
+            color: 'rgba(6, 182, 212, 0.4)',
+            lifespan: 0.25,
+            age: 0
+          });
+        }
+      }
+
+      // EventBus listener to update HUD feed
+      const eventLogFeed = document.getElementById('eventLogFeed');
+      eventBus.subscribe('*', (eventName, payload) => {
+        const line = document.createElement('div');
+        line.className = 'event-line';
+        line.innerHTML = `<span class="hl">${eventName}</span>: ${JSON.stringify(payload).slice(0, 48)}...`;
+        eventLogFeed.prepend(line);
+        if (eventLogFeed.children.length > 8) {
+          eventLogFeed.removeChild(eventLogFeed.lastChild);
+        }
+      });
+
+      // Terminal DOM integration
+      const terminalOverlay = document.getElementById('terminal-overlay');
+      const terminalOutput = document.getElementById('terminalOutput');
+      const terminalInput = document.getElementById('terminalInput');
+
+      eventBus.subscribe('TERMINAL_TOGGLED', (payload) => {
+        terminalOverlay.style.display = payload.isOpen ? 'flex' : 'none';
+        if (payload.isOpen) {
+          terminalInput.focus();
+          renderTerminalLines();
+        }
+      });
+
+      function renderTerminalLines() {
+        terminalOutput.innerHTML = terminal.outputLines.map(l => `<div>${l}</div>`).join('');
+        terminalOutput.scrollTop = terminalOutput.scrollHeight;
+      }
+
+      const origExecute = terminal.execute.bind(terminal);
+      terminal.execute = (cmd) => {
+        origExecute(cmd);
+        renderTerminalLines();
+      };
+
+      // Barcode Scanner Modal UI
+      let lastScannedEntity = null;
+      function toggleScannerModal() {
+        const modal = document.getElementById('scanner-modal');
+        const isVisible = modal.style.display === 'block';
+        modal.style.display = isVisible ? 'none' : 'block';
+        if (!isVisible) {
+          document.getElementById('barcodeInput').focus();
+          runScannerUI();
+        }
+      }
+
+      document.getElementById('btnTriggerScan').addEventListener('click', runScannerUI);
+      document.getElementById('barcodeInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') runScannerUI();
+      });
+
+      function runScannerUI() {
+        const val = document.getElementById('barcodeInput').value;
+        const entity = barcodeScanner.scanBarcode(val);
+        if (!entity) return;
+
+        lastScannedEntity = entity;
+        const details = document.getElementById('scannerResultDetails');
+        details.innerHTML = `
+          <strong>TARGET IDENTIFIED:</strong> ${entity.archetype} <span style="color: ${entity.visuals.primaryColor}; font-weight: bold;">[${entity.rarity}]</span><br>
+          <strong>ENTROPY HASH:</strong> ${entity.hashHex} | <strong>PULSE VITALITY:</strong> ${(entity.pulseStrength * 100).toFixed(0)}%<br>
+          <strong>COMBAT STATS:</strong> Speed ${entity.stats.speed}px/s | HP ${entity.stats.maxHealth} | Damage ${entity.stats.damage}<br>
+          <strong>STATUS:</strong> ${entity.isFlatline ? "⚠️ FLATLINE / SCRAP" : "✅ LIVING BIO-CYBER SIGNATURE"}
+        `;
+
+        drawEcgWaveform(entity.ecgWaveform, entity.visuals.primaryColor);
+
+        const spawnBtn = document.getElementById('btnSpawnScannedBot');
+        spawnBtn.style.display = 'block';
+        spawnBtn.style.background = entity.visuals.primaryColor;
+      }
+
+      document.getElementById('btnSpawnScannedBot').addEventListener('click', () => {
+        if (!lastScannedEntity) return;
+        const id = `SCAN_${lastScannedEntity.barcode.slice(0, 4)}_${Math.floor(Math.random() * 90)}`;
+        const agent = new System1NeuralAgent(id, canvas.width / 2 + 180, canvas.height / 2, lastScannedEntity.archetype, eventBus);
+        agent.maxSpeed = lastScannedEntity.stats.speed;
+        agent.maxHealth = lastScannedEntity.stats.maxHealth;
+        agent.health = agent.maxHealth;
+        agent.color = lastScannedEntity.visuals.primaryColor;
+        gameState.agents.push(agent);
+        toggleScannerModal();
+      });
+
+      function drawEcgWaveform(points, color = '#06b6d4') {
+        const ecgCanvas = document.getElementById('scannerEcgCanvas');
+        const ectx = ecgCanvas.getContext('2d');
+        ecgCanvas.width = ecgCanvas.clientWidth;
+        ecgCanvas.height = ecgCanvas.clientHeight;
+
+        ectx.fillStyle = '#020617';
+        ectx.fillRect(0, 0, ecgCanvas.width, ecgCanvas.height);
+
+        // Grid lines
+        ectx.strokeStyle = 'rgba(6, 182, 212, 0.15)';
+        ectx.lineWidth = 1;
+        for (let x = 0; x < ecgCanvas.width; x += 20) {
+          ectx.beginPath(); ectx.moveTo(x, 0); ectx.lineTo(x, ecgCanvas.height); ectx.stroke();
+        }
+        for (let y = 0; y < ecgCanvas.height; y += 20) {
+          ectx.beginPath(); ectx.moveTo(0, y); ectx.lineTo(ecgCanvas.width, y); ectx.stroke();
+        }
+
+        // Trace
+        ectx.strokeStyle = color;
+        ectx.lineWidth = 2;
+        ectx.beginPath();
+        const stepX = ecgCanvas.width / (points.length - 1);
+        for (let i = 0; i < points.length; i++) {
+          const px = i * stepX;
+          const py = (1.0 - points[i]) * ecgCanvas.height;
+          if (i === 0) ectx.moveTo(px, py);
+          else ectx.lineTo(px, py);
+        }
+        ectx.stroke();
+      }
+
+      // Director Rolling Waveform Mini-Canvas
+      const directorCanvas = document.getElementById('directorWaveformCanvas');
+      const dctx = directorCanvas.getContext('2d');
+      const directorTensionHistory = [];
+
+      // 3. MASTER GAME LOOP (60 FPS)
+      let lastTime = performance.now();
+      let playerShootTimer = 0;
+
+      function gameLoop(now) {
+        requestAnimationFrame(gameLoop);
+
+        const dt = Math.min((now - lastTime) / 1000, 0.1);
+        lastTime = now;
+
+        // Player update
+        const p = gameState.player;
+        if (p.isAlive) {
+          // Dash cooldown
+          if (p.dashTimer > 0) p.dashTimer -= dt;
+          if (p.isDashing) {
+            p.dashActiveTime += dt;
+            if (p.dashActiveTime >= p.dashDuration) {
+              p.isDashing = false;
+            }
+          } else {
+            // Movement keys
+            let mx = (keys['d'] ? 1 : 0) - (keys['a'] ? 1 : 0);
+            let my = (keys['s'] ? 1 : 0) - (keys['w'] ? 1 : 0);
+            const len = Math.hypot(mx, my);
+            const speed = 230;
+
+            if (len > 0) {
+              p.vx = (mx / len) * speed;
+              p.vy = (my / len) * speed;
+            } else {
+              p.vx *= 0.82;
+              p.vy *= 0.82;
+            }
+          }
+
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+
+          // Face mouse
+          p.rotation = Math.atan2(mouse.y - p.y, mouse.x - p.x);
+
+          // Obstacle collisions
+          resolveEntityObstacleCollisions(p, gameState.obstacles, gameState.arenaBounds);
+
+          // Reloading
+          if (p.isReloading) {
+            p.reloadTimer += dt;
+            if (p.reloadTimer >= p.reloadDuration) {
+              p.isReloading = false;
+              p.ammo = p.maxAmmo;
+              p.reloadTimer = 0;
+            }
+          }
+
+          // Player Shooting
+          playerShootTimer += dt;
+          if (mouse.isDown && !p.isReloading && playerShootTimer >= 0.18) {
+            playerShootTimer = 0;
+            if (p.ammo > 0) {
+              if (!p.isGodmode) p.ammo--;
+              firePlayerBullet();
+            } else {
+              p.isReloading = true;
+              p.reloadTimer = 0;
+            }
+          }
+        }
+
+        // Update System 1 AI Agents
+        gameState.agents.forEach(agent => agent.update(dt, gameState));
+        // Remove dead agents after brief delay
+        gameState.agents = gameState.agents.filter(a => a.isAlive || a.health > -100);
+
+        // Update Director
+        director.update(dt, gameState);
+
+        // Update Bullets
+        for (let i = gameState.bullets.length - 1; i >= 0; i--) {
+          const b = gameState.bullets[i];
+          b.x += b.vx * dt;
+          b.y += b.vy * dt;
+          b.lifespan -= dt;
+
+          // Check obstacle collisions
+          let hitObstacle = false;
+          for (const obs of gameState.obstacles) {
+            if (b.x >= obs.x && b.x <= obs.x + obs.width && b.y >= obs.y && b.y <= obs.y + obs.height) {
+              hitObstacle = true;
+              break;
+            }
+          }
+
+          // Check hit against player
+          if (!hitObstacle && b.isEnemy && p.isAlive && !p.isDashing) {
+            const dist = Math.hypot(b.x - p.x, b.y - p.y);
+            if (dist < p.radius) {
+              hitObstacle = true;
+              if (!p.isGodmode) {
+                p.health = Math.max(0, p.health - b.damage);
+                eventBus.publish('ENTITY_DAMAGED', {
+                  entityId: 'PLAYER',
+                  isEnemy: false,
+                  damage: b.damage,
+                  healthRemaining: p.health,
+                  attackerId: b.owner
+                });
+                if (p.health <= 0) p.isAlive = false;
+              }
+            }
+          }
+
+          // Check hit against AI agents
+          if (!hitObstacle && !b.isEnemy) {
+            for (const agent of gameState.agents) {
+              if (agent.isAlive) {
+                const dist = Math.hypot(b.x - agent.x, b.y - agent.y);
+                if (dist < agent.radius) {
+                  hitObstacle = true;
+                  agent.takeDamage(b.damage, 'PLAYER', Math.atan2(b.vy, b.vx));
+                  break;
+                }
+              }
+            }
+          }
+
+          if (hitObstacle || b.lifespan <= 0) {
+            // Spawn hit sparks
+            for (let s = 0; s < 4; s++) {
+              gameState.particles.push({
+                x: b.x,
+                y: b.y,
+                vx: (Math.random() - 0.5) * 120,
+                vy: (Math.random() - 0.5) * 120,
+                radius: 2,
+                color: b.color || '#f59e0b',
+                lifespan: 0.2,
+                age: 0
+              });
+            }
+            gameState.bullets.splice(i, 1);
+          }
+        }
+
+        // Update Particles
+        for (let i = gameState.particles.length - 1; i >= 0; i--) {
+          const pt = gameState.particles[i];
+          pt.x += pt.vx * dt;
+          pt.y += pt.vy * dt;
+          pt.age += dt;
+          if (pt.age >= pt.lifespan) {
+            gameState.particles.splice(i, 1);
+          }
+        }
+
+        // Render Canvas
+        render(ctx);
+
+        // Update HUD DOM
+        updateHUD();
+      }
+
+      function firePlayerBullet() {
+        const p = gameState.player;
+        const angle = p.rotation + (Math.random() - 0.5) * 0.04;
+        const speed = 640;
+
+        gameState.bullets.push({
+          x: p.x + Math.cos(p.rotation) * (p.radius + 6),
+          y: p.y + Math.sin(p.rotation) * (p.radius + 6),
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          owner: 'PLAYER',
+          isEnemy: false,
+          color: '#38bdf8',
+          damage: 26,
+          lifespan: 1.4
+        });
+
+        eventBus.publish('WEAPON_FIRED', {
+          owner: 'PLAYER',
+          isEnemy: false,
+          x: p.x,
+          y: p.y
+        });
+      }
+
+      function resolveEntityObstacleCollisions(entity, obsList, bounds) {
+        // Bounds
+        if (entity.x < bounds.x + entity.radius) entity.x = bounds.x + entity.radius;
+        if (entity.x > bounds.x + bounds.width - entity.radius) entity.x = bounds.x + bounds.width - entity.radius;
+        if (entity.y < bounds.y + entity.radius) entity.y = bounds.y + entity.radius;
+        if (entity.y > bounds.y + bounds.height - entity.radius) entity.y = bounds.y + bounds.height - entity.radius;
+
+        for (const obs of obsList) {
+          const closestX = Math.max(obs.x, Math.min(entity.x, obs.x + obs.width));
+          const closestY = Math.max(obs.y, Math.min(entity.y, obs.y + obs.height));
+          const distX = entity.x - closestX;
+          const distY = entity.y - closestY;
+          const dist = Math.hypot(distX, distY);
+
+          if (dist < entity.radius) {
+            const overlap = entity.radius - dist;
+            if (dist > 0.001) {
+              entity.x += (distX / dist) * overlap;
+              entity.y += (distY / dist) * overlap;
+            } else {
+              entity.x += overlap;
+            }
+          }
+        }
+      }
+
+      // 4. Canvas Renderer
+      function render(ctx) {
+        ctx.fillStyle = '#07090e';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Floor Grid
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+        ctx.lineWidth = 1;
+        const gridSize = 40;
+        for (let x = arenaBounds.x; x <= arenaBounds.x + arenaBounds.width; x += gridSize) {
+          ctx.beginPath(); ctx.moveTo(x, arenaBounds.y); ctx.lineTo(x, arenaBounds.y + arenaBounds.height); ctx.stroke();
+        }
+        for (let y = arenaBounds.y; y <= arenaBounds.y + arenaBounds.height; y += gridSize) {
+          ctx.beginPath(); ctx.moveTo(arenaBounds.x, y); ctx.lineTo(arenaBounds.x + arenaBounds.width, y); ctx.stroke();
+        }
+
+        // Arena Border
+        ctx.strokeStyle = 'rgba(245, 158, 11, 0.3)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(arenaBounds.x, arenaBounds.y, arenaBounds.width, arenaBounds.height);
+
+        // Obstacles (Crates / Cover Pillars)
+        gameState.obstacles.forEach(obs => {
+          ctx.fillStyle = '#1e293b';
+          ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+          ctx.strokeStyle = '#f59e0b';
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(obs.x, obs.y, obs.width, obs.height);
+
+          // Diagonal hatch pattern
+          ctx.strokeStyle = 'rgba(245, 158, 11, 0.15)';
+          ctx.beginPath();
+          ctx.moveTo(obs.x, obs.y);
+          ctx.lineTo(obs.x + obs.width, obs.y + obs.height);
+          ctx.moveTo(obs.x + obs.width, obs.y);
+          ctx.lineTo(obs.x, obs.y + obs.height);
+          ctx.stroke();
+        });
+
+        // Debug Vision: Cover nodes & AI Vectors
+        if (gameState.debugVision) {
+          // Cover nodes
+          gameState.coverNodes.forEach(cn => {
+            ctx.fillStyle = 'rgba(16, 185, 129, 0.25)';
+            ctx.beginPath();
+            ctx.arc(cn.x, cn.y, 4, 0, Math.PI * 2);
+            ctx.fill();
+          });
+
+          // AI Decision Vectors & LOS rays
+          gameState.agents.forEach(agent => {
+            if (!agent.isAlive) return;
+            const dec = agent.activeDecision;
+
+            // Target vector line
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(agent.x, agent.y);
+            ctx.lineTo(dec.targetX, dec.targetY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Stance text bubble
+            ctx.fillStyle = '#38bdf8';
+            ctx.font = '10px monospace';
+            ctx.fillText(`${dec.stance} (${(dec.confidence*100).toFixed(0)}%)`, agent.x - 30, agent.y - 24);
+          });
+        }
+
+        // Bullets
+        gameState.bullets.forEach(b => {
+          ctx.fillStyle = b.color || '#fff';
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, 3, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        // Particles
+        gameState.particles.forEach(pt => {
+          const alpha = 1.0 - (pt.age / pt.lifespan);
+          ctx.fillStyle = pt.color;
+          ctx.globalAlpha = Math.max(0, alpha);
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1.0;
+        });
+
+        // AI Agents
+        gameState.agents.forEach(agent => {
+          if (!agent.isAlive) return;
+
+          // Agent Body
+          ctx.save();
+          ctx.translate(agent.x, agent.y);
+          ctx.rotate(agent.rotation);
+
+          // Turret / Gun
+          ctx.fillStyle = '#64748b';
+          ctx.fillRect(8, -3, 14, 6);
+
+          // Silhouette circle
+          ctx.fillStyle = agent.color || '#10b981';
+          ctx.beginPath();
+          ctx.arc(0, 0, agent.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          ctx.restore();
+
+          // Health bar above head
+          const hpRatio = agent.health / agent.maxHealth;
+          const barW = 28;
+          ctx.fillStyle = 'rgba(0,0,0,0.6)';
+          ctx.fillRect(agent.x - barW / 2, agent.y - agent.radius - 10, barW, 4);
+          ctx.fillStyle = hpRatio > 0.4 ? '#10b981' : '#ef4444';
+          ctx.fillRect(agent.x - barW / 2, agent.y - agent.radius - 10, barW * hpRatio, 4);
+        });
+
+        // Player
+        const p = gameState.player;
+        if (p.isAlive) {
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rotation);
+
+          // Weapon barrel
+          ctx.fillStyle = '#94a3b8';
+          ctx.fillRect(10, -4, 16, 8);
+
+          // Player avatar
+          ctx.fillStyle = p.isDashing ? '#06b6d4' : '#f8fafc';
+          ctx.beginPath();
+          ctx.arc(0, 0, p.radius, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.strokeStyle = '#06b6d4';
+          ctx.lineWidth = 2.5;
+          ctx.stroke();
+
+          ctx.restore();
+        } else {
+          // Dead screen
+          ctx.fillStyle = 'rgba(239, 68, 68, 0.8)';
+          ctx.font = 'bold 32px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText("OPERATOR COMPROMISED", canvas.width / 2, canvas.height / 2);
+          ctx.font = '14px sans-serif';
+          ctx.fillStyle = '#cbd5e1';
+          ctx.fillText("Press [Reset Arena] to re-initialize System 1 loop", canvas.width / 2, canvas.height / 2 + 36);
+        }
+      }
+
+      // 5. Update HUD DOM
+      function updateHUD() {
+        const p = gameState.player;
+
+        // Player Health & Ammo
+        document.getElementById('playerHpFill').style.width = `${Math.max(0, p.health)}%`;
+        document.getElementById('playerHpText').innerText = `${Math.round(p.health)} / 100`;
+
+        const pipsContainer = document.getElementById('ammoPipsContainer');
+        pipsContainer.innerHTML = '';
+        for (let i = 0; i < p.maxAmmo; i++) {
+          const pip = document.createElement('div');
+          pip.className = 'pip' + (i >= p.ammo ? ' spent' : '');
+          pipsContainer.appendChild(pip);
+        }
+
+        const dashText = document.getElementById('dashStatusText');
+        if (p.dashTimer > 0) {
+          dashText.innerText = `DASH RECHARGING (${p.dashTimer.toFixed(1)}s)`;
+          dashText.style.color = '#94a3b8';
+        } else {
+          dashText.innerText = `DASH READY [SPACE]`;
+          dashText.style.color = '#06b6d4';
+        }
+
+        // Director Stats
+        document.getElementById('hudDirectorPhase').innerText = director.phase;
+        document.getElementById('directorTensionFill').style.width = `${(director.tension * 100).toFixed(0)}%`;
+        document.getElementById('hudTensionVal').innerText = `${(director.tension * 100).toFixed(0)}%`;
+        document.getElementById('hudWaveVal').innerText = director.currentWave;
+        document.getElementById('hudKillsVal').innerText = director.totalKills;
+
+        // AI Agents List
+        const listContainer = document.getElementById('aiAgentsList');
+        let totalLat = 0;
+        let count = 0;
+
+        listContainer.innerHTML = gameState.agents.filter(a => a.isAlive).map(a => {
+          totalLat += a.activeDecision.inferenceMs;
+          count++;
+          const stanceClass = a.activeDecision.stance.toLowerCase().replace('take_', '').replace('aggressive_', '');
+          return `
+            <div class="ai-agent-item ${stanceClass}">
+              <div class="agent-header">
+                <span>${a.id} [${a.archetype}]</span>
+                <span class="badge-latency">${a.activeDecision.inferenceMs}ms</span>
+              </div>
+              <div class="agent-sub">
+                <span>STANCE: <strong>${a.activeDecision.stance}</strong></span>
+                <span>CONF: ${(a.activeDecision.confidence * 100).toFixed(0)}%</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        if (count > 0) {
+          document.getElementById('hudAvgLatency').innerText = `${(totalLat / count).toFixed(2)} ms`;
+        }
+
+        // Rolling Director Waveform
+        directorTensionHistory.push(director.tension);
+        if (directorTensionHistory.length > 50) directorTensionHistory.shift();
+
+        dctx.fillStyle = '#0a0f19';
+        dctx.fillRect(0, 0, directorCanvas.width, directorCanvas.height);
+        dctx.strokeStyle = '#38bdf8';
+        dctx.lineWidth = 1.5;
+        dctx.beginPath();
+        const stepX = directorCanvas.width / 49;
+        for (let i = 0; i < directorTensionHistory.length; i++) {
+          const x = i * stepX;
+          const y = (1.0 - directorTensionHistory[i]) * directorCanvas.height;
+          if (i === 0) dctx.moveTo(x, y);
+          else dctx.lineTo(x, y);
+        }
+        dctx.stroke();
+      }
+
+      // Start loop
+      requestAnimationFrame(gameLoop);
+    });
+  </script>
+</body>
+</html>

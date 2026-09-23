@@ -242,3 +242,9 @@ The combined addition is approximately 4.45 MB. The prior curated payload was al
 - **Underground Comix & Graphic Novel Vault**: `/comics/` (`comics/index.html`), indexing all 7 canonical arcs across Blazin' Beaver Series 1–4, Uncle Vorath Mysteries Seasons 1–2, and Duel Zexal.
 - **Duel Zexal Tankobon Manga Reader**: `/manga/` (`manga/index.html`), 24-page authentic Japanese Right-to-Left (RTL) manga web reader with single/spread viewing, thumbnail filmstrip, and full tankobon master delivery.
 
+## Aetheria Astrological Studio & Matrix routes
+
+- **Aetheria Celestial Engine**: `/mystery-school/astrology/` (`mystery-school/astrology/index.html`), client-side astrological birth chart ephemeris, dual-wheel institutional synastry overlays, planetary Kamea magic square sigil synthesis, and TCG astrological card generator.
+- **Astrology Short Alias**: `/astrology/` (`astrology/index.html`), canonical instant client-side redirect to `/mystery-school/astrology/`.
+
+

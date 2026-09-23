@@ -11,7 +11,7 @@
       file: 'templates/meme_01_botanical_woodcut_alien_disclosure.svg',
       defaultTop: 'HISTORIANS CALL THEM ALLIES',
       defaultBottom: 'WE CALL THEM PLUG',
-      footnote: '1542 Spagyric Woodcut // The CDC Dispensary',
+      footnote: '1542 Spagyric Woodcut // The NSP APOTHECARY',
       font: 'impact',
       badge: 'declassified'
     },
@@ -33,9 +33,9 @@
       file: 'templates/meme_03_creation_of_adam_passing_blunt.svg',
       defaultTop: 'ON THE SEVENTH DAY',
       defaultBottom: 'HE SAID: PUFF PUFF PASS, ADAM',
-      footnote: 'Sistine Chapel Fresco // 10015 SW Hall Blvd',
+      footnote: 'Sistine Chapel Fresco // Cascadia Solarium Corridor',
       font: 'cinzel',
-      badge: 'cdc'
+      badge: 'nsp'
     },
     {
       id: 'm04',
@@ -52,10 +52,10 @@
       id: 'm05',
       title: 'Declassified FBI Dossier',
       category: 'high-culture',
-      file: 'templates/meme_05_declassified_fbi_dossier_hall_blvd.svg',
+      file: 'templates/meme_05_declassified_fbi_dossier_cascadia.svg',
       defaultTop: 'TOP SECRET FBI REPORT',
       defaultBottom: 'UNDERCOVER AGENTS REFUSE TO LEAVE SOLARIUM',
-      footnote: 'CLASSIFIED // LEVEL 4 SCIF TIGARD OR',
+      footnote: 'CLASSIFIED // LEVEL 4 SCIF CASCADIA 432HZ',
       font: 'mono',
       badge: 'declassified'
     },
@@ -76,7 +76,7 @@
       category: 'cascadia',
       file: 'templates/meme_07_portland_rain_vs_twilight_solarium.svg',
       defaultTop: 'SEASONAL AFFECTIVE DISORDER',
-      defaultBottom: 'MET ITS MATCH AT 10015 SW HALL BLVD',
+      defaultBottom: 'MET ITS MATCH AT Cascadia Solarium Corridor',
       footnote: 'Pacific Northwest Winter Antidote',
       font: 'impact',
       badge: 'oregon'
@@ -134,7 +134,7 @@
       defaultBottom: 'WAITING FOR THE BANGER TO HIT 480°F',
       footnote: 'Musée Rodin Bronze // Paris 1904',
       font: 'cinzel',
-      badge: 'cdc'
+      badge: 'nsp'
     },
     {
       id: 'm13',
@@ -145,7 +145,7 @@
       defaultBottom: 'AND TALKS 40 MINS ON CAPITATE-STALKED HEADS',
       footnote: 'Royal Botanical Society // Vol 14',
       font: 'cinzel',
-      badge: 'cdc'
+      badge: 'nsp'
     },
     {
       id: 'm14',
@@ -176,9 +176,9 @@
       file: 'templates/meme_16_victorian_patent_medicine_tonic.svg',
       defaultTop: 'YOUR GRANDFATHER\'S COUGH TONIC',
       defaultBottom: 'WAS JUST UNREGULATED 90u SOLVENTLESS LIVE ROSIN',
-      footnote: 'Pure & Unadulterated // Tigard Dispensary',
+      footnote: 'Pure & Unadulterated // NSP Apothecary',
       font: 'cinzel',
-      badge: 'cdc'
+      badge: 'nsp'
     },
     {
       id: 'm17',
@@ -200,7 +200,7 @@
       defaultBottom: 'BRING SINGLE-SOURCE COLD CURE OR DEPART',
       footnote: 'Ur III Dynasty // 1750 BCE Live Rosin Invoice',
       font: 'cinzel',
-      badge: 'cdc'
+      badge: 'nsp'
     },
     {
       id: 's01',
@@ -211,7 +211,7 @@
       defaultBottom: 'BUT I NEVER SEE \'EM FING. OH WAIT.',
       footnote: 'S13E16 // Weekend at Burnsie\'s',
       font: 'impact',
-      badge: 'cdc'
+      badge: 'nsp'
     },
     {
       id: 's05',
@@ -244,7 +244,7 @@
       defaultBottom: 'I DEMAND SINGLE-SOURCE 90u COLD CURE!',
       footnote: 'S12E11 // Worst Episode Ever',
       font: 'impact',
-      badge: 'cdc'
+      badge: 'nsp'
     },
     {
       id: 's11',
@@ -266,14 +266,14 @@
       defaultBottom: 'DO YOU TAKE DEBIT CARDS FOR BEAVER BLUNTS?',
       footnote: 'S07E18 // The Day the Violence Died',
       font: 'impact',
-      badge: 'cdc'
+      badge: 'nsp'
     }
   ];
 
   // Badge SVGs map
   const BADGES = {
     declassified: 'badges/declassified.svg',
-    cdc: 'badges/cdc_dispensary.svg',
+    nsp: 'badges/nsp_apothecary.svg',
     void: 'badges/void_kush.svg',
     oregon: 'badges/oregon_grown.svg',
     singularity: '../stickerforge/studio/vectors/sf_23_sphene_trichome_prism.svg',

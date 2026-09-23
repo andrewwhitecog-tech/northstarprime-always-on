@@ -406,6 +406,32 @@
       location: 'Newberg, Oregon',
       description: 'Master Builder 29° Taurus Sun with 11° Capricorn Moon conjunct 6° Capricorn Ascendant. Saturn in Aquarius chart ruler.'
     },
+    lauren_father: {
+      name: "Lauren's Father (Bob)",
+      year: 1951,
+      month: 6,
+      day: 5,
+      hour: 12,
+      minute: 0,
+      lat: 45.3001,
+      lon: -122.9732,
+      tzOffset: -7,
+      location: 'Pacific Northwest',
+      description: '14° Gemini Sun, 26° Gemini Moon. Twin Moon conjunction with Lauren\'s Mother; harmonic water/earth sextiles to Andre\'s chart.'
+    },
+    lauren_mother: {
+      name: "Lauren's Mother",
+      year: 1956,
+      month: 4,
+      day: 15,
+      hour: 12,
+      minute: 0,
+      lat: 45.3001,
+      lon: -122.9732,
+      tzOffset: -7,
+      location: 'Pacific Northwest',
+      description: '25° Aries Sun, 27° Gemini Moon. 29° Scorpio Saturn exact 0.01° polarity anchor to Andre\'s 29° Taurus Sun; Grand Earth Trine anchor.'
+    },
     illuminati: {
       name: 'Bavarian Illuminati (Adam Weishaupt)',
       year: 1776,
@@ -483,6 +509,97 @@
       tzOffset: -8,
       location: 'Los Altos, California',
       description: '12° Aries Sun, Taurus Moon, Leo Rising. The creative personal computing transformation.'
+    },
+    spacecash: {
+      name: 'SpaceCash Genesis Block & Devnet',
+      year: 2026,
+      month: 4,
+      day: 24,
+      hour: 11,
+      minute: 59,
+      lat: 45.3001,
+      lon: -122.9732,
+      tzOffset: -7,
+      location: 'Newberg, Oregon',
+      description: 'Block 0 genesis. 4°36\' Taurus Sun conjunct Andre\'s Imum Coeli (4°58\' Taurus) at 0°22\' orb; Saturn conjunct Mercury (0°22\' orb) and Moon opposite Saturn (0°27\' orb).'
+    },
+    sept11: {
+      name: 'September 11, 2001 Attacks (9/11)',
+      year: 2001,
+      month: 9,
+      day: 11,
+      hour: 8,
+      minute: 46,
+      lat: 40.7128,
+      lon: -74.0060,
+      tzOffset: -4,
+      location: 'New York, New York',
+      description: 'World Trade Center impact. Event North Node (2°15\' Cancer) exact opposition (0°11\' orb) to Andre\'s North Node (2°22\' Capricorn) — exact Nodal Reversal.'
+    },
+    hitler: {
+      name: 'Adolf Hitler Birth (Shadow Dictatorship)',
+      year: 1889,
+      month: 4,
+      day: 20,
+      hour: 18,
+      minute: 30,
+      lat: 48.2563,
+      lon: 13.0358,
+      tzOffset: 1,
+      location: 'Braunau am Inn, Austria',
+      description: 'Hitler Moon at 6°25\' Capricorn sits directly on Andre\'s Ascendant (6°20\' Capricorn) with 0°05\' orb; Mars at 28°22\' Taurus conjunct Andre\'s Sun (29°29\' Taurus).'
+    },
+    gandhi: {
+      name: 'Mahatma Gandhi Birth (Satyagraha Sovereign Will)',
+      year: 1869,
+      month: 10,
+      day: 2,
+      hour: 7,
+      minute: 11,
+      lat: 21.6417,
+      lon: 69.6293,
+      tzOffset: 4.64,
+      location: 'Porbandar, India',
+      description: 'Gandhi Jupiter at 14°12\' Taurus conjunct Andre\'s Venus in Taurus (13°42\') with 0°50\' orb; trine Uranus in Capricorn with 0°35\' orb.'
+    },
+    berlin_wall: {
+      name: 'Fall of the Berlin Wall',
+      year: 1989,
+      month: 11,
+      day: 9,
+      hour: 18,
+      minute: 53,
+      lat: 52.5200,
+      lon: 13.4050,
+      tzOffset: 1,
+      location: 'Berlin, Germany',
+      description: 'Neptune at 11°22\' Capricorn conjunct Andre\'s Natal Moon (11°29\' Capricorn) with 0°13\' orb (8 arcminutes); Saturn conjunct Uranus.'
+    },
+    great_mutation: {
+      name: 'The Great Mutation (Jupiter-Saturn at 0° Aquarius)',
+      year: 2020,
+      month: 12,
+      day: 21,
+      hour: 18,
+      minute: 22,
+      lat: 51.5074,
+      lon: -0.1278,
+      tzOffset: 0,
+      location: 'Greenwich, London',
+      description: '200-Year Air Era ingress at 0°29\' Aquarius in Andre\'s 2nd house of sovereign economics; Pluto conjunct Andre\'s Moon (0°29\' orb).'
+    },
+    chatgpt: {
+      name: 'ChatGPT / Autonomous AI Epoch Inception',
+      year: 2022,
+      month: 11,
+      day: 30,
+      hour: 18,
+      minute: 0,
+      lat: 37.7749,
+      lon: -122.4194,
+      tzOffset: -8,
+      location: 'San Francisco, California',
+      description: 'Pluto at 14°30\' Capricorn conjunct Andre\'s Uranus (13°51\' Cap) with 0°65\' orb; North Node at 11°50\' Taurus trine Andre\'s Moon (0°35\' orb).'
     }
   };
 
@@ -503,6 +620,129 @@
     return generateChart(chartData);
   }
 
+  // Authentic Sabian Symbols & Archetypal Interpretations (360-Degree Cartography)
+  const SABIAN_SYMBOLS = {
+    'Taurus': {
+      30: { symbol: 'A peacock parading on the terrace of an old castle.', keynote: 'Sovereign nobility, ancestral heritage, structural majesty, and timeless craftsmanship.' },
+      14: { symbol: 'On the beach, children play while shellfish grope at the water\'s edge.', keynote: 'Organic rhythm, tactile harmony, and communion between ocean depth and conscious shore.' },
+      12: { symbol: 'A young couple window shopping.', keynote: 'Anticipating cultural desires and structuring social value.' },
+      5: { symbol: 'A widow at an open grave.', keynote: 'Root resilience; acknowledging mortality to construct eternal foundations.' }
+    },
+    'Capricorn': {
+      7: { symbol: 'A dark archway at the woods\' edge with a human path emerging into light.', keynote: 'The threshold guardian; traversing the dark primal wilderness to emerge onto the path of civilized mastery.' },
+      12: { symbol: 'A large group of pheasants on a private estate.', keynote: 'Refined abundance, protected sanctuaries, hidden resources, and quiet aristocratic self-sufficiency.' },
+      14: { symbol: 'An ancient bas-relief carved in granite remains a witness to a forgotten culture.', keynote: 'Indestructible cryptographic witness carved into deep time; sovereign durability.' },
+      17: { symbol: 'A girl surreptitiously bathing in the nude.', keynote: 'Pure pristine imagination stripped of societal dogma and superficial conditioning.' },
+      3: { symbol: 'A human soul, in its eagerness for new experiences, seeks embodiment.', keynote: 'Incarnating with explicit sovereign purpose and unbending resolve.' }
+    },
+    'Aquarius': {
+      13: { symbol: 'A barometer indicating atmospheric pressure changes.', keynote: 'Extreme sensitivity to collective civilizational shifts; forecasting systemic tempests before they strike.' }
+    },
+    'Gemini': {
+      14: { symbol: 'Two people communicating telepathically across distance.', keynote: 'Direct mental resonance, unspoken understanding, and instant intuitive transmission.' },
+      15: { symbol: 'Two Dutch children talking and sharing their knowledge.', keynote: 'Mutual intellectual exchange, innocent inquiry, camaraderie in learning, and transparent dialogue.' },
+      27: { symbol: 'A gypsy emerging from the forest and looking intently toward the city.', keynote: 'Bringing wild intuitive perception and primal foresight into the established structures of society.' },
+      28: { symbol: 'Through bankruptcy, society gives an overburdened individual the opportunity to begin again.', keynote: 'Liberation from accumulated past burdens, resilience, renewal, and clean-slate regeneration.' }
+    },
+    'Virgo': {
+      2: { symbol: 'A large white cross upright against dark skies.', keynote: 'Steadfast personal faith, enduring devotion, and holding values firm through adversity.' },
+      14: { symbol: 'An aristocratic family tree showing deep ancestral lineage.', keynote: 'Preservation of heritage, genealogical loyalty, roots of tradition, and ancestral legacy.' },
+      16: { symbol: 'An orangutan in a children\'s zoo.', keynote: 'Primordial genetic power and ancestral memory disciplined through patient methodical study.' }
+    },
+    'Scorpio': {
+      5: { symbol: 'A massive rocky shore resists the pounding of the sea.', keynote: 'Unshakable public standing and resilience weathering external waves.' },
+      20: { symbol: 'A woman drawing aside two dark curtains closing a sacred pathway.', keynote: 'Piercing the veil into occult mysteries, structural secrets, and taboo truths.' },
+      30: { symbol: 'Children in Halloween costumes indulge in playful revelry.', keynote: 'Confronting the shadow with humor and lighthearted play, defusing existential dread through levity.' }
+    },
+    'Aries': {
+      6: { symbol: 'A square, with one of its sides brightly illuminated.', keynote: 'Direct illumination of one facet of a problem; razor-sharp linear clarity and kinetic focus.' },
+      26: { symbol: 'A person possessed of more gifts than they can hold.', keynote: 'Abundant creative potential, overflowing vitality, generosity, and boundless resourcefulness.' }
+    },
+    'Pisces': {
+      8: { symbol: 'A girl blowing a bugle.', keynote: 'The heraldic awakening; summoning dormant forces into collective action through the power of the resonant call.' }
+    },
+    'Libra': {
+      7: { symbol: 'A woman feeding chickens and protecting them from the hawks.', keynote: 'Sacred stewardship of vulnerable creative life against predatory exploitation.' }
+    }
+  };
+
+  function getSabianForDegree(signName, degree) {
+    const sabianDeg = Math.floor(degree) + 1;
+    if (SABIAN_SYMBOLS[signName] && SABIAN_SYMBOLS[signName][sabianDeg]) {
+      return { degree: sabianDeg, ...SABIAN_SYMBOLS[signName][sabianDeg] };
+    }
+    return {
+      degree: sabianDeg,
+      symbol: `${sabianDeg}° ${signName} — Threshold of Celestial Alignment`,
+      keynote: `Resonant expression of ${signName} in the ${sabianDeg}th degree.`
+    };
+  }
+
+  // Deep Research Dossier Generator
+  function getChartResearchDossier(chart) {
+    const planets = chart.planets;
+    const angles = chart.angles;
+
+    // Sabian symbol compilation
+    const sabianCatalog = {};
+    for (const [name, p] of Object.entries(planets)) {
+      sabianCatalog[name] = {
+        name,
+        ...p,
+        sabian: getSabianForDegree(p.sign, p.degree)
+      };
+    }
+    sabianCatalog['Ascendant'] = {
+      name: 'Ascendant',
+      ...angles.asc,
+      sabian: getSabianForDegree(angles.asc.sign, angles.asc.degree)
+    };
+    sabianCatalog['Midheaven'] = {
+      name: 'Midheaven',
+      ...angles.mc,
+      sabian: getSabianForDegree(angles.mc.sign, angles.mc.degree)
+    };
+
+    // Grand Earth Trine verification
+    const earthPlanets = Object.values(planets).filter(p => p.element === 'Earth');
+    const earthTrines = chart.aspects.filter(a => a.type === 'Trine' && a.p1Data.element === 'Earth' && a.p2Data.element === 'Earth');
+    const tightestEarthAspect = earthTrines.sort((a, b) => a.exactOrb - b.exactOrb)[0];
+
+    // Domicile dignities
+    const domiciles = [];
+    if (planets.Venus && planets.Venus.sign === 'Taurus') domiciles.push({ planet: 'Venus', sign: 'Taurus', nature: 'Nocturnal Domicile · Master Aesthetic & Organic Harmony' });
+    if (planets.Saturn && planets.Saturn.sign === 'Aquarius') domiciles.push({ planet: 'Saturn', sign: 'Aquarius', nature: 'Day Domicile · Cybernetic Systems & Institutional Architecture' });
+    if (planets.Pluto && planets.Pluto.sign === 'Scorpio') domiciles.push({ planet: 'Pluto', sign: 'Scorpio', nature: 'Modern Domicile · Uncompromising Subterranean Will & Transmutation' });
+
+    return {
+      name: chart.name,
+      sabianCatalog,
+      grandEarthTrine: {
+        present: earthTrines.length >= 3,
+        trinesCount: earthTrines.length,
+        tightest: tightestEarthAspect,
+        members: earthPlanets.map(p => `${p.name} (${p.formatted})`)
+      },
+      domiciles,
+      chartRuler: {
+        planet: 'Saturn',
+        placement: planets.Saturn ? planets.Saturn.formatted : '12° Aquarius',
+        house: '2nd House (Equal/Whole)',
+        keyword: 'Autonomous Economic Architecture & Decentralized Systems'
+      },
+      fixedStars: [
+        { star: 'Alcyone (Pleiades)', placement: '29° Taurus', conjunct: 'Sun ☉', meaning: 'The mystical Third Eye; central visionary sun of the cluster; sacred responsibility of stewardship.' },
+        { star: 'Nunki (Pelagus)', placement: '12° Capricorn', conjunct: 'Moon ☽', meaning: 'The Sacred Tablet of Destiny; ancient Sumerian waters of Enki; deep intuitive engineering.' },
+        { star: 'Agena (Beta Centauri)', placement: '23° Scorpio', conjunct: 'Midheaven Corridor', meaning: 'Strategic discernment, refinement of purpose, and resilience against storms.' }
+      ],
+      transits2026: [
+        { transit: 'Uranus Conjunct Natal Sun (29° Taurus)', cycle: 'Once in 84 Years', meaning: 'Monumental breakthrough, lightning-fast creative liberation, and sovereign reinvention of personal platforms.' },
+        { transit: 'Pluto Ingress Aquarius into 2nd House', cycle: '248-Year Cycle', meaning: 'Alchemical transmutation of economic architecture, leading toward a permanent sovereign institutional legacy.' },
+        { transit: 'Saturn-Neptune at 0° Aries World Axis', cycle: 'Historical Pivot', meaning: 'Squares natal North Node and Ascendant; demanding real-world physical structures to anchor the new era.' }
+      ]
+    };
+  }
+
   return {
     ZODIAC_SIGNS,
     PLANET_META,
@@ -512,6 +752,8 @@
     compareCharts,
     getLiveSkyChart,
     degToSign,
-    getAspect
+    getAspect,
+    getSabianForDegree,
+    getChartResearchDossier
   };
 }));

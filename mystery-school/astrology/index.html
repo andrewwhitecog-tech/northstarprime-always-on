@@ -68,6 +68,12 @@
       <button type="button" class="preset-pill" data-preset="apple">
         <span>⌘</span> Apple Co. (April 1, 1976)
       </button>
+      <button type="button" class="preset-pill" data-preset="lauren_father">
+        <span>✦</span> Lauren's Father (June 5, 1951)
+      </button>
+      <button type="button" class="preset-pill" data-preset="lauren_mother">
+        <span>✦</span> Lauren's Mother (April 15, 1956)
+      </button>
       <button type="button" class="preset-pill" id="btnLiveSky" style="border-color:var(--cyan-accent); color:var(--cyan-accent); background:rgba(56,189,248,0.1);">
         <span>⚡</span> Real-Time Sky Transits (Live Now)
       </button>
@@ -77,6 +83,7 @@
     <nav class="mode-tabs" role="tablist">
       <button type="button" class="tab-btn active" data-mode="natal">✦ Celestial Natal Wheel</button>
       <button type="button" class="tab-btn" data-mode="synastry">✦ Institutional Synastry Matrix</button>
+      <button type="button" class="tab-btn" data-mode="research">✦ Research Dossier & Sabians</button>
       <button type="button" class="tab-btn" data-mode="kamea">✦ Kamea Sigil Forge</button>
       <button type="button" class="tab-btn" data-mode="tcg">✦ TCG Celestial Card</button>
     </nav>
@@ -158,10 +165,21 @@
             <select id="selCompareTarget">
               <option value="illuminati" selected>Bavarian Illuminati (May 1, 1776)</option>
               <option value="bitcoin">Bitcoin Genesis Block (Jan 3, 2009)</option>
+              <option value="spacecash">SpaceCash Genesis & Devnet (April 24, 2026)</option>
+              <option value="sept11">September 11, 2001 Attacks (9/11)</option>
+              <option value="hitler">Adolf Hitler (April 20, 1889)</option>
+              <option value="gandhi">Mahatma Gandhi (October 2, 1869)</option>
+              <option value="berlin_wall">Fall of the Berlin Wall (Nov 9, 1989)</option>
+              <option value="great_mutation">The Great Mutation (Dec 21, 2020)</option>
+              <option value="chatgpt">ChatGPT / AI Epoch Inception (Nov 30, 2022)</option>
               <option value="usa">United States Declaration (July 4, 1776)</option>
               <option value="tesla">Nikola Tesla (July 10, 1856)</option>
               <option value="jung">Carl Gustav Jung (July 26, 1875)</option>
               <option value="apple">Apple Computer Founding (April 1, 1976)</option>
+              <optgroup label="Family & Support Circle">
+                <option value="lauren_father">Lauren's Father — Bob (June 5, 1951)</option>
+                <option value="lauren_mother">Lauren's Mother (April 15, 1956)</option>
+              </optgroup>
             </select>
           </div>
           <div class="synastry-highlight" id="synastryReport">
@@ -321,6 +339,10 @@
         synastryCard.style.display = 'block';
         renderSynastryWheel(currentChart, compareChart);
         renderSynastryReport(currentChart, compareChart);
+      } else if (currentMode === 'research') {
+        stageTitle.textContent = `Astrological Research Dossier · ${currentChart.name}`;
+        synastryCard.style.display = 'none';
+        renderResearchDossier(currentChart);
       } else if (currentMode === 'kamea') {
         stageTitle.textContent = `Planetary Kamea Sigil Forge`;
         synastryCard.style.display = 'none';
@@ -561,6 +583,140 @@
         `;
       });
       planetListContainer.innerHTML = html;
+    }
+
+    // Render Astrological Research Dossier & Sabians
+    function renderResearchDossier(chart) {
+      const dossier = AetheriaAstro.getChartResearchDossier(chart);
+
+      let sabianRows = '';
+      Object.values(dossier.sabianCatalog).forEach(item => {
+        sabianRows += `
+          <div class="dossier-sabian-item">
+            <div class="dossier-sabian-header">
+              <span class="dossier-glyph" style="color:${item.meta ? item.meta.color : 'var(--gold-light)'}">${item.meta ? item.meta.symbol : '✦'}</span>
+              <strong style="color:var(--text-main); font-size:0.95rem;">${item.name}</strong>
+              <span class="dossier-coord">${item.formatted}</span>
+              <span class="dossier-sabian-deg">Sabian ${item.sabian.degree}°</span>
+            </div>
+            <div class="dossier-sabian-symbol">"${item.sabian.symbol}"</div>
+            <div class="dossier-sabian-keynote">${item.sabian.keynote}</div>
+          </div>
+        `;
+      });
+
+      let domicilesHtml = '';
+      dossier.domiciles.forEach(d => {
+        domicilesHtml += `
+          <div class="dossier-badge-pill">
+            <strong>${d.planet} in ${d.sign}</strong>: ${d.nature}
+          </div>
+        `;
+      });
+
+      let fixedStarsHtml = '';
+      dossier.fixedStars.forEach(s => {
+        fixedStarsHtml += `
+          <div class="dossier-star-item">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <strong style="color:var(--gold-light);">${s.star} (${s.placement})</strong>
+              <span style="font-size:0.8rem; color:var(--cyan-accent); font-family:var(--font-mono);">Conjunct ${s.conjunct}</span>
+            </div>
+            <div style="font-size:0.82rem; color:var(--text-dim); margin-top:4px;">${s.meaning}</div>
+          </div>
+        `;
+      });
+
+      let transitsHtml = '';
+      dossier.transits2026.forEach(t => {
+        transitsHtml += `
+          <div class="dossier-transit-item">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <strong style="color:var(--gold-glow);">${t.transit}</strong>
+              <span style="font-size:0.75rem; text-transform:uppercase; color:var(--emerald-accent); font-family:var(--font-mono);">${t.cycle}</span>
+            </div>
+            <div style="font-size:0.82rem; color:var(--text-dim); margin-top:4px;">${t.meaning}</div>
+          </div>
+        `;
+      });
+
+      const grandEarthHtml = dossier.grandEarthTrine.present ? `
+        <div class="dossier-section-box highlight-trine">
+          <div class="dossier-section-title" style="color:var(--gold-light);">✦ Grand Earth Trine (Materialization Engine)</div>
+          <p style="font-size:0.88rem; color:var(--text-main); margin-bottom:10px;">
+            An interlocking equilateral Earth trine anchoring visionary ideals into permanent material reality.
+          </p>
+          <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+            ${dossier.grandEarthTrine.members.map(m => `<span class="earth-member-tag">✦ ${m}</span>`).join('')}
+          </div>
+          <div style="font-size:0.82rem; color:var(--cyan-accent); font-family:var(--font-mono);">
+            Tightest Chord: ${dossier.grandEarthTrine.tightest.p1} to ${dossier.grandEarthTrine.tightest.p2} with razor-sharp 0°09' (0.15°) orb — The Cybernetic Artisan Signature.
+          </div>
+        </div>
+      ` : '';
+
+      wheelWrap.innerHTML = `
+        <div class="research-dossier-wrap">
+          <div class="dossier-hero">
+            <h3>Astrological Architecture & Archetypal Research</h3>
+            <p>High-precision forensic breakdown of natal mechanics, authentic 360-degree Sabian symbols, and 2026 transit catalysts.</p>
+          </div>
+
+          ${grandEarthHtml}
+
+          <div class="dossier-grid">
+            <div class="dossier-section-box">
+              <div class="dossier-section-title">✦ Chart Ruler & Planetary Domiciles</div>
+              <div style="margin-bottom:12px;">
+                <strong style="color:var(--gold-primary);">Chart Ruler:</strong> ${dossier.chartRuler.planet} (${dossier.chartRuler.placement}) in ${dossier.chartRuler.house}
+                <div style="font-size:0.8rem; color:var(--text-dim); margin-top:2px;">${dossier.chartRuler.keyword}</div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                ${domicilesHtml}
+              </div>
+            </div>
+
+            <div class="dossier-section-box">
+              <div class="dossier-section-title">✦ 2026 Transit Catalyst (Live Sky)</div>
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                ${transitsHtml}
+              </div>
+            </div>
+          </div>
+
+          <div class="dossier-section-box" style="margin-top:16px;">
+            <div class="dossier-section-title">✦ Fixed Star Conjunctions & Lineage Anchors</div>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              ${fixedStarsHtml}
+              <div class="dossier-star-item" style="border-left:2px solid var(--purple-accent); padding-left:10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <strong style="color:var(--purple-accent);">Bavarian Illuminati (May 1, 1776)</strong>
+                  <span style="font-size:0.8rem; color:var(--emerald-accent); font-family:var(--font-mono);">0°05' Grand Earth Trine</span>
+                </div>
+                <div style="font-size:0.82rem; color:var(--text-dim); margin-top:4px;">
+                  Illuminati Sun at 11°37' Taurus forms an exact 0°05' trine to Natal Moon at 11°29' Capricorn (119°55' harmonic arc), naturally mastering order-craft and esoteric institutional frameworks.
+                </div>
+              </div>
+              <div class="dossier-star-item" style="border-left:2px solid var(--gold-primary); padding-left:10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <strong style="color:var(--gold-primary);">Bitcoin Genesis Block (Jan 3, 2009)</strong>
+                  <span style="font-size:0.8rem; color:var(--gold-light); font-family:var(--font-mono);">Exact Conjunction (0°36' Orb)</span>
+                </div>
+                <div style="font-size:0.82rem; color:var(--text-dim); margin-top:4px;">
+                  Bitcoin Genesis Sun at 13°15' Capricorn conjuncts Natal Uranus at 13°51' Capricorn; sovereign cryptographic architecture written into the natal horizon.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="dossier-section-box" style="margin-top:16px;">
+            <div class="dossier-section-title">✦ Authentic Sabian Symbols & Keynotes</div>
+            <div class="dossier-sabians-container">
+              ${sabianRows}
+            </div>
+          </div>
+        </div>
+      `;
     }
 
     // Render Kamea Sigil Forge

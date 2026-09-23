@@ -183,18 +183,18 @@
     const stageRect = slapStage.getBoundingClientRect();
     const jitterX = (Math.random() - 0.5) * 60;
     const jitterY = (Math.random() - 0.5) * 60;
-    const x = (stageRect.width / 2) - (size / 2) + jitterX;
-    const y = (stageRect.height / 2) - (size / 2) + jitterY;
-    const rot = (Math.random() - 0.5) * 24;
+    const x = customOptions.x !== undefined ? customOptions.x : (stageRect.width / 2) - (size / 2) + jitterX;
+    const y = customOptions.y !== undefined ? customOptions.y : (stageRect.height / 2) - (size / 2) + jitterY;
+    const rot = customOptions.rotation !== undefined ? customOptions.rotation : (Math.random() - 0.5) * 24;
 
     const stickerData = {
       el: stickerEl,
       item: item,
-      x: x,
-      y: y,
+      x: Math.max(10, x),
+      y: Math.max(10, y),
       size: size,
       rotation: rot,
-      opacity: 1,
+      opacity: customOptions.opacity !== undefined ? customOptions.opacity : 1,
       dieCut: customOptions.dieCut || 'die-cut-white',
       holo: customOptions.holo !== undefined ? customOptions.holo : true
     };
@@ -476,6 +476,47 @@
       }
     });
   }
+
+  // Auto-Slap Bomb (Random 6 Curated Stickers)
+  const autoBombBtn = document.getElementById('autoBombBtn');
+  if (autoBombBtn) {
+    autoBombBtn.addEventListener('click', () => {
+      if (!catalogStickers || catalogStickers.length === 0) return;
+      const stageRect = slapStage.getBoundingClientRect();
+      const maxX = Math.max(30, stageRect.width - 180);
+      const maxY = Math.max(30, stageRect.height - 180);
+      const count = 6;
+      for (let i = 0; i < count; i++) {
+        setTimeout(() => {
+          const randItem = catalogStickers[Math.floor(Math.random() * catalogStickers.length)];
+          const rx = Math.floor(Math.random() * maxX) + 15;
+          const ry = Math.floor(Math.random() * maxY) + 15;
+          const rSize = Math.floor(100 + Math.random() * 70);
+          const rRot = Math.floor((Math.random() - 0.5) * 48);
+          const rStyles = ['die-cut-white', 'die-cut-gold', 'die-cut-holographic'];
+          const rStyle = rStyles[Math.floor(Math.random() * rStyles.length)];
+          slapSticker(randItem, {
+            x: rx,
+            y: ry,
+            size: rSize,
+            rotation: rRot,
+            dieCut: rStyle,
+            holo: Math.random() > 0.3
+          });
+        }, i * 90);
+      }
+    });
+  }
+
+  // Dynamic Cursor Specular Foil Reflection
+  slapStage.addEventListener('pointermove', (e) => {
+    const rect = slapStage.getBoundingClientRect();
+    const px = Math.round(((e.clientX - rect.left) / rect.width) * 100);
+    const py = Math.round(((e.clientY - rect.top) / rect.height) * 100);
+    document.querySelectorAll('.holo-foil-overlay').forEach(el => {
+      el.style.backgroundPosition = `${px}% ${py}%`;
+    });
+  });
 
   // Clear Surface Button
   const clearSurfaceBtn = document.getElementById('clearSurfaceBtn');

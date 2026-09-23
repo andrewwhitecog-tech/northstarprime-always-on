@@ -93,8 +93,15 @@ class GrokAgent:
                     "prompt_sha256": prompt_hash,
                 }
             try:
-                # Dispatch grok CLI command
-                cmd = [str(self.grok_exe), full_prompt]
+                # Dispatch grok CLI command with explicit headless flags
+                cmd = [
+                    str(self.grok_exe),
+                    "-p", full_prompt,
+                    "--output-format", "plain",
+                    "--no-alt-screen",
+                    "--disable-web-search",
+                    "--no-subagents",
+                ]
                 proc = subprocess.run(
                     cmd,
                     capture_output=True,

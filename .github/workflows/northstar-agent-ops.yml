@@ -1,0 +1,59 @@
+name: NorthStar Autonomous Agent Sentinel
+
+on:
+  schedule:
+    - cron: '17 4 * * *'
+  workflow_dispatch:
+    inputs:
+      audit_scope:
+        description: 'Scope of agent audit'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+          - full
+          - triage_only
+          - ci_only
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+  actions: read
+
+concurrency:
+  group: agent-sentinel-ops
+  cancel-in-progress: false
+
+jobs:
+  agent-sentinel-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 10
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run GitHub Autonomous Agent Audit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p output/agent_reports
+          python tools/agents/github_agent.py \
+            --repo-slug ${{ github.repository }} \
+            --output output/agent_reports/sentinel_audit_${{ github.run_id }}.json \
+            --markdown
+
+      - name: Upload Sentinel Audit Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sentinel-audit-${{ github.run_id }}
+          path: output/agent_reports/
+          retention-days: 30

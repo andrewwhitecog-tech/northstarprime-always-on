@@ -474,6 +474,7 @@
       </div>
     </div>
     <div class="nav-actions">
+      <button class="nav-btn" style="border-color:var(--amber); color:var(--amber);" onclick="openBoosterPackModal()">✦ Open Booster Pack (5)</button>
       <a href="/comics/reader/" class="nav-btn" style="border-color:var(--cyan); color:var(--cyan);">✦ Comics Reader &rarr;</a>
       <a href="/manga/" class="nav-btn">Duel Zexal Manga &rarr;</a>
       <a href="/comics/" class="nav-btn">Comics Vault &rarr;</a>
@@ -487,8 +488,15 @@
       <span class="counter-badge" id="main-deck-count">Main Deck: 0 / 40</span>
       <span class="counter-badge" style="color:var(--purple); border-color:var(--purple); background:rgba(192,132,252,0.12);" id="extra-deck-count">Extra Deck: 0 / 15</span>
     </div>
-    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+      <select id="preset-select" class="nav-btn" style="cursor:pointer; background:rgba(255,255,255,0.06); outline:none;" onchange="loadPresetDeck(this.value)">
+        <option value="">✦ Load 40-Card Preset...</option>
+        <option value="beats_bass">Astral Beats &amp; Sub-Bass (Hip-Hop + EDM)</option>
+        <option value="crypt_occult">Millennium Crypt &amp; Occult (Egypt + Occult)</option>
+        <option value="metal_syndicate">High-Amplitude Syndicate (Metal + Outlaws)</option>
+      </select>
       <button class="nav-btn nav-btn-highlight" onclick="openTestHand()">✦ Test Hand (5)</button>
+      <button class="nav-btn" style="border-color:var(--gold); color:var(--gold);" onclick="openDeckStats()">✦ Synergy Stats</button>
       <button class="nav-btn" style="border-color:var(--amber); color:var(--amber);" onclick="saveDeck()">Save Deck</button>
       <button class="nav-btn" onclick="clearDeck()">Clear</button>
       <button class="nav-btn" style="border-color:var(--emerald); color:var(--emerald);" onclick="exportDeck()">Export</button>
@@ -559,6 +567,60 @@
           <button class="nav-btn" style="border-color:var(--cyan); color:var(--cyan);" onclick="drawOneCard()">+ Draw 1 Card</button>
         </div>
         <button class="nav-btn" onclick="closeTestHand()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOOSTER PACK MODAL -->
+  <div class="modal" id="booster-modal" onclick="closeBoosterModal(event)">
+    <div class="test-hand-container" onclick="event.stopPropagation()" style="max-width:850px; text-align:center;">
+      <button class="modal-close" onclick="closeBoosterModal()">✕</button>
+      <div>
+        <span style="font-family:monospace; color:var(--gold); font-size:0.8rem; letter-spacing:1px;">SOVEREIGN TCG // OFFICIAL EXPANSION SHRINE</span>
+        <h2 style="font-size:1.6rem; color:#fff; margin:4px 0;">Astral Harmonics Series 1 Booster Pack</h2>
+        <p style="color:var(--text-muted); font-size:0.85rem;">5 Holographic Cards per pack • Guaranteed Archon or Secret Rare</p>
+      </div>
+
+      <!-- Pack Wrapper View -->
+      <div id="pack-wrapper-view" style="padding:28px 0; display:flex; flex-direction:column; align-items:center; gap:20px;">
+        <div id="booster-pack-box" style="width:220px; aspect-ratio:2.5/3.8; background:linear-gradient(135deg, #1e1b4b, #312e81 50%, #065f46); border:2px solid var(--gold); border-radius:12px; box-shadow:0 0 35px rgba(245, 158, 11, 0.45); display:flex; flex-direction:column; justify-content:space-between; padding:20px; cursor:pointer; transition:transform 0.3s;" onclick="ripBoosterPack()">
+          <div style="font-size:0.75rem; font-family:monospace; color:var(--gold); letter-spacing:1px; text-transform:uppercase;">NorthStar Sovereign</div>
+          <div style="font-size:2.2rem; color:#fff;">✦</div>
+          <div style="font-size:1.15rem; font-weight:800; color:#fff; text-shadow:0 0 12px rgba(0,240,255,0.8); line-height:1.2;">ASTRAL HARMONICS</div>
+          <div style="font-size:0.72rem; color:var(--cyan); font-family:monospace;">SERIES 1 // 5 CARDS</div>
+        </div>
+        <button class="nav-btn nav-btn-highlight" style="padding:10px 24px; font-size:0.9rem;" onclick="ripBoosterPack()">✦ Rip Foil &amp; Reveal (5 Cards)</button>
+      </div>
+
+      <!-- Pack Revealed Cards View -->
+      <div id="pack-revealed-view" style="display:none; flex-direction:column; gap:20px;">
+        <div class="test-hand-cards" id="pack-cards-container">
+          <!-- Rendered pack cards -->
+        </div>
+        <div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap; border-top:1px solid rgba(255,255,255,0.1); padding-top:16px;">
+          <button class="nav-btn nav-btn-highlight" onclick="addAllPackCardsToDeck()">+ Add All 5 to Active Deck</button>
+          <button class="nav-btn" style="border-color:var(--gold); color:var(--gold);" onclick="resetBoosterPack()">✦ Open Another Pack</button>
+          <button class="nav-btn" onclick="closeBoosterModal()">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DECK SYNERGY STATS MODAL -->
+  <div class="modal" id="stats-modal" onclick="closeDeckStats(event)">
+    <div class="test-hand-container" onclick="event.stopPropagation()" style="max-width:620px;">
+      <button class="modal-close" onclick="closeDeckStats()">✕</button>
+      <div>
+        <span style="font-family:monospace; color:var(--cyan); font-size:0.8rem;">DECK ANALYTICS // TOURNAMENT VALIDATION</span>
+        <h2 style="font-size:1.5rem; color:#fff; margin:4px 0;">Active Deck Statistics &amp; Synergy</h2>
+      </div>
+
+      <div id="deck-stats-body" style="display:flex; flex-direction:column; gap:14px; font-size:0.88rem;">
+        <!-- Populated via JS -->
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; border-top:1px solid rgba(255,255,255,0.1); padding-top:14px;">
+        <button class="nav-btn" onclick="closeDeckStats()">Close</button>
       </div>
     </div>
   </div>
@@ -829,6 +891,201 @@
       a.href = url;
       a.download = 'NorthStar_Sovereign_Decklist.txt';
       a.click();
+    }
+
+    // 40-CARD TOURNAMENT PRESETS
+    const PRESETS = {
+      beats_bass: [
+        'NSP-EN001','NSP-EN001','NSP-EN004','NSP-EN004','NSP-EN009','NSP-EN011','NSP-EN011',
+        'NSP-EN013','NSP-EN014','NSP-EN014','NSP-EN015','NSP-EN016','NSP-EN016','NSP-EN017',
+        'NSP-EN017','NSP-EN019','NSP-EN020','NSP-EN024','NSP-EN025','NSP-EN025','NSP-EN026',
+        'NSP-EN027','NSP-EN028','NSP-EN028','NSP-EN034','NSP-EN034','NSP-EN038','NSP-EN039',
+        'NSP-EN040','NSP-EN040','NSP-EN041','NSP-EN046','NSP-EN047','NSP-EN049','NSP-EN049',
+        'NSP-EN050','NSP-EN060','NSP-EN060','NSP-EN061','NSP-EN061'
+      ],
+      crypt_occult: [
+        'NSP-EN002','NSP-EN002','NSP-EN003','NSP-EN003','NSP-EN005','NSP-EN006','NSP-EN007',
+        'NSP-EN021','NSP-EN021','NSP-EN022','NSP-EN022','NSP-EN023','NSP-EN023','NSP-EN030',
+        'NSP-EN031','NSP-EN032','NSP-EN033','NSP-EN035','NSP-EN036','NSP-EN037','NSP-EN043',
+        'NSP-EN043','NSP-EN045','NSP-EN045','NSP-EN052','NSP-EN052','NSP-EN053','NSP-EN054',
+        'NSP-EN054','NSP-EN055','NSP-EN056','NSP-EN057','NSP-EN058','NSP-EN058','NSP-EN062',
+        'NSP-EN062','NSP-EN003','NSP-EN007','NSP-EN033','NSP-EN037'
+      ],
+      metal_syndicate: [
+        'NSP-EN008','NSP-EN008','NSP-EN010','NSP-EN010','NSP-EN012','NSP-EN018','NSP-EN018',
+        'NSP-EN029','NSP-EN042','NSP-EN042','NSP-EN044','NSP-EN044','NSP-EN048','NSP-EN051',
+        'NSP-EN051','NSP-EN059','NSP-EN059','NSP-EN063','NSP-EN063','NSP-EN064','NSP-EN065',
+        'NSP-EN066','NSP-EN067','NSP-EN068','NSP-EN068','NSP-EN069','NSP-EN069','NSP-EN070',
+        'NSP-EN070','NSP-EN071','NSP-EN071','NSP-EN008','NSP-EN010','NSP-EN012','NSP-EN018',
+        'NSP-EN029','NSP-EN044','NSP-EN051','NSP-EN059','NSP-EN068'
+      ]
+    };
+
+    function loadPresetDeck(key) {
+      if (!key || !PRESETS[key]) return;
+      const codes = PRESETS[key];
+      userDeck = [];
+      codes.forEach(cd => {
+        const found = cardsData.find(c => c.code === cd);
+        if (found) userDeck.push(found);
+      });
+      playCardChime();
+      updateDeckCounter();
+      try {
+        localStorage.setItem('nsp_sovereign_deck', JSON.stringify(userDeck.map(x => x.code)));
+      } catch (e) {}
+      alert(`Loaded 40-Card Tournament Preset: ${userDeck.length} cards active! Click "Test Hand (5)" to draw.`);
+      document.getElementById('preset-select').value = '';
+    }
+
+    // BOOSTER PACK SHRINE SIMULATOR
+    let currentPackCards = [];
+    function openBoosterPackModal() {
+      resetBoosterPack();
+      document.getElementById('booster-modal').classList.add('active');
+    }
+
+    function closeBoosterModal() {
+      document.getElementById('booster-modal').classList.remove('active');
+    }
+
+    function resetBoosterPack() {
+      currentPackCards = [];
+      document.getElementById('pack-wrapper-view').style.display = 'flex';
+      document.getElementById('pack-revealed-view').style.display = 'none';
+      document.getElementById('pack-cards-container').innerHTML = '';
+    }
+
+    function ripBoosterPack() {
+      playCardChime();
+      const poolCommon = cardsData.filter(c => c.stars <= 4);
+      const poolRare = cardsData.filter(c => c.stars === 5);
+
+      currentPackCards = [];
+      // 3 Vanguard (4★)
+      for (let i = 0; i < 3; i++) {
+        const r = poolCommon[Math.floor(Math.random() * poolCommon.length)];
+        currentPackCards.push(r);
+      }
+      // 2 Archon / Secret Rare (5★)
+      for (let i = 0; i < 2; i++) {
+        const r = poolRare[Math.floor(Math.random() * poolRare.length)];
+        currentPackCards.push(r);
+      }
+
+      // Shuffle pack order
+      currentPackCards.sort(() => Math.random() - 0.5);
+
+      const container = document.getElementById('pack-cards-container');
+      container.innerHTML = '';
+      currentPackCards.forEach(c => {
+        const el = document.createElement('div');
+        el.className = 'hand-card';
+        el.title = `${c.title} (${c.code})`;
+        el.innerHTML = `<img src="${c.rel_path}" alt="${c.title}">`;
+        el.onclick = () => openModal(c.code);
+        container.appendChild(el);
+      });
+
+      document.getElementById('pack-wrapper-view').style.display = 'none';
+      document.getElementById('pack-revealed-view').style.display = 'flex';
+    }
+
+    function addAllPackCardsToDeck() {
+      if (currentPackCards.length === 0) return;
+      let added = 0;
+      currentPackCards.forEach(c => {
+        if (userDeck.length < 60) {
+          userDeck.push(c);
+          added++;
+        }
+      });
+      playCardChime();
+      updateDeckCounter();
+      try {
+        localStorage.setItem('nsp_sovereign_deck', JSON.stringify(userDeck.map(x => x.code)));
+      } catch (e) {}
+      alert(`Added ${added} cards to your active deck! (Total: ${userDeck.length})`);
+      closeBoosterModal();
+    }
+
+    // DECK SYNERGY STATS
+    function openDeckStats() {
+      const body = document.getElementById('deck-stats-body');
+      if (userDeck.length === 0) {
+        body.innerHTML = `
+          <div style="padding:20px; text-align:center; color:var(--text-muted); background:rgba(0,0,0,0.3); border-radius:8px;">
+            Deck is currently empty. Add cards or load a 40-card preset to view synergy analysis!
+          </div>
+        `;
+      } else {
+        const total = userDeck.length;
+        const starCounts = { 4: 0, 5: 0 };
+        const archetypes = {};
+
+        userDeck.forEach(c => {
+          if (c.stars === 5) starCounts[5]++;
+          else starCounts[4]++;
+
+          archetypes[c.tag_label] = (archetypes[c.tag_label] || 0) + 1;
+        });
+
+        const sortedArch = Object.entries(archetypes).sort((a,b) => b[1] - a[1]);
+        const primary = sortedArch[0] ? sortedArch[0][0] : 'None';
+        const secondary = sortedArch[1] ? sortedArch[1][0] : null;
+
+        let synergyTier = 'Tier B // Standard Construction';
+        if (total >= 40) {
+          if (sortedArch.length <= 2) synergyTier = 'Tier S // Pure Dual Harmonic Synergy';
+          else if (sortedArch.length <= 3) synergyTier = 'Tier A // Competitive High Synergy';
+        }
+
+        let archRows = sortedArch.map(([name, count]) => {
+          const pct = Math.round((count / total) * 100);
+          return `
+            <div style="margin-bottom:8px;">
+              <div style="display:flex; justify-content:space-between; margin-bottom:3px; font-size:0.82rem;">
+                <span style="color:#fff;">${name}</span>
+                <span style="font-family:monospace; color:var(--cyan);">${count} cards (${pct}%)</span>
+              </div>
+              <div style="background:rgba(255,255,255,0.08); height:6px; border-radius:3px; overflow:hidden;">
+                <div style="background:linear-gradient(90deg, var(--cyan), var(--emerald)); width:${pct}%; height:100%;"></div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        body.innerHTML = `
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div style="background:rgba(0,0,0,0.35); padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.08);">
+              <div style="font-size:0.75rem; color:var(--text-muted); font-family:monospace;">TOTAL CARDS</div>
+              <div style="font-size:1.4rem; font-weight:800; color:#fff;">${total} <span style="font-size:0.8rem; color:${total >= 40 ? 'var(--emerald)' : 'var(--amber)'};">${total >= 40 ? '✦ Legal' : 'Under 40'}</span></div>
+            </div>
+            <div style="background:rgba(0,0,0,0.35); padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.08);">
+              <div style="font-size:0.75rem; color:var(--text-muted); font-family:monospace;">RARITY RATIO</div>
+              <div style="font-size:0.95rem; color:#fff; margin-top:4px;">
+                5★ Archons: <strong style="color:var(--gold);">${starCounts[5]}</strong> | 4★ Vanguard: <strong style="color:var(--cyan);">${starCounts[4]}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:rgba(0,240,255,0.06); border:1px solid rgba(0,240,255,0.25); border-radius:8px; padding:12px;">
+            <div style="font-size:0.75rem; font-family:monospace; color:var(--cyan);">SYNERGY EVALUATION</div>
+            <div style="font-size:1.05rem; font-weight:800; color:#fff; margin-top:2px;">${synergyTier}</div>
+            <div style="font-size:0.8rem; color:var(--text-muted); margin-top:4px;">Primary Anchor: <span style="color:#fff;">${primary}</span>${secondary ? ` • Secondary Anchor: <span style="color:#fff;">${secondary}</span>` : ''}</div>
+          </div>
+
+          <div style="background:rgba(0,0,0,0.25); border-radius:8px; padding:12px;">
+            <div style="font-size:0.75rem; font-family:monospace; color:var(--text-muted); margin-bottom:8px;">ARCHETYPE DISTRIBUTION</div>
+            ${archRows}
+          </div>
+        `;
+      }
+      document.getElementById('stats-modal').classList.add('active');
+    }
+
+    function closeDeckStats() {
+      document.getElementById('stats-modal').classList.remove('active');
     }
 
     // Initial Load & Render

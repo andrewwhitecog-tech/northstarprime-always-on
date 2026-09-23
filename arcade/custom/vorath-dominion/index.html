@@ -45,11 +45,11 @@
   <script src="/static/games/juice.js"></script>
   <script src="/static/games/chiptune.js"></script>
   <div id="top">
-    <div class="res" id="food"><span class="ic">🍖</span><span class="v">200</span></div>
-    <div class="res" id="wood"><span class="ic">🪵</span><span class="v">200</span></div>
-    <div class="res" id="crystal"><span class="ic">💎</span><span class="v">150</span></div>
-    <div class="res" id="stone"><span class="ic">⛏️</span><span class="v">100</span></div>
-    <div class="res" id="pop"><span class="ic">👤</span><span class="v">3/8</span></div>
+    <div class="res" id="food"><span class="ic">FOD</span><span class="v">200</span></div>
+    <div class="res" id="wood"><span class="ic">LBR</span><span class="v">200</span></div>
+    <div class="res" id="crystal"><span class="ic">CRY</span><span class="v">150</span></div>
+    <div class="res" id="stone"><span class="ic">STN</span><span class="v">100</span></div>
+    <div class="res" id="pop"><span class="ic">POP</span><span class="v">3/8</span></div>
     <div id="obj">Objective: raise the Great Pyramid — or crush the Shadow tribunal.</div>
   </div>
   <div id="msg"></div>
@@ -61,7 +61,7 @@
   <div class="overlay" id="overlay">
     <div class="card">
       <h1>VORATH DOMINION</h1>
-      <p>You command the <b>Prism tribunal</b>. Your villagers gather <b>🍖 food</b>, <b>🪵 wood</b>, <b>💎 crystal</b>, and <b>⛏️ stone</b> from an abundant land studded with ancient temples and scattered <b>relics</b>.</p>
+      <p>You command the <b>Prism tribunal</b>. Your villagers gather <b>Food</b>, <b>Wood</b>, <b>Crystal</b>, and <b>Stone</b> from an abundant land studded with ancient temples and scattered <b>relics</b>.</p>
       <p><b>Build</b> houses (raise your population cap), a barracks (train crystal warriors), and <b>temples</b> — then crown the map with the <b>Great Pyramid</b> wonder. Claim relics for permanent bonuses. Across the valley, the <b>Shadow tribunal</b> is doing the same and will raid you.</p>
       <p><b>Win two ways:</b> complete the Great Pyramid and hold it for 90 seconds, <i>or</i> destroy the enemy Town Center. <b>Controls:</b> left-click / drag select · right-click move/gather/attack/build · arrows or screen-edge to pan · <kbd>H</kbd> centers on your town.</p>
       <button class="go" id="startBtn" type="button">Found the Tribunal</button>
@@ -134,10 +134,10 @@
   function genWorld(){
     // scatter forests, berry clusters, crystal veins, stone quarries — abundant
     function cluster(type,cx,cy,n,rad,amt,color,icon){ for(let i=0;i<n;i++){ const a=Math.random()*6.28,d=Math.random()*rad; const x=cx+Math.cos(a)*d,y=cy+Math.sin(a)*d; if(x>1&&y>3&&x<MAPW-1&&y<MAPH-1) seedRes(type,Math.round(x),Math.round(y),amt,color,icon); } }
-    for(let i=0;i<10;i++) cluster("wood",4+Math.random()*(MAPW-8),4+Math.random()*(MAPH-8),14,3.5,120,"#3f7a3a","🌲");
-    for(let i=0;i<7;i++)  cluster("food",4+Math.random()*(MAPW-8),4+Math.random()*(MAPH-8),5,2,150,"#c65a86","🫐");
-    for(let i=0;i<6;i++)  cluster("crystal",4+Math.random()*(MAPW-8),4+Math.random()*(MAPH-8),4,1.8,180,"#7fd7ff","💎");
-    for(let i=0;i<5;i++)  cluster("stone",4+Math.random()*(MAPW-8),4+Math.random()*(MAPH-8),4,1.6,200,"#b7a9c6","⛏️");
+    for(let i=0;i<10;i++) cluster("wood",4+Math.random()*(MAPW-8),4+Math.random()*(MAPH-8),14,3.5,120,"#3f7a3a","▲");
+    for(let i=0;i<7;i++)  cluster("food",4+Math.random()*(MAPW-8),4+Math.random()*(MAPH-8),5,2,150,"#c65a86","●");
+    for(let i=0;i<6;i++)  cluster("crystal",4+Math.random()*(MAPW-8),4+Math.random()*(MAPH-8),4,1.8,180,"#7fd7ff","◆");
+    for(let i=0;i<5;i++)  cluster("stone",4+Math.random()*(MAPW-8),4+Math.random()*(MAPH-8),4,1.6,200,"#b7a9c6","■");
     // ancient temples (neutral ruins — visual monuments; near them, relics)
     const templeSpots=[[MAPW/2,MAPH/2],[14,48],[50,16],[46,50],[16,14]];
     for(const [tx,ty] of templeSpots){ G.buildings.push(mkBuilding("temple",Math.round(tx)-1,Math.round(ty)-1,"neutral",true)); }
@@ -211,7 +211,7 @@
     btn.disabled=!canAfford(u.cost)||G.pop>=G.popCap;
     btn.onclick=()=>{ if(!canAfford(u.cost)){msg("Not enough resources","#ff9f6b");S("bump");return;} if(G.pop>=G.popCap){msg("Build houses to raise population","#e9c86a");S("bump");return;} pay(u.cost); b.queue.push(type); if(b.queue.length===1)b.qT=u.trainT; S("blip"); updSelPanel(); };
     cmds.appendChild(btn); }
-  function costStr(c){ return Object.entries(c).map(([k,v])=>v+" "+({food:"🍖",wood:"🪵",crystal:"💎",stone:"⛏️"}[k])).join(" ")||"free"; }
+  function costStr(c){ return Object.entries(c).map(([k,v])=>v+" "+({food:"Food",wood:"Wood",crystal:"Crystal",stone:"Stone"}[k])).join(" ")||"free"; }
 
   function buildPalette(){ const cmds=document.getElementById("cmds");
     const hasVill=G.sel.some(u=>u.u&&u.u.worker); if(!hasVill) return;
@@ -329,7 +329,7 @@
     }
     // pyramid victory hold
     const pyr=G.buildings.find(b=>b.owner==="you"&&b.key==="pyramid"&&b.done);
-    if(pyr){ G.pyramidHeld+=dt*0.001; const left=Math.ceil(90-G.pyramidHeld); document.getElementById("obj").textContent="🔺 Great Pyramid raised — hold "+Math.max(0,left)+"s to win!";
+    if(pyr){ G.pyramidHeld+=dt*0.001; const left=Math.ceil(90-G.pyramidHeld); document.getElementById("obj").textContent="▲ Great Pyramid raised — hold "+Math.max(0,left)+"s to win!";
       if(G.pyramidHeld>=90) win("The Great Pyramid stands eternal. Dominion achieved."); }
   }
 
@@ -444,8 +444,8 @@
     if(G.keys.arrowup||G.keys.w||G.my<18)cam.y-=sp; if(G.keys.arrowdown||G.keys.s||G.my>VH-18)cam.y+=sp; clampCam(); }
 
   // ---------- win/lose ----------
-  function win(t){ if(G.over)return; G.over=true; G.running=false; stopMusic(); S("oneUp"); endScreen("🏆 DOMINION",t,"#e9c86a"); }
-  function lose(t){ if(G.over)return; G.over=true; G.running=false; stopMusic(); S("death"); endScreen("💀 FALLEN",t,"#ff5b6b"); }
+  function win(t){ if(G.over)return; G.over=true; G.running=false; stopMusic(); S("oneUp"); endScreen("✦ DOMINION",t,"#e9c86a"); }
+  function lose(t){ if(G.over)return; G.over=true; G.running=false; stopMusic(); S("death"); endScreen("✦ FALLEN",t,"#ff5b6b"); }
   function endScreen(h,body,c){ const card=document.querySelector(".card"); card.querySelector("h1").textContent=h; card.querySelector("h1").style.animation="none"; card.querySelector("h1").style.color=c; card.querySelector("h1").style.webkitTextFillColor=c;
     card.querySelectorAll("p").forEach((p,i)=>p.style.display=i===0?"block":"none"); card.querySelector("p").innerHTML=body;
     document.getElementById("startBtn").textContent="Play again"; document.getElementById("overlay").hidden=false; }

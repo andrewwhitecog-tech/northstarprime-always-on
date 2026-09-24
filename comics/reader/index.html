@@ -28,6 +28,9 @@
       display: flex;
       flex-direction: column;
       overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 50% 15%, var(--ambient-glow, rgba(0, 240, 255, 0.04)) 0%, transparent 65%);
+      transition: background-image 0.4s ease;
     }
 
     /* HEADER */
@@ -316,6 +319,71 @@
     :fullscreen .comic-page-img {
       max-height: 96vh;
     }
+
+    /* TOAST NOTIFICATION */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: rgba(13, 18, 29, 0.96);
+      border: 1px solid var(--cyan);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8), 0 0 15px rgba(0, 240, 255, 0.3);
+      z-index: 1000;
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+    }
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    /* SHORTCUTS MODAL */
+    .shortcuts-modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(4, 7, 14, 0.88);
+      backdrop-filter: blur(10px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .shortcuts-modal.active { display: flex; }
+    .shortcuts-box {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 480px;
+      width: 100%;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.85);
+      position: relative;
+    }
+    .shortcut-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 0.85rem;
+    }
+    .kbd-key {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      padding: 2px 7px;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--cyan);
+    }
   </style>
 </head>
 <body>
@@ -333,10 +401,17 @@
       <select id="seriesSelect" class="series-select" aria-label="Select Comic Series">
         <option value="blazin_beaver_s4">Blazin' Beaver S4: The Mycelial Gateway (Issue 1)</option>
         <option value="vorath_s2">Uncle Vorath Mysteries S2: Starmap Deposition (Issue 1)</option>
+        <option value="vorath_s3">Uncle Vorath S3: The Obsidian Docket (Chapter 1)</option>
         <option value="duel_zexal">Duel Zexal: Iconic Spirits (Tankobon Vol. 1)</option>
       </select>
       <button id="btnFullscreen" type="button" class="btn" aria-label="Toggle Fullscreen">
         <span>⛶</span> Fullscreen
+      </button>
+      <button id="btnShare" type="button" class="btn" aria-label="Copy Direct Link">
+        <span>✦</span> Share
+      </button>
+      <button id="btnHelp" type="button" class="btn" aria-label="Keyboard Shortcuts">
+        <span>?</span> Shortcuts
       </button>
       <a href="/tcg/" class="btn btn-gold">3D TCG Binder &rarr;</a>
       <a href="/comics/" class="btn">&larr; Vault</a>
@@ -423,14 +498,24 @@
             { file: "Page_08.webp", label: "Page 8" }
           ]
         },
+        vorath_s3: {
+          title: "Uncle Vorath: The Obsidian Docket",
+          subtitle: "SEASON 3 // CHAPTER 01: CONCRETE & STATIC // NOIR SOVEREIGN READER",
+          defaultDir: "LTR",
+          basePath: "/comics/assets/covers/",
+          readChapterUrl: "/comics/vorath-obsidian-docket/",
+          pages: [
+            { file: "vorath_mysteries_s3.webp", label: "Cover" }
+          ]
+        },
         duel_zexal: {
           title: "Duel Zexal: Iconic Spirits Vol. 1",
-          subtitle: "JUMP COMICS TANKOBON // CHAPTER 01: ASTRAL DUELIST // 25 PAGES",
+          subtitle: "JUMP COMICS TANKOBON // CHAPTER 01: ASTRAL DUELIST // 24 SHEETS",
           defaultDir: "RTL",
           basePath: "/manga/assets/tankobon_vol_01/",
           pages: [
             { file: "Cover.webp", label: "Cover" },
-            ...Array.from({ length: 24 }, (_, i) => ({
+            ...Array.from({ length: 23 }, (_, i) => ({
               file: `Page_${String(i + 1).padStart(2, '0')}.webp`,
               label: `Page ${i + 1}`
             }))
@@ -543,6 +628,21 @@
         headerSubtitle.textContent = series.subtitle;
         flowDirection = series.defaultDir;
         updateDirButtons();
+
+        // Dynamic ambient theme glow
+        if (key === 'blazin_beaver_s4') {
+          document.body.style.setProperty('--ambient-glow', 'rgba(0, 255, 136, 0.08)');
+          document.body.style.setProperty('--border', 'rgba(0, 255, 136, 0.25)');
+        } else if (key === 'vorath_s2') {
+          document.body.style.setProperty('--ambient-glow', 'rgba(0, 240, 255, 0.08)');
+          document.body.style.setProperty('--border', 'rgba(0, 240, 255, 0.25)');
+        } else if (key === 'vorath_s3') {
+          document.body.style.setProperty('--ambient-glow', 'rgba(0, 229, 153, 0.08)');
+          document.body.style.setProperty('--border', 'rgba(0, 229, 153, 0.25)');
+        } else if (key === 'duel_zexal') {
+          document.body.style.setProperty('--ambient-glow', 'rgba(245, 158, 11, 0.08)');
+          document.body.style.setProperty('--border', 'rgba(245, 158, 11, 0.25)');
+        }
 
         // Populate page select
         pageSelect.innerHTML = '';
@@ -810,6 +910,18 @@
           goToPage(s.pages.length - 1);
         } else if (e.key === 'f' || e.key === 'F') {
           btnFullscreen.click();
+        } else if (e.key === 's' || e.key === 'S') {
+          if (isSpread) viewSingle.click();
+          else viewSpread.click();
+        } else if (e.key === 'd' || e.key === 'D') {
+          if (flowDirection === 'LTR') dirRtl.click();
+          else dirLtr.click();
+        } else if (e.key === 'm' || e.key === 'M') {
+          btnSound.click();
+        } else if (e.key === '?' || e.key === '/') {
+          toggleShortcutsModal();
+        } else if (e.key === 'Escape') {
+          closeShortcutsModal();
         }
       });
 
@@ -835,11 +947,100 @@
         }
       }, { passive: true });
 
+      // Share & Toast
+      function showToast(msg) {
+        const toast = document.getElementById('readerToast');
+        if (!toast) return;
+        toast.textContent = msg;
+        toast.classList.add('show');
+        setTimeout(() => { toast.classList.remove('show'); }, 2200);
+      }
+
+      const btnShare = document.getElementById('btnShare');
+      if (btnShare) {
+        btnShare.addEventListener('click', () => {
+          const url = new URL(window.location.origin + '/comics/reader/');
+          url.searchParams.set('series', currentSeriesKey);
+          url.searchParams.set('page', currentIndex + 1);
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(url.toString()).then(() => {
+              showToast(`✦ Copied link to Page ${currentIndex + 1}!`);
+            }).catch(() => {
+              prompt('Copy this link:', url.toString());
+            });
+          } else {
+            prompt('Copy this link:', url.toString());
+          }
+        });
+      }
+
+      // Shortcuts Modal
+      const shortcutsModal = document.getElementById('shortcutsModal');
+      function toggleShortcutsModal() {
+        if (shortcutsModal) shortcutsModal.classList.toggle('active');
+      }
+      function closeShortcutsModal(e) {
+        if (shortcutsModal) shortcutsModal.classList.remove('active');
+      }
+      window.closeShortcutsModal = closeShortcutsModal;
+
+      const btnHelp = document.getElementById('btnHelp');
+      if (btnHelp) {
+        btnHelp.addEventListener('click', toggleShortcutsModal);
+      }
+
       // Init
       readUrlParams();
       loadSeries(currentSeriesKey, true);
 
     })();
   </script>
+
+  <!-- SHORTCUTS MODAL -->
+  <div class="shortcuts-modal" id="shortcutsModal" onclick="closeShortcutsModal(event)">
+    <div class="shortcuts-box" onclick="event.stopPropagation()">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <h3 style="color:#fff; font-size:1.1rem; display:flex; align-items:center; gap:8px;">
+          <span style="color:var(--cyan);">✦</span> Keyboard Navigation Shortcuts
+        </h3>
+        <button type="button" class="btn" onclick="closeShortcutsModal()" style="padding:2px 8px;">✕</button>
+      </div>
+      <div class="shortcut-row">
+        <span>Next Page</span>
+        <span class="kbd-key">Right Arrow / Space / PageDn</span>
+      </div>
+      <div class="shortcut-row">
+        <span>Previous Page</span>
+        <span class="kbd-key">Left Arrow / PageUp</span>
+      </div>
+      <div class="shortcut-row">
+        <span>Toggle Fullscreen</span>
+        <span class="kbd-key">F</span>
+      </div>
+      <div class="shortcut-row">
+        <span>Toggle Single / Spread</span>
+        <span class="kbd-key">S</span>
+      </div>
+      <div class="shortcut-row">
+        <span>Toggle LTR / RTL Direction</span>
+        <span class="kbd-key">D</span>
+      </div>
+      <div class="shortcut-row">
+        <span>Toggle Page Sound</span>
+        <span class="kbd-key">M</span>
+      </div>
+      <div class="shortcut-row">
+        <span>Jump to First Page (Cover)</span>
+        <span class="kbd-key">Home</span>
+      </div>
+      <div class="shortcut-row" style="border-bottom:none;">
+        <span>Jump to Last Page</span>
+        <span class="kbd-key">End</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div class="toast" id="readerToast">Link copied to clipboard!</div>
 </body>
 </html>

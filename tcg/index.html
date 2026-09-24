@@ -645,9 +645,14 @@
           ARENA MODE:
           <strong id="current-mode-label" style="color:var(--cyan);">PRACTICE SANDBOX</strong>
         </div>
-        <div style="display:flex; gap:8px;">
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
           <button class="nav-btn" id="btn-mode-sandbox" style="padding:4px 10px; font-size:0.75rem; border-color:var(--cyan); color:var(--cyan);" onclick="setArenaMode('sandbox')">✦ Practice Sandbox</button>
-          <button class="nav-btn" id="btn-mode-cpu" style="padding:4px 10px; font-size:0.75rem; border-color:var(--amber); color:var(--amber);" onclick="setArenaMode('cpu')">✦ CPU Match (vs Vorath AI)</button>
+          <button class="nav-btn" id="btn-mode-cpu" style="padding:4px 10px; font-size:0.75rem; border-color:var(--amber); color:var(--amber);" onclick="setArenaMode('cpu')">✦ CPU Match</button>
+          <select id="cpu-opponent-select" class="nav-btn" style="display:none; padding:4px 8px; font-size:0.75rem; background:rgba(0,0,0,0.5); border-color:var(--amber); color:var(--amber); outline:none; cursor:pointer;" onchange="changeCpuOpponent(this.value)">
+            <option value="vorath">Vorath AI (8,000 LP)</option>
+            <option value="vector">Vector AI (7,500 LP)</option>
+            <option value="blaze">Blaze AI (8,500 LP)</option>
+          </select>
         </div>
       </div>
 
@@ -680,6 +685,7 @@
             <span>FIELD ATK: <strong style="color:var(--cyan); font-size:1.1rem;" id="mat-atk">0</strong></span>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="nav-btn" id="btn-xyz-summon" style="padding:4px 10px; font-size:0.75rem; border-color:var(--gold); color:var(--gold); background:rgba(245,158,11,0.15);" onclick="performXyzOverlaySummon()">✦ Overlay Summon (Rank 5)</button>
             <button class="nav-btn" style="padding:4px 10px; font-size:0.75rem;" onclick="advancePhase()">Next Phase ▶</button>
             <button class="nav-btn nav-btn-highlight" style="padding:4px 10px; font-size:0.75rem;" onclick="declareBattleAttack()">✦ Attack</button>
             <button class="nav-btn" id="btn-end-turn-cpu" style="display:none; padding:4px 10px; font-size:0.75rem; border-color:var(--amber); color:var(--amber);" onclick="triggerCpuTurn()">✦ End Turn (Trigger CPU)</button>
@@ -883,6 +889,26 @@
     </div>
   </div>
 
+  <!-- XYZ OVERLAY CHANT MODAL -->
+  <div class="modal" id="xyz-chant-modal" onclick="closeXyzChantModal(event)">
+    <div class="modal-content" onclick="event.stopPropagation()" style="max-width:620px; background:radial-gradient(circle at center, #1c1404 0%, #080602 100%); border:2px solid var(--gold); box-shadow:0 0 45px rgba(245,158,11,0.55); border-radius:16px;">
+      <button class="modal-close" onclick="closeXyzChantModal()">✕</button>
+      <div style="display:flex; flex-direction:column; gap:16px; text-align:center; padding:16px;">
+        <span style="font-family:monospace; color:var(--gold); font-size:0.85rem; letter-spacing:2px; text-transform:uppercase;">✦ ASTRAL XYZ OVERLAY NETWORK AWAKENED ✦</span>
+        <h2 style="font-size:1.65rem; color:#fff; text-shadow:0 0 16px rgba(245,158,11,0.7);" id="xyz-modal-title">Nikola Tesla, Master of Lightning</h2>
+        <div style="background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.35); border-radius:10px; padding:16px; font-style:italic; font-size:0.95rem; line-height:1.6; color:#fef08a;" id="xyz-modal-chant">
+          "When two currents converge across the void, the sparks of genius shatter temporal cages! Open the circuits of infinite potential! Xyz Summon! Appear now, Rank 5 — Nikola Tesla, Master of Lightning!"
+        </div>
+        <div style="display:flex; justify-content:center; gap:20px; font-family:monospace; font-size:0.85rem; color:var(--cyan);">
+          <span>RANK: 5 ★★★★★</span>
+          <span>ATK: 3,300</span>
+          <span>MATERIALS: 2x VANGUARD</span>
+        </div>
+        <button class="nav-btn nav-btn-highlight" style="padding:10px 24px; font-size:0.9rem; align-self:center;" onclick="closeXyzChantModal()">Proceed to Battle ▶</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const cardsData = [{"code": "NSP-EN001", "title": "2 Chainz The Trap Aristocrat", "filename": "2_Chainz_The_Trap_Aristocrat_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN001.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN002", "title": "Aleister Crowley The Great Beast 666", "filename": "Aleister_Crowley_The_Great_Beast_666_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN002.webp", "folder": "YuGiOh_Music_Cards", "tag": "occult", "tag_label": "Occult & Esoteric", "archetype": "ALCHEMICAL-TRANSMUTATION", "rarity": "Ghost Rare", "stars": 5}, {"code": "NSP-EN003", "title": "Army Of The Pharaohs The Unholy Legion", "filename": "Army_Of_The_Pharaohs_The_Unholy_Legion_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN003.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN004", "title": "BLP Kosher Authentic", "filename": "BLP_Kosher_Authentic_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN004.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN005", "title": "Babalon The Scarlet Empress", "filename": "Babalon_The_Scarlet_Empress_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN005.webp", "folder": "YuGiOh_Music_Cards", "tag": "occult", "tag_label": "Occult & Esoteric", "archetype": "ALCHEMICAL-TRANSMUTATION", "rarity": "Ghost Rare", "stars": 5}, {"code": "NSP-EN006", "title": "Baphomet The Sabbatic Hierophant", "filename": "Baphomet_The_Sabbatic_Hierophant_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN006.webp", "folder": "YuGiOh_Music_Cards", "tag": "occult", "tag_label": "Occult & Esoteric", "archetype": "ALCHEMICAL-TRANSMUTATION", "rarity": "Ghost Rare", "stars": 5}, {"code": "NSP-EN007", "title": "Behemoth Nergal The Luciferian Archon", "filename": "Behemoth_Nergal_The_Luciferian_Archon_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN007.webp", "folder": "YuGiOh_Music_Cards", "tag": "occult", "tag_label": "Occult & Esoteric", "archetype": "ALCHEMICAL-TRANSMUTATION", "rarity": "Ghost Rare", "stars": 5}, {"code": "NSP-EN008", "title": "Between The Buried And Me Tommy Rogers", "filename": "Between_The_Buried_And_Me_Tommy_Rogers_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN008.webp", "folder": "YuGiOh_Music_Cards", "tag": "metal", "tag_label": "Rock & Metal Archons", "archetype": "HIGH-AMPLITUDE", "rarity": "Secret Rare", "stars": 5}, {"code": "NSP-EN009", "title": "Birdman Number One Stunna", "filename": "Birdman_Number_One_Stunna_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN009.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN010", "title": "Bring Me The Horizon Oli Sykes", "filename": "Bring_Me_The_Horizon_Oli_Sykes_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN010.webp", "folder": "YuGiOh_Music_Cards", "tag": "metal", "tag_label": "Rock & Metal Archons", "archetype": "HIGH-AMPLITUDE", "rarity": "Secret Rare", "stars": 5}, {"code": "NSP-EN011", "title": "DJ Snake The Sub Bass Pharaoh", "filename": "DJ_Snake_The_Sub_Bass_Pharaoh_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN011.webp", "folder": "YuGiOh_Music_Cards", "tag": "edm", "tag_label": "EDM & Bass Titans", "archetype": "SUB-BASS-FREQ", "rarity": "Prismatic Secret", "stars": 5}, {"code": "NSP-EN012", "title": "David Bowie Ziggy Stardust", "filename": "David_Bowie_Ziggy_Stardust_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN012.webp", "folder": "YuGiOh_Music_Cards", "tag": "metal", "tag_label": "Rock & Metal Archons", "archetype": "HIGH-AMPLITUDE", "rarity": "Secret Rare", "stars": 5}, {"code": "NSP-EN013", "title": "David Guetta The Titanium Anthem King", "filename": "David_Guetta_The_Titanium_Anthem_King_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN013.webp", "folder": "YuGiOh_Music_Cards", "tag": "edm", "tag_label": "EDM & Bass Titans", "archetype": "SUB-BASS-FREQ", "rarity": "Prismatic Secret", "stars": 5}, {"code": "NSP-EN014", "title": "Dr Dre The GFunk Alchemist", "filename": "Dr_Dre_The_GFunk_Alchemist_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN014.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN015", "title": "Easy Mac Blue Slide Revolution", "filename": "Easy_Mac_Blue_Slide_Revolution.jpg", "rel_path": "/tcg/assets/cards/NSP-EN015.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN016", "title": "GRiZ The Funk Transcendent", "filename": "GRiZ_The_Funk_Transcendent_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN016.webp", "folder": "YuGiOh_Music_Cards", "tag": "edm", "tag_label": "EDM & Bass Titans", "archetype": "SUB-BASS-FREQ", "rarity": "Prismatic Secret", "stars": 5}, {"code": "NSP-EN017", "title": "Ganja White Night Wobble", "filename": "Ganja_White_Night_Wobble_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN017.webp", "folder": "YuGiOh_Music_Cards", "tag": "edm", "tag_label": "EDM & Bass Titans", "archetype": "SUB-BASS-FREQ", "rarity": "Prismatic Secret", "stars": 5}, {"code": "NSP-EN018", "title": "Gojira The Oceanic Leviathan", "filename": "Gojira_The_Oceanic_Leviathan_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN018.webp", "folder": "YuGiOh_Music_Cards", "tag": "metal", "tag_label": "Rock & Metal Archons", "archetype": "HIGH-AMPLITUDE", "rarity": "Secret Rare", "stars": 5}, {"code": "NSP-EN019", "title": "Gorilla Nems FYL Mayor Of Coney Island", "filename": "Gorilla_Nems_FYL_Mayor_Of_Coney_Island.jpg", "rel_path": "/tcg/assets/cards/NSP-EN019.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN020", "title": "Gorilla Twins Ill Bill And Nems", "filename": "Gorilla_Twins_Ill_Bill_And_Nems_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN020.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN021", "title": "Gravekeepers Commandant", "filename": "Gravekeepers_Commandant_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN021.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN022", "title": "Gravekeepers Spy", "filename": "Gravekeepers_Spy_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN022.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN023", "title": "Gravekeepers Supernaturalist", "filename": "Gravekeepers_Supernaturalist_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN023.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN024", "title": "Heavy Metal Kings Paz And Bill", "filename": "Heavy_Metal_Kings_Paz_And_Bill_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN024.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN025", "title": "Ice Cube The West Coast Predator", "filename": "Ice_Cube_The_West_Coast_Predator_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN025.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN026", "title": "Ill Bill Cult Leader Of Glenwood", "filename": "Ill_Bill_Cult_Leader_Of_Glenwood_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN026.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN027", "title": "Ill Bill The Cannibal Hulk", "filename": "Ill_Bill_The_Cannibal_Hulk_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN027.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN028", "title": "Inzo The Overthinker", "filename": "Inzo_The_Overthinker_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN028.webp", "folder": "YuGiOh_Music_Cards", "tag": "edm", "tag_label": "EDM & Bass Titans", "archetype": "SUB-BASS-FREQ", "rarity": "Prismatic Secret", "stars": 5}, {"code": "NSP-EN029", "title": "Jimi Hendrix Voodoo Child", "filename": "Jimi_Hendrix_Voodoo_Child_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN029.webp", "folder": "YuGiOh_Music_Cards", "tag": "metal", "tag_label": "Rock & Metal Archons", "archetype": "HIGH-AMPLITUDE", "rarity": "Secret Rare", "stars": 5}, {"code": "NSP-EN030", "title": "Kauket Lady Of Primordial Night", "filename": "Kauket_Lady_Of_Primordial_Night_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN030.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN031", "title": "Kek Primordial Lord Of Darkness", "filename": "Kek_Primordial_Lord_Of_Darkness_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN031.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN032", "title": "Khepri The Celestial Dawn Scarab", "filename": "Khepri_The_Celestial_Dawn_Scarab_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN032.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN033", "title": "Leviathan The Abyssal Ouroboros", "filename": "Leviathan_The_Abyssal_Ouroboros_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN033.webp", "folder": "YuGiOh_Music_Cards", "tag": "occult", "tag_label": "Occult & Esoteric", "archetype": "ALCHEMICAL-TRANSMUTATION", "rarity": "Ghost Rare", "stars": 5}, {"code": "NSP-EN034", "title": "Lil Wayne The Martian", "filename": "Lil_Wayne_The_Martian_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN034.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN035", "title": "Lilith Queen Of Sitra Achra", "filename": "Lilith_Queen_Of_Sitra_Achra_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN035.webp", "folder": "YuGiOh_Music_Cards", "tag": "occult", "tag_label": "Occult & Esoteric", "archetype": "ALCHEMICAL-TRANSMUTATION", "rarity": "Ghost Rare", "stars": 5}, {"code": "NSP-EN036", "title": "Lord Goat The Gore Elohim", "filename": "Lord_Goat_The_Gore_Elohim_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN036.webp", "folder": "YuGiOh_Music_Cards", "tag": "occult", "tag_label": "Occult & Esoteric", "archetype": "ALCHEMICAL-TRANSMUTATION", "rarity": "Ghost Rare", "stars": 5}, {"code": "NSP-EN037", "title": "Lucifer The Morning Star", "filename": "Lucifer_The_Morning_Star_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN037.webp", "folder": "YuGiOh_Music_Cards", "tag": "occult", "tag_label": "Occult & Esoteric", "archetype": "ALCHEMICAL-TRANSMUTATION", "rarity": "Ghost Rare", "stars": 5}, {"code": "NSP-EN038", "title": "Luh Tyler The Florida Visionary", "filename": "Luh_Tyler_The_Florida_Visionary_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN038.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN039", "title": "Mac Miller Celestial Swimmer", "filename": "Mac_Miller_Celestial_Swimmer.jpg", "rel_path": "/tcg/assets/cards/NSP-EN039.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN040", "title": "Mac Miller Macadelic Astral Transcendence", "filename": "Mac_Miller_Macadelic_Astral_Transcendence.jpg", "rel_path": "/tcg/assets/cards/NSP-EN040.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN041", "title": "Mac Miller Master Of Faces", "filename": "Mac_Miller_Master_Of_Faces.jpg", "rel_path": "/tcg/assets/cards/NSP-EN041.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN042", "title": "Mastodon The Leviathan Beast", "filename": "Mastodon_The_Leviathan_Beast_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN042.webp", "folder": "YuGiOh_Music_Cards", "tag": "metal", "tag_label": "Rock & Metal Archons", "archetype": "HIGH-AMPLITUDE", "rarity": "Secret Rare", "stars": 5}, {"code": "NSP-EN043", "title": "Medjed The Concealed Smiter", "filename": "Medjed_The_Concealed_Smiter_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN043.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN044", "title": "Mudvayne Chad Gray LD50", "filename": "Mudvayne_Chad_Gray_LD50_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN044.webp", "folder": "YuGiOh_Music_Cards", "tag": "metal", "tag_label": "Rock & Metal Archons", "archetype": "HIGH-AMPLITUDE", "rarity": "Secret Rare", "stars": 5}, {"code": "NSP-EN045", "title": "Necrovalley The Sacred Tomb City", "filename": "Necrovalley_The_Sacred_Tomb_City_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN045.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN046", "title": "Non Phixion Ill Bill And Lord Goat", "filename": "Non_Phixion_Ill_Bill_And_Lord_Goat.jpg", "rel_path": "/tcg/assets/cards/NSP-EN046.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN047", "title": "Non Phixion The Future Is Now", "filename": "Non_Phixion_The_Future_Is_Now_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN047.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN048", "title": "Queen Freddie Mercury Bohemian Rhapsody", "filename": "Queen_Freddie_Mercury_Bohemian_Rhapsody_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN048.webp", "folder": "YuGiOh_Music_Cards", "tag": "metal", "tag_label": "Rock & Metal Archons", "archetype": "HIGH-AMPLITUDE", "rarity": "Secret Rare", "stars": 5}, {"code": "NSP-EN049", "title": "Rezz The Spiral Hypnotist", "filename": "Rezz_The_Spiral_Hypnotist_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN049.webp", "folder": "YuGiOh_Music_Cards", "tag": "edm", "tag_label": "EDM & Bass Titans", "archetype": "SUB-BASS-FREQ", "rarity": "Prismatic Secret", "stars": 5}, {"code": "NSP-EN050", "title": "Sabac Red The Revolutionary Voice", "filename": "Sabac_Red_The_Revolutionary_Voice_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN050.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN051", "title": "The Black Dahlia Murder Trevor Strnad", "filename": "The_Black_Dahlia_Murder_Trevor_Strnad_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN051.webp", "folder": "YuGiOh_Music_Cards", "tag": "metal", "tag_label": "Rock & Metal Archons", "archetype": "HIGH-AMPLITUDE", "rarity": "Secret Rare", "stars": 5}, {"code": "NSP-EN052", "title": "The Emerald Tablet Hermetic Spell", "filename": "The_Emerald_Tablet_Hermetic_Spell_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN052.webp", "folder": "YuGiOh_Music_Cards", "tag": "occult", "tag_label": "Occult & Esoteric", "archetype": "ALCHEMICAL-TRANSMUTATION", "rarity": "Ghost Rare", "stars": 5}, {"code": "NSP-EN053", "title": "The Millennium Eye Gaze Of The Mind", "filename": "The_Millennium_Eye_Gaze_Of_The_Mind_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN053.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN054", "title": "The Millennium Puzzle Vessel Of The Pharaoh", "filename": "The_Millennium_Puzzle_Vessel_Of_The_Pharaoh_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN054.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN055", "title": "The Millennium Ring Compass Of The Shadow Realm", "filename": "The_Millennium_Ring_Compass_Of_The_Shadow_Realm_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN055.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN056", "title": "The Millennium Scarab Heart Of The Eternal Sun", "filename": "The_Millennium_Scarab_Heart_Of_The_Eternal_Sun_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN056.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN057", "title": "The Millennium Uraeus Flame Of Wadjet", "filename": "The_Millennium_Uraeus_Flame_Of_Wadjet_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN057.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN058", "title": "Thoth Scribe Of Maat And Hermopolis", "filename": "Thoth_Scribe_Of_Maat_And_Hermopolis_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN058.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN059", "title": "Tool Maynard The Transcendental Vocalist", "filename": "Tool_Maynard_The_Transcendental_Vocalist_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN059.webp", "folder": "YuGiOh_Music_Cards", "tag": "metal", "tag_label": "Rock & Metal Archons", "archetype": "HIGH-AMPLITUDE", "rarity": "Secret Rare", "stars": 5}, {"code": "NSP-EN060", "title": "Trapland Pat Authentic", "filename": "Trapland_Pat_Authentic_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN060.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN061", "title": "Vinnie Paz Boxcutter Pazzy", "filename": "Vinnie_Paz_Boxcutter_Pazzy_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN061.webp", "folder": "YuGiOh_Music_Cards", "tag": "hiphop", "tag_label": "Hip-Hop & Trap", "archetype": "BEATS-FLOW", "rarity": "Ultra Rare", "stars": 4}, {"code": "NSP-EN062", "title": "Wepwawet The Opener Of The Ways", "filename": "Wepwawet_The_Opener_Of_The_Ways_Master.jpg", "rel_path": "/tcg/assets/cards/NSP-EN062.webp", "folder": "YuGiOh_Music_Cards", "tag": "egypt", "tag_label": "Ancient Egyptian & Millennium", "archetype": "MILLENNIUM-CRYPT", "rarity": "Collector's Rare", "stars": 5}, {"code": "NSP-EN063", "title": "Pro Bowling PBA 300 Cracked Ice", "filename": "Pro_Bowling_PBA_300_Cracked_Ice.jpg", "rel_path": "/tcg/assets/cards/NSP-EN063.webp", "folder": "Alt_Sports_Fine_Art", "tag": "sports", "tag_label": "Alt Sports & Fine Art", "archetype": "PRO-LEAGUE", "rarity": "Secret Rare", "stars": 4}, {"code": "NSP-EN064", "title": "trading card fine art vangogh 1789476059280", "filename": "trading_card_fine_art_vangogh_1789476059280.jpg", "rel_path": "/tcg/assets/cards/NSP-EN064.webp", "folder": "Alt_Sports_Fine_Art", "tag": "sports", "tag_label": "Alt Sports & Fine Art", "archetype": "PRO-LEAGUE", "rarity": "Secret Rare", "stars": 4}, {"code": "NSP-EN065", "title": "trading card pro billiards 1789476027055", "filename": "trading_card_pro_billiards_1789476027055.jpg", "rel_path": "/tcg/assets/cards/NSP-EN065.webp", "folder": "Alt_Sports_Fine_Art", "tag": "sports", "tag_label": "Alt Sports & Fine Art", "archetype": "PRO-LEAGUE", "rarity": "Secret Rare", "stars": 4}, {"code": "NSP-EN066", "title": "trading card pro cornhole 1789475993173", "filename": "trading_card_pro_cornhole_1789475993173.jpg", "rel_path": "/tcg/assets/cards/NSP-EN066.webp", "folder": "Alt_Sports_Fine_Art", "tag": "sports", "tag_label": "Alt Sports & Fine Art", "archetype": "PRO-LEAGUE", "rarity": "Secret Rare", "stars": 4}, {"code": "NSP-EN067", "title": "trading card pro pickleball 1789475950171", "filename": "trading_card_pro_pickleball_1789475950171.jpg", "rel_path": "/tcg/assets/cards/NSP-EN067.webp", "folder": "Alt_Sports_Fine_Art", "tag": "sports", "tag_label": "Alt Sports & Fine Art", "archetype": "PRO-LEAGUE", "rarity": "Secret Rare", "stars": 4}, {"code": "NSP-EN068", "title": "Al Capone Chicago Outfit Gold Refractor", "filename": "Al_Capone_Chicago_Outfit_Gold_Refractor.jpg", "rel_path": "/tcg/assets/cards/NSP-EN068.webp", "folder": "Infamous_Outlaws_Cults", "tag": "outlaws", "tag_label": "Infamous Outlaws & Cults", "archetype": "OUTLAW-SYNDICATE", "rarity": "Prizm Foil", "stars": 5}, {"code": "NSP-EN069", "title": "Billy The Kid Wild West Prizm", "filename": "Billy_The_Kid_Wild_West_Prizm.jpg", "rel_path": "/tcg/assets/cards/NSP-EN069.webp", "folder": "Infamous_Outlaws_Cults", "tag": "outlaws", "tag_label": "Infamous Outlaws & Cults", "archetype": "OUTLAW-SYNDICATE", "rarity": "Prizm Foil", "stars": 5}, {"code": "NSP-EN070", "title": "Grigori Rasputin Mad Monk Relic Foil", "filename": "Grigori_Rasputin_Mad_Monk_Relic_Foil.jpg", "rel_path": "/tcg/assets/cards/NSP-EN070.webp", "folder": "Infamous_Outlaws_Cults", "tag": "outlaws", "tag_label": "Infamous Outlaws & Cults", "archetype": "OUTLAW-SYNDICATE", "rarity": "Prizm Foil", "stars": 5}, {"code": "NSP-EN071", "title": "Ill Bill Heavy Metal Kings Relic Prizm", "filename": "Ill_Bill_Heavy_Metal_Kings_Relic_Prizm.jpg", "rel_path": "/tcg/assets/cards/NSP-EN071.webp", "folder": "Infamous_Outlaws_Cults", "tag": "outlaws", "tag_label": "Infamous Outlaws & Cults", "archetype": "OUTLAW-SYNDICATE", "rarity": "Prizm Foil", "stars": 5}];
     let activeCategory = 'all';
@@ -891,26 +917,55 @@
     let currentModalCard = null;
     let testHandDeck = [];
 
-    // Web Audio Sound Synthesis for Card Hologram & Flip
+    // Web Audio Sound Synthesis for Card Hologram, Flips, Attacks & Xyz Overlay
     let audioCtx = null;
-    function playCardChime() {
+    function playSound(type) {
       try {
         if (!audioCtx) {
           audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15);
-        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.2);
+        if (type === 'chime' || !type) {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15);
+          gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.2);
+        } else if (type === 'attack') {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(260, audioCtx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(65, audioCtx.currentTime + 0.25);
+          gain.gain.setValueAtTime(0.14, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.25);
+        } else if (type === 'xyz') {
+          [440, 554.37, 659.25, 880, 1108.73, 1318.51].forEach((freq, i) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            const startTime = audioCtx.currentTime + i * 0.06;
+            osc.frequency.setValueAtTime(freq, startTime);
+            gain.gain.setValueAtTime(0.08, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.22);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(startTime);
+            osc.stop(startTime + 0.22);
+          });
+        }
       } catch(e) {}
     }
+    function playCardChime() { playSound('chime'); }
 
     function renderCards() {
       const grid = document.getElementById('card-grid');
@@ -1192,12 +1247,46 @@
     let playerLP = 8000;
     let cpuLP = 8000;
     let cpuFieldZones = { v1: null, v2: null, v3: null, s1: null, s2: null };
-    const cpuRoster = [
-      { code: 'CPU-01', title: 'Chrono-Inquisitor Vorath', stars: 5, atk: 2800, rel_path: '/comics/assets/covers/vorath_mysteries_s1.webp', tag: 'Chrono-Void' },
-      { code: 'CPU-02', title: 'Void-Drift Sentry', stars: 4, atk: 1900, rel_path: '/comics/assets/covers/vorath_mysteries_s2.webp', tag: 'Chrono-Void' },
-      { code: 'CPU-03', title: 'Null-Time Arbiter', stars: 4, atk: 1800, rel_path: '/tcg/assets/cards/NSP-EN002.webp', tag: 'Occult' },
-      { code: 'CPU-04', title: 'Temporal Seal of Arbitration', stars: 4, isRelic: true, atk: 400, rel_path: '/tcg/assets/cards/NSP-EN052.webp', tag: 'Relic' }
-    ];
+
+    const cpuOpponents = {
+      vorath: {
+        name: "Chrono-Inquisitor Vorath AI",
+        startLP: 8000,
+        color: "var(--amber)",
+        quote: "Chrono-Inquisitor Vorath files an injunction against your battle declaration!",
+        roster: [
+          { code: 'CPU-VOR-01', title: 'Chrono-Inquisitor Vorath', stars: 5, atk: 2800, rel_path: '/comics/assets/covers/vorath_mysteries_s1.webp', tag: 'Chrono-Void' },
+          { code: 'CPU-VOR-02', title: 'Void-Drift Sentry', stars: 4, atk: 1900, rel_path: '/comics/assets/covers/vorath_mysteries_s2.webp', tag: 'Chrono-Void' },
+          { code: 'CPU-VOR-03', title: 'Null-Time Arbiter', stars: 4, atk: 1800, rel_path: '/tcg/assets/cards/NSP-EN002.webp', tag: 'Occult' },
+          { code: 'CPU-VOR-04', title: 'Temporal Seal of Arbitration', stars: 4, isRelic: true, atk: 400, rel_path: '/tcg/assets/cards/NSP-EN052.webp', tag: 'Relic' }
+        ]
+      },
+      vector: {
+        name: "Void-Warden Vector AI",
+        startLP: 7500,
+        color: "var(--purple)",
+        quote: "Vector activates the Void-Drift Damping Lattice, absorbing your acoustic frequency!",
+        roster: [
+          { code: 'CPU-VEC-01', title: 'Vector The Void Vanguard', stars: 5, atk: 2700, rel_path: '/tcg/assets/cards/NSP-EN049.webp', tag: 'Sub-Bass' },
+          { code: 'CPU-VEC-02', title: 'Sub-Bass Phantom Drone', stars: 4, atk: 2000, rel_path: '/tcg/assets/cards/NSP-EN011.webp', tag: 'EDM' },
+          { code: 'CPU-VEC-03', title: 'Shadow Glitch Infiltrator', stars: 4, atk: 1850, rel_path: '/tcg/assets/cards/NSP-EN037.webp', tag: 'Occult' },
+          { code: 'CPU-VEC-04', title: 'Millennium Eye Frequency Lock', stars: 4, isRelic: true, atk: 400, rel_path: '/tcg/assets/cards/NSP-EN053.webp', tag: 'Relic' }
+        ]
+      },
+      blaze: {
+        name: "Blaze Beaver Cascadia AI",
+        startLP: 8500,
+        color: "var(--emerald)",
+        quote: "Blaze Beaver triggers a subterranean Mycelial Spore resonance surge!",
+        roster: [
+          { code: 'CPU-BLZ-01', title: 'Blaze Beaver Apex Warden', stars: 5, atk: 2900, rel_path: '/comics/assets/covers/blazin_beaver_s4.webp', tag: 'Cascadia' },
+          { code: 'CPU-BLZ-02', title: 'Old-Growth Spore Sentinel', stars: 4, atk: 1950, rel_path: '/comics/assets/covers/blazin_beaver_s1.webp', tag: 'Cascadia' },
+          { code: 'CPU-BLZ-03', title: 'Hydraulic Timber Phalanx', stars: 4, atk: 1800, rel_path: '/comics/assets/covers/blazin_beaver_s2.webp', tag: 'Cascadia' },
+          { code: 'CPU-BLZ-04', title: 'Ancient Canopy Bioshield', stars: 4, isRelic: true, atk: 400, rel_path: '/comics/assets/covers/blazin_beaver_s3.webp', tag: 'Relic' }
+        ]
+      }
+    };
+    let currentCpuKey = 'vorath';
     let cpuRosterIndex = 0;
 
     function setArenaMode(mode) {
@@ -1207,12 +1296,15 @@
       const cpuBtn = document.getElementById('btn-end-turn-cpu');
       const btnSandbox = document.getElementById('btn-mode-sandbox');
       const btnCpu = document.getElementById('btn-mode-cpu');
+      const cpuSelect = document.getElementById('cpu-opponent-select');
 
       if (mode === 'cpu') {
-        label.innerText = 'CPU MATCH // VS VORATH AI';
-        label.style.color = 'var(--amber)';
+        const opp = cpuOpponents[currentCpuKey];
+        label.innerText = `CPU MATCH // VS ${opp.name.toUpperCase()}`;
+        label.style.color = opp.color;
         cpuSection.style.display = 'flex';
         cpuBtn.style.display = 'inline-flex';
+        if (cpuSelect) cpuSelect.style.display = 'inline-flex';
         btnCpu.classList.add('nav-btn-highlight');
         btnSandbox.classList.remove('nav-btn-highlight');
         resetCpuDuel();
@@ -1221,6 +1313,7 @@
         label.style.color = 'var(--cyan)';
         cpuSection.style.display = 'none';
         cpuBtn.style.display = 'none';
+        if (cpuSelect) cpuSelect.style.display = 'none';
         btnSandbox.classList.add('nav-btn-highlight');
         btnCpu.classList.remove('nav-btn-highlight');
         playerLP = 8000;
@@ -1229,19 +1322,32 @@
       playCardChime();
     }
 
+    function changeCpuOpponent(key) {
+      if (!cpuOpponents[key]) return;
+      currentCpuKey = key;
+      const opp = cpuOpponents[key];
+      const label = document.getElementById('current-mode-label');
+      if (label) {
+        label.innerText = `CPU MATCH // VS ${opp.name.toUpperCase()}`;
+        label.style.color = opp.color;
+      }
+      resetCpuDuel();
+    }
+
     function resetCpuDuel() {
+      const opp = cpuOpponents[currentCpuKey] || cpuOpponents.vorath;
       playerLP = 8000;
-      cpuLP = 8000;
+      cpuLP = opp.startLP;
       ['v1', 'v2', 'v3', 's1', 's2'].forEach(k => { cpuFieldZones[k] = null; });
       cpuRosterIndex = 0;
       
       // CPU initial summon (Turn 1 Opening)
-      cpuFieldZones['v1'] = cpuRoster[1]; // Void-Drift Sentry
+      cpuFieldZones['v1'] = opp.roster[1] || opp.roster[0];
       updateCpuFieldUI();
       document.getElementById('cpu-lp').innerText = cpuLP.toLocaleString();
       document.getElementById('mat-lp').innerText = playerLP.toLocaleString();
       document.getElementById('cpu-status-badge').innerText = 'YOUR TURN';
-      document.getElementById('hand-subtext').innerText = 'CPU Vorath initialized! Summon Vanguard Archons to defend and declare battle strikes!';
+      document.getElementById('hand-subtext').innerText = `✦ Duel initialized against ${opp.name}! Summon Vanguard Archons to defend and declare battle strikes!`;
     }
 
     function updateCpuFieldUI() {
@@ -1291,11 +1397,13 @@
       playCardChime();
       document.getElementById('cpu-status-badge').innerText = 'CPU EXECUTING...';
 
+      const opp = cpuOpponents[currentCpuKey] || cpuOpponents.vorath;
+
       // 1. CPU Summon Phase: Find empty zone
       const emptyVanguard = ['v1', 'v2', 'v3'].find(k => !cpuFieldZones[k]);
       if (emptyVanguard) {
-        cpuRosterIndex = (cpuRosterIndex + 1) % cpuRoster.length;
-        const nextCard = cpuRoster[cpuRosterIndex];
+        cpuRosterIndex = (cpuRosterIndex + 1) % opp.roster.length;
+        const nextCard = opp.roster[cpuRosterIndex];
         if (nextCard.isRelic) {
           const emptyRelic = ['s1', 's2'].find(k => !cpuFieldZones[k]);
           if (emptyRelic) cpuFieldZones[emptyRelic] = nextCard;
@@ -1318,18 +1426,19 @@
               const diff = cpuAtk - pAtk;
               fieldZones[occupiedPlayerZone] = null;
               playerLP = Math.max(0, playerLP - diff);
-              playCardChime();
-              document.getElementById('hand-subtext').innerText = `✦ CPU ATTACK! Destroyed your ${playerCard.title}! Inflicted ${diff.toLocaleString()} piercing damage to your LP!`;
+              playSound('attack');
+              document.getElementById('hand-subtext').innerText = `✦ ${opp.name} ATTACK! Destroyed your ${playerCard.title}! Inflicted ${diff.toLocaleString()} piercing damage to your LP!`;
             } else {
               const diff = pAtk - cpuAtk;
               cpuLP = Math.max(0, cpuLP - diff);
-              document.getElementById('hand-subtext').innerText = `✦ COUNTER-STRIKE! Your ${playerCard.title} withstood the strike and dealt ${diff.toLocaleString()} recoil damage to CPU!`;
+              playSound('attack');
+              document.getElementById('hand-subtext').innerText = `✦ COUNTER-STRIKE! Your ${playerCard.title} withstood the strike and dealt ${diff.toLocaleString()} recoil damage to ${opp.name}!`;
             }
           } else {
             // Direct attack on player!
             playerLP = Math.max(0, playerLP - cpuAtk);
-            playCardChime();
-            document.getElementById('hand-subtext').innerText = `✦ DIRECT ATTACK! CPU struck your Life Points for ${cpuAtk.toLocaleString()} direct damage!`;
+            playSound('attack');
+            document.getElementById('hand-subtext').innerText = `✦ DIRECT ATTACK! ${opp.name} struck your Life Points for ${cpuAtk.toLocaleString()} direct damage!`;
           }
         }
 
@@ -1340,7 +1449,7 @@
 
         if (playerLP <= 0) {
           document.getElementById('cpu-status-badge').innerText = 'CPU VICTORY';
-          alert('✦ DEFEAT // Vorath Chrono-Inquisition depleted your Life Points. Resetting duel arena.');
+          alert(`✦ DEFEAT // ${opp.name} depleted your Life Points. Resetting duel arena.`);
           resetCpuDuel();
           return;
         }
@@ -1358,10 +1467,12 @@
         alert('No Vanguard Archons on field! Summon cards to the Vanguard Zone to declare an attack.');
         return;
       }
-      playCardChime();
+      playSound('attack');
       const duelMat = document.getElementById('duel-mat');
       duelMat.style.boxShadow = '0 0 35px rgba(0, 240, 255, 0.8)';
       setTimeout(() => { duelMat.style.boxShadow = ''; }, 400);
+
+      const opp = cpuOpponents[currentCpuKey] || cpuOpponents.vorath;
 
       if (arenaMode === 'cpu') {
         // Attack CPU Field
@@ -1373,29 +1484,77 @@
             cpuFieldZones[occupiedCpuZone] = null;
             cpuLP = Math.max(0, cpuLP - diff);
             updateCpuFieldUI();
-            document.getElementById('hand-subtext').innerText = `✦ ATTACK SUCCESS! Destroyed Vorath's ${cpuCard.title} (${cpuCard.atk} ATK) and dealt ${diff.toLocaleString()} piercing damage!`;
+            document.getElementById('hand-subtext').innerText = `✦ ATTACK SUCCESS! Destroyed ${opp.name}'s ${cpuCard.title} (${cpuCard.atk} ATK) and dealt ${diff.toLocaleString()} piercing damage!`;
           } else {
             const diff = cpuCard.atk - atk;
             playerLP = Math.max(0, playerLP - diff);
             document.getElementById('mat-lp').innerText = playerLP.toLocaleString();
-            document.getElementById('hand-subtext').innerText = `✦ ATTACK REPELLED! Vorath's ${cpuCard.title} overpowered your attack. You took ${diff.toLocaleString()} recoil damage!`;
+            document.getElementById('hand-subtext').innerText = `✦ ATTACK REPELLED! ${opp.name}'s ${cpuCard.title} overpowered your attack. You took ${diff.toLocaleString()} recoil damage!`;
           }
         } else {
           // Direct attack
           cpuLP = Math.max(0, cpuLP - atk);
           updateCpuFieldUI();
-          document.getElementById('hand-subtext').innerText = `✦ DIRECT STRIKE! Dealt ${atk.toLocaleString()} direct damage to Vorath AI!`;
+          document.getElementById('hand-subtext').innerText = `✦ DIRECT STRIKE! Dealt ${atk.toLocaleString()} direct damage to ${opp.name}!`;
         }
 
         if (cpuLP <= 0) {
-          playCardChime();
+          playSound('xyz');
           document.getElementById('cpu-status-badge').innerText = 'PLAYER VICTORY';
-          alert('✦ VICTORY DECLARED! You defeated Chrono-Inquisitor Vorath and cleared the Astral Overlay!');
+          alert(`✦ VICTORY DECLARED! You defeated ${opp.name} and cleared the Astral Overlay!`);
           resetCpuDuel();
         }
       } else {
         document.getElementById('hand-subtext').innerText = `✦ BATTLE STRIKE! Declared direct attack with ${atk.toLocaleString()} total field power!`;
       }
+    }
+
+    function performXyzOverlaySummon() {
+      // Find occupied Vanguard zones
+      const occupiedVanguards = ['v1', 'v2', 'v3'].filter(k => fieldZones[k]);
+      if (occupiedVanguards.length < 2) {
+        alert('✦ Xyz Overlay Summon requires at least two Vanguard monsters on your frontline to overlay as materials!');
+        return;
+      }
+
+      // Consume 2 vanguard monsters
+      const mat1 = fieldZones[occupiedVanguards[0]];
+      const mat2 = fieldZones[occupiedVanguards[1]];
+      fieldZones[occupiedVanguards[0]] = null;
+      fieldZones[occupiedVanguards[1]] = null;
+
+      // Overlay summon Nikola Tesla, Master of Lightning
+      const teslaCard = {
+        code: 'NSP-XYZ05',
+        title: 'Nikola Tesla, Master of Lightning',
+        stars: 5,
+        atk: 3300,
+        rel_path: '/tcg/assets/cards/NSP-EN001.webp',
+        tag_label: 'Overlay Radiant Archon',
+        archetype: 'XYZ-OVERLAY',
+        rarity: 'Prismatic Ghost Rare (Rank 5)'
+      };
+
+      fieldZones['v1'] = teslaCard;
+      playSound('xyz');
+
+      // Visual flash
+      const mat = document.getElementById('duel-mat');
+      mat.style.boxShadow = '0 0 50px rgba(245, 158, 11, 0.9)';
+      setTimeout(() => { mat.style.boxShadow = ''; }, 700);
+
+      // Open Overlay Chant Modal
+      openXyzChantModal();
+      updateBattleMatUI();
+      document.getElementById('hand-subtext').innerText = `✦ XYZ OVERLAY SUMMON COMPLETE! Summoned Nikola Tesla, Master of Lightning (3,300 ATK) using ${mat1.title} and ${mat2.title} as overlay materials!`;
+    }
+
+    function openXyzChantModal() {
+      document.getElementById('xyz-chant-modal').classList.add('active');
+    }
+
+    function closeXyzChantModal() {
+      document.getElementById('xyz-chant-modal').classList.remove('active');
     }
 
     function clearField() {

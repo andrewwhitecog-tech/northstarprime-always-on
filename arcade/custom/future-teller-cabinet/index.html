@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Future Teller Cabinet</title>
+  <title>VORATH Oracle Engine // Three-Chamber Augury</title>
   <script src="/static/games/chiptune.js"></script>
   <style>
     :root {
@@ -840,6 +840,85 @@
       .ticket-meta,
       .ticket-foot { font-size: 10px; }
     }
+    /* Wave 38: authored chambers and transforming oracle regalia. */
+    .chamber-deck {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid rgba(255, 245, 219, 0.18);
+      border-radius: 8px;
+      background: rgba(2, 5, 9, 0.72);
+      box-shadow: inset 0 0 26px rgba(47, 230, 255, 0.08);
+    }
+
+    .chamber-btn {
+      min-height: 58px;
+      display: grid;
+      align-content: center;
+      gap: 3px;
+      padding: 8px 10px;
+      text-align: left;
+    }
+
+    .chamber-btn strong,
+    .oracle-name,
+    .power-name {
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .chamber-btn span {
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    .chamber-btn[aria-pressed="true"] {
+      border-color: var(--chamber-accent, var(--yellow));
+      color: #fff;
+      background: rgba(255, 255, 255, 0.1);
+      box-shadow: 0 0 20px rgba(255, 228, 92, 0.22), inset 0 0 18px rgba(255,255,255,0.05);
+    }
+
+    .oracle-brief {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(180px, .72fr);
+      gap: 10px;
+      padding: 10px 12px;
+      border-left: 3px solid var(--chamber-accent, var(--yellow));
+      background: linear-gradient(90deg, rgba(255,255,255,.08), transparent);
+    }
+
+    .oracle-copy,
+    .power-copy { display: grid; gap: 3px; }
+    .oracle-name { color: var(--chamber-accent, var(--yellow)); font-size: 13px; font-weight: 950; }
+    .oracle-role,
+    .power-rule { color: var(--muted); font-size: 11px; line-height: 1.3; font-weight: 700; }
+    .power-name { font-size: 12px; font-weight: 950; }
+    #powerBtn { min-height: 52px; border-color: var(--chamber-accent, var(--yellow)); }
+    #powerBtn.power-armed { color: #071314; background: var(--chamber-accent, var(--yellow)); box-shadow: 0 0 26px var(--chamber-accent, var(--yellow)); }
+
+    body.chamber-censer { --chamber-accent: #f4b942; --chamber-deep: #3a160b; }
+    body.chamber-prism { --chamber-accent: #55f3ff; --chamber-deep: #11104b; }
+    body.chamber-null { --chamber-accent: #bf7cff; --chamber-deep: #090516; }
+    body.chamber-censer .cabinet { background: linear-gradient(115deg, rgba(244,185,66,.2), transparent 42%), linear-gradient(180deg, #35170d, #120a09 56%, #271207); }
+    body.chamber-prism .cabinet { background: linear-gradient(115deg, rgba(85,243,255,.2), transparent 42%), linear-gradient(180deg, #15134a, #080c1b 56%, #230d32); }
+    body.chamber-null .cabinet { background: linear-gradient(115deg, rgba(191,124,255,.18), transparent 42%), linear-gradient(180deg, #130820, #030308 56%, #0b0614); }
+
+    @media (max-width: 720px) {
+      button { min-height: 56px !important; }
+      .chamber-deck { grid-template-columns: 1fr; }
+      .chamber-btn { min-height: 62px; }
+      .oracle-brief { grid-template-columns: 1fr; }
+      #powerBtn,
+      #insertBtn,
+      #pullBtn { min-height: 60px !important; }
+    }
   </style>
 </head>
 <body class="glow-on">
@@ -851,7 +930,7 @@
     <header class="topbar">
       <div class="brand">
         <div class="kicker">NorthStar Penny Arcade</div>
-        <h1>Future Teller Cabinet</h1>
+        <h1>VORATH Oracle Engine</h1>
       </div>
       <div class="ledger" aria-live="polite">
         <span class="chip" id="tokenChip">Tokens 7</span>
@@ -864,9 +943,26 @@
       <article class="cabinet" id="cabinet" aria-label="Future Teller Cabinet machine">
         <div class="marquee">
           <div class="bulbs" aria-hidden="true" id="bulbRow"></div>
-          <div class="marquee-title">One Token // One Future</div>
-          <div class="marquee-sub">Card vender // poetry press // peep machine</div>
+          <div class="marquee-title">Three-Chamber Augury</div>
+          <div class="marquee-sub">Sibyl Vanta // keeper of possible doors</div>
         </div>
+
+        <nav class="chamber-deck" id="chamberDeck" aria-label="Oracle chambers">
+          <button class="chamber-btn" type="button" data-chamber="0" aria-pressed="true"><strong>Censer Parlor</strong><span>Bell-Seer regalia // echo memory</span></button>
+          <button class="chamber-btn" type="button" data-chamber="1" aria-pressed="false"><strong>Prism Observatory</strong><span>Mirror-Augur regalia // twin omen</span></button>
+          <button class="chamber-btn" type="button" data-chamber="2" aria-pressed="false"><strong>Null Archive</strong><span>Veil-Scrivener regalia // silent debt</span></button>
+        </nav>
+
+        <section class="oracle-brief" aria-live="polite">
+          <div class="oracle-copy">
+            <span class="oracle-name" id="oracleName">Sibyl Vanta // Bell-Seer</span>
+            <span class="oracle-role" id="oracleRole">The bronze parlor remembers one voice from the prior door.</span>
+          </div>
+          <div class="power-copy">
+            <button id="powerBtn" type="button"><span class="power-name" id="powerName">Arm Echo Draw</span></button>
+            <span class="power-rule" id="powerRule">One charge: bind the prior oracle into the next card.</span>
+          </div>
+        </section>
 
         <div class="machine">
           <section class="screen" aria-label="Cabinet screen">
@@ -1243,6 +1339,36 @@
       };
     }
 
+    const chambers = [
+      {
+        key: "censer",
+        label: "Censer Parlor",
+        regalia: "Bell-Seer",
+        power: "Echo Draw",
+        role: "The bronze parlor remembers one voice from the prior door.",
+        rule: "One charge: bind the prior oracle into the next card.",
+        accent: "#f4b942"
+      },
+      {
+        key: "prism",
+        label: "Prism Observatory",
+        regalia: "Mirror-Augur",
+        power: "Twin Omen",
+        role: "The glass observatory reads the bright path and its necessary opposite.",
+        rule: "One charge: print a paired counter-omen on the next card.",
+        accent: "#55f3ff"
+      },
+      {
+        key: "null",
+        label: "Null Archive",
+        regalia: "Veil-Scrivener",
+        power: "Debt of Silence",
+        role: "The black archive reveals the premise the loud answer concealed.",
+        rule: "One charge: reveal the hidden premise and return the spent token.",
+        accent: "#bf7cff"
+      }
+    ];
+
     const els = {
       body: document.body,
       cabinet: document.querySelector("#cabinet"),
@@ -1273,7 +1399,14 @@
       dialCore: document.querySelector("#dialCore"),
       glowToggle: document.querySelector("#glowToggle"),
       motionToggle: document.querySelector("#motionToggle"),
-      canvas: document.querySelector("#visionCanvas")
+      canvas: document.querySelector("#visionCanvas"),
+      chamberDeck: document.querySelector("#chamberDeck"),
+      chamberButtons: Array.from(document.querySelectorAll(".chamber-btn")),
+      oracleName: document.querySelector("#oracleName"),
+      oracleRole: document.querySelector("#oracleRole"),
+      powerBtn: document.querySelector("#powerBtn"),
+      powerName: document.querySelector("#powerName"),
+      powerRule: document.querySelector("#powerRule")
     };
 
     const ctx = els.canvas.getContext("2d");
@@ -1341,10 +1474,16 @@
           armed: false,
           archive: Array.isArray(saved.archive) ? saved.archive.slice(0, MAX_ARCHIVE) : [],
           active: saved.active || null,
-          reading: false
+          reading: false,
+          chamber: Number.isInteger(saved.chamber) ? Math.max(0, Math.min(2, saved.chamber)) : 0,
+          chamberReads: Number.isInteger(saved.chamberReads) ? Math.max(0, Math.min(2, saved.chamberReads)) : 0,
+          powerReady: saved.powerReady !== false,
+          powerArmed: false,
+          totalReadings: Number.isInteger(saved.totalReadings) ? saved.totalReadings : 0,
+          lastPower: saved.lastPower || "none"
         };
       } catch (error) {
-        return { tokens: 7, armed: false, archive: [], active: null, reading: false };
+        return { tokens: 7, armed: false, archive: [], active: null, reading: false, chamber: 0, chamberReads: 0, powerReady: true, powerArmed: false, totalReadings: 0, lastPower: "none" };
       }
     }
 
@@ -1353,11 +1492,79 @@
         localStorage.setItem(STORAGE_KEY, JSON.stringify({
           tokens: state.tokens,
           archive: state.archive.slice(0, MAX_ARCHIVE),
-          active: state.active
+          active: state.active,
+          chamber: state.chamber,
+          chamberReads: state.chamberReads,
+          powerReady: state.powerReady,
+          totalReadings: state.totalReadings,
+          lastPower: state.lastPower
         }));
       } catch (error) {
         // Local storage can be blocked in private contexts; the cabinet still runs.
       }
+    }
+
+    function currentChamber() {
+      return chambers[state.chamber] || chambers[0];
+    }
+
+    function publishTelemetry() {
+      const chamber = currentChamber();
+      window.__nspOracleState = {
+        title: "VORATH Oracle Engine // Three-Chamber Augury",
+        character: "Sibyl Vanta",
+        chamber: chamber.key,
+        chamberLabel: chamber.label,
+        regalia: chamber.regalia,
+        power: chamber.power,
+        powerReady: state.powerReady,
+        powerArmed: state.powerArmed,
+        chamberReads: state.chamberReads,
+        totalReadings: state.totalReadings,
+        tokens: state.tokens,
+        armed: state.armed,
+        reading: state.reading,
+        activeSerial: state.active ? state.active.serial : null,
+        activeEffect: state.active ? (state.active.chamberEffect || "standard") : "none",
+        input: "keyboard/touch/standard-gamepad"
+      };
+    }
+
+    function selectChamber(index, manual) {
+      if (state.reading) return;
+      const next = Math.max(0, Math.min(chambers.length - 1, Number(index) || 0));
+      if (next !== state.chamber) {
+        state.chamber = next;
+        state.chamberReads = 0;
+        state.powerReady = true;
+        state.powerArmed = false;
+        state.lastPower = "none";
+      } else if (manual && state.powerArmed) {
+        state.powerArmed = false;
+      }
+      const chamber = currentChamber();
+      chambers.forEach(item => els.body.classList.remove("chamber-" + item.key));
+      els.body.classList.add("chamber-" + chamber.key);
+      els.chamberButtons.forEach((button, buttonIndex) => button.setAttribute("aria-pressed", String(buttonIndex === state.chamber)));
+      els.oracleName.textContent = "Sibyl Vanta // " + chamber.regalia;
+      els.oracleRole.textContent = chamber.role;
+      els.powerName.textContent = (state.powerArmed ? "Armed: " : "Arm ") + chamber.power;
+      els.powerRule.textContent = chamber.rule;
+      els.powerBtn.classList.toggle("power-armed", state.powerArmed);
+      els.powerBtn.disabled = state.reading || !state.powerReady;
+      els.powerBtn.setAttribute("aria-pressed", String(state.powerArmed));
+      drawVision(state.active, 1);
+      saveState();
+      publishTelemetry();
+    }
+
+    function togglePower() {
+      if (state.reading || !state.powerReady) return;
+      startAudio();
+      state.powerArmed = !state.powerArmed;
+      SFX(state.powerArmed ? "powerUp" : "blip");
+      selectChamber(state.chamber, false);
+      updateUi();
     }
 
     function hashString(input) {
@@ -1569,10 +1776,43 @@
         encodedDay,
         teaching,
         recitation,
+        chamberKey: currentChamber().key,
+        chamberLabel: currentChamber().label,
+        regalia: currentChamber().regalia,
+        chamberEffect: "standard",
         palette,
         glyphs: buildGlyphs(random, palette),
         createdAt: new Date().toISOString()
       };
+    }
+
+    function applyChamberMechanic(reading) {
+      if (!state.powerArmed || !state.powerReady) return reading;
+      const chamber = currentChamber();
+      reading.chamberEffect = chamber.key === "censer" ? "echo_draw" : chamber.key === "prism" ? "twin_omen" : "debt_of_silence";
+      if (chamber.key === "censer") {
+        const prior = state.active && state.active.oracle ? state.active.oracle : "The first bell remembers the hand that woke it.";
+        reading.echoOracle = prior;
+        reading.poem.unshift("Echo held from the prior door: “" + prior + "”");
+        reading.loreLines.unshift("CENSER ECHO // prior oracle bound into this draw");
+      } else if (chamber.key === "prism") {
+        const pack = packs[reading.packKey] || packs.future;
+        const mirrorRandom = mulberry32(hashString(reading.seed + ":twin-omen"));
+        const alternatives = pack.oracle.filter(line => line !== reading.oracle);
+        reading.counterOracle = pickFrom(mirrorRandom, alternatives, pack.oracle);
+        reading.poem.push("Counter-omen through the opposite pane: “" + reading.counterOracle + "”");
+        reading.loreLines.unshift("PRISM TWIN // bright path measured against its opposite");
+      } else {
+        const premise = reading.teaching && reading.teaching.text ? reading.teaching.text : "Silence is part of the evidence.";
+        reading.hiddenPremise = premise;
+        reading.tokenRefund = true;
+        reading.poem.unshift("Hidden premise: " + premise);
+        reading.loreLines.unshift("NULL DEBT // premise revealed // token returned");
+      }
+      state.lastPower = chamber.power;
+      state.powerReady = false;
+      state.powerArmed = false;
+      return reading;
     }
 
     function resizeCanvas() {
@@ -1617,6 +1857,148 @@
       ctx.moveTo(-r * 0.72, 0);
       ctx.lineTo(r * 0.72, 0);
       ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawChamberRegalia(w, h, cx, baseY, colors, t, layer) {
+      const chamber = currentChamber();
+      ctx.save();
+      if (chamber.key === "censer") {
+        if (layer === "back") {
+          const bronze = ctx.createLinearGradient(cx, h * 0.18, cx, h * 0.82);
+          bronze.addColorStop(0, "rgba(255,235,168,.74)");
+          bronze.addColorStop(.38, "rgba(244,185,66,.48)");
+          bronze.addColorStop(1, "rgba(57,18,6,.2)");
+          ctx.fillStyle = bronze;
+          ctx.strokeStyle = "rgba(255,225,140,.72)";
+          ctx.lineWidth = Math.max(2, w * .004);
+          ctx.beginPath();
+          ctx.moveTo(cx - w * .12, baseY - h * .3);
+          ctx.quadraticCurveTo(cx, h * .12, cx + w * .12, baseY - h * .3);
+          ctx.lineTo(cx + w * .2, baseY + h * .08);
+          ctx.lineTo(cx - w * .2, baseY + h * .08);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          [-1, 1].forEach(side => {
+            const chainX = cx + side * w * .17;
+            const sway = Math.sin(t * 1.8 + side) * w * .012;
+            ctx.strokeStyle = "rgba(255,225,140,.7)";
+            ctx.beginPath();
+            ctx.moveTo(cx + side * w * .1, baseY - h * .2);
+            ctx.lineTo(chainX + sway, baseY - h * .02);
+            ctx.stroke();
+            ctx.fillStyle = "rgba(244,185,66,.7)";
+            ctx.beginPath();
+            ctx.moveTo(chainX + sway - w * .025, baseY - h * .02);
+            ctx.quadraticCurveTo(chainX + sway, baseY + h * .06, chainX + sway + w * .025, baseY - h * .02);
+            ctx.closePath();
+            ctx.fill();
+            for (let smoke = 0; smoke < 3; smoke += 1) {
+              ctx.strokeStyle = `rgba(255,210,118,${.22 - smoke * .045})`;
+              ctx.beginPath();
+              ctx.moveTo(chainX + sway, baseY - h * (.025 + smoke * .03));
+              ctx.bezierCurveTo(chainX - side * w * .04, baseY - h * (.08 + smoke * .035), chainX + side * w * .04, baseY - h * (.12 + smoke * .04), chainX, baseY - h * (.16 + smoke * .045));
+              ctx.stroke();
+            }
+          });
+        } else {
+          ctx.translate(cx, baseY - h * .49);
+          ctx.fillStyle = "rgba(244,185,66,.86)";
+          ctx.strokeStyle = "#fff0bb";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(-w * .055, h * .04);
+          ctx.quadraticCurveTo(-w * .048, -h * .09, 0, -h * .15);
+          ctx.quadraticCurveTo(w * .048, -h * .09, w * .055, h * .04);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = "#fff0bb";
+          ctx.fillRect(-w * .068, h * .035, w * .136, Math.max(3, h * .012));
+        }
+      } else if (chamber.key === "prism") {
+        if (layer === "back") {
+          [-1, 1].forEach(side => {
+            const grad = ctx.createLinearGradient(cx, baseY - h * .3, cx + side * w * .33, baseY);
+            grad.addColorStop(0, "rgba(255,255,255,.68)");
+            grad.addColorStop(.3, "rgba(85,243,255,.38)");
+            grad.addColorStop(.68, "rgba(255,79,220,.3)");
+            grad.addColorStop(1, "rgba(30,20,90,.12)");
+            ctx.fillStyle = grad;
+            ctx.strokeStyle = side < 0 ? "#55f3ff" : "#ff5eea";
+            ctx.lineWidth = Math.max(2, w * .004);
+            ctx.beginPath();
+            ctx.moveTo(cx + side * w * .055, baseY - h * .28);
+            ctx.lineTo(cx + side * w * .34, baseY - h * .22);
+            ctx.lineTo(cx + side * w * .24, baseY + h * .06);
+            ctx.lineTo(cx + side * w * .09, baseY - h * .02);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(cx + side * w * .08, baseY - h * .22);
+            ctx.lineTo(cx + side * w * .27, baseY - h * .15);
+            ctx.lineTo(cx + side * w * .18, baseY);
+            ctx.stroke();
+          });
+        } else {
+          ctx.translate(cx, baseY - h * .3);
+          ctx.fillStyle = "rgba(85,243,255,.34)";
+          ctx.strokeStyle = "rgba(255,255,255,.86)";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(-w * .18, 0);
+          ctx.lineTo(-w * .055, -h * .08);
+          ctx.lineTo(0, h * .015);
+          ctx.lineTo(w * .055, -h * .08);
+          ctx.lineTo(w * .18, 0);
+          ctx.lineTo(w * .08, h * .06);
+          ctx.lineTo(-w * .08, h * .06);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        }
+      } else {
+        if (layer === "back") {
+          ctx.fillStyle = "rgba(4,1,12,.78)";
+          ctx.strokeStyle = "rgba(191,124,255,.64)";
+          ctx.lineWidth = Math.max(2, w * .004);
+          ctx.beginPath();
+          ctx.moveTo(cx, h * .14);
+          ctx.bezierCurveTo(cx - w * .22, h * .22, cx - w * .25, baseY - h * .06, cx - w * .16, baseY + h * .1);
+          ctx.lineTo(cx + w * .16, baseY + h * .1);
+          ctx.bezierCurveTo(cx + w * .25, baseY - h * .06, cx + w * .22, h * .22, cx, h * .14);
+          ctx.fill();
+          ctx.stroke();
+          [-1, 1].forEach(side => {
+            for (let ribbon = 0; ribbon < 3; ribbon += 1) {
+              ctx.strokeStyle = `rgba(${160 + ribbon * 24},${92 + ribbon * 30},255,${.52 - ribbon * .1})`;
+              ctx.lineWidth = 2 + ribbon;
+              ctx.beginPath();
+              ctx.moveTo(cx + side * w * (.11 + ribbon * .025), baseY - h * .12);
+              ctx.bezierCurveTo(cx + side * w * (.34 + Math.sin(t + ribbon) * .03), baseY - h * .02, cx + side * w * .2, baseY + h * .11, cx + side * w * (.31 - ribbon * .035), baseY + h * .14);
+              ctx.stroke();
+            }
+          });
+        } else {
+          ctx.translate(cx, baseY - h * .44);
+          ctx.strokeStyle = "rgba(225,194,255,.88)";
+          ctx.fillStyle = "rgba(8,2,18,.82)";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(-w * .06, h * .02);
+          ctx.quadraticCurveTo(-w * .14, -h * .08, -w * .115, -h * .18);
+          ctx.quadraticCurveTo(-w * .03, -h * .11, 0, -h * .04);
+          ctx.quadraticCurveTo(w * .03, -h * .11, w * .115, -h * .18);
+          ctx.quadraticCurveTo(w * .14, -h * .08, w * .06, h * .02);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.ellipse(0, h * .02, w * .1, h * .15, 0, Math.PI, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        }
+      }
       ctx.restore();
     }
 
@@ -1740,6 +2122,8 @@
       ctx.stroke();
       ctx.restore();
 
+      drawChamberRegalia(w, h, cx, baseY, colors, t, "back");
+
       // Body robe.
       ctx.save();
       ctx.translate(cx, baseY);
@@ -1844,6 +2228,8 @@
       ctx.quadraticCurveTo(0, h * 0.052 + Math.sin(t * 7) * 3, w * 0.045, h * 0.036);
       ctx.stroke();
       ctx.restore();
+
+      drawChamberRegalia(w, h, cx, baseY, colors, t, "front");
 
       // Crystal ball and arm sweep.
       const ballX = cx;
@@ -2111,8 +2497,9 @@
 
     function renderReading(reading) {
       state.active = reading;
-      els.panelTitle.textContent = reading.packLabel + " Card";
-      els.ticketPack.textContent = reading.packLabel + " Pack // " + (reading.zodiacLabel || "Open Sign");
+      const effectLabel = reading.chamberEffect && reading.chamberEffect !== "standard" ? " // " + reading.chamberEffect.replace(/_/g, " ") : "";
+      els.panelTitle.textContent = reading.packLabel + " Card" + effectLabel;
+      els.ticketPack.textContent = (reading.chamberLabel || currentChamber().label) + " // " + (reading.regalia || currentChamber().regalia) + " // " + reading.packLabel + " // " + (reading.zodiacLabel || "Open Sign");
       els.ticketSerial.textContent = reading.serial;
       els.ticketSeed.textContent = "Seed: " + reading.seed;
       els.ticketLucky.textContent = "No. " + reading.lucky;
@@ -2142,7 +2529,13 @@
       els.pullBtn.disabled = !state.armed || state.reading;
       els.insertBtn.disabled = state.reading || state.armed || state.tokens <= 0;
       els.refillBtn.disabled = state.reading;
-      els.footerStatus.textContent = state.reading ? "Printing card" : state.armed ? "Lever ready" : loreStatusLabel();
+      const chamber = currentChamber();
+      els.footerStatus.textContent = state.reading ? chamber.regalia + " reading" : state.armed ? "Lever ready // " + chamber.label : loreStatusLabel() + " // " + (3 - state.chamberReads) + " draws to transform";
+      els.powerBtn.disabled = state.reading || !state.powerReady;
+      els.powerBtn.classList.toggle("power-armed", state.powerArmed);
+      els.powerBtn.setAttribute("aria-pressed", String(state.powerArmed));
+      els.powerName.textContent = state.powerReady ? ((state.powerArmed ? "Armed: " : "Arm ") + chamber.power) : chamber.power + " spent";
+      publishTelemetry();
     }
 
     function renderArchive() {
@@ -2180,7 +2573,7 @@
       screenShake(7);
       updateUi();
       let tick = 0;
-      const staged = makeReading();
+      const staged = applyChamberMechanic(makeReading());
       const interval = window.setInterval(() => {
         tick += 1;
         drawVision(staged, Math.min(1, tick / 14));
@@ -2191,10 +2584,17 @@
         window.clearInterval(interval);
         state.reading = false;
         els.cabinet.classList.remove("reading");
+        state.totalReadings += 1;
+        state.chamberReads += 1;
+        if (staged.tokenRefund) state.tokens = Math.min(21, state.tokens + 1);
         state.archive = [staged].concat(state.archive.filter(item => item.serial !== staged.serial)).slice(0, MAX_ARCHIVE);
         renderReading(staged);
         SFX("powerUp");
         screenShake(9);
+        if (state.chamberReads >= 3) {
+          selectChamber((state.chamber + 1) % chambers.length, false);
+          els.footerStatus.textContent = "Regalia transformed // " + currentChamber().label;
+        }
       }, els.body.classList.contains("reduced-motion") ? 280 : 1320);
     }
 
@@ -2303,6 +2703,34 @@
       }, 180);
     }
 
+    const gamepadLatch = { a: false, b: false, left: false, right: false };
+    function readGamepad() {
+      try {
+        const pads = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
+        const pad = pads[0];
+        if (pad) {
+          const pressed = index => Boolean(pad.buttons[index] && pad.buttons[index].pressed);
+          const a = pressed(0);
+          const b = pressed(1);
+          const left = pressed(14) || pressed(4);
+          const right = pressed(15) || pressed(5);
+          if (a && !gamepadLatch.a && !state.reading) state.armed ? pullLever() : insertToken();
+          if (b && !gamepadLatch.b) togglePower();
+          if (left && !gamepadLatch.left) { selectChamber((state.chamber + chambers.length - 1) % chambers.length, true); updateUi(); }
+          if (right && !gamepadLatch.right) { selectChamber((state.chamber + 1) % chambers.length, true); updateUi(); }
+          gamepadLatch.a = a;
+          gamepadLatch.b = b;
+          gamepadLatch.left = left;
+          gamepadLatch.right = right;
+        }
+      } catch (error) { /* gamepads are optional */ }
+    }
+    window.__nspOracleReadGamepad = readGamepad;
+    function pollGamepad() {
+      readGamepad();
+      requestAnimationFrame(pollGamepad);
+    }
+
     function init() {
       for (let i = 0; i < 16; i += 1) {
         const bulb = document.createElement("span");
@@ -2332,17 +2760,37 @@
           requestAnimationFrame(drawAttract);
         }
       });
+      els.chamberDeck.addEventListener("click", event => {
+        const button = event.target.closest("button[data-chamber]");
+        if (button) { startAudio(); SFX("gate"); selectChamber(Number(button.dataset.chamber), true); updateUi(); }
+      });
+      els.powerBtn.addEventListener("click", togglePower);
       els.archive.addEventListener("click", event => {
         const button = event.target.closest("button[data-index]");
         if (button) loadArchive(Number(button.dataset.index));
       });
       window.addEventListener("resize", () => drawVision(state.active, 1));
       window.addEventListener("keydown", event => {
+        if (["1", "2", "3"].includes(event.key)) {
+          selectChamber(Number(event.key) - 1, true);
+          updateUi();
+          return;
+        }
+        if (event.key.toLowerCase() === "q") {
+          togglePower();
+          return;
+        }
+        if ((event.key === "Enter" || event.key.toLowerCase() === "e") && !state.reading) {
+          event.preventDefault();
+          if (state.armed) pullLever(); else insertToken();
+          return;
+        }
         if (event.key === " " && state.armed && !state.reading) {
           event.preventDefault();
           pullLever();
         }
       });
+      selectChamber(state.chamber, false);
       if (state.active) renderReading(state.active);
       renderArchive();
       updateUi();
@@ -2350,6 +2798,7 @@
       drawVision(state.active, 1);
       requestAnimationFrame(drawAttract);
       maybeRunPlaytest();
+      requestAnimationFrame(pollGamepad);
     }
 
     init();

@@ -363,6 +363,25 @@
     loadSprite("emerald","/static/games/sprites/blade_emerald.png");
     loadSprite("ruby","/static/games/sprites/blade_ruby.png");
 
+    const BLADE_ATLAS_SRC = {
+      emerald: "/static/art/games/vorath_overhaul_v01/blade_tribunal/emerald_votary_atlas_v01.png",
+      ruby: "/static/art/games/vorath_overhaul_v01/blade_tribunal/ruby_mantis_regent_atlas_v01.png"
+    };
+    const BLADE_ATLAS = { emerald: new Image(), ruby: new Image() };
+    const BLADE_ATLAS_READY = { emerald: false, ruby: false };
+    for (const who of ["emerald", "ruby"]) {
+      BLADE_ATLAS[who].decoding = "async";
+      BLADE_ATLAS[who].addEventListener("load", () => { BLADE_ATLAS_READY[who] = true; });
+      BLADE_ATLAS[who].src = BLADE_ATLAS_SRC[who];
+    }
+    const BLADE_POSE_INDEX = { idle: 0, windup: 1, strike: 2, hurt: 3 };
+    function drawBladeAtlasPose(atlas, pose, x, y, width, height) {
+      const index = BLADE_POSE_INDEX[pose] ?? 0;
+      const sourceX = (index % 2) * 512;
+      const sourceY = Math.floor(index / 2) * 768;
+      ctx.drawImage(atlas, sourceX, sourceY, 512, 768, x, y, width, height);
+    }
+
     // Seamless parallax arena backdrop (mirror-tiled, no hard seam).
     const ARENA = new Image(); let ARENA_OK = false;
     ARENA.onload = () => { ARENA_OK = true; }; ARENA.src = "/static/games/roster/blade_arena.png";
@@ -852,15 +871,21 @@
           const sp = attacks[g.action];
           pose = (sp && g.frame < sp.activeStart) ? "windup" : "strike";
         }
-        const spr = SPR[g.who + "_" + pose] || SPR[g.who + "_idle"] || SPR[g.who];
-        if (!spr) continue;
         const t = Math.max(0, g.life / g.max);
         ctx.globalAlpha = t * 0.22;
         ctx.save();
         ctx.translate(g.x, g.y);
         ctx.scale(g.facing * scale, scale);
-        const sh = 300, sw = sh * spr.width / spr.height;
-        ctx.drawImage(spr, -sw / 2, 16 - sh, sw, sh);
+        if (BLADE_ATLAS_READY[g.who]) {
+          const sh = 330, sw = sh * (512 / 768);
+          drawBladeAtlasPose(BLADE_ATLAS[g.who], pose, -sw / 2, 16 - sh, sw, sh);
+        } else {
+          const spr = SPR[g.who + "_" + pose] || SPR[g.who + "_idle"] || SPR[g.who];
+          if (spr) {
+            const sh = 300, sw = sh * spr.width / spr.height;
+            ctx.drawImage(spr, -sw / 2, 16 - sh, sw, sh);
+          }
+        }
         ctx.restore();
       }
       ctx.restore();
@@ -873,7 +898,9 @@
         ctx.save();
         ctx.globalAlpha = Math.min(1, state.fadeIn);
         ctx.fillStyle = "#04050b";
-        ctx.fillRect(0, 0, view.w, view.h);
+        ctx.beginPath();
+        ctx.rect(0, 0, view.w, view.h);
+        ctx.fill();
         ctx.restore();
       }
       // Soft dip to dark at the tail of the round delay, released by resetRound's fadeIn.
@@ -881,7 +908,9 @@
         ctx.save();
         ctx.globalAlpha = Math.min(0.85, (26 - state.roundDelay) / 26 * 0.85);
         ctx.fillStyle = "#04050b";
-        ctx.fillRect(0, 0, view.w, view.h);
+        ctx.beginPath();
+        ctx.rect(0, 0, view.w, view.h);
+        ctx.fill();
         ctx.restore();
       }
     }
@@ -1130,6 +1159,29 @@
       else if (fighter.action === "slash" || fighter.action === "heavy" || fighter.action === "charged") {
         const _sp = attacks[fighter.action];
         _pose = (_sp && fighter.frame < _sp.activeStart) ? "windup" : "strike";
+      }
+      if (BLADE_ATLAS_READY[_who]) {
+        ctx.shadowBlur = 0;
+        const breathe = 1 + Math.sin(performance.now() * 0.003 + (fighter.id === "player" ? 0 : 1.6)) * 0.015;
+        const lunge = _pose === "strike" ? 1.07 : 1;
+        const sh = 330 * breathe * lunge, sw = sh * (512 / 768);
+        const yOff = _pose === "hurt" ? -6 : 0;
+        drawBladeAtlasPose(BLADE_ATLAS[_who], _pose, -sw / 2, 16 - sh + yOff, sw, sh);
+        if ((fighter.hurtTime || 0) > 0) {
+          ctx.globalAlpha = Math.min(0.75, fighter.hurtTime / 16 * 0.75);
+          ctx.globalCompositeOperation = "lighter";
+          drawBladeAtlasPose(BLADE_ATLAS[_who], _pose, -sw / 2, 16 - sh + yOff, sw, sh);
+          ctx.globalAlpha = 1;
+          ctx.globalCompositeOperation = "source-over";
+        } else if (fighter.invuln > 0) {
+          ctx.globalAlpha = 0.5;
+          ctx.globalCompositeOperation = "lighter";
+          drawBladeAtlasPose(BLADE_ATLAS[_who], _pose, -sw / 2, 16 - sh, sw, sh);
+          ctx.globalAlpha = 1;
+          ctx.globalCompositeOperation = "source-over";
+        }
+        ctx.restore();
+        return;
       }
       const _spr = SPR[_who + "_" + _pose] || SPR[_who + "_idle"] || (fighter.id === "player" ? SPR.emerald : SPR.ruby);
       if (_spr) {
@@ -1596,6 +1648,13 @@
         player: { hp: player.hp, stamina: player.stamina, charge: player.charge, rounds: player.rounds },
         enemy: { hp: enemy.hp, stamina: enemy.stamina, charge: enemy.charge, rounds: enemy.rounds },
         gate: "BLADE",
+        fighter_identity_version: "vorath-overhaul-v01",
+        fighter_atlases: BLADE_ATLAS_SRC,
+        fighter_atlases_ready: { ...BLADE_ATLAS_READY },
+        fighter_states: {
+          player: (player.hurtTime || 0) > 0 ? "hurt" : (player.action === "slash" || player.action === "heavy" || player.action === "charged" ? "combat" : "idle"),
+          enemy: (enemy.hurtTime || 0) > 0 ? "hurt" : (enemy.action === "slash" || enemy.action === "heavy" || enemy.action === "charged" ? "combat" : "idle")
+        },
         visual_directive: "rainbows neon maximalism holographic gems jewels crystals alien insects glow blade trails",
         noProtectedAssets: "No protected weapon-fighter assets, names, characters, stages, move lists, animation data, logos, audio, or screenshots are used.",
         generatedAt: new Date().toISOString(),
@@ -1653,7 +1712,26 @@
     draw();
     requestAnimationFrame(updateGame);
 
-    window.vorathBladeTribunal = { startDuel, updateGame, exportReceipt, makeReceipt };
+    window.vorathBladeTribunal = {
+      startDuel,
+      updateGame,
+      exportReceipt,
+      makeReceipt,
+      debugVisualState: () => ({
+        context_is_main_canvas: ctx.canvas === canvas,
+        context_width: ctx.canvas.width,
+        context_height: ctx.canvas.height,
+        context_alpha: ctx.globalAlpha,
+        context_composite: ctx.globalCompositeOperation,
+        context_transform: ctx.getTransform().toString(),
+        player: { x: player.x, y: player.y, action: player.action },
+        enemy: { x: enemy.x, y: enemy.y, action: enemy.action },
+        fade_in: state.fadeIn,
+        atlas_ready: { ...BLADE_ATLAS_READY }
+      }),
+      forceDraw: draw
+    };
+    window.northstarArcadeState = makeReceipt;
     if (new URLSearchParams(window.location.search).has("playtest")) {
       window.setTimeout(() => {
         startDuel();

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DIGITAL TERRARIUM v7.0.0 // 3D XENOBIOLOGICAL CONTAINMENT</title>
+<title>VORATH ABYSSAL CONSERVATORY // THREE-CURRENT MENAGERIE</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
@@ -472,12 +472,85 @@ body {
 #monitor-brand, #system-status, #ai-window .ai-title {
   text-shadow: 0 0 10px rgba(34,211,238,0.7), 0 0 20px rgba(236,72,153,0.45);
 }
+
+/* ======== V30 THREE-CURRENT CONSERVATORY ======== */
+#current-badge {
+  position: absolute;
+  top: 82px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 36;
+  min-width: 310px;
+  padding: 8px 16px;
+  border: 1px solid rgba(255, 216, 92, 0.72);
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(4,8,22,.88), rgba(35,8,48,.82), rgba(4,16,28,.88));
+  color: #fff2ad;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-align: center;
+  box-shadow: 0 0 18px rgba(255,216,92,.18), inset 0 0 22px rgba(126,249,255,.06);
+  pointer-events: none;
+}
+#current-badge strong { color: #7ef9ff; }
+#current-badge .mechanic { color: #ff75d8; }
+#touch-dock {
+  display: none;
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  z-index: 90;
+  grid-template-columns: repeat(5, minmax(48px, 1fr));
+  gap: 7px;
+}
+#touch-dock button {
+  /* The arcade shell appends a generic 30px control floor after game CSS. */
+  min-height: 54px !important;
+  border: 2px solid currentColor;
+  border-radius: 16px;
+  background: rgba(3, 7, 18, .84);
+  color: #7ef9ff;
+  font: 700 10px/1.15 'Share Tech Mono', 'Courier New', monospace;
+  letter-spacing: .7px;
+  box-shadow: 0 0 14px rgba(126,249,255,.24), inset 0 0 12px rgba(255,255,255,.04);
+  touch-action: manipulation;
+}
+#touch-dock button:nth-child(2) { color: #ff75d8; }
+#touch-dock button:nth-child(3) { color: #ffe06b; }
+#touch-dock button:nth-child(4) { color: #ff765f; }
+#touch-dock button:nth-child(5) { color: #9dff9a; }
+#touch-dock button:active { background: currentColor; color: #02040a; transform: translateY(1px); }
+
+@media (max-width: 700px), (pointer: coarse) {
+  #monitor { width: 100vw; height: 100vh; border-radius: 0; padding: 8px 8px 28px; }
+  #screen { border-radius: 4px; }
+  #monitor-brand { bottom: 7px; font-size: 7px; letter-spacing: 2px; white-space: nowrap; }
+  #power-led, #power-label { display: none; }
+  #top-bar { height: 48px; padding: 5px 9px; align-items: flex-start; }
+  #top-bar .title { width: 250px; font-size: 10px; line-height: 1.35; }
+  #top-bar .sys-time { font-size: 9px; padding-top: 2px; }
+  #stats-bar { top: 48px; height: 54px; padding: 4px 9px; gap: 5px 11px; flex-wrap: wrap; align-content: center; font-size: 9px; }
+  #infection-bar-wrap { top: 103px; }
+  #current-badge { top: 119px; min-width: 0; width: calc(100% - 24px); padding: 6px 8px; font-size: 8px; letter-spacing: .7px; }
+  #ai-window { top: 154px; right: 9px; width: calc(100% - 18px); max-height: 90px; padding: 6px 8px; background: rgba(0,6,12,.72); }
+  #ai-window .ai-title, #ai-window .ai-line { font-size: 9px; line-height: 1.25; }
+  #event-log { top: 253px; left: 9px; right: 9px; max-width: none; max-height: 78px; font-size: 9px; }
+  #pop-chart-panel, #controls-help { display: none; }
+  #info-panel { left: 9px; right: 9px; bottom: 76px; max-width: none; max-height: 142px; overflow: hidden; font-size: 9px; line-height: 1.35; padding: 8px; }
+  #touch-dock { display: grid; }
+  #boot { padding: 18px 14px; font-size: 9px; line-height: 1.25; }
+  #danger-alert { width: calc(100% - 36px); top: 57%; }
+  #danger-alert .alert-icon { font-size: 30px; }
+  #danger-alert .alert-text { font-size: 16px; letter-spacing: 3px; }
+  #danger-alert .alert-sub { font-size: 10px; letter-spacing: 1.5px; }
+}
 </style>
 </head>
 <body>
 
 <div id="monitor">
-  <div id="monitor-brand">THESEUS DEEP-FIELD OBSERVATORY // 3D CONTAINMENT ARRAY</div>
+  <div id="monitor-brand">LOOMWHEEL ABYSSAL CONSERVATORY // THREE-CURRENT LIVING ARRAY</div>
   <div id="power-led"></div>
   <div id="power-label">PWR</div>
 
@@ -486,11 +559,38 @@ body {
     <div id="scanlines"></div>
     <canvas id="webgl-canvas"></canvas>
     <script src="/static/games/juice.js"></script>
-    <script>if (window.Juice) addEventListener("DOMContentLoaded", () => Juice.attachFX(document.getElementById("webgl-canvas"), { vignette: 0.42, scanlines: 0.03, glow: 0.05 }));</script>
+    <script>
+// --- Crystalline Organism Audio Synthesizer ---
+let latticeAudio=null;
+function initLatticeAudio(){
+  try{
+    if(!latticeAudio){
+      const AC=window.AudioContext||window.webkitAudioContext;
+      if(AC) latticeAudio=new AC();
+    }
+    if(latticeAudio&&latticeAudio.state==='suspended') latticeAudio.resume();
+  }catch(_){}
+}
+function playOrganismChime(f=528,d=0.35,type='sine',vol=0.08){
+  initLatticeAudio();
+  if(!latticeAudio)return;
+  try{
+    const t=latticeAudio.currentTime;
+    const osc=latticeAudio.createOscillator(),g=latticeAudio.createGain();
+    osc.type=type;
+    osc.frequency.setValueAtTime(f,t);
+    osc.frequency.exponentialRampToValueAtTime(f*1.2,t+d);
+    g.gain.setValueAtTime(vol,t);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+d);
+    osc.connect(g);g.connect(latticeAudio.destination);
+    osc.start(t);osc.stop(t+d+0.05);
+  }catch(_){}
+}
+if (window.Juice) addEventListener("DOMContentLoaded", () => Juice.attachFX(document.getElementById("webgl-canvas"), { vignette: 0.42, scanlines: 0.03, glow: 0.05 }));</script>
     <div id="screen-flash"></div>
 
     <div id="top-bar">
-      <span class="title">DIGITAL TERRARIUM v7.0.0 // 3D XENOBIOLOGICAL CONTAINMENT</span>
+      <span class="title">VORATH ABYSSAL CONSERVATORY // THREE-CURRENT MENAGERIE</span>
       <span class="sys-time" id="sys-time">00:00:00.000</span>
     </div>
 
@@ -506,8 +606,10 @@ body {
 
     <div id="infection-bar-wrap">
       <div id="infection-bar-fill"></div>
-      <div id="infection-bar-label">BEHEMOTH 0%</div>
+      <div id="infection-bar-label">AURORA BLOOM 0%</div>
     </div>
+
+    <div id="current-badge"><strong>MIRROR REEF</strong> // <span class="mechanic">PRISMATIC VELOCITY</span></div>
 
     <div id="danger-alert">
       <div class="alert-icon" id="danger-icon"></div>
@@ -516,7 +618,7 @@ body {
     </div>
 
     <div id="ai-window">
-      <div class="ai-title">THESEUS AI // BEHAVIORAL ANALYSIS</div>
+      <div class="ai-title">LOOMWHEEL ORACLE // ECOLOGICAL CHORUS</div>
       <div id="ai-content"></div>
     </div>
 
@@ -533,9 +635,19 @@ body {
 
     <div id="controls-help">
       <span>F</span> FULLSCREEN | <span>SPACE</span> PAUSE<br>
-      <span>B</span> SPAWN BEHEMOTH | <span>V</span> SEPPUKU<br>
+      <span>B</span> SPAWN AURORA BLOOM | <span>V</span> MERCY VEIL<br>
+      <span>1/2/3</span> CURRENT | <span>C</span> TAG NEXT<br>
+      <span>LB/RB</span> CURRENT | <span>A/X/Y</span> TAG/BLOOM/VEIL<br>
       <span>CLICK</span> SELECT | <span>SCROLL</span> ZOOM<br>
       <span>DRAG</span> ORBIT CAMERA
+    </div>
+
+    <div id="touch-dock" aria-label="Conservatory controls">
+      <button type="button" data-action="current-up">CURRENT<br>UP</button>
+      <button type="button" data-action="current-down">CURRENT<br>DOWN</button>
+      <button type="button" data-action="tag-next">TAG<br>NEXT</button>
+      <button type="button" data-action="bloom">AURORA<br>BLOOM</button>
+      <button type="button" data-action="mercy">MERCY<br>VEIL</button>
     </div>
 
     <div id="pause-overlay">PAUSED</div>
@@ -574,96 +686,117 @@ let clock = new THREE.Clock();
 let frameCount = 0;
 let fpsTime = 0;
 let currentFPS = 60;
+let simulationStarted = false;
+const userActions = { current_changes: 0, tags: 0, blooms: 0, mercy_veils: 0 };
+const gamepadLatch = {};
 
 // ============================================================
 // SPECIES DEFINITIONS
 // ============================================================
 const SPECIES = {
-  DRIFTER: {
+  VEIL_JELLY: {
     color: new THREE.Color(0.08, 0.86, 0.59),
     glowColor: new THREE.Color(0.16, 0.86, 0.59),
     size: [2, 4], speed: 0.3, metabolism: 0.001, reproduce: 0.0008,
-    desc: 'DRIFTER // Cnidaria digitalis\nClass: Filter-feeder\nBlind bioluminescent organism\nNavigates via chemotaxis',
-    latin: 'Cnidaria digitalis', threat: 'NONE'
+    desc: 'VEIL JELLY // Velaria aurealis\nClass: Aurora filter-feeder\nSix ribbon cilia read mineral songs\nCenser Crown increases vent lift',
+    latin: 'Velaria aurealis', threat: 'NONE'
   },
-  SCRAMBLER: {
+  RIBBON_REAVER: {
     color: new THREE.Color(0.86, 0.24, 0.16),
     glowColor: new THREE.Color(0.86, 0.24, 0.16),
     size: [1.5, 3], speed: 1.8, metabolism: 0.004, reproduce: 0.0003,
-    desc: 'SCRAMBLER // Rorschach praedator\nClass: Apex predator\nNo consciousness detected\nPure reflex architecture',
-    latin: 'Rorschach praedator', threat: 'HIGH'
+    desc: 'RIBBON REAVER // Auroravorax reflexa\nClass: Pursuit predator\nSegmented knife-body reads current wakes\nPrism Gills sharpen lateral pursuit',
+    latin: 'Auroravorax reflexa', threat: 'HIGH'
   },
-  CRUCIFORM: {
+  LATTICE_CHOIR: {
     color: new THREE.Color(0.59, 0.43, 0.86),
     glowColor: new THREE.Color(0.59, 0.43, 0.86),
     size: [1, 2], speed: 0.5, metabolism: 0.002, reproduce: 0.001,
-    desc: 'CRUCIFORM // Colonialis geometrica\nClass: Colonial superorganism\nForms geometric defense arrays',
-    latin: 'Colonialis geometrica', threat: 'LOW'
+    desc: 'LATTICE CHOIR // Cantoria tessellata\nClass: Colonial superorganism\nForms rotating witness arrays\nAbyssal Veil hardens the chorus',
+    latin: 'Cantoria tessellata', threat: 'LOW'
   },
-  RORSCHACH: {
+  INK_CATHEDRAL: {
     color: new THREE.Color(0.47, 0.47, 0.47),
     glowColor: new THREE.Color(0.47, 0.47, 0.47),
     size: [6, 10], speed: 0.05, metabolism: 0.0005, reproduce: 0.0001,
-    desc: 'RORSCHACH // Architectus abyssalis\nClass: Sessile megafauna\nManipulates local EM field\nSentience: INDETERMINATE',
-    latin: 'Architectus abyssalis', threat: 'EXTREME'
+    desc: 'INK CATHEDRAL // Basilica atramenta\nClass: Sessile megafauna\nBends local gravity into nave-like folds\nSentience: INDETERMINATE',
+    latin: 'Basilica atramenta', threat: 'EXTREME'
   },
-  CHIMAERA: {
+  GILDED_SPORE: {
     color: new THREE.Color(0.86, 0.71, 0.16),
     glowColor: new THREE.Color(0.86, 0.71, 0.16),
     size: [0.5, 1.2], speed: 1.2, metabolism: 0.003, reproduce: 0.0005,
-    desc: 'CHIMAERA // Parasitus neuros\nClass: Neural parasite\nHijacks host nervous system',
-    latin: 'Parasitus neuros', threat: 'MODERATE'
+    desc: 'GILDED SPORE // Reliquia symbiota\nClass: Chronometabolic symbiont\nRewrites host rhythm through gold pollen',
+    latin: 'Reliquia symbiota', threat: 'MODERATE'
   },
-  FIREFLY: {
+  STAR_LANTERN: {
     color: new THREE.Color(0.24, 0.75, 1.0),
     glowColor: new THREE.Color(0.24, 0.75, 1.0),
     size: [0.3, 0.8], speed: 0.8, metabolism: 0.002, reproduce: 0.002,
-    desc: 'FIREFLY // Lux collectiva\nClass: Swarm intelligence\nSynchronized bioluminescent pulses',
-    latin: 'Lux collectiva', threat: 'NONE'
+    desc: 'STAR LANTERN // Lux constellata\nClass: Swarm intelligence\nSynchronized constellation pulses\nMirror Reef grants prismatic velocity',
+    latin: 'Lux constellata', threat: 'NONE'
   },
-  VAMPIRE: {
+  CROWN_MAW: {
     color: new THREE.Color(0.86, 0.12, 0.12),
     glowColor: new THREE.Color(1.0, 0.1, 0.1),
     size: [3.5, 5], speed: 2.5, metabolism: 0.003, reproduce: 0.00005,
-    desc: 'VAMPIRE // Homo sapiens vampiris\nClass: Apex super-predator\nCross-hemisphere cognition\nRight-angle fixation\nEXTREME DANGER',
-    latin: 'Homo sapiens vampiris', threat: 'EXTREME'
+    desc: 'CROWN MAW // Corona vorax\nClass: Apex super-predator\nSix-fanged royal sensory crown\nTracks energy debt across currents\nEXTREME DANGER',
+    latin: 'Corona vorax', threat: 'EXTREME'
   },
-  BICAMERAL: {
+  TWIN_CHOIR: {
     color: new THREE.Color(0.16, 0.86, 0.86),
     glowColor: new THREE.Color(0.16, 0.86, 0.86),
     size: [1, 1.8], speed: 0.7, metabolism: 0.002, reproduce: 0.0006,
-    desc: 'BICAMERAL // Homo sapiens bicameralis\nClass: Hive-mind collective\nLinked neural mesh\nNo individual consciousness',
-    latin: 'Homo sapiens bicameralis', threat: 'MODERATE'
+    desc: 'TWIN CHOIR // Gemina cantoria\nClass: Paired chorus collective\nTwo minds exchange harmonic bearings\nIdentity emerges only in duet',
+    latin: 'Gemina cantoria', threat: 'MODERATE'
   },
-  RIFTER: {
+  TRENCH_PILGRIM: {
     color: new THREE.Color(0.12, 0.24, 0.71),
     glowColor: new THREE.Color(0.12, 0.24, 0.71),
     size: [1.5, 2.5], speed: 0.9, metabolism: 0.002, reproduce: 0.0004,
-    desc: 'RIFTER // Homo sapiens abyssalis\nClass: Deep-modified human\nPressure-rated to 300atm\nPsychological profile: UNSTABLE',
-    latin: 'Homo sapiens abyssalis', threat: 'MODERATE'
+    desc: 'TRENCH PILGRIM // Peregrinus bathyalis\nClass: Adult abyssal cartographer\nPressure mantle rated to 300atm\nMaps living currents by touch',
+    latin: 'Peregrinus bathyalis', threat: 'MODERATE'
   },
-  NEUROGEL: {
+  DREAM_MARROW: {
     color: new THREE.Color(0.71, 0.31, 1.0),
     glowColor: new THREE.Color(0.71, 0.31, 1.0),
     size: [1.5, 3], speed: 0.2, metabolism: 0.001, reproduce: 0.0002,
-    desc: 'NEUROGEL // Synthetica neuralis\nClass: Amorphous neural network\nMerges on contact\nSpeciation engine detected',
-    latin: 'Synthetica neuralis', threat: 'UNKNOWN'
+    desc: 'DREAM MARROW // Oneira synaptica\nClass: Amorphous neural reef\nMerges memory on contact\nSpeciation engine detected',
+    latin: 'Oneira synaptica', threat: 'UNKNOWN'
   },
-  LENIE: {
+  ERRATA_DIVER: {
     color: new THREE.Color(0.02, 0.02, 0.06),
     glowColor: new THREE.Color(0.78, 0.08, 0.08),
     size: [2, 3], speed: 1.0, metabolism: 0.002, reproduce: 0,
-    desc: 'LENIE CLARKE // Named Entity\nClass: Modified Rifter (unique)\nDeliberately seeks infection\nCHAOS AGENT -- DO NOT APPROACH',
-    latin: 'Named Entity (Lenie Clarke)', threat: 'CATASTROPHIC'
+    desc: 'ERRATA DIVER // Singular adult entity\nClass: Revision-seeking Trench Pilgrim\nAmplifies unstable Aurora Blooms\nCHAOS AGENT -- DO NOT APPROACH',
+    latin: 'Peregrinus errata singularis', threat: 'CATASTROPHIC'
   }
 };
 
 const SPECIES_COLORS_HEX = {
-  DRIFTER: '#15db96', SCRAMBLER: '#db3d29', CRUCIFORM: '#976edb',
-  RORSCHACH: '#787878', CHIMAERA: '#dbb529', FIREFLY: '#3dc0ff',
-  VAMPIRE: '#db1e1e', BICAMERAL: '#29dbdb', RIFTER: '#1e3db5',
-  NEUROGEL: '#b54fff', LENIE: '#c81414'
+  VEIL_JELLY: '#15db96', RIBBON_REAVER: '#db3d29', LATTICE_CHOIR: '#976edb',
+  INK_CATHEDRAL: '#787878', GILDED_SPORE: '#dbb529', STAR_LANTERN: '#3dc0ff',
+  CROWN_MAW: '#db1e1e', TWIN_CHOIR: '#29dbdb', TRENCH_PILGRIM: '#1e3db5',
+  DREAM_MARROW: '#b54fff', ERRATA_DIVER: '#c81414'
 };
+
+const SPECIES_LABELS = {
+  VEIL_JELLY: 'VEIL JELLY', RIBBON_REAVER: 'RIBBON REAVER', LATTICE_CHOIR: 'LATTICE CHOIR',
+  INK_CATHEDRAL: 'INK CATHEDRAL', GILDED_SPORE: 'GILDED SPORE', STAR_LANTERN: 'STAR LANTERN',
+  CROWN_MAW: 'CROWN MAW', TWIN_CHOIR: 'TWIN CHOIR', TRENCH_PILGRIM: 'TRENCH PILGRIM',
+  DREAM_MARROW: 'DREAM MARROW', ERRATA_DIVER: 'ERRATA DIVER'
+};
+const HABITATS = [
+  { name: 'SOLAR VENT', regalia: 'CENSER CROWN REGALIA', mechanic: 'UPDRAFT METABOLISM', y: 52, color: 0xffb82e, accent: 0xff6a3d },
+  { name: 'MIRROR REEF', regalia: 'PRISM GILL REGALIA', mechanic: 'LATERAL CURRENT VELOCITY', y: 0, color: 0x39e9ff, accent: 0xff57ce },
+  { name: 'NULL TRENCH', regalia: 'ABYSSAL VEIL REGALIA', mechanic: 'PRESSURE ARMOR / SLOW DRIFT', y: -52, color: 0x9c65ff, accent: 0x57ffc8 }
+];
+let focusedHabitat = 1;
+let taggedIndex = -1;
+
+function displaySpecies(type) {
+  return SPECIES_LABELS[type] || String(type).replaceAll('_', ' ');
+}
 
 // ============================================================
 // THREE.JS SETUP
@@ -673,14 +806,14 @@ const canvas = document.getElementById('webgl-canvas');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.8;
+renderer.toneMappingExposure = 0.66;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000408);
 scene.fog = new THREE.FogExp2(0x000610, 0.004);
 
-const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
-camera.position.set(0, 40, 120);
+const camera = new THREE.PerspectiveCamera(58, 1, 0.1, 1000);
+camera.position.set(0, 20, 165);
 
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
@@ -700,9 +833,9 @@ const bloomPass = new UnrealBloomPass(
   new THREE.Vector2(window.innerWidth, window.innerHeight),
   1.5, 0.4, 0.85
 );
-bloomPass.threshold = 0.1;
-bloomPass.strength = 1.8;
-bloomPass.radius = 0.6;
+bloomPass.threshold = 0.34;
+bloomPass.strength = 0.88;
+bloomPass.radius = 0.44;
 composer.addPass(bloomPass);
 
 function resize() {
@@ -814,12 +947,124 @@ gridHelper.material.transparent = true;
 gridHelper.material.opacity = 0.2;
 scene.add(gridHelper);
 
+function luminousMaterial(color, emissive, intensity = 1.4, opacity = 1) {
+  return new THREE.MeshPhysicalMaterial({
+    color, emissive, emissiveIntensity: intensity, metalness: 0.72, roughness: 0.23,
+    clearcoat: 0.82, clearcoatRoughness: 0.12, transparent: opacity < 1, opacity,
+    side: THREE.DoubleSide, depthWrite: opacity >= 0.8
+  });
+}
+
+// Three authored habitat strata make the containment volume read as levels,
+// rather than an empty wireframe cube.
+const habitatArchitecture = [];
+for (let habitatIndex = 0; habitatIndex < HABITATS.length; habitatIndex++) {
+  const habitat = HABITATS[habitatIndex];
+  const root = new THREE.Group();
+  root.name = 'Habitat_' + habitat.name.replaceAll(' ', '_');
+  root.position.y = habitat.y;
+  root.userData.habitatIndex = habitatIndex;
+  const primary = luminousMaterial(habitat.color, habitat.color, 1.25, 0.88);
+  const secondary = luminousMaterial(habitat.accent, habitat.accent, 0.92, 0.72);
+  const gold = luminousMaterial(0xb87816, 0xffb82e, 1.18, 0.92);
+
+  const floor = new THREE.Mesh(new THREE.RingGeometry(18, 62, 64, 4), luminousMaterial(0x050916, habitat.color, 0.24, 0.24));
+  floor.rotation.x = -Math.PI / 2;
+  root.add(floor);
+  [28, 43, 58].forEach((radius, ringIndex) => {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(radius, ringIndex === 2 ? 0.72 : 0.30, 6, 72), ringIndex === 1 ? primary : gold);
+    ring.rotation.x = Math.PI / 2;
+    ring.rotation.z = ringIndex * 0.17;
+    root.add(ring);
+  });
+  for (let i = 0; i < 12; i++) {
+    const angle = i / 12 * Math.PI * 2;
+    const spire = new THREE.Mesh(new THREE.ConeGeometry(1.4 + (i % 3) * 0.35, 15 + (i % 4) * 3, 5), i % 2 ? primary : secondary);
+    spire.position.set(Math.cos(angle) * 53, (i % 2 ? 5 : -3), Math.sin(angle) * 53);
+    spire.rotation.z = -Math.cos(angle) * 0.20;
+    spire.rotation.x = Math.sin(angle) * 0.20;
+    root.add(spire);
+  }
+  for (let i = 0; i < 8; i++) {
+    const angle = i / 8 * Math.PI * 2 + 0.2;
+    const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(2.0 + (i % 3) * 0.6, 1), i % 2 ? secondary : primary);
+    crystal.scale.y = 2.6;
+    crystal.position.set(Math.cos(angle) * 36, Math.sin(i) * 5, Math.sin(angle) * 36);
+    root.add(crystal);
+  }
+  const portal = new THREE.Group();
+  portal.position.set(0, 4, -58);
+  const portalRing = new THREE.Mesh(new THREE.TorusGeometry(12, 0.9, 8, 64), gold);
+  const irisRing = new THREE.Mesh(new THREE.TorusGeometry(7.4, 0.42, 7, 48), primary);
+  const pupil = new THREE.Mesh(new THREE.SphereGeometry(3.0, 20, 12), secondary);
+  pupil.scale.y = 2.1;
+  pupil.scale.z = 0.28;
+  portal.add(portalRing, irisRing, pupil);
+  root.add(portal);
+  scene.add(root);
+  habitatArchitecture.push(root);
+}
+
+function createHabitatRegalia(size, type) {
+  const root = new THREE.Group();
+  root.name = 'ThreeCurrentRegalia';
+  const gold = luminousMaterial(0xb87816, 0xffca55, 1.7, 0.94);
+  const solar = luminousMaterial(0xff6f36, 0xffc542, 1.8, 0.90);
+  const mirror = luminousMaterial(0x0b7191, 0x42efff, 1.8, 0.82);
+  const mirrorPink = luminousMaterial(0x7d195f, 0xff57ce, 1.6, 0.80);
+  const nullGlass = luminousMaterial(0x24105d, 0x9c65ff, 1.65, 0.78);
+  const nullGreen = luminousMaterial(0x075745, 0x57ffc8, 1.55, 0.80);
+
+  const crown = new THREE.Group();
+  crown.name = 'CenserCrownRegalia';
+  const halo = new THREE.Mesh(new THREE.TorusGeometry(size * 1.38, size * 0.10, 6, 32), gold);
+  halo.position.y = size * 0.30;
+  crown.add(halo);
+  for (let i = 0; i < 5; i++) {
+    const fin = new THREE.Mesh(new THREE.ConeGeometry(size * 0.12, size * (1.0 + i * 0.08), 4), i % 2 ? solar : gold);
+    fin.position.set((i - 2) * size * 0.46, size * 1.05 - Math.abs(i - 2) * size * 0.16, 0);
+    fin.rotation.z = (i - 2) * -0.13;
+    crown.add(fin);
+  }
+
+  const reef = new THREE.Group();
+  reef.name = 'PrismGillRegalia';
+  for (const side of [-1, 1]) {
+    const gill = new THREE.Mesh(new THREE.ConeGeometry(size * 0.30, size * 1.9, 4), side < 0 ? mirror : mirrorPink);
+    gill.position.set(side * size * 1.25, 0, 0);
+    gill.rotation.z = side * -Math.PI / 2;
+    reef.add(gill);
+    const optic = new THREE.Mesh(new THREE.TorusGeometry(size * 0.52, size * 0.09, 5, 28), gold);
+    optic.position.set(side * size * 0.58, size * 0.45, size * 0.42);
+    reef.add(optic);
+  }
+
+  const trench = new THREE.Group();
+  trench.name = 'AbyssalVeilRegalia';
+  for (const side of [-1, 1]) {
+    for (let i = 0; i < 3; i++) {
+      const antler = new THREE.Mesh(new THREE.ConeGeometry(size * (0.13 - i * 0.018), size * (1.45 + i * 0.35), 5), i === 1 ? nullGreen : nullGlass);
+      antler.position.set(side * size * (0.55 + i * 0.34), size * (0.28 - i * 0.26), -size * 0.10);
+      antler.rotation.z = side * (0.35 + i * 0.19);
+      trench.add(antler);
+    }
+  }
+  const pressureHalo = new THREE.Mesh(new THREE.TorusGeometry(size * 1.58, size * 0.08, 6, 40), nullGreen);
+  pressureHalo.rotation.x = Math.PI / 2;
+  trench.add(pressureHalo);
+
+  root.add(crown, reef, trench);
+  root.userData.forms = ['CENSER CROWN REGALIA', 'PRISM GILL REGALIA', 'ABYSSAL VEIL REGALIA'];
+  root.userData.species = type;
+  return root;
+}
+
 // ============================================================
 // ORGANISM 3D CLASS
 // ============================================================
 let organisms = [];
-let behemothClouds = [];
-let seppukuClouds = [];
+let auroraBloomClouds = [];
+let mercyVeilClouds = [];
 let deathParticles = [];
 let idCounter = 0;
 
@@ -840,8 +1085,8 @@ class Organism3D {
     this.infectedTimer = 0;
     this.huntTarget = null;
     this.attached = null;
-    this.gelMass = type === 'NEUROGEL' ? 1 : 0;
-    this.faction = type === 'CRUCIFORM' ? (Math.random() < 0.5 ? 'BOWINIAN' : 'HERETIC') : null;
+    this.gelMass = type === 'DREAM_MARROW' ? 1 : 0;
+    this.faction = type === 'LATTICE_CHOIR' ? (Math.random() < 0.5 ? 'GOLDEN_CANTICLE' : 'MIRROR_DISSENT') : null;
     this.rightAngleFreeze = 0;
     this.sabotageCooldown = 0;
     this.mutations = [];
@@ -858,17 +1103,21 @@ class Organism3D {
     this.z = z !== undefined ? z : (Math.random() - 0.5) * WORLD_SIZE * 0.8;
 
     // Mutations
-    if (Math.random() < 0.12 && type !== 'VAMPIRE' && type !== 'LENIE') {
+    if (Math.random() < 0.12 && type !== 'CROWN_MAW' && type !== 'ERRATA_DIVER') {
       this.mutations.push(Math.random() < 0.5 ? 'gigantism' : 'luminous');
       if (this.mutations.includes('gigantism')) this.size *= 1.5;
     }
 
     // Species overrides
-    if (type === 'VAMPIRE') { this.maxAge = 8000 + Math.random() * 5000; this.size = 4 + Math.random() * 1.5; }
-    if (type === 'LENIE') { this.maxAge = 999999; this.size = 2.5; }
+    if (type === 'CROWN_MAW') { this.maxAge = 8000 + Math.random() * 5000; this.size = 4 + Math.random() * 1.5; }
+    if (type === 'ERRATA_DIVER') { this.maxAge = 999999; this.size = 2.5; }
 
     // Build 3D mesh
     this.mesh = this.createMesh();
+    this.habitatIndex = -1;
+    this.regalia = createHabitatRegalia(this.size, this.type);
+    this.mesh.add(this.regalia);
+    this.updateHabitatRegalia(true);
     this.mesh.userData.organism = this;
     scene.add(this.mesh);
     this.updateMeshPosition();
@@ -893,7 +1142,7 @@ class Organism3D {
     const emissiveIntensity = 2.0;
 
     switch(this.type) {
-      case 'DRIFTER': {
+      case 'VEIL_JELLY': {
         // Translucent jellyfish bell
         const bellGeom = new THREE.SphereGeometry(this.size, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.6);
         const bellMat = new THREE.MeshPhongMaterial({
@@ -926,7 +1175,7 @@ class Organism3D {
         }
         break;
       }
-      case 'SCRAMBLER': {
+      case 'RIBBON_REAVER': {
         // Angular red predator with spiny segments
         for (let i = 0; i < 5; i++) {
           const segGeom = new THREE.OctahedronGeometry(this.size * (1 - i * 0.12), 0);
@@ -954,11 +1203,11 @@ class Organism3D {
         }
         break;
       }
-      case 'CRUCIFORM': {
+      case 'LATTICE_CHOIR': {
         // Geometric cross/star
         const armMat = new THREE.MeshPhongMaterial({
-          color: this.faction === 'BOWINIAN' ? 0x8855cc : 0xcc55aa,
-          emissive: this.faction === 'BOWINIAN' ? 0x442266 : 0x662244,
+          color: this.faction === 'GOLDEN_CANTICLE' ? 0x8855cc : 0xcc55aa,
+          emissive: this.faction === 'GOLDEN_CANTICLE' ? 0x442266 : 0x662244,
           emissiveIntensity,
           flatShading: true
         });
@@ -975,7 +1224,7 @@ class Organism3D {
         group.add(new THREE.Mesh(centerGeom, armMat));
         break;
       }
-      case 'RORSCHACH': {
+      case 'INK_CATHEDRAL': {
         // Large dark amorphous mass
         const coreGeom = new THREE.IcosahedronGeometry(this.size, 2);
         // Distort vertices
@@ -1012,7 +1261,7 @@ class Organism3D {
         }
         break;
       }
-      case 'CHIMAERA': {
+      case 'GILDED_SPORE': {
         // Tiny gold parasites
         const bodyGeom = new THREE.TetrahedronGeometry(this.size, 0);
         const bodyMat = new THREE.MeshPhongMaterial({
@@ -1026,7 +1275,7 @@ class Organism3D {
         group.add(new THREE.Mesh(glowGeom, glowMat));
         break;
       }
-      case 'FIREFLY': {
+      case 'STAR_LANTERN': {
         // Small blue luminescent sphere
         const bodyGeom = new THREE.SphereGeometry(this.size, 8, 8);
         const bodyMat = new THREE.MeshBasicMaterial({
@@ -1042,7 +1291,7 @@ class Organism3D {
         group.add(new THREE.Mesh(glowGeom, glowMat));
         break;
       }
-      case 'VAMPIRE': {
+      case 'CROWN_MAW': {
         // Large menacing red predator
         const bodyGeom = new THREE.ConeGeometry(this.size, this.size * 3, 6);
         const bodyMat = new THREE.MeshPhongMaterial({
@@ -1074,7 +1323,7 @@ class Organism3D {
         }
         break;
       }
-      case 'BICAMERAL': {
+      case 'TWIN_CHOIR': {
         // Cyan collective node
         const bodyGeom = new THREE.DodecahedronGeometry(this.size, 0);
         const bodyMat = new THREE.MeshPhongMaterial({
@@ -1092,7 +1341,7 @@ class Organism3D {
         }
         break;
       }
-      case 'RIFTER': {
+      case 'TRENCH_PILGRIM': {
         // Dark blue modified human shape
         const torsoGeom = new THREE.CapsuleGeometry(this.size * 0.6, this.size * 1.5, 4, 8);
         const torsoMat = new THREE.MeshPhongMaterial({
@@ -1116,7 +1365,7 @@ class Organism3D {
         }
         break;
       }
-      case 'NEUROGEL': {
+      case 'DREAM_MARROW': {
         // Purple amorphous blob
         const blobGeom = new THREE.IcosahedronGeometry(this.size, 2);
         const posAttr2 = blobGeom.attributes.position;
@@ -1141,7 +1390,7 @@ class Organism3D {
         group.add(new THREE.Mesh(arcGeom, arcMat));
         break;
       }
-      case 'LENIE': {
+      case 'ERRATA_DIVER': {
         // Near-black entity with single red eye
         const bodyGeom = new THREE.CapsuleGeometry(this.size * 0.7, this.size * 1.8, 4, 8);
         const bodyMat = new THREE.MeshPhongMaterial({
@@ -1168,6 +1417,18 @@ class Organism3D {
     }
 
     return group;
+  }
+
+  updateHabitatRegalia(force = false) {
+    const nextIndex = this.y > 25 ? 0 : (this.y < -25 ? 2 : 1);
+    if (!force && nextIndex === this.habitatIndex) return;
+    this.habitatIndex = nextIndex;
+    this.regalia.children.forEach((form, index) => { form.visible = index === nextIndex; });
+    this.mesh.userData.habitatIndex = nextIndex;
+    this.mesh.userData.regalia = HABITATS[nextIndex].regalia;
+    if (!force) {
+      spawnDeathParticles(this.x, this.y, this.z, HABITATS[nextIndex].color, 7);
+    }
   }
 
   updateMeshPosition() {
@@ -1209,7 +1470,7 @@ class Organism3D {
       }
       // Spread
       for (const o of others) {
-        if (o === this || o.infected || o.type === 'RIFTER' || o.type === 'LENIE') continue;
+        if (o === this || o.infected || o.type === 'TRENCH_PILGRIM' || o.type === 'ERRATA_DIVER') continue;
         if (this.distTo(o) < 8 && Math.random() < 0.01 * dt) {
           o.infected = true;
           spawnDeathParticles(o.x, o.y, o.z, 0xcc6614, 5);
@@ -1217,10 +1478,10 @@ class Organism3D {
       }
     }
 
-    // Behemoth cloud infection
-    for (const cloud of behemothClouds) {
+    // Aurora Bloom cloud infection
+    for (const cloud of auroraBloomClouds) {
       const d = Math.sqrt((this.x-cloud.x)**2 + (this.y-cloud.y)**2 + (this.z-cloud.z)**2);
-      if (d < cloud.radius && !this.infected && this.type !== 'RIFTER' && this.type !== 'LENIE') {
+      if (d < cloud.radius && !this.infected && this.type !== 'TRENCH_PILGRIM' && this.type !== 'ERRATA_DIVER') {
         if (Math.random() < 0.02 * dt) {
           this.infected = true;
           spawnDeathParticles(this.x, this.y, this.z, 0xcc6614, 5);
@@ -1228,8 +1489,8 @@ class Organism3D {
       }
     }
 
-    // Seppuku cloud kill
-    for (const cloud of seppukuClouds) {
+    // Mercy Veil cloud kill
+    for (const cloud of mercyVeilClouds) {
       const d = Math.sqrt((this.x-cloud.x)**2 + (this.y-cloud.y)**2 + (this.z-cloud.z)**2);
       if (d < cloud.radius) {
         if (this.infected) {
@@ -1244,17 +1505,34 @@ class Organism3D {
 
     // Type-specific behavior
     switch(this.type) {
-      case 'DRIFTER': this.behaveDrifter(dt, others); break;
-      case 'SCRAMBLER': this.behaveScrambler(dt, others); break;
-      case 'CRUCIFORM': this.behaveCruciform(dt, others); break;
-      case 'RORSCHACH': this.behaveRorschach(dt, others); break;
-      case 'CHIMAERA': this.behaveChimaera(dt, others); break;
-      case 'FIREFLY': this.behaveFirefly(dt, others); break;
-      case 'VAMPIRE': this.behaveVampire(dt, others); break;
-      case 'BICAMERAL': this.behaveBicameral(dt, others); break;
-      case 'RIFTER': this.behaveRifter(dt, others); break;
-      case 'NEUROGEL': this.behaveNeurogel(dt, others); break;
-      case 'LENIE': this.behaveLenie(dt, others); break;
+      case 'VEIL_JELLY': this.behaveVeilJelly(dt, others); break;
+      case 'RIBBON_REAVER': this.behaveRibbonReaver(dt, others); break;
+      case 'LATTICE_CHOIR': this.behaveLatticeChoir(dt, others); break;
+      case 'INK_CATHEDRAL': this.behaveInkCathedral(dt, others); break;
+      case 'GILDED_SPORE': this.behaveGildedSpore(dt, others); break;
+      case 'STAR_LANTERN': this.behaveStarLantern(dt, others); break;
+      case 'CROWN_MAW': this.behaveCrownMaw(dt, others); break;
+      case 'TWIN_CHOIR': this.behaveTwinChoir(dt, others); break;
+      case 'TRENCH_PILGRIM': this.behaveTrenchPilgrim(dt, others); break;
+      case 'DREAM_MARROW': this.behaveDreamMarrow(dt, others); break;
+      case 'ERRATA_DIVER': this.behaveErrataDiver(dt, others); break;
+    }
+
+    // Regalia changes at authored current thresholds and changes locomotion.
+    this.updateHabitatRegalia();
+    if (this.habitatIndex === 0) {
+      this.vy += 0.008 * dt;
+      this.vx *= 1.003;
+      this.vz *= 1.003;
+      this.energy += 0.00012 * dt;
+    } else if (this.habitatIndex === 1) {
+      this.vx *= 1.007;
+      this.vz *= 1.007;
+    } else {
+      this.vx *= 0.985;
+      this.vy *= 0.992;
+      this.vz *= 0.985;
+      this.energy += 0.00020 * dt;
     }
 
     // Move
@@ -1277,7 +1555,7 @@ class Organism3D {
     this.vz *= 0.99;
 
     // Passive energy
-    if (this.type !== 'SCRAMBLER' && this.type !== 'CHIMAERA' && this.type !== 'VAMPIRE') {
+    if (this.type !== 'RIBBON_REAVER' && this.type !== 'GILDED_SPORE' && this.type !== 'CROWN_MAW') {
       this.energy += 0.0003 * dt;
     }
 
@@ -1298,13 +1576,13 @@ class Organism3D {
 
   // ============ BEHAVIORS ============
 
-  behaveDrifter(dt, others) {
+  behaveVeilJelly(dt, others) {
     this.vx += Math.sin(this.phase) * 0.01;
     this.vy += Math.cos(this.phase * 0.7) * 0.008;
     this.vz += Math.sin(this.phase * 0.5) * 0.006;
-    // Drift toward fireflies
+    // Drift toward Star Lanterns
     for (const o of others) {
-      if (o === this || o.type !== 'FIREFLY') continue;
+      if (o === this || o.type !== 'STAR_LANTERN') continue;
       const d = this.distTo(o);
       if (d < 40 && d > 5) {
         const dir = this.dirTo(o);
@@ -1315,10 +1593,10 @@ class Organism3D {
     }
   }
 
-  behaveScrambler(dt, others) {
+  behaveRibbonReaver(dt, others) {
     let closest = null, closestD = Infinity;
     for (const o of others) {
-      if (o === this || o.type === 'SCRAMBLER' || o.type === 'RORSCHACH' || o.type === 'VAMPIRE') continue;
+      if (o === this || o.type === 'RIBBON_REAVER' || o.type === 'INK_CATHEDRAL' || o.type === 'CROWN_MAW') continue;
       const d = this.distTo(o);
       if (d < closestD) { closestD = d; closest = o; }
     }
@@ -1333,7 +1611,7 @@ class Organism3D {
         closest.energy = -1;
         spawnDeathParticles(closest.x, closest.y, closest.z, SPECIES[closest.type].glowColor.getHex(), 25);
         flashScreenEffect(closest.spec.glowColor.getHex(), 0.05);
-        logEvent('SCRAMBLER KILL: ' + closest.type + ' consumed', 'danger', 'scrambler_kill');
+        logEvent('RIBBON REAVER KILL: ' + displaySpecies(closest.type) + ' consumed', 'danger', 'ribbon_reaver_kill');
       }
     } else {
       this.huntTarget = null;
@@ -1343,9 +1621,9 @@ class Organism3D {
         this.vz += (Math.random() - 0.5) * 0.5;
       }
     }
-    // Flee from Rorschach and Vampires
+    // Flee from Ink Cathedral and Crown Maws
     for (const o of others) {
-      if (o.type !== 'RORSCHACH' && o.type !== 'VAMPIRE') continue;
+      if (o.type !== 'INK_CATHEDRAL' && o.type !== 'CROWN_MAW') continue;
       const d = this.distTo(o);
       if (d < o.size * 5) {
         const dir = this.dirTo(o);
@@ -1356,10 +1634,10 @@ class Organism3D {
     }
   }
 
-  behaveCruciform(dt, others) {
+  behaveLatticeChoir(dt, others) {
     // Cluster with same faction, fight opposing
     for (const o of others) {
-      if (o === this || o.type !== 'CRUCIFORM') continue;
+      if (o === this || o.type !== 'LATTICE_CHOIR') continue;
       const d = this.distTo(o);
       if (d < 25) {
         const dir = this.dirTo(o);
@@ -1382,7 +1660,7 @@ class Organism3D {
     }
     // Flee predators
     for (const o of others) {
-      if (o.type !== 'SCRAMBLER' && o.type !== 'VAMPIRE') continue;
+      if (o.type !== 'RIBBON_REAVER' && o.type !== 'CROWN_MAW') continue;
       const d = this.distTo(o);
       if (d < 30) {
         const dir = this.dirTo(o);
@@ -1396,10 +1674,10 @@ class Organism3D {
     this.vz += Math.sin(this.phase * 0.7) * 0.003;
   }
 
-  behaveRorschach(dt, others) {
+  behaveInkCathedral(dt, others) {
     this.vx *= 0.95; this.vy *= 0.95; this.vz *= 0.95;
     for (const o of others) {
-      if (o === this || o.type === 'RORSCHACH' || o.type === 'RIFTER') continue;
+      if (o === this || o.type === 'INK_CATHEDRAL' || o.type === 'TRENCH_PILGRIM') continue;
       const d = this.distTo(o);
       if (d < this.size * 8 && d > this.size) {
         const dir = this.dirTo(o);
@@ -1409,11 +1687,11 @@ class Organism3D {
         o.vy -= dir.y * pull;
         o.vz -= dir.z * pull;
       }
-      if (d < this.size * 1.2 && o.type !== 'SCRAMBLER' && o.type !== 'VAMPIRE') {
+      if (d < this.size * 1.2 && o.type !== 'RIBBON_REAVER' && o.type !== 'CROWN_MAW') {
         this.energy += o.energy * 0.3;
         o.energy = -1;
         spawnDeathParticles(o.x, o.y, o.z, 0x787878, 15);
-        logEvent('RORSCHACH ABSORPTION: ' + o.type, '', 'rorschach_eat');
+        logEvent('INK CATHEDRAL ABSORPTION: ' + displaySpecies(o.type), '', 'ink_cathedral_absorption');
       }
     }
     if (this.energy > 0.6) {
@@ -1421,7 +1699,7 @@ class Organism3D {
     }
   }
 
-  behaveChimaera(dt, others) {
+  behaveGildedSpore(dt, others) {
     if (this.attached) {
       this.x = this.attached.x + Math.sin(this.phase) * this.attached.size * 1.5;
       this.y = this.attached.y + Math.cos(this.phase) * this.attached.size * 1.5;
@@ -1433,7 +1711,7 @@ class Organism3D {
     }
     let closest = null, closestD = Infinity;
     for (const o of others) {
-      if (o === this || o.type === 'CHIMAERA' || o.type === 'RORSCHACH' || o.type === 'VAMPIRE') continue;
+      if (o === this || o.type === 'GILDED_SPORE' || o.type === 'INK_CATHEDRAL' || o.type === 'CROWN_MAW') continue;
       const d = this.distTo(o);
       if (d < closestD) { closestD = d; closest = o; }
     }
@@ -1445,16 +1723,16 @@ class Organism3D {
       if (closestD < closest.size + this.size + 1) {
         this.attached = closest;
         spawnDeathParticles(this.x, this.y, this.z, 0xddaa20, 5);
-        logEvent('CHIMAERA ATTACHMENT: Parasitizing ' + closest.type, '', 'chimaera_attach');
+        logEvent('GILDED SPORE ATTACHMENT: Parasitizing ' + displaySpecies(closest.type), '', 'gilded_spore_attach');
       }
     }
   }
 
-  behaveFirefly(dt, others) {
+  behaveStarLantern(dt, others) {
     let sx = 0, sy = 0, sz = 0, cx = 0, cy = 0, cz = 0;
     let ax = 0, ay = 0, az = 0, n = 0;
     for (const o of others) {
-      if (o === this || o.type !== 'FIREFLY') continue;
+      if (o === this || o.type !== 'STAR_LANTERN') continue;
       const d = this.distTo(o);
       if (d < 20) {
         const dir = this.dirTo(o);
@@ -1480,7 +1758,7 @@ class Organism3D {
     }
   }
 
-  behaveVampire(dt, others) {
+  behaveCrownMaw(dt, others) {
     // Right-angle freeze
     const gridSize = 20;
     const nearX = Math.abs(this.x % gridSize) < 2 || Math.abs(this.x % gridSize - gridSize) < 2;
@@ -1497,11 +1775,11 @@ class Organism3D {
     // Hunt
     let target = null, targetD = Infinity;
     for (const o of others) {
-      if (o === this || o.type === 'VAMPIRE' || o.type === 'RORSCHACH') continue;
+      if (o === this || o.type === 'CROWN_MAW' || o.type === 'INK_CATHEDRAL') continue;
       let d = this.distTo(o);
       let priority = d;
-      if (o.type === 'SCRAMBLER') priority *= 0.5;
-      if (o.type === 'BICAMERAL') priority *= 0.6;
+      if (o.type === 'RIBBON_REAVER') priority *= 0.5;
+      if (o.type === 'TWIN_CHOIR') priority *= 0.6;
       if (priority < targetD) { targetD = priority; target = o; }
     }
     if (target) {
@@ -1517,8 +1795,8 @@ class Organism3D {
         spawnDeathParticles(target.x, target.y, target.z, 0xffffff, 15);
         flashScreenEffect(0xff2020, 0.12);
         triggerScreenShake();
-        logEvent('VAMPIRE KILL: ' + target.type + ' ELIMINATED', 'danger', 'vamp_kill');
-        showDangerAlert('VAMPIRE ACTIVE', 'APEX PREDATOR FEEDING', 2000);
+        logEvent('CROWN MAW KILL: ' + displaySpecies(target.type) + ' REDACTED', 'danger', 'crown_maw_kill');
+        showDangerAlert('CROWN_MAW ACTIVE', 'APEX PREDATOR FEEDING', 2000);
       }
     } else {
       if (Math.random() < 0.01) {
@@ -1534,10 +1812,10 @@ class Organism3D {
     }
   }
 
-  behaveBicameral(dt, others) {
+  behaveTwinChoir(dt, others) {
     const groupMembers = [];
     for (const o of others) {
-      if (o === this || o.type !== 'BICAMERAL') continue;
+      if (o === this || o.type !== 'TWIN_CHOIR') continue;
       if (this.distTo(o) < 25) groupMembers.push(o);
     }
     if (groupMembers.length > 0) {
@@ -1561,9 +1839,9 @@ class Organism3D {
         this.vz += (Math.random() - 0.5) * 0.8;
       }
     }
-    // Boost nearby Cruciform energy
+    // Boost nearby Lattice Choir energy
     for (const o of others) {
-      if (o.type === 'CRUCIFORM' && this.distTo(o) < 12) {
+      if (o.type === 'LATTICE_CHOIR' && this.distTo(o) < 12) {
         o.energy += 0.0005 * dt;
       }
     }
@@ -1572,16 +1850,16 @@ class Organism3D {
     this.vz += Math.sin(this.phase * 0.7) * 0.006;
   }
 
-  behaveRifter(dt, others) {
-    // Sabotage Bowinian structures
+  behaveTrenchPilgrim(dt, others) {
+    // Sabotage Golden Canticle structures
     if (this.sabotageCooldown <= 0) {
       for (const o of others) {
-        if (o.type === 'CRUCIFORM' && o.faction === 'BOWINIAN') {
+        if (o.type === 'LATTICE_CHOIR' && o.faction === 'GOLDEN_CANTICLE') {
           if (this.distTo(o) < 8 && Math.random() < 0.005 * dt) {
             o.energy -= 0.3;
             spawnDeathParticles(o.x, o.y, o.z, 0x1e3cb5, 10);
             this.sabotageCooldown = 200;
-            logEvent('RIFTER SABOTAGE: BOWINIAN STRUCTURE COMPROMISED', 'warn', 'rifter_sab');
+            logEvent('TRENCH PILGRIM SABOTAGE: GOLDEN CANTICLE STRUCTURE COMPROMISED', 'warn', 'pilgrim_sabotage');
             break;
           }
         }
@@ -1596,10 +1874,10 @@ class Organism3D {
     }
   }
 
-  behaveNeurogel(dt, others) {
-    // Merge with other neurogels
+  behaveDreamMarrow(dt, others) {
+    // Merge with other Dream Marrows
     for (const o of others) {
-      if (o === this || o.type !== 'NEUROGEL' || o.energy <= 0) continue;
+      if (o === this || o.type !== 'DREAM_MARROW' || o.energy <= 0) continue;
       const d = this.distTo(o);
       if (d < this.size + o.size + 2 && this.gelMass >= o.gelMass) {
         this.gelMass += o.gelMass;
@@ -1608,29 +1886,29 @@ class Organism3D {
         o.energy = -1;
         spawnDeathParticles(this.x, this.y, this.z, 0xb54fff, 12);
         flashScreenEffect(0xb54fff, 0.04);
-        logEvent('NEUROGEL MERGE: Mass now ' + this.gelMass, '', 'neurogel_merge');
+        logEvent('DREAM_MARROW MERGE: Mass now ' + this.gelMass, '', 'dream_marrow_merge');
       }
     }
 
     // Critical mass - speciate
     if (this.gelMass >= 5) {
-      const types = ['DRIFTER', 'SCRAMBLER', 'CRUCIFORM', 'FIREFLY', 'CHIMAERA', 'BICAMERAL', 'RIFTER'];
+      const types = ['VEIL_JELLY', 'RIBBON_REAVER', 'LATTICE_CHOIR', 'STAR_LANTERN', 'GILDED_SPORE', 'TWIN_CHOIR', 'TRENCH_PILGRIM'];
       const newType = types[Math.floor(Math.random() * types.length)];
       const child = new Organism3D(newType, this.x + (Math.random()-0.5)*6, this.y + (Math.random()-0.5)*6, this.z + (Math.random()-0.5)*6, this.gen + 1);
-      child.mutations.push('neurogel_born');
+      child.mutations.push('dream_marrow_born');
       child.size *= 1.2;
       this.gelMass = 1;
       this.size = 1.5 + this.gelMass * 0.8;
       this.energy *= 0.3;
       spawnDeathParticles(this.x, this.y, this.z, 0xffc8ff, 30);
       flashScreenEffect(0xb54fff, 0.1);
-      logEvent('NEUROGEL SPECIATION: ' + newType + ' spawned!', 'warn', 'neurogel_spec');
+      logEvent('DREAM MARROW SPECIATION: ' + displaySpecies(newType) + ' spawned!', 'warn', 'dream_marrow_speciation');
       return child;
     }
 
-    // Drift toward other neurogels
+    // Drift toward other Dream Marrows
     for (const o of others) {
-      if (o === this || o.type !== 'NEUROGEL') continue;
+      if (o === this || o.type !== 'DREAM_MARROW') continue;
       const d = this.distTo(o);
       if (d < 40 && d > 2) {
         const dir = this.dirTo(o);
@@ -1645,10 +1923,10 @@ class Organism3D {
     return null;
   }
 
-  behaveLenie(dt, others) {
-    // Move toward Behemoth clouds
+  behaveErrataDiver(dt, others) {
+    // Move toward Aurora Bloom clouds
     let nearest = null, nearestD = Infinity;
-    for (const cloud of behemothClouds) {
+    for (const cloud of auroraBloomClouds) {
       const d = Math.sqrt((this.x-cloud.x)**2 + (this.y-cloud.y)**2 + (this.z-cloud.z)**2);
       if (d < nearestD) { nearestD = d; nearest = cloud; }
     }
@@ -1664,16 +1942,16 @@ class Organism3D {
         nearest.growRate = 0.2;
         nearest.maxRadius = Math.min(50, nearest.maxRadius * 1.001);
         if (Math.random() < 0.01) {
-          logEvent('LENIE CLARKE AMPLIFYING OUTBREAK', 'critical', 'lenie_amp');
+          logEvent('ERRATA DIVER AMPLIFYING OUTBREAK', 'critical', 'errata_diver_amp');
         }
       }
     } else {
       this.vx += Math.sin(this.phase * 0.4) * 0.015;
       this.vy += Math.cos(this.phase * 0.3) * 0.015;
       this.vz += Math.sin(this.phase * 0.6) * 0.01;
-      if (Math.random() < 0.0005 * 1 && behemothClouds.length < 3) {
-        spawnBehemoth(this.x, this.y, this.z);
-        logEvent('LENIE CLARKE INITIATED NEW OUTBREAK', 'critical', 'lenie_outbreak');
+      if (Math.random() < 0.0005 * 1 && auroraBloomClouds.length < 3) {
+        spawnAuroraBloom(this.x, this.y, this.z);
+        logEvent('ERRATA DIVER INITIATED NEW OUTBREAK', 'critical', 'errata_diver_outbreak');
       }
     }
     if (Math.random() < 0.01) this.flickerTimer = 8;
@@ -1718,17 +1996,21 @@ class Organism3D {
     const pulse = Math.sin(this.pulsePhase) * 0.15 + 1.0;
     const s = this.infected ? pulse * (0.8 + Math.sin(this.phase * 5) * 0.2) : pulse;
     this.mesh.scale.setScalar(s);
+    if (this.regalia) {
+      this.regalia.rotation.y += (this.habitatIndex === 1 ? 0.012 : 0.006) * dt;
+      this.regalia.rotation.z = Math.sin(this.phase * 0.7) * (this.habitatIndex === 2 ? 0.12 : 0.05);
+    }
 
     // Rotation animation per type
     switch(this.type) {
-      case 'DRIFTER':
+      case 'VEIL_JELLY':
         this.mesh.rotation.y += 0.003 * dt;
         // Tentacle sway (bob up and down)
         this.mesh.children.forEach((c, i) => {
           if (i > 1) c.rotation.x = Math.sin(this.phase + i) * 0.1;
         });
         break;
-      case 'SCRAMBLER':
+      case 'RIBBON_REAVER':
         this.mesh.rotation.y += 0.02 * dt;
         this.mesh.rotation.z = Math.sin(this.phase) * 0.1;
         // Segment wobble
@@ -1736,11 +2018,11 @@ class Organism3D {
           if (i < 5) c.rotation.x += 0.01 * dt;
         });
         break;
-      case 'CRUCIFORM':
+      case 'LATTICE_CHOIR':
         this.mesh.rotation.x += 0.005 * dt;
         this.mesh.rotation.y += 0.008 * dt;
         break;
-      case 'RORSCHACH':
+      case 'INK_CATHEDRAL':
         this.mesh.rotation.y += 0.001 * dt;
         // Tendrils writhe
         this.mesh.children.forEach((c, i) => {
@@ -1750,17 +2032,17 @@ class Organism3D {
           }
         });
         break;
-      case 'CHIMAERA':
+      case 'GILDED_SPORE':
         this.mesh.rotation.x += 0.03 * dt;
         this.mesh.rotation.y += 0.02 * dt;
         break;
-      case 'FIREFLY': {
+      case 'STAR_LANTERN': {
         const fp = Math.sin(this.pulsePhase) * 0.5 + 0.5;
         this.mesh.children[0].material.opacity = 0.3 + fp * 0.7;
         this.mesh.children[1].material.opacity = fp * 0.2;
         break;
       }
-      case 'VAMPIRE':
+      case 'CROWN_MAW':
         // Face direction of movement
         if (this.huntTarget) {
           const dir = this.dirTo(this.huntTarget);
@@ -1768,11 +2050,11 @@ class Organism3D {
         }
         this.mesh.rotation.z = Math.sin(this.phase * 2) * 0.05;
         break;
-      case 'BICAMERAL':
+      case 'TWIN_CHOIR':
         this.mesh.rotation.y += 0.01 * dt;
         this.mesh.rotation.x = Math.sin(this.phase * 0.5) * 0.05;
         break;
-      case 'RIFTER':
+      case 'TRENCH_PILGRIM':
         this.mesh.rotation.y += 0.005 * dt;
         // Flash effect
         if (this.flickerTimer > 0) {
@@ -1791,13 +2073,13 @@ class Organism3D {
           });
         }
         break;
-      case 'NEUROGEL':
+      case 'DREAM_MARROW':
         this.mesh.rotation.x += 0.002 * dt;
         this.mesh.rotation.z += 0.003 * dt;
         // Scale based on gel mass
         this.mesh.scale.setScalar(s * (0.8 + this.gelMass * 0.2));
         break;
-      case 'LENIE':
+      case 'ERRATA_DIVER':
         this.mesh.rotation.y += 0.005 * dt;
         // Red eye pulse
         this.mesh.children.forEach(c => {
@@ -1819,7 +2101,7 @@ class Organism3D {
     }
 
     // Flicker (being attacked)
-    if (this.flickerTimer > 0 && this.type !== 'RIFTER') {
+    if (this.flickerTimer > 0 && this.type !== 'TRENCH_PILGRIM') {
       this.mesh.visible = Math.floor(this.flickerTimer) % 2 === 0;
     } else {
       this.mesh.visible = true;
@@ -1842,9 +2124,9 @@ class Organism3D {
 }
 
 // ============================================================
-// BEHEMOTH CLOUD SYSTEM (3D)
+// AURORA BLOOM CLOUD SYSTEM (3D)
 // ============================================================
-function spawnBehemoth(x, y, z) {
+function spawnAuroraBloom(x, y, z) {
   const cloud = {
     x: x !== undefined ? x : (Math.random()-0.5) * WORLD_SIZE * 0.6,
     y: y !== undefined ? y : (Math.random()-0.5) * WORLD_SIZE * 0.6,
@@ -1868,12 +2150,12 @@ function spawnBehemoth(x, y, z) {
   cloud.mesh = new THREE.Mesh(geom, mat);
   cloud.mesh.position.set(cloud.x, cloud.y, cloud.z);
   scene.add(cloud.mesh);
-  behemothClouds.push(cloud);
-  logEvent('BEHEMOTH OUTBREAK: NEW INFECTION ZONE', 'danger', 'behemoth_spawn');
+  auroraBloomClouds.push(cloud);
+  logEvent('AURORA BLOOM OUTBREAK: NEW INFECTION ZONE', 'danger', 'auroraBloom_spawn');
   flashScreenEffect(0xff6400, 0.08);
 }
 
-function spawnSeppuku(x, y, z) {
+function spawnMercyVeil(x, y, z) {
   const cloud = {
     x: x || 0, y: y || 0, z: z || 0,
     radius: 8,
@@ -1894,16 +2176,16 @@ function spawnSeppuku(x, y, z) {
   cloud.mesh = new THREE.Mesh(geom, mat);
   cloud.mesh.position.set(cloud.x, cloud.y, cloud.z);
   scene.add(cloud.mesh);
-  seppukuClouds.push(cloud);
-  logEvent('SEPPUKU PROTOCOL INITIATED', 'critical', 'seppuku');
+  mercyVeilClouds.push(cloud);
+  logEvent('MERCY VEIL PROTOCOL INITIATED', 'critical', 'mercyVeil');
   flashScreenEffect(0x0064ff, 0.15);
   triggerScreenShake();
 }
 
 function updateClouds(dt) {
-  // Behemoth
-  for (let i = behemothClouds.length - 1; i >= 0; i--) {
-    const c = behemothClouds[i];
+  // Aurora Bloom
+  for (let i = auroraBloomClouds.length - 1; i >= 0; i--) {
+    const c = auroraBloomClouds[i];
     c.radius = Math.min(c.maxRadius, c.radius + c.growRate * dt);
     c.life -= 0.0003 * dt;
     c.mesh.scale.setScalar(c.radius);
@@ -1912,12 +2194,12 @@ function updateClouds(dt) {
       scene.remove(c.mesh);
       c.mesh.geometry.dispose();
       c.mesh.material.dispose();
-      behemothClouds.splice(i, 1);
+      auroraBloomClouds.splice(i, 1);
     }
   }
-  // Seppuku
-  for (let i = seppukuClouds.length - 1; i >= 0; i--) {
-    const c = seppukuClouds[i];
+  // Mercy Veil
+  for (let i = mercyVeilClouds.length - 1; i >= 0; i--) {
+    const c = mercyVeilClouds[i];
     c.radius = Math.min(c.maxRadius, c.radius + c.growRate * dt);
     c.life -= 0.002 * dt;
     c.mesh.scale.setScalar(c.radius);
@@ -1926,7 +2208,7 @@ function updateClouds(dt) {
       scene.remove(c.mesh);
       c.mesh.geometry.dispose();
       c.mesh.material.dispose();
-      seppukuClouds.splice(i, 1);
+      mercyVeilClouds.splice(i, 1);
     }
   }
 
@@ -1935,16 +2217,16 @@ function updateClouds(dt) {
   for (const o of organisms) { if (o.infected) infected++; }
   infectionRate = organisms.length > 0 ? infected / organisms.length : 0;
 
-  // Auto-seppuku at 30%
-  if (infectionRate > 0.3 && seppukuClouds.length === 0) {
-    spawnSeppuku();
+  // Auto-mercyVeil at 30%
+  if (infectionRate > 0.3 && mercyVeilClouds.length === 0) {
+    spawnMercyVeil();
   }
 
   // Infection milestones
   if (infectionRate > 0.05 && infectionRate < 0.15) {
-    logEvent('BEHEMOTH: INFECTION AT ' + Math.floor(infectionRate * 100) + '%', 'danger', 'infect_low');
+    logEvent('AURORA BLOOM: INFECTION AT ' + Math.floor(infectionRate * 100) + '%', 'danger', 'infect_low');
   } else if (infectionRate > 0.15 && infectionRate < 0.3) {
-    logEvent('BEHEMOTH CRITICAL: ' + Math.floor(infectionRate * 100) + '%', 'critical', 'infect_high');
+    logEvent('AURORA BLOOM CRITICAL: ' + Math.floor(infectionRate * 100) + '%', 'critical', 'infect_high');
     showDangerAlert('BIOHAZARD', 'INFECTION RATE ' + Math.floor(infectionRate*100) + '%', 2000);
   }
 
@@ -2089,39 +2371,39 @@ function updateAI() {
   for (const key of Object.keys(SPECIES)) counts[key] = 0;
   for (const o of organisms) counts[o.type]++;
 
-  const vampires = counts.VAMPIRE;
-  const scramblers = counts.SCRAMBLER;
-  const fireflies = counts.FIREFLY;
+  const crownMaws = counts.CROWN_MAW;
+  const ribbonReavers = counts.RIBBON_REAVER;
+  const starLanterns = counts.STAR_LANTERN;
   const total = organisms.length;
 
   const observations = [];
 
-  if (vampires > 0) {
-    observations.push({ text: 'Vampire-class predator active. Population control in effect.', cls: 'threat' });
+  if (crownMaws > 0) {
+    observations.push({ text: 'Crown Maw predator active. Population control in effect.', cls: 'threat' });
   }
   if (infectionRate > 0.1) {
-    observations.push({ text: 'Behemoth viral load at ' + Math.floor(infectionRate*100) + '%. Containment failing.', cls: 'threat' });
+    observations.push({ text: 'Aurora Bloom viral load at ' + Math.floor(infectionRate*100) + '%. Containment failing.', cls: 'threat' });
   }
-  if (fireflies > 20) {
-    observations.push({ text: 'Firefly swarm exhibiting synchronized pulse at ' + Math.floor(60 + fireflies) + 'Hz.', cls: 'action' });
+  if (starLanterns > 20) {
+    observations.push({ text: 'Star Lantern swarm exhibiting synchronized pulse at ' + Math.floor(60 + starLanterns) + 'Hz.', cls: 'action' });
   }
-  if (scramblers > 5) {
-    observations.push({ text: 'Scrambler population elevated. Prey species under pressure.', cls: 'threat' });
+  if (ribbonReavers > 5) {
+    observations.push({ text: 'Ribbon Reaver population elevated. Prey species under pressure.', cls: 'threat' });
   }
-  if (counts.CRUCIFORM > 10) {
-    observations.push({ text: 'Cruciform colonies forming geometric defense arrays.', cls: 'action' });
+  if (counts.LATTICE_CHOIR > 10) {
+    observations.push({ text: 'Lattice Choir colonies forming geometric defense arrays.', cls: 'action' });
   }
-  if (counts.NEUROGEL > 3) {
-    observations.push({ text: 'Neurogel mass accumulating. Speciation event probability: ' + Math.floor(counts.NEUROGEL * 12) + '%', cls: 'event' });
+  if (counts.DREAM_MARROW > 3) {
+    observations.push({ text: 'Dream Marrow mass accumulating. Speciation event probability: ' + Math.floor(counts.DREAM_MARROW * 12) + '%', cls: 'event' });
   }
-  if (counts.BICAMERAL > 5) {
-    observations.push({ text: 'Bicameral hive-mind link strengthening. ' + counts.BICAMERAL + ' nodes in mesh.', cls: 'action' });
+  if (counts.TWIN_CHOIR > 5) {
+    observations.push({ text: 'Twin Choir lattice link strengthening. ' + counts.TWIN_CHOIR + ' nodes in mesh.', cls: 'action' });
   }
-  if (counts.RORSCHACH > 0) {
-    observations.push({ text: 'Rorschach EM field detected. Local spacetime distortion: ' + (Math.random() * 0.03).toFixed(4) + 'AU', cls: 'event' });
+  if (counts.INK_CATHEDRAL > 0) {
+    observations.push({ text: 'Ink Cathedral gravity field detected. Local spacetime distortion: ' + (Math.random() * 0.03).toFixed(4) + 'AU', cls: 'event' });
   }
-  if (counts.LENIE > 0 && behemothClouds.length > 0) {
-    observations.push({ text: 'WARNING: Lenie Clarke operating within infection zone.', cls: 'threat' });
+  if (counts.ERRATA_DIVER > 0 && auroraBloomClouds.length > 0) {
+    observations.push({ text: 'WARNING: Errata Diver operating within infection zone.', cls: 'threat' });
   }
   if (total > 200) {
     observations.push({ text: 'Population nearing containment limits. Biomass: ' + (total * 0.47).toFixed(1) + 'kg', cls: 'event' });
@@ -2129,8 +2411,8 @@ function updateAI() {
   if (total < 20) {
     observations.push({ text: 'Population critically low. Ecosystem collapse imminent.', cls: 'threat' });
   }
-  if (counts.RIFTER > 0) {
-    observations.push({ text: 'Rifter-class entities detected at depth. Monitoring psychological profiles.', cls: '' });
+  if (counts.TRENCH_PILGRIM > 0) {
+    observations.push({ text: 'Trench Pilgrim-class entities detected at depth. Monitoring psychological profiles.', cls: '' });
   }
 
   if (observations.length === 0) {
@@ -2153,7 +2435,7 @@ function showDangerAlert(text, sub, duration) {
   const textEl = document.getElementById('danger-text');
   const subEl = document.getElementById('danger-sub');
 
-  if (text.includes('VAMPIRE')) {
+  if (text.includes('CROWN_MAW')) {
     iconEl.textContent = '\u2620';
   } else if (text.includes('BIOHAZARD') || text.includes('INFECTION')) {
     iconEl.textContent = '\u2623';
@@ -2193,12 +2475,12 @@ function updateInfectionBar() {
   const fill = document.getElementById('infection-bar-fill');
   const label = document.getElementById('infection-bar-label');
 
-  if (infectionRate > 0.01 || behemothClouds.length > 0) {
+  if (infectionRate > 0.01 || auroraBloomClouds.length > 0) {
     wrap.classList.add('visible');
     const pct = Math.floor(infectionRate * 100);
     fill.style.width = pct + '%';
     fill.style.backgroundPosition = (pct * 4) + '% 0';
-    label.textContent = 'BEHEMOTH ' + pct + '%';
+    label.textContent = 'AURORA BLOOM ' + pct + '%';
     const statInfect = document.getElementById('stat-infect');
     statInfect.textContent = pct + '%';
     if (pct > 20) {
@@ -2290,6 +2572,38 @@ function updateStats() {
   const secs = Math.floor(totalSec % 60).toString().padStart(2, '0');
   const ms = Math.floor((totalSec * 1000) % 1000).toString().padStart(3, '0');
   document.getElementById('sys-time').textContent = hrs + ':' + mins + ':' + secs + '.' + ms;
+
+  const habitatCounts = [0, 0, 0];
+  const speciesCounts = {};
+  for (const key of Object.keys(SPECIES)) speciesCounts[key] = 0;
+  for (const organism of organisms) {
+    habitatCounts[organism.habitatIndex] = (habitatCounts[organism.habitatIndex] || 0) + 1;
+    speciesCounts[organism.type] = (speciesCounts[organism.type] || 0) + 1;
+  }
+  window.__nspTerrariumState = {
+    version: 'V30_THREE_CURRENT_MENAGERIE',
+    title: 'VORATH ABYSSAL CONSERVATORY',
+    population: organisms.length,
+    species_total: Object.keys(SPECIES).length,
+    species_counts: speciesCounts,
+    habitat_total: HABITATS.length,
+    habitat_names: HABITATS.map(h => h.name),
+    habitat_regalia: HABITATS.map(h => h.regalia),
+    habitat_mechanics: HABITATS.map(h => h.mechanic),
+    habitat_population: habitatCounts,
+    focused_habitat: focusedHabitat,
+    focused_habitat_name: HABITATS[focusedHabitat].name,
+    selected_species: selectedOrganism ? displaySpecies(selectedOrganism.type) : null,
+    selected_regalia: selectedOrganism ? HABITATS[selectedOrganism.habitatIndex].regalia : null,
+    architecture_groups: habitatArchitecture.length,
+    architecture_nodes: habitatArchitecture.reduce((sum, root) => sum + root.children.length, 0),
+    aurora_blooms: auroraBloomClouds.length,
+    mercy_veils: mercyVeilClouds.length,
+    user_actions: { ...userActions },
+    gamepad_mapping: { current_up: 'LB/DPAD_UP', current_down: 'RB/DPAD_DOWN', tag: 'A', bloom: 'X', mercy_veil: 'Y' },
+    fps: currentFPS,
+    paused
+  };
 }
 
 // Info panel for selected organism
@@ -2305,16 +2619,16 @@ function updateInfoPanel() {
   const o = selectedOrganism;
   const spec = SPECIES[o.type];
   content.innerHTML = `
-    <div class="species-name">${o.type}</div>
+    <div class="species-name">${displaySpecies(o.type)} // ${HABITATS[o.habitatIndex].regalia}</div>
     <div><span class="label">CLASSIFICATION:</span> <span class="val">${spec.latin}</span></div>
     <div><span class="label">THREAT LEVEL:</span> <span class="val">${spec.threat}</span></div>
     <div><span class="label">ENERGY:</span> <span class="val">${(o.energy * 100).toFixed(1)}%</span></div>
     <div><span class="label">AGE:</span> <span class="val">${Math.floor(o.age)} / ${Math.floor(o.maxAge)}</span></div>
     <div><span class="label">GENERATION:</span> <span class="val">${o.gen}</span></div>
     <div><span class="label">SIZE:</span> <span class="val">${o.size.toFixed(2)}m</span></div>
-    <div><span class="label">INFECTED:</span> <span class="val" style="color:${o.infected ? '#ff4400' : '#44aa66'}">${o.infected ? 'YES - BEHEMOTH' : 'NO'}</span></div>
+    <div><span class="label">INFECTED:</span> <span class="val" style="color:${o.infected ? '#ff4400' : '#44aa66'}">${o.infected ? 'YES - AURORA BLOOM' : 'NO'}</span></div>
     <div><span class="label">MUTATIONS:</span> <span class="val">${o.mutations.length > 0 ? o.mutations.join(', ') : 'none'}</span></div>
-    ${o.faction ? '<div><span class="label">FACTION:</span> <span class="val">' + o.faction + '</span></div>' : ''}
+    ${o.faction ? '<div><span class="label">FACTION:</span> <span class="val">' + String(o.faction).replaceAll('_', ' ') + '</span></div>' : ''}
     ${o.gelMass > 1 ? '<div><span class="label">GEL MASS:</span> <span class="val">' + o.gelMass + '/5</span></div>' : ''}
     <div><span class="label">POSITION:</span> <span class="val">[${o.x.toFixed(1)}, ${o.y.toFixed(1)}, ${o.z.toFixed(1)}]</span></div>
   `;
@@ -2345,12 +2659,71 @@ canvas.addEventListener('click', (event) => {
       selectedOrganism = obj.userData.organism;
       // Camera track
       controls.target.set(selectedOrganism.x, selectedOrganism.y, selectedOrganism.z);
-      logEvent('TAGGED: ' + selectedOrganism.type + ' [ID:' + selectedOrganism.id + ']', '', 'tag');
+      userActions.tags++;
+      logEvent('TAGGED: ' + displaySpecies(selectedOrganism.type) + ' [ID:' + selectedOrganism.id + ']', '', 'tag');
     }
   } else {
     selectedOrganism = null;
   }
 });
+
+function updateCurrentBadge() {
+  const habitat = HABITATS[focusedHabitat];
+  document.getElementById('current-badge').innerHTML = `<strong>${habitat.name}</strong> // ${habitat.regalia} // <span class="mechanic">${habitat.mechanic}</span>`;
+}
+
+function focusCurrent(index, countAction = true) {
+  focusedHabitat = (index + HABITATS.length) % HABITATS.length;
+  const habitat = HABITATS[focusedHabitat];
+  controls.target.set(0, habitat.y, 0);
+  camera.position.set(camera.position.x * 0.35, habitat.y + 20, 118);
+  if (countAction) userActions.current_changes++;
+  updateCurrentBadge();
+  logEvent('CURRENT LOCK: ' + habitat.name + ' // ' + habitat.regalia, '', 'current_lock');
+}
+
+function tagNextOrganism() {
+  if (!organisms.length) return;
+  const candidates = organisms.filter(o => o.habitatIndex === focusedHabitat && o.energy > 0);
+  const pool = candidates.length ? candidates : organisms;
+  taggedIndex = (taggedIndex + 1) % pool.length;
+  selectedOrganism = pool[taggedIndex];
+  controls.target.set(selectedOrganism.x, selectedOrganism.y, selectedOrganism.z);
+  userActions.tags++;
+  logEvent('TAGGED: ' + displaySpecies(selectedOrganism.type) + ' // ' + HABITATS[selectedOrganism.habitatIndex].regalia, '', 'tag_next');
+}
+
+function runControlAction(action) {
+  if (action === 'current-up') focusCurrent(focusedHabitat - 1);
+  else if (action === 'current-down') focusCurrent(focusedHabitat + 1);
+  else if (action === 'tag-next') tagNextOrganism();
+  else if (action === 'bloom') { spawnAuroraBloom(0, HABITATS[focusedHabitat].y, 0); userActions.blooms++; }
+  else if (action === 'mercy') { spawnMercyVeil(0, HABITATS[focusedHabitat].y, 0); userActions.mercy_veils++; }
+}
+
+document.querySelectorAll('#touch-dock button').forEach(button => {
+  button.addEventListener('pointerdown', event => {
+    event.preventDefault();
+    runControlAction(button.dataset.action);
+  });
+});
+
+function pollGamepad() {
+  const pad = navigator.getGamepads ? navigator.getGamepads()[0] : null;
+  if (!pad) return;
+  const bindings = [
+    { key: 'current-up', buttons: [4, 12] },
+    { key: 'current-down', buttons: [5, 13] },
+    { key: 'tag-next', buttons: [0] },
+    { key: 'bloom', buttons: [2] },
+    { key: 'mercy', buttons: [3] }
+  ];
+  for (const binding of bindings) {
+    const pressed = binding.buttons.some(index => pad.buttons[index] && pad.buttons[index].pressed);
+    if (pressed && !gamepadLatch[binding.key]) runControlAction(binding.key);
+    gamepadLatch[binding.key] = pressed;
+  }
+}
 
 // ============================================================
 // KEYBOARD CONTROLS
@@ -2367,10 +2740,24 @@ document.addEventListener('keydown', (e) => {
       document.getElementById('pause-overlay').classList.toggle('active', paused);
       break;
     case 'b':
-      spawnBehemoth();
+      spawnAuroraBloom(0, HABITATS[focusedHabitat].y, 0);
+      userActions.blooms++;
       break;
     case 'v':
-      spawnSeppuku();
+      spawnMercyVeil(0, HABITATS[focusedHabitat].y, 0);
+      userActions.mercy_veils++;
+      break;
+    case '1':
+      focusCurrent(0);
+      break;
+    case '2':
+      focusCurrent(1);
+      break;
+    case '3':
+      focusCurrent(2);
+      break;
+    case 'c':
+      tagNextOrganism();
       break;
   }
 });
@@ -2410,17 +2797,17 @@ function updateLightShafts(dt) {
 // ============================================================
 function seedOrganisms() {
   const spawns = [
-    { type: 'DRIFTER', count: 20 },
-    { type: 'SCRAMBLER', count: 6 },
-    { type: 'CRUCIFORM', count: 15 },
-    { type: 'RORSCHACH', count: 2 },
-    { type: 'CHIMAERA', count: 8 },
-    { type: 'FIREFLY', count: 30 },
-    { type: 'VAMPIRE', count: 1 },
-    { type: 'BICAMERAL', count: 10 },
-    { type: 'RIFTER', count: 5 },
-    { type: 'NEUROGEL', count: 6 },
-    { type: 'LENIE', count: 1 }
+    { type: 'VEIL_JELLY', count: 20 },
+    { type: 'RIBBON_REAVER', count: 6 },
+    { type: 'LATTICE_CHOIR', count: 15 },
+    { type: 'INK_CATHEDRAL', count: 2 },
+    { type: 'GILDED_SPORE', count: 8 },
+    { type: 'STAR_LANTERN', count: 30 },
+    { type: 'CROWN_MAW', count: 1 },
+    { type: 'TWIN_CHOIR', count: 10 },
+    { type: 'TRENCH_PILGRIM', count: 5 },
+    { type: 'DREAM_MARROW', count: 6 },
+    { type: 'ERRATA_DIVER', count: 1 }
   ];
   for (const s of spawns) {
     for (let i = 0; i < s.count; i++) {
@@ -2429,48 +2816,55 @@ function seedOrganisms() {
   }
 }
 
+function startSimulation() {
+  if (simulationStarted) return;
+  simulationStarted = true;
+  seedOrganisms();
+  focusCurrent(1, false);
+  addAILine('Living array online. Eleven original organism houses are moving.', 'action');
+  addAILine('Three currents active: Solar Vent, Mirror Reef, Null Trench.', '');
+  addAILine('Regalia shifts alter silhouette, velocity, lift, pressure armor, and metabolism.', 'event');
+  animate();
+}
+
 // ============================================================
 // BOOT SEQUENCE
 // ============================================================
 const bootLines = [
-  { text: 'THESEUS DEEP-FIELD OBSERVATORY v7.0.0 // 3D ARRAY', cls: '' },
+  { text: 'LOOMWHEEL DEEP ORACLE // THREE-CURRENT ARRAY', cls: '' },
   { text: 'Initializing WebGL quantum substrate...', cls: '' },
   { text: 'Loading Three.js r160 xenobiological renderer..... [OK]', cls: 'ok' },
   { text: 'Calibrating volumetric bioluminescence array...... [OK]', cls: 'ok' },
   { text: 'Initializing 3D fluid dynamics engine.............. [OK]', cls: 'ok' },
-  { text: 'Loading Rifters-class deep modifications........... [OK]', cls: 'ok' },
-  { text: 'Compiling Behemoth viral containment protocols..... [OK]', cls: 'ok' },
+  { text: 'Loading abyssal pilgrim deep modifications........... [OK]', cls: 'ok' },
+  { text: 'Compiling Aurora Bloom viral containment protocols..... [OK]', cls: 'ok' },
   { text: 'Building UnrealBloomPass post-processing pipeline.. [OK]', cls: 'ok' },
   { text: 'Seeding primordial organisms in 3D space........... [OK]', cls: 'ok' },
   { text: 'Activating containment field (200m^3 volume)....... [OK]', cls: 'ok' },
-  { text: 'WARNING: Vampire-class predator genome detected in substrate', cls: 'warn' },
-  { text: 'WARNING: Bicameral hive-mind signatures in neural mesh', cls: 'warn' },
-  { text: 'WARNING: Behemoth viral reservoir at 0.3% -- MONITORING', cls: 'warn' },
-  { text: 'ALERT: Scrambler protocol ACTIVE', cls: 'err' },
-  { text: 'ALERT: Lenie Clarke entity detected - CHAOS AGENT', cls: 'err' },
-  { text: 'ALERT: Seppuku countermeasure ARMED', cls: 'err' },
+  { text: 'WARNING: Crown Maw predator genome detected in substrate', cls: 'warn' },
+  { text: 'WARNING: Twin Choir lattice signatures in neural mesh', cls: 'warn' },
+  { text: 'WARNING: Aurora Bloom viral reservoir at 0.3% -- MONITORING', cls: 'warn' },
+  { text: 'ALERT: Ribbon Reaver protocol ACTIVE', cls: 'err' },
+  { text: 'ALERT: Errata Diver entity detected - CHAOS AGENT', cls: 'err' },
+  { text: 'ALERT: Mercy Veil countermeasure ARMED', cls: 'err' },
   { text: 'Observer mode: PASSIVE // Recording to black box', cls: '' },
-  { text: '> DIGITAL TERRARIUM v7.0.0 // 3D CONTAINMENT ONLINE', cls: 'ok' }
+  { text: '> VORATH ABYSSAL CONSERVATORY // LIVING ARRAY ONLINE', cls: 'ok' }
 ];
 
 async function boot() {
+  startSimulation();
   const bootEl = document.getElementById('boot');
   for (let i = 0; i < bootLines.length; i++) {
     const div = document.createElement('div');
     div.textContent = bootLines[i].text;
     if (bootLines[i].cls) div.classList.add(bootLines[i].cls);
     bootEl.appendChild(div);
-    await new Promise(r => setTimeout(r, 100 + Math.random() * 180));
+    await new Promise(r => setTimeout(r, 35 + Math.random() * 35));
     div.style.opacity = '1';
   }
-  await new Promise(r => setTimeout(r, 800));
+  await new Promise(r => setTimeout(r, 240));
   bootEl.classList.add('done');
-  setTimeout(() => { bootEl.remove(); }, 1500);
-  seedOrganisms();
-  addAILine('System initialized. 11 xenobiological species loaded.', 'action');
-  addAILine('3D containment volume: 200m x 200m x 200m', '');
-  addAILine('Monitoring ' + organisms.length + ' organisms...', '');
-  animate();
+  setTimeout(() => { bootEl.remove(); }, 600);
 }
 
 // ============================================================
@@ -2478,6 +2872,8 @@ async function boot() {
 // ============================================================
 function animate() {
   requestAnimationFrame(animate);
+
+  pollGamepad();
 
   const rawDt = clock.getDelta();
   const dt = Math.min(rawDt * 60, 3); // Normalize to ~60fps timestep, cap at 3
@@ -2523,15 +2919,21 @@ function animate() {
       o.updateVisuals(dt);
     }
 
+    habitatArchitecture.forEach((root, index) => {
+      root.rotation.y += (0.0006 + index * 0.00022) * dt;
+      const portal = root.children[root.children.length - 1];
+      if (portal) portal.rotation.z = Math.sin(simTime * 0.004 + index) * 0.12;
+    });
+
     // Track selected organism with camera
     if (selectedOrganism) {
       controls.target.lerp(new THREE.Vector3(selectedOrganism.x, selectedOrganism.y, selectedOrganism.z), 0.05);
     }
 
-    // Vampire danger alert
-    const vampireCount = organisms.filter(o => o.type === 'VAMPIRE').length;
-    if (vampireCount > 0 && Math.random() < 0.002) {
-      showDangerAlert('VAMPIRE ACTIVE', 'APEX PREDATOR IN CONTAINMENT', 2500);
+    // Crown Maw danger alert
+    const crownMawCount = organisms.filter(o => o.type === 'CROWN_MAW').length;
+    if (crownMawCount > 0 && Math.random() < 0.002) {
+      showDangerAlert('CROWN MAW ACTIVE', 'APEX PREDATOR IN CONSERVATORY', 2500);
     }
 
     // Epoch tracking

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Vorath Prism Runner</title>
+<title>VORATH Prism Runner: Fourfold Regalia</title>
 <style>
   :root {
     color-scheme: dark;
@@ -111,6 +111,20 @@
     box-shadow: 0 0 20px rgba(245, 197, 66, 0.24), 0 0 30px rgba(236, 72, 153, 0.18);
   }
 
+  body.bespoke-game-art button {
+    min-height: 48px !important;
+    touch-action: manipulation;
+  }
+
+  body.sensory-safe *,
+  body.sensory-safe *::before,
+  body.sensory-safe *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  body.sensory-safe canvas { filter: none !important; }
+
   .primary {
     background: linear-gradient(90deg, #22d3ee, #ec4899, #f5c542, #22c55e);
     color: #04050a;
@@ -118,7 +132,7 @@
 
   .hud {
     display: grid;
-    grid-template-columns: repeat(6, minmax(76px, 1fr));
+    grid-template-columns: repeat(4, minmax(92px, 1fr));
     gap: 8px;
     margin-bottom: 10px;
   }
@@ -187,6 +201,7 @@
   .overlay.hidden {
     opacity: 0;
     pointer-events: none;
+    visibility: hidden;
   }
 
   .start-card {
@@ -298,16 +313,17 @@
 </style>
 <!-- canonical-source-plate: /static/games/imagegen_quality_pass_20260625/vorath_prism_runner_plate.png -->
 </head>
-<body>
+<body class="bespoke-game-art" data-ns-game-visual="bespoke-wave26">
 <main class="cabinet">
   <header class="topbar">
     <div>
-      <h1>Vorath Prism Runner</h1>
-      <p class="subtitle">Original VORATH prism runner: pilot a chrome signal-drone through rainbow auspicious clouds, dash through emerald prism gates, and survive the crystal storm.</p>
+      <h1>VORATH Prism Runner: Fourfold Regalia</h1>
+      <p class="subtitle">Run one adult masked courier through four authored districts. Each threshold seats a new costume with its own silhouette, material language, movement signature, and traversal rule.</p>
     </div>
     <div class="actions">
       <button class="primary" id="startBtn" type="button">Start Run</button>
       <button id="resetBtn" type="button">Reset</button>
+      <button id="safeBtn" type="button">Sensory Safe</button>
     </div>
   </header>
 
@@ -318,6 +334,8 @@
     <div class="stat"><b>Dash</b><span id="dash">Ready</span></div>
     <div class="stat"><b>Distance</b><span id="distance">0%</span></div>
     <div class="stat"><b>Time</b><span id="timer">0.0</span></div>
+    <div class="stat"><b>District</b><span id="district">Solar Archive</span></div>
+    <div class="stat"><b>Regalia</b><span id="regalia">Archive Scribe</span></div>
   </section>
 
   <section class="stage" aria-label="Vorath Prism Runner game stage">
@@ -326,8 +344,8 @@
 <script>addEventListener("DOMContentLoaded",function(){if(window.Juice){var c=document.getElementById("game");if(c)Juice.attachFX(c,{vignette:0.5,scanlines:0.035,glow:0.06});}});</script>
     <div class="overlay" id="overlay">
       <div class="start-card">
-        <h2>Auspicious Cloud Sprint</h2>
-        <p>Jump with W, Up, or Space. Jump again in the air. Dash with X, Shift, or Right Arrow to pierce prism gates and crystal drones.</p>
+        <h2>Fourfold Covenant Run</h2>
+        <p>Jump with W, Up, Space, or gamepad A. Dash with X, Shift, Right Arrow, or gamepad X. Glide with G, Down, or a trigger. Crossing a district threshold changes the courier's full regalia and movement rule automatically.</p>
         <div class="actions">
           <button class="primary" id="overlayStart" type="button">Play</button>
           <button id="overlayPractice" type="button">Practice Dash</button>
@@ -346,7 +364,7 @@
     </div>
   </section>
 
-  <div class="message-line" id="message">Ready. Start the neon sprint through the cloud-crystal lane.</div>
+  <div class="message-line" id="message">Ready. The Solar Archive Scribe awaits the first threshold.</div>
 
   <section class="receipt">
     <pre id="receipt">No run exported yet.</pre>
@@ -369,10 +387,38 @@
   const imagegenPlate = new Image();
   imagegenPlate.decoding = "async";
   imagegenPlate.src = IMAGEGEN_PLATE_SRC;
+  const COSTUME_ATLAS_SRC = "/static/art/games/vorath_overhaul_v01/vorath_prism_runner/vorath_prism_runner_four_regalia_atlas_v01.png";
+  const costumeAtlas = new Image();
+  let costumeAtlasReady = false;
+  let costumeAtlasCutout = null;
+  costumeAtlas.decoding = "async";
+  function buildCostumeAtlasCutout() {
+    const cutout = document.createElement("canvas");
+    cutout.width = costumeAtlas.naturalWidth;
+    cutout.height = costumeAtlas.naturalHeight;
+    const cutoutCtx = cutout.getContext("2d", { willReadFrequently: true });
+    cutoutCtx.drawImage(costumeAtlas, 0, 0);
+    const pixels = cutoutCtx.getImageData(0, 0, cutout.width, cutout.height);
+    for (let index = 0; index < pixels.data.length; index += 4) {
+      const peak = Math.max(pixels.data[index], pixels.data[index + 1], pixels.data[index + 2]);
+      if (peak < 18) pixels.data[index + 3] = 0;
+      else if (peak < 46) pixels.data[index + 3] = Math.round(pixels.data[index + 3] * ((peak - 18) / 28));
+    }
+    cutoutCtx.putImageData(pixels, 0, 0);
+    costumeAtlasCutout = cutout;
+  }
+  costumeAtlas.onload = () => {
+    try { buildCostumeAtlasCutout(); } catch (error) { costumeAtlasCutout = costumeAtlas; }
+    costumeAtlasReady = true;
+  };
+  costumeAtlas.onerror = () => { costumeAtlasReady = false; };
+  costumeAtlas.src = COSTUME_ATLAS_SRC;
 
   // living background: seedance motion plate upgrades the still when playable
   const IMAGEGEN_PLATE_MOTION_SRC = "/static/games/imagegen_quality_pass_20260625/vorath_prism_runner_plate_motion.mp4";
-  const platePrefersStill = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // Wave 26 keeps the backdrop still: decoding and painting the legacy motion plate
+  // every frame cost more than a second per frame on the reference cabinet.
+  const platePrefersStill = true;
   const motionPlate = document.createElement("video");
   let motionPlateReady = false;
   if (!platePrefersStill) {
@@ -392,10 +438,103 @@
     dash: document.getElementById("dash"),
     distance: document.getElementById("distance"),
     timer: document.getElementById("timer"),
+    district: document.getElementById("district"),
+    regalia: document.getElementById("regalia"),
     message: document.getElementById("message"),
     receipt: document.getElementById("receipt"),
     overlay: document.getElementById("overlay")
   };
+
+  const COURSE_SECTORS = [
+    {
+      id: "archive",
+      name: "Solar Archive",
+      regalia: "Archive Scribe",
+      start: 0,
+      end: 1100,
+      atlasIndex: 0,
+      accent: "#f5d77a",
+      second: "#57e7ff",
+      movement: "precision double-jump and wide ring witness",
+      jumpLimit: 2,
+      jumpFirst: -13.2,
+      jumpNext: -11.6,
+      gravity: 0.44,
+      glideGravity: 0.17,
+      maxFall: 11.8,
+      dashFrames: 18,
+      dashCooldown: 50,
+      dashBoost: 7.5,
+      ringRadius: 38,
+      scoreBias: 1.2
+    },
+    {
+      id: "garden",
+      name: "Censer Garden",
+      regalia: "Garden Harrier",
+      start: 1100,
+      end: 2200,
+      atlasIndex: 1,
+      accent: "#54f0a7",
+      second: "#d8ff72",
+      movement: "triple spring-jump and pollen glide",
+      jumpLimit: 3,
+      jumpFirst: -12.3,
+      jumpNext: -10.8,
+      gravity: 0.4,
+      glideGravity: 0.08,
+      maxFall: 7.2,
+      dashFrames: 17,
+      dashCooldown: 48,
+      dashBoost: 7.2,
+      ringRadius: 30,
+      scoreBias: 1.05
+    },
+    {
+      id: "forge",
+      name: "Redaction Forge",
+      regalia: "Forge Breaker",
+      start: 2200,
+      end: 3200,
+      atlasIndex: 2,
+      accent: "#ff405f",
+      second: "#ff56c9",
+      movement: "heavy heat-dash that breaks spikes and drones",
+      jumpLimit: 2,
+      jumpFirst: -11.8,
+      jumpNext: -10.4,
+      gravity: 0.52,
+      glideGravity: 0.22,
+      maxFall: 13.4,
+      dashFrames: 25,
+      dashCooldown: 60,
+      dashBoost: 10.2,
+      ringRadius: 29,
+      scoreBias: 1.35
+    },
+    {
+      id: "tempest",
+      name: "Null Tempest",
+      regalia: "Tempest Magistrate",
+      start: 3200,
+      end: WORLD_W + 1,
+      atlasIndex: 3,
+      accent: "#9f7cff",
+      second: "#68e7ff",
+      movement: "long storm-glide with rapid recovery",
+      jumpLimit: 2,
+      jumpFirst: -12.4,
+      jumpNext: -11.2,
+      gravity: 0.4,
+      glideGravity: 0.045,
+      maxFall: 5.2,
+      dashFrames: 20,
+      dashCooldown: 38,
+      dashBoost: 8.4,
+      ringRadius: 32,
+      scoreBias: 1.15
+    }
+  ];
 
   const cloudLanes = [
     { x: -120, y: 432, w: 690, h: 46, hue: 0 },
@@ -436,8 +575,8 @@
   const player = {
     x: 105,
     y: 340,
-    w: 76,
-    h: 34,
+    w: 50,
+    h: 76,
     vy: 0,
     onCloud: false,
     jumps: 0,
@@ -471,6 +610,9 @@
   let noisePattern = null;
   let materialPatterns = null;
   let spriteAtlas = null;
+  let lastSectorIndex = 0;
+  let gamepadPrevious = {};
+  let visitedSectors = new Set(["archive"]);
 
   const input = {
     jump: false,
@@ -503,8 +645,8 @@
     Object.assign(player, {
       x: 105,
       y: 340,
-      w: 76,
-      h: 34,
+      w: 50,
+      h: 76,
       vy: 0,
       onCloud: false,
       jumps: 0,
@@ -518,7 +660,10 @@
       respawnY: 340,
       trail: []
     });
-    setMessage("Ready. Start the neon sprint through the cloud-crystal lane.");
+    lastSectorIndex = 0;
+    gamepadPrevious = {};
+    visitedSectors = new Set(["archive"]);
+    setMessage("Ready. The Solar Archive Scribe awaits the first threshold.");
     updateHud();
   }
 
@@ -528,7 +673,7 @@
     playtestHold = false;
     running = true;
     hud.overlay.classList.add("hidden");
-    setMessage("Sprint live. Double jump, dash gates, keep the cloud line.");
+    setMessage("Solar Archive live. Archive Scribe precision is seated.");
     addBurst(player.x + player.w / 2, player.y + player.h, "#f5c542", 56, 24, "cloud");
     sound([330, 440, 660], 0.08, "triangle", 0.035);
   }
@@ -574,6 +719,31 @@
   function sound(freqs, duration, type, gain) {
     if (!audioCtx) return;
     freqs.forEach((freq, index) => window.setTimeout(() => tone(freq, duration, type, gain), index * 30));
+  }
+
+  function sectorIndexForX(x = player.x) {
+    const index = COURSE_SECTORS.findIndex(sector => x >= sector.start && x < sector.end);
+    return index < 0 ? COURSE_SECTORS.length - 1 : index;
+  }
+
+  function currentSector() {
+    return COURSE_SECTORS[sectorIndexForX(player.x)];
+  }
+
+  function syncSectorRegalia(force = false) {
+    const nextIndex = sectorIndexForX(player.x);
+    if (!force && nextIndex === lastSectorIndex) return false;
+    lastSectorIndex = nextIndex;
+    const sector = COURSE_SECTORS[nextIndex];
+    visitedSectors.add(sector.id);
+    player.jumps = 0;
+    player.dashCooldown = Math.min(player.dashCooldown, Math.round(sector.dashCooldown * 0.5));
+    addParticles(player.x + player.w / 2, player.y + player.h / 2, sector.accent, 30, 4.4);
+    addParticles(player.x + player.w / 2, player.y + player.h / 2, sector.second, 18, 3.2);
+    addBurst(player.x + player.w / 2, player.y + player.h / 2, sector.accent, 112, 34, "gate");
+    sound([392 + nextIndex * 72, 523 + nextIndex * 58, 784 + nextIndex * 40], 0.08, "triangle", 0.03);
+    setMessage(`${sector.name}: ${sector.regalia} seated — ${sector.movement}.`);
+    return true;
   }
 
   function rectsOverlap(a, b) {
@@ -630,8 +800,9 @@
 
   function jump() {
     if (!running || complete || gameOver) startGame();
-    if (player.onCloud || player.jumps < 2) {
-      player.vy = player.jumps === 0 ? -12.6 : -11.2;
+    const sector = currentSector();
+    if (player.onCloud || player.jumps < sector.jumpLimit) {
+      player.vy = player.jumps === 0 ? sector.jumpFirst : sector.jumpNext;
       player.onCloud = false;
       player.jumps += 1;
       addParticles(player.x + 18, player.y + player.h, "#22d3ee", 12, 2.2);
@@ -643,13 +814,14 @@
   function dash() {
     if (!running || complete || gameOver) startGame();
     if (player.dashCooldown <= 0) {
-      player.dash = 18;
-      player.dashCooldown = 54;
+      const sector = currentSector();
+      player.dash = sector.dashFrames;
+      player.dashCooldown = sector.dashCooldown;
       player.score += 25;
       addParticles(player.x + player.w, player.y + player.h / 2, "#ec4899", 18, 4);
       addBurst(player.x + player.w, player.y + player.h / 2, "#ec4899", 76, 22, "dash");
       sound([220, 440, 880], 0.055, "square", 0.03);
-      setMessage("Neon dash armed.");
+      setMessage(`${sector.regalia} dash armed: ${sector.movement}.`);
     }
   }
 
@@ -675,9 +847,10 @@
   }
 
   function collectRing(ring) {
+    const sector = currentSector();
     ring.active = false;
     player.rings += 1;
-    player.score += 80 + player.rings * 5;
+    player.score += Math.round((80 + player.rings * 5) * sector.scoreBias);
     addParticles(ring.x, ring.y, "#f5c542", 16, 2.8);
     addParticles(ring.x, ring.y, "#ec4899", 8, 2.2);
     addBurst(ring.x, ring.y, ["#ef4444", "#f5c542", "#22c55e", "#22d3ee", "#ec4899"][ring.index % 5], 54, 27, "pickup");
@@ -709,7 +882,7 @@
     addBurst(FINISH_X, 318, "#22c55e", 150, 46, "finish");
     sound([523, 659, 784, 1046], 0.11, "triangle", 0.035);
     hud.overlay.classList.remove("hidden");
-    setMessage("Rainbow auspicious cloud cleared. Vorath Prism Runner run complete.");
+    setMessage("Fourfold covenant cleared. Every district and regalia witnessed.");
     exportSession(false);
   }
 
@@ -747,13 +920,14 @@
         ? { x: crystal.x + 8, y: crystal.y + 8, w: crystal.w - 16, h: crystal.h - 8 }
         : { x: crystal.x + 8, y: crystal.y + 8, w: crystal.w - 16, h: crystal.h - 16 };
       if (!rectsOverlap(player, hitbox)) continue;
-      if (player.dash > 0 && crystal.type === "drone") {
+      const forgeBreaker = currentSector().id === "forge";
+      if (player.dash > 0 && (crystal.type === "drone" || forgeBreaker)) {
         crystal.alive = false;
         player.score += 260;
         addParticles(crystal.x + crystal.w / 2, crystal.y + crystal.h / 2, "#ec4899", 28, 4.2);
         addBurst(crystal.x + crystal.w / 2, crystal.y + crystal.h / 2, "#ec4899", 76, 25, "shatter");
         tone(740, 0.07, "square", 0.032);
-        setMessage("Crystal drone shattered by dash.");
+        setMessage(forgeBreaker && crystal.type === "spike" ? "Forge Breaker pulverized a blackglass spike." : "Crystal drone shattered by dash.");
       } else {
         hurtPlayer(crystal.type === "drone" ? "Crystal drone impact" : "Neon crystal spike");
       }
@@ -784,7 +958,7 @@
       if (!ring.active) continue;
       const dx = player.x + player.w / 2 - ring.x;
       const dy = player.y + player.h / 2 - ring.y;
-      if (Math.hypot(dx, dy) < ring.r + 26) collectRing(ring);
+      if (Math.hypot(dx, dy) < ring.r + currentSector().ringRadius) collectRing(ring);
     }
   }
 
@@ -807,7 +981,24 @@
     bursts = bursts.filter(b => b.life > 0);
   }
 
+  function gamepadFrame() {
+    let pad = null;
+    try { pad = navigator.getGamepads?.()[0] || null; } catch (error) { pad = null; }
+    if (!pad) return { glide: false };
+    const held = index => Boolean(pad.buttons[index]?.pressed);
+    const edge = (name, value, action) => {
+      if (value && !gamepadPrevious[name]) action();
+      gamepadPrevious[name] = value;
+    };
+    edge("start", held(9), () => { if (!running) startGame(); });
+    edge("jump", held(0), () => { input.jumpPressed = true; });
+    edge("dash", held(2), () => { input.dashPressed = true; });
+    edge("sensory", held(3), toggleSensorySafe);
+    return { glide: held(6) || held(7) || (pad.axes?.[1] || 0) > 0.55 };
+  }
+
   function update() {
+    const pad = gamepadFrame();
     frame += 1;
     updateScreenImpulse();
     if (input.jumpPressed) {
@@ -835,11 +1026,16 @@
 
     elapsed += 1 / 60;
     const prevY = player.y;
-    const baseSpeed = 4.9 + Math.min(1.4, elapsed * 0.012);
-    const dashBoost = player.dash > 0 ? 7.6 : 0;
+    const sectorBeforeStep = currentSector();
+    const districtPace = [0, 0.18, 0.08, 0.34][sectorIndexForX(player.x)];
+    const baseSpeed = 5.15 + districtPace + Math.min(1.55, elapsed * 0.012);
+    const dashBoost = player.dash > 0 ? sectorBeforeStep.dashBoost : 0;
     player.x += baseSpeed + dashBoost;
-    player.vy += input.glide && player.vy > 0 ? 0.18 : 0.48;
-    player.vy = Math.min(player.vy, input.glide ? 6.4 : 12.8);
+    syncSectorRegalia();
+    const sector = currentSector();
+    const gliding = input.glide || pad.glide;
+    player.vy += gliding && player.vy > 0 ? sector.glideGravity : sector.gravity;
+    player.vy = Math.min(player.vy, gliding ? sector.maxFall : sector.maxFall + 1.6);
     player.y += player.vy;
 
     if (player.dash > 0) {
@@ -868,12 +1064,15 @@
   }
 
   function updateHud() {
+    const sector = currentSector();
     hud.score.textContent = String(Math.max(0, Math.round(player.score)));
     hud.rings.textContent = player.rings + "/" + MAX_RINGS;
     hud.lives.textContent = String(player.lives);
     hud.dash.textContent = player.dash > 0 ? "Active" : (player.dashCooldown <= 0 ? "Ready" : Math.ceil(player.dashCooldown / 10));
     hud.distance.textContent = Math.max(0, Math.min(100, Math.round((player.x / FINISH_X) * 100))) + "%";
     hud.timer.textContent = elapsed.toFixed(1);
+    hud.district.textContent = sector.name;
+    hud.regalia.textContent = sector.regalia;
   }
 
   function worldX(x) {
@@ -1220,6 +1419,8 @@
   function drawRunnerContrastPlane() {
     ctx.save();
     ctx.globalCompositeOperation = "multiply";
+    ctx.fillStyle = "rgba(4,6,14,0.22)";
+    ctx.fillRect(0, 0, W, H);
     const lower = ctx.createLinearGradient(0, H * 0.28, 0, H);
     lower.addColorStop(0, "rgba(255,255,255,0)");
     lower.addColorStop(0.46, "rgba(6,7,15,0.18)");
@@ -1243,6 +1444,114 @@
       ctx.stroke();
     }
     ctx.restore();
+  }
+
+  function drawDistrictFields() {
+    COURSE_SECTORS.forEach((sector, index) => {
+      const left = Math.max(0, worldX(sector.start));
+      const right = Math.min(W, worldX(sector.end));
+      if (right <= 0 || left >= W || right <= left) return;
+      const span = right - left;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(left, 0, span, H);
+      ctx.clip();
+
+      const veil = ctx.createLinearGradient(left, 0, right, H);
+      veil.addColorStop(0, `${sector.accent}22`);
+      veil.addColorStop(0.52, "rgba(3,5,12,0.16)");
+      veil.addColorStop(1, `${sector.second}24`);
+      ctx.globalCompositeOperation = "multiply";
+      ctx.fillStyle = index === 0 ? "rgba(40,34,18,0.26)" : index === 1 ? "rgba(4,38,22,0.3)" : index === 2 ? "rgba(55,5,12,0.34)" : "rgba(12,6,50,0.34)";
+      ctx.fillRect(left, 0, span, H);
+      ctx.globalCompositeOperation = "screen";
+      ctx.fillStyle = veil;
+      ctx.fillRect(left, 0, span, H);
+
+      ctx.strokeStyle = `${sector.accent}88`;
+      ctx.fillStyle = `${sector.second}66`;
+      ctx.lineWidth = 2;
+      const anchor = sector.start - cameraX;
+      if (sector.id === "archive") {
+        for (let wx = sector.start + 90; wx < sector.end; wx += 170) {
+          const x = worldX(wx);
+          ctx.strokeRect(x, 88, 84, 286);
+          ctx.beginPath();
+          ctx.arc(x + 42, 88, 42, Math.PI, 0);
+          ctx.stroke();
+          for (let y = 122; y < 348; y += 34) { ctx.fillRect(x + 15, y, 54, 2); }
+        }
+      } else if (sector.id === "garden") {
+        for (let wx = sector.start + 60; wx < sector.end; wx += 150) {
+          const x = worldX(wx);
+          ctx.beginPath();
+          ctx.moveTo(x, H);
+          ctx.bezierCurveTo(x - 42, 390, x + 76, 290, x + 8, 132);
+          ctx.stroke();
+          for (let p = 0; p < 5; p += 1) {
+            ctx.beginPath();
+            ctx.ellipse(x + Math.sin(p * 2.1) * 38, 342 - p * 48, 13, 5, p * 0.55, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      } else if (sector.id === "forge") {
+        for (let wx = sector.start + 70; wx < sector.end; wx += 190) {
+          const x = worldX(wx);
+          ctx.strokeRect(x, 164, 104, 270);
+          ctx.beginPath();
+          ctx.moveTo(x + 12, 434);
+          ctx.lineTo(x + 52, 336);
+          ctx.lineTo(x + 92, 434);
+          ctx.stroke();
+          for (let y = 190; y < 320; y += 30) { ctx.fillRect(x + 24, y, 56, 6); }
+        }
+      } else {
+        for (let wx = sector.start + 70; wx < sector.end; wx += 155) {
+          const x = worldX(wx);
+          ctx.beginPath();
+          ctx.moveTo(x + 34, 70);
+          ctx.lineTo(x - 8, 174);
+          ctx.lineTo(x + 28, 166);
+          ctx.lineTo(x - 20, 292);
+          ctx.lineTo(x + 66, 146);
+          ctx.lineTo(x + 24, 154);
+          ctx.closePath();
+          ctx.stroke();
+        }
+      }
+
+      ctx.globalCompositeOperation = "source-over";
+      const labelX = Math.max(22, Math.min(W - 320, anchor + 28));
+      ctx.fillStyle = "rgba(3,5,12,0.72)";
+      roundRect(labelX, 24, 286, 50, 12);
+      ctx.fill();
+      ctx.strokeStyle = `${sector.accent}aa`;
+      ctx.stroke();
+      ctx.fillStyle = "#fff9e8";
+      ctx.font = "800 18px Segoe UI, sans-serif";
+      ctx.fillText(`${index + 1}. ${sector.name.toUpperCase()}`, labelX + 14, 46);
+      ctx.fillStyle = sector.second;
+      ctx.font = "700 12px Segoe UI, sans-serif";
+      ctx.fillText(sector.regalia.toUpperCase(), labelX + 14, 64);
+      ctx.restore();
+
+      if (index > 0) {
+        const seam = worldX(sector.start);
+        if (seam > -30 && seam < W + 30) {
+          ctx.save();
+          ctx.globalCompositeOperation = "screen";
+          ctx.strokeStyle = sector.accent;
+          ctx.shadowColor = sector.second;
+          ctx.shadowBlur = 22;
+          ctx.lineWidth = 5;
+          ctx.beginPath();
+          ctx.moveTo(seam, 16);
+          for (let y = 16; y <= H; y += 34) ctx.lineTo(seam + Math.sin(y * 0.08 + frame * 0.05) * 12, y);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+    });
   }
 
   function drawCrystalsBackdrop(rate, baseY, color) {
@@ -1795,6 +2104,54 @@
     ctx.ellipse(-1, 22, 46, 7, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
+
+    if (costumeAtlasReady) {
+      const sector = currentSector();
+      const cellWidth = costumeAtlas.naturalWidth / COURSE_SECTORS.length;
+      const atlasSource = costumeAtlasCutout || costumeAtlas;
+      const runCycle = player.onCloud ? Math.sin(frame * 0.34) : Math.sin(frame * 0.16);
+      const bob = player.onCloud ? runCycle * 3.2 : Math.min(5, Math.abs(player.vy) * 0.18);
+      const stretchX = player.dash > 0 ? 1.16 : 1 + Math.abs(runCycle) * 0.025;
+      const stretchY = player.dash > 0 ? 0.9 : 1 - Math.abs(runCycle) * 0.018;
+      const drawCostume = (offsetX, alpha, scale = 1) => {
+        ctx.save();
+        ctx.translate(offsetX, bob);
+        ctx.scale(stretchX * scale, stretchY * scale);
+        ctx.globalAlpha = alpha;
+        ctx.globalCompositeOperation = "source-over";
+        ctx.filter = `drop-shadow(0 0 ${player.dash > 0 ? 16 : 10}px ${sector.accent})`;
+        ctx.drawImage(
+          atlasSource,
+          sector.atlasIndex * cellWidth,
+          0,
+          cellWidth,
+          costumeAtlas.naturalHeight,
+          -46,
+          -192,
+          92,
+          230
+        );
+        ctx.restore();
+      };
+      if (player.dash > 0) {
+        drawCostume(-32, 0.12, 0.94);
+        drawCostume(-17, 0.24, 0.97);
+      }
+      drawCostume(0, 1, 1);
+
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      ctx.strokeStyle = sector.second;
+      ctx.shadowColor = sector.accent;
+      ctx.shadowBlur = 12;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(23, -52 + bob, 6 + Math.sin(frame * 0.16) * 1.2, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+      ctx.restore();
+      return;
+    }
 
     const body = ctx.createLinearGradient(-38, -18, 42, 18);
     body.addColorStop(0, "#cbd5e1");
@@ -3268,7 +3625,7 @@
   }
 
   function applyCameraImpulse() {
-    if (cameraShake <= 0) return;
+    if (cameraShake <= 0 || document.body.classList.contains("sensory-safe")) return;
     const x = Math.sin(frame * 1.64) * cameraShake * 0.7;
     const y = Math.cos(frame * 1.22) * cameraShake * 0.42;
     ctx.translate(x, y);
@@ -3276,7 +3633,8 @@
 
   function drawArcadeGradeOverlay() {
     ctx.save();
-    if (screenFlash > 0) {
+    const sensorySafe = document.body.classList.contains("sensory-safe");
+    if (screenFlash > 0 && !sensorySafe) {
       ctx.globalCompositeOperation = "screen";
       ctx.fillStyle = `rgba(255,242,194,${screenFlash.toFixed(3)})`;
       ctx.fillRect(0, 0, W, H);
@@ -3288,10 +3646,12 @@
     vignette.addColorStop(1, "rgba(0,0,0,0.19)");
     ctx.fillStyle = vignette;
     ctx.fillRect(0, 0, W, H);
-    ctx.globalCompositeOperation = "screen";
-    ctx.fillStyle = "rgba(236,72,153,0.035)";
-    for (let y = 4; y < H; y += 8) {
-      ctx.fillRect(0, y, W, 1);
+    if (!sensorySafe) {
+      ctx.globalCompositeOperation = "screen";
+      ctx.fillStyle = "rgba(236,72,153,0.035)";
+      for (let y = 4; y < H; y += 8) {
+        ctx.fillRect(0, y, W, 1);
+      }
     }
     ctx.restore();
   }
@@ -3300,29 +3660,18 @@
     drawBackground();
     ctx.save();
     applyCameraImpulse();
-    drawRainbowAtlasBackdrop();
     drawRunnerContrastPlane();
+    drawDistrictFields();
     cloudLanes.forEach(drawCloud);
-    drawCloudMaterialPass();
-    drawRunnerGroundedDepthDetails();
     drawRunnerWorldSetPieces();
-    drawRunnerGameplayFocusBacking();
     rings.forEach(drawRing);
     gates.forEach(drawGate);
     crystals.forEach(drawCrystal);
-    drawCrystalMaterialPass();
     drawFinish();
-    drawRunnerObjectMaterialDetails();
     drawBursts();
     drawPlayer();
-    drawRunnerOverpaint();
-    drawRunnerReadabilityPass();
     drawParticles();
-    drawLightField();
-    drawNeonRefractionMicroPass();
-    drawRunnerForegroundSetDressing();
     drawGlass();
-    drawCinematicBloom();
     ctx.restore();
     drawArcadeGradeOverlay();
 
@@ -3334,8 +3683,9 @@
   }
 
   function playtestPayload() {
+    const sector = currentSector();
     return {
-      title: "Vorath Prism Runner",
+      title: "VORATH Prism Runner: Fourfold Regalia",
       route: "/arcade/custom/vorath-prism-runner",
       outcome: complete ? "win" : (gameOver ? "fail" : "open"),
       running,
@@ -3348,6 +3698,14 @@
       dash_ready: player.dashCooldown <= 0,
       gates_broken: gates.filter(gate => gate.broken).length,
       drones_remaining: crystals.filter(crystal => crystal.type === "drone" && crystal.alive !== false).length,
+      district: sector.name,
+      district_id: sector.id,
+      regalia: sector.regalia,
+      movement_signature: sector.movement,
+      visited_regalia: [...visitedSectors],
+      costume_atlas: COSTUME_ATLAS_SRC,
+      costume_atlas_ready: costumeAtlasReady,
+      sensory_safe: document.body.classList.contains("sensory-safe"),
       player: {
         x: Math.round(player.x),
         y: Math.round(player.y),
@@ -3402,22 +3760,37 @@
       });
       cameraX = Math.max(0, Math.min(WORLD_W - W, player.x - W * 0.48));
       addBurst(FINISH_X, 318, "#22c55e", 136, 42, "finish");
+      COURSE_SECTORS.forEach(sector => visitedSectors.add(sector.id));
+      lastSectorIndex = COURSE_SECTORS.length - 1;
       setMessage("Playtest visual: finish crown charged.");
     } else {
-      const gate = gates[0];
-      player.x = gate.x - 138;
-      player.y = 268;
-      player.rings = 6;
-      player.score = 720;
-      player.dash = 18;
+      const targets = {
+        archive: { x: 520, y: 330, rings: 3, score: 280 },
+        garden: { x: 1540, y: 285, rings: 8, score: 920 },
+        forge: { x: 2520, y: 244, rings: 14, score: 1680 },
+        tempest: { x: 3520, y: 250, rings: 20, score: 2460 },
+        gate: { x: 1010, y: 236, rings: 6, score: 720 }
+      };
+      const target = targets[scene] || targets.gate;
+      player.x = target.x;
+      player.y = target.y;
+      player.rings = target.rings;
+      player.score = target.score;
+      const sector = currentSector();
+      lastSectorIndex = sectorIndexForX(player.x);
+      for (let index = 0; index <= lastSectorIndex; index += 1) visitedSectors.add(COURSE_SECTORS[index].id);
+      player.dash = sector.dashFrames;
       player.dashCooldown = 0;
       player.onCloud = false;
-      gate.telegraph = 1;
-      gate.residue = 76;
+      const gate = gates[Math.max(0, Math.min(gates.length - 1, lastSectorIndex))];
+      if (gate) {
+        gate.telegraph = 1;
+        gate.residue = 76;
+      }
       gateRuptureWake = 42;
-      cameraX = Math.max(0, Math.min(WORLD_W - W, gate.x - W * 0.58));
-      addBurst(gate.x + gate.w / 2, gate.y + gate.h / 2, "#f5c542", 100, 34, "gate");
-      setMessage("Playtest visual: prism gate and chrome runner staged.");
+      cameraX = Math.max(0, Math.min(WORLD_W - W, player.x - W * 0.42));
+      addBurst(player.x + player.w / 2, player.y + player.h / 2, sector.accent, 100, 34, "gate");
+      setMessage(`Playtest visual: ${sector.name} and ${sector.regalia} staged.`);
     }
 
     player.vy = 0;
@@ -3448,12 +3821,28 @@
 
   function handleKey(e, down) {
     const key = e.key;
-    if (["ArrowUp", "ArrowRight", " ", "Spacebar", "w", "W", "x", "X", "Shift", "Enter"].includes(key)) {
+    if (["ArrowUp", "ArrowRight", "ArrowDown", " ", "Spacebar", "w", "W", "x", "X", "g", "G", "Shift", "Enter"].includes(key)) {
       e.preventDefault();
     }
     if (key === "Enter" && down && !running) startGame();
     if (key === "ArrowUp" || key === "w" || key === "W" || key === " " || key === "Spacebar") setControl("jump", down);
     if (key === "ArrowRight" || key === "x" || key === "X" || key === "Shift") setControl("dash", down);
+    if (key === "ArrowDown" || key === "g" || key === "G") setControl("glide", down);
+  }
+
+  function toggleSensorySafe() {
+    const enabled = document.body.classList.toggle("sensory-safe");
+    const button = document.getElementById("safeBtn");
+    if (button) button.textContent = enabled ? "Sensory Safe On" : "Sensory Safe";
+    if (enabled) {
+      motionPlate.pause();
+      cameraShake = 0;
+      screenFlash = 0;
+    } else if (motionPlateReady) {
+      motionPlate.play().catch(() => {});
+    }
+    setMessage(enabled ? "Sensory Safe: shake, flash, and motion plate reduced." : "Full motion restored.");
+    return enabled;
   }
 
   function bindTouchControls() {
@@ -3478,13 +3867,15 @@
 
   function installMobileOverlayGuard() {
     const style = document.createElement("style");
-    style.textContent = "@media (max-width: 560px) { #northstar-vorath-gate { display: none !important; } }";
+    style.textContent = "@media (max-width: 560px) { #northstar-vorath-gate, #northstar-playtest-kit, .northstar-arcade-return { display: none !important; } }";
     document.head.appendChild(style);
   }
 
   function loop() {
-    update();
-    draw();
+    if (!playtestHold) {
+      update();
+      draw();
+    }
     requestAnimationFrame(loop);
   }
 
@@ -3495,6 +3886,7 @@
     resetWorld();
     hud.overlay.classList.remove("hidden");
   });
+  document.getElementById("safeBtn").addEventListener("click", toggleSensorySafe);
   document.getElementById("exportSession").addEventListener("click", () => exportSession(true));
   window.addEventListener("keydown", event => handleKey(event, true), { passive: false });
   window.addEventListener("keyup", event => handleKey(event, false), { passive: false });
@@ -3510,6 +3902,23 @@
   window.vorathPrismRunnerPlaytestScene = playtestScene;
   window.exportSession = exportSession;
   window.northstarArcadeState = () => playtestPayload();
+  window.vorathPrismRunner = {
+    player,
+    COURSE_SECTORS,
+    currentSector,
+    sectorIndexForX,
+    syncSectorRegalia,
+    gamepadFrame,
+    toggleSensorySafe,
+    setControl,
+    startGame,
+    resetWorld,
+    playtestScene,
+    playtestPayload,
+    exportSession,
+    costumeAtlas,
+    costumeAtlasReady: () => costumeAtlasReady
+  };
 
   makeNoisePattern();
   makeMaterialPatterns();

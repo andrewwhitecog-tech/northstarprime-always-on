@@ -2,86 +2,206 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>BREAKOUT: THE WALL</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>GLYPHBREAKER // APEX AI EDITION</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{
-  background:radial-gradient(circle at 50% 0%,#0a0a18 0%,#05030a 60%,#020108 100%);
+  background:radial-gradient(circle at 50% 0%,#151024 0%,#05030a 56%,#010105 100%);
   overflow:hidden;font-family:'Courier New',monospace;
   display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;
-}
-canvas{display:block;border-radius:12px;
-  border:1px solid rgba(127,215,255,.28);
-  box-shadow:0 0 0 5px rgba(127,215,255,.05),0 0 44px rgba(127,215,255,.16),0 24px 60px rgba(0,0,0,.7),inset 0 0 60px rgba(0,0,0,.4);
+  user-select:none;
 }
 #title{
-  font-size:15px;font-weight:bold;letter-spacing:10px;margin-bottom:10px;text-transform:uppercase;
-  background:linear-gradient(100deg,#7fd7ff 0%,#e9c86a 30%,#ec4899 55%,#7fd7ff 80%);
+  font-size:15px;font-weight:bold;letter-spacing:10px;margin-bottom:8px;text-transform:uppercase;
+  background:linear-gradient(100deg,#f4dfa0 0%,#e9c86a 25%,#8ff7ff 48%,#d883ff 68%,#f4dfa0 100%);
   background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
   animation:shimmer 5s linear infinite;
   filter:drop-shadow(0 0 12px rgba(127,215,255,.45));
 }
 @keyframes shimmer{0%{background-position:0% 0}100%{background-position:300% 0}}
-#hud{display:flex;gap:12px;margin-bottom:12px}
+#hud{display:flex;gap:12px;margin-bottom:8px}
 .chip{
-  background:rgba(8,8,24,.62);border:1px solid rgba(127,215,255,.30);border-radius:10px;
-  padding:6px 18px;text-align:center;backdrop-filter:blur(6px);
+  background:rgba(8,6,20,.72);border:1px solid rgba(233,200,106,.30);border-radius:10px;
+  padding:5px 16px;text-align:center;backdrop-filter:blur(6px);
   box-shadow:0 0 18px rgba(127,215,255,.10),inset 0 1px 0 rgba(255,255,255,.06);
 }
 .chip .lbl{color:#5f7d95;font-size:9px;letter-spacing:4px;text-transform:uppercase}
-.chip .num{color:#eaf7ff;font-size:20px;font-weight:bold;text-shadow:0 0 12px rgba(127,215,255,.85),0 0 26px rgba(127,215,255,.4)}
+.chip .num{color:#eaf7ff;font-size:18px;font-weight:bold;text-shadow:0 0 12px rgba(127,215,255,.85),0 0 26px rgba(127,215,255,.4)}
 .chip.gold{border-color:rgba(233,200,106,.32)}
 .chip.gold .num{text-shadow:0 0 12px rgba(233,200,106,.85),0 0 26px rgba(233,200,106,.4)}
 .chip.pink{border-color:rgba(236,72,153,.32)}
 .chip.pink .num{text-shadow:0 0 12px rgba(236,72,153,.85),0 0 26px rgba(236,72,153,.4)}
-#info{color:#4c5468;font-size:11px;margin-top:12px;letter-spacing:2.5px;text-transform:uppercase}
+.chip.cyan{border-color:rgba(127,215,255,.35)}
+.chip.cyan .num{color:#7fd7ff;font-size:14px;letter-spacing:1px}
+
+canvas{
+  display:block;border-radius:12px;
+  width:min(800px,calc(100vw - 20px));height:auto;max-height:calc(100vh - 145px);object-fit:contain;touch-action:none;
+  border:1px solid rgba(233,200,106,.48);
+  box-shadow:0 0 0 5px rgba(233,200,106,.04),0 0 50px rgba(127,90,255,.19),0 24px 60px rgba(0,0,0,.8),inset 0 0 70px rgba(0,0,0,.5);
+}
+#info{color:#4c5468;font-size:10px;margin-top:8px;letter-spacing:2px;text-transform:uppercase}
 #info b{color:#7fd7ff;font-weight:normal;text-shadow:0 0 8px rgba(127,215,255,.6)}
 </style>
 </head>
 <body>
-<div id="title">Breakout &middot; The Wall</div>
+<div id="title">Glyphbreaker // Apex AI Edition</div>
 <div id="hud">
-  <div class="chip"><div class="lbl">Score</div><div class="num" id="score">0</div></div>
-  <div class="chip pink"><div class="lbl">Lives</div><div class="num" id="lives">3</div></div>
-  <div class="chip gold"><div class="lbl">Level</div><div class="num" id="level">1</div></div>
+  <div class="chip"><div class="lbl">Resonance</div><div class="num" id="score">0</div></div>
+  <div class="chip pink"><div class="lbl">Continuities</div><div class="num" id="lives">3</div></div>
+  <div class="chip gold"><div class="lbl">Seal Layer</div><div class="num" id="level">1</div></div>
+  <div class="chip cyan"><div class="lbl">Director</div><div class="num" id="directorState">STABLE</div></div>
+  <div class="chip gold"><div class="lbl">Chain</div><div class="num" id="comboVal">1.0x</div></div>
 </div>
 <canvas id="c"></canvas>
-<div id="info"><b>Mouse</b> or <b>&larr; &rarr;</b> move &nbsp;&middot;&nbsp; <b>Space</b> launch &nbsp;&middot;&nbsp; collect powerups</div>
+<div id="info"><b>Mouse / Arrows</b> move &nbsp;&middot;&nbsp; <b>Shift / R-Click</b> parry dash &nbsp;&middot;&nbsp; <b>Z</b> singularity catch &nbsp;&middot;&nbsp; <b>Q</b> harmonic EMP</div>
 <script src="/static/games/chiptune.js"></script>
 <script>
-// --- Chiptune audio helpers (guarded; game runs fine without engine) ---
-function SND(n){try{ if(window.Chiptune) Chiptune.SFX[n](); }catch(e){}}
-const _sndT={};
-function SNDC(n,ms){const now=performance.now();if(_sndT[n]&&now-_sndT[n]<(ms||70))return;_sndT[n]=now;SND(n)}
+"use strict";
+// --- Procedural Web Audio Engine ---
+const AudioEngine = {
+  ctx: null,
+  init() {
+    if (this.ctx) return;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) this.ctx = new AC();
+    } catch(e){}
+  },
+  resume() {
+    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+  },
+  playTone(freq, dur, type='sine', gain=0.15, slide=null) {
+    if (!this.ctx) return;
+    try {
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+      if (slide) osc.frequency.exponentialRampToValueAtTime(Math.max(10, slide), this.ctx.currentTime + dur);
+      g.gain.setValueAtTime(gain, this.ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + dur);
+      osc.connect(g);
+      g.connect(this.ctx.destination);
+      osc.start();
+      osc.stop(this.ctx.currentTime + dur);
+    } catch(e){}
+  },
+  paddleBounce() { this.playTone(340, 0.09, 'sine', 0.18, 520); },
+  brickHit() { this.playTone(520, 0.08, 'triangle', 0.15, 880); },
+  brickShatter(hue) {
+    this.playTone(440 + (hue%400), 0.2, 'sine', 0.22, 1200);
+    this.playTone(660 + (hue%400), 0.15, 'triangle', 0.14, 1600);
+  },
+  parry() {
+    this.playTone(120, 0.45, 'sawtooth', 0.35, 40); // sub bass
+    this.playTone(1600, 0.3, 'sine', 0.3, 3200);   // crystalline shimmer
+  },
+  emp() {
+    this.playTone(90, 0.7, 'triangle', 0.4, 30);
+    this.playTone(800, 0.5, 'sine', 0.2, 100);
+  },
+  catchTone() {
+    this.playTone(700, 0.25, 'sine', 0.2, 1100);
+  }
+};
 
 const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
 const W=canvas.width=800,H=canvas.height=600;
 
-const BRICK_ROWS=8,BRICK_COLS=12,BRICK_W=60,BRICK_H=18,BRICK_GAP=4;
-const PADDLE_W_DEFAULT=100,PADDLE_H=14,BALL_R=6;
+const BRICK_W=72,BRICK_H=34;
+const PADDLE_W_DEFAULT=118,PADDLE_H=22,BALL_R=6;
+const GLYPH_ATLAS='/static/art/games/vorath_overhaul_v01/glyphbreaker/glyphbreaker_atlas_v01.png';
+const glyphAtlas=new Image();
+glyphAtlas.src=GLYPH_ATLAS;
+let railHitTimer=0,railStateOverride=null;
 
 let paddle,balls,bricks,powerups,particles,score,lives,level,gameOver,phase,launched;
 let paddleW=PADDLE_W_DEFAULT;
-let stickyBall=false;
+let voidSpikes=[],floatingTexts=[];
+let freezeFrames=0;
+
+// --- Combat Verbs State ---
+const combatVerbs = {
+  parryCooldown: 0,
+  parryCooldownMax: 90, // 1.5s
+  parryActiveTimer: 0,
+  parryDuration: 8,     // 130ms window
+  catchCooldown: 0,
+  catchCooldownMax: 360, // 6s
+  caughtBall: null,
+  empCooldown: 0,
+  empCooldownMax: 600,   // 10s
+  comboCount: 0,
+  comboTimer: 0
+};
+
+// --- Left 4 Dead Dynamic Seal Tension Director ---
+const sealDirector = {
+  state: "STABLE", // STABLE, HARMONIC_SURGE, CHORUS_FRENZY, SANCTUARY_ECHO, APOTHEOSIS
+  tension: 0,
+  stateTimer: 0,
+  aiLatencyUs: 0.38,
+  wheelAngle: 0,
+  update() {
+    this.stateTimer++;
+    if (combatVerbs.comboTimer > 0) {
+      combatVerbs.comboTimer--;
+      if (combatVerbs.comboTimer === 0) combatVerbs.comboCount = 0;
+    }
+
+    const brickRatio = bricks.length / Math.max(1, 34);
+    const speedAvg = balls.reduce((acc, b) => acc + Math.hypot(b.vx, b.vy), 0) / Math.max(1, balls.length);
+    this.tension = Math.max(0, Math.min(100, Math.round((1 - brickRatio) * 60 + (balls.length - 1) * 15 + (speedAvg - 5) * 5 + combatVerbs.comboCount * 4)));
+
+    // Harmonic micro-rotations of seal during surges
+    if (this.state === "CHORUS_FRENZY" || this.state === "HARMONIC_SURGE") {
+      this.wheelAngle += 0.003 * (this.state === "CHORUS_FRENZY" ? 1.8 : 1.0);
+    }
+
+    // State Transitions
+    if (this.state === "STABLE") {
+      if (this.tension > 45 || this.stateTimer > 400) {
+        this.state = Math.random() < 0.5 ? "HARMONIC_SURGE" : "CHORUS_FRENZY";
+        this.stateTimer = 0;
+      }
+    } else if (this.state === "HARMONIC_SURGE" || this.state === "CHORUS_FRENZY") {
+      if (this.stateTimer > 350) {
+        this.state = "SANCTUARY_ECHO";
+        this.stateTimer = 0;
+      }
+    } else if (this.state === "SANCTUARY_ECHO") {
+      if (this.stateTimer > 150) {
+        this.state = "STABLE";
+        this.stateTimer = 0;
+      }
+    }
+
+    // Sync HUD Elements
+    const stateEl = document.getElementById("directorState");
+    if (stateEl) stateEl.textContent = this.state.replace("_", " ");
+    const comboEl = document.getElementById("comboVal");
+    if (comboEl) {
+      const mult = (1 + combatVerbs.comboCount * 0.25).toFixed(1);
+      comboEl.textContent = mult + "x";
+    }
+  }
+};
 
 const POWERUP_TYPES=[
-  {type:'wide',color:'#5eead4',label:'W',desc:'Wide Paddle'},
-  {type:'multi',color:'#ec4899',label:'M',desc:'Multi-Ball'},
-  {type:'life',color:'#ff2d55',label:'+',desc:'Extra Life'},
-  {type:'fire',color:'#fb923c',label:'F',desc:'Fireball'},
+  {type:'wide',color:'#5eead4',sigil:'⌒',desc:'Harmonic Span'},
+  {type:'multi',color:'#d883ff',sigil:'◉',desc:'Chorus'},
+  {type:'life',color:'#ff8d9e',sigil:'∞',desc:'Continuity'},
+  {type:'fire',color:'#f5c95c',sigil:'☼',desc:'Sun Verdict'},
+];
+const SEAL_FAMILIES=[
+  {name:'Witness Eye',color:'#8ff7ff',sx:512,sy:0},
+  {name:'Loom Knot',color:'#d883ff',sx:512,sy:512},
+  {name:'Crown Mandala',color:'#f5c95c',sx:512,sy:1024},
 ];
 
-const BRICK_COLORS=[
-  {hp:1,colors:['#7fd7ff','#1d4f8a']},
-  {hp:2,colors:['#5eead4','#0d5c4e']},
-  {hp:3,colors:['#e9c86a','#8a6410']},
-  {hp:4,colors:['#fb923c','#8a3a12']},
-  {hp:5,colors:['#ec4899','#7a1450']},
-];
-
-// ============================================================
-// SLEEK FX TOOLKIT (visual only — no gameplay impact)
-// ============================================================
+// FX TOOLKIT
 const FX={shakeT:0,shakeM:0,flashA:0,flashC:'#fff',t:0};
 function fxShake(m,d){FX.shakeM=Math.max(FX.shakeM,m);FX.shakeT=Math.max(FX.shakeT,d||10)}
 function fxFlash(c,a){FX.flashC=c;FX.flashA=Math.max(FX.flashA,a||0.3)}
@@ -91,7 +211,7 @@ function fxUpdate(){
   FX.flashA=Math.max(0,FX.flashA-0.035);
 }
 
-// --- baked spark sprites (per color; glow paid once, not per frame) ---
+// Baked spark cache
 const _sparkCache={};
 function sparkSprite(color){
   if(_sparkCache[color])return _sparkCache[color];
@@ -105,7 +225,7 @@ function sparkSprite(color){
   return _sparkCache[color]=c;
 }
 
-// --- baked orb (ball) sprite: hot white core + colored halo ---
+// Baked orb cache
 function bakeOrb(color,halo){
   const R=BALL_R,PAD=18,S=(R+PAD)*2;
   const c=document.createElement('canvas');c.width=c.height=S;
@@ -118,93 +238,26 @@ function bakeOrb(color,halo){
   g.addColorStop(1,'rgba(0,0,0,0)');
   x.fillStyle=g;
   x.beginPath();x.arc(S/2,S/2,R+PAD,0,Math.PI*2);x.fill();
-  // crisp core edge
   x.fillStyle='rgba(255,255,255,0.95)';
   x.beginPath();x.arc(S/2,S/2,R*0.62,0,Math.PI*2);x.fill();
   return c;
 }
 const ORB_CYAN=bakeOrb('#7fd7ff','rgba(64,140,255,0.5)');
 const ORB_FIRE=bakeOrb('#ffd27f','rgba(255,90,40,0.55)');
+const ORB_HYPER=bakeOrb('#ec4899','rgba(236,72,153,0.7)');
 const ORB_S=ORB_CYAN.width;
 
-// --- baked brick sprites: beveled gem + baked glow, one per tier ---
-function bakeBrick(tier){
-  const PAD=12,w=BRICK_W+PAD*2,h=BRICK_H+PAD*2;
-  const c=document.createElement('canvas');c.width=w;c.height=h;
-  const x=c.getContext('2d');
-  const [hi,lo]=BRICK_COLORS[tier].colors;
-  const bx=PAD,by=PAD,r=4;
-  const rr=(xx,yy,ww,hh,rad)=>{
-    x.beginPath();
-    if(x.roundRect)x.roundRect(xx,yy,ww,hh,rad);
-    else x.rect(xx,yy,ww,hh);
-  };
-  // glow pass (paid once at bake time)
-  x.shadowColor=hi;x.shadowBlur=14;
-  x.fillStyle=lo;rr(bx,by,BRICK_W,BRICK_H,r);x.fill();
-  x.shadowBlur=0;
-  // beveled gem body
-  const g=x.createLinearGradient(bx,by,bx,by+BRICK_H);
-  g.addColorStop(0,'rgba(255,255,255,0.85)');
-  g.addColorStop(0.12,hi);
-  g.addColorStop(0.5,lo);
-  g.addColorStop(0.88,'rgba(0,0,0,0.55)');
-  g.addColorStop(1,'rgba(0,0,0,0.7)');
-  x.fillStyle=g;rr(bx,by,BRICK_W,BRICK_H,r);x.fill();
-  // glass top highlight
-  const hg=x.createLinearGradient(bx,by,bx,by+BRICK_H*0.45);
-  hg.addColorStop(0,'rgba(255,255,255,0.55)');
-  hg.addColorStop(1,'rgba(255,255,255,0)');
-  x.fillStyle=hg;rr(bx+2,by+1.5,BRICK_W-4,BRICK_H*0.42,3);x.fill();
-  // 1px neon edge
-  x.strokeStyle=hi;x.globalAlpha=0.9;x.lineWidth=1;
-  rr(bx+0.5,by+0.5,BRICK_W-1,BRICK_H-1,r);x.stroke();
-  x.globalAlpha=1;
-  // inner facet line
-  x.strokeStyle='rgba(255,255,255,0.25)';x.lineWidth=0.8;
-  x.beginPath();x.moveTo(bx+4,by+BRICK_H-4);x.lineTo(bx+BRICK_W-4,by+BRICK_H-4);x.stroke();
-  return c;
+const RAIL_STATES=[
+  {name:'poised',sx:0,sy:0},
+  {name:'harmonic span',sx:0,sy:512},
+  {name:'fractured overload',sx:0,sy:1024},
+];
+function railStateIndex(){
+  if(railStateOverride!==null)return Math.max(0,Math.min(2,railStateOverride));
+  if(railHitTimer>0)return 2;
+  return paddleW>PADDLE_W_DEFAULT+10?1:0;
 }
-const BRICK_SPRITES=BRICK_COLORS.map((_,i)=>bakeBrick(i));
-const BRICK_PAD=12;
 
-// --- baked paddle: metallic bar with energy edge + glow ---
-function bakePaddle(){
-  const BW=220,PAD=16,w=BW+PAD*2,h=PADDLE_H+PAD*2;
-  const c=document.createElement('canvas');c.width=w;c.height=h;
-  const x=c.getContext('2d');
-  const px=PAD,py=PAD;
-  const rr=()=>{x.beginPath();if(x.roundRect)x.roundRect(px,py,BW,PADDLE_H,PADDLE_H/2);else x.rect(px,py,BW,PADDLE_H)};
-  x.shadowColor='#7fd7ff';x.shadowBlur=16;
-  x.fillStyle='#0b2438';rr();x.fill();
-  x.shadowBlur=0;
-  // metallic vertical sheen
-  const g=x.createLinearGradient(0,py,0,py+PADDLE_H);
-  g.addColorStop(0,'#eaf7ff');
-  g.addColorStop(0.22,'#7fd7ff');
-  g.addColorStop(0.5,'#123a5c');
-  g.addColorStop(0.82,'#0a2036');
-  g.addColorStop(1,'#245d8a');
-  x.fillStyle=g;rr();x.fill();
-  // energy edge (top line)
-  x.strokeStyle='rgba(255,255,255,0.9)';x.lineWidth=1.4;
-  x.beginPath();x.moveTo(px+6,py+2);x.lineTo(px+BW-6,py+2);x.stroke();
-  // neon rim
-  x.strokeStyle='rgba(127,215,255,0.85)';x.lineWidth=1;
-  x.beginPath();if(x.roundRect)x.roundRect(px+0.5,py+0.5,BW-1,PADDLE_H-1,PADDLE_H/2);else x.rect(px+0.5,py+0.5,BW-1,PADDLE_H-1);x.stroke();
-  // hot end caps
-  for(const ex of [px+7,px+BW-7]){
-    const eg=x.createRadialGradient(ex,py+PADDLE_H/2,0,ex,py+PADDLE_H/2,9);
-    eg.addColorStop(0,'rgba(255,255,255,0.95)');
-    eg.addColorStop(0.4,'rgba(236,72,153,0.8)');
-    eg.addColorStop(1,'rgba(236,72,153,0)');
-    x.fillStyle=eg;x.beginPath();x.arc(ex,py+PADDLE_H/2,9,0,Math.PI*2);x.fill();
-  }
-  return {c,BW,PAD};
-}
-const PADDLE_SPRITE=bakePaddle();
-
-// --- baked powerup gems (diamond + glow + label) ---
 function bakePowerup(p){
   const S=48;
   const c=document.createElement('canvas');c.width=c.height=S;
@@ -220,13 +273,12 @@ function bakePowerup(p){
   x.shadowBlur=0;
   x.strokeStyle='rgba(255,255,255,0.85)';x.lineWidth=1.2;x.stroke();
   x.fillStyle='#05030a';x.font='bold 11px Courier New';x.textAlign='center';x.textBaseline='middle';
-  x.fillText(p.label,0,1);
+  x.fillText(p.sigil,0,1);
   return c;
 }
 const POWERUP_SPRITES={};
 for(const p of POWERUP_TYPES)POWERUP_SPRITES[p.type]=bakePowerup(p);
 
-// --- baked layered background: void gradient + nebula ---
 function bakeBackground(){
   const c=document.createElement('canvas');c.width=W;c.height=H;
   const x=c.getContext('2d');
@@ -235,7 +287,6 @@ function bakeBackground(){
   g.addColorStop(0.45,'#080618');
   g.addColorStop(1,'#0a0a18');
   x.fillStyle=g;x.fillRect(0,0,W,H);
-  // nebula blobs (screen blend, very low alpha)
   x.globalCompositeOperation='screen';
   const blobs=[
     [W*0.18,H*0.22,340,'127,215,255',0.10],
@@ -250,7 +301,6 @@ function bakeBackground(){
     bg.addColorStop(1,'rgba(0,0,0,0)');
     x.fillStyle=bg;x.fillRect(0,0,W,H);
   }
-  // whisper-subtle grid
   x.globalCompositeOperation='source-over';
   x.strokeStyle='rgba(127,215,255,0.035)';x.lineWidth=1;
   for(let gx=0;gx<=W;gx+=40){x.beginPath();x.moveTo(gx+0.5,0);x.lineTo(gx+0.5,H);x.stroke()}
@@ -259,7 +309,6 @@ function bakeBackground(){
 }
 const BG=bakeBackground();
 
-// --- baked star layers (drift for parallax depth) ---
 function bakeStars(n,rmin,rmax,alpha){
   const c=document.createElement('canvas');c.width=W;c.height=H;
   const x=c.getContext('2d');
@@ -275,7 +324,6 @@ function bakeStars(n,rmin,rmax,alpha){
 const STARS_FAR=bakeStars(90,0.4,1.0,0.5);
 const STARS_NEAR=bakeStars(40,0.8,1.6,0.8);
 
-// --- baked CRT finish: vignette + faint scanlines ---
 function bakeCRT(){
   const c=document.createElement('canvas');c.width=W;c.height=H;
   const x=c.getContext('2d');
@@ -288,34 +336,53 @@ function bakeCRT(){
   return c;
 }
 const CRT=bakeCRT();
-// ============================================================
+
+function addFloatingText(x, y, text, color='#fff') {
+  floatingTexts.push({x, y, text, color, life: 1.0, vy: -1.2});
+  if (floatingTexts.length > 20) floatingTexts.shift();
+}
 
 function makeBricks(){
   bricks=[];
-  const ox=(W-BRICK_COLS*(BRICK_W+BRICK_GAP))/2;
-  for(let r=0;r<BRICK_ROWS;r++){
-    const hpBase=Math.min(5,BRICK_ROWS-r+Math.floor(level/2));
-    for(let c=0;c<BRICK_COLS;c++){
-      // Some bricks are empty for patterns
-      if(level>1&&Math.random()<0.1)continue;
-      const hp=Math.max(1,hpBase-Math.floor(Math.random()*2));
-      bricks.push({x:ox+c*(BRICK_W+BRICK_GAP),y:50+r*(BRICK_H+BRICK_GAP),w:BRICK_W,h:BRICK_H,hp,maxHp:hp});
+  const cx=W/2,cy=226;
+  const rings=[
+    {radius:78,count:7,family:0,phase:-Math.PI/2},
+    {radius:132,count:11,family:1,phase:-Math.PI/2+0.15},
+    {radius:190,count:16,family:2,phase:-Math.PI/2},
+  ];
+  for(const ring of rings){
+    for(let i=0;i<ring.count;i++){
+      const angle=ring.phase+i*Math.PI*2/ring.count;
+      if(Math.sin(angle)>0.72&&Math.abs(Math.cos(angle))<0.46)continue;
+      const hp=Math.min(5,1+ring.family+Math.floor(level/2));
+      bricks.push({
+        baseAngle: angle,
+        radius: ring.radius,
+        cx, cy,
+        x:cx+Math.cos(angle)*ring.radius-BRICK_W/2,
+        y:cy+Math.sin(angle)*ring.radius-BRICK_H/2,
+        w:BRICK_W,h:BRICK_H,hp,maxHp:hp,family:ring.family,angle:angle+Math.PI/2,
+      });
     }
   }
 }
 
 function init(){
+  AudioEngine.init();AudioEngine.resume();
   paddle={x:W/2-PADDLE_W_DEFAULT/2,y:H-40};
   paddleW=PADDLE_W_DEFAULT;
-  balls=[];powerups=[];particles=[];
-  score=0;lives=3;level=1;gameOver=false;phase=0;launched=false;stickyBall=false;
+  balls=[];powerups=[];particles=[];voidSpikes=[];floatingTexts=[];
+  score=0;lives=3;level=1;gameOver=false;phase=0;launched=false;
+  railHitTimer=0;railStateOverride=null;
+  combatVerbs.comboCount=0;
+  combatVerbs.caughtBall=null;
   makeBricks();
   spawnBall();
   updateHUD();
 }
 
 function spawnBall(){
-  balls.push({x:paddle.x+paddleW/2,y:paddle.y-BALL_R-1,vx:0,vy:0,fire:false,stuck:true});
+  balls.push({x:paddle.x+paddleW/2,y:paddle.y-BALL_R-1,vx:0,vy:0,fire:false,stuck:true,hyper:false,pierceCount:0});
   launched=false;
 }
 
@@ -323,8 +390,8 @@ function launch(){
   for(const b of balls){
     if(b.stuck){
       const angle=-Math.PI/2+(Math.random()-0.5)*0.4;
-      b.vx=Math.cos(angle)*5;b.vy=Math.sin(angle)*5;b.stuck=false;launched=true;
-      SNDC('shoot',150);
+      b.vx=Math.cos(angle)*5.2;b.vy=Math.sin(angle)*5.2;b.stuck=false;launched=true;
+      AudioEngine.playTone(600, 0.1, 'sine', 0.2, 300);
     }
   }
 }
@@ -335,77 +402,246 @@ function updateHUD(){
   document.getElementById('level').textContent=level;
 }
 
+// --- Combat Verbs Triggers ---
+function triggerParry() {
+  if (combatVerbs.parryCooldown > 0) return false;
+  combatVerbs.parryActiveTimer = combatVerbs.parryDuration;
+  combatVerbs.parryCooldown = combatVerbs.parryCooldownMax;
+  AudioEngine.playTone(450, 0.1, 'sine', 0.2, 900);
+  addParticles(paddle.x + paddleW/2, paddle.y, 12, '#ffd27f');
+  return true;
+}
+
+function triggerSingularityCatch() {
+  if (combatVerbs.catchCooldown > 0 || balls.length === 0) return false;
+  // Catch the ball nearest to the paddle
+  let nearestBall = null, minDist = Infinity;
+  for (const b of balls) {
+    if (!b.stuck) {
+      const d = Math.hypot(b.x - (paddle.x + paddleW/2), b.y - paddle.y);
+      if (d < minDist) { minDist = d; nearestBall = b; }
+    }
+  }
+  if (nearestBall && minDist < 280) {
+    combatVerbs.catchCooldown = combatVerbs.catchCooldownMax;
+    nearestBall.stuck = true;
+    combatVerbs.caughtBall = nearestBall;
+    AudioEngine.catchTone();
+    addFloatingText(paddle.x + paddleW/2, paddle.y - 20, "SINGULARITY CAPTURE", "#7fd7ff");
+    return true;
+  }
+  return false;
+}
+
+function triggerHarmonicEMP() {
+  if (combatVerbs.empCooldown > 0) return false;
+  combatVerbs.empCooldown = combatVerbs.empCooldownMax;
+  fxShake(6, 16);
+  fxFlash('#7fd7ff', 0.45);
+  AudioEngine.emp();
+
+  // Strip 1 HP from all bricks
+  for (let i = bricks.length - 1; i >= 0; i--) {
+    const br = bricks[i];
+    br.hp--;
+    addParticles(br.x + br.w/2, br.y + br.h/2, 4, SEAL_FAMILIES[br.family].color);
+    if (br.hp <= 0) {
+      score += br.maxHp * 15;
+      bricks.splice(i, 1);
+    }
+  }
+
+  // Obliterate all falling void spikes
+  voidSpikes = [];
+
+  // Duplicate active balls
+  const newBalls = [];
+  for (const b of balls) {
+    if (!b.stuck) {
+      newBalls.push({...b, vx: b.vx * 0.9 - 1.5, vy: b.vy * 0.9, trail: []});
+      newBalls.push({...b, vx: b.vx * 0.9 + 1.5, vy: b.vy * 0.9, trail: []});
+    }
+  }
+  if (newBalls.length) balls.push(...newBalls);
+
+  addFloatingText(W/2, H/2, "HARMONIC EMP CLEANSING", "#ffd27f");
+  updateHUD();
+  return true;
+}
+
 let mouseX=W/2;
-canvas.addEventListener('mousemove',e=>{const r=canvas.getBoundingClientRect();mouseX=e.clientX-r.left});
+function tuneRail(clientX){const r=canvas.getBoundingClientRect();mouseX=(clientX-r.left)*W/r.width}
+canvas.addEventListener('mousemove',e=>tuneRail(e.clientX));
+canvas.addEventListener('pointermove',e=>{tuneRail(e.clientX);if(e.pointerType!=='mouse')e.preventDefault()},{passive:false});
+canvas.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  triggerParry();
+});
+canvas.addEventListener('pointerdown',e=>{
+  AudioEngine.init();AudioEngine.resume();
+  tuneRail(e.clientX);
+  if(e.button === 2) {
+    triggerParry();
+    return;
+  }
+  if(gameOver)init();
+  else if(combatVerbs.caughtBall) {
+    // Release sniper shot!
+    combatVerbs.caughtBall.stuck = false;
+    const angle = -Math.PI/2 + (Math.random() - 0.5) * 0.2;
+    combatVerbs.caughtBall.vx = Math.cos(angle) * 8.5;
+    combatVerbs.caughtBall.vy = Math.sin(angle) * 8.5;
+    combatVerbs.caughtBall.hyper = true;
+    combatVerbs.caughtBall.pierceCount = 4;
+    combatVerbs.caughtBall = null;
+    AudioEngine.playTone(900, 0.2, 'sawtooth', 0.25, 200);
+    fxShake(4, 10);
+    addFloatingText(paddle.x + paddleW/2, paddle.y - 20, "SNIPER DISCHARGE", "#ffd27f");
+  } else launch();
+  e.preventDefault();
+},{passive:false});
+
 const keys={};
 document.addEventListener('keydown',e=>{
+  AudioEngine.init();AudioEngine.resume();
   try{ if(window.Chiptune) Chiptune.resume(); }catch(e2){}
   keys[e.key]=true;
-  if(e.key===' '){e.preventDefault();if(gameOver)init();else launch()}
+  if(e.key===' '){
+    e.preventDefault();
+    if(gameOver)init();
+    else if(combatVerbs.caughtBall) {
+      combatVerbs.caughtBall.stuck = false;
+      combatVerbs.caughtBall.vx = 0;
+      combatVerbs.caughtBall.vy = -8.5;
+      combatVerbs.caughtBall.hyper = true;
+      combatVerbs.caughtBall.pierceCount = 4;
+      combatVerbs.caughtBall = null;
+    } else launch();
+  } else if(e.key==='Shift' || e.code==='ShiftLeft' || e.code==='ShiftRight' || e.code==='KeyC') {
+    triggerParry();
+  } else if(e.code==='KeyZ' || e.code==='Digit2') {
+    triggerSingularityCatch();
+  } else if(e.code==='KeyQ' || e.code==='Digit3') {
+    triggerHarmonicEMP();
+  }
 });
 document.addEventListener('keyup',e=>keys[e.key]=false);
 
 function addParticles(x,y,n,color){
   for(let i=0;i<n;i++){
-    if(particles.length>=200)particles.shift(); // hard cap (perf budget)
-    const a=Math.random()*Math.PI*2,s=Math.random()*3+1;
+    if(particles.length>=240)particles.shift();
+    const a=Math.random()*Math.PI*2,s=Math.random()*3.5+1;
     particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,alpha:1,color,size:Math.random()*4+2,hue:Math.random()*360,rot:Math.random()*Math.PI});
   }
 }
 
 function update(){
   if(gameOver)return;
+  if(freezeFrames > 0) {
+    freezeFrames--;
+    return;
+  }
   phase+=0.03;
+  railHitTimer=Math.max(0,railHitTimer-1);
+
+  // Update Cooldowns
+  if (combatVerbs.parryCooldown > 0) combatVerbs.parryCooldown--;
+  if (combatVerbs.parryActiveTimer > 0) combatVerbs.parryActiveTimer--;
+  if (combatVerbs.catchCooldown > 0) combatVerbs.catchCooldown--;
+  if (combatVerbs.empCooldown > 0) combatVerbs.empCooldown--;
+
+  sealDirector.update();
+
+  // Dynamic seal positioning with director wheelAngle
+  for (const br of bricks) {
+    const curAngle = br.baseAngle + sealDirector.wheelAngle;
+    br.x = br.cx + Math.cos(curAngle) * br.radius - br.w/2;
+    br.y = br.cy + Math.sin(curAngle) * br.radius - br.h/2;
+    br.angle = curAngle + Math.PI/2;
+  }
 
   // Paddle movement
-  if(keys['ArrowLeft'])paddle.x-=8;
-  if(keys['ArrowRight'])paddle.x+=8;
-  paddle.x+=(mouseX-paddleW/2-paddle.x)*0.15;
+  if(keys['ArrowLeft']||keys['KeyA'])paddle.x-=9;
+  if(keys['ArrowRight']||keys['KeyD'])paddle.x+=9;
+  paddle.x+=(mouseX-paddleW/2-paddle.x)*0.18;
   paddle.x=Math.max(0,Math.min(W-paddleW,paddle.x));
 
-  // Balls
+  // Balls Update
   for(let i=balls.length-1;i>=0;i--){
     const b=balls[i];
-    if(b.stuck){b.x=paddle.x+paddleW/2;b.y=paddle.y-BALL_R-1;continue}
+    if(b.stuck){
+      b.x=paddle.x+paddleW/2;
+      b.y=paddle.y-BALL_R-1;
+      continue;
+    }
 
-    b.x+=b.vx;b.y+=b.vy;
+    b.x+=b.vx;
+    b.y+=b.vy;
 
     // Wall bounces
-    if(b.x-BALL_R<0){b.x=BALL_R;b.vx*=-1;SNDC('bump')}
-    if(b.x+BALL_R>W){b.x=W-BALL_R;b.vx*=-1;SNDC('bump')}
-    if(b.y-BALL_R<0){b.y=BALL_R;b.vy*=-1;SNDC('bump')}
+    if(b.x-BALL_R<0){b.x=BALL_R;b.vx*=-1;AudioEngine.playTone(300,0.05,'sine',0.1);}
+    if(b.x+BALL_R>W){b.x=W-BALL_R;b.vx*=-1;AudioEngine.playTone(300,0.05,'sine',0.1);}
+    if(b.y-BALL_R<0){b.y=BALL_R;b.vy*=-1;AudioEngine.playTone(300,0.05,'sine',0.1);}
 
     // Bottom - lose ball
     if(b.y>H+BALL_R){
       balls.splice(i,1);
       if(balls.length===0){
         lives--;updateHUD();
-        fxFlash('#ff2d55',0.3);fxShake(4,12); // fx only
-        if(lives<=0){gameOver=true;SND('death');fxFlash('#ff2d55',0.55);fxShake(7,22)}else{SND('hurt');paddleW=PADDLE_W_DEFAULT;spawnBall()}
+        railHitTimer=54;
+        fxFlash('#ff2d55',0.3);fxShake(5,14);
+        if(lives<=0){
+          gameOver=true;
+          AudioEngine.playTone(150, 0.6, 'sawtooth', 0.4, 30);
+          fxFlash('#ff2d55',0.55);fxShake(8,24);
+        } else {
+          AudioEngine.playTone(220, 0.3, 'sine', 0.2, 80);
+          paddleW=PADDLE_W_DEFAULT;
+          spawnBall();
+        }
       }
       continue;
     }
 
-    // Paddle collision
-    if(b.vy>0&&b.y+BALL_R>paddle.y&&b.y+BALL_R<paddle.y+PADDLE_H+5&&b.x>paddle.x-5&&b.x<paddle.x+paddleW+5){
+    // Paddle collision & FRAME-PERFECT PARRY
+    if(b.vy>0&&b.y+BALL_R>paddle.y&&b.y+BALL_R<paddle.y+PADDLE_H+8&&b.x>paddle.x-10&&b.x<paddle.x+paddleW+10){
       const rel=(b.x-(paddle.x+paddleW/2))/(paddleW/2);
       const angle=rel*Math.PI/3-Math.PI/2;
-      const speed=Math.sqrt(b.vx*b.vx+b.vy*b.vy);
+      let speed=Math.sqrt(b.vx*b.vx+b.vy*b.vy);
+
+      // Check Parry
+      if (combatVerbs.parryActiveTimer > 0) {
+        freezeFrames = 4; // 60ms bullet time pause
+        speed = Math.max(speed * 1.5, 9.5);
+        b.hyper = true;
+        b.pierceCount = 3;
+        fxShake(7, 15);
+        fxFlash('#ffd27f', 0.4);
+        AudioEngine.parry();
+        combatVerbs.comboCount++;
+        combatVerbs.comboTimer = 240;
+        addParticles(b.x, b.y, 25, '#ffd27f');
+        addFloatingText(b.x, b.y - 25, `KINETIC PARRY! +${200 * combatVerbs.comboCount}`, '#ffd27f');
+        score += 200 * combatVerbs.comboCount;
+      } else {
+        AudioEngine.paddleBounce();
+        addParticles(b.x,b.y,6,'#e9c86a');
+      }
+
       b.vx=Math.cos(angle)*speed;
       b.vy=Math.sin(angle)*speed;
-      if(b.vy>-1)b.vy=-1;
+      if(b.vy>-1.2)b.vy=-1.2;
       b.y=paddle.y-BALL_R-1;
-      SNDC('blip');
-      addParticles(b.x,b.y,5,'#7fd7ff');
     }
 
     // Brick collision
     for(let j=bricks.length-1;j>=0;j--){
       const br=bricks[j];
       if(b.x+BALL_R>br.x&&b.x-BALL_R<br.x+br.w&&b.y+BALL_R>br.y&&b.y-BALL_R<br.y+br.h){
-        br.hp--;
-        if(!b.fire){
-          // Determine bounce direction
+        const damage = b.hyper ? 3 : 1;
+        br.hp -= damage;
+
+        if(!b.fire && !b.hyper){
           const overlapLeft=b.x+BALL_R-br.x;
           const overlapRight=br.x+br.w-(b.x-BALL_R);
           const overlapTop=b.y+BALL_R-br.y;
@@ -413,25 +649,66 @@ function update(){
           const minOverlap=Math.min(overlapLeft,overlapRight,overlapTop,overlapBottom);
           if(minOverlap===overlapLeft||minOverlap===overlapRight)b.vx*=-1;
           else b.vy*=-1;
+        } else if (b.hyper) {
+          b.pierceCount--;
+          if (b.pierceCount <= 0) b.hyper = false;
         }
 
         if(br.hp<=0){
-          SNDC('pop',50);
-          score+=br.maxHp*10*level;
-          addParticles(br.x+br.w/2,br.y+br.h/2,8,BRICK_COLORS[Math.min(br.maxHp-1,4)].colors[0]);
-          fxShake(2.5,7); // fx only
+          score+=br.maxHp*12*level*(1 + combatVerbs.comboCount * 0.2);
+          addParticles(br.x+br.w/2,br.y+br.h/2,10,SEAL_FAMILIES[br.family].color);
+          fxShake(3,8);
+          AudioEngine.brickShatter(SEAL_FAMILIES[br.family].color);
+
+          // Release hostile void spike from high-tier bricks
+          if (br.family >= 1 && Math.random() < 0.4) {
+            voidSpikes.push({
+              x: br.x + br.w/2, y: br.y + br.h, vy: 2.5 + Math.random() * 1.5,
+              alive: true, hue: br.family === 2 ? 46 : 280
+            });
+          }
+
           // Chance to drop powerup
-          if(Math.random()<0.15){
+          if(Math.random()<0.18){
             const ptype=POWERUP_TYPES[Math.floor(Math.random()*POWERUP_TYPES.length)];
             powerups.push({x:br.x+br.w/2,y:br.y+br.h/2,vy:2,...ptype});
           }
           bricks.splice(j,1);
         } else {
-          SNDC('hit',60);
-          addParticles(b.x,b.y,3,'#fff');
+          AudioEngine.brickHit();
+          addParticles(b.x,b.y,4,'#fff');
         }
         updateHUD();
-        if(!b.fire)break;
+        if(!b.fire && !b.hyper)break;
+      }
+    }
+  }
+
+  // Update Hostile Void Spikes
+  for (let i = voidSpikes.length - 1; i >= 0; i--) {
+    const s = voidSpikes[i];
+    s.y += s.vy;
+    if (s.y > H) { voidSpikes.splice(i, 1); continue; }
+
+    // Check collision with paddle
+    if (s.y > paddle.y && s.y < paddle.y + PADDLE_H && s.x > paddle.x && s.x < paddle.x + paddleW) {
+      if (combatVerbs.parryActiveTimer > 0) {
+        // PARRY REFLECTION!
+        voidSpikes.splice(i, 1);
+        freezeFrames = 3;
+        fxShake(5, 12);
+        AudioEngine.parry();
+        addFloatingText(s.x, s.y - 20, "SPIKE DEFLECTED!", "#ffd27f");
+        score += 150;
+        // Launch reflected upward bolt
+        balls.push({x: s.x, y: s.y, vx: (Math.random() - 0.5) * 4, vy: -7, fire: true, stuck: false, hyper: true, pierceCount: 2});
+      } else {
+        // Player hit by spike
+        voidSpikes.splice(i, 1);
+        railHitTimer = 30;
+        fxShake(4, 10);
+        fxFlash('#ff2d55', 0.25);
+        AudioEngine.playTone(200, 0.15, 'sawtooth', 0.25, 60);
       }
     }
   }
@@ -440,56 +717,63 @@ function update(){
   for(let i=powerups.length-1;i>=0;i--){
     const p=powerups[i];
     p.y+=p.vy;
-    if(p.y>H){powerups.splice(i,1);continue}
+    if(p.y>H){powerups.splice(i,1);continue;}
     if(p.y+10>paddle.y&&p.y<paddle.y+PADDLE_H&&p.x>paddle.x&&p.x<paddle.x+paddleW){
-      // Collect
-      if(p.type==='wide'){paddleW=Math.min(200,paddleW+30)}
+      if(p.type==='wide'){paddleW=Math.min(210,paddleW+32);}
       if(p.type==='multi'){
         const nb=[];
         for(const b of balls){
           if(!b.stuck){
-            nb.push({...b,vx:b.vx+1,vy:b.vy-0.5,fire:b.fire});
-            nb.push({...b,vx:b.vx-1,vy:b.vy-0.5,fire:b.fire});
+            nb.push({...b,vx:b.vx+1.2,vy:b.vy-0.6,fire:b.fire,hyper:false,pierceCount:0,trail:[]});
+            nb.push({...b,vx:b.vx-1.2,vy:b.vy-0.6,fire:b.fire,hyper:false,pierceCount:0,trail:[]});
           }
         }
         balls.push(...nb);
       }
-      if(p.type==='life'){lives++;updateHUD()}
-      if(p.type==='fire'){for(const b of balls)b.fire=true;setTimeout(()=>{for(const b of balls)b.fire=false},5000)}
-      SND(p.type==='life'?'oneUp':'powerUp');
-      addParticles(p.x,p.y,10,p.color);
-      fxFlash(p.color,0.18); // fx only
+      if(p.type==='life'){lives++;updateHUD();}
+      if(p.type==='fire'){
+        for(const b of balls)b.fire=true;
+        setTimeout(()=>{for(const b of balls)b.fire=false},5500);
+      }
+      AudioEngine.playTone(880, 0.25, 'sine', 0.2, 1760);
+      addParticles(p.x,p.y,12,p.color);
+      fxFlash(p.color,0.18);
       powerups.splice(i,1);
     }
   }
 
   // Level clear
   if(bricks.length===0){
-    SND('gate');
-    fxFlash('#e9c86a',0.45);fxShake(3,10); // fx only
+    AudioEngine.playTone(523, 0.6, 'sine', 0.3, 1046);
+    fxFlash('#e9c86a',0.45);fxShake(4,12);
     level++;updateHUD();makeBricks();
     balls=[];paddleW=PADDLE_W_DEFAULT;spawnBall();
+    addFloatingText(W/2, H/2 - 40, `LAYER ${level} UNLOCKED`, '#e9c86a');
   }
 
   // Particles
   for(let i=particles.length-1;i>=0;i--){
     const p=particles[i];
-    p.x+=p.vx;p.y+=p.vy;p.alpha-=0.025;p.vy+=0.05;
+    p.x+=p.vx;p.y+=p.vy;p.alpha-=0.024;p.vy+=0.04;
     if(p.alpha<=0)particles.splice(i,1);
+  }
+
+  // Floating Texts
+  for(let i=floatingTexts.length-1;i>=0;i--){
+    const ft=floatingTexts[i];
+    ft.y+=ft.vy;
+    ft.life-=0.02;
+    if(ft.life<=0)floatingTexts.splice(i,1);
   }
 
   fxUpdate();
 }
 
-// ============================================================
-// PREMIUM RENDERER
-// ============================================================
+// RENDER PIPELINE
 function draw(){
   ctx.save();
-  // screen shake
   if(FX.shakeT>0&&FX.shakeM>0)ctx.translate((Math.random()-0.5)*FX.shakeM*2,(Math.random()-0.5)*FX.shakeM*2);
 
-  // layered void background + drifting starfields
   ctx.drawImage(BG,0,0);
   const off1=(FX.t*6)%H,off2=(FX.t*14)%H;
   ctx.globalAlpha=0.8;
@@ -497,7 +781,7 @@ function draw(){
   ctx.drawImage(STARS_NEAR,0,off2-H);ctx.drawImage(STARS_NEAR,0,off2);
   ctx.globalAlpha=1;
 
-  // breathing nebula accent (single cheap gradient)
+  // Breathing nebula
   ctx.save();
   ctx.globalCompositeOperation='screen';
   const nx=W/2+Math.sin(phase*0.5)*120,ny=H*0.35+Math.cos(phase*0.35)*50;
@@ -507,56 +791,87 @@ function draw(){
   ctx.fillStyle=ng;ctx.fillRect(0,0,W,H);
   ctx.restore();
 
-  // Bricks (baked beveled gem sprites)
+  // Draw Bricks
   for(const br of bricks){
-    const ci=Math.min(br.maxHp-1,4);
+    const family=SEAL_FAMILIES[br.family];
     const t=br.hp/br.maxHp;
-    ctx.globalAlpha=0.55+t*0.45;
-    ctx.drawImage(BRICK_SPRITES[ci],br.x-BRICK_PAD,br.y-BRICK_PAD);
-    ctx.globalAlpha=1;
-    // HP indicator
-    if(br.hp>1){
-      ctx.fillStyle='rgba(3,2,10,0.55)';ctx.font='bold 10px Courier New';ctx.textAlign='center';
-      ctx.fillText(br.hp,br.x+br.w/2,br.y+br.h/2+3.5);
+    const breathe=1+Math.sin(phase*1.8+br.angle*2)*0.035;
+    ctx.save();
+    ctx.translate(br.x+br.w/2,br.y+br.h/2);
+    ctx.rotate(br.angle);
+    ctx.globalAlpha=0.58+t*0.42;
+    ctx.shadowColor=family.color;ctx.shadowBlur=8+(1-t)*15;
+    if(glyphAtlas.complete&&glyphAtlas.naturalWidth){
+      ctx.drawImage(glyphAtlas,family.sx,family.sy,512,512,-br.w*breathe/2,-br.h*breathe*1.02,br.w*breathe,br.h*breathe*2.04);
+    }else{
+      ctx.fillStyle=family.color;ctx.beginPath();ctx.ellipse(0,0,br.w/2,br.h/2,0,0,Math.PI*2);ctx.fill();
     }
-    // Crack effect for damaged bricks
+    ctx.restore();
+    ctx.globalAlpha=1;
+
+    if(br.hp>1){
+      ctx.fillStyle=family.color;ctx.globalAlpha=.8;
+      for(let n=0;n<br.hp;n++){ctx.beginPath();ctx.arc(br.x+br.w/2+(n-(br.hp-1)/2)*5,br.y+br.h/2,1.3,0,Math.PI*2);ctx.fill()}
+      ctx.globalAlpha=1;
+    }
     if(br.hp<br.maxHp){
       ctx.strokeStyle=`rgba(255,255,255,${0.35*(1-t)})`;ctx.lineWidth=1;
       ctx.beginPath();ctx.moveTo(br.x+br.w*0.3,br.y);ctx.lineTo(br.x+br.w*0.5,br.y+br.h*0.6);ctx.lineTo(br.x+br.w*0.7,br.y+br.h);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(br.x+br.w*0.62,br.y+br.h*0.15);ctx.lineTo(br.x+br.w*0.45,br.y+br.h*0.5);ctx.stroke();
     }
   }
 
-  // Paddle (baked metallic sprite, stretched to width + live energy shimmer)
-  {
-    const ps=PADDLE_SPRITE,k=paddleW/ps.BW;
-    ctx.drawImage(ps.c,paddle.x-ps.PAD*k,paddle.y-ps.PAD,(ps.BW+ps.PAD*2)*k,PADDLE_H+ps.PAD*2);
-    // energy edge shimmer
+  // Draw Void Spikes
+  for (const s of voidSpikes) {
     ctx.save();
-    ctx.globalCompositeOperation='lighter';
-    const ex=paddle.x+((phase*90)%(paddleW+40))-20;
-    const eg=ctx.createLinearGradient(ex-26,0,ex+26,0);
-    eg.addColorStop(0,'rgba(127,215,255,0)');
-    eg.addColorStop(0.5,'rgba(200,240,255,0.55)');
-    eg.addColorStop(1,'rgba(127,215,255,0)');
-    ctx.fillStyle=eg;
-    ctx.fillRect(Math.max(paddle.x,ex-26),paddle.y,Math.min(52,paddle.x+paddleW-Math.max(paddle.x,ex-26)),3);
+    ctx.translate(s.x, s.y);
+    ctx.fillStyle = s.hue === 46 ? '#ffd27f' : '#d883ff';
+    ctx.shadowColor = ctx.fillStyle;
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.moveTo(0, 8);
+    ctx.lineTo(4, -8);
+    ctx.lineTo(-4, -8);
+    ctx.closePath();
+    ctx.fill();
     ctx.restore();
   }
 
-  // Balls: comet trail + baked glow orb
+  // Draw Paddle & Parry Aura
+  {
+    const state=railStateIndex(),cell=RAIL_STATES[state];
+    const rw=paddleW+58,rh=78;
+    ctx.save();
+    if (combatVerbs.parryActiveTimer > 0) {
+      ctx.shadowColor='#ffd27f';
+      ctx.shadowBlur=30;
+      ctx.strokeStyle='#ffd27f';
+      ctx.lineWidth=3;
+      ctx.strokeRect(paddle.x-4, paddle.y-4, paddleW+8, PADDLE_H+8);
+    } else {
+      ctx.shadowColor=state===2?'#ff4b55':state===1?'#8ff7ff':'#e9c86a';
+      ctx.shadowBlur=18;
+    }
+    if(glyphAtlas.complete&&glyphAtlas.naturalWidth){
+      ctx.drawImage(glyphAtlas,cell.sx,cell.sy,512,512,paddle.x-rw*.18,paddle.y-rh*.62,rw*1.36,rh);
+    }else{
+      ctx.strokeStyle='#e9c86a';ctx.lineWidth=5;ctx.beginPath();ctx.arc(paddle.x+paddleW/2,paddle.y-36,paddleW*.56,.2,Math.PI-.2);ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Draw Balls
   ctx.save();
   ctx.globalCompositeOperation='lighter';
   for(const b of balls){
     if(!b.trail)b.trail=[];
     b.trail.push({x:b.x,y:b.y});
-    if(b.trail.length>12)b.trail.shift();
-    const spr=b.fire?ORB_FIRE:ORB_CYAN;
+    if(b.trail.length>(b.hyper?20:12))b.trail.shift();
+    const spr=b.hyper?ORB_HYPER:(b.fire?ORB_FIRE:ORB_CYAN);
     if(!b.stuck){
       for(let t=0;t<b.trail.length;t++){
         const tp=b.trail[t],ta=(t/b.trail.length);
-        const d=ORB_S*(0.25+ta*0.55);
-        ctx.globalAlpha=ta*0.28;
+        const d=ORB_S*(0.25+ta*(b.hyper?0.85:0.55));
+        ctx.globalAlpha=ta*(b.hyper?0.5:0.28);
         ctx.drawImage(spr,tp.x-d/2,tp.y-d/2,d,d);
       }
     }
@@ -565,7 +880,7 @@ function draw(){
   }
   ctx.restore();
 
-  // Powerups (baked gem sprites, spinning)
+  // Draw Powerups
   for(const p of powerups){
     const spr=POWERUP_SPRITES[p.type];
     ctx.save();
@@ -576,7 +891,7 @@ function draw(){
     ctx.restore();
   }
 
-  // Particles (additive pass, baked spark sprites)
+  // Draw Particles
   ctx.save();
   ctx.globalCompositeOperation='lighter';
   for(const p of particles){
@@ -586,11 +901,55 @@ function draw(){
     ctx.drawImage(spr,p.x-d/2,p.y-d/2,d,d);
   }
   ctx.restore();
-  ctx.globalAlpha=1;
+
+  // Floating Texts
+  ctx.save();
+  ctx.textAlign='center';
+  ctx.font='bold 13px Courier New';
+  for(const ft of floatingTexts){
+    ctx.fillStyle=ft.color;
+    ctx.globalAlpha=Math.max(0,ft.life);
+    ctx.fillText(ft.text,ft.x,ft.y);
+  }
+  ctx.restore();
+
+  // Ability Chips at bottom of screen
+  {
+    const y = H - 24;
+    const chips = [
+      {key: "SHIFT", name: "PARRY DASH", cd: combatVerbs.parryCooldown, maxCd: combatVerbs.parryCooldownMax, col: "#ffd27f"},
+      {key: "Z", name: "SINGULARITY", cd: combatVerbs.catchCooldown, maxCd: combatVerbs.catchCooldownMax, col: "#7fd7ff"},
+      {key: "Q", name: "HARMONIC EMP", cd: combatVerbs.empCooldown, maxCd: combatVerbs.empCooldownMax, col: "#ec4899"}
+    ];
+    let x = 20;
+    ctx.save();
+    ctx.font = "bold 9px Courier New";
+    for(const c of chips){
+      const ready = c.cd <= 0;
+      ctx.fillStyle = ready ? "rgba(10,12,28,0.85)" : "rgba(6,6,12,0.6)";
+      ctx.strokeStyle = ready ? c.col : "rgba(255,255,255,0.15)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      if(ctx.roundRect) ctx.roundRect(x, y-14, 140, 20, 4);
+      else ctx.rect(x, y-14, 140, 20);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = ready ? c.col : "rgba(255,255,255,0.4)";
+      ctx.textAlign = "left";
+      ctx.fillText(`[${c.key}] ${c.name}`, x+6, y);
+      if(!ready){
+        const pct = (1 - c.cd / c.maxCd);
+        ctx.fillStyle = c.col;
+        ctx.fillRect(x+108, y-8, 24 * pct, 6);
+      }
+      x += 148;
+    }
+    ctx.restore();
+  }
 
   ctx.restore(); // end shake
 
-  // flash overlay (level up / hit / game over)
   if(FX.flashA>0){
     ctx.globalAlpha=FX.flashA;
     ctx.fillStyle=FX.flashC;
@@ -598,12 +957,10 @@ function draw(){
     ctx.globalAlpha=1;
   }
 
-  // CRT finish: vignette + scanlines
   ctx.drawImage(CRT,0,0);
 
   if(gameOver){
     ctx.fillStyle='rgba(4,2,10,0.78)';ctx.fillRect(0,0,W,H);
-    // glass panel
     ctx.fillStyle='rgba(10,8,26,0.72)';
     ctx.strokeStyle='rgba(255,45,85,0.5)';
     ctx.lineWidth=1;
@@ -613,13 +970,13 @@ function draw(){
     ctx.textAlign='center';
     ctx.fillStyle='#ff2d55';ctx.font='bold 36px Courier New';
     ctx.shadowColor='#ff2d55';ctx.shadowBlur=24;
-    ctx.fillText('THE WALL STANDS',W/2,H/2-30);
+    ctx.fillText('THE SEAL REMAINS',W/2,H/2-30);
     ctx.fillStyle='#7fd7ff';ctx.font='20px Courier New';ctx.shadowColor='#7fd7ff';ctx.shadowBlur=14;
-    ctx.fillText(`SCORE ${score}  ·  LEVEL ${level}`,W/2,H/2+10);
+    ctx.fillText(`RESONANCE ${score}  ·  LAYER ${level}`,W/2,H/2+10);
     ctx.shadowBlur=0;
     const pa=0.45+Math.sin(phase*4)*0.3;
     ctx.fillStyle=`rgba(233,200,106,${pa})`;ctx.font='15px Courier New';
-    ctx.fillText('P R E S S   S P A C E   T O   R E B U I L D',W/2,H/2+58);
+    ctx.fillText('R E T U R N   T O   T H E   C H O R D',W/2,H/2+58);
   } else if(!launched){
     const pa=0.5+Math.sin(phase*4)*0.35;
     ctx.save();
@@ -627,34 +984,45 @@ function draw(){
     ctx.fillStyle=`rgba(127,215,255,${pa})`;
     ctx.shadowColor='#7fd7ff';ctx.shadowBlur=12;
     ctx.font='15px Courier New';
-    ctx.fillText('P R E S S   S P A C E   T O   L A U N C H',W/2,H-84);
+    ctx.fillText('S T R I K E   T H E   F I R S T   T O N E',W/2,H-84);
     ctx.restore();
   }
 }
 
-function loop(){update();draw();requestAnimationFrame(loop)}
+function loop(){update();draw();requestAnimationFrame(loop);}
 init();
-if(new URLSearchParams(location.search).has('playtest')){
-  score=3880;lives=4;level=5;launched=true;gameOver=false;phase=3.4;
-  paddle.x=W/2-92;paddleW=184;
-  balls=[
-    {x:W*0.48,y:H*0.58,vx:4.8,vy:-5.6,fire:true,stuck:false},
-    {x:W*0.56,y:H*0.44,vx:-3.8,vy:-4.4,fire:false,stuck:false},
-    {x:W*0.37,y:H*0.36,vx:3.2,vy:-3.9,fire:false,stuck:false}
-  ];
-  powerups=[
-    {x:W*0.31,y:H*0.62,vy:1.1,...POWERUP_TYPES[0]},
-    {x:W*0.66,y:H*0.52,vy:1.25,...POWERUP_TYPES[1]},
-    {x:W*0.78,y:H*0.68,vy:1.0,...POWERUP_TYPES[3]}
-  ];
-  bricks.forEach((br,i)=>{ if(i%4===0)br.hp=Math.max(1,br.hp-2); if(i%7===0)br.hp=1; });
-  for(let i=0;i<56;i++){
-    const x=W*0.5+Math.cos(i*0.31)*260*Math.random();
-    const y=H*0.42+Math.sin(i*0.47)*160*Math.random();
-    addParticles(x,y,1,['#7fd7ff','#ec4899','#e9c86a','#5eead4'][i%4]);
-  }
-  updateHUD();
+
+function glyphbreakerPayload(){
+  const state=railStateIndex();
+  return {
+    title:'Glyphbreaker - Apex AI Edition',
+    atlas:GLYPH_ATLAS,atlasReady:!!(glyphAtlas.complete&&glyphAtlas.naturalWidth),
+    railState:state,railStateName:RAIL_STATES[state].name,railX:Math.round(paddle.x),railWidth:Math.round(paddleW),
+    sealFamilies:[...new Set(bricks.map(br=>SEAL_FAMILIES[br.family].name))],
+    sealFamilyCounts:SEAL_FAMILIES.map((f,i)=>({name:f.name,count:bricks.filter(br=>br.family===i).length})),
+    ballCount:balls.length,launched,brickCount:bricks.length,score,lives,level,gameOver,
+    directorState:sealDirector.state,
+    tension:sealDirector.tension,
+    aiLatencyUs:sealDirector.aiLatencyUs,
+    comboMultiplier:(1 + combatVerbs.comboCount * 0.25).toFixed(1),
+    parryReady:combatVerbs.parryCooldown<=0,
+    singularityReady:combatVerbs.catchCooldown<=0,
+    empReady:combatVerbs.empCooldown<=0
+  };
 }
+window.glyphbreakerPayload=glyphbreakerPayload;
+window.__glyphbreakerDebug={
+  payload:glyphbreakerPayload,
+  enterPlay(){launch();return glyphbreakerPayload();},
+  triggerParry(){triggerParry();return glyphbreakerPayload();},
+  triggerSingularity(){triggerSingularityCatch();return glyphbreakerPayload();},
+  triggerEMP(){triggerHarmonicEMP();return glyphbreakerPayload();},
+  setRailState(state){railStateOverride=Math.max(0,Math.min(2,Number(state)));return glyphbreakerPayload();},
+  clearRailState(){railStateOverride=null;return glyphbreakerPayload();},
+  setSealFamilies(){bricks.forEach((br,i)=>br.family=i%3);return glyphbreakerPayload();},
+  launchTone(){launch();return glyphbreakerPayload();},
+  fractureOne(){if(bricks.length){const br=bricks[0];br.hp=Math.max(0,br.hp-1);if(!br.hp)bricks.shift();}return glyphbreakerPayload();},
+};
 loop();
 </script>
 </body>

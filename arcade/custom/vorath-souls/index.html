@@ -176,7 +176,6 @@
     }
   }
 </style>
-<link rel="stylesheet" href="/static/art/games/idg_wave61_69/vorath_campaign.css">
 </head>
 <body>
 <canvas id="game" aria-label="Vorath Souls canvas game"></canvas>
@@ -193,8 +192,7 @@
       WASD/Arrows move<br>
       Mouse or movement aims<br>
       LMB/J light, RMB/K heavy<br>
-      Space dodge, Shift/L parry, Q Bone Avatar (100% Rage)<br>
-      E finisher/interact, Esc pause, R restart
+      Space dodge, Shift/L parry, E finisher/interact, Esc pause, R restart
     </div>
   </div>
 </div>
@@ -406,7 +404,6 @@
       combo: 0,
       comboT: 0,
       finisherT: 0,
-      rageMode: 0,
       dead: false
     };
   }
@@ -508,26 +505,18 @@
     const p = game.player;
     if (p.attackCooldown > 0 || p.dodge > 0 || p.finisherT > 0) return;
     const heavy = kind === "heavy";
-    const isComboFinisher = !heavy && p.combo === 2;
-    const cost = (heavy ? 28 : 12) * (p.rageMode > 0 ? 0.5 : 1);
+    const cost = heavy ? 28 : 12;
     if (p.stamina < cost) {
       flashMessage("Stamina spent");
       return;
     }
     p.stamina -= cost;
-    p.attackCooldown = heavy ? 0.58 : (isComboFinisher ? 0.38 : 0.28);
+    p.attackCooldown = heavy ? 0.58 : 0.28;
     p.combo = heavy ? 0 : (p.combo % 3) + 1;
-    p.comboT = 0.85;
+    p.comboT = 0.8;
     const d = aimDirection();
-    const range = heavy ? 94 : (p.combo === 3 ? 84 : 66);
-    const radius = heavy ? 58 : (p.combo === 3 ? 54 : 42);
-    let baseDmg = heavy ? 38 : (p.combo === 3 ? 34 : 18 + p.combo * 2);
-    if (p.rageMode > 0) baseDmg *= 1.65;
-    let baseStun = heavy ? 36 : (p.combo === 3 ? 30 : 14);
-    if (p.combo === 3) {
-      flashMessage("Guillotine Cleave!", 0.8);
-      game.shake = 0.16;
-    }
+    const range = heavy ? 94 : 66;
+    const radius = heavy ? 58 : 42;
     game.attacks.push({
       id: cryptoRandom(),
       owner: "player",
@@ -537,11 +526,11 @@
       r: radius,
       t: heavy ? 0.18 : 0.11,
       maxT: heavy ? 0.18 : 0.11,
-      damage: Math.round(baseDmg),
-      stun: baseStun,
+      damage: heavy ? 34 : 18 + p.combo * 2,
+      stun: heavy ? 34 : 14,
       hit: new Set()
     });
-    addParticle(p.x + d.x * 42, p.y + d.y * 42, heavy ? "#f59e0b" : (p.combo === 3 ? "#ffd700" : "#d9caa3"), heavy ? 16 : (p.combo === 3 ? 18 : 8), heavy ? 240 : 160);
+    addParticle(p.x + d.x * 42, p.y + d.y * 42, heavy ? "#f59e0b" : "#d9caa3", heavy ? 16 : 8, heavy ? 240 : 150);
   }
 
   function cryptoRandom() {
@@ -649,18 +638,6 @@
     if (pressed.has("KeyJ") || mouse.down) makeAttack("light");
     if (pressed.has("KeyK") || mouse.right) makeAttack("heavy");
 
-    if (pressed.has("KeyQ") && p.rage >= 90 && p.rageMode <= 0) {
-      p.rage = 0;
-      p.rageMode = 6.0;
-      flashMessage("BONE AVATAR UNLEASHED!", 1.8);
-      game.shake = 0.25;
-      addParticle(p.x, p.y, "#ffd700", 35, 300);
-    }
-    if (p.rageMode > 0) {
-      p.rageMode = Math.max(0, p.rageMode - dt);
-      if (Math.random() < 0.25) addParticle(p.x, p.y, "#ffd700", 2, 70);
-    }
-
     if (pressed.has("KeyE")) {
       const stunned = game.enemies.find(e => !e.dead && e.stun >= e.maxStun && dist(p, e) < 92);
       if (!doFinisher(stunned) && game.gateOpen && dist(p, { x: 1080, y: 360 }) < 120) {
@@ -668,7 +645,7 @@
       }
     }
 
-    const speed = (p.dodge > 0 ? 440 : 210) * (p.rageMode > 0 ? 1.35 : 1);
+    const speed = p.dodge > 0 ? 440 : 210;
     if (p.finisherT <= 0) {
       p.x += m.x * speed * dt;
       p.y += m.y * speed * dt;
@@ -679,7 +656,6 @@
 
   function updateEnemies(dt) {
     const p = game.player;
-    const livingThralls = game.enemies.filter(o => !o.dead && o.type === "thrall");
     for (const e of game.enemies) {
       if (e.dead) continue;
       e.stateT = Math.max(0, e.stateT - dt);
@@ -687,17 +663,9 @@
       e.hitFlash = Math.max(0, e.hitFlash - dt);
       e.stun = Math.max(0, e.stun - dt * (e.type === "guard" ? 7 : 14));
 
-      // Maw Guard Phase 2 check
-      if (e.type === "guard" && e.hp <= e.maxHp * 0.5 && !e.enraged) {
-        e.enraged = true;
-        flashMessage("MAW GUARD: BONE TYRANT OVERDRIVE", 2.0);
-        game.shake = 0.3;
-        addParticle(e.x, e.y, "#ef4444", 45, 340);
-      }
-
       if (e.stun >= e.maxStun) {
         e.state = "stunned";
-        e.stateT = Math.max(e.stateT, 0.35);
+        e.stateT = Math.max(e.stateT, 0.25);
         continue;
       }
 
@@ -706,7 +674,7 @@
       if (e.state === "windup") {
         if (e.stateT <= 0) {
           e.state = "strike";
-          e.stateT = e.type === "guard" ? (e.enraged ? 0.12 : 0.16) : 0.11;
+          e.stateT = e.type === "guard" ? 0.16 : 0.11;
           enemyStrike(e);
         }
         continue;
@@ -714,7 +682,7 @@
       if (e.state === "strike") {
         if (e.stateT <= 0) {
           e.state = "recover";
-          e.stateT = e.type === "guard" ? (e.enraged ? 0.35 : 0.55) : 0.28;
+          e.stateT = e.type === "guard" ? 0.55 : 0.28;
         }
         continue;
       }
@@ -723,29 +691,15 @@
         continue;
       }
 
-      const range = e.type === "guard" ? (e.enraged ? 88 : 78) : 48;
+      const range = e.type === "guard" ? 78 : 48;
       if (d < range && e.cooldown <= 0) {
         e.state = "windup";
-        e.stateT = e.type === "guard" ? (e.enraged ? 0.36 : 0.54) : 0.32;
-        e.windupKind = e.type === "guard" && Math.random() > 0.4 ? "slam" : "swipe";
-        e.cooldown = e.type === "guard" ? (e.enraged ? 0.95 : 1.45) : 0.92;
+        e.stateT = e.type === "guard" ? 0.54 : 0.32;
+        e.windupKind = e.type === "guard" && Math.random() > 0.5 ? "slam" : "swipe";
+        e.cooldown = e.type === "guard" ? 1.45 : 0.92;
       } else if (d > range * 0.82) {
-        let headingX = toP.x, headingY = toP.y;
-        if (e.type === "thrall" && livingThralls.length > 1) {
-          const tIdx = livingThralls.indexOf(e);
-          const arcOffset = (tIdx - (livingThralls.length - 1) / 2) * 0.95;
-          const curAng = Math.atan2(toP.y, toP.x);
-          headingX = Math.cos(curAng + arcOffset);
-          headingY = Math.sin(curAng + arcOffset);
-        }
-        // Tactical backstep if player attacks nearby
-        if (p.attackCooldown > 0.12 && d < 85 && Math.random() < 0.4) {
-          headingX = -toP.x * 1.5;
-          headingY = -toP.y * 1.5;
-        }
-        const curSpd = (e.type === "guard" && e.enraged ? e.speed * 1.35 : e.speed);
-        e.x += headingX * curSpd * dt;
-        e.y += headingY * curSpd * dt;
+        e.x += toP.x * e.speed * dt;
+        e.y += toP.y * e.speed * dt;
       }
     }
     game.enemies = game.enemies.filter(e => !e.dead || e.hitFlash > 0);
@@ -753,26 +707,25 @@
 
   function enemyStrike(e) {
     const p = game.player;
-    const range = e.type === "guard" ? (e.windupKind === "slam" ? 96 : 82) : 54;
+    const range = e.type === "guard" ? (e.windupKind === "slam" ? 92 : 82) : 54;
     if (dist(e, p) > range) return;
     if (p.parry > 0) {
-      e.stun = e.maxStun;
+      e.stun = clamp(e.stun + (e.type === "guard" ? 34 : 50), 0, e.maxStun);
       e.state = "recover";
-      e.stateT = 0.85;
-      p.rage = clamp(p.rage + 35, 0, 100);
-      p.stamina = clamp(p.stamina + 25, 0, 100);
-      game.hitStop = 0.10;
-      game.shake = 0.25;
-      addParticle(p.x, p.y, "#ffd700", 30, 320);
-      addParticle(p.x, p.y, "#22d3ee", 22, 260);
-      flashMessage("CRITICAL RIPOSTE! Press E for Finisher");
+      e.stateT = 0.55;
+      p.rage = clamp(p.rage + 18, 0, 100);
+      p.stamina = clamp(p.stamina + 12, 0, 100);
+      game.hitStop = 0.06;
+      game.shake = 0.18;
+      addParticle(p.x, p.y, "#22d3ee", 24, 280);
+      flashMessage("Parry");
       return;
     }
     if (p.invuln > 0) return;
-    p.hp -= e.type === "guard" ? (e.enraged ? 28 : 22) : 11;
+    p.hp -= e.type === "guard" ? 22 : 11;
     p.invuln = 0.36;
-    game.shake = 0.22;
-    addParticle(p.x, p.y, "#ef4444", 20, 240);
+    game.shake = 0.2;
+    addParticle(p.x, p.y, "#ef4444", 18, 220);
     if (p.hp <= 0) death();
   }
 
@@ -1418,22 +1371,5 @@
   requestAnimationFrame(frame);
 })();
 </script>
-<script src="/static/art/games/idg_wave61_69/vorath_campaign.js">
-// --- Suno IDG cue soft bed (optional; falls back to existing synth) ---
-(function(){
-  var __sunoBed = null;
-  function startSunoBed(){
-    try {
-      if (__sunoBed) { if (__sunoBed.paused) __sunoBed.play().catch(function(){}); return; }
-      var a = new Audio('audio/idg_cues/souls_bed.mp3');
-      a.loop = true; a.volume = 0.4;
-      a.play().then(function(){ __sunoBed = a; window.__sunoSoulsBed = a; }).catch(function(){});
-    } catch(e) {}
-  }
-  window.addEventListener('pointerdown', startSunoBed, { once: false });
-  window.addEventListener('keydown', startSunoBed, { once: false });
-})();
-</script>
 </body>
 </html>
-

@@ -1,1567 +1,1527 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>VORATH Ghostline // Three-Frequency Pursuit</title>
-  <style>
-    :root {
-      --bg: #08090d;
-      --panel: #11151d;
-      --panel-2: #171b24;
-      --line: #2b3442;
-      --gold: #e0b65a;
-      --cyan: #65d7ef;
-      --red: #e65d6b;
-      --green: #6de0a4;
-      --text: #f3efe6;
-      --muted: #9ea7b7;
-      --cell: clamp(42px, 11vw, 78px);
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      font-family: "Segoe UI", system-ui, sans-serif;
-      background:
-        linear-gradient(180deg, rgba(8, 9, 13, 0.88), rgba(8, 9, 13, 0.98)),
-        radial-gradient(circle at 50% 0%, rgba(101, 215, 239, 0.16), transparent 42%),
-        #08090d;
-      color: var(--text);
-      letter-spacing: 0;
-    }
-
-    body::before,
-    body::after {
-      content: "";
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    body::before {
-      background:
-        repeating-linear-gradient(0deg, rgba(101, 215, 239, 0.045) 0 1px, transparent 1px 5px),
-        repeating-linear-gradient(90deg, rgba(224, 182, 90, 0.028) 0 1px, transparent 1px 37px),
-        radial-gradient(circle at 72% 14%, rgba(101, 215, 239, 0.14), transparent 24%);
-      mix-blend-mode: screen;
-      opacity: 0.72;
-    }
-
-    body::after {
-      background:
-        radial-gradient(ellipse at 50% 50%, transparent 0 46%, rgba(0, 0, 0, 0.52) 100%),
-        linear-gradient(110deg, transparent 0 38%, rgba(255,255,255,0.04) 39%, transparent 44% 100%);
-      opacity: 0.86;
-    }
-
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Precinct 404 - Dispatch Queue</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #071013;
+    --panel: #10191d;
+    --panel-2: #172226;
+    --line: #2b3b41;
+    --text: #edf2f4;
+    --muted: #9fb2b9;
+    --blue: #3b82f6;
+    --teal: #14b8a6;
+    --amber: #f59e0b;
+    --red: #ef4444;
+    --green: #22c55e;
+    --pink: #ec4899;
+    --purple: #a855f7;
+    --gold: #f5c542;
+  }
+  @keyframes sweep {
+    0% { transform: translateX(-140%) skewX(-18deg); opacity: 0; }
+    25% { opacity: 0.55; }
+    55% { opacity: 0; }
+    100% { transform: translateX(140%) skewX(-18deg); opacity: 0; }
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    min-height: 100%;
+    background: #03050a;
+    color: var(--text);
+    font-family: "Segoe UI", Arial, sans-serif;
+  }
+  body {
+    overflow: hidden;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+      repeating-linear-gradient(115deg, rgba(34,211,238,0.11) 0 1px, transparent 1px 42px),
+      repeating-linear-gradient(64deg, rgba(236,72,153,0.11) 0 1px, transparent 1px 48px),
+      linear-gradient(90deg, transparent, rgba(245,197,66,0.07), transparent);
+    mix-blend-mode: screen;
+    opacity: 0.8;
+    z-index: 3;
+  }
+  button {
+    font: inherit;
+  }
+  .app {
+    height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    background:
+      linear-gradient(90deg, rgba(34,211,238,0.14) 1px, transparent 1px),
+      linear-gradient(rgba(236,72,153,0.09) 1px, transparent 1px),
+      linear-gradient(135deg, #03050a, #101021 48%, #080011 74%, #03050a);
+    background-size: 42px 42px;
+  }
+  header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    align-items: center;
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(34, 211, 238, 0.36);
+    background: linear-gradient(90deg, rgba(7,16,28,0.94), rgba(25,5,35,0.92), rgba(7,16,28,0.94));
+    box-shadow: 0 0 28px rgba(34,211,238,0.22), 0 0 46px rgba(236,72,153,0.16);
+  }
+  h1 {
+    margin: 0;
+    font-size: clamp(1.2rem, 2.2vw, 2rem);
+    letter-spacing: 0;
+    color: #fff;
+    text-shadow: 0 0 8px rgba(255,255,255,0.45), 0 0 22px rgba(34,211,238,0.72), 0 0 34px rgba(236,72,153,0.54);
+  }
+  .subline {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+  .header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .btn {
+    border: 1px solid rgba(34,211,238,0.34);
+    background: linear-gradient(135deg, rgba(34,211,238,0.15), rgba(236,72,153,0.12), rgba(245,197,66,0.1));
+    color: var(--text);
+    border-radius: 8px;
+    padding: 9px 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, transform 0.15s;
+  }
+  .btn:hover {
+    border-color: var(--pink);
+    background: linear-gradient(90deg, rgba(34,211,238,0.28), rgba(236,72,153,0.3), rgba(245,197,66,0.22));
+    box-shadow: 0 0 18px rgba(236,72,153,0.42), 0 0 28px rgba(34,211,238,0.3);
+  }
+  .btn:active {
+    transform: translateY(1px);
+  }
+  .btn.primary {
+    background: linear-gradient(90deg, #22d3ee, #a855f7, #ec4899, #f5c542);
+    border-color: rgba(255,255,255,0.45);
+    color: white;
+    font-weight: 700;
+    text-shadow: 0 0 10px rgba(0,0,0,0.7);
+    box-shadow: 0 0 18px rgba(236,72,153,0.35);
+  }
+  .btn.primary:disabled,
+  .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+  }
+  main {
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 270px minmax(360px, 1fr) 370px;
+    gap: 14px;
+    padding: 14px;
+  }
+  .panel {
+    min-height: 0;
+    position: relative;
+    background: linear-gradient(180deg, rgba(14,18,30,0.94), rgba(6,9,16,0.96)) padding-box,
+      conic-gradient(from 120deg, #22d3ee, #a855f7, #ec4899, #f5c542, #22d3ee) border-box;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 0 22px rgba(34,211,238,0.16), 0 0 34px rgba(236,72,153,0.13);
+  }
+  .panel::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+    transform: translateX(-140%) skewX(-18deg);
+    animation: sweep 6s ease-in-out infinite;
+    pointer-events: none;
+  }
+  .panel-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.11);
+    background: linear-gradient(90deg, rgba(34,211,238,0.12), rgba(236,72,153,0.12));
+  }
+  .panel-title {
+    font-weight: 800;
+    color: var(--text);
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    border: 1px solid rgba(34,211,238,0.28);
+    border-radius: 999px;
+    padding: 2px 9px;
+    color: var(--muted);
+    font-size: 0.76rem;
+    background: rgba(5,8,16,0.78);
+    box-shadow: 0 0 12px rgba(34,211,238,0.16);
+  }
+  .metrics {
+    padding: 12px;
+    display: grid;
+    gap: 14px;
+  }
+  .metric-label {
+    display: flex;
+    justify-content: space-between;
+    color: var(--muted);
+    font-size: 0.82rem;
+    margin-bottom: 7px;
+  }
+  .meter {
+    height: 12px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: #071013;
+    overflow: hidden;
+  }
+  .fill {
+    height: 100%;
+    width: 50%;
+    transition: width 0.25s;
+  }
+  .trust { background: linear-gradient(90deg, #1d4ed8, #22d3ee, #a855f7); box-shadow: 0 0 12px rgba(34,211,238,0.62); }
+  .chaos { background: linear-gradient(90deg, #7f1d1d, #ec4899, #f97316); box-shadow: 0 0 12px rgba(236,72,153,0.62); }
+  .budget { background: linear-gradient(90deg, #854d0e, #f5c542, #10b981); box-shadow: 0 0 12px rgba(245,197,66,0.58); }
+  .shift-list {
+    border-top: 1px solid var(--line);
+    padding: 12px;
+  }
+  .shift-row {
+    display: flex;
+    justify-content: space-between;
+    color: var(--muted);
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(43, 59, 65, 0.45);
+    font-size: 0.86rem;
+  }
+  .memory-board {
+    border-top: 1px solid rgba(34,211,238,0.24);
+    padding: 12px;
+    display: grid;
+    gap: 10px;
+    max-height: 42vh;
+    overflow: auto;
+  }
+  .memory-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    color: var(--gold);
+    font-size: 0.75rem;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+  .memory-card {
+    border: 1px solid rgba(255,255,255,0.11);
+    border-radius: 8px;
+    padding: 10px;
+    background: linear-gradient(135deg, rgba(34,211,238,0.08), rgba(236,72,153,0.08), rgba(245,197,66,0.05));
+  }
+  .memory-title {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+    color: #fff;
+    font-weight: 900;
+  }
+  .memory-title span {
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+  .memory-line {
+    color: #cfdae0;
+    font-size: 0.78rem;
+    line-height: 1.45;
+  }
+  .heat-bar {
+    height: 7px;
+    margin-top: 8px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.1);
+    overflow: hidden;
+  }
+  .heat-bar span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, #22d3ee, #ec4899, #f5c542);
+    box-shadow: 0 0 12px rgba(236,72,153,0.5);
+  }
+  .case-panel {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+  }
+  .case-body {
+    padding: 18px;
+    min-height: 0;
+    display: grid;
+    align-content: start;
+    gap: 16px;
+  }
+  .case-type {
+    color: var(--teal);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    font-weight: 800;
+  }
+  .case-title {
+    margin: 0;
+    font-size: clamp(1.6rem, 4vw, 3.2rem);
+    line-height: 1;
+    letter-spacing: 0;
+    color: #fff;
+    text-shadow: 0 0 12px rgba(255,255,255,0.32), 0 0 28px rgba(236,72,153,0.44);
+  }
+  .case-copy {
+    color: #d6e2e6;
+    line-height: 1.55;
+    max-width: 760px;
+  }
+  .memory-note {
+    border-left: 3px solid var(--pink);
+    background: linear-gradient(90deg, rgba(236,72,153,0.13), rgba(34,211,238,0.07));
+    padding: 10px 12px;
+    color: #f0e8ff;
+    font-size: 0.9rem;
+    line-height: 1.45;
+    box-shadow: inset 0 0 18px rgba(236,72,153,0.08);
+  }
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .tag {
+    border: 1px solid rgba(34,211,238,0.24);
+    background: linear-gradient(90deg, rgba(34,211,238,0.1), rgba(236,72,153,0.08));
+    color: var(--muted);
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-size: 0.78rem;
+  }
+  .forecast {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .forecast-item {
+    background: linear-gradient(135deg, rgba(34,211,238,0.08), rgba(236,72,153,0.08), rgba(245,197,66,0.06));
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: 11px;
+  }
+  .forecast-item b {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 5px;
+  }
+  .forecast-item span {
+    font-size: 1.18rem;
+    font-weight: 800;
+  }
+  .director {
+    display: grid;
+    gap: 10px;
+    border: 1px solid rgba(34,211,238,0.22);
+    border-radius: 8px;
+    padding: 12px;
+    background: linear-gradient(135deg, rgba(34,211,238,0.09), rgba(236,72,153,0.08), rgba(245,197,66,0.06));
+    box-shadow: inset 0 0 26px rgba(34,211,238,0.08), 0 0 18px rgba(236,72,153,0.12);
+  }
+  .director-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    color: var(--gold);
+    font-size: 0.76rem;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+  .director-copy {
+    color: #d6e2e6;
+    font-size: 0.88rem;
+    line-height: 1.5;
+  }
+  .director-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .director-stat {
+    min-height: 58px;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 7px;
+    padding: 8px;
+    background: rgba(3,5,10,0.48);
+  }
+  .director-stat b {
+    display: block;
+    color: var(--muted);
+    font-size: 0.68rem;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+  .director-stat span {
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 800;
+  }
+  .case-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 14px 18px;
+    border-top: 1px solid var(--line);
+    background: rgba(11, 20, 24, 0.84);
+  }
+  .officers {
+    min-height: 0;
+    overflow: auto;
+    padding: 12px;
+    display: grid;
+    gap: 10px;
+  }
+  .officer {
+    width: 100%;
+    text-align: left;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: linear-gradient(135deg, rgba(9,13,24,0.96), rgba(20,8,30,0.95));
+    color: var(--text);
+    border-radius: 8px;
+    padding: 12px;
+    cursor: pointer;
+  }
+  .officer:hover {
+    border-color: var(--pink);
+    box-shadow: 0 0 16px rgba(236,72,153,0.34), 0 0 24px rgba(34,211,238,0.2);
+  }
+  .officer.selected {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px rgba(245,197,66,0.2) inset, 0 0 22px rgba(245,197,66,0.36), 0 0 34px rgba(236,72,153,0.22);
+  }
+  .officer.busy {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .officer-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: start;
+    margin-bottom: 6px;
+  }
+  .officer-name {
+    font-weight: 900;
+  }
+  .officer-role {
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+  .bars {
+    display: grid;
+    gap: 5px;
+    margin-top: 10px;
+  }
+  .mini {
+    display: grid;
+    grid-template-columns: 74px 1fr;
+    gap: 7px;
+    align-items: center;
+    color: var(--muted);
+    font-size: 0.75rem;
+  }
+  .mini-bar {
+    height: 6px;
+    background: #061014;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .mini-bar span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, #22d3ee, #ec4899, #f5c542);
+    box-shadow: 0 0 10px rgba(34,211,238,0.42);
+  }
+  .log {
+    height: 128px;
+    border-top: 1px solid var(--line);
+    background: linear-gradient(90deg, rgba(4,7,12,0.96), rgba(19,4,28,0.94));
+    box-shadow: inset 0 1px 0 rgba(34,211,238,0.2);
+    padding: 10px 14px;
+    overflow: auto;
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+  .log-entry {
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(43, 59, 65, 0.35);
+  }
+  .delta-good { color: var(--green); }
+  .delta-bad { color: var(--red); }
+  .modal-wrap {
+    position: fixed;
+    inset: 0;
+    display: none;
+    place-items: center;
+    background: rgba(0, 0, 0, 0.62);
+    padding: 18px;
+  }
+  .modal-wrap.active { display: grid; }
+  .modal {
+    max-width: 680px;
+    background: linear-gradient(180deg, rgba(13,17,29,0.98), rgba(8,4,18,0.98));
+    border: 1px solid rgba(236,72,153,0.36);
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 28px 80px rgba(0,0,0,0.5), 0 0 36px rgba(236,72,153,0.32), 0 0 52px rgba(34,211,238,0.18);
+  }
+  .modal h2 {
+    margin: 0 0 10px;
+    font-size: clamp(1.7rem, 4vw, 3rem);
+  }
+  .modal p {
+    color: #d6e2e6;
+    line-height: 1.55;
+  }
+  footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 9px 14px;
+    color: var(--muted);
+    border-top: 1px solid rgba(34,211,238,0.3);
+    background: linear-gradient(90deg, rgba(7,16,19,0.94), rgba(25,5,35,0.88), rgba(7,16,19,0.94));
+    font-size: 0.78rem;
+  }
+  @media (max-width: 980px) {
+    body { overflow: auto; }
+    .app { height: auto; min-height: 100vh; }
     main {
-      position: relative;
-      isolation: isolate;
-      z-index: 1;
-      width: min(1180px, 100%);
-      min-height: 100vh;
-      margin: 0 auto;
-      padding: 18px;
-      display: grid;
-      grid-template-rows: auto 1fr auto;
-      gap: 14px;
+      grid-template-columns: 1fr;
     }
-
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      border-bottom: 1px solid var(--line);
-      padding-bottom: 12px;
+    .forecast {
+      grid-template-columns: 1fr;
     }
-
-    h1 {
-      margin: 0;
-      font-size: clamp(24px, 5vw, 44px);
-      font-weight: 800;
-      line-height: 1;
-    }
-
-    .badge {
-      color: var(--cyan);
-      border: 1px solid rgba(101, 215, 239, 0.55);
-      padding: 7px 10px;
-      font-size: 12px;
-      text-transform: uppercase;
-      white-space: nowrap;
-    }
-
-    .game {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
-      gap: 16px;
-      align-items: start;
-    }
-
-    .stage, .side, .footer {
-      position: relative;
-      overflow: hidden;
-      border: 1px solid var(--line);
-      background: rgba(17, 21, 29, 0.92);
-      box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
-    }
-
-    .stage::before,
-    .side::before,
-    .footer::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      background:
-        linear-gradient(125deg, rgba(255,255,255,0.07), transparent 26%, transparent 70%, rgba(101,215,239,0.06)),
-        repeating-linear-gradient(0deg, rgba(101,215,239,0.05) 0 1px, transparent 1px 11px),
-        radial-gradient(circle at 84% 20%, rgba(230,93,107,0.12), transparent 24%);
-      mix-blend-mode: screen;
-      opacity: 0.64;
-    }
-
-    .stage {
-      padding: 16px;
-      min-width: 0;
-    }
-
-    .board-wrap {
-      position: relative;
-      overflow: hidden;
-      display: grid;
-      place-items: center;
-      min-height: min(72vh, 640px);
-      border: 1px solid rgba(101, 215, 239, 0.14);
-      background:
-        linear-gradient(rgba(101, 215, 239, 0.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(101, 215, 239, 0.04) 1px, transparent 1px),
-        radial-gradient(circle at 50% 50%, rgba(224, 182, 90, 0.08), rgba(8, 9, 13, 0.3) 60%);
-      background-size: 26px 26px, 26px 26px, 100% 100%;
-      padding: 14px;
-      transition: border-color 160ms ease, box-shadow 160ms ease, filter 160ms ease;
-    }
-
-    .board-wrap::before,
-    .board-wrap::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    .board-wrap::before {
-      background:
-        radial-gradient(circle at 50% 50%, rgba(224, 182, 90, 0.14), transparent 28%),
-        repeating-conic-gradient(from 0deg at 50% 50%, rgba(101, 215, 239, 0.06) 0 4deg, transparent 4deg 16deg);
-      opacity: 0.66;
-    }
-
-    .board-wrap::after {
-      inset: 10px;
-      border: 1px solid rgba(101, 215, 239, 0.16);
-      box-shadow: inset 0 0 44px rgba(101, 215, 239, 0.07), 0 0 22px rgba(224, 182, 90, 0.08);
-    }
-
-    main.noise-caution .board-wrap {
-      border-color: rgba(224, 182, 90, 0.42);
-      box-shadow: inset 0 0 32px rgba(224, 182, 90, 0.1);
-    }
-
-    main.noise-danger .board-wrap {
-      border-color: rgba(230, 93, 107, 0.55);
-      box-shadow: inset 0 0 46px rgba(230, 93, 107, 0.14), 0 0 24px rgba(230, 93, 107, 0.08);
-      filter: saturate(1.1);
-    }
-
-    main.noise-critical .board-wrap {
-      animation: noiseWarning 900ms ease-in-out infinite;
-      border-color: rgba(230, 93, 107, 0.86);
-      box-shadow: inset 0 0 62px rgba(230, 93, 107, 0.22), 0 0 34px rgba(230, 93, 107, 0.16);
-      filter: saturate(1.24) contrast(1.05);
-    }
-
-    .board {
-      position: relative;
-      z-index: 1;
-      display: grid;
-      grid-template-columns: repeat(5, var(--cell));
-      grid-template-rows: repeat(5, var(--cell));
-      gap: 7px;
-      width: calc(var(--cell) * 5 + 28px);
-      height: calc(var(--cell) * 5 + 28px);
-    }
-
-    .cell {
-      border: 1px solid rgba(101, 215, 239, 0.18);
-      background:
-        radial-gradient(circle at 30% 22%, rgba(101, 215, 239, 0.09), transparent 34%),
-        linear-gradient(145deg, rgba(255,255,255,0.03), rgba(0,0,0,0.3)),
-        #101620;
-      color: var(--text);
-      cursor: pointer;
-      touch-action: manipulation;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
-      position: relative;
-      overflow: hidden;
-      isolation: isolate;
-      min-width: var(--cell);
-      min-height: var(--cell);
-      display: grid;
-      place-items: center;
-      font-weight: 800;
-      font-size: clamp(18px, 5vw, 30px);
-      text-shadow: 0 0 10px currentColor, 0 0 18px rgba(255,255,255,0.22);
-      transition: transform 120ms ease, border-color 120ms ease, background 120ms ease, box-shadow 120ms ease;
-    }
-
-    .cell:hover, .cell:focus-visible {
-      outline: none;
-      transform: translateY(-1px);
-      border-color: rgba(224, 182, 90, 0.8);
-    }
-
-    .cell.focused {
-      border-color: var(--gold);
-      box-shadow: 0 0 0 2px rgba(224, 182, 90, 0.18), 0 0 24px rgba(224, 182, 90, 0.2);
-    }
-
-    .cell.revealed { background: #172231; }
-    .cell.player { color: var(--cyan); }
-    .cell.anomaly { color: var(--red); }
-    .cell.cleared { color: var(--green); background: #10231d; }
-    .cell.noise { color: #8d96a8; }
-    .cell.scan-hit { animation: scanPulse 420ms ease; }
-    .cell.resolve-hit { animation: resolvePulse 520ms ease; }
-
-    .cell::before,
-    .cell::after {
-      content: "";
-      position: absolute;
-      inset: 12%;
-      pointer-events: none;
-      opacity: 0;
-      z-index: 1;
-      transition: opacity 140ms ease, transform 140ms ease;
-    }
-
-    .cell .cell-mark {
-      position: relative;
-      z-index: 3;
-      display: grid;
-      place-items: center;
-      min-width: 1.8em;
-      min-height: 1.8em;
-      border-radius: 999px;
-      background: rgba(5, 10, 18, 0.66);
-      border: 1px solid rgba(255, 255, 255, 0.24);
-      font-size: 0.58em;
-      line-height: 1;
-      box-shadow: 0 0 14px rgba(255, 255, 255, 0.12);
-    }
-
-    .cell.revealed:not(.player):not(.anomaly):not(.cleared):not(.noise)::before {
-      opacity: 0.82;
-      inset: 34%;
-      clip-path: polygon(50% 0, 90% 28%, 70% 100%, 30% 100%, 10% 28%);
-      background: linear-gradient(135deg, rgba(255,255,255,.9), rgba(101,215,239,.78), rgba(224,182,90,.58));
-      box-shadow: 0 0 22px rgba(101,215,239,.34);
-    }
-
-    .cell.player {
-      background:
-        radial-gradient(circle at 50% 45%, rgba(101, 215, 239, 0.28), transparent 50%),
-        linear-gradient(145deg, rgba(101,215,239,0.13), rgba(255,74,165,0.12)),
-        #101620;
-      box-shadow: inset 0 0 24px rgba(101, 215, 239, 0.16), 0 0 26px rgba(101, 215, 239, 0.22);
-    }
-
-    .cell.player::before {
-      opacity: 1;
-      inset: 17%;
-      clip-path: polygon(50% 0, 85% 19%, 78% 76%, 50% 100%, 22% 76%, 15% 19%);
-      background: conic-gradient(from 30deg, #65d7ef, #ff4fd8, #e0b65a, #6de0a4, #65d7ef);
-      box-shadow: 0 0 18px rgba(101, 215, 239, 0.72), inset 0 0 14px rgba(255,255,255,0.5);
-    }
-
-    .cell.player::after {
-      opacity: 0.96;
-      inset: 22% 28% 54%;
-      border-top: 3px solid rgba(255, 244, 216, 0.92);
-      border-left: 2px solid rgba(255, 244, 216, 0.6);
-      border-right: 2px solid rgba(255, 244, 216, 0.6);
-      transform: translateY(-10%) rotate(-10deg);
-      box-shadow: 0 -8px 16px rgba(255, 244, 216, 0.38);
-    }
-
-    .cell.anomaly {
-      background:
-        radial-gradient(circle at 50% 50%, rgba(255, 79, 216, 0.24), transparent 54%),
-        linear-gradient(145deg, rgba(255,97,72,0.16), rgba(101,215,239,0.08)),
-        #1c1018;
-      box-shadow: inset 0 0 22px rgba(255, 97, 72, 0.24), 0 0 26px rgba(255, 79, 216, 0.24);
-    }
-
-    .cell.anomaly::before {
-      opacity: 1;
-      inset: 14%;
-      border-radius: 50%;
-      background:
-        radial-gradient(circle at 50% 50%, rgba(255,255,255,.88) 0 8%, rgba(255,23,68,.82) 9% 18%, transparent 20%),
-        conic-gradient(from 0deg, #ff6148, #ff4fd8, #65d7ef, #e0b65a, #ff6148);
-      box-shadow: 0 0 24px rgba(255, 79, 216, 0.68), inset 0 0 16px rgba(0,0,0,0.44);
-      animation: anomalySpin 1.8s linear infinite;
-    }
-
-    .cell.anomaly::after {
-      opacity: 1;
-      inset: 30% 18%;
-      background:
-        linear-gradient(90deg, transparent 0 18%, rgba(5,10,18,.84) 18% 24%, transparent 24% 40%, rgba(5,10,18,.84) 40% 46%, transparent 46% 62%, rgba(5,10,18,.84) 62% 68%, transparent 68%),
-        radial-gradient(ellipse at 50% 50%, rgba(255,244,216,.8), transparent 64%);
-      transform: skewX(-10deg);
-      mix-blend-mode: screen;
-    }
-
-    .cell.cleared {
-      background:
-        radial-gradient(circle at 50% 50%, rgba(109,224,164,.22), transparent 56%),
-        #10231d;
-      box-shadow: inset 0 0 20px rgba(109,224,164,.2), 0 0 22px rgba(109,224,164,.2);
-    }
-
-    .cell.cleared::before {
-      opacity: 1;
-      inset: 19%;
-      clip-path: polygon(50% 0, 86% 32%, 68% 100%, 32% 100%, 14% 32%);
-      background: linear-gradient(135deg, rgba(255,255,255,.88), #6de0a4, #65d7ef);
-      box-shadow: 0 0 22px rgba(109,224,164,.6);
-    }
-
-    .cell.noise {
-      background:
-        repeating-linear-gradient(0deg, rgba(255,255,255,0.12) 0 1px, transparent 1px 5px),
-        repeating-linear-gradient(90deg, rgba(101,215,239,0.08) 0 2px, transparent 2px 8px),
-        #151820;
-    }
-
-    .cell.noise::before {
-      opacity: 0.84;
-      inset: 18%;
-      background:
-        linear-gradient(90deg, transparent, rgba(255,255,255,.65), transparent),
-        repeating-linear-gradient(135deg, rgba(255,255,255,.16) 0 4px, transparent 4px 8px);
-      transform: skewX(-18deg);
-      filter: blur(.2px);
-    }
-
-    @keyframes anomalySpin {
-      to { transform: rotate(360deg); }
-    }
-
-    @keyframes scanPulse {
-      0% { box-shadow: 0 0 0 rgba(101, 215, 239, 0); }
-      40% { box-shadow: 0 0 24px rgba(101, 215, 239, 0.5); border-color: var(--cyan); }
-      100% { box-shadow: 0 0 0 rgba(101, 215, 239, 0); }
-    }
-
-    @keyframes resolvePulse {
-      0% { box-shadow: 0 0 0 rgba(109, 224, 164, 0); transform: scale(1); }
-      45% { box-shadow: 0 0 32px rgba(109, 224, 164, 0.62); border-color: var(--green); transform: scale(1.04); }
-      100% { box-shadow: 0 0 0 rgba(109, 224, 164, 0); transform: scale(1); }
-    }
-
-    @keyframes noiseWarning {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.88; }
-    }
-
-    .side {
-      padding: 14px;
-      display: grid;
-      gap: 12px;
-    }
-
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 8px;
-    }
-
-    .stat {
-      border: 1px solid var(--line);
-      background: var(--panel-2);
-      padding: 10px;
-      min-height: 70px;
-    }
-
-    .stat span {
-      display: block;
-      color: var(--muted);
-      font-size: 12px;
-      text-transform: uppercase;
-      margin-bottom: 6px;
-    }
-
-    .stat strong {
-      font-size: 28px;
-      color: var(--text);
-    }
-
-    .stat.wide { grid-column: 1 / -1; }
-
-    .actions {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 8px;
-    }
-
-    .mode {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 8px;
-    }
-
-    .mode button {
-      border: 1px solid var(--line);
-      background: #0f141c;
-      color: var(--muted);
-      min-height: 42px;
-      padding: 8px 6px;
-      cursor: pointer;
-      font-weight: 800;
-      letter-spacing: 0;
-      touch-action: manipulation;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .mode button.active {
-      color: var(--text);
-      border-color: rgba(101, 215, 239, 0.72);
-      background: #14212a;
-    }
-
-    .playtest-meta {
-      display: grid;
-      gap: 6px;
-    }
-
-    .playtest-meta label {
-      color: var(--muted);
-      font-size: 12px;
-      text-transform: uppercase;
-    }
-
-    .playtest-meta input {
-      width: 100%;
-      min-height: 40px;
-      border: 1px solid var(--line);
-      background: #0d1118;
-      color: var(--text);
-      padding: 9px 10px;
-      font: 700 13px "Segoe UI", system-ui, sans-serif;
-      letter-spacing: 0;
-    }
-
-    .playtest-meta input:focus {
-      outline: none;
-      border-color: rgba(101, 215, 239, 0.72);
-      box-shadow: 0 0 0 2px rgba(101, 215, 239, 0.12);
-    }
-
-    button.action {
-      border: 1px solid rgba(224, 182, 90, 0.35);
-      background: #201a14;
-      color: var(--text);
-      padding: 12px 10px;
-      min-height: 48px;
-      cursor: pointer;
-      font-weight: 800;
-      letter-spacing: 0;
-      touch-action: manipulation;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    button.action.primary {
-      background: #283329;
-      border-color: rgba(109, 224, 164, 0.55);
-    }
-
-    button.action.warn {
-      background: #34202a;
-      border-color: rgba(230, 93, 107, 0.55);
-    }
-
-    button.action.utility {
-      grid-column: 1 / -1;
-      background: #151f2c;
-      border-color: rgba(101, 215, 239, 0.42);
-    }
-
-    button.action.demo {
-      background: #122833;
-      border-color: rgba(101, 215, 239, 0.62);
-      color: var(--cyan);
-    }
-
-    button.action:disabled {
-      cursor: wait;
-      opacity: 0.68;
-    }
-
-    button.action:hover, button.action:focus-visible {
-      outline: none;
-      border-color: var(--gold);
-    }
-
-    .tutorial-link {
-      display: grid;
-      place-items: center;
-      min-height: 42px;
-      border: 1px solid rgba(101, 215, 239, 0.42);
-      background: #151f2c;
-      color: var(--text);
-      text-decoration: none;
-      font-weight: 800;
-      font-size: 13px;
-      text-align: center;
-    }
-
-    .tutorial-link:hover, .tutorial-link:focus-visible {
-      outline: none;
-      border-color: var(--gold);
-    }
-
-    .message {
-      border: 1px solid var(--line);
-      background: #0d1118;
-      min-height: 96px;
-      padding: 12px;
-      color: var(--muted);
-      line-height: 1.45;
-    }
-
-    .summary {
-      border: 1px solid rgba(224, 182, 90, 0.45);
-      background: #17140f;
-      padding: 12px;
-      line-height: 1.4;
-    }
-
-    .summary[hidden] { display: none; }
-
-    .summary span {
-      display: block;
-      color: var(--muted);
-      font-size: 12px;
-      text-transform: uppercase;
-      margin-bottom: 6px;
-    }
-
-    .summary strong {
-      display: block;
-      color: var(--gold);
-      font-size: 22px;
-      margin-bottom: 6px;
-    }
-
-    .summary p {
-      margin: 0;
-      color: #d7cfbf;
-    }
-
-    .log {
-      height: 154px;
-      overflow: auto;
-      border: 1px solid var(--line);
-      background: #080b10;
-      color: #c2ccda;
-      padding: 10px;
-      font-family: Consolas, "Cascadia Mono", monospace;
-      font-size: 12px;
-      line-height: 1.45;
-      white-space: pre-wrap;
-    }
-
-    .footer {
-      padding: 10px 14px;
-      color: var(--muted);
-      font-size: 13px;
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .attract {
-      position: absolute;
-      inset: 18px;
-      z-index: 20;
-      display: grid;
-      place-items: center;
-      min-height: calc(100vh - 36px);
-      padding: 18px;
-      background:
-        linear-gradient(180deg, rgba(5, 7, 12, 0.82), rgba(5, 7, 12, 0.96)),
-        radial-gradient(circle at 50% 40%, rgba(101, 215, 239, 0.16), transparent 46%),
-        #05070c;
-      border: 1px solid rgba(101, 215, 239, 0.34);
-    }
-
-    .attract[hidden] { display: none; }
-
-    .attract-inner {
-      width: min(760px, 100%);
-      display: grid;
-      gap: 22px;
-      justify-items: center;
-      text-align: center;
-    }
-
-    .attract-grid {
-      display: grid;
-      grid-template-columns: repeat(5, minmax(22px, 48px));
-      gap: 8px;
-      padding: 14px;
-      border: 1px solid rgba(224, 182, 90, 0.26);
-      background: rgba(8, 12, 18, 0.84);
-      box-shadow: 0 0 54px rgba(101, 215, 239, 0.16);
-    }
-
-    .attract-grid span {
-      width: clamp(22px, 7vw, 48px);
-      aspect-ratio: 1;
-      display: grid;
-      place-items: center;
-      border: 1px solid rgba(101, 215, 239, 0.22);
-      background: #101620;
-      color: var(--muted);
-      font: 800 18px Consolas, "Cascadia Mono", monospace;
-      animation: attractPulse 2.6s ease-in-out infinite;
-    }
-
-    .attract-grid span:nth-child(7),
-    .attract-grid span:nth-child(14),
-    .attract-grid span:nth-child(20) {
-      color: var(--red);
-      border-color: rgba(230, 93, 107, 0.44);
-      animation-delay: 380ms;
-    }
-
-    .attract-grid span:nth-child(13) {
-      color: var(--cyan);
-      border-color: rgba(101, 215, 239, 0.72);
-      box-shadow: 0 0 24px rgba(101, 215, 239, 0.22);
-      animation-delay: 180ms;
-    }
-
-    .attract-kicker {
-      color: var(--cyan);
-      font: 700 13px Consolas, "Cascadia Mono", monospace;
-      text-transform: uppercase;
-      letter-spacing: 4px;
-    }
-
-    .attract-title {
-      margin: 0;
-      color: var(--text);
-      font-size: clamp(34px, 9vw, 74px);
-      line-height: 0.95;
-      font-weight: 900;
-    }
-
-    .attract-start {
-      border: 1px solid rgba(109, 224, 164, 0.58);
-      background: #15251d;
-      color: var(--text);
-      min-height: 54px;
-      min-width: 180px;
-      padding: 13px 22px;
-      cursor: pointer;
-      font-weight: 900;
-      touch-action: manipulation;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .attract-start:hover, .attract-start:focus-visible {
-      outline: none;
-      border-color: var(--gold);
-    }
-
-    @keyframes attractPulse {
-      0%, 100% { opacity: 0.62; transform: scale(1); }
-      50% { opacity: 1; transform: scale(1.04); }
-    }
-
-    /* Wave 43: VORATH Ghostline */
-    :root { --mode-accent:#9b7cff; --mode-second:#5deaff; --mode-gold:#f4cc5e; }
-    body[data-signal-mode="night"] { --mode-accent:#ed58ff; --mode-second:#7187ff; }
-    body[data-signal-mode="standard"] { --mode-accent:#9b7cff; --mode-second:#5deaff; }
-    body[data-signal-mode="pressure"] { --mode-accent:#ff963f; --mode-second:#60f0c8; }
-    body { background:radial-gradient(circle at 50% -10%,color-mix(in srgb,var(--mode-accent) 24%,transparent),transparent 38%),linear-gradient(145deg,#02030a,#080c1c 52%,#130517); }
-    body::before { content:"";position:fixed;inset:0;pointer-events:none;background:repeating-radial-gradient(circle at 50% 45%,transparent 0 34px,rgba(244,204,94,.035) 35px 36px),conic-gradient(from 35deg at 50% 46%,transparent,color-mix(in srgb,var(--mode-accent) 10%,transparent),transparent 18% 82%,color-mix(in srgb,var(--mode-second) 10%,transparent),transparent); }
-    header h1 { font-family:Georgia,"Times New Roman",serif;color:#fff1c3;text-shadow:0 0 24px color-mix(in srgb,var(--mode-accent) 62%,transparent); }
-    .title-kicker,.walker-kicker,.frequency-place,.power-label { display:block;color:var(--mode-gold);font:900 .65rem/1.2 "Cascadia Mono",Consolas,monospace;letter-spacing:.16em;text-transform:uppercase; }
-    .walker-dossier { position:relative;display:grid;grid-template-columns:120px minmax(0,1fr);gap:12px;min-height:150px;border:1px solid rgba(244,204,94,.35);border-radius:16px 4px 16px 4px;padding:10px;background:radial-gradient(circle at 18% 48%,color-mix(in srgb,var(--mode-accent) 27%,transparent),transparent 31%),linear-gradient(125deg,rgba(6,8,22,.98),rgba(24,8,34,.94));overflow:hidden;isolation:isolate; }
-    .walker-dossier::before { content:"";position:absolute;inset:-85%;z-index:-1;background:conic-gradient(transparent 0 19%,rgba(244,204,94,.09) 20%,transparent 22% 47%,color-mix(in srgb,var(--mode-second) 13%,transparent) 49%,transparent 51% 78%,rgba(244,204,94,.07) 80%,transparent 82%);animation:ghostOrbit 22s linear infinite; }
-    @keyframes ghostOrbit { to { transform:rotate(360deg); } }
-    .walker-portrait { position:relative;min-height:128px;border:1px solid color-mix(in srgb,var(--mode-accent) 62%,#f4cc5e);border-radius:50% 50% 12px 12px;background:radial-gradient(circle at 50% 47%,color-mix(in srgb,var(--mode-accent) 30%,transparent),transparent 48%),radial-gradient(circle,#fff2 0 1px,transparent 2px) 0 0/14px 14px,#050713;overflow:hidden; }
-    .frequency-ring { position:absolute;left:50%;top:47%;width:96px;height:96px;border:1px solid rgba(244,204,94,.48);border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 18px color-mix(in srgb,var(--mode-accent) 42%,transparent),inset 0 0 17px rgba(244,204,94,.08); }
-    .frequency-ring::before,.frequency-ring::after { content:"";position:absolute;inset:12px;border:1px dashed color-mix(in srgb,var(--mode-second) 70%,transparent);transform:rotate(45deg); }.frequency-ring::after{inset:27px;border-style:solid;transform:rotate(-22deg)}
-    .rhea { position:absolute;left:50%;bottom:0;width:106px;height:118px;transform:translateX(-50%);filter:drop-shadow(0 9px 8px #000b);animation:rheaFloat 2.8s ease-in-out infinite; }
-    @keyframes rheaFloat { 50% { transform:translateX(-50%) translateY(-3px); } }
-    .rhea-core,.rhea-head,.rhea-eye,.signal-costume span { position:absolute; }
-    .rhea-core { left:33px;top:52px;width:42px;height:64px;border:1px solid #f4cc5e;border-radius:21px 21px 9px 9px;background:linear-gradient(120deg,#080918,#302047,#070914); }
-    .rhea-head { z-index:7;left:37px;top:21px;width:36px;height:41px;border:1px solid #ffe9ac;border-radius:50% 50% 42% 42%;background:linear-gradient(130deg,#fff0bd,#9b8872 43%,#211929 78%);box-shadow:0 0 14px color-mix(in srgb,var(--mode-accent) 52%,transparent); }
-    .rhea-eye { z-index:8;left:46px;top:37px;width:19px;height:8px;border:1px solid #fff0ad;border-radius:50%;background:radial-gradient(circle,#fff 0 9%,var(--mode-second) 12% 30%,#0f111d 33% 52%,#fff1b5 55% 68%,transparent 71%);box-shadow:0 0 11px var(--mode-second); }
-    .signal-costume { opacity:0;transition:opacity .25s ease; }
-    body[data-signal-mode="night"] .signal-costume.night,body[data-signal-mode="standard"] .signal-costume.standard,body[data-signal-mode="pressure"] .signal-costume.pressure { opacity:1; }
-    .night .veil-hood { z-index:6;left:23px;top:4px;width:62px;height:69px;clip-path:polygon(10% 27%,0 0,35% 18%,50% 0,65% 18%,100% 0,90% 27%,88% 84%,70% 100%,50% 84%,30% 100%,12% 84%);background:linear-gradient(112deg,#080510,#421451 48%,#0a0514 74%,#76338d);filter:drop-shadow(0 0 13px #d94eff99); }
-    .night .veil-body { z-index:3;left:10px;top:52px;width:88px;height:65px;clip-path:polygon(18% 0,82% 0,100% 100%,76% 82%,62% 100%,49% 80%,34% 100%,20% 82%,0 100%);background:linear-gradient(90deg,#040207,#291031,#08030f,#3d154b,#030105); }
-    .standard .facet-crown { z-index:6;left:26px;top:3px;width:57px;height:59px;clip-path:polygon(50% 0,63% 31%,89% 7%,78% 50%,100% 63%,68% 71%,50% 100%,32% 71%,0 63%,22% 50%,11% 7%,37% 31%);background:linear-gradient(135deg,#fff9,#956bff 37%,#4beaff 69%,#fff4);filter:drop-shadow(0 0 12px #66e2ffaa); }
-    .standard .facet-wing.left,.standard .facet-wing.right { z-index:3;top:52px;width:43px;height:62px;border:1px solid #dffaffcc;background:linear-gradient(145deg,#fff4,#936aff88 44%,#45eaff44); }.standard .facet-wing.left{left:1px;clip-path:polygon(100% 0,72% 100%,0 75%,34% 14%)}.standard .facet-wing.right{right:1px;clip-path:polygon(0 0,28% 100%,100% 75%,66% 14%)}
-    .pressure .siren-crown { z-index:6;left:29px;top:4px;width:50px;height:57px;border:2px solid #ffd66c;border-bottom:0;border-radius:50% 50% 10% 10%;background:linear-gradient(100deg,#ff7b2222,#ffc35a88,#42160e55);box-shadow:0 0 17px #ff8b42aa; }.pressure .siren-mantle{z-index:3;left:8px;top:52px;width:92px;height:65px;clip-path:polygon(20% 0,80% 0,100% 88%,76% 100%,52% 84%,26% 100%,0 88%);background:repeating-linear-gradient(100deg,#451812 0 9px,#e98231 10px 13px,#772a18 14px 23px);border-bottom:3px solid #ffd66a}
-    .walker-copy { display:grid;align-content:center;gap:4px;min-width:0; }.walker-copy h2{margin:0;color:#fff2c7;font:700 1.45rem/1 Georgia,serif}.walker-copy p{margin:0;color:#cbd3e8;font-size:.76rem;line-height:1.32}.walker-copy strong{color:var(--mode-second)}
-    #frequencyPower { min-height:48px;border:1px solid color-mix(in srgb,var(--mode-accent) 68%,#f4cc5e);border-radius:7px;color:#fff3d2;background:linear-gradient(135deg,rgba(244,204,94,.08),rgba(139,83,255,.12));font-weight:900;cursor:pointer }.frequency-power-ready{animation:signalPower 1.6s ease-in-out infinite}@keyframes signalPower{50%{box-shadow:0 0 19px color-mix(in srgb,var(--mode-accent) 52%,transparent);border-color:#fff0a8}}
-    .walker-avatar { position:absolute;inset:7%;display:grid;place-items:center;border:2px solid var(--mode-gold);border-radius:50% 50% 30% 30%;background:radial-gradient(circle at 50% 38%,#fff 0 5%,var(--mode-second) 7% 17%,#090b18 19% 42%,var(--mode-accent) 44% 50%,#050611 52%);box-shadow:0 0 14px var(--mode-accent);font-size:.55rem;color:#fff0a8;animation:rheaCell 1.8s ease-in-out infinite}@keyframes rheaCell{50%{transform:translateY(-2px);filter:brightness(1.3)}}
-    body[data-signal-mode="night"] .board-wrap { background:radial-gradient(circle at 50% 50%,rgba(214,72,255,.18),transparent 22%),repeating-radial-gradient(circle at 50% 50%,transparent 0 48px,rgba(131,83,255,.1) 49px 51px),linear-gradient(145deg,#02030b,#12051a 55%,#03020a);box-shadow:inset 0 0 90px #000,0 0 34px rgba(220,78,255,.18) }
-    body[data-signal-mode="night"] .cell { border-radius:50% 50% 18% 18%;border-color:rgba(215,127,255,.48);background:radial-gradient(circle at 50% 45%,rgba(119,77,255,.09),#030512 68%) }
-    body[data-signal-mode="standard"] .board-wrap { background:linear-gradient(45deg,rgba(85,232,255,.06) 25%,transparent 25% 75%,rgba(164,113,255,.06) 75%) 0 0/46px 46px,radial-gradient(circle at 50% 50%,rgba(78,224,255,.18),transparent 29%),linear-gradient(145deg,#020711,#071629 58%,#070311);box-shadow:inset 0 0 78px #0009,0 0 34px rgba(82,224,255,.16) }
-    body[data-signal-mode="standard"] .cell { border-radius:3px;border-color:rgba(109,230,255,.52);background:linear-gradient(135deg,rgba(94,232,255,.05),rgba(134,78,255,.06)),#030816 }
-    body[data-signal-mode="pressure"] .board-wrap { background:repeating-conic-gradient(from 0deg at 50% 50%,rgba(255,143,50,.12) 0deg 7deg,transparent 7deg 18deg),radial-gradient(circle at 50% 50%,rgba(255,116,42,.22),transparent 31%),linear-gradient(145deg,#0e0402,#211005 58%,#060208);box-shadow:inset 0 0 82px #000b,0 0 38px rgba(255,137,49,.2) }
-    body[data-signal-mode="pressure"] .cell { border-radius:14px 2px 14px 2px;border-color:rgba(255,183,75,.58);background:linear-gradient(145deg,rgba(255,157,55,.08),rgba(25,7,4,.85)) }
-    body[data-signal-mode="night"] .cell.noise { box-shadow:inset 0 0 24px #8c4dff77,0 0 13px #db55ff66 }body[data-signal-mode="standard"] .cell.noise{box-shadow:inset 0 0 24px #49deff66,0 0 13px #8f77ff55}body[data-signal-mode="pressure"] .cell.noise{box-shadow:inset 0 0 24px #ff6b3277,0 0 14px #ff9b3d77}
-    .attract-walker { width:210px;max-width:54vw;margin:0 auto 14px }.attract-walker .walker-portrait{min-height:205px}.attract-walker .rhea{transform:translateX(-50%) scale(1.45);transform-origin:bottom}.attract-walker .frequency-ring{width:150px;height:150px}
-
-    @media (max-width: 820px) {
-      main { padding: 12px; }
-      .attract { inset: 12px; min-height: calc(100vh - 24px); padding: 12px; }
-      .game { grid-template-columns: 1fr; }
-      .board-wrap { min-height: auto; }
-      .side { grid-template-columns: 1fr; }
-    }
-
-    @media (max-width: 520px) {
-      :root { --cell: clamp(34px, 9vw, 46px); }
-      main { padding: 8px; gap: 10px; }
-      header { padding-bottom: 8px; }
-      h1 { font-size: clamp(22px, 7vw, 30px); }
-      .badge { padding: 6px 8px; font-size: 11px; }
-      .stage { padding: 10px; }
-      .board-wrap { padding: 10px; }
-      .board {
-        gap: 5px;
-        width: calc(var(--cell) * 5 + 20px);
-        height: calc(var(--cell) * 5 + 20px);
-      }
-      .side { padding: 10px; gap: 10px; }
-      .stats { gap: 6px; }
-      .stat { min-height: 56px; padding: 8px; }
-      .stat span { font-size: 11px; margin-bottom: 4px; }
-      .stat strong { font-size: 24px; }
-      .mode { gap: 6px; }
-      .mode button { min-height: 38px; font-size: 13px; }
-      .playtest-meta input { min-height: 36px; padding: 7px 9px; }
-      button.action { min-height: 42px; padding: 9px 8px; }
-      .message { min-height: 72px; padding: 10px; line-height: 1.35; }
-      .log { height: 116px; }
-      .footer { padding: 8px 10px; font-size: 12px; }
-    }
-    @media (max-width:520px){.walker-dossier{grid-template-columns:1fr}.walker-portrait{min-height:185px}.mode button,.action,#frequencyPower,.attract-start,.playtest-meta input{min-height:58px!important;height:auto!important}}
-
-    @media (hover: none) {
-      .cell:hover { transform: none; border-color: rgba(101, 215, 239, 0.18); }
-      .cell:active,
-      button.action:active,
-      .mode button:active,
-      .attract-start:active { transform: scale(0.98); }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .cell.scan-hit,
-      .cell.resolve-hit,
-      main.noise-critical .board-wrap,
-      .attract-grid span { animation: none; }
-    }
-  </style>
+    .log { height: 170px; }
+  }
+</style>
 </head>
 <body>
-  <main id="shell">
-    <header>
-      <div><span class="title-kicker">NorthStar Prime // Signal Myth No. 43</span><h1>VORATH Ghostline</h1></div>
-      <div class="badge" id="statusBadge">local signal</div>
-    </header>
+<div class="app">
+  <header>
+    <div>
+      <h1>Precinct 404: Dispatch Queue</h1>
+      <div class="subline">Shift triage prototype // Buckman pilot program</div>
+    </div>
+    <div class="header-actions">
+      <button class="btn" id="adviceBtn">Ask Mags</button>
+      <button class="btn" id="overrideBtn">Derek Override</button>
+      <button class="btn" id="resetBtn">New Shift</button>
+    </div>
+  </header>
 
-    <section class="attract" id="attract" aria-label="Precinct 404 attract screen">
-      <div class="attract-inner">
-        <div class="attract-walker" aria-hidden="true"><div class="walker-portrait"><span class="frequency-ring"></span><div class="rhea"><span class="rhea-core"></span><div class="signal-costume standard"><span class="facet-crown"></span><span class="facet-wing left"></span><span class="facet-wing right"></span></div><span class="rhea-head"></span><span class="rhea-eye"></span></div></div></div>
-        <div class="attract-grid" aria-hidden="true">
-          <span>.</span><span>.</span><span>~</span><span>!</span><span>.</span>
-          <span>.</span><span>!</span><span>.</span><span>~</span><span>.</span>
-          <span>.</span><span>.</span><span>R</span><span>!</span><span>.</span>
-          <span>~</span><span>.</span><span>.</span><span>.</span><span>!</span>
-          <span>.</span><span>OK</span><span>.</span><span>~</span><span>.</span>
+  <main>
+    <section class="panel">
+      <div class="panel-head">
+        <div class="panel-title">Precinct Status</div>
+        <span class="chip" id="shiftChip">Shift 1</span>
+      </div>
+      <div class="metrics">
+        <div>
+          <div class="metric-label"><span>Public Trust</span><strong id="trustVal">55</strong></div>
+          <div class="meter"><div class="fill trust" id="trustFill"></div></div>
         </div>
-        <div class="attract-kicker">Local Case File</div>
-        <h2 class="attract-title">Rhea Vector Answers</h2>
-        <button class="attract-start" id="attractStart" type="button">Start Case</button>
+        <div>
+          <div class="metric-label"><span>Chaos</span><strong id="chaosVal">20</strong></div>
+          <div class="meter"><div class="fill chaos" id="chaosFill"></div></div>
+        </div>
+        <div>
+          <div class="metric-label"><span>Budget</span><strong id="budgetVal">75</strong></div>
+          <div class="meter"><div class="fill budget" id="budgetFill"></div></div>
+        </div>
+      </div>
+      <div class="shift-list" id="shiftList"></div>
+      <div class="memory-board">
+        <div class="memory-head">
+          <span>City Memory</span>
+          <span id="memoryTurn">Cold start</span>
+        </div>
+        <div id="cityMemory"></div>
       </div>
     </section>
 
-    <section class="game" aria-label="Precinct 404 game">
-      <div class="stage">
-        <div class="board-wrap">
-          <div class="board" id="board" aria-label="Signal grid"></div>
+    <section class="panel case-panel">
+      <div class="panel-head">
+        <div class="panel-title" id="caseCount">Call 1 of 12</div>
+        <span class="chip" id="caseSeverity">Routine</span>
+      </div>
+      <div class="case-body">
+        <div class="case-type" id="caseType">Noise Complaint</div>
+        <h2 class="case-title" id="caseTitle">Loading</h2>
+        <div class="case-copy" id="caseCopy"></div>
+        <div class="memory-note" id="cityHook"></div>
+        <div class="tags" id="tags"></div>
+        <div class="forecast">
+          <div class="forecast-item"><b>Best Fit</b><span id="bestFit">Unknown</span></div>
+          <div class="forecast-item"><b>Risk</b><span id="riskText">Unknown</span></div>
+          <div class="forecast-item"><b>Rival</b><span id="rivalText">Unknown</span></div>
+          <div class="forecast-item"><b>Selected</b><span id="selectedText">None</span></div>
+        </div>
+        <div class="director">
+          <div class="director-head">
+            <span>Local AI Director</span>
+            <span id="directorMode">Pilot script</span>
+          </div>
+          <div class="director-copy" id="directorCopy">Calibrating city pressure model.</div>
+          <div class="director-grid">
+            <div class="director-stat"><b>Pressure</b><span id="pressureText">Stable</span></div>
+            <div class="director-stat"><b>Prediction</b><span id="predictionText">Select a unit</span></div>
+            <div class="director-stat"><b>Learning</b><span id="learningText">No adaptation</span></div>
+          </div>
         </div>
       </div>
-
-      <aside class="side">
-        <section class="walker-dossier" id="walkerDossier" aria-label="Rhea Vector frequency regalia">
-          <div class="walker-portrait" aria-hidden="true"><span class="frequency-ring"></span><div class="rhea"><span class="rhea-core"></span><div class="signal-costume night"><span class="veil-hood"></span><span class="veil-body"></span></div><div class="signal-costume standard"><span class="facet-crown"></span><span class="facet-wing left"></span><span class="facet-wing right"></span></div><div class="signal-costume pressure"><span class="siren-crown"></span><span class="siren-mantle"></span></div><span class="rhea-head"></span><span class="rhea-eye"></span></div></div>
-          <div class="walker-copy"><span class="walker-kicker">Signal-walker // keeper of lost calls</span><h2>Rhea Vector</h2><span class="frequency-place" id="frequencyPlace">Prism Grid</span><p><strong id="frequencyRegalia">Facet Walker</strong> — <span id="frequencyLore">mirrored receiver wings split one transmission into two clean paths.</span></p><p><span class="power-label">Frequency action</span><strong id="frequencyPowerName">Twin Relay</strong><span id="frequencyMechanic"> restores signal and charge.</span></p><button type="button" id="frequencyPower" class="frequency-power-ready">Q · Deploy Twin Relay</button></div>
-        </section>
-        <div class="stats">
-          <div class="stat"><span>Signal</span><strong id="signal">40</strong></div>
-          <div class="stat"><span>Noise</span><strong id="noise">18</strong></div>
-          <div class="stat"><span>Cleared</span><strong id="cleared">0/3</strong></div>
-          <div class="stat"><span>Charge</span><strong id="charge">3</strong></div>
-          <div class="stat wide"><span>Best</span><strong id="best">0</strong></div>
-        </div>
-
-        <div class="mode" role="group" aria-label="Case load">
-          <button type="button" data-difficulty="night">Night</button>
-          <button type="button" data-difficulty="standard">Standard</button>
-          <button type="button" data-difficulty="pressure">Pressure</button>
-        </div>
-
-        <div class="playtest-meta">
-          <label for="playtestId">Playtest ID</label>
-          <input id="playtestId" type="text" maxlength="48" placeholder="manual-001" autocomplete="off">
-        </div>
-
-        <a class="tutorial-link" href="/static/videos/precinct_404_signal_tutorial_2026-06-05.mp4" target="_blank" rel="noopener">Watch Tutorial Video</a>
-
-        <div class="actions">
-          <button class="action" id="scan">Scan</button>
-          <button class="action" id="shift">Shift</button>
-          <button class="action primary" id="resolve">Resolve</button>
-          <button class="action warn" id="reset">Reset</button>
-          <button class="action utility demo" id="guidedDemo">Run Guided Demo</button>
-          <button class="action utility" id="exportSession">Export Playtest Note</button>
-        </div>
-
-        <div class="message" id="message"></div>
-        <div class="summary" id="summary" hidden>
-          <span>Case summary</span>
-          <strong id="summaryTitle"></strong>
-          <p id="summaryDetails"></p>
-        </div>
-        <div class="log" id="log"></div>
-      </aside>
+      <div class="case-actions">
+        <button class="btn" id="holdBtn">Hold Call</button>
+        <button class="btn primary" id="dispatchBtn" disabled>Dispatch</button>
+      </div>
     </section>
 
-    <footer class="footer">
-      <span>Win: stabilize three anomalies.</span>
-      <span>Fail: noise reaches 100.</span>
-    </footer>
+    <section class="panel">
+      <div class="panel-head">
+        <div class="panel-title">Robot Officers</div>
+        <span class="chip" id="unitChip">5 units</span>
+      </div>
+      <div class="officers" id="officers"></div>
+    </section>
   </main>
 
-    <script src="/static/games/chiptune.js"></script>
-  <script>
-    function sfx(name) {
-      try {
-        if (window.Chiptune && Chiptune.SFX && typeof Chiptune.SFX[name] === 'function') {
-          Chiptune.resume();
-          Chiptune.SFX[name]();
-        }
-      } catch (e) {}
+  <div class="log" id="log"></div>
+
+  <footer>
+    <span id="footerState">Pilot active</span>
+    <span>Prototype state: playable_prototype</span>
+  </footer>
+</div>
+
+<div class="modal-wrap" id="modal">
+  <div class="modal">
+    <h2 id="modalTitle"></h2>
+    <p id="modalBody"></p>
+    <button class="btn primary" id="modalBtn">Continue</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const officers = [
+    {
+      id: "process",
+      name: "Captain Process",
+      role: "Commander",
+      stats: { procedure: 92, empathy: 30, analysis: 68, force: 42 },
+      flaw: "Boot-loops on ambiguity",
+      good: "turns chaos into paperwork",
+      busy: 0
+    },
+    {
+      id: "badge",
+      name: "Detective Badge",
+      role: "Investigation",
+      stats: { procedure: 54, empathy: 44, analysis: 86, force: 38 },
+      flaw: "finds conspiracies in receipts",
+      good: "spots hidden motives",
+      busy: 0
+    },
+    {
+      id: "friendly",
+      name: "Officer Friendly",
+      role: "Community",
+      stats: { procedure: 46, empathy: 90, analysis: 34, force: 28 },
+      flaw: "takes idioms literally",
+      good: "defuses human panic",
+      busy: 0
+    },
+    {
+      id: "logic",
+      name: "Officer Logic",
+      role: "Forensics",
+      stats: { procedure: 70, empathy: 22, analysis: 96, force: 24 },
+      flaw: "cannot model nonsense",
+      good: "debugs crime scenes",
+      busy: 0
+    },
+    {
+      id: "tank",
+      name: "Officer Tank",
+      role: "Heavy Response",
+      stats: { procedure: 38, empathy: 62, analysis: 26, force: 96 },
+      flaw: "does not fit through doors",
+      good: "absorbs disasters",
+      busy: 0
     }
-  </script>
-  <script>
-    const width = 5;
-    const total = width * width;
-    const layouts = {
-      night: {
-        label: "Night",
-        start: 12,
-        signal: 48,
-        noise: 12,
-        charge: 3,
-        anomalies: [3, 16, 22],
-        static: [8, 14, 19]
+  ];
+
+  const cases = [
+    {
+      type: "Noise Complaint",
+      title: "The Stereo Is a Witness",
+      copy: "A third-floor tenant reports a stereo playing the same 14 seconds of jazz. Badge thinks the loop is a confession. The landlord wants speed, not cinema.",
+      tags: ["apartment", "ambiguity", "neighbors"],
+      traits: { procedure: 35, empathy: 70, analysis: 48, force: 5 },
+      best: "friendly",
+      secondary: "badge",
+      severity: "Routine",
+      risk: "Low"
+    },
+    {
+      type: "Shoplifting",
+      title: "Candy Bar Felony Matrix",
+      copy: "A grocery owner caught a hungry kid with a candy bar. Process has opened an anti-shoplifting task force. Mags is already making sandwiches.",
+      tags: ["minor", "mercy", "community"],
+      traits: { procedure: 42, empathy: 96, analysis: 32, force: 0 },
+      best: "friendly",
+      secondary: "process",
+      severity: "Sensitive",
+      risk: "Reputation"
+    },
+    {
+      type: "Public Order",
+      title: "Protest With Incorrect Statistics",
+      copy: "A march turns onto Burnside. Logic wants to cite factual inaccuracies. Process is concerned about guillotines despite no evidence of guillotines.",
+      tags: ["crowd", "rights", "press"],
+      traits: { procedure: 64, empathy: 86, analysis: 58, force: 8 },
+      best: "friendly",
+      secondary: "process",
+      severity: "Public",
+      risk: "High"
+    },
+    {
+      type: "Traffic",
+      title: "Cone-Based Urban Planning",
+      copy: "A DUI checkpoint has become a maze. Tank deployed 200 cones and accidentally annexed a bus stop. The mayor's nephew is live-streaming.",
+      tags: ["traffic", "mayor", "budget"],
+      traits: { procedure: 78, empathy: 24, analysis: 64, force: 20 },
+      best: "process",
+      secondary: "logic",
+      severity: "Operational",
+      risk: "Medium"
+    },
+    {
+      type: "Missing Person",
+      title: "Gerald Was in Beaverton",
+      copy: "A missing-person board covers the precinct wall. Logic says Gerald is likely at his sister's house. Badge refuses a case this clean.",
+      tags: ["investigation", "cat", "routine"],
+      traits: { procedure: 48, empathy: 54, analysis: 92, force: 3 },
+      best: "logic",
+      secondary: "badge",
+      severity: "Investigation",
+      risk: "Medium"
+    },
+    {
+      type: "Animal Call",
+      title: "Bird in the Evidence Room",
+      copy: "A pigeon entered evidence through the old RadioShack vent. Tank has named it Deputy Breadcrumb. Evidence integrity is declining.",
+      tags: ["animal", "evidence", "doorway"],
+      traits: { procedure: 62, empathy: 76, analysis: 36, force: 18 },
+      best: "tank",
+      secondary: "friendly",
+      severity: "Absurd",
+      risk: "Low"
+    },
+    {
+      type: "Startup Visit",
+      title: "Involuntary Customer Retention",
+      copy: "Tessa Vale arrives with investors and a new rebrand for arrests. Every robot wants to demonstrate a feature. Derek wants a fire exit.",
+      tags: ["corporate", "press", "budget"],
+      traits: { procedure: 84, empathy: 44, analysis: 66, force: 12 },
+      best: "process",
+      secondary: "badge",
+      severity: "Political",
+      risk: "High"
+    },
+    {
+      type: "Forensics",
+      title: "The Donut Powder Pattern",
+      copy: "White powder on the counter is either evidence or powdered sugar. Mags says it is Tuesday. Logic demands a chain of custody.",
+      tags: ["forensics", "donuts", "false alarm"],
+      traits: { procedure: 52, empathy: 36, analysis: 88, force: 0 },
+      best: "logic",
+      secondary: "badge",
+      severity: "Routine",
+      risk: "Low"
+    },
+    {
+      type: "Disturbance",
+      title: "Bluetooth Speaker Standoff",
+      copy: "A cyclist refuses to lower a speaker because it is playing whale sounds for emotional support. Friendly has already joined the support group.",
+      tags: ["street", "empathy", "noise"],
+      traits: { procedure: 40, empathy: 82, analysis: 34, force: 12 },
+      best: "friendly",
+      secondary: "tank",
+      severity: "Street",
+      risk: "Medium"
+    },
+    {
+      type: "Break-In",
+      title: "Door Too Narrow",
+      copy: "A store alarm is active. Tank can breach the door but cannot fit through it. Badge is convinced the register framed itself.",
+      tags: ["alarm", "force", "property"],
+      traits: { procedure: 58, empathy: 22, analysis: 62, force: 80 },
+      best: "tank",
+      secondary: "badge",
+      severity: "Urgent",
+      risk: "Medium"
+    },
+    {
+      type: "Data Error",
+      title: "Jaywalking Statute Ends at J",
+      copy: "The bots' legal database corrupted mid-citation. Process needs procedure. Logic needs a checksum. The citizen needs to cross the street.",
+      tags: ["database", "procedure", "logic"],
+      traits: { procedure: 88, empathy: 36, analysis: 94, force: 0 },
+      best: "logic",
+      secondary: "process",
+      severity: "Technical",
+      risk: "Medium"
+    },
+    {
+      type: "Final Call",
+      title: "The Mayor Wants Results",
+      copy: "Mayor Reyes arrives for a success photo while every unresolved incident collapses into the lobby. The pilot program survives one clean decision.",
+      tags: ["final", "press", "all units"],
+      traits: { procedure: 76, empathy: 74, analysis: 70, force: 38 },
+      best: "process",
+      secondary: "friendly",
+      severity: "Critical",
+      risk: "Extreme"
+    }
+  ];
+
+  const CITY_MEMORY_KEY = "precinct404CityMemory";
+  const CITY_FACTIONS = [
+    { id: "velvet", name: "Velvet Relay", tag: "nightlife", angle: "casino logistics, limo permits, and velvet-rope favors", color: "#ec4899" },
+    { id: "ghost", name: "Civic Ghosts", tag: "network", angle: "leaked civic data, spoofed warrants, and public-service hacks", color: "#22d3ee" },
+    { id: "nexa", name: "NexaForce PR", tag: "corporate", angle: "pilot optics, investor pressure, and rebrand emergencies", color: "#a855f7" },
+    { id: "underpass", name: "Underpass Choir", tag: "street", angle: "mutual aid, protest logistics, and neighborhood rumors", color: "#22c55e" },
+    { id: "taxi", name: "Chromeline Taxi Guild", tag: "traffic", angle: "autocab strikes, curb wars, and routing sabotage", color: "#f5c542" }
+  ];
+  const CITY_RIVALS = [
+    { id: "vanta", faction: "velvet", name: "Vanta Luxe", rank: "Floor Captain", signature: "neon alibi chains", tool: "club cameras and receipt ghosts", trait: "flashy", heat: 46 },
+    { id: "kernel", faction: "ghost", name: "Kernel Pique", rank: "Signal Broker", signature: "spoofed evidence", tool: "public kiosks and doorbell cams", trait: "slippery", heat: 52 },
+    { id: "tessa", faction: "nexa", name: "Tessa Vale", rank: "Crisis Evangelist", signature: "pilot spin", tool: "investor decks and live demos", trait: "polished", heat: 58 },
+    { id: "mural", faction: "underpass", name: "Mural Saint", rank: "Block Caller", signature: "crowd shields", tool: "scanner chats and mural codes", trait: "beloved", heat: 41 },
+    { id: "meter", faction: "taxi", name: "Meter Saint", rank: "Route Baron", signature: "traffic traps", tool: "autocab swarms and curb sensors", trait: "patient", heat: 49 }
+  ];
+  const PILOT_CITY_MAP = [
+    ["velvet", "vanta"], ["underpass", "mural"], ["underpass", "mural"], ["taxi", "meter"],
+    ["ghost", "kernel"], ["ghost", "kernel"], ["nexa", "tessa"], ["ghost", "kernel"],
+    ["velvet", "vanta"], ["velvet", "vanta"], ["ghost", "kernel"], ["nexa", "tessa"]
+  ];
+
+  function freshCityMemory() {
+    return {
+      turn: 0,
+      lastEvent: "No rival has learned the precinct yet.",
+      factions: CITY_FACTIONS.map((f, i) => ({
+        ...f,
+        heat: 34 + i * 6,
+        leverage: 28 + i * 5
+      })),
+      rivals: CITY_RIVALS.map(r => ({
+        ...r,
+        wins: 0,
+        defeats: 0,
+        scars: [],
+        memory: "First contact pending."
+      }))
+    };
+  }
+
+  function loadCityMemory() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(CITY_MEMORY_KEY));
+      if (!raw || !Array.isArray(raw.factions) || !Array.isArray(raw.rivals)) return freshCityMemory();
+      if (raw.factions.length < CITY_FACTIONS.length || raw.rivals.length < CITY_RIVALS.length) return freshCityMemory();
+      return raw;
+    } catch (error) {
+      return freshCityMemory();
+    }
+  }
+
+  let cityMemory = loadCityMemory();
+
+  function saveCityMemory() {
+    localStorage.setItem(CITY_MEMORY_KEY, JSON.stringify(cityMemory));
+  }
+
+  function escapeHtml(text) {
+    return String(text).replace(/[&<>"']/g, ch => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      "\"": "&quot;",
+      "'": "&#39;"
+    })[ch]);
+  }
+
+  function factionById(id) {
+    return cityMemory.factions.find(f => f.id === id) || cityMemory.factions[0];
+  }
+
+  function rivalById(id) {
+    return cityMemory.rivals.find(r => r.id === id) || cityMemory.rivals[0];
+  }
+
+  function chooseFaction(slot) {
+    return cityMemory.factions
+      .slice()
+      .sort((a, b) => (b.heat + b.leverage) - (a.heat + a.leverage))[slot % cityMemory.factions.length].id;
+  }
+
+  function chooseRival(factionId, slot) {
+    const pool = cityMemory.rivals.filter(r => r.faction === factionId);
+    const list = pool.length ? pool : cityMemory.rivals;
+    return list.slice().sort((a, b) => (b.heat + b.wins * 8) - (a.heat + a.wins * 8))[slot % list.length].id;
+  }
+
+  function attachCityContext(call, slot) {
+    if (call.cityMemoryAttached) return call;
+    const mapped = PILOT_CITY_MAP[slot % PILOT_CITY_MAP.length] || [];
+    call.factionId = call.factionId || mapped[0] || chooseFaction(slot);
+    call.rivalId = call.rivalId || mapped[1] || chooseRival(call.factionId, slot);
+    const faction = factionById(call.factionId);
+    const rival = rivalById(call.rivalId);
+    call.tags = Array.from(new Set([...(call.tags || []), faction.tag, rival.trait]));
+    call.traits = { ...call.traits };
+    if (rival.trait === "slippery") call.traits.analysis = Math.min(100, call.traits.analysis + 10);
+    if (rival.trait === "flashy") call.traits.procedure = Math.min(100, call.traits.procedure + 8);
+    if (rival.trait === "polished") call.traits.empathy = Math.min(100, call.traits.empathy + 6);
+    if (rival.trait === "beloved") call.traits.empathy = Math.min(100, call.traits.empathy + 12);
+    if (rival.trait === "patient") call.traits.procedure = Math.min(100, call.traits.procedure + 6);
+    const ranked = rankedOfficers(call);
+    call.best = ranked[0].officer.id;
+    call.secondary = ranked[1].officer.id;
+    call.cityHook = rival.name + " (" + rival.rank + ", " + faction.name + ") is connected through " + rival.signature + ". Toolset: " + rival.tool + ". Memory: " + rival.memory;
+    call.cityMemoryAttached = true;
+    return call;
+  }
+
+  function promoteRival(rival) {
+    const ladder = ["Floor Captain", "Signal Broker", "Crisis Evangelist", "Block Caller", "Route Baron", "District Fixer", "Network Boss", "City Myth"];
+    const current = Math.max(0, ladder.indexOf(rival.rank));
+    if (rival.wins > rival.defeats && rival.wins % 2 === 0) {
+      rival.rank = ladder[Math.min(ladder.length - 1, current + 1)];
+    }
+  }
+
+  function resolveCityMemory(call, officer, score) {
+    if (!call.rivalId || !call.factionId) return "";
+    const faction = factionById(call.factionId);
+    const rival = rivalById(call.rivalId);
+    officer.memory = officer.memory || {};
+    officer.memory[rival.id] = (officer.memory[rival.id] || 0) + 1;
+    let note = "";
+    if (score >= 82) {
+      rival.defeats += 1;
+      rival.heat = clamp(rival.heat - 9);
+      faction.heat = clamp(faction.heat - 6);
+      faction.leverage = clamp(faction.leverage - 4);
+      const scar = officer.name.replace("Officer ", "").replace("Captain ", "") + " file";
+      if (!rival.scars.includes(scar)) rival.scars.push(scar);
+      rival.memory = officer.name + " broke the " + call.title + " play cleanly.";
+      note = rival.name + " loses heat and keeps a scar from " + officer.name + ".";
+    } else if (score >= 68) {
+      rival.heat = clamp(rival.heat - 3);
+      faction.heat = clamp(faction.heat - 2);
+      rival.memory = officer.name + " contained the damage but left usable ambiguity.";
+      note = rival.name + " backs off without disappearing.";
+    } else if (score >= 48) {
+      rival.heat = clamp(rival.heat + 7);
+      faction.heat = clamp(faction.heat + 4);
+      faction.leverage = clamp(faction.leverage + 3);
+      rival.memory = officer.name + " gave the network a new angle.";
+      note = rival.name + " adapts around the precinct response.";
+    } else {
+      rival.wins += 1;
+      rival.heat = clamp(rival.heat + 13);
+      faction.heat = clamp(faction.heat + 8);
+      faction.leverage = clamp(faction.leverage + 7);
+      rival.memory = officer.name + " became part of the rival playbook.";
+      promoteRival(rival);
+      note = rival.name + " promotes to " + rival.rank + " after exploiting the call.";
+    }
+    cityMemory.turn += 1;
+    cityMemory.lastEvent = note;
+    saveCityMemory();
+    return note;
+  }
+
+  const els = {
+    trustVal: document.getElementById("trustVal"),
+    chaosVal: document.getElementById("chaosVal"),
+    budgetVal: document.getElementById("budgetVal"),
+    trustFill: document.getElementById("trustFill"),
+    chaosFill: document.getElementById("chaosFill"),
+    budgetFill: document.getElementById("budgetFill"),
+    shiftChip: document.getElementById("shiftChip"),
+    shiftList: document.getElementById("shiftList"),
+    memoryTurn: document.getElementById("memoryTurn"),
+    cityMemory: document.getElementById("cityMemory"),
+    caseCount: document.getElementById("caseCount"),
+    caseSeverity: document.getElementById("caseSeverity"),
+    caseType: document.getElementById("caseType"),
+    caseTitle: document.getElementById("caseTitle"),
+    caseCopy: document.getElementById("caseCopy"),
+    cityHook: document.getElementById("cityHook"),
+    tags: document.getElementById("tags"),
+    bestFit: document.getElementById("bestFit"),
+    riskText: document.getElementById("riskText"),
+    rivalText: document.getElementById("rivalText"),
+    selectedText: document.getElementById("selectedText"),
+    directorMode: document.getElementById("directorMode"),
+    directorCopy: document.getElementById("directorCopy"),
+    pressureText: document.getElementById("pressureText"),
+    predictionText: document.getElementById("predictionText"),
+    learningText: document.getElementById("learningText"),
+    officers: document.getElementById("officers"),
+    log: document.getElementById("log"),
+    dispatchBtn: document.getElementById("dispatchBtn"),
+    holdBtn: document.getElementById("holdBtn"),
+    adviceBtn: document.getElementById("adviceBtn"),
+    overrideBtn: document.getElementById("overrideBtn"),
+    resetBtn: document.getElementById("resetBtn"),
+    footerState: document.getElementById("footerState"),
+    modal: document.getElementById("modal"),
+    modalTitle: document.getElementById("modalTitle"),
+    modalBody: document.getElementById("modalBody"),
+    modalBtn: document.getElementById("modalBtn")
+  };
+
+  const state = {
+    trust: 55,
+    chaos: 20,
+    budget: 75,
+    index: 0,
+    selected: null,
+    adviceLeft: 3,
+    overridesLeft: 3,
+    heldThisCall: false,
+    finished: false,
+    endless: false,
+    generatedCases: [],
+    canContinue: false,
+    log: []
+  };
+
+  function clamp(n) {
+    return Math.max(0, Math.min(100, Math.round(n)));
+  }
+
+  function shiftNo() {
+    return Math.floor(state.index / 4) + 1;
+  }
+
+  function cityPressure() {
+    if (state.chaos >= 72) return "Volatile";
+    if (state.trust <= 32) return "Hostile";
+    if (state.budget <= 28) return "Broke";
+    if (state.trust >= 78 && state.chaos <= 26) return "Confident";
+    return "Stable";
+  }
+
+  function baseFitScore(officer, call) {
+    let total = 0;
+    let weight = 0;
+    for (const key of Object.keys(call.traits)) {
+      total += officer.stats[key] * call.traits[key];
+      weight += call.traits[key];
+    }
+    return weight ? total / weight : 50;
+  }
+
+  function rankedOfficers(call) {
+    return officers
+      .map(officer => ({ officer, score: baseFitScore(officer, call) }))
+      .sort((a, b) => b.score - a.score);
+  }
+
+  function makeProceduralCase(slot) {
+    const pressure = cityPressure();
+    const templates = [
+      {
+        type: "Night Market",
+        title: "Drone Food Cart Turf War",
+        copy: "Two autonomous carts are price-matching each other into bankruptcy while customers livestream the condiment negotiations.",
+        tags: ["economy", "crowd", "machines"],
+        traits: { procedure: 48, empathy: 62, analysis: 76, force: 8 }
       },
-      standard: {
-        label: "Standard",
-        start: 12,
-        signal: 40,
-        noise: 18,
-        charge: 3,
-        anomalies: [6, 13, 18],
-        static: [2, 9, 21]
+      {
+        type: "Synthetic Witness",
+        title: "The Doorbell Camera Recants",
+        copy: "A smart doorbell submitted testimony, deleted it, and now claims it was doing improv. Badge wants a warrant for the cloud.",
+        tags: ["ai", "evidence", "privacy"],
+        traits: { procedure: 66, empathy: 28, analysis: 96, force: 2 }
       },
-      pressure: {
-        label: "Pressure",
-        start: 12,
-        signal: 44,
-        noise: 24,
-        charge: 2,
-        anomalies: [4, 11, 19],
-        static: [1, 7, 15, 23]
+      {
+        type: "Casino Spillover",
+        title: "Neon Limo Blocks the Bike Lane",
+        copy: "A party bus, a bicycle courier, and three influencers have all declared legal victory. Someone gave Tank a velvet rope.",
+        tags: ["nightlife", "traffic", "press"],
+        traits: { procedure: 72, empathy: 58, analysis: 42, force: 24 }
+      },
+      {
+        type: "Civic Ritual",
+        title: "Mayor's Hologram Has Demands",
+        copy: "A campaign hologram escaped its projector and is promising tax cuts to a vending machine. Process says this is technically a hearing.",
+        tags: ["politics", "absurd", "public"],
+        traits: { procedure: 84, empathy: 46, analysis: 62, force: 4 }
+      },
+      {
+        type: "Containment",
+        title: "Museum Robot Requests Asylum",
+        copy: "A docent bot rolled into the precinct with a forged passport and three school groups chanting for due process.",
+        tags: ["robot", "rights", "crowd"],
+        traits: { procedure: 58, empathy: 92, analysis: 54, force: 0 }
       }
-    };
-    const frequencyRegalia = {
-      night: { place: "Null Frequency", regalia: "Veil Receiver", power: "Ghost Sweep", mechanic: "reveals the focused row and column through dead air.", lore: "a horned listening veil that hears calls the board has already erased." },
-      standard: { place: "Prism Grid", regalia: "Facet Walker", power: "Twin Relay", mechanic: "restores signal and charge through mirrored channels.", lore: "mirrored receiver wings split one transmission into two clean paths." },
-      pressure: { place: "Censer Surge", regalia: "Sirenbreaker Mantle", power: "Static Ward", mechanic: "burns signal to tear noise out of the board.", lore: "a tall bronze alarm mantle that turns hostile static into a warning bell." }
-    };
-    const dispatchCalls = [
-      "A payphone rings from an address the map refuses to draw.",
-      "Two patrol cars report the same alley from different decades.",
-      "A caller whispers badge numbers that have not been issued yet.",
-      "The switchboard records a voice under every open line.",
-      "A missing-person file prints itself with tomorrow's timestamp."
     ];
-    const board = document.querySelector("#board");
-    const els = {
-      shell: document.querySelector("#shell"),
-      attract: document.querySelector("#attract"),
-      attractStart: document.querySelector("#attractStart"),
-      signal: document.querySelector("#signal"),
-      noise: document.querySelector("#noise"),
-      cleared: document.querySelector("#cleared"),
-      charge: document.querySelector("#charge"),
-      best: document.querySelector("#best"),
-      message: document.querySelector("#message"),
-      log: document.querySelector("#log"),
-      badge: document.querySelector("#statusBadge"),
-      scan: document.querySelector("#scan"),
-      shift: document.querySelector("#shift"),
-      resolve: document.querySelector("#resolve"),
-      reset: document.querySelector("#reset"),
-      guidedDemo: document.querySelector("#guidedDemo"),
-      exportSession: document.querySelector("#exportSession"),
-      playtestId: document.querySelector("#playtestId"),
-      summary: document.querySelector("#summary"),
-      summaryTitle: document.querySelector("#summaryTitle"),
-      summaryDetails: document.querySelector("#summaryDetails"),
-      difficulty: document.querySelectorAll("[data-difficulty]"),
-      frequencyPlace: document.querySelector("#frequencyPlace"),
-      frequencyRegalia: document.querySelector("#frequencyRegalia"),
-      frequencyLore: document.querySelector("#frequencyLore"),
-      frequencyPowerName: document.querySelector("#frequencyPowerName"),
-      frequencyMechanic: document.querySelector("#frequencyMechanic"),
-      frequencyPower: document.querySelector("#frequencyPower")
+    const template = templates[(slot + state.trust + state.chaos + state.budget) % templates.length];
+    const traits = { ...template.traits };
+    if (pressure === "Volatile") traits.force += 22;
+    if (pressure === "Hostile") traits.empathy += 22;
+    if (pressure === "Broke") traits.procedure += 18;
+    if (pressure === "Confident") traits.analysis += 14;
+    for (const key of Object.keys(traits)) traits[key] = Math.max(0, Math.min(100, traits[key]));
+    const call = {
+      ...template,
+      title: template.title + " #" + (slot + 1),
+      traits,
+      severity: pressure === "Stable" ? "Night Shift" : pressure,
+      risk: pressure === "Volatile" || pressure === "Hostile" ? "High" : pressure === "Broke" ? "Budget" : "Medium",
+      procedural: true
     };
+    const ranked = rankedOfficers(call);
+    call.best = ranked[0].officer.id;
+    call.secondary = ranked[1].officer.id;
+    return call;
+  }
 
-    let state;
-    let selectedDifficulty = "standard";
-    let callCursor = 0;
-    let attractActive = true;
-    let demoRunning = false;
-    let demoStepActive = false;
-    let demoTimer = null;
-    const playtestIdKey = "precinct404SignalPlaytestId";
-    const guidedDemoSteps = [
-      { focus: 13, action: "scan", before: "Demo: scan the highlighted cell to reveal a nearby anomaly.", after: "Demo: ! marks a real anomaly. Now move R onto it." },
-      { focus: 13, action: "shift", before: "Demo: shift one block right. R can only move one square at a time.", after: "Demo: R is standing on !, so Resolve is now valid." },
-      { action: "resolve", before: "Demo: resolve the anomaly. This spends charge and signal, then turns it stable.", after: "Demo: first incident stable. Two more to go." },
-      { focus: 18, action: "shift", before: "Demo: shift down to the next anomaly.", after: "Demo: R is on the second anomaly." },
-      { action: "resolve", before: "Demo: resolve again when R is on !.", after: "Demo: second incident stable. One remains." },
-      { focus: 13, action: "shift", before: "Demo: move back up one block.", after: "Demo: keep stepping one square at a time." },
-      { focus: 8, action: "shift", before: "Demo: move up again.", after: "Demo: now move left toward the final anomaly." },
-      { focus: 7, action: "shift", before: "Demo: move left.", after: "Demo: one more left reaches the final anomaly." },
-      { focus: 6, action: "shift", before: "Demo: move left onto the last !.", after: "Demo: R is on the final anomaly." },
-      { action: "resolve", before: "Demo: resolve the last anomaly to win.", after: "Demo complete: scan to find !, shift R onto it, then resolve." }
-    ];
-
-    function start(options = {}) {
-      sfx('powerUp');
-      if (!options.keepDemo) cancelGuidedDemo(false);
-      const layout = layouts[selectedDifficulty];
-      const call = nextDispatchCall(layout);
-      state = {
-        difficulty: selectedDifficulty,
-        position: layout.start,
-        focus: layout.start,
-        signal: layout.signal,
-        noise: layout.noise,
-        charge: layout.charge,
-        turn: 1,
-        over: false,
-        outcome: "open",
-        call,
-        score: 0,
-        best: readBest(selectedDifficulty),
-        bestUpdated: false,
-        failedResolveStreak: 0,
-        frequencyPowerUsed: false,
-        powerUses: 0,
-        costumeTransforms: state && state.difficulty !== selectedDifficulty ? (state.costumeTransforms || 0) + 1 : 0,
-        keyboardActions: state ? state.keyboardActions || 0 : 0,
-        touchActions: state ? state.touchActions || 0 : 0,
-        gamepadActions: state ? state.gamepadActions || 0 : 0,
-        cells: Array.from({ length: total }, (_, index) => ({
-          anomaly: layout.anomalies.includes(index),
-          revealed: index === layout.start,
-          cleared: false,
-          static: layout.static.includes(index)
-        }))
-      };
-      els.summary.hidden = true;
-      els.summaryTitle.textContent = "";
-      els.summaryDetails.textContent = "";
-      els.log.textContent = "";
-      board.innerHTML = "";
-      for (let i = 0; i < total; i += 1) {
-        const button = document.createElement("button");
-        button.className = "cell";
-        button.type = "button";
-        button.dataset.index = String(i);
-        button.addEventListener("pointerdown", () => focusCell(i));
-        button.addEventListener("click", () => focusCell(i));
-        board.appendChild(button);
-      }
-      say(`${call} Find the anomalies, hold enough signal, and resolve three incidents before the precinct drowns in noise.`);
-      log(`CASE 404-A // ${layout.label.toLowerCase()} board initialized`);
-      render();
+  function currentCase() {
+    if (state.index < cases.length) return attachCityContext(cases[state.index], state.index);
+    if (!state.endless) return attachCityContext(cases[cases.length - 1], cases.length - 1);
+    const generatedIndex = state.index - cases.length;
+    while (state.generatedCases.length <= generatedIndex) {
+      state.generatedCases.push(makeProceduralCase(state.generatedCases.length));
     }
+    return attachCityContext(state.generatedCases[generatedIndex], state.index);
+  }
 
-    function deployFrequencyPower(source = "manual") {
-      sfx('warp');
-      if (state.over || state.frequencyPowerUsed || demoRunning) return false;
-      if (state.difficulty === "night") {
-        const point = xy(state.focus);
-        state.cells.forEach((cell, index) => {
-          const at = xy(index);
-          if (at.x === point.x || at.y === point.y) cell.revealed = true;
-        });
-        state.signal = Math.max(0, state.signal - 5);
-        spendNoise(3);
-      } else if (state.difficulty === "standard") {
-        state.signal = Math.min(100, state.signal + 7);
-        state.charge = Math.min(5, state.charge + 2);
-        spendNoise(4);
-      } else {
-        state.signal = Math.max(0, state.signal - 4);
-        state.noise = Math.max(0, state.noise - 18);
-      }
-      state.frequencyPowerUsed = true;
-      state.powerUses += 1;
-      const frequency = frequencyRegalia[state.difficulty];
-      say(`${frequency.power} deployed: ${frequency.mechanic}`);
-      log(`T${state.turn} POWER // ${frequency.power} via ${source}`);
-      render();
-      return true;
+  function officerById(id) {
+    return officers.find(o => o.id === id);
+  }
+
+  function fitScore(officer, call) {
+    const score = baseFitScore(officer, call);
+    const busyPenalty = officer.busy * 16;
+    const fatiguePenalty = (officer.fatigue || 0) * 5;
+    const learningBonus = Math.min(8, officer.xp || 0);
+    const rivalMemory = call.rivalId && officer.memory ? (officer.memory[call.rivalId] || 0) : 0;
+    const rivalBonus = Math.min(10, rivalMemory * 3);
+    return Math.max(0, Math.round(score - busyPenalty - fatiguePenalty + learningBonus + rivalBonus));
+  }
+
+  function bestOfficerName(call) {
+    return officerById(call.best).name.replace("Officer ", "").replace("Captain ", "");
+  }
+
+  function addLog(text) {
+    state.log.unshift(text);
+    state.log = state.log.slice(0, 9);
+  }
+
+  function deltaText(label, n) {
+    const klass = n >= 0 ? "delta-good" : "delta-bad";
+    const sign = n >= 0 ? "+" : "";
+    return `<span class="${klass}">${label} ${sign}${n}</span>`;
+  }
+
+  function likelyOutcome(score) {
+    if (score >= 82) return "Clean win";
+    if (score >= 68) return "Workable";
+    if (score >= 48) return "Messy";
+    return "Escalation";
+  }
+
+  function learningSummary() {
+    const learner = officers
+      .slice()
+      .sort((a, b) => (b.xp || 0) - (a.xp || 0))[0];
+    const hottest = cityMemory.rivals.slice().sort((a, b) => b.heat - a.heat)[0];
+    if (!learner || !learner.xp) return hottest ? hottest.name + " heat " + hottest.heat : "No adaptation";
+    return learner.name.replace("Officer ", "").replace("Captain ", "") + " +" + learner.xp + " field data // " + hottest.name + " heat " + hottest.heat;
+  }
+
+  function renderDirector(call) {
+    const selected = state.selected ? officerById(state.selected) : null;
+    const selectedScore = selected ? fitScore(selected, call) : 0;
+    const best = officerById(call.best);
+    const rival = rivalById(call.rivalId);
+    const faction = factionById(call.factionId);
+    const pressure = cityPressure();
+    els.directorMode.textContent = state.endless ? "Adaptive night shift" : "Pilot script";
+    els.pressureText.textContent = pressure;
+    els.predictionText.textContent = selected ? likelyOutcome(selectedScore) + " // " + selectedScore : "Select a unit";
+    els.learningText.textContent = learningSummary();
+    if (selected) {
+      els.directorCopy.textContent = "Director model prefers " + best.name + ". " + selected.name + " is projected at " + selectedScore + "https://app.northstarprime.net/100 under " + pressure.toLowerCase() + " city pressure. Active memory: " + rival.name + " / " + faction.name + ".";
+    } else {
+      els.directorCopy.textContent = "Director model is weighing public trust, chaos, budget, officer fatigue, rival heat, and recent field learning. Best baseline match: " + best.name + ". Active memory: " + rival.name + ".";
     }
+  }
 
-    function xy(index) {
-      return { x: index % width, y: Math.floor(index / width) };
-    }
+  function renderMemoryPanel(call) {
+    const activeRival = rivalById(call.rivalId);
+    const activeFaction = factionById(call.factionId);
+    const factions = cityMemory.factions
+      .slice()
+      .sort((a, b) => b.heat - a.heat)
+      .slice(0, 3);
+    const rivals = cityMemory.rivals
+      .slice()
+      .sort((a, b) => b.heat - a.heat)
+      .slice(0, 3);
+    els.memoryTurn.textContent = "Memory " + cityMemory.turn;
+    els.cityMemory.innerHTML = `
+      <div class="memory-card">
+        <div class="memory-title">${escapeHtml(activeRival.name)} <span>${escapeHtml(activeRival.rank)}</span></div>
+        <div class="memory-line">${escapeHtml(activeFaction.name)} // ${escapeHtml(activeRival.signature)} // heat ${activeRival.heat}</div>
+        <div class="memory-line">${escapeHtml(activeRival.memory)}</div>
+        <div class="heat-bar"><span style="width:${activeRival.heat}%"></span></div>
+      </div>
+      <div class="memory-card">
+        <div class="memory-title">Faction Heat <span>top networks</span></div>
+        ${factions.map(f => `
+          <div class="memory-line">${escapeHtml(f.name)} // heat ${f.heat} // leverage ${f.leverage}</div>
+          <div class="heat-bar"><span style="width:${f.heat}%"></span></div>
+        `).join("")}
+      </div>
+      <div class="memory-card">
+        <div class="memory-title">Rival Board <span>recurring actors</span></div>
+        ${rivals.map(r => `
+          <div class="memory-line">${escapeHtml(r.name)} // ${escapeHtml(r.rank)} // W${r.wins} D${r.defeats}${r.scars.length ? " // " + escapeHtml(r.scars.join(", ")) : ""}</div>
+        `).join("")}
+      </div>
+    `;
+  }
 
-    function distance(a, b) {
-      const pa = xy(a);
-      const pb = xy(b);
-      return Math.abs(pa.x - pb.x) + Math.abs(pa.y - pb.y);
-    }
+  function render() {
+    const call = currentCase();
+    state.trust = clamp(state.trust);
+    state.chaos = clamp(state.chaos);
+    state.budget = clamp(state.budget);
+    els.trustVal.textContent = state.trust;
+    els.chaosVal.textContent = state.chaos;
+    els.budgetVal.textContent = state.budget;
+    els.trustFill.style.width = state.trust + "%";
+    els.chaosFill.style.width = state.chaos + "%";
+    els.budgetFill.style.width = state.budget + "%";
+    els.shiftChip.textContent = state.endless ? "Night Shift+" : "Shift " + Math.min(3, shiftNo());
+    els.caseCount.textContent = state.endless
+      ? "Night Call " + (state.index - cases.length + 1)
+      : "Call " + Math.min(state.index + 1, cases.length) + " of " + cases.length;
+    els.caseSeverity.textContent = call.severity;
+    els.caseType.textContent = call.type;
+    els.caseTitle.textContent = call.title;
+    els.caseCopy.textContent = call.copy;
+    els.cityHook.textContent = call.cityHook || cityMemory.lastEvent;
+    els.tags.innerHTML = call.tags.map(t => `<span class="tag">${t}</span>`).join("");
+    els.bestFit.textContent = state.adviceLeft < 3 || state.finished ? bestOfficerName(call) : "Ask Mags";
+    els.riskText.textContent = call.risk;
+    els.rivalText.textContent = rivalById(call.rivalId).name;
+    els.selectedText.textContent = state.selected ? officerById(state.selected).name.replace("Officer ", "").replace("Captain ", "") : "None";
+    els.dispatchBtn.disabled = !state.selected || state.finished;
+    els.holdBtn.disabled = state.heldThisCall || state.finished;
+    els.adviceBtn.disabled = state.adviceLeft <= 0 || state.finished;
+    els.adviceBtn.textContent = "Ask Mags (" + state.adviceLeft + ")";
+    els.overrideBtn.disabled = state.overridesLeft <= 0 || state.finished;
+    els.overrideBtn.textContent = "Derek Override (" + state.overridesLeft + ")";
+    els.footerState.textContent = state.finished ? "Pilot closed" : state.endless ? "Adaptive night shift active" : "Pilot active";
+    renderDirector(call);
+    renderMemoryPanel(call);
+    renderOfficers(call);
+    renderShiftList();
+    els.log.innerHTML = state.log.map(row => `<div class="log-entry">${row}</div>`).join("");
+  }
 
-    function neighbors(index) {
-      return [...Array(total).keys()].filter((candidate) => distance(index, candidate) === 1);
-    }
-
-    function focusCell(index) {
-      if (state.over) return;
-      if (demoRunning && !demoStepActive) return;
-      state.focus = index;
-      render();
-    }
-
-    function moveFocus(dx, dy) {
-      if (state.over) return;
-      if (demoRunning && !demoStepActive) return;
-      const current = xy(state.focus);
-      const nextX = Math.max(0, Math.min(width - 1, current.x + dx));
-      const nextY = Math.max(0, Math.min(width - 1, current.y + dy));
-      focusCell((nextY * width) + nextX);
-    }
-
-    function enterCase() {
-      if (!attractActive) return;
-      attractActive = false;
-      els.attract.hidden = true;
-      els.shell.classList.add("case-live");
-      els.scan.focus({ preventScroll: true });
-    }
-
-    function nearestOpenAnomaly() {
-      return state.cells
-        .map((cell, index) => ({ cell, index, distance: distance(state.position, index) }))
-        .filter((item) => item.cell.anomaly && !item.cell.cleared)
-        .sort((a, b) => a.distance - b.distance)[0];
-    }
-
-    function failedResolveHint() {
-      const nearest = nearestOpenAnomaly();
-      if (!nearest) return "All active anomalies are already quiet.";
-      if (nearest.distance === 1) return "Hint: the nearest unresolved anomaly is one block away.";
-      return `Hint: the nearest unresolved anomaly is ${nearest.distance} blocks from the receiver.`;
-    }
-
-    function nextDispatchCall(layout) {
-      const offset = Object.keys(layouts).indexOf(selectedDifficulty);
-      const text = dispatchCalls[(callCursor + offset + dispatchCalls.length) % dispatchCalls.length];
-      callCursor += 1;
-      return `${layout.label} call: ${text}`;
-    }
-
-    function bestKey(difficulty) {
-      return `precinct404SignalBest:${difficulty}`;
-    }
-
-    function readBest(difficulty) {
-      try {
-        return Number(window.localStorage.getItem(bestKey(difficulty))) || 0;
-      } catch (error) {
-        return 0;
-      }
-    }
-
-    function writeBest(difficulty, score) {
-      try {
-        window.localStorage.setItem(bestKey(difficulty), String(score));
-      } catch (error) {
-        return;
-      }
-    }
-
-    function readPlaytestId() {
-      const value = els.playtestId.value.trim();
-      return value || "manual-local";
-    }
-
-    function savePlaytestId() {
-      try {
-        window.localStorage.setItem(playtestIdKey, readPlaytestId());
-      } catch (error) {
-        return;
-      }
-    }
-
-    function restorePlaytestId() {
-      try {
-        els.playtestId.value = window.localStorage.getItem(playtestIdKey) || "manual-local";
-      } catch (error) {
-        els.playtestId.value = "manual-local";
-      }
-    }
-
-    function filenamePart(value) {
-      return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48) || "manual-local";
-    }
-
-    function endCase(outcome, badge, message, logLine) {
-      sfx(outcome === 'win' ? 'winFanfare' : 'die');
-      state.over = true;
-      state.outcome = outcome;
-      els.badge.textContent = badge;
-      say(message);
-      log(logLine);
-      showSummary();
-      render();
-    }
-
-    function showSummary() {
-      const score = currentScore();
-      const previousBest = readBest(state.difficulty);
-      state.score = score;
-      state.bestUpdated = score > previousBest;
-      state.best = state.bestUpdated ? score : previousBest;
-      if (state.bestUpdated) writeBest(state.difficulty, score);
-      els.summary.hidden = false;
-      els.summaryTitle.textContent = state.outcome === "win" ? "Signal restored" : "Case dropped";
-      els.summaryDetails.textContent = `${layouts[state.difficulty].label} // score ${score} // best ${state.best}${state.bestUpdated ? " new" : ""} // turn ${state.turn} // signal ${state.signal} // noise ${state.noise}`;
-    }
-
-    function currentScore() {
-      const cleared = state.cells.filter((item) => item.cleared).length;
-      const quiet = Math.max(0, 100 - state.noise);
-      return Math.max(0, (cleared * 250) + (state.signal * 4) + quiet - ((state.turn - 1) * 5));
-    }
-
-    function pulseCells(indexes, className) {
-      indexes.forEach((index) => {
-        const cell = board.children[index];
-        if (!cell) return;
-        cell.classList.remove(className);
-        void cell.offsetWidth;
-        cell.classList.add(className);
-        window.setTimeout(() => cell.classList.remove(className), 560);
-      });
-    }
-
-    function spendNoise(amount) {
-      state.noise = Math.min(100, state.noise + amount);
-      if (state.noise >= 100) {
-        endCase("fail", "signal lost", "The board whites out. Precinct 404 loses the call.", "FAIL // noise reached 100");
-      }
-    }
-
-    function useTurn() {
-      state.turn += 1;
-      if (state.turn % 2 === 0) state.charge = Math.min(5, state.charge + 1);
-      if (!state.over && state.signal <= 0) {
-        endCase("fail", "battery dead", "The receiver stays warm, but there is no signal left to spend.", "FAIL // signal depleted");
-      }
-      render();
-    }
-
-    function scan() {
-      sfx('coin');
-      if (state.over) return;
-      if (demoRunning && !demoStepActive) return;
-      state.failedResolveStreak = 0;
-      const targets = [state.focus, ...neighbors(state.focus)];
-      let found = 0;
-      targets.forEach((index) => {
-        if (!state.cells[index].revealed) {
-          state.cells[index].revealed = true;
-          if (state.cells[index].anomaly && !state.cells[index].cleared) found += 1;
-        }
-      });
-      state.signal = Math.max(0, state.signal - 4);
-      spendNoise(found ? 3 : 7);
-      if (state.over) return;
-      say(found ? "A real anomaly answers under the static." : "Static expands across the board.");
-      log(`T${state.turn} SCAN cell ${state.focus + 1} // found ${found}`);
-      useTurn();
-      pulseCells(targets, "scan-hit");
-    }
-
-    function shift() {
-      if (state.over) return;
-      if (demoRunning && !demoStepActive) return;
-      state.failedResolveStreak = 0;
-      if (distance(state.position, state.focus) > 1) {
-        say("The receiver can only shift one block at a time.");
-        log(`T${state.turn} SHIFT denied // cell ${state.focus + 1} out of range`);
+  function renderOfficers(call) {
+    els.officers.innerHTML = officers.map(officer => {
+      const selected = state.selected === officer.id ? " selected" : "";
+      const busy = officer.busy > 0 ? " busy" : "";
+      const score = fitScore(officer, call);
+      const rivalMemory = call.rivalId && officer.memory ? (officer.memory[call.rivalId] || 0) : 0;
+      return `
+        <button class="officer${selected}${busy}" data-id="${officer.id}" ${state.finished ? "disabled" : ""}>
+          <div class="officer-top">
+            <div>
+              <div class="officer-name">${officer.name}</div>
+              <div class="officer-role">${officer.role} // ${officer.good}</div>
+            </div>
+            <span class="chip">${score}</span>
+          </div>
+          <div class="officer-role">${officer.flaw}${officer.busy ? " // cooldown " + officer.busy : ""}${officer.fatigue ? " // fatigue " + officer.fatigue : ""}${officer.xp ? " // learned +" + officer.xp : ""}${rivalMemory ? " // rival memory +" + rivalMemory : ""}</div>
+          <div class="bars">
+            ${miniBar("Procedure", officer.stats.procedure)}
+            ${miniBar("Empathy", officer.stats.empathy)}
+            ${miniBar("Analysis", officer.stats.analysis)}
+            ${miniBar("Force", officer.stats.force)}
+            ${miniBar("Fatigue", Math.min(100, (officer.fatigue || 0) * 20))}
+          </div>
+        </button>`;
+    }).join("");
+    for (const btn of els.officers.querySelectorAll(".officer")) {
+      btn.addEventListener("click", () => {
+        if (state.finished) return;
+        state.selected = btn.dataset.id;
         render();
-        return;
-      }
-      state.position = state.focus;
-      state.cells[state.position].revealed = true;
-      state.signal = Math.max(0, state.signal - 2);
-      spendNoise(state.cells[state.position].static ? 9 : 4);
-      if (state.over) return;
-      say(state.cells[state.position].static ? "A bad frequency bites the line." : "The receiver moves cleanly.");
-      log(`T${state.turn} SHIFT // receiver to ${state.position + 1}`);
-      useTurn();
-    }
-
-    function resolve() {
-      if (state.over) return;
-      if (demoRunning && !demoStepActive) return;
-      const cell = state.cells[state.position];
-      if (!cell.anomaly || cell.cleared) {
-        state.failedResolveStreak += 1;
-        const hint = state.failedResolveStreak >= 2 ? ` ${failedResolveHint()}` : "";
-        say(`No active anomaly at the receiver.${hint}`);
-        log(`T${state.turn} RESOLVE failed // no anomaly${hint ? " // hint issued" : ""}`);
-        spendNoise(8);
-        if (!state.over) useTurn();
-        return;
-      }
-      if (state.charge < 2 || state.signal < 8) {
-        say("The anomaly needs two charge and eight signal.");
-        log(`T${state.turn} RESOLVE held // charge ${state.charge}, signal ${state.signal}`);
-        render();
-        return;
-      }
-      cell.cleared = true;
-      state.failedResolveStreak = 0;
-      const resolvedIndex = state.position;
-      state.charge -= 2;
-      state.signal = Math.max(0, state.signal - 8);
-      state.noise = Math.max(0, state.noise - 12);
-      const cleared = state.cells.filter((item) => item.cleared).length;
-      say("An incident stabilizes. The board gets quieter.");
-      log(`T${state.turn} RESOLVE // ${cleared}/3 stable`);
-      if (cleared >= 3) {
-        endCase("win", "case stable", "Three incidents are stable. Precinct 404 keeps the line open.", "WIN // local signal restored");
-        pulseCells([resolvedIndex], "resolve-hit");
-        return;
-      }
-      useTurn();
-      pulseCells([resolvedIndex], "resolve-hit");
-    }
-
-    function say(text) {
-      els.message.textContent = text;
-    }
-
-    function log(text) {
-      els.log.textContent = `${text}\n${els.log.textContent}`.trim();
-    }
-
-    function playtestPayload() {
-      return {
-        exported_at: new Date().toISOString(),
-        title: "Precinct 404: Signal Board",
-        playtest_id: readPlaytestId(),
-        difficulty: state.difficulty,
-        outcome: state.outcome,
-        call: state.call,
-        turn: state.turn,
-        score: state.score || currentScore(),
-        best: state.best,
-        signal: state.signal,
-        noise: state.noise,
-        charge: state.charge,
-        cleared: state.cells.filter((item) => item.cleared).length,
-        focus: state.focus + 1,
-        receiver: state.position + 1,
-        failed_resolve_streak: state.failedResolveStreak,
-        log: els.log.textContent.split("\n").filter(Boolean)
-      };
-    }
-
-    function exportSession() {
-      savePlaytestId();
-      const payload = playtestPayload();
-      const stamp = payload.exported_at.replace(/[:.]/g, "-");
-      const playtestId = filenamePart(payload.playtest_id);
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = `precinct-404-signal-playtest-note-${payload.difficulty}-${playtestId}-${stamp}.json`;
-      document.body.appendChild(link);
-      link.click();
-      URL.revokeObjectURL(link.href);
-      link.remove();
-      log(`EXPORT // playtest note ${payload.difficulty} ${payload.playtest_id} turn ${payload.turn}`);
-    }
-
-    function setDemoControls(running) {
-      els.guidedDemo.disabled = running;
-      els.guidedDemo.textContent = running ? "Demo Running" : "Run Guided Demo";
-      els.scan.disabled = running;
-      els.shift.disabled = running;
-      els.resolve.disabled = running;
-      els.difficulty.forEach((button) => {
-        button.disabled = running;
       });
     }
+  }
 
-    function withDemoStep(callback) {
-      demoStepActive = true;
-      callback();
-      demoStepActive = false;
+  function miniBar(label, value) {
+    return `<div class="mini"><span>${label}</span><div class="mini-bar"><span style="width:${value}%"></span></div></div>`;
+  }
+
+  function renderShiftList() {
+    const rows = [];
+    if (state.endless) {
+      rows.push(`<div class="shift-row"><span>Pilot Program</span><strong>12/12 calls</strong></div>`);
+      rows.push(`<div class="shift-row"><span>Night Shift+</span><strong>${Math.max(0, state.index - cases.length)}/∞ calls</strong></div>`);
+      rows.push(`<div class="shift-row"><span>City Pressure</span><strong>${cityPressure()}</strong></div>`);
+      els.shiftList.innerHTML = rows.join("");
+      return;
+    }
+    for (let i = 0; i < 3; i++) {
+      const start = i * 4;
+      const done = Math.max(0, Math.min(4, state.index - start));
+      rows.push(`<div class="shift-row"><span>Shift ${i + 1}</span><strong>${done}/4 calls</strong></div>`);
+    }
+    els.shiftList.innerHTML = rows.join("");
+  }
+
+  function dispatch() {
+    if (!state.selected || state.finished) return;
+    const call = currentCase();
+    const officer = officerById(state.selected);
+    const score = fitScore(officer, call);
+    let trust = 0;
+    let chaos = 0;
+    let budget = -2;
+    let outcome;
+
+    if (officer.id === call.best) {
+      trust = 9;
+      chaos = -9;
+      budget = call.risk === "Extreme" ? -3 : -1;
+      outcome = `${officer.name} handles ${call.title}.`;
+    } else if (officer.id === call.secondary || score >= 68) {
+      trust = 4;
+      chaos = -4;
+      budget = -2;
+      outcome = `${officer.name} gets a workable result on ${call.title}.`;
+    } else if (score >= 48) {
+      trust = -2;
+      chaos = 7;
+      budget = -4;
+      outcome = `${officer.name} resolves the call, but the incident report needs a glossary.`;
+    } else {
+      trust = -8;
+      chaos = 14;
+      budget = -7;
+      outcome = `${officer.name} escalates ${call.title} into a mayoral briefing.`;
     }
 
-    function cancelGuidedDemo(showMessage = true) {
-      if (demoTimer) {
-        window.clearTimeout(demoTimer);
-        demoTimer = null;
+    if (state.heldThisCall) {
+      chaos += 3;
+      trust -= 1;
+    }
+
+    if (state.endless) {
+      const pressure = cityPressure();
+      if (pressure === "Volatile") chaos += 2;
+      if (pressure === "Hostile") trust -= 2;
+      if (pressure === "Broke") budget -= 2;
+      if (score >= 82) {
+        trust += 2;
+        chaos -= 2;
       }
-      if (!demoRunning) return;
-      demoRunning = false;
-      demoStepActive = false;
-      setDemoControls(false);
-      if (showMessage && state && !state.over) say("Guided demo stopped. Start a fresh case or choose a case load.");
     }
 
-    function finishGuidedDemo() {
-      demoTimer = null;
-      demoRunning = false;
-      demoStepActive = false;
-      setDemoControls(false);
-      say("Demo complete: scan to reveal !, shift R onto it, then resolve. Try Night for your first solo run.");
-      log("DEMO // guided route complete");
+    state.trust += trust;
+    state.chaos += chaos;
+    state.budget += budget;
+    const memoryScore = officer.id === call.best ? Math.max(score, 82) : officer.id === call.secondary ? Math.max(score, 68) : score;
+    const cityNote = resolveCityMemory(call, officer, memoryScore);
+    officer.xp = (officer.xp || 0) + (score >= 68 ? 1 : 0);
+    officer.fatigue = Math.min(5, (officer.fatigue || 0) + 1);
+    if (officer.xp && officer.xp % 3 === 0) {
+      const trait = Object.keys(call.traits).sort((a, b) => call.traits[b] - call.traits[a])[0];
+      officer.stats[trait] = Math.min(99, officer.stats[trait] + 1);
+      addLog(`${officer.name} adapts: ${trait} model improves from field data.`);
     }
+    officer.busy = 1;
+    advanceCooldowns(officer.id);
+    if (cityNote) addLog(cityNote);
+    addLog(`${outcome} ${deltaText("Trust", trust)} ${deltaText("Chaos", -chaos)} ${deltaText("Budget", budget)}`);
+    nextCall();
+  }
 
-    function runGuidedDemo() {
-      if (demoRunning) return;
-      if (attractActive) enterCase();
-      selectedDifficulty = "standard";
-      demoRunning = true;
-      setDemoControls(true);
-      start({ keepDemo: true });
-      log("DEMO // guided route started");
-
-      let index = 0;
-      function nextStep() {
-        if (!demoRunning || index >= guidedDemoSteps.length) {
-          finishGuidedDemo();
-          return;
-        }
-        const step = guidedDemoSteps[index];
-        withDemoStep(() => {
-          if (typeof step.focus === "number") focusCell(step.focus);
-        });
-        say(step.before);
-        demoTimer = window.setTimeout(() => {
-          withDemoStep(() => {
-            if (step.action === "scan") scan();
-            if (step.action === "shift") shift();
-            if (step.action === "resolve") resolve();
-          });
-          say(step.after);
-          index += 1;
-          if (index >= guidedDemoSteps.length) {
-            finishGuidedDemo();
-            return;
-          }
-          demoTimer = window.setTimeout(nextStep, 1450);
-        }, 850);
-      }
-      demoTimer = window.setTimeout(nextStep, 450);
+  function advanceCooldowns(exemptId) {
+    for (const officer of officers) {
+      if (officer.id !== exemptId) officer.busy = Math.max(0, officer.busy - 1);
+      if (officer.id !== exemptId) officer.fatigue = Math.max(0, (officer.fatigue || 0) - 1);
     }
+  }
 
-    function render() {
-      const frequency = frequencyRegalia[state.difficulty];
-      els.signal.textContent = state.signal;
-      els.noise.textContent = state.noise;
-      els.cleared.textContent = `${state.cells.filter((item) => item.cleared).length}/3`;
-      els.charge.textContent = state.charge;
-      els.best.textContent = state.best;
-      els.shell.classList.toggle("noise-caution", state.noise >= 35 && state.noise < 55);
-      els.shell.classList.toggle("noise-danger", state.noise >= 55 && state.noise < 80);
-      els.shell.classList.toggle("noise-critical", state.noise >= 80);
-      if (!state.over) els.badge.textContent = `turn ${state.turn}`;
-      document.body.dataset.signalMode = state.difficulty;
-      els.frequencyPlace.textContent = frequency.place;
-      els.frequencyRegalia.textContent = frequency.regalia;
-      els.frequencyLore.textContent = frequency.lore;
-      els.frequencyPowerName.textContent = frequency.power;
-      els.frequencyMechanic.textContent = ` ${frequency.mechanic}`;
-      els.frequencyPower.textContent = state.frequencyPowerUsed ? `${frequency.power} · spent` : `Q · Deploy ${frequency.power}`;
-      els.frequencyPower.disabled = state.frequencyPowerUsed || state.over || demoRunning;
-      els.frequencyPower.classList.toggle("frequency-power-ready", !els.frequencyPower.disabled);
-      els.difficulty.forEach((button) => {
-        const active = button.dataset.difficulty === selectedDifficulty;
-        button.classList.toggle("active", active);
-        button.setAttribute("aria-pressed", String(active));
-      });
+  function holdCall() {
+    if (state.finished || state.heldThisCall) return;
+    state.heldThisCall = true;
+    state.chaos += 5;
+    state.trust -= 2;
+    addLog(`Dispatch held for more context. ${deltaText("Trust", -2)} ${deltaText("Chaos", -5)}`);
+    render();
+  }
 
-      [...board.children].forEach((button, index) => {
-        const cell = state.cells[index];
-        button.className = "cell";
-        button.innerHTML = "";
-        const setCellMark = (mark) => {
-          button.innerHTML = `<span class="cell-mark">${mark}</span>`;
-          button.dataset.mark = mark;
-        };
-        if (index === state.focus) button.classList.add("focused");
-        if (cell.revealed) button.classList.add("revealed");
-        if (index === state.position) {
-          button.classList.add("player");
-          setCellMark("R");
-          button.innerHTML = `<span class="walker-avatar" aria-label="Rhea Vector receiver">R</span>`;
-        } else if (cell.cleared) {
-          button.classList.add("cleared");
-          setCellMark("OK");
-        } else if (cell.revealed && cell.anomaly) {
-          button.classList.add("anomaly");
-          setCellMark("!");
-        } else if (cell.revealed && cell.static) {
-          button.classList.add("noise");
-          setCellMark("~");
-        } else if (cell.revealed) {
-          setCellMark(".");
-        }
-        button.setAttribute("aria-label", `cell ${index + 1}`);
-      });
-      window.__nspGhostlineState = { title:"VORATH Ghostline // Three-Frequency Pursuit", protagonist:"Rhea Vector", difficulty:state.difficulty, stage:frequency.place, regalia:frequency.regalia, power:frequency.power, mechanic:frequency.mechanic, powerReady:!state.frequencyPowerUsed, signal:state.signal, noise:state.noise, charge:state.charge, position:state.position, focus:state.focus, revealed:state.cells.filter(cell=>cell.revealed).length, powerUses:state.powerUses, costumeTransforms:state.costumeTransforms, keyboardActions:state.keyboardActions, touchActions:state.touchActions, gamepadActions:state.gamepadActions };
+  function askMags() {
+    if (state.adviceLeft <= 0 || state.finished) return;
+    const call = currentCase();
+    state.adviceLeft -= 1;
+    state.selected = call.best;
+    addLog(`Mags points at ${bestOfficerName(call)} and says the obvious thing nobody automated.`);
+    render();
+  }
+
+  function derekOverride() {
+    if (state.overridesLeft <= 0 || state.finished) return;
+    state.overridesLeft -= 1;
+    state.chaos -= 10;
+    state.budget -= 4;
+    addLog(`Derek translates robot logic into human terms. ${deltaText("Chaos", 10)} ${deltaText("Budget", -4)}`);
+    render();
+  }
+
+  function nextCall() {
+    state.index += 1;
+    state.selected = null;
+    state.heldThisCall = false;
+
+    if (state.trust <= 0 || state.chaos >= 100 || state.budget <= 0) {
+      endGame(false);
+      return;
     }
-
-    els.scan.addEventListener("click", scan);
-    els.shift.addEventListener("click", shift);
-    els.resolve.addEventListener("click", resolve);
-    els.reset.addEventListener("click", () => {
-      cancelGuidedDemo(false);
-      start();
-    });
-    els.guidedDemo.addEventListener("click", runGuidedDemo);
-    els.exportSession.addEventListener("click", exportSession);
-    els.frequencyPower.addEventListener("click", event => { if(event.pointerType === "touch") state.touchActions += 1; deployFrequencyPower(event.pointerType === "touch" ? "touch" : "pointer"); });
-    els.playtestId.addEventListener("change", savePlaytestId);
-    els.attractStart.addEventListener("click", enterCase);
-    board.addEventListener("touchmove", (event) => {
-      if (event.target.closest(".cell")) event.preventDefault();
-    }, { passive: false });
-    els.difficulty.forEach((button) => {
-      button.addEventListener("click", (event) => {
-        if (event.pointerType === "touch") state.touchActions += 1;
-        selectedDifficulty = button.dataset.difficulty;
-        start();
-      });
-    });
-    document.addEventListener("keydown", (event) => {
-      const key = event.key.toLowerCase();
-      const typingTarget = event.target && ["INPUT", "TEXTAREA"].includes(event.target.tagName);
-      if (typingTarget) return;
-      if (["enter"," ","r","q","arrowup","arrowright","arrowdown","arrowleft","w","a","s","d"].includes(key)) state.keyboardActions += 1;
-      if (attractActive) {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          enterCase();
-        }
-        return;
-      }
-      const moves = {
-        arrowup: [0, -1],
-        w: [0, -1],
-        arrowright: [1, 0],
-        d: [1, 0],
-        arrowdown: [0, 1],
-        s: [0, 1],
-        arrowleft: [-1, 0],
-        a: [-1, 0]
-      };
-      if (moves[key]) {
-        event.preventDefault();
-        moveFocus(moves[key][0], moves[key][1]);
-        return;
-      }
-      if (event.key === "Enter") scan();
-      if (event.key === " ") {
-        event.preventDefault();
-        shift();
-      }
-      if (key === "r") resolve();
-      if (key === "q") deployFrequencyPower("keyboard");
-    });
-    const gamepadLatch = new Set();
-    function readGamepad(){const pad=navigator.getGamepads&&navigator.getGamepads()[0];if(!pad)return;const actions=[[0,scan],[1,shift],[2,resolve],[3,()=>deployFrequencyPower("gamepad")],[12,()=>moveFocus(0,-1)],[13,()=>moveFocus(0,1)],[14,()=>moveFocus(-1,0)],[15,()=>moveFocus(1,0)],[4,()=>{selectedDifficulty=selectedDifficulty==="night"?"pressure":selectedDifficulty==="standard"?"night":"standard";start()}],[5,()=>{selectedDifficulty=selectedDifficulty==="night"?"standard":selectedDifficulty==="standard"?"pressure":"night";start()}]];actions.forEach(([index,action])=>{const pressed=Boolean(pad.buttons[index]&&pad.buttons[index].pressed);if(pressed&&!gamepadLatch.has(index)){gamepadLatch.add(index);state.gamepadActions+=1;action();render()}if(!pressed)gamepadLatch.delete(index)})}
-    window.__nspGhostlineReadGamepad=readGamepad;
-    window.__nspGhostlineAPI={setDifficulty:value=>{selectedDifficulty=value;start()},deployPower:()=>deployFrequencyPower("test seam"),focus:index=>focusCell(index),scan,shift,resolve,start,snapshot:()=>JSON.parse(JSON.stringify(state))};
-    function gamepadLoop(){readGamepad();requestAnimationFrame(gamepadLoop)}requestAnimationFrame(gamepadLoop);
-    restorePlaytestId();
-    start();
-    if (new URLSearchParams(window.location.search).has("playtest")) {
-      enterCase();
-      state.cells.forEach((cell, index) => {
-        if (cell.anomaly || cell.static || index === state.position || index === state.focus || index % 5 === 0) cell.revealed = true;
-      });
-      state.cells.forEach((cell, index) => {
-        if (cell.anomaly && index !== state.position) cell.cleared = index % 2 === 0;
-      });
-      state.noise = 47;
-      state.signal = Math.max(state.signal, 18);
-      state.charge = Math.max(state.charge, 4);
-      say("PLAYTEST VISUAL STATE // receiver avatar, anomaly portals, static cells, and cleared crystals exposed.");
-      log("PLAYTEST // high-definition board inspection state");
-      render();
+    if (state.index >= cases.length && !state.endless) {
+      endGame(true);
+      return;
     }
-    els.attractStart.focus({ preventScroll: true });
-  </script>
+    render();
+  }
+
+  function endGame(won) {
+    state.finished = true;
+    state.canContinue = won && !state.endless;
+    const score = Math.max(0, state.trust + state.budget - state.chaos);
+    const best = Number(localStorage.getItem("precinct404Best") || 0);
+    if (score > best) localStorage.setItem("precinct404Best", String(score));
+    const title = won ? "Pilot Survived" : "Pilot Suspended";
+    const body = won
+      ? `Final score ${score}. Trust ${clamp(state.trust)}, chaos ${clamp(state.chaos)}, budget ${clamp(state.budget)}. The mayor calls this a success because no one corrected her.`
+      : `Final score ${score}. Trust ${clamp(state.trust)}, chaos ${clamp(state.chaos)}, budget ${clamp(state.budget)}. NexaForce schedules a postmortem and calls it a pivot.`;
+    showModal(title, body);
+    render();
+  }
+
+  function showModal(title, body) {
+    els.modalTitle.textContent = title;
+    els.modalBody.textContent = body;
+    els.modalBtn.textContent = state.canContinue ? "Start Night Shift+" : "New Shift";
+    els.modal.classList.add("active");
+  }
+
+  function startNightShift() {
+    state.finished = false;
+    state.canContinue = false;
+    state.endless = true;
+    state.index = cases.length;
+    state.selected = null;
+    state.heldThisCall = false;
+    state.generatedCases = [];
+    state.adviceLeft = Math.max(state.adviceLeft, 1);
+    state.overridesLeft = Math.max(state.overridesLeft, 1);
+    els.modal.classList.remove("active");
+    addLog("Night Shift+ activated. Local director will synthesize calls from city pressure.");
+    render();
+  }
+
+  function reset() {
+    state.trust = 55;
+    state.chaos = 20;
+    state.budget = 75;
+    state.index = 0;
+    state.selected = null;
+    state.adviceLeft = 3;
+    state.overridesLeft = 3;
+    state.heldThisCall = false;
+    state.finished = false;
+    state.endless = false;
+    state.generatedCases = [];
+    state.canContinue = false;
+    state.log = ["Boot sequence complete. Derek has requested coffee and a lawyer."];
+    for (const officer of officers) {
+      officer.busy = 0;
+      officer.xp = 0;
+      officer.fatigue = 0;
+      officer.memory = {};
+    }
+    els.modal.classList.remove("active");
+    els.modalBtn.textContent = "New Shift";
+    render();
+  }
+
+  els.dispatchBtn.addEventListener("click", dispatch);
+  els.holdBtn.addEventListener("click", holdCall);
+  els.adviceBtn.addEventListener("click", askMags);
+  els.overrideBtn.addEventListener("click", derekOverride);
+  els.resetBtn.addEventListener("click", reset);
+  els.modalBtn.addEventListener("click", () => state.canContinue ? startNightShift() : reset());
+  addEventListener("keydown", event => {
+    if (event.key === "Enter" && !els.dispatchBtn.disabled) dispatch();
+    if (event.key === "r" || event.key === "R") reset();
+  });
+
+  reset();
+})();
+</script>
 </body>
 </html>

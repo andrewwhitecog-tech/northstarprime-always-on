@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>IDC Studios — Google Flow Ultra (Veo 3.1) Production Studio</title>
+  <meta name="description" content="Production cockpit and 1-click prompt dispatch matrix for generating authentic 16:9 cinematic video masters using Google Flow Ultra (Veo 3.1).">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <style>
+    :root {
+      --void: #050712;
+      --surface: #0b0f1d;
+      --card: rgba(15, 23, 42, 0.85);
+      --gold: #f5c542;
+      --cyan: #22d3ee;
+      --pink: #ec4899;
+      --green: #10b981;
+      --border: rgba(34, 211, 238, 0.2);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: radial-gradient(ellipse at 50% 10%, rgba(34,211,238,0.12), transparent 50%),
+                  radial-gradient(ellipse at 80% 60%, rgba(245,197,66,0.08), transparent 50%),
+                  var(--void);
+      color: var(--text);
+      font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+      line-height: 1.5;
+      padding-bottom: 5rem;
+    }
+    .wrap {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+    header {
+      text-align: center;
+      padding: 2.5rem 1rem 2rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2.5rem;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.9rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      background: rgba(34,211,238,0.12);
+      border: 1px solid var(--cyan);
+      color: var(--cyan);
+      margin-bottom: 1rem;
+    }
+    h1 {
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      text-transform: uppercase;
+      letter-spacing: -1px;
+      color: #fff;
+      margin-bottom: 0.75rem;
+    }
+    h1 span {
+      background: linear-gradient(90deg, var(--cyan), var(--gold), var(--pink), var(--cyan));
+      background-size: 260% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shimmer 8s linear infinite;
+    }
+    @keyframes shimmer { 0% { background-position: 0% center; } 100% { background-position: 260% center; } }
+    p.lead {
+      max-width: 820px;
+      margin: 0 auto 1.5rem;
+      color: var(--muted);
+      font-size: 1.1rem;
+    }
+    .tracker-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 1.5rem;
+      background: rgba(11, 15, 29, 0.9);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.5rem;
+      margin: 1.5rem auto 0;
+      max-width: 900px;
+    }
+    .tracker-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .tracker-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+    }
+    .tracker-val {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--gold);
+    }
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      justify-content: center;
+      margin-bottom: 2.5rem;
+    }
+    .filter-btn {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: var(--muted);
+      padding: 0.55rem 1.2rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .filter-btn:hover, .filter-btn.active {
+      background: rgba(34,211,238,0.15);
+      border-color: var(--cyan);
+      color: #fff;
+      box-shadow: 0 0 15px rgba(34,211,238,0.25);
+    }
+    .filter-btn.active {
+      background: linear-gradient(135deg, rgba(245,197,66,0.25), rgba(34,211,238,0.2));
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 1.5rem;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      border-color: var(--cyan);
+      box-shadow: 0 15px 35px rgba(0,0,0,0.5), 0 0 20px rgba(34,211,238,0.15);
+    }
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+    .series-tag {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--cyan);
+    }
+    .duration-badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.2rem 0.5rem;
+      background: rgba(245,197,66,0.15);
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      border-radius: 4px;
+    }
+    .card-title {
+      font-size: 1.25rem;
+      color: #fff;
+      margin-bottom: 0.5rem;
+    }
+    .card-desc {
+      font-size: 0.88rem;
+      color: var(--muted);
+      margin-bottom: 1rem;
+      line-height: 1.4;
+    }
+    .prompt-box {
+      background: rgba(5, 7, 18, 0.8);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 0.9rem;
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: #cbd5e1;
+      margin-bottom: 1rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+      user-select: all;
+      flex-grow: 1;
+      border-left: 3px solid var(--cyan);
+    }
+    .card-actions {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.6rem 1rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      text-decoration: none;
+    }
+    .btn-copy {
+      background: var(--cyan);
+      color: #050712;
+      flex-grow: 1;
+    }
+    .btn-copy:hover {
+      background: #fff;
+      box-shadow: 0 0 15px rgba(34,211,238,0.5);
+    }
+    .btn-copy.copied {
+      background: var(--green);
+      color: #fff;
+    }
+    .btn-flow {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff;
+    }
+    .btn-flow:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+  </style>
+</head>
+<body>
+<nav style="display:flex;justify-content:space-between;align-items:center;padding:12px 24px;background:#07090e;border-bottom:1px solid rgba(225,199,116,0.22);position:sticky;top:0;z-index:100;font-family:sans-serif;margin-bottom:24px;">
+  <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+    <a href="/idc-programming/" style="font-size:0.78rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#f2d172;border:1px solid #f2d172;padding:3px 8px;border-radius:4px;text-decoration:none;">IDC Cinema</a>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <a href="/idc/season-1/" style="font-size:0.82rem;font-weight:600;color:#aeb3c6;text-decoration:none;padding:4px 10px;border-radius:4px;">Season 1 (Origin)</a>
+      <a href="/idc/season-2/" style="font-size:0.82rem;font-weight:600;color:#aeb3c6;text-decoration:none;padding:4px 10px;border-radius:4px;">Season 2 (Expansion)</a>
+      <a href="/idc/season-3/" style="font-size:0.82rem;font-weight:600;color:#aeb3c6;text-decoration:none;padding:4px 10px;border-radius:4px;">Season 3 (Listening)</a>
+      <a href="/idc/season-4/" style="font-size:0.82rem;font-weight:600;color:#aeb3c6;text-decoration:none;padding:4px 10px;border-radius:4px;">Season 4 (Production)</a>
+      <a href="/idc/season-4/jukebox/" style="font-size:0.82rem;font-weight:600;color:#aeb3c6;text-decoration:none;padding:4px 10px;border-radius:4px;">Audio Jukebox</a>
+      <a href="/idc/flow-studio/" style="font-size:0.82rem;font-weight:600;color:#fff;background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.4);text-decoration:none;padding:4px 10px;border-radius:4px;">Flow Studio</a>
+    </div>
+  </div>
+  <a href="/idc-programming/" style="font-size:0.82rem;color:#aeb3c6;text-decoration:none;">&larr; Back to Cinema Programming Hub</a>
+</nav>
+  <div class="wrap">
+    <header>
+      <div class="badge">Google Flow Ultra · Veo 3.1 Fast / Quality Engine</div>
+      <h1>IDC Studios <span>Flow Studio</span></h1>
+      <p class="lead">1-Click prompt dispatch matrix for generating authentic 16:9 cinematic motion masters. Standardized on Google Ultra allowances (10 credits / 8s shot), safe margins, photorealistic lighting, and zero burnt-in text.</p>
+      
+      <div class="tracker-bar">
+        <div class="tracker-item">
+          <span class="tracker-label">Ultra Credit Balance</span>
+          <span class="tracker-val">25,000 Credits</span>
+        </div>
+        <div class="tracker-item">
+          <span class="tracker-label">Cost per Shot</span>
+          <span class="tracker-val">10 Credits / 8s</span>
+        </div>
+        <div class="tracker-item">
+          <span class="tracker-label">Generation Capacity</span>
+          <span class="tracker-val">2,500 Full Shots</span>
+        </div>
+        <div class="tracker-item">
+          <span class="tracker-label">Aspect Ratio</span>
+          <span class="tracker-val">16:9 Widescreen</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="filter-bar">
+      <button class="filter-btn active" data-filter="all">All Series (20 Shots)</button>
+      <button class="filter-btn" data-filter="deeper-state">Deeper State</button>
+      <button class="filter-btn" data-filter="higher-ground">Higher Ground</button>
+      <button class="filter-btn" data-filter="uncommon">Uncommon Side Effects</button>
+      <button class="filter-btn" data-filter="cancellation">Cancellation Department</button>
+      <button class="filter-btn" data-filter="anthology">Season One Anthology</button>
+    </div>
+
+    <div class="grid" id="shots-grid">
+      <!-- 1. Deeper State: Conduit Catwalk -->
+      <article class="card" data-category="deeper-state">
+        <div class="card-head">
+          <span class="series-tag">Deeper State · Conduit Line</span>
+          <span class="duration-badge">8.0s · 1080p</span>
+        </div>
+        <h3 class="card-title">Transit Conduit Failure</h3>
+        <p class="card-desc">Low-angle tracking shot through a subterranean transit conduit bulkhead. Cooling coils dripping into drainage grates, amber status lamps glowing softly in mist.</p>
+        <div class="prompt-box">Cinematic 16:9 widescreen tracking shot through a damp brutalist subterranean concrete transit conduit. Heavy industrial copper cooling coils with faint steam, warm droplets of amber mineral oil dripping steadily into a rusted floor grate. Four small amber indicator lamps glowing softly against wet concrete bulkhead in the distance. Volumetric sodium-vapor lighting cutting through atmospheric haze, 35mm film grain, photorealistic industrial realism, zero text, zero overlays, zero logos.</div>
+        <div class="card-actions">
+          <button class="btn btn-copy" onclick="copyPrompt(this)">Copy Flow Prompt</button>
+          <a class="btn btn-flow" href="https://flow.google.com/" target="_blank">Open Flow ↗</a>
+        </div>
+      </article>
+
+      <!-- 2. Deeper State: Audit Mezzanine -->
+      <article class="card" data-category="deeper-state">
+        <div class="card-head">
+          <span class="series-tag">Deeper State · Civic Trust</span>
+          <span class="duration-badge">8.0s · 1080p</span>
+        </div>
+        <h3 class="card-title">The Merit Token Ledger</h3>
+        <p class="card-desc">Slow cinematic dolly into an open brass ledger box holding translucent gold-foil merit tokens on a green baize desk. Morning sun streaming through clerestory windows.</p>
+        <div class="prompt-box">Cinematic 16:9 slow push-in dolly shot onto an open polished brass ledger box on a dark green felt desk in an administrative municipal mezzanine. Inside the box rest translucent amber and gold tokens catching morning sunlight. Dust motes drifting gently through warm directional window rays, shallow depth of field, natural soft lens flare, rich tactile materials, 1080p photorealistic cinematography, zero subtitles, zero text overlays.</div>
+        <div class="card-actions">
+          <button class="btn btn-copy" onclick="copyPrompt(this)">Copy Flow Prompt</button>
+          <a class="btn btn-flow" href="https://flow.google.com/" target="_blank">Open Flow ↗</a>
+        </div>
+      </article>
+
+      <!-- 3. Deeper State: Reservoir Spillway -->
+      <article class="card" data-category="deeper-state">
+        <div class="card-head">
+          <span class="series-tag">Deeper State · Infrastructure</span>
+          <span class="duration-badge">8.0s · 1080p</span>
+        </div>
+        <h3 class="card-title">Reservoir Dam Storm</h3>
+        <p class="card-desc">Dramatic wide shot of an immense brutalist reservoir dam in torrential autumn night rain. Industrial floodlights illuminating turbulent cascading water.</p>
+        <div class="prompt-box">Cinematic 16:9 dramatic wide exterior shot of an immense brutalist precast concrete dam and reservoir spillway at night in heavy driving rain. Powerful industrial floodlights cutting through mist and water spray, turbulent grey water cascading over the sluice gates, wet concrete gleaming under harsh stadium lighting, atmospheric cold realism, steady cinematic slow camera drift, photorealistic, zero text, zero subtitles.</div>
+        <div class="card-actions">
+          <button class="btn btn-copy" onclick="copyPrompt(this)">Copy Flow Prompt</button>
+          <a class="btn btn-flow" href="https://flow.google.com/" target="_blank">Open Flow ↗</a>
+        </div>
+      </article>
+
+      <!-- 4. Deeper State: Telephone Desk -->
+      <article class="card" data-category="deeper-state">
+        <div class="card-head">
+          <span class="series-tag">Deeper State · Operations</span>
+          <span class="duration-badge">8.0s · 1080p</span>
+        </div>
+        <h3 class="card-title">The Four-Way Bridge Desk</h3>
+        <p class="card-desc">Gliding camera movement across four vintage black bakelite telephone receivers resting off-hook beside ink-stamped blue ledger cards in twilight room tone.</p>
+        <div class="prompt-box">Cinematic 16:9 slow lateral tracking shot across a wooden operations desk in twilight room lighting. Four vintage black bakelite telephone receivers resting off their cradles on brass paperweight stands, ink stamps, stacks of blue ledger cards with fountain pen notes, soft warm incandescent desk lamp glow, shallow focus, 35mm film texture, photorealistic tactile administrative aesthetic, zero text overlays.</div>
+        <div class="card-actions">
+          <button class="btn btn-copy" onclick="copyPrompt(this)">Copy Flow Prompt</button>
+          <a class="btn btn-flow" href="https://flow.google.com/" target="_blank">Open Flow ↗</a>
+        </div>
+      </article>
+
+      <!-- 5. Higher Ground: Courtyard Dusk -->
+      <article class="card" data-category="higher-ground">
+        <div class="card-head">
+          <span class="series-tag">Higher Ground · Green Cathedral</span>
+          <span class="duration-badge">8.0s · 1080p</span>
+        </div>
+        <h3 class="card-title">Courtyard Solstice Dusk</h3>
+        <p class="card-desc">Warm wide shot of a multi-story reclaimed brick factory courtyard. Glowing Edison bulbs, lush vertical herb planters, deep blue twilight sky above.</p>
+        <div class="prompt-box">Cinematic 16:9 wide shot of an inner courtyard between multi-story reclaimed red brick factory buildings at blue hour twilight. Strings of warm filament Edison bulbs suspended overhead casting amber reflections on weathered brick pavers, lush wooden planter boxes of rosemary and mint, old iron fire escapes rising up the walls, gentle evening breeze, photorealistic architectural texture, zero text, zero logos.</div>
+        <div class="card-actions">
+          <button class="btn btn-copy" onclick="copyPrompt(this)">Copy Flow Prompt</button>
+          <a class="btn btn-flow" href="https://flow.google.com/" target="_blank">Open Flow ↗</a>
+        </div>
+      </article>
+
+      <!-- 6. Higher Ground: Quiet Reading Night -->
+      <article class="card" data-category="higher-ground">
+        <div class="card-head">
+          <span class="series-tag">Higher Ground · Quiet Culture</span>
+          <span class="duration-badge">8.0s · 1080p</span>
+        </div>
+        <h3 class="card-title">The Quiet Garden Commons</h3>
+        <p class="card-desc">Slow push-in on an open garden courtyard at night. People peacefully reading and sketching by ceramic beeswax lanterns, stone fountain splashing gently.</p>
+        <div class="prompt-box">Cinematic 16:9 slow push-in shot of a peaceful nighttime courtyard garden. Patrons sitting quietly at rustic timber tables illuminated by handmade ceramic beeswax candle lanterns, sketching in notebooks and reading under woolen blankets, soft trickling water from a central carved stone fountain, tranquil atmospheric evening ambience, rich warm candlelight shadows, photorealistic, zero text overlays.</div>
+        <div class="card-actions">
+          <button class="btn btn-copy" onclick="copyPrompt(this)">Copy Flow Prompt</button>
+          <a class="btn btn-flow" href="https://flow.google.com/" target="_blank">Open Flow ↗</a>
+        </div>
+      </article>
+
+      <!-- 7. Higher Ground: Boiler Room -->
+      <article class="card" data-category="higher-ground">
+        <div class="card-head">
+          <span class="series-tag">Higher Ground · Infrastructure</span>
+          <span class="duration-badge">8.0s · 1080p</span>
+        </div>
+        <h3 class="card-title">The Cellar Boiler Seam</h3>
+        <p class="card-desc">Moody pan across an immense Victorian cast-iron heating boiler, glowing firebox inspection seam, steam gauge trembling under copper valves.</p>
+        <div class="prompt-box">Cinematic 16:9 slow vertical tilt down an immense vintage cast-iron heating boiler in a vaulted stone cellar. A glowing orange heat seam visible through an iron damper plate, trembling round brass pressure gauges, dark ductile iron pipes branching across the ceiling, light steam wisps venting from a brass relief valve, dramatic chiaroscuro lighting, photorealistic mechanical detail, zero subtitles.</div>
+        <div class="card-actions">
+          <button class="btn btn-copy" onclick="copyPrompt(this)">Copy Flow Prompt</button>
+          <a class="btn btn-flow" href="https://flow.google.com/" target="_blank">Open Flow ↗</a>
+        </div>
+      </article>
+
+      <!-- 8. Higher Ground: Ceramic Workshop -->
+      <article class="card" data-category="higher-ground">
+        <div class="card-head">
+          <span class="series-tag">Higher Ground · Workshop</span>
+          <span class="duration-badge">8.0s · 1080p</span>
+        </div>
+        <h3 class="card-title">Morning Ceramic Workshop</h3>
+        <p class="card-desc">Sunlit pottery workshop with damp terra-cotta clay on a wooden wheel, clay-spattered tools on timber pegboards, morning dust in the air.</p>
+        <div class="prompt-box">Cinematic 16:9 slow tracking shot through a sunlit ground-floor ceramic workshop. Wet terra-cotta clay centered on a slowly rotating wooden potter's wheel, rows of handmade clay vessels drying on pine shelves, wooden calipers and trimming tools hung on weathered pegboard, golden morning window light streaming through leaded glass, photorealistic tactile craft aesthetic, zero text overlays.</div>
+        <div class="card-actions">
+          <button class="btn btn-copy" onclick="copyPrompt(this)">Copy Flow Prompt</button>
+          <a class="btn btn-flow" href="https://flow.google.com/" target="_blank">Open Flow ↗</a>
+        </div>
+      </article>
+
+      <!-- 9. Uncommon: 2:40 AM Alcove -->
+      <article class="card" data-category="uncommon">
+        <div class="card-head">
+          <span class="series-tag">Uncommon Side Effects · Ghost Route</span>
+          <span class="duration-badge">8.0s · 1080p</span>
+        </div>
+        <h3 class="card-title">The 2:40 A.M. Phosphor Glow</h3>
+        <p class="card-desc">Moody close-up of a vintage green phosphor cathode ray monitor scrolling telemetry in a dark records alcove, reflection of a lonely technician in the curved glass.</p>
+        <div class="prompt-box">Cinematic 16:9 intimate slow tracking shot of a heavy vintage monochrome green phosphor CRT monitor in a shadowy concrete archives alcove at 2:40 AM. Lines of abstract diagnostic telemetry scrolling across curved glass, faint scanline raster hum, soft green phosphor glow reflecting in the eyeglasses of a thoughtful technician sitting in silhouette, cyberpunk administrative atmosphere, 35mm grain, photorealistic, zero text overlays.</div>
+        <div class="card-actions">
+          <button class="btn btn-copy" onclick="copyPrompt(this)">Copy Flow Prompt</button>
+          <a class="btn btn-flow" href="https://flow.google.com/" target="_blank">Open Flow ↗</a>
+        </div>
+      </article>
+
+      <!-- 10. Uncommon: Palisade Optical Vault -->
+      <article class="card" data-category="uncommon">
+        <div class="card-head">
+          <span class="series-tag">Uncommon Side Effects · Palisade</span>
+          <span class="duration-badge">8.0s · 1080p</span>
+        </div>
+        <h3 class="card-title">The Golden Optical Tape Vault</h3>
+        <p class="card-desc">Wide tracking shot inside a chilled archival data cathedral. Towering floor-to-ceiling racks of golden optical tape cartridges with pulsating blue LED status lights.</p>
+        <div class="prompt-box">Cinematic 16:9 wide slow tracking shot through a vast chilled corporate archival data vault. Towering twenty-foot server monoliths holding thousands of shimmering golden optical tape cartridges behind anti-reflective glass, pulsing deep blue fiber-optic leads, faint cryogenic vapor drifting across polished black terrazzo flooring, sleek modern institutional grandeur, photorealistic, zero text, zero subtitles.</div>
+        <div class="card-actions">
+          <button class="btn btn-copy" onclick="copyPrompt(this)">Copy Flow Prompt</button>
+          <a class="btn btn-flow" href="https://flow.google.com/" target="_blank">Open Flow ↗</a>
+        </div>
+      </article>
+
+      <!-- 11. Uncommon: Test Harness Scope -->
+      <article class="card" data-category="uncommon">
+        <div class="card-head">
+          <span class="series-tag">Uncommon Side Effects · Test Harness</span>
+          <span class="duration-badge">8.0s · 1080p</span>
+        </div>
+        <h3 class="card-title">Forensic Drive Projection</h3>
+        <p class="card-desc">Macro focus on an open diagnostic drive enclosure, glowing ribbon cables, and an amber projection beam casting test cards onto frosted glass.</p>
+        <div class="prompt-box">Cinematic 16:9 macro shot of an open electronic forensic test rig on a static-dissipative workbench. Multi-colored flat ribbon cables, spinning mirrored optical platters, and an overhead amber projection beam casting sharp geometric framing reticles onto a frosted glass panel, clean industrial technology aesthetic, shallow focus, atmospheric dust motes, photorealistic, zero text overlays.</div>
+        <div class="card-actions">
+          <button class="btn btn-copy" onclick="copyPrompt(this)">Copy Flow Prompt</button>
+          <a class="btn btn-flow" href="https://flow.google.com/" target="_blank">Open Flow ↗</a>
+        </div>
+      </article>
+
+      <!-- 12. Uncommon: Solenoid Token Key -->
+      <article class="card" data-category="uncommon">
+        <div class="card-head">
+          <span class="series-tag">Uncommon Side Effects · Key Rotation</span>
+          <span class="duration-badge">8.0s · 1080p</span>
+        </div>
+        <h3 class="card-title">The Physical Revocation Key</h3>
+        <p class="card-desc">Slow-motion close-up of a heavy brass token key turning in an industrial server rack solenoid lock, mechanical latch snapping home, LED status shifting.</p>
+        <div class="prompt-box">Cinematic 16:9 slow-motion close-up of a hand turning a solid brass dual-bitted authentication key into an industrial security server faceplate. Heavy mechanical solenoid latch clicking shut, a status LED transitioning from blinking amber to solid crisp white, brushed stainless steel hardware, authentic mechanical click aesthetic, photorealistic lighting, zero text overlays.</div>
+        <div class="card-actions">
+          <button class="btn btn-copy" onclick="copyPrompt(this)">Copy Flow Prompt</button>
+          <a class="btn btn-flow" href="https://flow.google.com/" target="_blank">Open Flow ↗</a>
+        </div>
+      </article>
+
+      <!-- 13. Cancellation: Terrazzo Lobby -->
+      <article class="card" data-category="cancellation">
+        <div class="card-head">
+          <span class="series-tag">Cancellation · The Broadcast Lobby</span>
+          <span class="duration-badge">8.0s · 1080p</span>
+        </div>
+        <h3 class="card-title">The Holographic Marquee Foyer</h3>
+        <p class="card-desc">Elegant tracking shot across a grand 1930s-style terrazzo broadcast lobby. An illuminated vintage holographic marquee flickering softly beside a velvet armchair.</p>
+        <div class="prompt-box">Cinematic 16:9 elegant tracking shot across a grand art-deco broadcast exhibition lobby. Polished brass and terrazzo tile floor, warm wall sconces, a free-standing three-dimensional holographic marquee flickering softly with vintage television character projections, a quiet velvet armchair sitting in a shadowy corner, rich cinematic lighting, 35mm film texture, photorealistic, zero text overlays.</div>
+        <div class="card-actions">
+          <button class="btn btn-copy" onclick="copyPrompt(this)">Copy Flow Prompt</button>
+          <a class="btn btn-flow" href="https://flow.google.com/" target="_blank">Open Flow ↗</a>
+        </div>
+      </article>
+
+      <!-- 14. Cancellation: Open-Reel Deck -->
+      <article class="card" data-category="cancellation">
+        <div class="card-head">
+          <span class="series-tag">Cancellation · Archive Mezzanine</span>
+          <span class="duration-badge">8.0s · 1080p</span>
+        </div>
+        <h3 class="card-title">The Magnetic Tape Machine</h3>
+        <p class="card-desc">Intimate macro shot of an open-reel magnetic tape deck spinning slowly, vintage analog VU meters pulsing to audio warmth, monitor headphones resting on oak.</p>
+        <div class="prompt-box">Cinematic 16:9 intimate macro shot of a classic professional two-inch open-reel magnetic tape transport deck spinning smoothly. Glowing amber analog needle VU meters bouncing gently, polished aluminum reels catching warm tungsten light, open-back studio monitor headphones resting on the dark oak meter bridge, rich retro analog recording studio aesthetic, photorealistic, zero text overlays.</div>
+        <div class="card-actions">
+          <button class="btn btn-copy" onclick="copyPrompt(this)">Copy Flow Prompt</button>
+          <a class="btn btn-flow" href="https://flow.google.com/" target="_blank">Open Flow ↗</a>
+        </div>
+      </article>
+
+      <!-- 15. Cancellation: Tomato Sunroom -->
+      <article class="card" data-category="cancellation">
+        <div class="card-head">
+          <span class="series-tag">Cancellation · Sovereign Rest</span>
+          <span class="duration-badge">8.0s · 1080p</span>
+        </div>
+        <h3 class="card-title">The Retired Performer's Garden</h3>
+        <p class="card-desc">Sun-drenched greenhouse sunroom filled with lush climbing tomato vines, terracotta pots, morning dew, steam rising from a ceramic teacup on cedar wood.</p>
+        <div class="prompt-box">Cinematic 16:9 sunlit shot inside a peaceful domestic greenhouse garden sunroom. Tall climbing green tomato vines with ripe red fruit climbing cedar stakes, terracotta pots of herbs, morning mist outside glass panes, steam rising gently from a handmade ceramic teacup on a weathered potting bench, tranquil gentle breeze, photorealistic organic warmth, zero text, zero subtitles.</div>
+        <div class="card-actions">
+          <button class="btn btn-copy" onclick="copyPrompt(this)">Copy Flow Prompt</button>
+          <a class="btn btn-flow" href="https://flow.google.com/" target="_blank">Open Flow ↗</a>
+        </div>
+      </article>
+
+      <!-- 16. Cancellation: Closed Door Hallway -->
+      <article class="card" data-category="cancellation">
+        <div class="card-head">
+          <span class="series-tag">Cancellation · Local Circle</span>
+          <span class="duration-badge">8.0s · 1080p</span>
+        </div>
+        <h3 class="card-title">The Closed Session Door</h3>
+        <p class="card-desc">Low-angle shot of a heavy oak conference door with frosted glass panel. Warm yellow light spilling from underneath into a quiet linoleum hallway, brass handle gleaming.</p>
+        <div class="prompt-box">Cinematic 16:9 low-angle shot down an institutional linoleum corridor. A heavy solid oak conference room door with frosted glass transom window, warm golden light spilling out from beneath the door frame onto the polished floor, a brass door handle catching the hallway shadow, quiet atmospheric institutional realism, slow forward dolly movement, photorealistic, zero text overlays.</div>
+        <div class="card-actions">
+          <button class="btn btn-copy" onclick="copyPrompt(this)">Copy Flow Prompt</button>
+          <a class="btn btn-flow" href="https://flow.google.com/" target="_blank">Open Flow ↗</a>
+        </div>
+      </article>
+
+      <!-- 17. Anthology: Arrival Dish -->
+      <article class="card" data-category="anthology">
+        <div class="card-head">
+          <span class="series-tag">Season One · Episode 01 Arrival</span>
+          <span class="duration-badge">8.0s · 1080p</span>
+        </div>
+        <h3 class="card-title">The Perimeter Radio Dish</h3>
+        <p class="card-desc">Deep space radio telescope listening dish silhouetted against an auroral Cascadia night sky, faint cosmic nebula shimmer, cinematic anamorphic lens flare.</p>
+        <div class="prompt-box">Cinematic 16:9 wide shot of an immense deep-space radio telescope dish perched on a rocky mountain ridge at night. Vibrant emerald and magenta auroral curtains shimmering across the starry sky, faint cosmic nebula reflection on the curved metal receiver, subtle slow tilt up toward the cosmos, anamorphic cinematic lens flare, photorealistic atmospheric sci-fi, zero text, zero overlays.</div>
+        <div class="card-actions">
+          <button class="btn btn-copy" onclick="copyPrompt(this)">Copy Flow Prompt</button>
+          <a class="btn btn-flow" href="https://flow.google.com/" target="_blank">Open Flow ↗</a>
+        </div>
+      </article>
+
+      <!-- 18. Anthology: Misread Signal -->
+      <article class="card" data-category="anthology">
+        <div class="card-head">
+          <span class="series-tag">Season One · Episode 02 Signal</span>
+          <span class="duration-badge">8.0s · 1080p</span>
+        </div>
+        <h3 class="card-title">The Neon Rain Interchange</h3>
+        <p class="card-desc">Neon-lit city transit interchange at twilight, flickering cathode-ray arrival screens displaying distorted telemetry, wet asphalt reflections.</p>
+        <div class="prompt-box">Cinematic 16:9 slow tracking shot across a wet urban transit plaza at twilight in steady rain. Neon cyan and magenta signage reflecting on dark puddles, overhead cathode ray arrival displays showing soft scanning static bands, silhouettes of commuters carrying umbrellas moving past, rich atmospheric cyberpunk noir, photorealistic, zero text overlays, zero subtitles.</div>
+        <div class="card-actions">
+          <button class="btn btn-copy" onclick="copyPrompt(this)">Copy Flow Prompt</button>
+          <a class="btn btn-flow" href="https://flow.google.com/" target="_blank">Open Flow ↗</a>
+        </div>
+      </article>
+
+      <!-- 19. Anthology: Local Conflict -->
+      <article class="card" data-category="anthology">
+        <div class="card-head">
+          <span class="series-tag">Season One · Episode 03 Conflict</span>
+          <span class="duration-badge">8.0s · 1080p</span>
+        </div>
+        <h3 class="card-title">The Dual Rooftop Antennas</h3>
+        <p class="card-desc">Two weathered television antenna towers atop parallel Victorian rooftops, signal interference humming across telephone wires under a stormy twilight horizon.</p>
+        <div class="prompt-box">Cinematic 16:9 low-angle shot of two vintage metal television antenna masts mounted on adjacent Victorian brick chimneys. Heavy dark storm clouds rolling across the twilight horizon, electrical utility wires vibrating in the wind, dramatic rim lighting on the antennas, cinematic atmospheric tension, 35mm film grain, photorealistic, zero text overlays.</div>
+        <div class="card-actions">
+          <button class="btn btn-copy" onclick="copyPrompt(this)">Copy Flow Prompt</button>
+          <a class="btn btn-flow" href="https://flow.google.com/" target="_blank">Open Flow ↗</a>
+        </div>
+      </article>
+
+      <!-- 20. Anthology: Final Transmission -->
+      <article class="card" data-category="anthology">
+        <div class="card-head">
+          <span class="series-tag">Season One · Episode 08 Finale</span>
+          <span class="duration-badge">8.0s · 1080p</span>
+        </div>
+        <h3 class="card-title">The Sign-Off Oscilloscope</h3>
+        <p class="card-desc">Vintage analog broadcast studio control console at sign-off, glowing vacuum tubes, cathode ray oscilloscope line flattening into cosmic hiss.</p>
+        <div class="prompt-box">Cinematic 16:9 slow push-in shot of a darkened vintage broadcast studio control room at station sign-off. A glowing green circular oscilloscope screen showing a gentle sine wave slowly flattening into a calm flat line, warm orange filaments of vacuum tubes glowing behind perforated metal, dust motes in the darkness, peaceful contemplative final transmission aesthetic, photorealistic, zero text overlays.</div>
+        <div class="card-actions">
+          <button class="btn btn-copy" onclick="copyPrompt(this)">Copy Flow Prompt</button>
+          <a class="btn btn-flow" href="https://flow.google.com/" target="_blank">Open Flow ↗</a>
+        </div>
+      </article>
+    </div>
+  </div>
+
+  <script>
+    // Copy button feedback
+    function copyPrompt(btn) {
+      const box = btn.closest('.card').querySelector('.prompt-box');
+      const text = box.innerText.trim();
+      navigator.clipboard.writeText(text).then(() => {
+        const orig = btn.innerText;
+        btn.innerText = 'Copied to Clipboard! ✓';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.innerText = orig;
+          btn.classList.remove('copied');
+        }, 2200);
+      });
+    }
+
+    // Filter controls
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    const cards = document.querySelectorAll('.card');
+
+    filterBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        filterBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        const filter = btn.getAttribute('data-filter');
+        cards.forEach(card => {
+          if (filter === 'all' || card.getAttribute('data-category') === filter) {
+            card.style.display = 'flex';
+          } else {
+            card.style.display = 'none';
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

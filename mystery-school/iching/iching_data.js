@@ -211,7 +211,7 @@
       lower: 'Heaven',
       judgment: 'Possession in Great Measure. Supreme success.',
       image: 'Fire in heaven above: the image of Possession in Great Measure. Thus the noble person curtails evil and furthers good.',
-      vorathCommentary: 'Radiant abundance. The vault is overflowing with 140 music masters, 150 coloring plates, and 52 games. Share generously.'
+      vorathCommentary: 'Radiant abundance. The vault is overflowing with 140 music masters, 150 coloring plates, and 51 games. Share generously.'
     },
     {
       number: 15,

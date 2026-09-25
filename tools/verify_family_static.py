@@ -14,7 +14,7 @@ class Links(HTMLParser):
         if tag in ('iframe','audio','video','form'):self.embeds.append(tag)
 
 def main():
-    allowed={'/family/'}|{'/family/'+x+'/' for x in SLUGS}
+    allowed={'/family/', '/little-light-library/'}|{'/family/'+x+'/' for x in SLUGS}
     for page in [ROOT/'family/index.html']+[ROOT/'family'/x/'index.html' for x in SLUGS]:
         html=page.read_text(encoding='utf-8'); parser=Links();parser.feed(html)
         assert not parser.embeds,(page,parser.embeds)

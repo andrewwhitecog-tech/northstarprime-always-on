@@ -1,0 +1,2953 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Adventures of Blazin' Beaver // Issue No. 1</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #07090e;
+    --cabinet-bg: #0e131d;
+    --border: rgba(255, 255, 255, 0.12);
+    --gold: #f5c542;
+    --emerald: #10b981;
+    --cyan: #06b6d4;
+    --red: #ef4444;
+    --violet: #8b5cf6;
+    --paper: #fbf5e6;
+    --ink: #18181b;
+    --comic-red: #c0262b;
+    --comic-border: #1c1917;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: radial-gradient(circle at 50% 0%, #172554 0%, #090d16 50%, #030508 100%);
+    color: #e2e8f0;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+  }
+
+  /* CRT & Grain overlay */
+  .grain {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.25;
+    background-image: repeating-radial-gradient(circle at 17% 32%, white, black 0.00085px);
+    z-index: 9999;
+  }
+
+  /* Header Bar */
+  header.cabinet-header {
+    width: 100%;
+    max-width: 1200px;
+    padding: 14px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    background: rgba(14, 19, 29, 0.85);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .brand-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .badge-cdc {
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    padding: 4px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+  }
+
+  .title-group h1 {
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .title-group h1 span.gold {
+    color: var(--gold);
+  }
+
+  .title-group p {
+    font-size: 0.78rem;
+    color: #94a3b8;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn {
+    background: #1e293b;
+    color: #f1f5f9;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 6px 14px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn:hover {
+    background: #334155;
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+  }
+
+  .btn-accent {
+    background: linear-gradient(135deg, #c0262b, #dc2626);
+    border-color: #ef4444;
+    color: #fff;
+  }
+
+  .btn-accent:hover {
+    background: linear-gradient(135deg, #b91c1c, #b91c1c);
+    box-shadow: 0 0 14px rgba(239, 68, 68, 0.4);
+  }
+
+  .btn-emerald {
+    background: linear-gradient(135deg, #047857, #059669);
+    border-color: #10b981;
+    color: #fff;
+  }
+
+  .btn-emerald:hover {
+    box-shadow: 0 0 14px rgba(16, 185, 129, 0.4);
+  }
+
+  /* Main Reader Container */
+  main.reader-stage {
+    width: 100%;
+    max-width: 1200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 80px;
+    position: relative;
+  }
+
+  /* Comic Book Frame */
+  .comic-book-frame {
+    width: 100%;
+    max-width: 820px;
+    background: var(--paper);
+    color: var(--ink);
+    border: 6px solid var(--comic-border);
+    border-radius: 6px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.75), 0 0 40px rgba(16, 185, 129, 0.15);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.25s ease;
+  }
+
+  /* Comic Top Header / Issue banner */
+  .comic-issue-header {
+    background: #1c1917;
+    color: #f5f5f4;
+    padding: 8px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-bottom: 3px solid var(--comic-border);
+  }
+
+  .comic-issue-header .badge-tag {
+    color: var(--gold);
+  }
+
+  /* Page Content Area */
+  .page-viewport {
+    width: 100%;
+    min-height: 850px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    background-color: var(--paper);
+    background-image: radial-gradient(rgba(0,0,0,0.04) 1px, transparent 0);
+    background-size: 10px 10px;
+  }
+
+  /* Comic Page Image */
+  .comic-full-image {
+    width: 100%;
+    height: auto;
+    display: block;
+    border: 2px solid var(--comic-border);
+    border-radius: 2px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+  }
+
+  /* Dynamic Comic Panel Layouts (for pages 2 through 8) */
+  .dynamic-page {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    height: 100%;
+    flex: 1;
+  }
+
+  .panel-row {
+    display: grid;
+    gap: 14px;
+    width: 100%;
+  }
+
+  .panel-row.cols-1 { grid-template-columns: 1fr; }
+  .panel-row.cols-2 { grid-template-columns: 1fr 1fr; }
+  .panel-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .panel-row.cols-1-2 { grid-template-columns: 1.2fr 0.8fr; }
+  .panel-row.cols-2-1 { grid-template-columns: 0.8fr 1.2fr; }
+
+  .comic-panel {
+    background: #fff;
+    border: 3.5px solid var(--comic-border);
+    border-radius: 2px;
+    position: relative;
+    overflow: hidden;
+    min-height: 240px;
+    box-shadow: 3px 3px 0px rgba(0,0,0,0.85);
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .comic-panel:hover {
+    box-shadow: 5px 5px 0px var(--comic-red);
+    transform: translateY(-2px);
+  }
+
+  .comic-panel.active-panel {
+    outline: 4px solid var(--gold);
+    box-shadow: 0 0 20px rgba(245, 197, 66, 0.6);
+  }
+
+  .panel-art {
+    flex: 1;
+    width: 100%;
+    min-height: 180px;
+    position: relative;
+    background-size: cover;
+    background-position: center;
+    overflow: hidden;
+  }
+
+  /* Caption Boxes */
+  .comic-caption {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    max-width: 80%;
+    background: #fef08a;
+    color: #1c1917;
+    border: 2px solid var(--comic-border);
+    padding: 5px 9px;
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: bold;
+    font-size: 0.76rem;
+    box-shadow: 2px 2px 0px #000;
+    z-index: 10;
+  }
+
+  .comic-caption.bottom {
+    top: auto;
+    bottom: 8px;
+    left: 8px;
+  }
+
+  /* Speech Balloons */
+  .speech-balloon {
+    position: absolute;
+    background: #ffffff;
+    border: 2px solid #000;
+    border-radius: 12px;
+    padding: 6px 12px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    line-height: 1.25;
+    color: #18181b;
+    box-shadow: 2px 2px 0px rgba(0,0,0,0.7);
+    z-index: 15;
+    max-width: 250px;
+    transition: opacity 0.2s ease;
+  }
+
+  .speech-balloon .speaker-name {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    color: var(--comic-red);
+    display: block;
+    margin-bottom: 2px;
+    letter-spacing: 0.04em;
+  }
+
+  .speech-balloon.telepathic {
+    background: #f3e8ff;
+    border-color: #7c3aed;
+    border-radius: 18px 6px 18px 6px;
+    color: #4c1d95;
+    box-shadow: 2px 2px 0px #7c3aed;
+  }
+
+  .speech-balloon.telepathic .speaker-name {
+    color: #7c3aed;
+  }
+
+  /* Comic Sound Effects (SFX) typography */
+  .sfx-text {
+    position: absolute;
+    font-family: 'Impact', 'Arial Black', sans-serif;
+    font-size: 1.8rem;
+    letter-spacing: 0.05em;
+    font-style: italic;
+    color: var(--gold);
+    -webkit-text-stroke: 1.5px #000;
+    text-shadow: 3px 3px 0px #c0262b;
+    transform: rotate(-8deg);
+    pointer-events: none;
+    z-index: 20;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+  }
+
+  /* Navigation Toolbar */
+  .reader-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 820px;
+    margin-top: 18px;
+    background: rgba(14, 19, 29, 0.95);
+    padding: 12px 20px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  }
+
+  .page-nav-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .nav-btn {
+    background: #1e293b;
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 8px 18px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .nav-btn:hover:not(:disabled) {
+    background: var(--gold);
+    color: #000;
+    border-color: var(--gold);
+    transform: scale(1.03);
+  }
+
+  .nav-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .page-indicator {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #cbd5e1;
+    text-align: center;
+  }
+
+  .page-indicator span.cur {
+    color: var(--gold);
+    font-size: 1.1rem;
+  }
+
+  .control-tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .tool-btn {
+    background: #1e293b;
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #cbd5e1;
+    border-radius: 6px;
+    padding: 7px 11px;
+    font-size: 0.78rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.2s;
+  }
+
+  .tool-btn.active {
+    background: #0f766e;
+    color: #fff;
+    border-color: var(--emerald);
+  }
+
+  /* Thumbnail Tray */
+  .thumbnail-drawer {
+    width: 100%;
+    max-width: 820px;
+    margin-top: 14px;
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 10px 4px;
+    scrollbar-width: thin;
+  }
+
+  .thumb-card {
+    flex: 0 0 76px;
+    height: 104px;
+    background: #1e293b;
+    border: 2px solid rgba(255,255,255,0.15);
+    border-radius: 4px;
+    cursor: pointer;
+    overflow: hidden;
+    position: relative;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 4px;
+  }
+
+  .thumb-card:hover {
+    border-color: var(--gold);
+    transform: translateY(-2px);
+  }
+
+  .thumb-card.active {
+    border-color: var(--emerald);
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
+  }
+
+  .thumb-card .thumb-label {
+    background: rgba(0,0,0,0.85);
+    font-size: 0.62rem;
+    font-weight: 800;
+    text-align: center;
+    color: #fff;
+    padding: 2px 0;
+    border-radius: 2px;
+  }
+
+  /* Modals */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    padding: 20px;
+  }
+
+  .modal-overlay.open {
+    display: flex;
+  }
+
+  .modal-box {
+    background: #0f172a;
+    border: 2px solid var(--gold);
+    border-radius: 12px;
+    max-width: 750px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 30px rgba(245, 197, 66, 0.2);
+    color: #f1f5f9;
+  }
+
+  .modal-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(30, 41, 59, 0.6);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .modal-header h2 {
+    font-size: 1.15rem;
+    color: var(--gold);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .modal-body {
+    padding: 20px;
+    line-height: 1.6;
+    font-size: 0.92rem;
+  }
+
+  .modal-close-btn {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 1.4rem;
+    cursor: pointer;
+  }
+
+  .modal-close-btn:hover {
+    color: #fff;
+  }
+
+  .bible-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 14px;
+  }
+
+  .bible-card {
+    background: #1e293b;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: 14px;
+  }
+
+  .bible-card h3 {
+    color: var(--emerald);
+    font-size: 0.95rem;
+    margin-bottom: 6px;
+  }
+
+  .bible-card p {
+    font-size: 0.8rem;
+    color: #cbd5e1;
+    margin-bottom: 4px;
+  }
+
+  /* Terpene Lab Card */
+  .lab-card {
+    background: #022c22;
+    border: 1px solid #10b981;
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 14px;
+  }
+
+  .lab-bar {
+    margin: 8px 0;
+  }
+
+  .lab-bar-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+
+  .lab-track {
+    background: #064e3b;
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+
+  .lab-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981, #f5c542);
+  }
+
+  /* SpaceCash Easter Egg Toast */
+  #easter-egg-toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: linear-gradient(135deg, #1e1b4b, #312e81);
+    border: 2px solid var(--gold);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8), 0 0 20px rgba(245, 197, 66, 0.4);
+    z-index: 10001;
+    display: none;
+    align-items: center;
+    gap: 12px;
+    animation: slideUp 0.3s ease;
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  /* Footer */
+  footer.cabinet-footer {
+    margin-top: 30px;
+    font-size: 0.75rem;
+    color: #64748b;
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  footer.cabinet-footer a {
+    color: var(--emerald);
+    text-decoration: none;
+  }
+
+  /* 3D Page Flip Transitions */
+  .comic-book-frame {
+    perspective: 1600px;
+    transform-style: preserve-3d;
+    transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    will-change: transform;
+    user-select: none;
+  }
+
+  .page-viewport {
+    transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.35s ease;
+    transform-origin: center center;
+    backface-visibility: hidden;
+    perspective: 1400px;
+    transform-style: preserve-3d;
+  }
+
+  .page-viewport.flip-next {
+    animation: pageCurlNext 0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  }
+
+  .page-viewport.flip-prev {
+    animation: pageCurlPrev 0.45s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  }
+
+  @keyframes pageCurlNext {
+    0% {
+      transform: perspective(1400px) rotateY(0deg) scale(1);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      filter: brightness(1);
+    }
+    40% {
+      transform: perspective(1400px) rotateY(-28deg) rotateZ(1.5deg) scale(0.96) translateZ(35px);
+      box-shadow: -22px 20px 42px rgba(0,0,0,0.8), inset -45px 0 60px rgba(0,0,0,0.38);
+      filter: brightness(0.92);
+    }
+    100% {
+      transform: perspective(1400px) rotateY(0deg) scale(1);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      filter: brightness(1);
+    }
+  }
+
+  @keyframes pageCurlPrev {
+    0% {
+      transform: perspective(1400px) rotateY(0deg) scale(1);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      filter: brightness(1);
+    }
+    40% {
+      transform: perspective(1400px) rotateY(28deg) rotateZ(-1.5deg) scale(0.96) translateZ(35px);
+      box-shadow: 22px 20px 42px rgba(0,0,0,0.8), inset 45px 0 60px rgba(0,0,0,0.38);
+      filter: brightness(0.92);
+    }
+    100% {
+      transform: perspective(1400px) rotateY(0deg) scale(1);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      filter: brightness(1);
+    }
+  }
+
+  /* Smooth Interactive Zoom & Pan Controls */
+  .zoom-controls-panel {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(14, 19, 29, 0.9);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px 6px;
+  }
+
+  .zoom-btn {
+    background: #1e293b;
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #e2e8f0;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    line-height: 1;
+    transition: all 0.15s;
+  }
+
+  .zoom-btn:hover {
+    background: #334155;
+    border-color: var(--cyan);
+    color: #fff;
+  }
+
+  .zoom-level-text {
+    font-family: monospace;
+    font-size: 0.82rem;
+    color: var(--gold);
+    min-width: 44px;
+    text-align: center;
+    font-weight: bold;
+  }
+
+  .comic-book-frame.is-panning {
+    cursor: grab !important;
+  }
+
+  .comic-book-frame.is-dragging {
+    cursor: grabbing !important;
+  }
+
+  /* Direct PDF Banner */
+  .btn-pdf-download {
+    background: linear-gradient(135deg, #059669, #10b981);
+    border: 1px solid #34d399;
+    color: #fff;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+  }
+
+  .btn-pdf-download:hover {
+    background: linear-gradient(135deg, #047857, #059669);
+    box-shadow: 0 0 18px rgba(16, 185, 129, 0.6);
+    color: #fff;
+  }
+
+  /* High-Res Print Styles for Direct Multi-Page PDF Export */
+  @media print {
+    body { background: #fff !important; color: #000 !important; }
+    .grain, .cabinet-header, .reader-controls, .thumbnail-drawer, .cabinet-footer, #northstar-arcade-hud, #northstar-crt-layer, #easter-egg-toast { display: none !important; }
+    .comic-book-frame { max-width: 100% !important; box-shadow: none !important; border: none !important; transform: none !important; }
+    .page-viewport { padding: 0 !important; min-height: auto !important; }
+    .comic-full-image { max-height: 100% !important; page-break-after: always; }
+  }
+
+  @media (max-width: 640px) {
+    .panel-row.cols-2,
+    .panel-row.cols-3,
+    .panel-row.cols-1-2,
+    .panel-row.cols-2-1 {
+      grid-template-columns: 1fr;
+    }
+    .bible-grid {
+      grid-template-columns: 1fr;
+    }
+    .header-actions .btn {
+      padding: 5px 8px;
+      font-size: 0.72rem;
+    }
+  }
+</style>
+<script src="northstar_arcade_hud.js"></script>
+</head>
+<body>
+
+<div class="grain"></div>
+
+<!-- Header -->
+<header class="cabinet-header">
+  <div class="brand-group">
+    <span class="badge-cdc">THE CDC DISPENSARY</span>
+    <div class="title-group">
+      <h1>THE ADVENTURES OF <span class="gold">BLAZIN' BEAVER</span></h1>
+      <p>Issue No. 1 // "The Green Dam Mystery" // 10015 SW Hall Blvd, Tigard OR</p>
+    </div>
+  </div>
+
+  <div class="header-actions">
+    <div class="series-switcher-group" style="display:inline-flex; align-items:center; gap:6px; background:#1e293b; border:1px solid #334155; border-radius:6px; padding:3px 8px;">
+      <span style="font-size:0.75rem; font-weight:700; color:var(--cyan); text-transform:uppercase;">LIB Series:</span>
+      <select id="series-select" onchange="switchSeries(this.value)" style="background:#0f172a; color:#f8fafc; border:1px solid #475569; border-radius:4px; padding:4px 6px; font-size:0.8rem; font-weight:bold; cursor:pointer;">
+        <option value="issue_1" selected>Issue #1: Dawn of the Willamette</option>
+        <option value="issue_2">Issue #2: The High Cascade Heist</option>
+        <option value="issue_3">Issue #3: Cosmic Timberline</option>
+        <option value="special_edition">Special Edition: Flora's Secret Garden</option>
+        <option value="ashcan">Ashcan Edition: Underground 1993</option>
+      </select>
+    </div>
+    <button class="btn tool-btn" id="btn-mixer" onclick="openModal('modal-forest-mixer')" title="PNW Forest Ambient Soundscape Mixer">
+      ♠ <span>Forest Mixer</span>
+    </button>
+    <a href="/static/comics/blazin_beaver/issue_01/Blazin_Beaver_Issue_01_Complete.pdf" download="Blazin_Beaver_Issue_01_Complete.pdf" target="_blank" class="btn btn-pdf-download" title="Download Complete Issue #1 PDF (Print Quality)" rel="noopener noreferrer">
+      ↓ <span>Download PDF</span>
+    </a>
+    <button class="btn tool-btn" id="btn-audio" onclick="toggleAudio()" title="Toggle Ambience & SFX">
+      SND <span>Sound: ON</span>
+    </button>
+    <button class="btn tool-btn active" id="btn-bubbles" onclick="toggleBubbles()" title="Toggle Speech Bubbles">
+      TALK <span>Lettering</span>
+    </button>
+    <button class="btn btn-emerald" onclick="openModal('modal-bible')">
+      DOC <span>Character Bible</span>
+    </button>
+    <button class="btn btn-accent" onclick="openModal('modal-script')">
+      LORE <span>Full Script</span>
+    </button>
+    <button class="btn" onclick="openModal('modal-lab')">
+      ⚗ <span>Terpene COA</span>
+    </button>
+  </div>
+</header>
+
+<!-- Main Reader Stage -->
+<main class="reader-stage">
+
+  <!-- Comic Frame -->
+  <div class="comic-book-frame" id="comic-container">
+
+    <!-- Comic Header Banner -->
+    <div class="comic-issue-header">
+      <div>NORTHSTAR PLATFORM // COLLECTIBLE EDITION #1</div>
+      <div class="badge-tag">OREGON CASSETTE NO. 420 • CANON GRADE A</div>
+      <div>$1.50 • FOR MATURE READERS</div>
+    </div>
+
+    <!-- Active Page Viewport -->
+    <div class="page-viewport" id="viewport">
+      <!-- Dynamic page inserted here via JavaScript -->
+    </div>
+
+  </div>
+
+  <!-- Navigation Controls -->
+  <div class="reader-controls">
+    <div class="page-nav-group">
+      <button class="nav-btn" id="btn-prev" onclick="prevPage()">◀ PREV</button>
+      <div class="page-indicator">
+        <span class="cur" id="page-num-display">COVER</span> / 8
+      </div>
+      <button class="nav-btn" id="btn-next" onclick="nextPage()">NEXT ▶</button>
+    </div>
+
+    <div class="control-tools">
+      <!-- Smooth Zoom & Pan Controls -->
+      <div class="zoom-controls-panel">
+        <button class="zoom-btn" onclick="zoomOut()" title="Zoom Out (-)">−</button>
+        <span class="zoom-level-text" id="zoom-level-display">100%</span>
+        <button class="zoom-btn" onclick="zoomIn()" title="Zoom In (+)">+</button>
+        <button class="zoom-btn" onclick="resetZoom()" title="Reset / Fit Page">Fit</button>
+      </div>
+      <button class="tool-btn" onclick="zoomPanelMode()" id="btn-guided-view">
+        FIND <span>Guided View</span>
+      </button>
+      <button class="tool-btn" onclick="window.print()" title="Print or Save as Multi-Page PDF">
+        ⎙️ <span>Print</span>
+      </button>
+      <a href="/static/comics/blazin_beaver/issue_01/Blazin_Beaver_Issue_01_Complete.pdf" download="Blazin_Beaver_Issue_01_Complete.pdf" target="_blank" class="tool-btn" style="text-decoration: none; color: var(--emerald);" title="Direct PDF Download" rel="noopener noreferrer">
+        ↓ <span>PDF</span>
+      </a>
+      <button class="tool-btn" onclick="toggleFullscreen()">
+        ⛶ <span>Fullscreen</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Thumbnail Strip -->
+  <div class="thumbnail-drawer" id="thumb-drawer">
+    <!-- Generated dynamically -->
+  </div>
+
+  <!-- Footer Credits -->
+  <footer class="cabinet-footer">
+    <p>© 2026 The CDC Dispensary & NorthStar Platform. All Rights Reserved. Grade A Canon.</p>
+    <p>Registered in NorthStar IP Vault: <code>NSP-IP-2026-BB-001</code> // Location: 10015 SW Hall Blvd, Tigard, OR 97223</p>
+    <p>Starring Castor "Blaze" Fiber, Professor Myrcene, Vorath the Grey & Sasquatch of Tillamook.</p>
+  </footer>
+
+</main>
+
+<!-- Easter Egg Toast -->
+<div id="easter-egg-toast">
+  <span style="font-size: 1.5rem;">◆</span>
+  <div>
+    <strong style="color: var(--gold); display: block;">SPACECASH BEAVER SHARD FOUND!</strong>
+    <span id="easter-egg-msg">You unlocked an authentic Cascadia Terpene Shard (+10 SpaceCash).</span>
+  </div>
+</div>
+
+<!-- Modal: PNW Forest Ambient Audio Mixer -->
+<div class="modal-overlay" id="modal-forest-mixer" onclick="closeModalOnBackdrop(event, 'modal-forest-mixer')">
+  <div class="modal-box" style="max-width: 540px;">
+    <div class="modal-header">
+      <h2>♠ PNW FOREST SOUNDSCAPE MIXER</h2>
+      <button class="modal-close-btn" onclick="closeModal('modal-forest-mixer')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 1rem;">
+        Procedurally synthesized natural audio generated live in WebAudio. Blend authentic Pacific Northwest biome layers to your preferred listening balance.
+      </p>
+
+      <div style="display: flex; flex-direction: column; gap: 14px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 14px;">
+        <!-- River Stream -->
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+          <div style="min-width: 140px;">
+            <strong style="color: #38bdf8; display: block; font-size: 0.9rem;">⛰️ River Stream</strong>
+            <span style="font-size: 0.72rem; color: #64748b;">Pink-filtered water eddies</span>
+          </div>
+          <input type="range" id="mixer-river" min="0" max="100" value="75" oninput="setChannelVolume('river', this.value)" style="flex: 1; accent-color: #38bdf8; cursor: pointer;">
+          <span id="mixer-river-val" style="font-family: monospace; font-size: 0.85rem; color: #38bdf8; width: 36px; text-align: right;">75%</span>
+        </div>
+
+        <!-- Cascades Birds -->
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+          <div style="min-width: 140px;">
+            <strong style="color: #4ade80; display: block; font-size: 0.9rem;">► Cascades Birds</strong>
+            <span style="font-size: 0.72rem; color: #64748b;">Canopy warbler & finch chirps</span>
+          </div>
+          <input type="range" id="mixer-birds" min="0" max="100" value="65" oninput="setChannelVolume('birds', this.value)" style="flex: 1; accent-color: #4ade80; cursor: pointer;">
+          <span id="mixer-birds-val" style="font-family: monospace; font-size: 0.85rem; color: #4ade80; width: 36px; text-align: right;">65%</span>
+        </div>
+
+        <!-- Pine Wind Breeze -->
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+          <div style="min-width: 140px;">
+            <strong style="color: #a78bfa; display: block; font-size: 0.9rem;">♠ Pine Breeze</strong>
+            <span style="font-size: 0.72rem; color: #64748b;">Sweeping mountain wind gusts</span>
+          </div>
+          <input type="range" id="mixer-breeze" min="0" max="100" value="50" oninput="setChannelVolume('breeze', this.value)" style="flex: 1; accent-color: #a78bfa; cursor: pointer;">
+          <span id="mixer-breeze-val" style="font-family: monospace; font-size: 0.85rem; color: #a78bfa; width: 36px; text-align: right;">50%</span>
+        </div>
+
+        <!-- Night Crickets -->
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+          <div style="min-width: 140px;">
+            <strong style="color: #facc15; display: block; font-size: 0.9rem;">· Night Crickets</strong>
+            <span style="font-size: 0.72rem; color: #64748b;">4.8kHz summer stridulation</span>
+          </div>
+          <input type="range" id="mixer-crickets" min="0" max="100" value="40" oninput="setChannelVolume('crickets', this.value)" style="flex: 1; accent-color: #facc15; cursor: pointer;">
+          <span id="mixer-crickets-val" style="font-family: monospace; font-size: 0.85rem; color: #facc15; width: 36px; text-align: right;">40%</span>
+        </div>
+      </div>
+
+      <div style="margin-top: 14px;">
+        <span style="font-size: 0.75rem; font-weight: bold; color: #94a3b8; text-transform: uppercase; display: block; margin-bottom: 6px;">Biomixer Presets:</span>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+          <button class="btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="applyMixerPreset('morning')">☼ Cascades Morning</button>
+          <button class="btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="applyMixerPreset('breeze')">» Deep Pine Wind</button>
+          <button class="btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="applyMixerPreset('twilight')">✦ Twilight Solarium</button>
+          <button class="btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="applyMixerPreset('midnight')">☽ Midnight Riverbank</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Character Bible -->
+<div class="modal-overlay" id="modal-bible" onclick="closeModalOnBackdrop(event, 'modal-bible')">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>♠ OFFICIAL CHARACTER BIBLE</h2>
+      <button class="modal-close-btn" onclick="closeModal('modal-bible')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="color: #94a3b8; font-size: 0.85rem;">Registered under NorthStar Platform Canon Grade A. Stewardship by The CDC Dispensary (10015 SW Hall Blvd, Tigard, OR).</p>
+      
+      <div class="bible-grid">
+        <div class="bible-card">
+          <h3>BLAZIN' BEAVER (Castor "Blaze" Fiber)</h3>
+          <p><strong>Species:</strong> Anthropomorphic American Beaver (*Castor canadensis*)</p>
+          <p><strong>Attire:</strong> Red buffalo plaid flannel, denim jeans, leather boots, pine green beanie.</p>
+          <p><strong>Role:</strong> Master hydrologic engineer turned pioneer terpene alchemist along the Willamette River.</p>
+          <p><strong>Catchphrase:</strong> <em>"Build true, let the river flow, and keep on the grass."</em></p>
+        </div>
+
+        <div class="bible-card">
+          <h3>PROFESSOR THADDEUS MYRCENE, Ph.D.</h3>
+          <p><strong>Species:</strong> Northern Spotted Owl (*Strix occidentalis caurina*)</p>
+          <p><strong>Attire:</strong> Brass circular bifocals, raw hemp twine bowtie, field satchel.</p>
+          <p><strong>Role:</strong> Chief Botanist, Phytochemical Analyst, and Archivist of the Canopy.</p>
+          <p><strong>Catchphrase:</strong> <em>"Fascinating! The chromatographic peak on that pinene fraction is completely off the charts!"</em></p>
+        </div>
+
+        <div class="bible-card">
+          <h3>VORATH THE GREY (Emissary Vorath-77)</h3>
+          <p><strong>Species:</strong> Vorathian Celestial Astral Entity</p>
+          <p><strong>Attire:</strong> Shimmering void-weave tunic, silver armillary gauntlet.</p>
+          <p><strong>Role:</strong> Interstellar emissary who transported the sacred Stardust seed across four galactic sectors.</p>
+          <p><strong>Quote:</strong> <em>"Civilizations rise and fall by the balance of their soil and the kindness of their waters."</em></p>
+        </div>
+
+        <div class="bible-card">
+          <h3>SASQUATCH OF TILLAMOOK (Kwi-Kwit)</h3>
+          <p><strong>Species:</strong> Cascadia Relic Hominid (The Tillamook Sentinel)</p>
+          <p><strong>Attire:</strong> Braided sweetgrass belt, cedar-bark foraging pouch.</p>
+          <p><strong>Role:</strong> 8.5-foot ancient guardian of the old-growth forests with hyper-olfactory terpene sensitivity.</p>
+          <p><strong>Communication:</strong> Gentle head nods, resonant chest hums, and deep mutual respect.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Full Script -->
+<div class="modal-overlay" id="modal-script" onclick="closeModalOnBackdrop(event, 'modal-script')">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>LORE COMPLETE PRODUCTION SCRIPT // ISSUE #1</h2>
+      <button class="modal-close-btn" onclick="closeModal('modal-script')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <h3 style="color: var(--gold); margin-bottom: 8px;">The Green Dam Mystery</h3>
+      <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 14px;">Written by NSP Comic IP Producer // The CDC Dispensary</p>
+      
+      <div style="font-family: 'Courier New', monospace; font-size: 0.82rem; background: #0b0f19; padding: 16px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); white-space: pre-wrap; line-height: 1.5; color: #e2e8f0;">
+PAGE 1: DAWN ON THE WILLAMETTE
+- Panel 1.1: Wide shot. Mist on Willamette River, Mt Hood in distance. Peach/lavender sky.
+- Panel 1.2: Blaze steps out of cedar lodge with morning spruce tea in red flannel & green beanie.
+- Panel 1.3: Paw close-up finding glowing crystalline seed pod washed ashore among river pebbles.
+
+PAGE 2: THE GERMINATION
+- Panel 2.1: Blaze builds river-fed hydroponic cedar dam and aerated sluice channels.
+- Panel 2.2: Professor Myrcene the owl inspects trichomes through brass loupe with open ledger.
+- Panel 2.3: Stardust plant blooms—crystalline trichomes sparkling like diamonds with amber resin droplets.
+
+PAGE 3: THE SCENT IN THE PINES
+- Panel 3.1: High canopy shot as pine and citrus terpene breeze sweeps into Tillamook forest.
+- Panel 3.2: Sasquatch emerges from Douglas firs, nostrils drinking in the calming bouquet.
+- Panel 3.3: Sasquatch reaches the river dock; Blaze calmly greets him with a fresh cedar branch.
+
+PAGE 4: THE TWILIGHT SOLARIUM
+- Panel 4.1: Twilight exterior of 10015 SW Hall Blvd in Tigard—The CDC Dispensary / NorthStar neon glow.
+- Panel 4.2: Blaze enters secret rear conservatory solarium carrying cedar humidor.
+- Panel 4.3: The Vorath Bridge activates—Vorath the Grey greets Blaze in telepathic cosmic harmony.
+
+PAGE 5: MEETING THE GRAND COUNCIL
+- Panel 5.1: Council table: Elf Eldrin, Dwarf Brokk, Vorath, Fairies Luna & Zephyr, Blaze, Sasquatch, and Myrcene.
+- Panel 5.2: Prof. Myrcene charts retrograde endocannabinoid signaling and CB2 receptor binding on blackboard.
+- Panel 5.3: Blaze lays down pure hemp papers and cedar rolling tray: "The proof is in the puff."
+
+PAGE 6: THE SECRET GOVERNMENT DOSSIER
+- Panel 6.1: Across the street, Operation Starlight brown surveillance van ("Oregon Water & Moss Survey").
+- Panel 6.2: Agent Moss panics at terpene spectrogram spike; Agent Sterling munches donut and reads classified file.
+- Panel 6.3: Moss peers through binoculars: "The beaver is the ringleader! The dam has gone cosmic!"
+
+PAGE 7: THE PEACE SMOKE
+- Panel 7.1: Blaze steps outside in cool night air, sparking artisan craft blunt with Sasquatch.
+- Panel 7.2: Lavender-tinted smoke drifts across the parking lot into the surveillance van.
+- Panel 7.3: Agent Moss's rigid tension melts; Sterling smiles; Blaze hands over the peace roll: "The only thing we're overthrowing tonight is bad posture."
+
+PAGE 8: KEEP ON THE GRASS
+- Panel 8.1: Return to Willamette River Green Dam at sunset; sanctuary bathed in warm honey light.
+- Panel 8.2: Blaze hammers hand-carved cedar sign into moss: "KEEP ON THE GRASS". Owl perches atop sign; Sasquatch gives thumbs-up.
+- Panel 8.3: Splash close-up: Blaze leans on cedar log, winks, tips beanie. Sunset over Mount Hood with Vorath star twinkling.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Terpene COA -->
+<div class="modal-overlay" id="modal-lab" onclick="closeModalOnBackdrop(event, 'modal-lab')">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>⚗ CERTIFICATE OF ANALYSIS // THE CDC DISPENSARY</h2>
+      <button class="modal-close-btn" onclick="closeModal('modal-lab')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">
+        <div>
+          <strong style="color: var(--gold);">Strain:</strong> Stardust Beaver Kush (River-Cured #001)<br>
+          <strong style="color: var(--gold);">Cultivator:</strong> Castor "Blaze" Fiber & Prof. Myrcene<br>
+          <strong style="color: var(--gold);">Origin:</strong> Willamette Hydro-Dam / Vorath Corridor
+        </div>
+        <div style="text-align: right;">
+          <strong>Batch ID:</strong> #CDC-2026-BB1<br>
+          <strong>Testing Lab:</strong> 10015 SW Hall Blvd, Tigard<br>
+          <strong>Status:</strong> <span style="color: var(--emerald); font-weight: bold;">GRADE A CERTIFIED</span>
+        </div>
+      </div>
+
+      <div class="lab-card">
+        <h3 style="color: var(--gold); margin-bottom: 12px; font-size: 0.95rem;">Dominant Terpene Profile (5.3% Total Active Terpenes)</h3>
+
+        <div class="lab-bar">
+          <div class="lab-bar-header">
+            <span>Beta-Myrcene (Sedative, Earthy, Mango)</span>
+            <span style="color: var(--gold);">2.8%</span>
+          </div>
+          <div class="lab-track"><div class="lab-fill" style="width: 85%;"></div></div>
+        </div>
+
+        <div class="lab-bar">
+          <div class="lab-bar-header">
+            <span>Alpha-Pinene (Fresh Douglas Fir, Focus, Bronchodilator)</span>
+            <span style="color: var(--gold);">1.4%</span>
+          </div>
+          <div class="lab-track"><div class="lab-fill" style="width: 55%;"></div></div>
+        </div>
+
+        <div class="lab-bar">
+          <div class="lab-bar-header">
+            <span>Beta-Caryophyllene (Spicy Cedar, CB2 Anti-Inflammatory)</span>
+            <span style="color: var(--gold);">1.1%</span>
+          </div>
+          <div class="lab-track"><div class="lab-fill" style="width: 45%;"></div></div>
+        </div>
+      </div>
+
+      <p style="margin-top: 14px; font-size: 0.82rem; color: #94a3b8;">
+        <strong>Phytochemical Note by Prof. Myrcene:</strong> <em>"Sample exhibits profound retrograde endocannabinoid signaling. Cross-species tranquility verified across beaver, owl, hominid, and celestial entities."</em>
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   BLAZIN' BEAVER COMIC ENGINE (NSP ARCHIVE)
+   ========================================================================= */
+
+let currentPage = 0;
+let showBubbles = true;
+let audioEnabled = true;
+let isGuidedView = false;
+let currentPanelIndex = 0;
+let easterEggsFound = new Set();
+
+// Ambient PNW Forest Mixer Engine
+let audioCtx = null;
+let ambientGain = null;
+let forestMixer = {
+  river: { gain: null, node: null, volume: 0.75 },
+  birds: { gain: null, timer: null, volume: 0.65 },
+  breeze: { gain: null, node: null, filter: null, volume: 0.50 },
+  crickets: { gain: null, timer: null, volume: 0.40 },
+  masterVolume: 0.8
+};
+
+function initAudio() {
+  if (audioCtx) {
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    return;
+  }
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContext();
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+
+    // Master ambient gain routed through NorthStar HUD if present
+    ambientGain = audioCtx.createGain();
+    ambientGain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+    const dest = (window.NorthStarHUD && NorthStarHUD.attachAudioContext(audioCtx)) || audioCtx.destination;
+    ambientGain.connect(dest);
+
+    // 1. River Stream (pink-filtered noise)
+    startRiverStream();
+
+    // 2. Pine Wind Breeze (sweeping bandpass noise with LFO)
+    startPineBreeze();
+
+    // 3. Cascades Birds (procedural sweet whistling chirps)
+    scheduleBirdChirp();
+
+    // 4. Night Crickets (4.8kHz rhythmic summer stridulation)
+    scheduleCricketChirp();
+
+    // 5. Procedural Lo-Fi Ambient Synth Chord Sequence (D Dorian)
+    playSynthPadChord();
+  } catch (e) {
+    console.warn("Audio init failed or not permitted yet:", e);
+  }
+}
+
+function startRiverStream() {
+  if (!audioCtx || forestMixer.river.node) return;
+  const bufferSize = audioCtx.sampleRate * 2;
+  const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const output = noiseBuffer.getChannelData(0);
+  let b0 = 0, b1 = 0, b2 = 0;
+  for (let i = 0; i < bufferSize; i++) {
+    const white = Math.random() * 2 - 1;
+    b0 = 0.99886 * b0 + white * 0.0555179;
+    b1 = 0.99332 * b1 + white * 0.0750759;
+    b2 = 0.96900 * b2 + white * 0.1538520;
+    output[i] = (b0 + b1 + b2) * 0.12;
+  }
+  const source = audioCtx.createBufferSource();
+  source.buffer = noiseBuffer;
+  source.loop = true;
+
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(520, audioCtx.currentTime);
+
+  const gain = audioCtx.createGain();
+  gain.gain.setValueAtTime(forestMixer.river.volume * 0.12, audioCtx.currentTime);
+
+  source.connect(filter);
+  filter.connect(gain);
+  gain.connect(ambientGain);
+  source.start();
+
+  forestMixer.river.node = source;
+  forestMixer.river.gain = gain;
+}
+
+function startPineBreeze() {
+  if (!audioCtx || forestMixer.breeze.node) return;
+  const bufferSize = audioCtx.sampleRate * 2;
+  const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const output = noiseBuffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    output[i] = (Math.random() * 2 - 1) * 0.15;
+  }
+  const source = audioCtx.createBufferSource();
+  source.buffer = noiseBuffer;
+  source.loop = true;
+
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.setValueAtTime(320, audioCtx.currentTime);
+  filter.Q.setValueAtTime(2.0, audioCtx.currentTime);
+
+  const lfo = audioCtx.createOscillator();
+  const lfoGain = audioCtx.createGain();
+  lfo.type = 'sine';
+  lfo.frequency.setValueAtTime(0.18, audioCtx.currentTime);
+  lfoGain.gain.setValueAtTime(160, audioCtx.currentTime);
+  lfo.connect(lfoGain);
+  lfoGain.connect(filter.frequency);
+  lfo.start();
+
+  const gain = audioCtx.createGain();
+  gain.gain.setValueAtTime(forestMixer.breeze.volume * 0.08, audioCtx.currentTime);
+
+  source.connect(filter);
+  filter.connect(gain);
+  gain.connect(ambientGain);
+  source.start();
+
+  forestMixer.breeze.node = source;
+  forestMixer.breeze.gain = gain;
+  forestMixer.breeze.filter = filter;
+}
+
+function scheduleBirdChirp() {
+  if (!audioEnabled || !audioCtx) return;
+  const nextDelay = 3000 + Math.random() * 6000;
+  forestMixer.birds.timer = setTimeout(() => {
+    playBirdSong();
+    scheduleBirdChirp();
+  }, nextDelay);
+}
+
+function playBirdSong() {
+  if (!audioCtx || !audioEnabled || forestMixer.birds.volume <= 0.01) return;
+  const now = audioCtx.currentTime;
+  const notesCount = 2 + Math.floor(Math.random() * 3);
+  const baseFreq = 2200 + Math.random() * 1400;
+
+  for (let i = 0; i < notesCount; i++) {
+    const noteTime = now + i * (0.09 + Math.random() * 0.06);
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+
+    const f1 = baseFreq + (Math.random() - 0.5) * 600;
+    const f2 = f1 + (Math.random() > 0.5 ? 400 : -500);
+
+    osc.frequency.setValueAtTime(f1, noteTime);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(800, f2), noteTime + 0.08);
+
+    const targetVol = forestMixer.birds.volume * 0.035;
+    gain.gain.setValueAtTime(0.0001, noteTime);
+    gain.gain.linearRampToValueAtTime(targetVol, noteTime + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, noteTime + 0.08);
+
+    osc.connect(gain);
+    gain.connect(ambientGain);
+    osc.start(noteTime);
+    osc.stop(noteTime + 0.085);
+  }
+}
+
+function scheduleCricketChirp() {
+  if (!audioEnabled || !audioCtx) return;
+  const nextDelay = 1500 + Math.random() * 3000;
+  forestMixer.crickets.timer = setTimeout(() => {
+    playCricketBurst();
+    scheduleCricketChirp();
+  }, nextDelay);
+}
+
+function playCricketBurst() {
+  if (!audioCtx || !audioEnabled || forestMixer.crickets.volume <= 0.01) return;
+  const now = audioCtx.currentTime;
+  const pulses = 3 + Math.floor(Math.random() * 3);
+  const cricketFreq = 4800 + Math.random() * 400;
+
+  for (let p = 0; p < pulses; p++) {
+    const pulseTime = now + p * 0.045;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(cricketFreq, pulseTime);
+
+    const targetVol = forestMixer.crickets.volume * 0.018;
+    gain.gain.setValueAtTime(0.0001, pulseTime);
+    gain.gain.linearRampToValueAtTime(targetVol, pulseTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, pulseTime + 0.035);
+
+    osc.connect(gain);
+    gain.connect(ambientGain);
+    osc.start(pulseTime);
+    osc.stop(pulseTime + 0.04);
+  }
+}
+
+function setChannelVolume(channel, val) {
+  const norm = Math.max(0, Math.min(100, parseInt(val, 10))) / 100;
+  forestMixer[channel].volume = norm;
+  const display = document.getElementById(`mixer-${channel}-val`);
+  if (display) display.innerText = `${Math.round(norm * 100)}%`;
+
+  if (!audioCtx) initAudio();
+  if (audioCtx) {
+    const now = audioCtx.currentTime;
+    if (channel === 'river' && forestMixer.river.gain) {
+      forestMixer.river.gain.gain.setTargetAtTime(norm * 0.12, now, 0.05);
+    } else if (channel === 'breeze' && forestMixer.breeze.gain) {
+      forestMixer.breeze.gain.gain.setTargetAtTime(norm * 0.08, now, 0.05);
+    }
+  }
+}
+
+function applyMixerPreset(preset) {
+  initAudio();
+  playSfx('shimmer');
+  let settings = { river: 75, birds: 65, breeze: 50, crickets: 40 };
+  if (preset === 'morning') settings = { river: 85, birds: 95, breeze: 40, crickets: 10 };
+  else if (preset === 'breeze') settings = { river: 60, birds: 35, breeze: 95, crickets: 25 };
+  else if (preset === 'twilight') settings = { river: 45, birds: 30, breeze: 60, crickets: 90 };
+  else if (preset === 'midnight') settings = { river: 90, birds: 5, breeze: 40, crickets: 85 };
+
+  for (const [ch, val] of Object.entries(settings)) {
+    const slider = document.getElementById(`mixer-${ch}`);
+    if (slider) slider.value = val;
+    setChannelVolume(ch, val);
+  }
+}
+
+function playSynthPadChord() {
+  if (!audioCtx || !audioEnabled) return;
+  const chords = [
+    [146.83, 174.61, 220.00, 261.63], // Dm7
+    [130.81, 164.81, 196.00, 246.94], // Cmaj7
+    [116.54, 146.83, 174.61, 220.00], // Bbmaj7
+    [130.81, 174.61, 196.00, 261.63]  // Csus4
+  ];
+  const chord = chords[Math.floor(Math.random() * chords.length)];
+  const now = audioCtx.currentTime;
+
+  chord.forEach(freq => {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(freq, now);
+
+    const f = audioCtx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.setValueAtTime(320, now);
+    f.frequency.exponentialRampToValueAtTime(700, now + 4);
+    f.frequency.exponentialRampToValueAtTime(280, now + 9);
+
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.015, now + 2.5);
+    gain.gain.linearRampToValueAtTime(0, now + 9);
+
+    osc.connect(f);
+    f.connect(gain);
+    gain.connect(ambientGain);
+
+    osc.start(now);
+    osc.stop(now + 9.5);
+  });
+
+  chordTimer = setTimeout(playSynthPadChord, 10000);
+}
+
+function playSfx(type) {
+  if (!audioEnabled) return;
+  initAudio();
+  if (!audioCtx) return;
+
+  const now = audioCtx.currentTime;
+
+  if (type === 'page_turn') {
+    // Paper rustle
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(160, now);
+    osc.frequency.exponentialRampToValueAtTime(80, now + 0.15);
+    gain.gain.setValueAtTime(0.08, now);
+    gain.gain.linearRampToValueAtTime(0.001, now + 0.15);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 0.16);
+  } else if (type === 'shimmer') {
+    // Cosmic crystalline chime
+    [587.33, 880, 1174.66, 1760].forEach((freq, idx) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + (idx * 0.06));
+      gain.gain.setValueAtTime(0, now + (idx * 0.06));
+      gain.gain.linearRampToValueAtTime(0.08, now + (idx * 0.06) + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + (idx * 0.06) + 0.8);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now + (idx * 0.06));
+      osc.stop(now + (idx * 0.06) + 0.85);
+    });
+  } else if (type === 'pop') {
+    // Bubble pop
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(420, now);
+    osc.frequency.exponentialRampToValueAtTime(880, now + 0.06);
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.linearRampToValueAtTime(0.001, now + 0.06);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 0.07);
+  } else if (type === 'thump') {
+    // Wooden mallet strike
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(140, now);
+    osc.frequency.exponentialRampToValueAtTime(30, now + 0.2);
+    gain.gain.setValueAtTime(0.25, now);
+    gain.gain.linearRampToValueAtTime(0.001, now + 0.2);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 0.22);
+  }
+}
+
+// Multi-Issue Series Data Definition
+const SERIES_DATA = {
+  issue_1: {
+    title: "The Adventures of Blazin' Beaver #1",
+    tagline: "The Green Dam Mystery // Origin Issue",
+    badge: "COLLECTIBLE EDITION #1",
+    stamp: "OREGON CASSETTE NO. 420 • CANON GRADE A",
+    price: "$1.50 • FOR MATURE READERS",
+    pages: [
+      {
+        type: 'cover',
+    title: 'Cover: The Adventures of Blazin\' Beaver #1',
+    imageSrc: '/static/comics/blazin_beaver/issue_1/cover.jpg',
+    fallbackSrc: '../static/comics/blazin_beaver/issue_1/cover.jpg'
+  },
+  {
+    type: 'image_page',
+    title: 'Page 1: Dawn on the Willamette',
+    imageSrc: '/static/comics/blazin_beaver/issue_1/page_1.jpg',
+    fallbackSrc: '../static/comics/blazin_beaver/issue_1/page_1.jpg',
+    panels: [
+      {
+        caption: "Willamette River, Oregon. Late autumn dawn.",
+        balloons: [
+          { speaker: "Blaze", text: "Nothing beats crisp autumn air and fresh river tea.", top: "42%", left: "45%" }
+        ],
+        sfx: { text: "RSHHHHH...", top: "18%", left: "70%" },
+        easterEgg: "Click the tea mug for a warm sip bonus!"
+      },
+      {
+        caption: "A cedar log cabin dam built with millimeter precision.",
+        balloons: [
+          { speaker: "Blaze", text: "Time to check the morning sluices.", top: "54%", left: "40%" }
+        ],
+        sfx: { text: "CREEEAK", top: "48%", left: "15%" }
+      },
+      {
+        caption: "A mysterious crystalline seed pod washed ashore, humming with cosmic light.",
+        balloons: [
+          { speaker: "Blaze", text: "...Well now. That didn't wash down from the paper mill.", top: "78%", left: "32%" }
+        ],
+        sfx: { text: "GLOW...", top: "72%", left: "20%" },
+        easterEgg: "The Vorath Stardust seed pod! Discovered!"
+      }
+    ]
+  },
+  {
+    type: 'dynamic_page',
+    title: 'Page 2: The Germination',
+    panels: [
+      {
+        title: "The Hydroponic Cedar Sluice",
+        caption: "Hydrodynamics meets organic permaculture. A river-fed cradle.",
+        artStyle: "radial-gradient(circle at 60% 40%, #10b981 0%, #064e3b 40%, #022c22 100%)",
+        svgContent: `
+          <svg viewBox="0 0 400 240" style="width:100%; height:100%;">
+            <rect width="400" height="240" fill="#0f172a" />
+            <!-- Water canal -->
+            <path d="M 0 160 Q 150 140 400 180 L 400 240 L 0 240 Z" fill="#0284c7" opacity="0.8"/>
+            <path d="M 0 175 Q 180 150 400 195 L 400 240 L 0 240 Z" fill="#38bdf8" opacity="0.6"/>
+            <!-- Cedar logs -->
+            <rect x="20" y="80" width="360" height="35" rx="6" fill="#854d0e" stroke="#451a03" stroke-width="4"/>
+            <rect x="50" y="110" width="300" height="30" rx="6" fill="#a16207" stroke="#451a03" stroke-width="4"/>
+            <!-- Hydro flume sluices -->
+            <path d="M 120 115 L 120 170" stroke="#fef08a" stroke-width="6" stroke-dasharray="6,4"/>
+            <path d="M 260 115 L 260 175" stroke="#fef08a" stroke-width="6" stroke-dasharray="6,4"/>
+            <!-- Beaver silhouette working -->
+            <ellipse cx="90" cy="90" rx="28" ry="32" fill="#78350f" stroke="#1c1917" stroke-width="3"/>
+            <rect x="75" y="70" width="30" height="35" fill="#dc2626" rx="4"/>
+            <ellipse cx="90" cy="55" rx="18" ry="16" fill="#78350f"/>
+            <path d="M 78 50 C 78 40 102 40 102 50 Z" fill="#15803d"/> <!-- beanie -->
+          </svg>
+        `,
+        balloons: [
+          { speaker: "Blaze", text: "Cold mountain water, rich eddies, and fresh cedar sap. Grow strong, little spark.", top: "20px", right: "20px" }
+        ],
+        sfx: { text: "SLUUUUICE!", top: "60%", left: "30%" }
+      },
+      {
+        title: "The Scholar of the Canopy",
+        caption: "Professor Thaddeus Myrcene takes the first sample.",
+        artStyle: "linear-gradient(180deg, #1e293b 0%, #0f172a 100%)",
+        svgContent: `
+          <svg viewBox="0 0 300 240" style="width:100%; height:100%;">
+            <rect width="300" height="240" fill="#0a0f1d"/>
+            <!-- Alder branch -->
+            <path d="M 0 120 Q 150 90 300 130" stroke="#713f12" stroke-width="18" stroke-linecap="round"/>
+            <!-- Spotted owl -->
+            <ellipse cx="150" cy="90" rx="40" ry="50" fill="#a16207" stroke="#000" stroke-width="3"/>
+            <circle cx="138" cy="70" r="14" fill="#fef08a" stroke="#000" stroke-width="2"/>
+            <circle cx="162" cy="70" r="14" fill="#fef08a" stroke="#000" stroke-width="2"/>
+            <circle cx="138" cy="70" r="6" fill="#000"/>
+            <circle cx="162" cy="70" r="6" fill="#000"/>
+            <path d="M 150 78 L 145 92 L 155 92 Z" fill="#ea580c"/> <!-- beak -->
+            <!-- Round brass spectacles -->
+            <circle cx="138" cy="70" r="15" fill="none" stroke="#f59e0b" stroke-width="3"/>
+            <circle cx="162" cy="70" r="15" fill="none" stroke="#f59e0b" stroke-width="3"/>
+            <line x1="153" y1="70" x2="147" y2="70" stroke="#f59e0b" stroke-width="3"/>
+            <!-- Tweed hemp bowtie -->
+            <polygon points="140,110 160,110 150,116" fill="#16a34a" stroke="#000" stroke-width="2"/>
+            <polygon points="135,116 165,116 150,110" fill="#16a34a" stroke="#000" stroke-width="2"/>
+            <!-- Pocket loupe sparkle -->
+            <circle cx="190" cy="115" r="16" fill="#67e8f9" opacity="0.7" stroke="#f59e0b" stroke-width="2"/>
+          </svg>
+        `,
+        balloons: [
+          { speaker: "Prof. Myrcene", text: "Hoo-hoo! Astonishing! The glandular trichomes are four times the density of terrestrial specimens!", top: "15px", left: "15px" }
+        ],
+        sfx: { text: "PEEK!", top: "65%", right: "20%" },
+        easterEgg: "You polished Prof. Myrcene's brass loupe (+10 SpaceCash)!"
+      },
+      {
+        title: "The Celestial Bloom",
+        caption: "Resin heads dripping amber starlight. Absolute biological tranquility.",
+        artStyle: "radial-gradient(circle at 50% 50%, #701a75 0%, #3b0764 50%, #030712 100%)",
+        svgContent: `
+          <svg viewBox="0 0 400 240" style="width:100%; height:100%;">
+            <rect width="400" height="240" fill="#090514"/>
+            <!-- Glowing Cannabis Fan Leaves -->
+            <g transform="translate(200, 160)">
+              <path d="M 0 0 C -30 -60 0 -130 0 -130 C 0 -130 30 -60 0 0 Z" fill="#10b981" stroke="#34d399" stroke-width="2"/>
+              <path d="M 0 0 C -60 -40 -110 -80 -110 -80 C -110 -80 -70 -20 0 0 Z" fill="#059669" stroke="#10b981" stroke-width="2"/>
+              <path d="M 0 0 C 60 -40 110 -80 110 -80 C 110 -80 70 -20 0 0 Z" fill="#059669" stroke="#10b981" stroke-width="2"/>
+              <path d="M 0 0 C -80 -10 -130 -20 -130 -20 C -130 -20 -80 20 0 0 Z" fill="#047857" stroke="#10b981" stroke-width="2"/>
+              <path d="M 0 0 C 80 -10 130 -20 130 -20 C 130 -20 80 20 0 0 Z" fill="#047857" stroke="#10b981" stroke-width="2"/>
+              <!-- Sparkling trichomes -->
+              <circle cx="-15" cy="-80" r="4" fill="#fef08a" filter="drop-shadow(0 0 6px #f59e0b)"/>
+              <circle cx="20" cy="-65" r="5" fill="#fef08a" filter="drop-shadow(0 0 6px #f59e0b)"/>
+              <circle cx="-45" cy="-45" r="4" fill="#67e8f9" filter="drop-shadow(0 0 6px #06b6d4)"/>
+              <circle cx="50" cy="-35" r="5" fill="#e879f9" filter="drop-shadow(0 0 6px #c084fc)"/>
+              <circle cx="0" cy="-110" r="6" fill="#fde047" filter="drop-shadow(0 0 8px #f59e0b)"/>
+            </g>
+          </svg>
+        `,
+        balloons: [
+          { speaker: "Prof. Myrcene", text: "Beta-myrcene! Alpha-pinene! It isn't just an aroma—it’s an acoustic broadcast of harmony!", top: "20px", left: "20px" }
+        ],
+        sfx: { text: "SHIIIMMER!", top: "50%", right: "25%" }
+      }
+    ]
+  },
+  {
+    type: 'dynamic_page',
+    title: 'Page 3: The Scent in the Pines',
+    panels: [
+      {
+        title: "The Cascadia Wind",
+        caption: "Terpenes travel on the mountain wind across Tillamook.",
+        artStyle: "linear-gradient(135deg, #064e3b 0%, #022c22 100%)",
+        svgContent: `
+          <svg viewBox="0 0 400 240" style="width:100%; height:100%;">
+            <rect width="400" height="240" fill="#061c14"/>
+            <!-- Evergreen pine silhouettes -->
+            <polygon points="60,30 20,130 100,130" fill="#0f382a"/>
+            <polygon points="140,10 90,140 190,140" fill="#0a2a1f"/>
+            <polygon points="280,40 220,160 340,160" fill="#051f16"/>
+            <!-- Swirling golden-green terpene mist -->
+            <path d="M 0 100 Q 100 60 200 120 T 400 80" stroke="#facc15" stroke-width="12" stroke-linecap="round" fill="none" opacity="0.6"/>
+            <path d="M 0 130 Q 150 160 250 90 T 400 140" stroke="#34d399" stroke-width="8" stroke-linecap="round" fill="none" opacity="0.7"/>
+          </svg>
+        `,
+        sfx: { text: "WHOOOOSH...", top: "35%", left: "30%" }
+      },
+      {
+        title: "The Tillamook Sentinel",
+        caption: "Sasquatch has guarded this forest for centuries. This frequency is irresistible.",
+        artStyle: "radial-gradient(circle at 50% 30%, #451a03 0%, #1c1917 80%)",
+        svgContent: `
+          <svg viewBox="0 0 350 240" style="width:100%; height:100%;">
+            <rect width="350" height="240" fill="#180e05"/>
+            <!-- Sasquatch face/bust -->
+            <ellipse cx="175" cy="140" rx="90" ry="110" fill="#451a03" stroke="#291204" stroke-width="4"/>
+            <!-- Shaggy fur highlights -->
+            <path d="M 90 80 Q 175 40 260 80 Q 250 160 230 220 L 120 220 Z" fill="#78350f"/>
+            <!-- Gentle intelligent eyes -->
+            <ellipse cx="145" cy="115" rx="12" ry="9" fill="#f59e0b"/>
+            <circle cx="145" cy="115" r="5" fill="#000"/>
+            <ellipse cx="205" cy="115" rx="12" ry="9" fill="#f59e0b"/>
+            <circle cx="205" cy="115" r="5" fill="#000"/>
+            <!-- Broad flat nose flaring -->
+            <ellipse cx="175" cy="145" rx="18" ry="12" fill="#291204"/>
+            <circle cx="168" cy="148" r="4" fill="#000"/>
+            <circle cx="182" cy="148" r="4" fill="#000"/>
+            <!-- Sweetgrass collar -->
+            <path d="M 120 220 Q 175 235 230 220" stroke="#84cc16" stroke-width="8" stroke-dasharray="10,5"/>
+          </svg>
+        `,
+        balloons: [
+          { speaker: "Sasquatch", text: "[Deep chest rumble: Hhhhrrruuuummmm...]", top: "20px", left: "20px" }
+        ],
+        sfx: { text: "SNIIIIFF!", top: "60%", right: "15%" },
+        easterEgg: "Sasquatch gives you a gentle forest nod (+10 SpaceCash)!"
+      },
+      {
+        title: "The Unspoken Alliance",
+        caption: "No words required. An ancient bond sealed in cedar and resin.",
+        artStyle: "linear-gradient(180deg, #1e3a8a 0%, #0f172a 100%)",
+        svgContent: `
+          <svg viewBox="0 0 400 240" style="width:100%; height:100%;">
+            <rect width="400" height="240" fill="#0b132b"/>
+            <!-- River dock -->
+            <rect x="0" y="160" width="400" height="80" fill="#78350f" stroke="#451a03" stroke-width="4"/>
+            <!-- Blaze on dock holding branch -->
+            <circle cx="100" cy="130" r="25" fill="#92400e"/>
+            <rect x="85" y="110" width="30" height="30" fill="#dc2626"/>
+            <!-- Giant hairy arm extending -->
+            <path d="M 380 100 Q 250 120 180 140" stroke="#451a03" stroke-width="26" stroke-linecap="round"/>
+            <!-- Aromatic cedar cutting with glowing flowers -->
+            <line x1="110" y1="135" x2="170" y2="135" stroke="#15803d" stroke-width="6"/>
+            <circle cx="170" cy="135" r="10" fill="#10b981" filter="drop-shadow(0 0 8px #f5c542)"/>
+          </svg>
+        `,
+        balloons: [
+          { speaker: "Blaze", text: "Welcome to the Green Dam, big guy. Pull up a cedar log.", top: "20px", left: "25px" }
+        ],
+        sfx: { text: "RESPECT.", top: "68%", left: "45%" }
+      }
+    ]
+  },
+  {
+    type: 'dynamic_page',
+    title: 'Page 4: The Twilight Solarium',
+    panels: [
+      {
+        title: "10015 SW Hall Blvd, Tigard OR",
+        caption: "The CDC Dispensary / NorthStar Sanctuary at evening twilight.",
+        artStyle: "linear-gradient(180deg, #312e81 0%, #1e1b4b 60%, #09090b 100%)",
+        svgContent: `
+          <svg viewBox="0 0 400 240" style="width:100%; height:100%;">
+            <rect width="400" height="240" fill="#0a0a14"/>
+            <!-- Dispensary Building -->
+            <polygon points="40,90 200,40 360,90 360,220 40,220" fill="#334155" stroke="#1e293b" stroke-width="4"/>
+            <!-- Neon Sign -->
+            <rect x="80" y="95" width="240" height="35" rx="4" fill="#0f172a" stroke="#10b981" stroke-width="2"/>
+            <text x="200" y="118" fill="#34d399" font-family="sans-serif" font-weight="900" font-size="14" text-anchor="middle" letter-spacing="1">THE CDC DISPENSARY</text>
+            <!-- Large Glass Solarium Dome at rear -->
+            <path d="M 240 90 Q 340 30 380 90 L 380 220 L 240 220 Z" fill="#8b5cf6" opacity="0.35" stroke="#a78bfa" stroke-width="2"/>
+            <!-- Station wagon in lot -->
+            <rect x="60" y="180" width="110" height="35" rx="6" fill="#854d0e"/>
+          </svg>
+        `,
+        balloons: [
+          { speaker: "Blaze", text: "Here we are. 10015 SW Hall. Home of the true craft.", top: "15px", left: "20px" }
+        ],
+        sfx: { text: "NEON GLOW", top: "58%", left: "65%" }
+      },
+      {
+        title: "The Vorath Bridge Activation",
+        caption: "Behind the retail shelves: an interdimensional astral conservatory.",
+        artStyle: "radial-gradient(circle at 50% 50%, #4c1d95 0%, #1e1b4b 50%, #030712 100%)",
+        svgContent: `
+          <svg viewBox="0 0 400 240" style="width:100%; height:100%;">
+            <rect width="400" height="240" fill="#05030d"/>
+            <!-- Pulsing dimensional rings -->
+            <circle cx="200" cy="120" r="90" fill="none" stroke="#a855f7" stroke-width="3" opacity="0.7"/>
+            <circle cx="200" cy="120" r="60" fill="none" stroke="#22d3ee" stroke-width="3" opacity="0.8"/>
+            <circle cx="200" cy="120" r="30" fill="none" stroke="#f472b6" stroke-width="3"/>
+            <!-- Vorath the Grey Silhouette -->
+            <ellipse cx="200" cy="110" rx="20" ry="60" fill="#e2e8f0" opacity="0.9"/>
+            <!-- Pearlescent alien head -->
+            <ellipse cx="200" cy="65" rx="18" ry="24" fill="#cbd5e1"/>
+            <!-- Violet almond eyes -->
+            <ellipse cx="192" cy="62" rx="5" ry="8" fill="#7e22ce" transform="rotate(-15 192 62)"/>
+            <ellipse cx="208" cy="62" rx="5" ry="8" fill="#7e22ce" transform="rotate(15 208 62)"/>
+          </svg>
+        `,
+        balloons: [
+          { speaker: "Vorath", text: "Greetings, Castor Fiber. The harmonic vibration of your river waters has cradled our ancestral strain beyond our greatest calculations.", top: "15px", left: "15px", telepathic: true }
+        ],
+        sfx: { text: "HUMMMMM...", top: "70%", right: "20%" },
+        easterEgg: "You tuned into the Vorath Signal (+10 SpaceCash)!"
+      }
+    ]
+  },
+  {
+    type: 'dynamic_page',
+    title: 'Page 5: Meeting the Grand Council',
+    panels: [
+      {
+        title: "The 500-Year Douglas Fir Table",
+        caption: "Eldrin the Elf, Brokk the Dwarf, Vorath, and the Fairies assemble.",
+        artStyle: "radial-gradient(circle at 50% 60%, #78350f 0%, #1c1917 80%)",
+        svgContent: `
+          <svg viewBox="0 0 400 240" style="width:100%; height:100%;">
+            <rect width="400" height="240" fill="#140b05"/>
+            <!-- Round Table Cross-Section with Growth Rings -->
+            <ellipse cx="200" cy="160" rx="160" ry="70" fill="#92400e" stroke="#451a03" stroke-width="6"/>
+            <ellipse cx="200" cy="160" rx="120" ry="50" fill="none" stroke="#78350f" stroke-width="2"/>
+            <ellipse cx="200" cy="160" rx="80" ry="30" fill="none" stroke="#78350f" stroke-width="2"/>
+            <!-- Councilors around table -->
+            <!-- Elf left -->
+            <polygon points="70,120 85,90 100,120" fill="#15803d"/>
+            <polygon points="65,95 85,75 80,100" fill="#fef08a"/> <!-- elf hair -->
+            <!-- Dwarf right -->
+            <rect x="290" y="100" width="35" height="35" fill="#b45309"/>
+            <polygon points="285,120 330,120 307,155" fill="#ea580c"/> <!-- red beard -->
+            <!-- Fairies hovering -->
+            <circle cx="180" cy="70" r="8" fill="#f472b6" filter="drop-shadow(0 0 6px #ec4899)"/>
+            <circle cx="220" cy="65" r="8" fill="#38bdf8" filter="drop-shadow(0 0 6px #0ea5e9)"/>
+          </svg>
+        `,
+        balloons: [
+          { speaker: "Eldrin", text: "The soil mycorrhizae have fully integrated with the interstellar genetics!", top: "15px", left: "15px" },
+          { speaker: "Brokk", text: "Aye, but does the rosin press like golden honey?", top: "45px", right: "15px" }
+        ],
+        sfx: { text: "DEBATE!", top: "70%", left: "40%" }
+      },
+      {
+        title: "The Endocannabinoid Blackboard",
+        caption: "Prof. Myrcene demonstrates retrograde neurotransmitter signaling.",
+        artStyle: "linear-gradient(180deg, #14532d 0%, #052e16 100%)",
+        svgContent: `
+          <svg viewBox="0 0 400 240" style="width:100%; height:100%;">
+            <rect width="400" height="240" fill="#062817"/>
+            <!-- Chalkboard diagrams -->
+            <rect x="20" y="20" width="360" height="200" fill="#0f3923" stroke="#854d0e" stroke-width="6"/>
+            <!-- CB1 and CB2 receptor diagram in chalk -->
+            <circle cx="120" cy="110" r="35" fill="none" stroke="#fef08a" stroke-width="3" stroke-dasharray="4,3"/>
+            <text x="120" y="115" fill="#fef08a" font-family="monospace" font-size="12" text-anchor="middle">CB1 RECEPTOR</text>
+            <circle cx="270" cy="110" r="35" fill="none" stroke="#86efac" stroke-width="3" stroke-dasharray="4,3"/>
+            <text x="270" y="115" fill="#86efac" font-family="monospace" font-size="12" text-anchor="middle">CB2 RECEPTOR</text>
+            <!-- Chemical terpene formula connecting them -->
+            <path d="M 155 110 L 235 110" stroke="#f59e0b" stroke-width="4"/>
+            <text x="195" y="95" fill="#fbbf24" font-family="monospace" font-size="10" text-anchor="middle">MYRCENE</text>
+          </svg>
+        `,
+        balloons: [
+          { speaker: "Prof. Myrcene", text: "Observe! When beta-caryophyllene selectively binds to CB2, systemic tension evaporates!", top: "15px", left: "20px" },
+          { speaker: "Blaze", text: "Enough lectures, Prof. The proof is in the puff.", top: "70%", right: "20px" }
+        ],
+        sfx: { text: "Q.E.D.", top: "65%", left: "20%" },
+        easterEgg: "You solved the CB2 receptor riddle (+10 SpaceCash)!"
+      }
+    ]
+  },
+  {
+    type: 'dynamic_page',
+    title: 'Page 6: The Secret Government Dossier',
+    panels: [
+      {
+        title: "The 1984 Surveillance Van",
+        caption: "Across the street behind the dumpster: Operation Starlight.",
+        artStyle: "linear-gradient(180deg, #1e293b 0%, #0f172a 100%)",
+        svgContent: `
+          <svg viewBox="0 0 400 240" style="width:100%; height:100%;">
+            <rect width="400" height="240" fill="#0a0e17"/>
+            <!-- Brown spy van -->
+            <rect x="50" y="100" width="280" height="90" rx="10" fill="#78350f" stroke="#451a03" stroke-width="3"/>
+            <rect x="250" y="110" width="70" height="40" fill="#1e293b"/> <!-- windshield -->
+            <!-- Antennae bristling on roof -->
+            <line x1="120" y1="100" x2="120" y2="40" stroke="#94a3b8" stroke-width="3"/>
+            <circle cx="120" cy="38" r="8" fill="#ef4444"/>
+            <line x1="200" y1="100" x2="220" y2="30" stroke="#94a3b8" stroke-width="3"/>
+            <!-- Side door stencil -->
+            <text x="170" y="145" fill="#fef08a" font-family="monospace" font-size="10" text-anchor="middle" font-weight="bold">OREGON WATER & MOSS SURVEY</text>
+          </svg>
+        `,
+        balloons: [
+          { speaker: "Moss (O.S.)", text: "Sterling! The spectrogram readings on that dispensary greenhouse just spiked twelve thousand percent in the pine-citrus band!", top: "20px", left: "20px" }
+        ],
+        sfx: { text: "BEEP-BEEP-BEEP!", top: "25%", right: "20%" }
+      },
+      {
+        title: "Binoculars Don't Lie",
+        caption: "Night-vision green display reveals the interdimensional ringleader.",
+        artStyle: "radial-gradient(circle at 50% 50%, #15803d 0%, #052e16 60%, #000 100%)",
+        svgContent: `
+          <svg viewBox="0 0 400 240" style="width:100%; height:100%;">
+            <rect width="400" height="240" fill="#000"/>
+            <!-- Binocular mask circles -->
+            <circle cx="150" cy="120" r="95" fill="#14532d" opacity="0.85"/>
+            <circle cx="250" cy="120" r="95" fill="#14532d" opacity="0.85"/>
+            <!-- Green night vision reticle -->
+            <line x1="200" y1="50" x2="200" y2="190" stroke="#86efac" stroke-width="1.5"/>
+            <line x1="80" y1="120" x2="320" y2="120" stroke="#86efac" stroke-width="1.5"/>
+            <!-- Beaver in red flannel holding blunt in binoculars -->
+            <circle cx="200" cy="115" r="28" fill="#22c55e"/>
+            <rect x="185" y="130" width="30" height="35" fill="#15803d"/>
+            <text x="200" y="80" fill="#86efac" font-family="monospace" font-size="11" text-anchor="middle">TARGET: CASTOR FIBER (SUSPECT #1)</text>
+          </svg>
+        `,
+        balloons: [
+          { speaker: "Moss", text: "Good grief... the beaver is the ringleader! The dam has gone cosmic!", top: "15px", left: "15px" },
+          { speaker: "Sterling", text: "My cousin says their gummies are the best in Tigard, Moss.", top: "70%", right: "15px" }
+        ],
+        sfx: { text: "ZOOM IN!", top: "65%", left: "20%" },
+        easterEgg: "You hacked Operation Starlight's night-vision scope (+10 SpaceCash)!"
+      }
+    ]
+  },
+  {
+    type: 'dynamic_page',
+    title: 'Page 7: The Peace Smoke',
+    panels: [
+      {
+        title: "The Match Flare",
+        caption: "Blaze sparks an artisan hemp roll outside the side door.",
+        artStyle: "linear-gradient(180deg, #1e1b4b 0%, #0f172a 100%)",
+        svgContent: `
+          <svg viewBox="0 0 400 240" style="width:100%; height:100%;">
+            <rect width="400" height="240" fill="#080811"/>
+            <!-- Match flare -->
+            <circle cx="200" cy="120" r="30" fill="#fef08a" filter="drop-shadow(0 0 25px #f59e0b)"/>
+            <circle cx="200" cy="120" r="12" fill="#fff"/>
+            <!-- Craft roll silhouette -->
+            <line x1="200" y1="120" x2="150" y2="140" stroke="#78350f" stroke-width="8" stroke-linecap="round"/>
+            <line x1="198" y1="120" x2="202" y2="120" stroke="#ef4444" stroke-width="4"/> <!-- cherry -->
+          </svg>
+        `,
+        balloons: [
+          { speaker: "Blaze", text: "Hey, fellas in the brown van! Cold night for spying. Step out of the shadows.", top: "15px", left: "20px" }
+        ],
+        sfx: { text: "SKRRRTCH!", top: "35%", right: "25%" }
+      },
+      {
+        title: "The Melt of Tension",
+        caption: "Retrograde signaling activates. Agent Moss's rigid posture completely dissolves.",
+        artStyle: "radial-gradient(circle at 50% 40%, #c084fc 0%, #3b0764 50%, #090314 100%)",
+        svgContent: `
+          <svg viewBox="0 0 400 240" style="width:100%; height:100%;">
+            <rect width="400" height="240" fill="#080210"/>
+            <!-- Swirling aromatic smoke clouds -->
+            <path d="M 50 180 Q 150 110 250 160 T 380 90" stroke="#e9d5ff" stroke-width="16" stroke-linecap="round" fill="none" opacity="0.65"/>
+            <path d="M 70 200 Q 180 150 280 190 T 390 120" stroke="#c084fc" stroke-width="10" stroke-linecap="round" fill="none" opacity="0.5"/>
+            <!-- Agent Moss smiling with crooked aviators -->
+            <circle cx="200" cy="100" r="35" fill="#fcd34d"/>
+            <!-- crooked sunglasses -->
+            <polygon points="175,95 200,105 195,115 170,105" fill="#000"/>
+            <polygon points="205,107 230,117 225,127 200,117" fill="#000"/>
+            <!-- Broad relaxed smile -->
+            <path d="M 180 120 Q 200 135 220 120" stroke="#000" stroke-width="3" fill="none"/>
+          </svg>
+        `,
+        balloons: [
+          { speaker: "Agent Moss", text: "...The chronic tension in my lower lumbar vertebrae... it's just gone. Why was I yelling into a phone?", top: "15px", left: "15px" },
+          { speaker: "Blaze", text: "Take a pull, Agent. The only thing we're overthrowing tonight is bad posture.", top: "70%", right: "15px" }
+        ],
+        sfx: { text: "BLIIIIISSS...", top: "60%", left: "15%" },
+        easterEgg: "Agent Moss accepted the peace offering (+10 SpaceCash)!"
+      }
+    ]
+  },
+  {
+    type: 'dynamic_page',
+    title: 'Page 8: Keep on the Grass',
+    panels: [
+      {
+        title: "Sanctuary Secured",
+        caption: "Willamette River Green Dam at golden hour sunset.",
+        artStyle: "linear-gradient(180deg, #f97316 0%, #ec4899 40%, #1e1b4b 100%)",
+        svgContent: `
+          <svg viewBox="0 0 400 240" style="width:100%; height:100%;">
+            <rect width="400" height="240" fill="#1a0c2e"/>
+            <!-- Sunset sky -->
+            <ellipse cx="200" cy="90" rx="45" ry="45" fill="#fef08a" filter="drop-shadow(0 0 35px #ea580c)"/>
+            <!-- Mount Hood in distance -->
+            <polygon points="130,140 200,60 270,140" fill="#f43f5e"/>
+            <polygon points="175,90 200,60 225,90" fill="#fff"/> <!-- snowcap -->
+            <!-- River reflecting golden-pink light -->
+            <path d="M 0 170 Q 200 150 400 190 L 400 240 L 0 240 Z" fill="#fb923c" opacity="0.85"/>
+          </svg>
+        `,
+        sfx: { text: "TRANQUILITY", top: "25%", left: "30%" }
+      },
+      {
+        title: "The Cedar Plaque",
+        caption: "Blaze hammers the hand-carved sign into the riverbank moss.",
+        artStyle: "radial-gradient(circle at 50% 50%, #92400e 0%, #451a03 80%)",
+        svgContent: `
+          <svg viewBox="0 0 400 240" style="width:100%; height:100%;">
+            <rect width="400" height="240" fill="#1d0d04"/>
+            <!-- Cedar Post & Plaque -->
+            <rect x="185" y="100" width="30" height="130" fill="#78350f" stroke="#451a03" stroke-width="4"/>
+            <rect x="70" y="40" width="260" height="75" rx="8" fill="#b45309" stroke="#451a03" stroke-width="6"/>
+            <!-- Carved lettering -->
+            <text x="200" y="75" fill="#fef08a" font-family="'Impact', sans-serif" font-size="22" text-anchor="middle" letter-spacing="2">KEEP ON THE GRASS</text>
+            <text x="200" y="98" fill="#fef08a" font-family="sans-serif" font-size="11" text-anchor="middle" font-weight="bold">THE CDC DISPENSARY • OREGON</text>
+            <!-- Owl perched on corner -->
+            <circle cx="95" cy="35" r="14" fill="#a16207"/>
+            <circle cx="90" cy="32" r="4" fill="#fef08a"/>
+            <circle cx="100" cy="32" r="4" fill="#fef08a"/>
+          </svg>
+        `,
+        balloons: [
+          { speaker: "Blaze", text: "There. Clear enough for hikers, beavers, and flying saucers alike.", top: "15px", left: "20px" }
+        ],
+        sfx: { text: "THUMP! THUMP!", top: "60%", right: "20%" },
+        easterEgg: "You inspected the historic cedar plaque (+10 SpaceCash)!"
+      },
+      {
+        title: "The Final Splash",
+        caption: "Build honest, love your waters, and always keep on the grass.",
+        artStyle: "linear-gradient(135deg, #065f46 0%, #022c22 100%)",
+        svgContent: `
+          <svg viewBox="0 0 400 240" style="width:100%; height:100%;">
+            <rect width="400" height="240" fill="#021c14"/>
+            <!-- Cozy lodge interior / porch at sunset -->
+            <circle cx="200" cy="110" r="45" fill="#78350f" stroke="#1c1917" stroke-width="4"/>
+            <!-- Beanie & flannel -->
+            <path d="M 160 85 C 160 60 240 60 240 85 Z" fill="#15803d"/>
+            <rect x="175" y="115" width="50" height="40" fill="#dc2626" rx="4"/>
+            <!-- Beavers friendly winking face -->
+            <circle cx="185" cy="105" r="6" fill="#000"/> <!-- eye -->
+            <path d="M 210 105 Q 220 102 225 107" stroke="#000" stroke-width="3" fill="none"/> <!-- wink -->
+            <ellipse cx="200" cy="112" rx="10" ry="6" fill="#1c1917"/> <!-- nose -->
+            <!-- Signature orange front teeth -->
+            <rect x="194" y="118" width="6" height="10" fill="#ea580c" stroke="#000" stroke-width="1"/>
+            <rect x="200" y="118" width="6" height="10" fill="#ea580c" stroke="#000" stroke-width="1"/>
+            <!-- Twinkling Vorath star above -->
+            <polygon points="340,30 345,40 355,45 345,50 340,60 335,50 325,45 335,40" fill="#c084fc" filter="drop-shadow(0 0 8px #a855f7)"/>
+          </svg>
+        `,
+        balloons: [
+          { speaker: "Blaze", text: "Life's too short to hold tension, neighbor. Build honest, love your waters, and always keep on the grass.", top: "20px", left: "20px" }
+        ],
+        sfx: { text: "PEACE.", top: "65%", right: "25%" },
+        easterEgg: "Series completed! You earned the Master Beaver Pin (+20 SpaceCash)!"
+      }
+    ]
+  }
+  ]
+},
+issue_2: {
+    title: "The Adventures of Blazin' Beaver #2",
+    tagline: "The High Cascade Heist // Mount Hood Vault Raid",
+    badge: "COLLECTIBLE EDITION #2",
+    stamp: "CASCADE NIGHT OPS • CANON GRADE A",
+    price: "$1.75 • ACTION PACKED",
+    pages: [
+      {
+        type: 'cover',
+        title: "Cover: The High Cascade Heist #2",
+        svgContent: `
+          <svg viewBox="0 0 400 600" style="width:100%; height:100%;">
+            <rect width="400" height="600" fill="#020617"/>
+            <circle cx="300" cy="110" r="48" fill="#fef08a" filter="drop-shadow(0 0 20px #eab308)"/>
+            <polygon points="200,160 80,480 320,480" fill="#334155"/>
+            <polygon points="200,160 160,260 240,260" fill="#f8fafc"/>
+            <rect x="130" y="320" width="140" height="200" fill="#1e293b" stroke="#0284c7" stroke-width="4"/>
+            <line x1="80" y1="360" x2="320" y2="360" stroke="#ef4444" stroke-width="3" stroke-dasharray="8,4"/>
+            <line x1="80" y1="410" x2="320" y2="410" stroke="#ef4444" stroke-width="3" stroke-dasharray="8,4"/>
+            <line x1="200" y1="180" x2="160" y2="300" stroke="#cbd5e1" stroke-width="3"/>
+            <circle cx="160" cy="300" r="24" fill="#78350f"/>
+            <path d="M 148 288 C 148 275 172 275 172 288 Z" fill="#15803d"/>
+            <rect x="150" y="302" width="20" height="22" fill="#dc2626" rx="3"/>
+            <ellipse cx="142" cy="316" rx="14" ry="7" fill="#451a03"/>
+            <rect x="20" y="24" width="360" height="68" rx="6" fill="#0f172a" stroke="#38bdf8" stroke-width="3"/>
+            <text x="200" y="52" fill="#38bdf8" font-family="sans-serif" font-weight="900" font-size="20" text-anchor="middle" letter-spacing="2">BLAZIN' BEAVER #2</text>
+            <text x="200" y="76" fill="#fef08a" font-family="sans-serif" font-weight="700" font-size="12" text-anchor="middle">THE HIGH CASCADE HEIST</text>
+          </svg>
+        `
+      },
+      {
+        type: 'dynamic_page',
+        title: "Page 1: Midnight at Timberline",
+        panels: [
+          {
+            title: "The Blueprint on the Cedar Stump",
+            caption: "Blaze unrolls the stolen schematic of the Mount Hood Timber Vault under a dim kerosene lantern.",
+            artStyle: "linear-gradient(180deg, #090d16 0%, #111827 100%)",
+            svgContent: `
+              <svg viewBox="0 0 400 240" style="width:100%; height:100%;">
+                <rect width="400" height="240" fill="#0b0f19"/>
+                <ellipse cx="200" cy="180" rx="140" ry="45" fill="#592e0e" stroke="#291204" stroke-width="4"/>
+                <rect x="110" y="145" width="180" height="65" rx="3" fill="#1e3a8a" stroke="#60a5fa" stroke-width="2"/>
+                <line x1="125" y1="165" x2="275" y2="165" stroke="#93c5fd" stroke-width="1.5" stroke-dasharray="4,2"/>
+                <line x1="125" y1="185" x2="275" y2="185" stroke="#93c5fd" stroke-width="1.5" stroke-dasharray="4,2"/>
+                <circle cx="200" cy="90" r="35" fill="#fef08a" opacity="0.3" filter="drop-shadow(0 0 35px #f59e0b)"/>
+                <rect x="190" y="80" width="20" height="30" rx="3" fill="#f59e0b"/>
+              </svg>
+            `,
+            balloons: [
+              { speaker: "Blaze", text: "Three laser tripwires and a reinforced Douglas fir bulkhead. Nothing our river sluice can't bypass.", top: "20px", left: "20px" }
+            ],
+            sfx: { text: "CRACKLE...", top: "60%", right: "25%" }
+          },
+          {
+            title: "The Owl's Surveillance",
+            caption: "Professor Myrcene adjusts his brass bifocals from the high hemlock bough.",
+            artStyle: "linear-gradient(180deg, #0c192c 0%, #030712 100%)",
+            svgContent: `
+              <svg viewBox="0 0 400 240" style="width:100%; height:100%;">
+                <rect width="400" height="240" fill="#060c18"/>
+                <rect x="0" y="130" width="280" height="25" fill="#422006" rx="4"/>
+                <ellipse cx="140" cy="90" rx="26" ry="36" fill="#854d0e"/>
+                <circle cx="130" cy="80" r="8" fill="#fef08a"/>
+                <circle cx="150" cy="80" r="8" fill="#fef08a"/>
+                <circle cx="130" cy="80" r="3" fill="#000"/>
+                <circle cx="150" cy="80" r="3" fill="#000"/>
+                <line x1="138" y1="80" x2="142" y2="80" stroke="#f59e0b" stroke-width="2"/>
+              </svg>
+            `,
+            balloons: [
+              { speaker: "Prof. Myrcene", text: "Guards change shifts at precisely 02:40. The humidity will mask your tail splash!", top: "25px", right: "20px" }
+            ],
+            sfx: { text: "HOOO-HOOO", top: "65%", left: "30%" }
+          }
+        ]
+      },
+      {
+        type: 'dynamic_page',
+        title: "Page 2: The Flume Infiltration",
+        panels: [
+          {
+            title: "Shooting the Flume",
+            caption: "Blaze slides down the mountain log flume at 45 MPH, water spraying beneath the moon.",
+            artStyle: "radial-gradient(circle, #0284c7 0%, #0c4a6e 60%, #020617 100%)",
+            svgContent: `
+              <svg viewBox="0 0 400 240" style="width:100%; height:100%;">
+                <rect width="400" height="240" fill="#021422"/>
+                <path d="M 0 40 L 400 200 L 400 240 L 0 80 Z" fill="#0369a1"/>
+                <path d="M 0 55 L 400 215" stroke="#7dd3fc" stroke-width="6" stroke-dasharray="14,8"/>
+                <ellipse cx="220" cy="120" rx="35" ry="10" fill="#78350f" transform="rotate(22 220 120)"/>
+                <circle cx="215" cy="98" r="16" fill="#78350f"/>
+                <path d="M 205 90 C 205 80 225 80 225 90 Z" fill="#15803d"/>
+              </svg>
+            `,
+            balloons: [
+              { speaker: "Blaze", text: "Hold onto your beanies! Hydro-momentum engaged!", top: "15px", left: "20px" }
+            ],
+            sfx: { text: "WHOOOOOOSH!", top: "60%", right: "20%" },
+            easterEgg: "Hydro-slide turbo activated (+15 SpaceCash)!"
+          },
+          {
+            title: "Laser Grid Dodged",
+            caption: "A millimeter-tight duck beneath the infrared perimeter beam.",
+            artStyle: "linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%)",
+            svgContent: `
+              <svg viewBox="0 0 400 240" style="width:100%; height:100%;">
+                <rect width="400" height="240" fill="#0b0a1a"/>
+                <line x1="0" y1="100" x2="400" y2="100" stroke="#ef4444" stroke-width="4" filter="drop-shadow(0 0 8px #ef4444)"/>
+                <path d="M 120 170 Q 200 130 280 170" stroke="#38bdf8" stroke-width="8" fill="none"/>
+              </svg>
+            `,
+            balloons: [
+              { speaker: "Blaze", text: "Two inches of clearance. Piece of bark.", top: "25px", right: "20px" }
+            ],
+            sfx: { text: "ZZZZZT...", top: "50%", left: "35%" }
+          }
+        ]
+      },
+      {
+        type: 'dynamic_page',
+        title: "Page 3: The Golden Trichome Vault",
+        panels: [
+          {
+            title: "Cracking the Bulkhead",
+            caption: "Using a hand-carved cedar wedge and beaver leverage, the hydraulic steel doors give way.",
+            artStyle: "linear-gradient(180deg, #1e293b 0%, #020617 100%)",
+            svgContent: `
+              <svg viewBox="0 0 400 240" style="width:100%; height:100%;">
+                <rect width="400" height="240" fill="#060911"/>
+                <rect x="40" y="20" width="140" height="200" fill="#475569" stroke="#94a3b8" stroke-width="6"/>
+                <circle cx="160" cy="120" r="28" fill="#cbd5e1" stroke="#334155" stroke-width="6"/>
+                <polygon points="180,40 380,0 380,240 180,200" fill="#fef08a" opacity="0.45" filter="drop-shadow(0 0 30px #eab308)"/>
+              </svg>
+            `,
+            balloons: [
+              { speaker: "Blaze", text: "Open sesame. Feast your eyes, Thaddeus.", top: "20px", left: "20px" }
+            ],
+            sfx: { text: "KER-CHUNK!", top: "60%", right: "20%" }
+          },
+          {
+            title: "The Stardust Canister Secured",
+            caption: "The sacred Vorath trichome canister glows with cosmic amber luminescence.",
+            artStyle: "radial-gradient(circle at 50% 50%, #fef08a 0%, #f59e0b 40%, #0f172a 100%)",
+            svgContent: `
+              <svg viewBox="0 0 400 240" style="width:100%; height:100%;">
+                <rect width="400" height="240" fill="#0c0e17"/>
+                <rect x="160" y="40" width="80" height="150" rx="14" fill="#0284c7" opacity="0.3" stroke="#38bdf8" stroke-width="4"/>
+                <circle cx="200" cy="115" r="30" fill="#fef08a" filter="drop-shadow(0 0 25px #eab308)"/>
+                <polygon points="200,95 205,105 215,110 205,115 200,125 195,115 185,110 195,105" fill="#fff"/>
+              </svg>
+            `,
+            balloons: [
+              { speaker: "Blaze", text: "Safe and sound. Let's ride the floodgates home!", top: "20px", right: "20px" }
+            ],
+            sfx: { text: "SHIIIIINE!", top: "65%", left: "25%" },
+            easterEgg: "You secured the Cascade Gold Canister (+20 SpaceCash)!"
+          }
+        ]
+      },
+      {
+        type: 'dynamic_page',
+        title: "Page 4: The Log Jam Getaway",
+        panels: [
+          {
+            title: "Surfing the River Surge",
+            caption: "The emergency floodgates blow; Blaze surfs an armada of cedar logs across the moonlit gorge to victory.",
+            artStyle: "linear-gradient(135deg, #047857 0%, #064e3b 50%, #022c22 100%)",
+            svgContent: `
+              <svg viewBox="0 0 400 240" style="width:100%; height:100%;">
+                <rect width="400" height="240" fill="#011b13"/>
+                <path d="M 0 160 Q 120 120 240 170 T 400 150 L 400 240 L 0 240 Z" fill="#059669"/>
+                <path d="M 0 180 Q 140 140 260 190 T 400 170" stroke="#a7f3d0" stroke-width="6" fill="none"/>
+                <rect x="60" y="160" width="90" height="18" rx="6" fill="#854d0e"/>
+                <rect x="230" y="170" width="110" height="20" rx="6" fill="#a16207"/>
+                <circle cx="200" cy="100" r="28" fill="#78350f"/>
+                <path d="M 185 85 C 185 70 215 70 215 85 Z" fill="#15803d"/>
+                <rect x="185" y="110" width="30" height="35" fill="#dc2626" rx="4"/>
+                <polygon points="260,60 265,70 275,75 265,80 260,90 255,80 245,75 255,70" fill="#fef08a"/>
+              </svg>
+            `,
+            balloons: [
+              { speaker: "Blaze", text: "Mission accomplished! Tigard will have the purest terpene blend in North America by sunrise!", top: "15px", left: "20px" }
+            ],
+            sfx: { text: "YEEEE-HAW!", top: "60%", right: "20%" },
+            easterEgg: "Issue #2 completed! High Cascade Heist Master (+30 SpaceCash)!"
+          }
+        ]
+      }
+    ]
+  },
+  issue_3: {
+    title: "The Adventures of Blazin' Beaver #3",
+    tagline: "Cosmic Timberline // The Celestial Resonator",
+    badge: "COLLECTIBLE EDITION #3",
+    stamp: "VORATH CONTACT • CANON GRADE A",
+    price: "$2.00 • INTERDIMENSIONAL",
+    pages: [
+      {
+        type: 'cover',
+        title: "Cover: Cosmic Timberline #3",
+        svgContent: `
+          <svg viewBox="0 0 400 600" style="width:100%; height:100%;">
+            <defs>
+              <radialGradient id="c3-glow" cx="50%" cy="35%" r="50%">
+                <stop offset="0%" stop-color="#c084fc"/>
+                <stop offset="40%" stop-color="#3b0764"/>
+                <stop offset="100%" stop-color="#020617"/>
+              </radialGradient>
+            </defs>
+            <rect width="400" height="600" fill="url(#c3-glow)"/>
+            <ellipse cx="200" cy="180" rx="140" ry="40" fill="#cbd5e1" stroke="#38bdf8" stroke-width="5"/>
+            <ellipse cx="200" cy="165" rx="70" ry="24" fill="#38bdf8" opacity="0.8"/>
+            <polygon points="200,200 60,540 340,540" fill="#10b981" opacity="0.35"/>
+            <polygon points="200,420 140,550 260,550" fill="#1e293b"/>
+            <circle cx="200" cy="460" r="22" fill="#78350f"/>
+            <path d="M 188 448 C 188 435 212 435 212 448 Z" fill="#15803d"/>
+            <rect x="190" y="468" width="20" height="24" fill="#dc2626" rx="3"/>
+            <rect x="20" y="24" width="360" height="68" rx="6" fill="#0f172a" stroke="#c084fc" stroke-width="3"/>
+            <text x="200" y="52" fill="#c084fc" font-family="sans-serif" font-weight="900" font-size="20" text-anchor="middle" letter-spacing="2">BLAZIN' BEAVER #3</text>
+            <text x="200" y="76" fill="#38bdf8" font-family="sans-serif" font-weight="700" font-size="12" text-anchor="middle">COSMIC TIMBERLINE</text>
+          </svg>
+        `
+      },
+      {
+        type: 'dynamic_page',
+        title: "Page 1: The Celestial Resonator",
+        panels: [
+          {
+            title: "Tuning the Giant Cedar Log",
+            caption: "Blaze tunes a 90-foot hollow cedar log to 432 Hz to harmonize with the Vorathian mothership.",
+            artStyle: "linear-gradient(180deg, #180b2b 0%, #030712 100%)",
+            svgContent: `
+              <svg viewBox="0 0 400 240" style="width:100%; height:100%;">
+                <rect width="400" height="240" fill="#07020e"/>
+                <ellipse cx="200" cy="130" rx="160" ry="30" fill="#581c87" stroke="#a855f7" stroke-width="4"/>
+                <ellipse cx="200" cy="130" rx="130" ry="20" fill="#3b0764"/>
+                <line x1="40" y1="130" x2="360" y2="130" stroke="#e9d5ff" stroke-width="3" stroke-dasharray="6,4"/>
+              </svg>
+            `,
+            balloons: [
+              { speaker: "Blaze", text: "One clean strike on the soundboard. Let the galaxy hear Oregon cedar!", top: "20px", left: "20px" }
+            ],
+            sfx: { text: "BOOOOOOOM (432Hz)", top: "60%", right: "20%" }
+          }
+        ]
+      },
+      {
+        type: 'dynamic_page',
+        title: "Page 2: The Stardust Harmonic Bloom",
+        panels: [
+          {
+            title: "Every Needle Shimmers",
+            caption: "The entire Columbia Gorge erupts into a celestial glow of luminescent terpene crystals.",
+            artStyle: "radial-gradient(circle, #38bdf8 0%, #1e1b4b 60%, #020617 100%)",
+            svgContent: `
+              <svg viewBox="0 0 400 240" style="width:100%; height:100%;">
+                <rect width="400" height="240" fill="#050a16"/>
+                <polygon points="100,60 105,75 120,80 105,85 100,100 95,85 80,80 95,75" fill="#fef08a"/>
+                <polygon points="260,40 265,55 280,60 265,65 260,80 255,65 240,60 255,55" fill="#38bdf8"/>
+                <polygon points="180,110 185,125 200,130 185,135 180,150 175,135 160,130 175,125" fill="#c084fc"/>
+              </svg>
+            `,
+            balloons: [
+              { speaker: "Vorath-77", text: "Earth stewardship verified. The cedar frequency is true.", top: "20px", right: "20px" }
+            ],
+            sfx: { text: "CHIIIIIME...", top: "65%", left: "30%" },
+            easterEgg: "Interdimensional Treaty unlocked (+25 SpaceCash)!"
+          }
+        ]
+      },
+      {
+        type: 'dynamic_page',
+        title: "Page 3: The Galactic Council Toast",
+        panels: [
+          {
+            title: "Peace in the Pines",
+            caption: "Blaze, Sasquatch, and Vorath the Grey share a steaming kettle of river tea under the aurora borealis.",
+            artStyle: "linear-gradient(135deg, #059669 0%, #064e3b 50%, #022c22 100%)",
+            svgContent: `
+              <svg viewBox="0 0 400 240" style="width:100%; height:100%;">
+                <rect width="400" height="240" fill="#021a11"/>
+                <polygon points="200,120 180,180 220,180" fill="#f97316" filter="drop-shadow(0 0 20px #ea580c)"/>
+                <polygon points="200,135 190,175 210,175" fill="#fef08a"/>
+              </svg>
+            `,
+            balloons: [
+              { speaker: "Blaze", text: "Drink up, ambassadors. Next batch is on the house at 10015 SW Hall Blvd!", top: "20px", left: "20px" }
+            ],
+            sfx: { text: "CLINK!", top: "65%", right: "25%" },
+            easterEgg: "Issue #3 completed! Cosmic Ambassador Pin (+40 SpaceCash)!"
+          }
+        ]
+      }
+    ]
+  },
+  special_edition: {
+    title: "Blazin' Beaver: Special Edition",
+    tagline: "Flora's Secret Garden // Botanical Alchemy & Root Lore",
+    badge: "BOTANICAL SPECIAL",
+    stamp: "PHYTOLOGICAL FOLIO • GRADE A CANON",
+    price: "$2.50 • EXPANDED FOLIO",
+    pages: [
+      {
+        type: 'cover',
+        title: "Cover: Flora's Secret Garden",
+        svgContent: `
+          <svg viewBox="0 0 400 600" style="width:100%; height:100%;">
+            <rect width="400" height="600" fill="#022c22"/>
+            <circle cx="200" cy="270" r="160" fill="none" stroke="#10b981" stroke-width="3" stroke-dasharray="8,4"/>
+            <circle cx="200" cy="270" r="120" fill="none" stroke="#34d399" stroke-width="2"/>
+            <circle cx="200" cy="270" r="70" fill="#047857"/>
+            <rect x="20" y="24" width="360" height="68" rx="6" fill="#064e3b" stroke="#34d399" stroke-width="3"/>
+            <text x="200" y="52" fill="#a7f3d0" font-family="sans-serif" font-weight="900" font-size="18" text-anchor="middle" letter-spacing="2">FLORA'S SECRET GARDEN</text>
+            <text x="200" y="76" fill="#fef08a" font-family="sans-serif" font-weight="700" font-size="11" text-anchor="middle">SPECIAL BOTANICAL FOLIO</text>
+          </svg>
+        `
+      },
+      {
+        type: 'dynamic_page',
+        title: "Page 1: The Mycelial Network",
+        panels: [
+          {
+            title: "Underground Highway",
+            caption: "Beneath the damp cedar needles, glowing fungal hyphae ferry terpenes between trees.",
+            artStyle: "radial-gradient(circle, #10b981 0%, #064e3b 50%, #021f18 100%)",
+            svgContent: `
+              <svg viewBox="0 0 400 240" style="width:100%; height:100%;">
+                <rect width="400" height="240" fill="#01140e"/>
+                <path d="M 20 60 Q 120 180 200 110 T 380 200" stroke="#34d399" stroke-width="4" fill="none"/>
+                <path d="M 60 220 Q 160 90 280 160 T 390 40" stroke="#a7f3d0" stroke-width="2" fill="none"/>
+              </svg>
+            `,
+            balloons: [
+              { speaker: "Prof. Myrcene", text: "Nature's fiber-optic network. Pure biochemical harmony.", top: "20px", left: "20px" }
+            ],
+            sfx: { text: "PULSE...", top: "60%", right: "20%" },
+            easterEgg: "Mycelial Explorer Badge (+20 SpaceCash)!"
+          }
+        ]
+      }
+    ]
+  },
+  ashcan: {
+    title: "Blazin' Beaver: 1993 Underground Ashcan",
+    tagline: "Original Indie Xerox Edition // Tigard Micro-Press",
+    badge: "ASHCAN PREVIEW 1993",
+    stamp: "HAND-NUMBERED #114/500 • RARE ARCHIVE",
+    price: "75¢ • RAW UNDERGROUND",
+    pages: [
+      {
+        type: 'cover',
+        title: "Cover: 1993 Ashcan Edition",
+        svgContent: `
+          <svg viewBox="0 0 400 600" style="width:100%; height:100%;">
+            <rect width="400" height="600" fill="#f8fafc"/>
+            <rect x="20" y="20" width="360" height="560" fill="#e2e8f0" stroke="#000" stroke-width="4"/>
+            <text x="200" y="80" fill="#000" font-family="monospace" font-weight="900" font-size="24" text-anchor="middle">BLAZIN' BEAVER</text>
+            <text x="200" y="110" fill="#475569" font-family="monospace" font-weight="bold" font-size="12" text-anchor="middle">1993 UNDERGROUND ASHCAN PREVIEW</text>
+            <circle cx="200" cy="300" r="70" fill="none" stroke="#000" stroke-width="6"/>
+            <circle cx="180" cy="285" r="8" fill="#000"/>
+            <circle cx="220" cy="285" r="8" fill="#000"/>
+            <rect x="192" y="315" width="8" height="18" fill="#000"/>
+            <rect x="200" y="315" width="8" height="18" fill="#000"/>
+            <circle cx="310" cy="460" r="45" fill="none" stroke="#94a3b8" stroke-width="8" opacity="0.4"/>
+          </svg>
+        `
+      },
+      {
+        type: 'dynamic_page',
+        title: "Page 1: Creator Concept Sketches",
+        panels: [
+          {
+            title: "Original Pencil Roughs",
+            caption: "Hand-scrawled notes on legal pad paper from November 1993 in Tigard, Oregon.",
+            artStyle: "linear-gradient(180deg, #f1f5f9 0%, #cbd5e1 100%)",
+            svgContent: `
+              <svg viewBox="0 0 400 240" style="width:100%; height:100%;">
+                <rect width="400" height="240" fill="#f8fafc"/>
+                <line x1="30" y1="40" x2="370" y2="40" stroke="#94a3b8" stroke-width="1"/>
+                <line x1="30" y1="80" x2="370" y2="80" stroke="#94a3b8" stroke-width="1"/>
+                <line x1="30" y1="120" x2="370" y2="120" stroke="#94a3b8" stroke-width="1"/>
+                <line x1="30" y1="160" x2="370" y2="160" stroke="#94a3b8" stroke-width="1"/>
+                <text x="40" y="70" font-family="monospace" font-size="14" fill="#0f172a">NOTE: Flannel must be red buffalo plaid.</text>
+                <text x="40" y="110" font-family="monospace" font-size="14" fill="#0f172a">NOTE: He loves river tea and keeping dams true.</text>
+              </svg>
+            `,
+            balloons: [
+              { speaker: "Creator Note", text: "First sketch ever drawn on SW Hall Blvd napkin.", top: "20px", right: "20px" }
+            ],
+            sfx: { text: "SCRITCH...", top: "60%", left: "30%" },
+            easterEgg: "Ashcan Vault Hunter Badge (+50 SpaceCash)!"
+          }
+        ]
+      }
+    ]
+  }
+};
+
+let currentSeriesKey = 'issue_1';
+let COMIC_PAGES = SERIES_DATA[currentSeriesKey].pages;
+
+function switchSeries(key) {
+  if (!SERIES_DATA[key]) return;
+  currentSeriesKey = key;
+  COMIC_PAGES = SERIES_DATA[key].pages;
+  currentPage = 0;
+
+  const seriesInfo = SERIES_DATA[key];
+  const sub = document.querySelector('.title-group p');
+  if (sub) sub.innerText = `${seriesInfo.title} // ${seriesInfo.tagline}`;
+
+  const issueHeader = document.querySelector('.comic-issue-header');
+  if (issueHeader) {
+    issueHeader.innerHTML = `
+      <div>NORTHSTAR PLATFORM // ${seriesInfo.badge}</div>
+      <div class="badge-tag">${seriesInfo.stamp}</div>
+      <div>${seriesInfo.price}</div>
+    `;
+  }
+
+  const numDisplay = document.getElementById('page-num-display');
+  if (numDisplay && numDisplay.parentElement) {
+    numDisplay.parentElement.innerHTML = `<span class="cur" id="page-num-display">COVER</span> / ${COMIC_PAGES.length - 1}`;
+  }
+
+  buildThumbnails();
+  resetZoom();
+  renderPage(0);
+  playSfx('shimmer');
+  triggerEasterEgg(`Opened ${seriesInfo.title}! (+25 SpaceCash)`);
+}
+
+// Page Render Logic
+function renderPage(index) {
+  const container = document.getElementById('viewport');
+  const pageData = COMIC_PAGES[index];
+  document.getElementById('page-num-display').innerText = index === 0 ? 'COVER' : `PAGE ${index}`;
+
+  // Update navigation buttons
+  document.getElementById('btn-prev').disabled = (index === 0);
+  document.getElementById('btn-next').disabled = (index === COMIC_PAGES.length - 1);
+
+  // Update thumbnails
+  document.querySelectorAll('.thumb-card').forEach((card, i) => {
+    if (i === index) card.classList.add('active');
+    else card.classList.remove('active');
+  });
+
+  if (pageData.type === 'cover') {
+    const coverMedia = pageData.svgContent ? `
+      <div style="width: 100%; max-width: 580px; aspect-ratio: 2/3; border-radius: 8px; overflow: hidden; box-shadow: 0 16px 40px rgba(0,0,0,0.6); cursor: pointer;" onclick="nextPage()">
+        ${pageData.svgContent}
+      </div>
+    ` : `
+      <img src="${pageData.imageSrc}" onerror="this.src='${pageData.fallbackSrc}'" alt="${pageData.title}" class="comic-full-image" style="max-height: 720px; object-fit: contain; cursor: pointer;" onclick="nextPage()">
+    `;
+
+    container.innerHTML = `
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;">
+        ${coverMedia}
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <button class="btn btn-accent" onclick="nextPage()" style="padding: 10px 24px; font-size: 1rem;">
+            ⚡ READ ISSUE ▶
+          </button>
+          <button class="btn" onclick="openModal('modal-script')">
+            LORE Production Notes
+          </button>
+        </div>
+      </div>
+    `;
+  } else if (pageData.type === 'image_page') {
+    let panelsHtml = '';
+    if (pageData.panels) {
+      panelsHtml = pageData.panels.map((p, pIdx) => `
+        <div class="comic-panel active-panel" style="margin-top: 10px; padding: 12px; background: #fff;" onclick="onPanelClick(${index}, ${pIdx})">
+          <div class="comic-caption">${p.caption}</div>
+          ${showBubbles && p.balloons ? p.balloons.map(b => `
+            <div class="speech-balloon" style="position: relative; margin: 8px 0; max-width: 100%;">
+              <span class="speaker-name">${b.speaker}</span>
+              ${b.text}
+            </div>
+          `).join('') : ''}
+          ${p.sfx ? `<div class="sfx-text" style="position: relative; margin: 4px 0;">${p.sfx.text}</div>` : ''}
+        </div>
+      `).join('');
+    }
+
+    container.innerHTML = `
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 14px;">
+        <img src="${pageData.imageSrc}" onerror="this.src='${pageData.fallbackSrc}'" alt="${pageData.title}" class="comic-full-image" style="max-height: 720px; object-fit: contain;">
+        <div style="width: 100%; max-width: 780px;">
+          ${panelsHtml}
+        </div>
+      </div>
+    `;
+  } else if (pageData.type === 'dynamic_page') {
+    let rowsHtml = '';
+    const panels = pageData.panels;
+
+    if (panels.length === 3) {
+      rowsHtml = `
+        <div class="panel-row cols-1-2">
+          ${renderSinglePanel(panels[0], index, 0)}
+          ${renderSinglePanel(panels[1], index, 1)}
+        </div>
+        <div class="panel-row cols-1">
+          ${renderSinglePanel(panels[2], index, 2)}
+        </div>
+      `;
+    } else if (panels.length === 2) {
+      rowsHtml = `
+        <div class="panel-row cols-2">
+          ${renderSinglePanel(panels[0], index, 0)}
+          ${renderSinglePanel(panels[1], index, 1)}
+        </div>
+      `;
+    } else {
+      rowsHtml = `
+        <div class="panel-row cols-1">
+          ${panels.map((p, i) => renderSinglePanel(p, index, i)).join('')}
+        </div>
+      `;
+    }
+
+    container.innerHTML = `
+      <div class="dynamic-page">
+        ${rowsHtml}
+      </div>
+    `;
+  }
+
+  // Scroll to top of viewport smoothly
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function renderSinglePanel(p, pageIdx, panelIdx) {
+  let balloonsHtml = '';
+  if (showBubbles && p.balloons) {
+    balloonsHtml = p.balloons.map(b => {
+      let style = '';
+      if (b.top) style += `top: ${b.top};`;
+      if (b.bottom) style += `bottom: ${b.bottom};`;
+      if (b.left) style += `left: ${b.left};`;
+      if (b.right) style += `right: ${b.right};`;
+      const teleClass = b.telepathic ? 'telepathic' : '';
+      return `
+        <div class="speech-balloon ${teleClass}" style="${style}" onclick="event.stopPropagation(); playSfx('pop');">
+          <span class="speaker-name">${b.speaker}</span>
+          ${b.text}
+        </div>
+      `;
+    }).join('');
+  }
+
+  let sfxHtml = '';
+  if (p.sfx) {
+    let sfxStyle = '';
+    if (p.sfx.top) sfxStyle += `top: ${p.sfx.top};`;
+    if (p.sfx.bottom) sfxStyle += `bottom: ${p.sfx.bottom};`;
+    if (p.sfx.left) sfxStyle += `left: ${p.sfx.left};`;
+    if (p.sfx.right) sfxStyle += `right: ${p.sfx.right};`;
+    sfxHtml = `<div class="sfx-text" style="${sfxStyle}">${p.sfx.text}</div>`;
+  }
+
+  return `
+    <div class="comic-panel" id="panel-${pageIdx}-${panelIdx}" onclick="onPanelClick(${pageIdx}, ${panelIdx})" style="background: ${p.artStyle || '#fff'};">
+      ${p.caption ? `<div class="comic-caption">${p.caption}</div>` : ''}
+      <div class="panel-art">
+        ${p.svgContent || ''}
+      </div>
+      ${balloonsHtml}
+      ${sfxHtml}
+    </div>
+  `;
+}
+
+function onPanelClick(pageIdx, panelIdx) {
+  const panelData = COMIC_PAGES[pageIdx].panels ? COMIC_PAGES[pageIdx].panels[panelIdx] : null;
+  playSfx('shimmer');
+
+  if (panelData && panelData.easterEgg) {
+    triggerEasterEgg(panelData.easterEgg);
+  }
+}
+
+// --- Smooth Zoom & Panning Engine ---
+let zoomLevel = 1.0;
+let panX = 0;
+let panY = 0;
+let isPanning = false;
+let startPointerX = 0;
+let startPointerY = 0;
+
+function updateTransform() {
+  const frame = document.getElementById('comic-container');
+  if (!frame) return;
+  frame.style.transform = `scale(${zoomLevel}) translate(${panX}px, ${panY}px)`;
+  const display = document.getElementById('zoom-level-display');
+  if (display) display.innerText = `${Math.round(zoomLevel * 100)}%`;
+  
+  if (zoomLevel > 1.0) {
+    frame.classList.add('is-panning');
+  } else {
+    frame.classList.remove('is-panning', 'is-dragging');
+    panX = 0;
+    panY = 0;
+  }
+}
+
+function zoomIn() {
+  zoomLevel = Math.min(2.5, +(zoomLevel + 0.25).toFixed(2));
+  playSfx('pop');
+  updateTransform();
+}
+
+function zoomOut() {
+  zoomLevel = Math.max(0.75, +(zoomLevel - 0.25).toFixed(2));
+  if (zoomLevel <= 1.0) { panX = 0; panY = 0; }
+  playSfx('pop');
+  updateTransform();
+}
+
+function resetZoom() {
+  zoomLevel = 1.0;
+  panX = 0;
+  panY = 0;
+  playSfx('pop');
+  updateTransform();
+}
+
+function setupZoomAndPan() {
+  const frame = document.getElementById('comic-container');
+  if (!frame) return;
+
+  // Mouse wheel zoom
+  frame.addEventListener('wheel', (e) => {
+    if (e.ctrlKey || e.altKey || Math.abs(e.deltaY) > 20) {
+      e.preventDefault();
+      if (e.deltaY < 0) zoomIn();
+      else zoomOut();
+    }
+  }, { passive: false });
+
+  // Mouse drag pan
+  frame.addEventListener('mousedown', (e) => {
+    if (zoomLevel <= 1.0) return;
+    if (e.target.closest('button') || e.target.closest('.speech-balloon')) return;
+    isPanning = true;
+    startPointerX = e.clientX - panX * zoomLevel;
+    startPointerY = e.clientY - panY * zoomLevel;
+    frame.classList.add('is-dragging');
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isPanning) return;
+    panX = (e.clientX - startPointerX) / zoomLevel;
+    panY = (e.clientY - startPointerY) / zoomLevel;
+    updateTransform();
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (isPanning) {
+      isPanning = false;
+      const f = document.getElementById('comic-container');
+      if (f) f.classList.remove('is-dragging');
+    }
+  });
+
+  // Touch pinch & drag
+  let touchStartDist = 0;
+  frame.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1 && zoomLevel > 1.0) {
+      isPanning = true;
+      startPointerX = e.touches[0].clientX - panX * zoomLevel;
+      startPointerY = e.touches[0].clientY - panY * zoomLevel;
+    } else if (e.touches.length === 2) {
+      touchStartDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+    }
+  }, { passive: true });
+
+  frame.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 1 && isPanning) {
+      panX = (e.touches[0].clientX - startPointerX) / zoomLevel;
+      panY = (e.touches[0].clientY - startPointerY) / zoomLevel;
+      updateTransform();
+    } else if (e.touches.length === 2 && touchStartDist > 0) {
+      const curDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const diff = (curDist - touchStartDist) * 0.005;
+      zoomLevel = Math.max(0.75, Math.min(2.5, +(zoomLevel + diff).toFixed(2)));
+      touchStartDist = curDist;
+      updateTransform();
+    }
+  }, { passive: true });
+
+  frame.addEventListener('touchend', () => {
+    isPanning = false;
+    touchStartDist = 0;
+  });
+}
+
+function updateLoreScore() {
+  const pagesReadScore = (currentPage + 1) * 100;
+  const easterScore = easterEggsFound.size * 250;
+  const totalScore = pagesReadScore + easterScore;
+  if (window.NorthStarHUD) {
+    NorthStarHUD.saveHighScore('blazin_beaver_comic', totalScore, {
+      page: currentPage,
+      easterEggs: easterEggsFound.size
+    });
+  }
+}
+
+function triggerEasterEgg(msg) {
+  if (easterEggsFound.has(msg)) return;
+  easterEggsFound.add(msg);
+  playSfx('shimmer');
+
+  updateLoreScore();
+
+  const toast = document.getElementById('easter-egg-toast');
+  document.getElementById('easter-egg-msg').innerText = msg;
+  toast.style.display = 'flex';
+  setTimeout(() => {
+    toast.style.display = 'none';
+  }, 4500);
+}
+
+function triggerPageFlipAnimation(direction) {
+  const vp = document.getElementById('viewport');
+  if (!vp) return;
+  vp.classList.remove('flip-next', 'flip-prev');
+  // force reflow
+  void vp.offsetWidth;
+  vp.classList.add(direction === 'next' ? 'flip-next' : 'flip-prev');
+  setTimeout(() => {
+    vp.classList.remove('flip-next', 'flip-prev');
+  }, 400);
+}
+
+function prevPage() {
+  if (currentPage > 0) {
+    currentPage--;
+    triggerPageFlipAnimation('prev');
+    playSfx('page_turn');
+    renderPage(currentPage);
+    localStorage.setItem('blazin_beaver_bookmark', String(currentPage));
+    updateLoreScore();
+  }
+}
+
+function nextPage() {
+  if (currentPage < COMIC_PAGES.length - 1) {
+    currentPage++;
+    triggerPageFlipAnimation('next');
+    playSfx('page_turn');
+    renderPage(currentPage);
+    localStorage.setItem('blazin_beaver_bookmark', String(currentPage));
+    updateLoreScore();
+  }
+}
+
+function goToPage(idx) {
+  if (idx >= 0 && idx < COMIC_PAGES.length) {
+    const dir = idx >= currentPage ? 'next' : 'prev';
+    currentPage = idx;
+    triggerPageFlipAnimation(dir);
+    playSfx('page_turn');
+    renderPage(currentPage);
+    localStorage.setItem('blazin_beaver_bookmark', String(currentPage));
+    updateLoreScore();
+  }
+}
+
+function toggleBubbles() {
+  showBubbles = !showBubbles;
+  document.getElementById('btn-bubbles').classList.toggle('active', showBubbles);
+  playSfx('pop');
+  renderPage(currentPage);
+}
+
+function toggleAudio() {
+  audioEnabled = !audioEnabled;
+  const btn = document.getElementById('btn-audio');
+  if (audioEnabled) {
+    btn.innerHTML = 'SND <span>Sound: ON</span>';
+    btn.classList.add('active');
+    initAudio();
+  } else {
+    btn.innerHTML = 'MUT <span>Sound: OFF</span>';
+    btn.classList.remove('active');
+    if (ambientGain) ambientGain.gain.setValueAtTime(0, audioCtx.currentTime);
+  }
+}
+
+function zoomPanelMode() {
+  isGuidedView = !isGuidedView;
+  const btn = document.getElementById('btn-guided-view');
+
+  if (isGuidedView) {
+    btn.classList.add('active');
+    zoomLevel = 1.25;
+    playSfx('shimmer');
+  } else {
+    btn.classList.remove('active');
+    zoomLevel = 1.0;
+    panX = 0;
+    panY = 0;
+    playSfx('page_turn');
+  }
+  updateTransform();
+}
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(err => {
+      console.log(`Error attempting to enable fullscreen: ${err.message}`);
+    });
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    }
+  }
+}
+
+// Modal controls
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  playSfx('pop');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  playSfx('pop');
+}
+
+function closeModalOnBackdrop(e, id) {
+  if (e.target.id === id) {
+    closeModal(id);
+  }
+}
+
+// Keyboard navigation
+window.addEventListener('keydown', (e) => {
+  if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+  if (e.key === 'ArrowRight' || e.key === ' ') {
+    nextPage();
+  } else if (e.key === 'ArrowLeft') {
+    prevPage();
+  } else if (e.key === '+' || e.key === '=') {
+    zoomIn();
+  } else if (e.key === '-' || e.key === '_') {
+    zoomOut();
+  } else if (e.key === '0') {
+    resetZoom();
+  } else if (e.key === 'b' || e.key === 'B') {
+    toggleBubbles();
+  } else if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('open'));
+  }
+});
+
+// Build Thumbnails Drawer
+function buildThumbnails() {
+  const drawer = document.getElementById('thumb-drawer');
+  drawer.innerHTML = COMIC_PAGES.map((p, i) => `
+    <div class="thumb-card ${i === 0 ? 'active' : ''}" onclick="goToPage(${i})">
+      <div style="flex:1; background: ${i === 0 ? '#b91c1c' : '#0f766e'}; opacity: 0.85; border-radius: 2px;"></div>
+      <div class="thumb-label">${i === 0 ? 'COVER' : 'PG ' + i}</div>
+    </div>
+  `).join('');
+}
+
+// Initialize on Load
+window.addEventListener('DOMContentLoaded', () => {
+  buildThumbnails();
+  setupZoomAndPan();
+
+  // Restore bookmarked page if available
+  const savedPage = parseInt(localStorage.getItem('blazin_beaver_bookmark') || '0', 10);
+  if (!isNaN(savedPage) && savedPage >= 0 && savedPage < COMIC_PAGES.length) {
+    currentPage = savedPage;
+  }
+  renderPage(currentPage);
+  updateLoreScore();
+
+  // Initialize NorthStar HUD
+  if (window.NorthStarHUD) {
+    NorthStarHUD.init({
+      gameId: 'blazin_beaver_comic',
+      gameTitle: "The Adventures of Blazin' Beaver // Issue #1",
+      onRestart: () => goToPage(0),
+      onPause: () => {
+        if (ambientGain && audioCtx) {
+          ambientGain.gain.cancelScheduledValues(audioCtx.currentTime);
+          ambientGain.gain.setTargetAtTime(0.00001, audioCtx.currentTime, 0.02);
+        }
+      },
+      onResume: () => {
+        if (ambientGain && audioCtx && audioEnabled) {
+          ambientGain.gain.cancelScheduledValues(audioCtx.currentTime);
+          ambientGain.gain.setTargetAtTime(0.08, audioCtx.currentTime, 0.04);
+        }
+      }
+    });
+  }
+
+  // Comic Reader Gamepad Navigation
+  let lastComicNavX = 0;
+  function pollComicGamepad() {
+    const gp = window.NorthStarHUD && NorthStarHUD.pollGamepad ? NorthStarHUD.pollGamepad() : null;
+    if (gp && window.NorthStarHUD && !NorthStarHUD.isPaused()) {
+      const navX = (gp.dpad.left || gp.lb || gp.axes.x < -0.45) ? -1 : ((gp.dpad.right || gp.rb || gp.a || gp.axes.x > 0.45) ? 1 : 0);
+      if (navX !== 0 && lastComicNavX === 0) {
+        if (navX === -1) prevPage();
+        else nextPage();
+      }
+      lastComicNavX = navX;
+    } else {
+      lastComicNavX = 0;
+    }
+    requestAnimationFrame(pollComicGamepad);
+  }
+  requestAnimationFrame(pollComicGamepad);
+
+  // Audio start on first click
+  window.addEventListener('click', () => {
+    if (!audioCtx && audioEnabled) {
+      initAudio();
+      if (window.NorthStarHUD && audioCtx) {
+        NorthStarHUD.attachAudioContext(audioCtx);
+      }
+    }
+  }, { once: true });
+});
+</script>
+</body>
+</html>

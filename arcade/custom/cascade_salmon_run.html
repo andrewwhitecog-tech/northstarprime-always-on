@@ -1,0 +1,1686 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-select=no">
+  <title>Cascade Salmon Run: The Upstream Odyssey</title>
+  <script src="northstar_arcade_hud.js"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --river-dark: #05141e;
+      --river-blue: #0ea5e9;
+      --river-cyan: #38bdf8;
+      --river-foam: #e0f2fe;
+      --emerald-moss: #10b981;
+      --timber-cedar: #b45309;
+      --gold-roe: #f59e0b;
+      --danger-red: #ef4444;
+      --panel-bg: rgba(6, 18, 30, 0.9);
+      --border-glow: rgba(56, 189, 248, 0.35);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--river-dark);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: #f0f9ff;
+    }
+
+    #cabinet-root {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 50% 30%, #0c283d 0%, #030c14 100%);
+    }
+
+    /* Top Arcade Header */
+    #arcade-topbar {
+      position: absolute;
+      top: 10px;
+      left: 14px;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: var(--panel-bg);
+      border: 1px solid var(--border-glow);
+      border-radius: 12px;
+      padding: 8px 16px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.6), 0 0 15px rgba(56,189,248,0.2);
+    }
+
+    .title-group {
+      display: flex;
+      flex-direction: column;
+    }
+    .title-group h1 {
+      font-size: 15px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #fff;
+      text-shadow: 0 0 10px var(--river-cyan);
+    }
+    .title-group span {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--emerald-moss);
+      letter-spacing: 0.04em;
+    }
+
+    .hud-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .hud-stat small {
+      font-size: 9px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: #94a3b8;
+      letter-spacing: 0.05em;
+    }
+    .hud-stat strong {
+      font-size: 14px;
+      font-family: monospace;
+      color: #fff;
+    }
+
+    /* Gauges */
+    .gauge-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      width: 90px;
+    }
+    .gauge-bar {
+      width: 100%;
+      height: 7px;
+      background: rgba(255,255,255,0.12);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+    .gauge-fill {
+      height: 100%;
+      width: 100%;
+      transition: width 0.1s linear;
+    }
+    .fill-hp { background: linear-gradient(90deg, #ef4444, #10b981); }
+    .fill-stamina { background: linear-gradient(90deg, #38bdf8, #0ea5e9); }
+
+    /* Canvas Stage */
+    #game-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      cursor: crosshair;
+    }
+
+    /* Overlay Screen (Start / Game Over / Victory) */
+    .screen-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 80;
+      background: rgba(3, 10, 18, 0.88);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(8px);
+      transition: opacity 0.3s ease;
+    }
+    .screen-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+      display: none;
+    }
+
+    .modal-card {
+      background: linear-gradient(180deg, #091a29 0%, #040d16 100%);
+      border: 2px solid var(--river-cyan);
+      border-radius: 16px;
+      max-width: 500px;
+      width: 90%;
+      padding: 30px 24px;
+      text-align: center;
+      box-shadow: 0 0 50px rgba(56,189,248,0.3), 0 20px 60px rgba(0,0,0,0.9);
+      animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes popIn {
+      from { transform: scale(0.92); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-card h2 {
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #fff;
+      text-shadow: 0 0 20px var(--river-cyan);
+      margin-bottom: 6px;
+    }
+    .modal-card p.subtitle {
+      color: var(--river-cyan);
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 18px;
+    }
+    .modal-card p.desc {
+      color: #cbd5e1;
+      font-size: 13px;
+      line-height: 1.5;
+      margin-bottom: 22px;
+      text-align: left;
+      background: rgba(0,0,0,0.35);
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .control-guide {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 22px;
+      font-size: 11px;
+      color: #94a3b8;
+      text-align: left;
+    }
+    .control-guide span strong {
+      color: #fff;
+      font-family: monospace;
+      background: rgba(255,255,255,0.12);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .btn-start {
+      width: 100%;
+      padding: 14px 20px;
+      font-size: 16px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      background: linear-gradient(135deg, #0ea5e9, #0284c7);
+      color: #fff;
+      box-shadow: 0 0 25px rgba(14,165,233,0.5);
+      transition: all 0.2s ease;
+    }
+    .btn-start:hover {
+      background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+      transform: translateY(-2px);
+      box-shadow: 0 0 35px rgba(56,189,248,0.7);
+    }
+
+    /* Virtual Touch Controls Overlay */
+    #touch-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 60;
+      display: none;
+    }
+    #touch-overlay.active {
+      display: block;
+    }
+
+    /* Virtual Joystick Container */
+    #virtual-stick-zone {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: rgba(14, 165, 233, 0.12);
+      border: 2px solid rgba(56, 189, 248, 0.4);
+      pointer-events: auto;
+      touch-action: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+    #virtual-stick-nub {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #38bdf8, #0284c7);
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.6);
+      transform: translate(0px, 0px);
+      pointer-events: none;
+    }
+
+    /* Virtual Action Buttons */
+    #virtual-actions {
+      position: absolute;
+      bottom: 25px;
+      right: 20px;
+      display: flex;
+      gap: 16px;
+      pointer-events: auto;
+    }
+    .touch-action-btn {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.4);
+      background: rgba(15, 23, 42, 0.85);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 800;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+      touch-action: none;
+      pointer-events: auto;
+    }
+    .touch-action-btn:active, .touch-action-btn.pressed {
+      transform: scale(0.92);
+    }
+    .btn-leap-touch {
+      border-color: #38bdf8;
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
+    }
+    .btn-sprint-touch {
+      border-color: #f59e0b;
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
+    }
+
+    @media (max-width: 720px) {
+      #arcade-topbar {
+        top: 6px;
+        left: 6px;
+        padding: 6px 10px;
+        gap: 8px;
+      }
+      .title-group h1 { font-size: 12px; }
+      .gauge-wrap { width: 60px; }
+      .hud-stat strong { font-size: 11px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="cabinet-root">
+    <!-- Top HUD Bar -->
+    <header id="arcade-topbar">
+      <div class="title-group">
+        <h1>Cascade Salmon Run</h1>
+        <span id="zone-tag">Lower Estuary</span>
+      </div>
+
+      <div class="hud-stat">
+        <small>Distance</small>
+        <strong><span id="dist-val">0</span> / 2,500m</strong>
+      </div>
+
+      <div class="hud-stat">
+        <small>Score</small>
+        <strong id="score-val" style="color:var(--gold-roe)">0</strong>
+      </div>
+
+      <div class="hud-stat">
+        <small>Vigor (HP)</small>
+        <div class="gauge-wrap">
+          <div class="gauge-bar">
+            <div class="gauge-fill fill-hp" id="hp-fill"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hud-stat">
+        <small>Stamina</small>
+        <div class="gauge-wrap">
+          <div class="gauge-bar">
+            <div class="gauge-fill fill-stamina" id="stamina-fill"></div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Game Canvas -->
+    <canvas id="game-canvas" width="1280" height="720"></canvas>
+
+    <!-- Virtual Touch Screen Controls -->
+    <div id="touch-overlay">
+      <div id="virtual-stick-zone">
+        <div id="virtual-stick-nub"></div>
+      </div>
+
+      <div id="virtual-actions">
+        <button type="button" class="touch-action-btn btn-leap-touch" id="touch-leap">
+          <span>~</span>
+          <span>LEAP</span>
+        </button>
+        <button type="button" class="touch-action-btn btn-sprint-touch" id="touch-sprint">
+          <span>⚡</span>
+          <span>SPRINT</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Start / Splash Modal -->
+    <div class="screen-overlay" id="start-overlay">
+      <div class="modal-card">
+        <h2>Cascade Salmon Run</h2>
+        <p class="subtitle">The Great Pacific Upstream Odyssey</p>
+        <p class="desc">
+          Take control of <strong>Silver-Gill</strong> on a perilous 2,500m journey upstream. Swim against raging white-water currents, leap over granite waterfalls and log jams, rest in tranquil beaver dam pools, and evade swooping bald eagles and hungry grizzly bears to reach the ancestral Spawning Grounds!
+        </p>
+
+        <div class="control-guide">
+          <span>Swim: <strong>Arrow Keys / WASD / Stick</strong></span>
+          <span>Power Leap: <strong>Space / A / RT</strong></span>
+          <span>Sprint Surge: <strong>Shift / B / LT</strong></span>
+          <span>Pause / Cabinet Menu: <strong>P / Esc / Start</strong></span>
+        </div>
+
+        <button type="button" class="btn-start" id="start-btn">▶ Swim Upstream</button>
+      </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div class="screen-overlay hidden" id="gameover-overlay">
+      <div class="modal-card">
+        <h2 style="color:var(--danger-red)">Exhausted in Current</h2>
+        <p class="subtitle">Silver-Gill was swept downstream</p>
+        <p class="desc" id="gameover-summary">
+          You made it 0 meters before succumbing to the fierce river rapids.
+        </p>
+        <button type="button" class="btn-start" id="retry-btn">↺ Try Again</button>
+      </div>
+    </div>
+
+    <!-- Victory Modal -->
+    <div class="screen-overlay hidden" id="victory-overlay">
+      <div class="modal-card">
+        <h2 style="color:var(--gold-roe)">Ancestral Spawning Grounds!</h2>
+        <p class="subtitle">The 2,500m Journey is Complete</p>
+        <p class="desc" id="victory-summary">
+          Silver-Gill has conquered the roaring waterfalls and hungry apex predators of the Pacific Northwest, reaching the crystal headwaters to begin the next generation!
+        </p>
+        <button type="button" class="btn-start" id="victory-retry-btn">★ Swim Again</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // --- Audio Engine (100% Procedural WebAudio) ---
+      let audioCtx = null;
+      let riverNoiseNode = null;
+      let riverGain = null;
+      let riverFilter = null;
+
+      function initAudio() {
+        if (audioCtx) return;
+        try {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          audioCtx = new AudioContext();
+          if (window.NorthStarHUD) NorthStarHUD.attachAudioContext(audioCtx);
+
+          // Continuous River Current Soundscape
+          const bufferSize = audioCtx.sampleRate * 2;
+          const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+          const output = noiseBuffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            output[i] = Math.random() * 2 - 1; // White noise
+          }
+
+          const whiteNoise = audioCtx.createBufferSource();
+          whiteNoise.buffer = noiseBuffer;
+          whiteNoise.loop = true;
+
+          riverFilter = audioCtx.createBiquadFilter();
+          riverFilter.type = 'lowpass';
+          riverFilter.frequency.setValueAtTime(380, audioCtx.currentTime);
+
+          riverGain = audioCtx.createGain();
+          riverGain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+
+          whiteNoise.connect(riverFilter);
+          riverFilter.connect(riverGain);
+
+          const masterGain = (window.NorthStarHUD && NorthStarHUD.attachAudioContext(audioCtx)) || audioCtx.destination;
+          riverGain.connect(masterGain);
+
+          whiteNoise.start(0);
+          riverNoiseNode = whiteNoise;
+
+          // Smoothly ramp ambient current volume
+          riverGain.gain.exponentialRampToValueAtTime(0.08, audioCtx.currentTime + 1.2);
+        } catch (e) {
+          console.warn('[Audio] WebAudio init error:', e);
+        }
+      }
+
+      function playSound(type) {
+        if (!audioCtx) return;
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const master = (window.NorthStarHUD && NorthStarHUD.attachAudioContext(audioCtx)) || audioCtx.destination;
+        const now = audioCtx.currentTime;
+        const vol = window.NorthStarHUD ? NorthStarHUD.getVolume() : 0.8;
+        if (vol <= 0.001) return;
+
+        try {
+          if (type === 'splash') {
+            // Crisp water entry / leap splash
+            const b = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.18, audioCtx.sampleRate);
+            const d = b.getChannelData(0);
+            for (let i = 0; i < d.length; i++) {
+              d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (d.length * 0.35));
+            }
+            const src = audioCtx.createBufferSource();
+            src.buffer = b;
+            const ftr = audioCtx.createBiquadFilter();
+            ftr.type = 'bandpass';
+            ftr.frequency.setValueAtTime(800, now);
+            ftr.frequency.exponentialRampToValueAtTime(200, now + 0.18);
+            const g = audioCtx.createGain();
+            g.gain.setValueAtTime(0.35 * vol, now);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+            src.connect(ftr); ftr.connect(g); g.connect(master);
+            src.start(now);
+          } else if (type === 'leap') {
+            // Aerodynamic water rupture
+            const osc = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(240, now);
+            osc.frequency.exponentialRampToValueAtTime(780, now + 0.18);
+            g.gain.setValueAtTime(0.25 * vol, now);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+            osc.connect(g); g.connect(master);
+            osc.start(now); osc.stop(now + 0.23);
+          } else if (type === 'eagle') {
+            // Piercing bald eagle FM screech
+            const carrier = audioCtx.createOscillator();
+            const mod = audioCtx.createOscillator();
+            const modGain = audioCtx.createGain();
+            const g = audioCtx.createGain();
+
+            carrier.type = 'sawtooth';
+            carrier.frequency.setValueAtTime(1600, now);
+            carrier.frequency.exponentialRampToValueAtTime(850, now + 0.45);
+
+            mod.type = 'sine';
+            mod.frequency.setValueAtTime(65, now);
+            modGain.gain.setValueAtTime(500, now);
+            mod.connect(modGain);
+            modGain.connect(carrier.frequency);
+
+            g.gain.setValueAtTime(0.001, now);
+            g.gain.linearRampToValueAtTime(0.3 * vol, now + 0.05);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 0.48);
+
+            carrier.connect(g); g.connect(master);
+            carrier.start(now); mod.start(now);
+            carrier.stop(now + 0.5); mod.stop(now + 0.5);
+          } else if (type === 'bear') {
+            // Grizzly claw swipe: deep sub-thump + fierce water roar
+            const osc = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(95, now);
+            osc.frequency.exponentialRampToValueAtTime(32, now + 0.3);
+            g.gain.setValueAtTime(0.48 * vol, now);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+            osc.connect(g); g.connect(master);
+            osc.start(now); osc.stop(now + 0.33);
+
+            // Water spray burst noise
+            const b = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.25, audioCtx.sampleRate);
+            const d = b.getChannelData(0);
+            for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+            const src = audioCtx.createBufferSource();
+            src.buffer = b;
+            const ftr = audioCtx.createBiquadFilter();
+            ftr.type = 'lowpass';
+            ftr.frequency.setValueAtTime(600, now);
+            const ng = audioCtx.createGain();
+            ng.gain.setValueAtTime(0.35 * vol, now);
+            ng.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+            src.connect(ftr); ftr.connect(ng); ng.connect(master);
+            src.start(now);
+          } else if (type === 'collect') {
+            // Sparkling water chime (E5 -> G#5 -> B5 -> E6)
+            [659.25, 830.61, 987.77, 1318.51].forEach((freq, idx) => {
+              const osc = audioCtx.createOscillator();
+              const g = audioCtx.createGain();
+              osc.type = 'sine';
+              osc.frequency.setValueAtTime(freq, now + idx * 0.05);
+              g.gain.setValueAtTime(0.18 * vol, now + idx * 0.05);
+              g.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.05 + 0.22);
+              osc.connect(g); g.connect(master);
+              osc.start(now + idx * 0.05);
+              osc.stop(now + idx * 0.05 + 0.24);
+            });
+          } else if (type === 'beaver') {
+            // Timber sanctuary peaceful resonant chord
+            [392, 523.25, 659.25].forEach((freq) => {
+              const osc = audioCtx.createOscillator();
+              const g = audioCtx.createGain();
+              osc.type = 'sine';
+              osc.frequency.setValueAtTime(freq, now);
+              g.gain.setValueAtTime(0.15 * vol, now);
+              g.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
+              osc.connect(g); g.connect(master);
+              osc.start(now); osc.stop(now + 0.9);
+            });
+          } else if (type === 'victory') {
+            // Majestic Pacific Northwest Fanfare
+            [523.25, 659.25, 783.99, 1046.5, 1318.51].forEach((freq, idx) => {
+              const osc = audioCtx.createOscillator();
+              const g = audioCtx.createGain();
+              osc.type = 'triangle';
+              osc.frequency.setValueAtTime(freq, now + idx * 0.09);
+              g.gain.setValueAtTime(0.24 * vol, now + idx * 0.09);
+              g.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.09 + (idx === 4 ? 1.2 : 0.35));
+              osc.connect(g); g.connect(master);
+              osc.start(now + idx * 0.09);
+              osc.stop(now + idx * 0.09 + (idx === 4 ? 1.3 : 0.4));
+            });
+          }
+        } catch (e) {}
+      }
+
+      // --- Canvas & Rendering Setup ---
+      const canvas = document.getElementById('game-canvas');
+      const ctx = canvas.getContext('2d');
+      const V_WIDTH = 1280;
+      const V_HEIGHT = 720;
+
+      function resizeCanvas() {
+        canvas.width = V_WIDTH;
+        canvas.height = V_HEIGHT;
+      }
+      window.addEventListener('resize', resizeCanvas);
+      resizeCanvas();
+
+      // --- Game Constants & World State ---
+      const TOTAL_DISTANCE = 2500; // 2,500m to Spawning Grounds
+      const RIVER_WIDTH = 680; // Main navigable river width
+      const RIVER_CENTER = V_WIDTH / 2;
+
+      const ZONES = [
+        { start: 0, end: 500, name: 'Lower Estuary & Willow Flats', color: '#0369a1', currentSpeed: 140 },
+        { start: 500, end: 1000, name: 'Cedar Rapids & Log Jams', color: '#0284c7', currentSpeed: 210 },
+        { start: 1000, end: 1500, name: 'Grizzly Shallows', color: '#075985', currentSpeed: 190 },
+        { start: 1500, end: 2000, name: "Blazin' Beaver Dam & Falls", color: '#0c4a6e', currentSpeed: 260 },
+        { start: 2000, end: 2500, name: 'Ancestral Spawning Pools', color: '#0891b2', currentSpeed: 120 }
+      ];
+
+      function getCurrentZone(distance) {
+        for (let i = 0; i < ZONES.length; i++) {
+          if (distance >= ZONES[i].start && distance < ZONES[i].end) return ZONES[i];
+        }
+        return ZONES[ZONES.length - 1];
+      }
+
+      // Player Object: "Silver-Gill"
+      const player = {
+        x: RIVER_CENTER,
+        y: V_HEIGHT * 0.72,
+        vx: 0,
+        vy: 0,
+        angle: -Math.PI / 2, // facing upstream (upwards)
+        speed: 0,
+        maxSpeed: 310,
+        sprintSpeed: 520,
+        hp: 100,
+        maxHp: 100,
+        stamina: 100,
+        maxStamina: 100,
+        isLeaping: false,
+        leapTimer: 0,
+        leapDuration: 0.85, // seconds in the air
+        isSprinting: false,
+        swimWaggle: 0,
+        invuln: 0,
+        isInBeaverPool: false
+      };
+
+      const world = {
+        distance: 0,
+        score: 0,
+        speed: 0, // forward speed relative to riverbed
+        running: false,
+        gameOver: false,
+        victory: false,
+        cameraY: 0,
+        shake: 0,
+        particles: [],
+        ripples: [],
+        predators: [],
+        collectibles: [],
+        obstacles: [],
+        waterfalls: [],
+        beaverDams: []
+      };
+
+      // Input State
+      const input = {
+        up: false,
+        down: false,
+        left: false,
+        right: false,
+        leap: false,
+        sprint: false,
+        stickX: 0,
+        stickY: 0
+      };
+
+      // Generate Procedural River World Obstacles & Features
+      function generateWorld() {
+        world.obstacles = [];
+        world.waterfalls = [];
+        world.beaverDams = [];
+        world.collectibles = [];
+        world.predators = [];
+
+        // Obstacles: Rocks, Log Jams
+        for (let d = 80; d < TOTAL_DISTANCE - 50; d += 65) {
+          const count = 1 + Math.floor(Math.random() * 3);
+          for (let i = 0; i < count; i++) {
+            const xOffset = (Math.random() * 2 - 1) * (RIVER_WIDTH * 0.4);
+            const isLog = Math.random() < 0.35;
+            world.obstacles.push({
+              dist: d + Math.random() * 20,
+              x: RIVER_CENTER + xOffset,
+              w: isLog ? 110 : 48 + Math.random() * 30,
+              h: isLog ? 28 : 42 + Math.random() * 24,
+              type: isLog ? 'log' : 'rock',
+              rotation: isLog ? (Math.random() * 0.4 - 0.2) : 0
+            });
+          }
+        }
+
+        // Waterfalls: Dramatic grade-5 granite cascades
+        const waterfallDists = [350, 850, 1400, 1850, 2150];
+        waterfallDists.forEach(d => {
+          world.waterfalls.push({
+            dist: d,
+            h: 60,
+            cleared: false
+          });
+        });
+
+        // Blazin' Beaver Dam Sanctuary at 1,600m
+        world.beaverDams.push({
+          dist: 1600,
+          w: RIVER_WIDTH * 0.95,
+          poolDistStart: 1540,
+          poolDistEnd: 1680,
+          visited: false
+        });
+
+        // Collectibles: Mayflies on surface, Golden Roe on gravel
+        for (let d = 40; d < TOTAL_DISTANCE; d += 35) {
+          const type = Math.random() < 0.65 ? 'fly' : 'roe';
+          const xOffset = (Math.random() * 2 - 1) * (RIVER_WIDTH * 0.38);
+          world.collectibles.push({
+            dist: d,
+            x: RIVER_CENTER + xOffset,
+            type,
+            active: true,
+            floatAnim: Math.random() * Math.PI * 2
+          });
+        }
+      }
+
+      // Spawn Predators (Bald Eagles & Grizzly Bears)
+      let predatorTimer = 0;
+      function updatePredators(dt) {
+        predatorTimer += dt;
+        const curZone = getCurrentZone(world.distance);
+
+        // Spawn Eagle in zones 2, 3, 4
+        if (predatorTimer > 7.5 && world.distance > 250 && world.distance < 2400) {
+          predatorTimer = 0;
+          const isBear = curZone.name.includes('Grizzly') || Math.random() < 0.45;
+          if (isBear) {
+            // Grizzly Bear along the shallow bank
+            const side = Math.random() < 0.5 ? -1 : 1;
+            world.predators.push({
+              type: 'bear',
+              side,
+              x: RIVER_CENTER + side * (RIVER_WIDTH * 0.42),
+              dist: world.distance + 400 + Math.random() * 100,
+              swiped: false,
+              swipeProgress: 0,
+              active: true
+            });
+          } else {
+            // Bald Eagle circling overhead
+            world.predators.push({
+              type: 'eagle',
+              x: player.x,
+              dist: world.distance + 280,
+              circleAngle: 0,
+              state: 'tracking', // tracking -> diving -> ascending
+              stateTimer: 0,
+              shadowSize: 32,
+              active: true
+            });
+          }
+        }
+
+        // Update Predator Behaviors
+        for (const pred of world.predators) {
+          if (!pred.active) continue;
+
+          if (pred.type === 'eagle') {
+            pred.stateTimer += dt;
+            if (pred.state === 'tracking') {
+              // Shadow tracks player position with smooth lag
+              pred.x += (player.x - pred.x) * 2.5 * dt;
+              pred.dist += (world.distance - pred.dist) * 2.5 * dt;
+              pred.circleAngle += dt * 3.5;
+              pred.shadowSize = 34 + Math.sin(pred.circleAngle) * 6;
+
+              if (pred.stateTimer > 2.2) {
+                pred.state = 'diving';
+                pred.stateTimer = 0;
+                playSound('eagle');
+              }
+            } else if (pred.state === 'diving') {
+              // Rapid talon strike!
+              pred.shadowSize = 58;
+              if (pred.stateTimer > 0.45 && !pred.struck) {
+                pred.struck = true;
+                const dX = Math.abs(pred.x - player.x);
+                const dDist = Math.abs(pred.dist - world.distance);
+
+                // Strike check
+                if (dX < 58 && dDist < 35 && !player.isLeaping && player.invuln <= 0) {
+                  // Hit player!
+                  player.hp = Math.max(0, player.hp - 28);
+                  player.invuln = 1.2;
+                  world.shake = 12;
+                  playSound('splash');
+                  addWaterSplash(player.x, player.y, '#ef4444', 30);
+                } else if (dX < 80 && dDist < 50) {
+                  // Evaded diving eagle!
+                  if (window.NorthStarHUD && NorthStarHUD.unlockAchievement) {
+                    NorthStarHUD.unlockAchievement('csr_eagle_eyed');
+                  }
+                  world.score += 350;
+                }
+              }
+              if (pred.stateTimer > 0.8) {
+                pred.state = 'ascending';
+              }
+            } else if (pred.state === 'ascending') {
+              pred.shadowSize -= dt * 40;
+              if (pred.shadowSize <= 4) pred.active = false;
+            }
+          } else if (pred.type === 'bear') {
+            const relDist = pred.dist - world.distance;
+            // When player approaches bear in shallows, bear swipes!
+            if (relDist < 120 && relDist > -60 && !pred.swiped) {
+              const dX = Math.abs(pred.x - player.x);
+              if (dX < 130) {
+                pred.swiped = true;
+                pred.swipeProgress = 1.0;
+                playSound('bear');
+                world.shake = 8;
+                addWaterSplash(pred.x, V_HEIGHT * 0.5, '#ffffff', 25);
+
+                if (dX < 65 && !player.isLeaping && player.invuln <= 0) {
+                  player.hp = Math.max(0, player.hp - 35);
+                  player.invuln = 1.5;
+                  addWaterSplash(player.x, player.y, '#ef4444', 35);
+                } else {
+                  // Dodged bear claw swipe!
+                  if (window.NorthStarHUD && NorthStarHUD.unlockAchievement) {
+                    NorthStarHUD.unlockAchievement('csr_bear_baiter');
+                  }
+                  world.score += 400;
+                }
+              }
+            }
+            if (relDist < -200) pred.active = false;
+          }
+        }
+
+        world.predators = world.predators.filter(p => p.active);
+      }
+
+      // Particle FX System
+      function addWaterSplash(x, y, color, count = 16, maxSpeed = 180) {
+        for (let i = 0; i < count; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const spd = (0.3 + Math.random() * 0.7) * maxSpeed;
+          world.particles.push({
+            x, y,
+            vx: Math.cos(angle) * spd,
+            vy: Math.sin(angle) * spd,
+            r: 2 + Math.random() * 3.5,
+            color: color || '#e0f2fe',
+            life: 0.35 + Math.random() * 0.3,
+            maxLife: 0.65
+          });
+        }
+      }
+
+      function addRipple(x, y, radius = 18) {
+        world.ripples.push({
+          x, y,
+          r: radius,
+          maxR: radius + 40,
+          alpha: 0.75,
+          life: 0.6
+        });
+      }
+
+      // Reset / Start Game Round
+      function startRound() {
+        initAudio();
+        generateWorld();
+
+        world.distance = 0;
+        world.score = 0;
+        world.running = true;
+        world.gameOver = false;
+        world.victory = false;
+        world.shake = 0;
+        world.particles.length = 0;
+        world.ripples.length = 0;
+
+        player.x = RIVER_CENTER;
+        player.y = V_HEIGHT * 0.72;
+        player.vx = 0;
+        player.vy = 0;
+        player.hp = 100;
+        player.stamina = 100;
+        player.isLeaping = false;
+        player.isSprinting = false;
+        player.invuln = 0;
+        player.isInBeaverPool = false;
+
+        document.getElementById('start-overlay').classList.add('hidden');
+        document.getElementById('gameover-overlay').classList.add('hidden');
+        document.getElementById('victory-overlay').classList.add('hidden');
+
+        // Check touch device to activate touch overlay
+        const isTouch = 'ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0) || window.innerWidth <= 1050;
+        const touchOverlay = document.getElementById('touch-overlay');
+        if (touchOverlay) touchOverlay.classList.toggle('active', isTouch);
+      }
+
+      // Input Listeners
+      window.addEventListener('keydown', (e) => {
+        if (e.repeat) return;
+        if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') input.up = true;
+        if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') input.down = true;
+        if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') input.left = true;
+        if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') input.right = true;
+
+        if (e.code === 'Space') {
+          e.preventDefault();
+          triggerLeap();
+        }
+        if (e.key === 'Shift' || e.key === 'j' || e.key === 'J' || e.key === 'k' || e.key === 'K') {
+          triggerSprint(true);
+        }
+      });
+
+      window.addEventListener('keyup', (e) => {
+        if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') input.up = false;
+        if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') input.down = false;
+        if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') input.left = false;
+        if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') input.right = false;
+
+        if (e.key === 'Shift' || e.key === 'j' || e.key === 'J' || e.key === 'k' || e.key === 'K') {
+          triggerSprint(false);
+        }
+      });
+
+      function triggerLeap() {
+        if (!world.running || player.isLeaping) return;
+        if (player.stamina < 16) return;
+
+        player.isLeaping = true;
+        player.leapTimer = player.leapDuration;
+        player.stamina = Math.max(0, player.stamina - 16);
+        playSound('leap');
+        playSound('splash');
+        addWaterSplash(player.x, player.y, '#ffffff', 22);
+        addRipple(player.x, player.y, 24);
+      }
+
+      function triggerSprint(active) {
+        if (active && player.stamina > 10) {
+          player.isSprinting = true;
+        } else {
+          player.isSprinting = false;
+        }
+      }
+
+      // Touch On-Screen Virtual Controls
+      const stickZone = document.getElementById('virtual-stick-zone');
+      const stickNub = document.getElementById('virtual-stick-nub');
+      let stickTouchId = null;
+      let stickOrigin = { x: 0, y: 0 };
+
+      if (stickZone) {
+        stickZone.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          const t = e.changedTouches[0];
+          stickTouchId = t.identifier;
+          const rect = stickZone.getBoundingClientRect();
+          stickOrigin = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+          handleStickMove(t.clientX, t.clientY);
+        }, { passive: false });
+
+        stickZone.addEventListener('touchmove', (e) => {
+          e.preventDefault();
+          for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === stickTouchId) {
+              handleStickMove(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
+              break;
+            }
+          }
+        }, { passive: false });
+
+        const endStick = (e) => {
+          for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === stickTouchId) {
+              stickTouchId = null;
+              input.stickX = 0;
+              input.stickY = 0;
+              if (stickNub) stickNub.style.transform = 'translate(0px, 0px)';
+              break;
+            }
+          }
+        };
+        stickZone.addEventListener('touchend', endStick);
+        stickZone.addEventListener('touchcancel', endStick);
+      }
+
+      function handleStickMove(clientX, clientY) {
+        const dX = clientX - stickOrigin.x;
+        const dY = clientY - stickOrigin.y;
+        const maxDist = 48;
+        const dist = Math.hypot(dX, dY);
+        const normDist = Math.min(1, dist / maxDist);
+        const angle = Math.atan2(dY, dX);
+
+        input.stickX = Math.cos(angle) * normDist;
+        input.stickY = Math.sin(angle) * normDist;
+
+        if (stickNub) {
+          const clampedX = Math.cos(angle) * (normDist * maxDist);
+          const clampedY = Math.sin(angle) * (normDist * maxDist);
+          stickNub.style.transform = `translate(${clampedX}px, ${clampedY}px)`;
+        }
+      }
+
+      const touchLeapBtn = document.getElementById('touch-leap');
+      const touchSprintBtn = document.getElementById('touch-sprint');
+      if (touchLeapBtn) {
+        touchLeapBtn.addEventListener('touchstart', (e) => { e.preventDefault(); triggerLeap(); });
+      }
+      if (touchSprintBtn) {
+        touchSprintBtn.addEventListener('touchstart', (e) => { e.preventDefault(); triggerSprint(true); });
+        touchSprintBtn.addEventListener('touchend', (e) => { e.preventDefault(); triggerSprint(false); });
+      }
+
+      // Start & Restart Buttons
+      document.getElementById('start-btn').onclick = () => startRound();
+      document.getElementById('retry-btn').onclick = () => startRound();
+      document.getElementById('victory-retry-btn').onclick = () => startRound();
+
+      // Main Game Loop Update
+      let lastTime = performance.now();
+      function update(now) {
+        // Respect Unified NorthStar HUD pause
+        if (window.NorthStarHUD && NorthStarHUD.isPaused()) {
+          lastTime = now;
+          requestAnimationFrame(update);
+          return;
+        }
+
+        const dt = Math.min(0.1, (now - lastTime) / 1000);
+        lastTime = now;
+
+        if (world.running) {
+          updateGame(dt);
+        }
+
+        render();
+        requestAnimationFrame(update);
+      }
+      requestAnimationFrame(update);
+
+      function updateGame(dt) {
+        // Gamepad API Poll
+        const pad = window.NorthStarHUD && NorthStarHUD.pollGamepad ? NorthStarHUD.pollGamepad() : null;
+        let moveX = 0;
+        let moveY = 0;
+
+        if (pad) {
+          moveX = pad.axes.x;
+          moveY = pad.axes.y;
+          if (pad.dpad.left) moveX = -1;
+          if (pad.dpad.right) moveX = 1;
+          if (pad.dpad.up) moveY = -1;
+          if (pad.dpad.down) moveY = 1;
+
+          if ((pad.a || pad.rt) && !player.isLeaping) triggerLeap();
+          triggerSprint(pad.b || pad.lt);
+        }
+
+        // Combine Keyboard & Stick Input
+        if (input.left) moveX = -1;
+        if (input.right) moveX = 1;
+        if (input.up) moveY = -1;
+        if (input.down) moveY = 1;
+        if (input.stickX !== 0 || input.stickY !== 0) {
+          moveX = input.stickX;
+          moveY = input.stickY;
+        }
+
+        // River Zone Current
+        const curZone = getCurrentZone(world.distance);
+        document.getElementById('zone-tag').textContent = curZone.name;
+
+        // Beaver Sanctuary Check
+        player.isInBeaverPool = false;
+        for (const dam of world.beaverDams) {
+          if (world.distance >= dam.poolDistStart && world.distance <= dam.poolDistEnd) {
+            player.isInBeaverPool = true;
+            if (!dam.visited) {
+              dam.visited = true;
+              playSound('beaver');
+              if (window.NorthStarHUD && NorthStarHUD.unlockAchievement) {
+                NorthStarHUD.unlockAchievement('csr_beaver_sanctuary');
+              }
+            }
+            break;
+          }
+        }
+
+        // Stamina Mechanics
+        if (player.isInBeaverPool) {
+          // Rapid recharge in sanctuary pool!
+          player.stamina = Math.min(player.maxStamina, player.stamina + 35 * dt);
+          player.hp = Math.min(player.maxHp, player.hp + 12 * dt);
+        } else if (player.isSprinting && player.stamina > 0) {
+          player.stamina = Math.max(0, player.stamina - 32 * dt);
+          if (player.stamina <= 0) player.isSprinting = false;
+        } else {
+          // Normal swim slowly recovers stamina if not fighting heavy current
+          player.stamina = Math.min(player.maxStamina, player.stamina + 8 * dt);
+        }
+
+        // Speed calculation
+        const targetMaxSpeed = player.isSprinting ? player.sprintSpeed : player.maxSpeed;
+        const currentResistance = player.isInBeaverPool ? 30 : curZone.currentSpeed;
+
+        // Player directional movement
+        if (moveX !== 0 || moveY !== 0) {
+          const targetAngle = Math.atan2(moveY, moveX);
+          player.angle += Math.sin(targetAngle - player.angle) * 8 * dt;
+
+          const accel = player.isSprinting ? 950 : 650;
+          player.vx += Math.cos(player.angle) * accel * dt;
+          player.vy += Math.sin(player.angle) * accel * dt;
+        }
+
+        // Water drag & current resistance
+        const drag = player.isLeaping ? 0.98 : 0.88;
+        player.vx *= Math.pow(drag, dt * 60);
+        player.vy *= Math.pow(drag, dt * 60);
+
+        // Update player position
+        player.x += player.vx * dt;
+        player.y += player.vy * dt;
+
+        // Forward swim progression (advances world distance upstream)
+        // Upward movement (negative vy) translates into distance upstream
+        const forwardVel = -player.vy;
+        const netUpstreamSpeed = Math.max(-80, forwardVel - (player.isLeaping ? 0 : currentResistance * 0.45));
+        world.distance = Math.max(0, world.distance + (netUpstreamSpeed * dt * 0.08));
+
+        // Score based on distance & vigor
+        world.score += Math.floor(Math.max(0, netUpstreamSpeed) * dt * 0.25);
+
+        // Keep player on-screen and within riverbanks
+        const riverLeft = RIVER_CENTER - RIVER_WIDTH / 2 + 35;
+        const riverRight = RIVER_CENTER + RIVER_WIDTH / 2 - 35;
+        player.x = Math.max(riverLeft, Math.min(riverRight, player.x));
+        player.y = Math.max(120, Math.min(V_HEIGHT - 60, player.y));
+
+        // Tail waggle animation
+        const currentSpeedVal = Math.hypot(player.vx, player.vy);
+        player.swimWaggle += dt * (12 + currentSpeedVal * 0.04);
+
+        // Leap Air Time Physics
+        if (player.isLeaping) {
+          player.leapTimer -= dt;
+          if (player.leapTimer <= 0) {
+            player.isLeaping = false;
+            playSound('splash');
+            addWaterSplash(player.x, player.y, '#ffffff', 24);
+            addRipple(player.x, player.y, 28);
+          }
+        }
+
+        // Water Splashes from sprint
+        if (player.isSprinting && Math.random() < 0.6) {
+          addWaterSplash(player.x - Math.cos(player.angle) * 22, player.y - Math.sin(player.angle) * 22, '#38bdf8', 3, 70);
+        }
+
+        // Waterfall Ascents Check
+        for (const wf of world.waterfalls) {
+          const relDist = wf.dist - world.distance;
+          if (relDist < 25 && relDist > -25) {
+            if (player.isLeaping && !wf.cleared) {
+              wf.cleared = true;
+              world.score += 800;
+              playSound('splash');
+              world.shake = 10;
+              if (window.NorthStarHUD && NorthStarHUD.unlockAchievement) {
+                NorthStarHUD.unlockAchievement('csr_waterfall_leaper');
+              }
+            } else if (!player.isLeaping) {
+              // Swept backward by the thundering cascade!
+              player.y += 180 * dt;
+              player.hp = Math.max(0, player.hp - 18 * dt);
+              world.shake = 4;
+            }
+          }
+        }
+
+        // Obstacle Collisions (Rocks & Logs)
+        if (!player.isLeaping) {
+          for (const obs of world.obstacles) {
+            const relDist = obs.dist - world.distance;
+            // Screen Y mapped
+            const obsY = player.y - (relDist * 12);
+            if (obsY > -100 && obsY < V_HEIGHT + 100) {
+              const dX = Math.abs(obs.x - player.x);
+              const dY = Math.abs(obsY - player.y);
+              if (dX < obs.w * 0.45 && dY < obs.h * 0.45) {
+                // Collision with obstacle
+                player.vx *= -0.5;
+                player.vy *= -0.5;
+                player.hp = Math.max(0, player.hp - 12 * dt);
+                world.shake = 3;
+                addWaterSplash(player.x, player.y, '#e0f2fe', 4);
+              }
+            }
+          }
+        }
+
+        // Collectibles Gathering
+        for (const col of world.collectibles) {
+          if (!col.active) continue;
+          const relDist = col.dist - world.distance;
+          const colY = player.y - (relDist * 12);
+          if (colY > -50 && colY < V_HEIGHT + 50) {
+            const d = Math.hypot(col.x - player.x, colY - player.y);
+            if (d < 36) {
+              col.active = true; // collected!
+              col.active = false;
+              playSound('collect');
+              if (col.type === 'fly') {
+                world.score += 150;
+                player.stamina = Math.min(player.maxStamina, player.stamina + 20);
+                addWaterSplash(col.x, colY, '#f59e0b', 12);
+              } else {
+                world.score += 500;
+                player.hp = Math.min(player.maxHp, player.hp + 15);
+                addWaterSplash(col.x, colY, '#38bdf8', 16);
+              }
+            }
+          }
+        }
+
+        // Update Predators
+        updatePredators(dt);
+
+        // Update Particle FX
+        for (const p of world.particles) {
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          p.life -= dt;
+        }
+        world.particles = world.particles.filter(p => p.life > 0);
+
+        for (const r of world.ripples) {
+          r.r += (r.maxR - r.r) * 4 * dt;
+          r.life -= dt;
+          r.alpha = Math.max(0, r.life / 0.6);
+        }
+        world.ripples = world.ripples.filter(r => r.life > 0);
+
+        // Camera Shake Decay
+        world.shake = Math.max(0, world.shake - dt * 18);
+        player.invuln = Math.max(0, player.invuln - dt);
+
+        // Update HUD Values
+        document.getElementById('dist-val').textContent = Math.floor(world.distance).toLocaleString();
+        document.getElementById('score-val').textContent = Math.floor(world.score).toLocaleString();
+        document.getElementById('hp-fill').style.width = `${Math.max(0, player.hp)}%`;
+        document.getElementById('stamina-fill').style.width = `${Math.max(0, player.stamina)}%`;
+
+        // Check Victory / Game Over
+        if (world.distance >= TOTAL_DISTANCE && !world.victory) {
+          triggerVictory();
+        } else if (player.hp <= 0 && !world.gameOver) {
+          triggerGameOver();
+        }
+      }
+
+      function triggerVictory() {
+        world.running = false;
+        world.victory = true;
+        playSound('victory');
+
+        if (window.NorthStarHUD && NorthStarHUD.unlockAchievement) {
+          NorthStarHUD.unlockAchievement('csr_spawning_grounds');
+        }
+
+        if (window.NorthStarHUD && NorthStarHUD.saveHighScore) {
+          NorthStarHUD.saveHighScore('cascade_salmon_run', world.score, {
+            distance: `${Math.floor(world.distance)}m`,
+            detail: 'Spawning Grounds Cleared'
+          });
+        }
+
+        document.getElementById('victory-summary').innerHTML = `
+          Magnificent run! Silver-Gill completed the entire <strong>${Math.floor(world.distance)}m</strong> odyssey with a final score of <strong>${Math.floor(world.score).toLocaleString()} PTS</strong>!
+        `;
+        document.getElementById('victory-overlay').classList.remove('hidden');
+      }
+
+      function triggerGameOver() {
+        world.running = false;
+        world.gameOver = true;
+
+        if (window.NorthStarHUD && NorthStarHUD.saveHighScore) {
+          NorthStarHUD.saveHighScore('cascade_salmon_run', world.score, {
+            distance: `${Math.floor(world.distance)}m`,
+            detail: getCurrentZone(world.distance).name
+          });
+        }
+
+        document.getElementById('gameover-summary').innerHTML = `
+          Silver-Gill swam <strong>${Math.floor(world.distance)}m</strong> through the Pacific Northwest river before running out of vigor.<br>Final Score: <strong>${Math.floor(world.score).toLocaleString()} PTS</strong>.
+        `;
+        document.getElementById('gameover-overlay').classList.remove('hidden');
+      }
+
+      // --- Rendering Pipeline ---
+      function render() {
+        ctx.save();
+
+        // Screen Shake
+        if (world.shake > 0) {
+          const sX = (Math.random() * 2 - 1) * world.shake;
+          const sY = (Math.random() * 2 - 1) * world.shake;
+          ctx.translate(sX, sY);
+        }
+
+        // 1. Riverbed Background
+        const curZone = getCurrentZone(world.distance);
+        const bgGrad = ctx.createLinearGradient(0, 0, 0, V_HEIGHT);
+        bgGrad.addColorStop(0, curZone.color);
+        bgGrad.addColorStop(1, '#021827');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, V_WIDTH, V_HEIGHT);
+
+        // 2. River Banks (Lush Moss & Forest Margins)
+        const bankLeft = RIVER_CENTER - RIVER_WIDTH / 2;
+        const bankRight = RIVER_CENTER + RIVER_WIDTH / 2;
+
+        // Left Bank Forest
+        ctx.fillStyle = '#064e3b'; // deep PNW emerald moss
+        ctx.fillRect(0, 0, bankLeft, V_HEIGHT);
+        ctx.fillStyle = '#022c22';
+        ctx.fillRect(0, 0, bankLeft - 25, V_HEIGHT);
+
+        // Right Bank Forest
+        ctx.fillStyle = '#064e3b';
+        ctx.fillRect(bankRight, 0, V_WIDTH - bankRight, V_HEIGHT);
+        ctx.fillStyle = '#022c22';
+        ctx.fillRect(bankRight + 25, 0, V_WIDTH - bankRight, V_HEIGHT);
+
+        // Forest Trees Silhouette Details
+        ctx.fillStyle = 'rgba(2, 44, 34, 0.65)';
+        for (let y = 0; y < V_HEIGHT; y += 48) {
+          const scrollOff = (world.distance * 12 + y) % V_HEIGHT;
+          // Left pines
+          ctx.beginPath();
+          ctx.moveTo(bankLeft - 10, scrollOff);
+          ctx.lineTo(bankLeft - 45, scrollOff - 24);
+          ctx.lineTo(bankLeft - 45, scrollOff + 24);
+          ctx.fill();
+
+          // Right pines
+          ctx.beginPath();
+          ctx.moveTo(bankRight + 10, scrollOff);
+          ctx.lineTo(bankRight + 45, scrollOff - 24);
+          ctx.lineTo(bankRight + 45, scrollOff + 24);
+          ctx.fill();
+        }
+
+        // 3. Dynamic Water Current Lines & Foam
+        ctx.lineWidth = 1.5;
+        const flowTime = performance.now() * 0.002;
+        for (let i = 0; i < 28; i++) {
+          const streamX = bankLeft + 30 + ((i * 47) % (RIVER_WIDTH - 60));
+          const streamY = ((i * 85 + flowTime * 280) % V_HEIGHT);
+          ctx.strokeStyle = i % 2 === 0 ? 'rgba(224, 242, 254, 0.22)' : 'rgba(56, 189, 248, 0.15)';
+          ctx.beginPath();
+          ctx.moveTo(streamX, streamY);
+          ctx.lineTo(streamX + Math.sin(flowTime + i) * 8, streamY + 36);
+          ctx.stroke();
+        }
+
+        // 4. Waterfalls
+        for (const wf of world.waterfalls) {
+          const relDist = wf.dist - world.distance;
+          const wfY = player.y - (relDist * 12);
+          if (wfY > -100 && wfY < V_HEIGHT + 100) {
+            // White-water foaming cascade
+            ctx.fillStyle = 'rgba(240, 249, 255, 0.88)';
+            ctx.fillRect(bankLeft, wfY - 20, RIVER_WIDTH, 40);
+
+            // Foaming spray ripples
+            ctx.fillStyle = '#ffffff';
+            for (let x = bankLeft + 10; x < bankRight - 10; x += 32) {
+              const hDrop = 15 + Math.sin(flowTime * 5 + x) * 8;
+              ctx.fillRect(x, wfY + 15, 22, hDrop);
+            }
+          }
+        }
+
+        // 5. Blazin' Beaver Dam
+        for (const dam of world.beaverDams) {
+          const relDist = dam.dist - world.distance;
+          const damY = player.y - (relDist * 12);
+          if (damY > -120 && damY < V_HEIGHT + 120) {
+            // Log Timber Wall
+            ctx.fillStyle = '#78350f'; // cedar brown
+            ctx.fillRect(bankLeft + 15, damY - 14, dam.w, 28);
+            ctx.strokeStyle = '#451a03';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(bankLeft + 15, damY - 14, dam.w, 28);
+
+            // Water Trickle & Timber sticks
+            ctx.fillStyle = '#b45309';
+            for (let x = bankLeft + 25; x < bankRight - 25; x += 40) {
+              ctx.fillRect(x, damY - 22, 14, 44);
+            }
+          }
+        }
+
+        // 6. Obstacles (Boulders & Logs)
+        for (const obs of world.obstacles) {
+          const relDist = obs.dist - world.distance;
+          const obsY = player.y - (relDist * 12);
+          if (obsY > -100 && obsY < V_HEIGHT + 100) {
+            ctx.save();
+            ctx.translate(obs.x, obsY);
+            if (obs.type === 'log') {
+              ctx.rotate(obs.rotation);
+              ctx.fillStyle = '#92400e';
+              ctx.fillRect(-obs.w / 2, -obs.h / 2, obs.w, obs.h);
+              ctx.strokeStyle = '#451a03';
+              ctx.lineWidth = 2;
+              ctx.strokeRect(-obs.w / 2, -obs.h / 2, obs.w, obs.h);
+            } else {
+              // River Granite Boulder
+              ctx.fillStyle = '#475569';
+              ctx.beginPath();
+              ctx.ellipse(0, 0, obs.w / 2, obs.h / 2, 0, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.strokeStyle = '#1e293b';
+              ctx.lineWidth = 2.5;
+              ctx.stroke();
+            }
+            ctx.restore();
+          }
+        }
+
+        // 7. Collectibles (Flies on water, Golden Roe)
+        for (const col of world.collectibles) {
+          if (!col.active) continue;
+          const relDist = col.dist - world.distance;
+          const colY = player.y - (relDist * 12);
+          if (colY > -40 && colY < V_HEIGHT + 40) {
+            ctx.save();
+            ctx.translate(col.x, colY);
+            if (col.type === 'fly') {
+              // Caddisfly / Mayfly with translucent flutter wings
+              ctx.fillStyle = '#fbbf24';
+              ctx.beginPath();
+              ctx.arc(0, 0, 4, 0, Math.PI * 2);
+              ctx.fill();
+
+              ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+              const wingFlutter = Math.sin(performance.now() * 0.04) * 8;
+              ctx.beginPath();
+              ctx.ellipse(-6, -wingFlutter, 7, 3, 0.3, 0, Math.PI * 2);
+              ctx.ellipse(6, -wingFlutter, 7, 3, -0.3, 0, Math.PI * 2);
+              ctx.fill();
+            } else {
+              // Glowing Golden Roe egg
+              ctx.fillStyle = '#f59e0b';
+              ctx.shadowColor = '#f59e0b';
+              ctx.shadowBlur = 12;
+              ctx.beginPath();
+              ctx.arc(0, 0, 6.5, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.fillStyle = '#fffbeb';
+              ctx.beginPath();
+              ctx.arc(-2, -2, 2, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.shadowBlur = 0;
+            }
+            ctx.restore();
+          }
+        }
+
+        // 8. Predators (Bald Eagle Shadows & Grizzly Bears)
+        for (const pred of world.predators) {
+          if (!pred.active) continue;
+          if (pred.type === 'eagle') {
+            // Circling Eagle Shadow on River Surface
+            const relDist = pred.dist - world.distance;
+            const predY = player.y - (relDist * 12);
+            ctx.save();
+            ctx.translate(pred.x, predY);
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+            ctx.beginPath();
+            // Eagle silhouette
+            const s = pred.shadowSize;
+            ctx.ellipse(0, 0, s, s * 0.45, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Wings
+            ctx.beginPath();
+            ctx.moveTo(-s * 1.2, -s * 0.2);
+            ctx.quadraticCurveTo(0, -s * 0.6, s * 1.2, -s * 0.2);
+            ctx.lineTo(0, s * 0.4);
+            ctx.fill();
+            ctx.restore();
+          } else if (pred.type === 'bear') {
+            // Grizzly Bear on the bank
+            const relDist = pred.dist - world.distance;
+            const predY = player.y - (relDist * 12);
+            ctx.save();
+            ctx.translate(pred.x, predY);
+            // Brown Bear Body
+            ctx.fillStyle = '#713f12';
+            ctx.beginPath();
+            ctx.arc(0, 0, 26, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Massive Claw Paw
+            ctx.fillStyle = '#451a03';
+            const swipeReach = pred.swiped ? pred.side * 28 : 0;
+            ctx.beginPath();
+            ctx.arc(swipeReach, 14, 12, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+        }
+
+        // 9. Water Ripples
+        for (const r of world.ripples) {
+          ctx.strokeStyle = `rgba(224, 242, 254, ${r.alpha})`;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(r.x, r.y, r.r, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        // 10. Water Particles
+        for (const p of world.particles) {
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r * (p.life / p.maxLife), 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // 11. Player: "Silver-Gill" (Chinook Salmon)
+        ctx.save();
+        ctx.translate(player.x, player.y);
+
+        // Aerial leap shadow if in the air
+        if (player.isLeaping) {
+          const airScale = 1.35;
+          ctx.save();
+          ctx.translate(14, 24);
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+          ctx.rotate(player.angle);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 26 * airScale, 11 * airScale, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        ctx.rotate(player.angle);
+
+        // Leap Air Height Scale
+        const scale = player.isLeaping ? 1.35 : 1.0;
+        ctx.scale(scale, scale);
+
+        // Salmon Body Contour
+        const waggleOffset = Math.sin(player.swimWaggle) * 4;
+
+        // Torpedo Fish Body
+        ctx.fillStyle = player.invuln > 0 && Math.floor(performance.now() / 80) % 2 === 0
+          ? '#ffffff'
+          : (player.isSprinting ? '#38bdf8' : '#cbd5e1'); // shimmering silver
+        ctx.beginPath();
+        ctx.moveTo(34, 0); // snout
+        ctx.quadraticCurveTo(12, -14, -18, -10);
+        ctx.lineTo(-32, -4 + waggleOffset); // tail base
+        ctx.lineTo(-32, 4 + waggleOffset);
+        ctx.quadraticCurveTo(12, 14, 34, 0);
+        ctx.closePath();
+        ctx.fill();
+
+        // Iridescent Dorsal Stripe & Scales
+        ctx.strokeStyle = '#0284c7';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(28, 0);
+        ctx.lineTo(-24, waggleOffset * 0.8);
+        ctx.stroke();
+
+        // Pinkish Lateral Spawning Line (Chinook signature)
+        ctx.strokeStyle = '#f43f5e';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(22, 2);
+        ctx.lineTo(-20, 2 + waggleOffset * 0.7);
+        ctx.stroke();
+
+        // Tail Fin (Caudal Fin) with flex
+        ctx.fillStyle = '#0369a1';
+        ctx.beginPath();
+        ctx.moveTo(-32, waggleOffset);
+        ctx.lineTo(-46, -16 + waggleOffset * 1.5);
+        ctx.quadraticCurveTo(-40, waggleOffset, -46, 16 + waggleOffset * 1.5);
+        ctx.closePath();
+        ctx.fill();
+
+        // Pectoral Fins
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.ellipse(6, -12, 9, 3, -0.4, 0, Math.PI * 2);
+        ctx.ellipse(6, 12, 9, 3, 0.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Eye
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.arc(22, -4, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(23, -4.8, 1, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+
+        ctx.restore();
+      }
+
+      // Initialize NorthStar HUD Bridge
+      if (window.NorthStarHUD) {
+        NorthStarHUD.init({
+          gameId: 'cascade_salmon_run',
+          gameTitle: 'Cascade Salmon Run',
+          onPause: () => {
+            if (riverGain && audioCtx) {
+              riverGain.gain.setValueAtTime(0.00001, audioCtx.currentTime);
+            }
+          },
+          onResume: () => {
+            if (riverGain && audioCtx) {
+              const vol = NorthStarHUD.getVolume();
+              riverGain.gain.setValueAtTime(0.08 * vol, audioCtx.currentTime);
+            }
+          },
+          onRestart: () => {
+            startRound();
+          },
+          onVolume: (val) => {
+            if (riverGain && audioCtx) {
+              riverGain.gain.setValueAtTime(0.08 * val, audioCtx.currentTime);
+            }
+          }
+        });
+      }
+
+    })();
+  </script>
+</body>
+</html>

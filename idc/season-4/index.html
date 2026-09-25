@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IDC Season Four Master Production Showcase & Audio Console</title>
+<style>
+  :root {
+    --bg-primary: #0a0c10;
+    --bg-secondary: #12161f;
+    --bg-tertiary: #1a202c;
+    --accent-blue: #38bdf8;
+    --accent-cyan: #06b6d4;
+    --accent-gold: #f59e0b;
+    --accent-emerald: #10b981;
+    --accent-purple: #a855f7;
+    --accent-rose: #f43f5e;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --border-color: #242c3d;
+    --card-bg: rgba(18, 22, 31, 0.85);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    padding: 24px;
+    background-image: radial-gradient(circle at 10% 20%, rgba(56, 189, 248, 0.04) 0%, transparent 40%),
+                      radial-gradient(circle at 90% 80%, rgba(168, 85, 247, 0.04) 0%, transparent 40%);
+  }
+  .container { max-width: 1400px; margin: 0 auto; }
+  header {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 20px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .badge {
+    display: inline-block;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-radius: 9999px;
+    margin-bottom: 8px;
+  }
+  .badge-gold { background: rgba(245, 158, 11, 0.15); color: var(--accent-gold); border: 1px solid rgba(245, 158, 11, 0.3); }
+  .badge-cyan { background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan); border: 1px solid rgba(6, 182, 212, 0.3); }
+  .badge-emerald { background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald); border: 1px solid rgba(16, 185, 129, 0.3); }
+  
+  h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; color: #fff; }
+  .subtitle { color: var(--text-secondary); font-size: 14px; margin-top: 4px; }
+  
+  /* Metrics Bar */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .metric-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px 20px;
+    backdrop-filter: blur(8px);
+  }
+  .metric-card .label { font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em; }
+  .metric-card .value { font-size: 24px; font-weight: 800; color: #fff; margin-top: 4px; }
+  .metric-card .hint { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 8px;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 24px;
+    overflow-x: auto;
+  }
+  .tab-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    padding: 10px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+  }
+  .tab-btn:hover { color: var(--text-primary); }
+  .tab-btn.active {
+    color: var(--accent-blue);
+    border-bottom-color: var(--accent-blue);
+  }
+  
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  /* Series Filter */
+  .series-filter {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .filter-btn {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .filter-btn.active, .filter-btn:hover {
+    background: var(--bg-tertiary);
+    color: #fff;
+    border-color: var(--accent-blue);
+  }
+
+  /* Episode Grid */
+  .episode-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+  }
+  .episode-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 18px;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .episode-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent-blue);
+  }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+  .ep-code { font-size: 12px; font-weight: 700; color: var(--accent-blue); text-transform: uppercase; }
+  .ep-dur { font-size: 12px; font-weight: 600; color: var(--accent-gold); }
+  .ep-title { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+  .ep-meta { font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; display: flex; gap: 12px; }
+  .card-footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding-top: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .btn-play {
+    background: var(--accent-blue);
+    color: #000;
+    border: none;
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .btn-play:hover { opacity: 0.9; }
+
+  /* Detail Drawer / Modal */
+  .modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 24px;
+  }
+  .modal-content {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    max-width: 800px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 28px;
+    position: relative;
+  }
+  .close-modal {
+    position: absolute;
+    top: 20px; right: 20px;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 20px;
+    cursor: pointer;
+  }
+  .modal-player {
+    width: 100%;
+    margin: 16px 0;
+  }
+  .script-excerpt {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 16px;
+    font-family: "Courier New", Courier, monospace;
+    font-size: 13px;
+    color: #e2e8f0;
+    white-space: pre-wrap;
+    max-height: 350px;
+    overflow-y: auto;
+    margin-top: 12px;
+    line-height: 1.6;
+  }
+
+  /* Query Card Table */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 13px;
+  }
+  th, td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-color);
+    text-align: left;
+  }
+  th { background: var(--bg-tertiary); color: var(--text-secondary); font-weight: 600; text-transform: uppercase; font-size: 11px; }
+  tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+  /* Veo Prompt Card */
+  .veo-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .veo-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+  .veo-prompt { background: var(--bg-primary); padding: 12px; border-radius: 8px; font-family: monospace; font-size: 12px; color: var(--accent-cyan); }
+
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div>
+      <span class="badge badge-gold">IDC Original Successor Slate</span>
+      <span class="badge badge-emerald">Season Four 100% Acoustically Realized</span>
+      <h1>Master Production Showcase & Audio Console</h1>
+      <p class="subtitle">Complete 38-Episode Screenplay Slate • 46 Lossless WAV & Review MP3 Masters • 7h 52m Continuous Audio</p>
+    </div>
+    <div>
+      <button class="btn-play" style="padding: 10px 20px; font-size: 13px;" onclick="window.open('file:///F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/IDC_VEO_FLOW_STUDIO.html')">Launch Veo 3.1 Studio Cockpit ↗</button>
+    </div>
+  </header>
+
+  <!-- Metrics Grid -->
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <div class="label">Total Screenplays</div>
+      <div class="value">38 Scripts</div>
+      <div class="hint">100% token-exact overlays sealed</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">Total Master Audio</div>
+      <div class="value">397m 29s (6.62 hours)</div>
+      <div class="hint">46 lossless WAVs + 46 MP3s rendered</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">Screenplay Volume</div>
+      <div class="value">59,753 Words</div>
+      <div class="hint">1,270 detected character cues</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">Candoril Query Cards</div>
+      <div class="value">24 Cards</div>
+      <div class="hint">0 medical claims • 7m 38s A/B savings</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">Synthesis Cost</div>
+      <div class="value">$0.00</div>
+      <div class="hint">Offline hardware SAPI pipeline</div>
+    </div>
+  </div>
+
+  <!-- Tabs Navigation -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('episodes')">All 38 Screenplays & Audio (Catalog)</button>
+    <button class="tab-btn" onclick="switchTab('excerpts')">Dramatic Scene Excerpts</button>
+    <button class="tab-btn" onclick="switchTab('candoril')">Candoril Clinical Sandbox (24 Cards)</button>
+    <button class="tab-btn" onclick="switchTab('waves')">Sealed Milestones (Waves V60–V67)</button>
+    <button class="tab-btn" onclick="switchTab('veo')">Veo 3.1 Video Forge Readiness</button>
+  </div>
+
+  <!-- Tab 1: All 38 Episodes -->
+  <div id="tab-episodes" class="tab-pane active">
+    <div class="series-filter">
+      <button class="filter-btn active" onclick="filterSeries('ALL')">All Series (38)</button>
+      <button class="filter-btn" onclick="filterSeries('DEEPER STATE')">Deeper State (10)</button>
+      <button class="filter-btn" onclick="filterSeries('HIGHER GROUND')">Higher Ground (10)</button>
+      <button class="filter-btn" onclick="filterSeries('UNCOMMON SIDE EFFECTS')">Uncommon Side Effects (8)</button>
+      <button class="filter-btn" onclick="filterSeries('THE CANCELLATION DEPARTMENT')">The Cancellation Department (10)</button>
+    </div>
+
+    <div class="episode-grid" id="episode-container">
+      <!-- Injected via JS -->
+    </div>
+  </div>
+
+  <!-- Tab 2: Dramatic Excerpts -->
+  <div id="tab-excerpts" class="tab-pane">
+    <h2 style="margin-bottom: 16px;">Core Dramatic Excerpts from Season Four</h2>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+      <div class="metric-card">
+        <h3 style="color: var(--accent-blue); margin-bottom: 6px;">Higher Ground 4.01 — “The Second Set of Keys”</h3>
+        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">Inez presents the symbolic emerald-ribboned keys of cooperative victory, only for the tenants to discover none of the locks match.</p>
+        <div class="script-excerpt">INEZ
+Welcome to year two of the Green Cathedral Cooperative. These keys represent our shared sovereignty. They open the front oak doors, the main meeting floor, the woodcraft workshop, and the courtyard garden gate.
+
+RAFI, a new tenant who builds bespoke acoustic instruments, takes his key and walks immediately to the accessible side entrance on Elm Street. He inserts the key into the heavy mortise lock. It turns freely in an endless, loose circle without catching the latch.
+
+RAFI
+The side door is spinning.
+
+JALEN walks to the supply room door behind the kitchen. He inserts his key. It doesn't even enter the keyway.
+
+JALEN
+The supply room keyway is thirty percent too narrow.
+
+SADE walks to the tall oak childcare storage armoire. Her key goes in halfway and jams tight.
+
+SADE
+Mine is wedged. Who cut these?</div>
+      </div>
+
+      <div class="metric-card">
+        <h3 style="color: var(--accent-gold); margin-bottom: 6px;">Deeper State 4.01 — “The Emergency Contact Is a Committee”</h3>
+        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">Priya and Owen face an automated telephone nightmare at 2:13 A.M. as three regional utility routes fail simultaneously.</p>
+        <div class="script-excerpt">INT. PRIYA'S OFFICE — 2:13 A.M.
+
+One red phone rings beneath seven laminated cards:
+PRIMARY CONTACT. ALTERNATE CONTACT. LOCAL CONTACT. CUSTODY CONTACT. ACCESS CONTACT. LABOR CONTACT. CONTACT-GOVERNANCE CONTACT.
+
+Priya answers.
+
+AUTOMATED VOICE
+For a service interruption, press one. To determine who is authorized to press one, press two.
+
+Priya presses one.
+
+AUTOMATED VOICE
+This action requires confirmation from the contact-governance contact.
+
+Across the room, Owen opens a binder.
+
+OWEN
+The contact-governance contact is a committee.
+
+The red phone keeps ringing in Priya's hand.</div>
+      </div>
+
+      <div class="metric-card">
+        <h3 style="color: var(--accent-purple); margin-bottom: 6px;">The Cancellation Department 4.01 — “Return Address Unknown”</h3>
+        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">Eve, Sol, and Nine unpack freight crates filled with decommissioned props and an unauthorized scene continuing beyond the finale.</p>
+        <div class="script-excerpt">INT. DECOMMISSIONED CARGO DOCK — MORNING
+
+EVE cuts through three layers of black reinforced vinyl shipping wrap with an industrial utility blade.
+
+A six-foot-tall wooden hand-painted station clock from the series finale emerges. Its hands are welded permanently to 4:48.
+
+SOL
+We closed that station nine weeks ago. We signed the export manifest.
+
+NINE
+Someone returned it without an airbill.
+
+A small thermal printer on the freight desk chatters. It spits out a strip of lavender register paper:
+
+RETURN ACCEPTED UNDER UNFINISHED CLAUSE 14.
+REASON: THE AUDIENCE IS STILL INSIDE THE PLATFORM.
+
+EVE
+Clause fourteen was struck in nineteen ninety-eight.
+
+NINE
+The clock doesn't know that. It's still ticking.</div>
+      </div>
+
+      <div class="metric-card">
+        <h3 style="color: var(--accent-emerald); margin-bottom: 6px;">Uncommon Side Effects 4.04 — “The Authorized Ghost”</h3>
+        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">Nia and Kiva discover an automated legacy service account quietly validating transformations five years after the regulator retired.</p>
+        <div class="script-excerpt">INT. RECORDS VAULT TERMINAL ALCOVE — 2:40 A.M.
+
+A luminous test card appears on the frosted glass screen:
+[PROJECTION CARD: S4Q-010 — RETIRED SERVICE ACCOUNT ROUTE DETECTION]
+
+PURPOSE: Evaluate whether defunct municipal credentials retain automated signing power.
+STATUS: ACTIVE QUERY.
+
+NIA
+Service account 409-Delta has submitted twelve thousand transformation confirmations since March.
+
+KIVA
+Who is 409-Delta?
+
+ELI
+Arthur Vance. He retired to Maine in twenty twenty-one. He spends his mornings building cedar birdhouses.
+
+NIA
+Arthur's birdhouses must be extraordinary, because his digital signature just approved three regional pharmaceutical registries at twelve seconds past midnight.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 3: Candoril Sandbox -->
+  <div id="tab-candoril" class="tab-pane">
+    <h2>Candoril Clinical Unknowns & Query Card Registry (24 Cards)</h2>
+    <p style="color: var(--text-secondary); font-size: 14px; margin-top: 4px; margin-bottom: 16px;">
+      Strict regulatory safeguard: All 24 query cards across Season Four operate with zero affirmative biological claims. Candoril's pharmacological, therapeutic, and toxicological properties remain strictly <strong>UNKNOWN</strong>.
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Card ID</th>
+          <th>Episode</th>
+          <th>Title</th>
+          <th>Administrative Test Focus</th>
+          <th>Clinical Status</th>
+          <th>A/B Projection Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>S4Q-001..003</code></td><td>Uncommon 4.01</td><td>The Record That Outlived Its Custodian</td><td>Custody survival & reconstruction sensitivity</td><td>UNKNOWN</td><td>-16.8s saved via silent projection</td></tr>
+        <tr><td><code>S4Q-004..006</code></td><td>Uncommon 4.02</td><td>Synthetic Legacy</td><td>Defunct vendor signing keys & synthetic lineage</td><td>UNKNOWN</td><td>-13.3s saved via silent projection</td></tr>
+        <tr><td><code>S4Q-007..009</code></td><td>Uncommon 4.03</td><td>Correction Without a Source</td><td>Response destination validity & attributed divergence</td><td>UNKNOWN</td><td>-96.8s saved via silent projection</td></tr>
+        <tr><td><code>S4Q-010..012</code></td><td>Uncommon 4.04</td><td>The Authorized Ghost</td><td>Retired service account detection & protocol gap</td><td>UNKNOWN</td><td>-12.6s saved via silent projection</td></tr>
+        <tr><td><code>S4Q-013..015</code></td><td>Uncommon 4.05</td><td>Archive of Last Resort</td><td>Normalization schema divergence & escrow failure</td><td>UNKNOWN</td><td>-14.6s saved via silent projection</td></tr>
+        <tr><td><code>S4Q-016..018</code></td><td>Uncommon 4.06</td><td>Consent After Closure</td><td>Delegation validity & orphan consent boundaries</td><td>UNKNOWN</td><td>-131.3s saved via silent projection</td></tr>
+        <tr><td><code>S4Q-019..021</code></td><td>Uncommon 4.07</td><td>The Confidence Inheritance</td><td>Confidence score divergence & regional audit partition</td><td>UNKNOWN</td><td>-139.6s saved via silent projection</td></tr>
+        <tr><td><code>S4Q-022..024</code></td><td>Uncommon 4.08</td><td>No Final Custodian</td><td>Monopolistic custody vulnerability & finale ledger</td><td>UNKNOWN</td><td>-130.5s saved via silent projection</td></tr>
+      </tbody>
+    </table>
+    <div class="metric-card" style="margin-top: 16px;">
+      <h4 style="color: var(--accent-cyan); margin-bottom: 4px;">Directorial Finding on Query Card Rehearsals</h4>
+      <p style="font-size: 13px; color: var(--text-secondary);">
+        Silent visual projection of companion data cards saved a total of <strong>07:38.711</strong> of spoken audio across the 7 Watch-tier Uncommon episodes, reducing episode durations by up to 20%. Voicing the query ID and bounds within character dialogue maintains narrative clarity while preserving episode momentum.
+      </p>
+    </div>
+  </div>
+
+  <!-- Tab 4: Sealed Milestones -->
+  <div id="tab-waves" class="tab-pane">
+    <h2>Sealed Institutional Waves (Season Four Lifecycle)</h2>
+    <p style="color: var(--text-secondary); font-size: 14px; margin-top: 4px; margin-bottom: 16px;">
+      All assets are permanently anchored on <code>F:\NORTHSTAR_OS\Projects\NSP_VIDEO_R_AND_D\</code> with immutable SHA-256 manifests.
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Wave</th>
+          <th>Milestone</th>
+          <th>Scope</th>
+          <th>Deliverable Assets</th>
+          <th>Manifest SHA-256</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>V60</strong></td><td>Consolidated Editorial Audit</td><td>All 38 Scripts</td><td>Scorecards, Master Index, Coverage</td><td><code>B059EA0B47AE2C5A...</code></td></tr>
+        <tr><td><strong>V61</strong></td><td>Priority A Dramatizations</td><td>8 Scripts</td><td>+226 Dialogue Cues, Screenplay Format</td><td><code>03DAAB0DB8EE3575...</code></td></tr>
+        <tr><td><strong>V62</strong></td><td>Priority A Table Read Prep</td><td>8 Scripts</td><td>6-Actor Doubling Map, SFX Dependencies</td><td><code>2B28617DD95BDBF9...</code></td></tr>
+        <tr><td><strong>V63</strong></td><td>Priority A Scratch Audio</td><td>8 Scripts + 1 A/B</td><td>85m 48.9s Master Audio, Lossless WAV</td><td><code>E1C01707FB938840...</code></td></tr>
+        <tr><td><strong>V64</strong></td><td>Priority B Production Overlay</td><td>38 Scripts</td><td>59,753 Words, Unified Read Policy</td><td><code>0AA7C7DF639F6502...</code></td></tr>
+        <tr><td><strong>V65</strong></td><td>Watch Tier Scratch Reads 01</td><td>10 Scripts + 7 A/B</td><td>174m 42.9s Master Audio (Ranks 1–10)</td><td><code>F3CBEC8DC46616CF...</code></td></tr>
+        <tr><td><strong>V66</strong></td><td>Watch Tier Scratch Reads 02</td><td>10 Scripts</td><td>110m 09.2s Master Audio (Ranks 11–20)</td><td><code>950BF72A40D0CA07...</code></td></tr>
+        <tr><td><strong>V67</strong></td><td>Watch Tier Scratch Reads 03</td><td>10 Scripts</td><td>102m 12.9s Master Audio (Ranks 21–30)</td><td><code>1DBA0E46D4F640BB...</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Tab 5: Veo 3.1 Studio -->
+  <div id="tab-veo" class="tab-pane">
+    <h2>Google Flow Ultra (Veo 3.1) Studio Cockpit</h2>
+    <p style="color: var(--text-secondary); font-size: 14px; margin-top: 4px; margin-bottom: 16px;">
+      Active Balance: <strong>25,000 Ultra balance</strong>. Each 8-second 1080p generation consumes 10 credits (2,500 master shots available).
+    </p>
+
+    <div class="veo-card">
+      <div class="veo-header">
+        <h4 style="color: #fff;">Deeper State — Municipal Cable Vault (16:9 4K Macro)</h4>
+        <span class="badge badge-cyan">Card #01 / 10 Credits</span>
+      </div>
+      <div class="veo-prompt">
+Cinematic 16:9 wide shot, cold fluorescent halogen illumination reflecting off wet subterranean concrete. A massive municipal telecom cable trench with thick bundles of labeled orange, black, and teal fiber-optic conduits strapped to steel cable ladders. Fine steam drifting through air. Photorealistic architectural cinematography, 35mm anamorphic lens, Arri Alexa Mini LF aesthetic, muted institutional color grading, subtle film grain.
+      </div>
+    </div>
+
+    <div class="veo-card">
+      <div class="veo-header">
+        <h4 style="color: #fff;">Higher Ground — Green Cathedral Woodcraft Workshop</h4>
+        <span class="badge badge-gold">Card #04 / 10 Credits</span>
+      </div>
+      <div class="veo-prompt">
+Cinematic medium shot inside a sunlit cooperative woodcraft workshop in a repurposed 1920s brick cathedral. Dust motes floating in diagonal beams of golden morning light. Handcrafted acoustic archtop guitars resting on padded felt workbench racks beside cast-iron jointers and antique brass hand planes. Warm natural timber textures, shallow depth of field, Cooke S4 prime lens look, rich Kodachrome warmth.
+      </div>
+    </div>
+
+    <div class="veo-card">
+      <div class="veo-header">
+        <h4 style="color: #fff;">Uncommon Side Effects — Plural Custody Archive Terminal</h4>
+        <span class="badge badge-emerald">Card #07 / 10 Credits</span>
+      </div>
+      <div class="veo-prompt">
+Extreme wide shot of a vast high-security municipal archive terminal room. Floor-to-ceiling rows of brushed-steel filing cabinets and glowing server racks with steady amber and turquoise pulse indicators. A frosted glass terminal screen displaying glowing monospace query cards. Atmospheric haze, cool teal shadow tones, anamorphic lens flare, Fincher-esque precision framing.
+      </div>
+    </div>
+
+    <div class="veo-card">
+      <div class="veo-header">
+        <h4 style="color: #fff;">The Cancellation Department — The Quiet Room</h4>
+        <span class="badge badge-purple">Card #11 / 10 Credits</span>
+      </div>
+      <div class="veo-prompt">
+A silent, cavernous decommissioned soundstage filled with shrouded set pieces, draped canvas over vintage furniture, and an oversized brass station clock suspended from rigging cables with hands welded to 4:48. Lone overhead tungsten work light casting dramatic long shadows across polished concrete. Haunting cinematic atmosphere, Panavision 70mm look, subtle dust motes.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Player & Excerpt -->
+<div class="modal-overlay" id="ep-modal" onclick="closeModal(event)">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <button class="close-modal" onclick="closeModalDirect()">&times;</button>
+    <div id="modal-series-badge" class="badge badge-gold">Series</div>
+    <h2 id="modal-title" style="margin-top: 4px;">Episode Title</h2>
+    <p id="modal-meta" style="color: var(--text-secondary); font-size: 13px; margin-top: 4px;">Duration • Words • Dialogue Cues</p>
+    
+    <div style="margin-top: 16px;">
+      <label style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Acoustic Scratch Read (Lossless MP3 Review Copy)</label>
+      <audio id="modal-audio" class="modal-player" controls preload="none">
+        <source id="modal-source" src="" type="audio/mpeg">
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+
+    <div style="margin-top: 16px;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline;">
+        <label style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Cold Open & Scene Excerpt</label>
+        <button id="copy-path-btn" class="btn-play" style="background: var(--bg-tertiary); color: var(--text-secondary);" onclick="copyAudioPath()">Copy File Path</button>
+      </div>
+      <div id="modal-excerpt" class="script-excerpt">Script excerpt loading...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const episodes = [{"file": "DEEPER_STATE_S04_EP01_THE_EMERGENCY_CONTACT_IS_A_COMMITTEE.md", "series": "DEEPER STATE", "episode": 1, "title": "THE EMERGENCY CONTACT IS A COMMITTEE", "words": 1068, "cues": 22, "cards": [], "duration_formatted": "07:25.144", "duration_seconds": 445.144, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v66_watch_tier_private_synthetic_scratch_reads02_20260922/audio/review_mp3/rank15_deeper_state_s04_ep01_the_emergency_contact_is_a_committee_full_read.mp3", "mp3_name": "rank15_deeper_state_s04_ep01_the_emergency_contact_is_a_committee_full_read.mp3", "cold_open_excerpt": "INT. PRIYA'S OFFICE \u2014 2:13 A.M.\n\nOne red phone rings beneath seven laminated cards.\n\n**PRIMARY CONTACT. ALTERNATE CONTACT. LOCAL CONTACT. CUSTODY CONTACT. ACCESS CONTACT. LABOR CONTACT. CONTACT-GOVERNANCE CONTACT.**\n\nPRIYA answers.\n\nAUTOMATED VOICE\n\nFor a service interruption, press one. To determine who is authorized to press one, press two.\n\nPriya presses one.\n\nAUTOMATED VOICE\n\nThis action requires confirmation from the contact-governance contact.\n\nAcross the room, OWEN opens a binder.\n\nOWEN\n\nThe contact-governance contact is a committee.\n\nThe red phone keeps ringing in Priya's hand.\n\nTITLE."}, {"file": "DEEPER_STATE_S04_EP02_MINIMUM_VIABLE_CUSTODIAN.md", "series": "DEEPER STATE", "episode": 2, "title": "MINIMUM VIABLE CUSTODIAN", "words": 1214, "cues": 25, "cards": [], "duration_formatted": "08:30.838", "duration_seconds": 510.838, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v67_watch_tier_private_synthetic_scratch_reads03_20260922/audio/review_mp3/rank27_deeper_state_s04_ep02_minimum_viable_custodian_full_read.mp3", "mp3_name": "rank27_deeper_state_s04_ep02_minimum_viable_custodian_full_read.mp3", "cold_open_excerpt": "INT. MIRROR STATION \u2014 MORNING\n\nA photographer directs the CUSTODIAN between two server cabinets. The Custodian holds a coil of replacement cable.\n\nPHOTOGRAPHER\n\nCould you hold something less replaceable?\n\nThe Custodian puts down the cable. Holds up a timesheet.\n\nOn the photographer's tablet: **THE PEOPLE WE COULD NEVER DO WITHOUT.**\n\nTOMAS enters carrying two coffees. The photographer waves him out of frame.\n\nPHOTOGRAPHER\n\nWe need the sole keeper.\n\nTomas looks at the second coffee, then at the camera.\n\nTOMAS\n\nShould I stop existing before or after handover?\n\nTITLE."}, {"file": "DEEPER_STATE_S04_EP03_THE_TRANSLATION_OF_RECORD.md", "series": "DEEPER STATE", "episode": 3, "title": "THE TRANSLATION OF RECORD", "words": 1623, "cues": 66, "cards": [], "duration_formatted": "11:14.288", "duration_seconds": 674.288, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v63_priority_a_private_synthetic_scratch_reads01_20260922/audio/review_mp3/04_deeper_state_s04_ep03_the_translation_of_record_full_read.mp3", "mp3_name": "04_deeper_state_s04_ep03_the_translation_of_record_full_read.mp3", "cold_open_excerpt": "INT. NORTH BRIDGE RESPONSE DESK \u2014 5:59 P.M.\n\nTwo desk workers in matching municipal cardigans turn over two laminated signs at the exact same instant.\n\nThe west sign reads, in clear local typography: **OPEN UNTIL THE REVIEW.**\n\nThe east sign reads, in another script: **OPENS AFTER THE REVIEW.**\n\nOWEN stands exactly between the two brass stanchions, carrying a blue paper inquiry form. He glances left, then right.\n\nOWEN\n\nExcuse me. Where do I stand during?\n\nBoth workers point simultaneously at the brass join in the floor directly between his boots.\n\nWEST WORKER\n\nHere until six.\n\nEAST WORKER\n\nHere after eight tomorrow.\n\nOWEN\n\nAnd right now?\n\nA clock behind the glass clicks to 6:00. The west worker pulls down her blind with a sharp snap. The east worker locks her drawer and turns off her desk lamp.\n\nOWEN\n\nI see. The administrative equator.\n\n**TITLE.**"}, {"file": "DEEPER_STATE_S04_EP04_INCIDENT_WITHOUT_JURISDICTION.md", "series": "DEEPER STATE", "episode": 4, "title": "INCIDENT WITHOUT JURISDICTION", "words": 1500, "cues": 38, "cards": [], "duration_formatted": "10:00.476", "duration_seconds": 600.476, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v67_watch_tier_private_synthetic_scratch_reads03_20260922/audio/review_mp3/rank25_deeper_state_s04_ep04_incident_without_jurisdiction_full_read.mp3", "mp3_name": "rank25_deeper_state_s04_ep04_incident_without_jurisdiction_full_read.mp3", "cold_open_excerpt": "INT. FOURTH DISTRICT TRANSIT CONDUIT \u2014 3:14 A.M.\n\nA copper cooling coil hiss cuts off abruptly.\n\nA diagnostic junction box clicks four times. In sequence, four amber lamps illuminate on four separate utility conduits mounted to the same concrete bulkhead:\n\nLANE A: REGIONAL POWER BOARD \u2014 \"TRANSIENT RETURN: MONITORING.\"\nLANE B: INTER-DISTRICT TELEMETRY \u2014 \"LINE STABLE: DOWNSTREAM EVENT.\"\nLANE C: MUNICIPAL PRESSURE LOG \u2014 \"LOCAL SURGE: WITHIN REPORTING TOLERANCE.\"\nLANE D: COMMONS WATER RESERVE \u2014 \"PRESSURE BALANCED: INLET NORMAL.\"\n\nBeneath the junction box, a puddle of warm mineral oil spreads across the drainage grating.\n\nOWEN stands at the end of the maintenance catwalk holding a dry flashlight. He watches the oil drip steadily into the conduit duct.\n\nOWEN\n\nNone of the lights turned red.\n\nTITLE."}, {"file": "DEEPER_STATE_S04_EP05_PAID_IN_CONFIDENCE.md", "series": "DEEPER STATE", "episode": 5, "title": "PAID IN CONFIDENCE", "words": 1224, "cues": 37, "cards": [], "duration_formatted": "08:14.605", "duration_seconds": 494.605, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v67_watch_tier_private_synthetic_scratch_reads03_20260922/audio/review_mp3/rank29_deeper_state_s04_ep05_paid_in_confidence_full_read.mp3", "mp3_name": "rank29_deeper_state_s04_ep05_paid_in_confidence_full_read.mp3", "cold_open_excerpt": "INT. UTILITY AUDIT MEZZANINE \u2014 9:00 A.M.\n\nA brass ledger box sits open on the review desk.\n\nInside are fifty polished acrylic tokens, each stamped with an embossed open eye and the gold-foil words:\n\n\"PUBLIC UTILITY OF DOUBT \u2014 MERIT CIRCLE: FIRST DEGREE.\"\n\nSUTEKH picks up a token between two fingers and turns it to the morning light.\n\nSUTEKH\n\nWhat is the exchange rate of gratitude in the public market?\n\nVALE stands behind him, adjusting a green visor.\n\nVALE\n\nEach token represents five hundred units of peer confidence. It entitles the bearer to priority speaking time at the quarterly municipal budget symposium and free admission to the annual infrastructure dinner.\n\nMARA enters with a clipboard of unpaid maintenance slips.\n\nMARA\n\nThe water valve technicians don't eat tokens, Vale. And the transformer oil supplier wants thirty-eight hundred standard credits by Friday afternoon.\n\nTITLE."}, {"file": "DEEPER_STATE_S04_EP06_LOCAL_OVERRIDE.md", "series": "DEEPER STATE", "episode": 6, "title": "LOCAL OVERRIDE", "words": 2038, "cues": 51, "cards": [], "duration_formatted": "13:11.304", "duration_seconds": 791.304, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v67_watch_tier_private_synthetic_scratch_reads03_20260922/audio/review_mp3/rank22_deeper_state_s04_ep06_local_override_full_read.mp3", "mp3_name": "rank22_deeper_state_s04_ep06_local_override_full_read.mp3", "cold_open_excerpt": "INT. CENTRAL UTILITY DISPATCH MEZZANINE \u2014 2:15 A.M.\n\nFreezing rain slaps against the industrial glass skylights. Outside, the city is a black silhouette under wet wind.\n\nOn the telemetry board, sixty glowing green squares represent the constituent substations of the Public Utility of Doubt.\n\nAt the far edge of the display, Substation Forty-Two\u2014known across the marshlands as Point Braid\u2014flashes violently amber, then locks into a sharp, unblinking crimson.\n\nAn automated chime tolls three flat notes.\n\nVALE drops a stainless steel thermal mug onto the console.\n\nVALE\n\nRule Four-A. Tripped on low feeder pressure. The breaker should have opened three minutes ago to protect the primary winding.\n\nSUTEKH leans over the terminal, magnifying the remote telemetry stream.\n\nSUTEKH\n\nThe breaker did not open. The feeder voltage dropped to forty-one percent, but current is still moving through the secondary line. Three hundred and forty amperes.\n\nVALE\n\nThat is impossible. The pneumatic lockout is hard-wired. Unless\u2014\n\nVALE strikes a sequence of keys. A remote diagnostic camera flickers onto the wall display.\n\nInside the unheated concrete shed at Point Braid, an iron crowbar has been jammed horizontally through the trip solenoid, wedged tight beneath the mechanical reset handle with a strip of orange electrical tape.\n\nNext to the breaker cabinet, taped to the steel panel with painter's tape, is a handwritten cardboard sign:\n\n\"DO NOT REMOVE. SHELTER HEAT AND WELL PUMPS RUNNING ON LINE B. KAREN.\"\n"}, {"file": "DEEPER_STATE_S04_EP07_THE_RECIPROCITY_EXCEPTION.md", "series": "DEEPER STATE", "episode": 7, "title": "THE RECIPROCITY EXCEPTION", "words": 2123, "cues": 40, "cards": [], "duration_formatted": "13:37.504", "duration_seconds": 817.504, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v66_watch_tier_private_synthetic_scratch_reads02_20260922/audio/review_mp3/rank19_deeper_state_s04_ep07_the_reciprocity_exception_full_read.mp3", "mp3_name": "rank19_deeper_state_s04_ep07_the_reciprocity_exception_full_read.mp3", "cold_open_excerpt": "INT. NORTH BRIDGE ROOT SERVER VAULT \u2014 3:40 A.M.\n\nThe low, oscillating drone of fifty cooling fans echoes through the narrow concrete chamber.\n\nAmber fiber-optic cables pulse with rapid, stuttering flickers inside chilled glass raceways.\n\nPRIYA stands before the primary terminal, her jacket draped over her arm, staring at a digital oscilloscope trace.\n\nThe master clock line\u2014the central synchronization heartbeat connecting forty-two peripheral substations\u2014wobbles with a microsecond phase jitter that widens with every sweep.\n\nVALE adjusts his glasses, tapping a mechanical stylus against the steel frame of the console.\n\nVALE\n\nClock drift is up to nine hundred and forty microseconds. The buffer overflow in the time-sync daemon is compounding. In five hours, the phase difference between the north and south feeder loops will exceed four degrees. If that happens, the inter-tie breakers will read the phase angle as a catastrophic bus fault and trip fifty thousand homes off the grid.\n\nPRIYA\n\nHow long to compile the patched daemon?\n\nVALE\n\nTwelve minutes. I have the binary staged on the deployment server.\n\nPRIYA\n\nAnd the mandatory peer review procedure? Section Seven requires twenty-four hours of public notice, a published source diff, and sign-off from at least three regional node operators before any root update touches peripheral switchboards.\n\nVALE\n\nSection Seven is for sunny afternoons and academic seminars, Priya. We don't have twenty-four hours. We have three hundred minutes befor"}, {"file": "DEEPER_STATE_S04_EP08_A_MAP_OF_UNAVAILABLE_PEOPLE.md", "series": "DEEPER STATE", "episode": 8, "title": "A MAP OF UNAVAILABLE PEOPLE", "words": 1915, "cues": 31, "cards": [], "duration_formatted": "12:00.223", "duration_seconds": 720.223, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v65_watch_tier_private_synthetic_scratch_reads01_20260922/audio/full/review_mp3/rank08_deeper_state_s04_ep08_a_map_of_unavailable_people_full_read.mp3", "mp3_name": "rank08_deeper_state_s04_ep08_a_map_of_unavailable_people_full_read.mp3", "cold_open_excerpt": "INT. NORTH BRIDGE DISPATCH MEZZANINE \u2014 6:15 A.M.\n\nA freezing north wind rattles the double-glazed panes of the mezzanine.\n\nAcross the sixty-foot curved wall display glows a complex algorithmic spreadsheet titled:\n\n\"MUNICIPAL INFRASTRUCTURE CONTINUITY MODEL \u2014 OPTIMAL WORKFORCE EXTRACTION V8.\"\n\nSixty-four technician profiles are represented as glowing blue circular nodes, organized into rigid eight-hour rotating bands.\n\nVALE taps a laser pointer against the glass.\n\nVALE\n\nThe municipal oversight board demanded a guaranteed emergency staffing SLA. This matrix achieves ninety-eight point four percent coverage. It models our sixty-four technicians as perfectly fungible operational units. The moment an ice storm downs an insulator, the system calculates the nearest qualified credential and auto-dispatches the technician within forty-five minutes.\n\nMARA walks in, holding a thermal printout marked with a bright red disciplinary flag.\n\nMARA\n\nYour model just issued a Level Three disciplinary citation against Darius Vance.\n\nVALE\n\nDarius is our senior thirty-four-kilovolt cable jointer. A feeder cable blew in the South Hills at three in the morning. The automated crawler called his home phone four times. He failed to answer. Insubordination during an active cold emergency carries an automatic ten-day suspension under municipal utility code.\n\nPRIYA enters from the locker room, her face pale with fatigue.\n\nPRIYA\n\nDarius didn't answer his phone because his father's ventilator alarm tripped w"}, {"file": "DEEPER_STATE_S04_EP09_THE_MAINTENANCE_MAJORITY.md", "series": "DEEPER STATE", "episode": 9, "title": "THE MAINTENANCE MAJORITY", "words": 1728, "cues": 28, "cards": [], "duration_formatted": "11:07.156", "duration_seconds": 667.156, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v65_watch_tier_private_synthetic_scratch_reads01_20260922/audio/full/review_mp3/rank09_deeper_state_s04_ep09_the_maintenance_majority_full_read.mp3", "mp3_name": "rank09_deeper_state_s04_ep09_the_maintenance_majority_full_read.mp3", "cold_open_excerpt": "INT. NORTH BRIDGE ROTUNDA \u2014 8:45 A.M.\n\nThe annual delegate congress of the Public Utility of Doubt has convened beneath the vaulted iron trusses.\n\nSixty delegates\u2014representing forty-two regional substations, municipal hospitals, rural marsh cooperatives, and urban residential wards\u2014sit in tiered wooden benches.\n\nAt the center podium stands THE CUSTODIAN, fifty-six, wearing heavy rubberized turnout bibs and steel-toed boots caked with dry river clay.\n\nBehind him sit five peripheral linemen, their faces weathered and chapped from the winter storms.\n\nThe Custodian drops a three-foot length of severed, heavily corroded four-aught copper transmission cable onto the polished oak table with a deafening THUD.\n\nThe copper core is charred black, surrounded by shredded lead sheathing.\n\nTHE CUSTODIAN\n\nFourteen hundred hours of excavation in sub-zero mud. Sixty-two emergency line splices in forty-five days. Two technicians with frostbitten fingers, and one with a cracked collarbone from a severed crossarm.\n\nThe room is dead silent.\n\nThe Custodian unfolds a printed parchment stamped with thirty-eight purple union stamps:\n\nTHE CUSTODIAN (CONT'D)\n\nThis is Resolution Forty-Nine: The Maintenance Representation Covenant. Henceforth, voting power in this utility shall be apportioned strictly by audited physical repair labor. Those who turn the wrenches shall hold the gavel.\n\nTITLE."}, {"file": "DEEPER_STATE_S04_EP10_THE_RIGHT_TO_BE_UNCERTAIN.md", "series": "DEEPER STATE", "episode": 10, "title": "THE RIGHT TO BE UNCERTAIN", "words": 1548, "cues": 26, "cards": [], "duration_formatted": "09:54.674", "duration_seconds": 594.674, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v66_watch_tier_private_synthetic_scratch_reads02_20260922/audio/review_mp3/rank14_deeper_state_s04_ep10_the_right_to_be_uncertain_full_read.mp3", "mp3_name": "rank14_deeper_state_s04_ep10_the_right_to_be_uncertain_full_read.mp3", "cold_open_excerpt": "INT. NORTH BRIDGE BOARDROOM \u2014 9:00 A.M.\n\nA winter morning. Sunlight reflects off snow-covered iron bridges outside the tall windows.\n\nOn the twenty-foot mahogany conference table sits a black leather presentation box lined with crimson silk.\n\nInside the box lies a heavy gold-plated ceremonial fountain pen, beside a five-hundred-page contract bound in navy morocco leather:\n\n\"THE MUNICIPAL STABILITY & CAPITAL GUARANTEE COVENANT.\"\n\"TOTAL ALLOCATED RESERVE: 50,000,000 REGIONAL CREDITS.\"\n\"CONDITION: MANDATORY APPOINTMENT OF A FINAL MUNICIPAL GUARANTOR.\"\n\nCOMMISSIONER HALE, fifty-eight, representing the regional municipal bond syndicate, rests his palms on the table.\n\nAcross from him stand Priya, Mara, Vale, Owen, and Sutekh.\n\nHALE\n\nFifty million credits, Priya. Enough to replace every corroded lead cable from the marsh to the foothills. Enough to build four new storm substations and guarantee fifty years of operational solvency.\n\nPRIYA\n\nAnd the condition, Commissioner?\n\nHALE\n\nYou sign page four hundred and ninety. You dissolve the Public Utility of Doubt. You appoint a single Chief Operating Guarantor who issues a legally binding warranty of one hundred percent grid certainty. No local overrides. No public attribution ledgers. No dissenting audit notes. The banks cannot sell bonds on an infrastructure system whose official motto is uncertainty.\n\nVALE's hand reaches toward the gold pen. His voice is a desperate whisper:\n\nVALE\n\nFifty million credits, Priya. We could buy forty new bu"}, {"file": "HIGHER_GROUND_S04_EP01_THE_SECOND_SET_OF_KEYS.md", "series": "HIGHER GROUND", "episode": 1, "title": "THE SECOND SET OF KEYS", "words": 1343, "cues": 37, "cards": [], "duration_formatted": "08:46.667", "duration_seconds": 526.667, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v63_priority_a_private_synthetic_scratch_reads01_20260922/audio/review_mp3/05_higher_ground_s04_ep01_the_second_set_of_keys_full_read.mp3", "mp3_name": "05_higher_ground_s04_ep01_the_second_set_of_keys_full_read.mp3", "cold_open_excerpt": "INT. GREEN CATHEDRAL ENTRY VESTIBULE \u2014 MORNING\n\nINEZ stands at the center of the terracotta floor, holding an antique mahogany tray lined with dark green velvet.\n\nSix shiny new brass keys, each threaded through a bright emerald-green satin ribbon, gleam in the morning light.\n\nINEZ\n\nWelcome to year two of the Green Cathedral Cooperative. These keys represent our shared sovereignty. They open the front oak doors, the main meeting floor, the woodcraft workshop, and the courtyard garden gate.\n\nRAFI, a new tenant who builds bespoke acoustic instruments, takes his key and walks immediately to the accessible side entrance on Elm Street.\n\nHe inserts the key into the heavy mortise lock.\n\nIt turns freely in an endless, loose circle without catching the latch.\n\nRAFI\n\nThe side door is spinning.\n\nJALEN, an evening storefront alterations worker, walks to the supply room door behind the kitchen. He inserts his key.\n\nIt doesn't even enter the keyway.\n\nJALEN\n\nThe supply room keyway is thirty percent too narrow.\n\nSADE walks to the tall oak childcare storage armoire. Her key goes in halfway and jams tight.\n\nSADE\n\nThe children's puzzle cupboard remains captive to the founding generation.\n\nCAL walks in from the courtyard, carrying an enormous, three-foot-long polished brass key retrieved from the commemorative display case on the wall.\n\nCAL\n\nDon't worry, everyone! I brought the ceremonial key from the 1924 cornerstone dedication!\n\nHe walks to the nearest door and attempts to jam the foot-wide bra"}, {"file": "HIGHER_GROUND_S04_EP02_THE_USEFUL_VACANCY.md", "series": "HIGHER GROUND", "episode": 2, "title": "THE USEFUL VACANCY", "words": 1400, "cues": 29, "cards": [], "duration_formatted": "09:15.918", "duration_seconds": 555.918, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v63_priority_a_private_synthetic_scratch_reads01_20260922/audio/review_mp3/06_higher_ground_s04_ep02_the_useful_vacancy_full_read.mp3", "mp3_name": "06_higher_ground_s04_ep02_the_useful_vacancy_full_read.mp3", "cold_open_excerpt": "INT. EMPTY CORNER STOREFRONT \u2014 MORNING\n\nINEZ unlocks the double street doors of the vacant corner retail bay. Morning sunlight pours across bare concrete, illuminating dust particles floating in twenty-foot-high air.\n\nBehind her, CAL maneuvers a steel pipe trolley loaded with ten-foot lengths of heavy black iron pipe.\n\nMIRA trails him, dragging a three-panel folding timber stage with squeaking casters.\n\nNIKO walks backward through the doorway, holding a yellow mechanical measuring wheel that clicks rhythmically with every revolution: *clack-clack-clack*.\n\nAll four stop simultaneously in the center of the vast, hollow space.\n\nINEZ\n\nLook at this light! Look at these proportions! We all see boundless creative potential!\n\nNIKO\n\n(stopping his measuring wheel)\nI see four hundred and twelve square feet of uninsulated concrete that bleeds one hundred and sixty dollars a week in idle property tax and municipal stormwater assessments.\n\nNiko reaches into his vest pocket, pulls out a heavy brass coin, and drops it onto the concrete floor.\n\n*PING.*\n\nThe coin bounces and rings. The sharp, high-pitched metallic echo ricochets off the bare plaster walls and ceiling joists for an excruciating, unbroken six seconds.\n\nNIKO\n\nA bill with truly magnificent acoustics.\n\n**TITLE.**"}, {"file": "HIGHER_GROUND_S04_EP03_REPAIR_SEASON.md", "series": "HIGHER GROUND", "episode": 3, "title": "REPAIR SEASON", "words": 1546, "cues": 46, "cards": [], "duration_formatted": "10:26.749", "duration_seconds": 626.749, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v63_priority_a_private_synthetic_scratch_reads01_20260922/audio/review_mp3/07_higher_ground_s04_ep03_repair_season_full_read.mp3", "mp3_name": "07_higher_ground_s04_ep03_repair_season_full_read.mp3", "cold_open_excerpt": "INT. GREEN CATHEDRAL MEETING FLOOR \u2014 MORNING\n\nCAL unrolls a six-foot-wide architectural blueprint across the scarred communal oak table. Three bright blue rectangles are stenciled across Tuesday, Wednesday, and Thursday.\n\nINEZ\n\nThree days. Look at that, everyone. The mechanical crew can replace the main south heating manifold in three neat, painless days.\n\nNIKO steps forward and slaps a printed bakery shift roster down on the first blue box.\n\nNIKO\n\nThe bread ovens need four hours of cool-down before anyone touches the gas main. There goes Tuesday morning.\n\nSADE drops a three-ring binder onto the second blue box.\n\nSADE\n\nWednesday is the regional childcare drop-in. Twelve working mothers who cannot reschedule their shifts because our boiler wants new gaskets.\n\nJALEN steps up, holding twenty-two garment bags over his shoulder on wire hangers. He lays twelve dry-cleaning and tailoring tickets across the third blue box.\n\nJALEN\n\nAnd Thursday is winter coat pickup. These belong to neighborhood clients who paid upfront. Where do twenty-two wool coats sleep if the work crew takes the room?\n\nCal looks at the blueprint. The blue rectangles are completely buried beneath flour stains, crayon marks, and tailor's chalk.\n\nCAL\n\nWell. We found the building. Now we just have to find the three days.\n\n**TITLE.**"}, {"file": "HIGHER_GROUND_S04_EP04_THE_APPLICANT_IS_A_BUILDING.md", "series": "HIGHER GROUND", "episode": 4, "title": "THE APPLICANT IS A BUILDING", "words": 1532, "cues": 42, "cards": [], "duration_formatted": "10:03.164", "duration_seconds": 603.164, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v66_watch_tier_private_synthetic_scratch_reads02_20260922/audio/review_mp3/rank20_higher_ground_s04_ep04_the_applicant_is_a_building_full_read.mp3", "mp3_name": "rank20_higher_ground_s04_ep04_the_applicant_is_a_building_full_read.mp3", "cold_open_excerpt": "INT. GREEN CATHEDRAL VESTIBULE \u2014 8:15 A.M.\n\nA municipal envelope with an embossed blue shield lies on the mail sorting bench.\n\nNIKO picks up the letter and reads the recipient line aloud to TASHA, who is oiling the deadbolt on the inner courtyard door.\n\nNIKO\n\n\"To Resident: Green Cathedral. Parcel 402-Bravo.\"\n\nTASHA\n\nWho is Resident Green Cathedral?\n\nNIKO\n\nAccording to the municipal Department of Community Resilience, this entire building is a single applicant. We were awarded an automatic energy modernization subsidy of fourteen thousand dollars.\n\nTASHA\n\nThat sounds like good news.\n\nNIKO\n\nTurn the page. To accept the subsidy, the applicant must certify that it has no internal rent disputes, that all occupants share a uniform household budget, and that eighty percent of the square footage will be heated to seventy-two degrees between November and March.\n\nCAL steps out of the cellar stairwell, wiping grease from his eyebrows with a blue shop towel.\n\nCAL\n\nThe ceramic studio needs fifty-five degrees to keep the clay from sweating, the third-floor nursery needs seventy, and the basement boiler can't do both without blowing the expansion valve.\n\nTITLE."}, {"file": "HIGHER_GROUND_S04_EP05_CULTURAL_USE_OVERTIME.md", "series": "HIGHER GROUND", "episode": 5, "title": "CULTURAL USE OVERTIME", "words": 1352, "cues": 35, "cards": [], "duration_formatted": "09:00.011", "duration_seconds": 540.011, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v67_watch_tier_private_synthetic_scratch_reads03_20260922/audio/review_mp3/rank23_higher_ground_s04_ep05_cultural_use_overtime_full_read.mp3", "mp3_name": "rank23_higher_ground_s04_ep05_cultural_use_overtime_full_read.mp3", "cold_open_excerpt": "INT. GREEN CATHEDRAL INNER COURTYARD \u2014 11:45 P.M.\n\nA string of bare filament Edison bulbs hums over the brick courtyard.\n\nSeventy people are crowded between the raised herb beds, cheering as a brass marching band concludes a roaring second encore.\n\nUp on the second-floor fire escape, SADE stands rocking her four-year-old daughter against her shoulder. The child is crying, her hands pressed against her ears.\n\nDown below near the cider keg, MIRA is rolling up an oversized commemorative canvas banner: \"CASCADIA COMMUNITY SOLSTICE SESSIONS: NIGHT 14 OF 20.\"\n\nNIKO walks past carrying two heavy galvanized steel trash cans overflowing with empty glass bottles and crushed paper cups.\n\nNIKO\n\nMira, how many more nights are on the schedule?\n\nMIRA\n\nSix. And if we cancel even one, the city cultural trust classifies our ground lease as under-utilized and triggers the commercial rent escalation clause.\n\nTITLE."}, {"file": "HIGHER_GROUND_S04_EP06_THE_ANNEX_SENDS_AN_INVOICE.md", "series": "HIGHER GROUND", "episode": 6, "title": "THE ANNEX SENDS AN INVOICE", "words": 1928, "cues": 42, "cards": [], "duration_formatted": "12:23.073", "duration_seconds": 743.073, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v67_watch_tier_private_synthetic_scratch_reads03_20260922/audio/review_mp3/rank26_higher_ground_s04_ep06_the_annex_sends_an_invoice_full_read.mp3", "mp3_name": "rank26_higher_ground_s04_ep06_the_annex_sends_an_invoice_full_read.mp3", "cold_open_excerpt": "INT. GREEN CATHEDRAL BASEMENT WORKSHOP \u2014 7:45 A.M.\n\nA galvanized bucket sits beneath the eastern foundation wall, catching dark, slow drops of seepage from the ceiling seam.\n\nPING.\n\nPING.\n\nCAL, twenty-eight, wearing rubber mud boots and carrying a halogen work light, kneels in front of the brickwork where the shared party wall meets the limestone footing.\n\nA fresh crack, wide as two fingers, zigzags through the lime mortar.\n\nBehind the bricks comes the muffled rumble of heavy industrial pumps from the other side of the wall\u2014the commercial Annex.\n\nThe basement door opens. MIRA walks down the wooden steps, holding an unopened white linen envelope embossed with the navy blue logo of \"METROPOLITAN PROPERTIES INC.\"\n\nCAL\n\nDon't tell me. A party invitation from our wealthy neighbors?\n\nMIRA\n\nAn itemized statement of charges.\n\nCal wipes wet silt from his knuckles.\n\nCAL\n\nFor what? We haven't spoken to Vance since he tried to turn our garden into an executive parking strip three summers ago.\n\nMira pulls a folded three-page document from the envelope and reads aloud:\n\nMIRA\n\n\"Emergency subterranean structural sleeve and sewer bypass: Party Wall Station Four. Total contracted excavation and welding: fourteen thousand two hundred dollars. Green Cathedral pro-rata tenant-in-common obligation: seven thousand one hundred dollars. Net payable upon receipt.\"\n\nCal stands up so fast his shoulder knocks an empty paint can off a shelf.\n\nCAL\n\nSeven thousand dollars? They didn't ask us. They didn't no"}, {"file": "HIGHER_GROUND_S04_EP07_A_QUORUM_OF_CAREGIVERS.md", "series": "HIGHER GROUND", "episode": 7, "title": "A QUORUM OF CAREGIVERS", "words": 2126, "cues": 39, "cards": [], "duration_formatted": "13:11.205", "duration_seconds": 791.205, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v66_watch_tier_private_synthetic_scratch_reads02_20260922/audio/review_mp3/rank12_higher_ground_s04_ep07_a_quorum_of_caregivers_full_read.mp3", "mp3_name": "rank12_higher_ground_s04_ep07_a_quorum_of_caregivers_full_read.mp3", "cold_open_excerpt": "INT. GREEN CATHEDRAL COMMUNITY DINING HALL \u2014 7:45 P.M.\n\nThe large hall is half-empty. Thirty-five folding metal chairs are occupied; forty-five remain empty, stacked against the wainscoted brick walls.\n\nAt the front of the room, CAL stands before a chalkboard, holding a wooden gavel.\n\nOn the board, written in thick white chalk:\n\n\"GENERAL ASSEMBLY QUORUM REQUIREMENT: 42 VOTING MEMBERS (60%).\"\n\"MEMBERS PRESENT: 35.\"\n\"CAPITAL VOTE STATUS: ADJOURNED WITHOUT ACTION (THIRD CONSECUTIVE WEEK).\"\n\nCal taps the gavel sharply against the table.\n\nCAL\n\nSeven-forty-five. Thirty-five members present. Once again, we lack quorum by seven votes.\n\nA collective groan echoes through the room.\n\nTASHA, sitting in the front row with a clipboard of contractor estimates, stands up.\n\nTASHA\n\nCal, the roofing contractor's price hold expires on Friday. The dry rot over the western residential wing spans forty feet of load-bearing cedar joists. If we don't authorize the thirty-five-thousand-dollar lumber deposit by tomorrow afternoon, the crew takes another job in the south county, and the first autumn rainstorm will collapse the ceiling into eight resident bedrooms!\n\nCAL\n\nI know the roof is rotting, Tasha! But Section Four of our land trust charter is absolute! No capital expenditure over ten thousand dollars can be authorized without a sixty percent member quorum in an in-person assembly! We've held three meetings in three weeks! Where are the other twenty-five members? Why are they leaving the roof to ro"}, {"file": "HIGHER_GROUND_S04_EP08_IMPROVEMENT_DISTRICT.md", "series": "HIGHER GROUND", "episode": 8, "title": "IMPROVEMENT DISTRICT", "words": 1802, "cues": 40, "cards": [], "duration_formatted": "11:47.422", "duration_seconds": 707.422, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v67_watch_tier_private_synthetic_scratch_reads03_20260922/audio/review_mp3/rank28_higher_ground_s04_ep08_improvement_district_full_read.mp3", "mp3_name": "rank28_higher_ground_s04_ep08_improvement_district_full_read.mp3", "cold_open_excerpt": "EXT. GREEN CATHEDRAL MAIN ENTRANCE \u2014 8:00 A.M.\n\nA crisp autumn morning. Yellow maple leaves drift across the cracked concrete sidewalk.\n\nOutside the front steps, an eight-foot wooden bench sits under an overhanging wisteria trellis.\n\nAn unhoused neighborhood elder, OTIS, seventy, wrapped in a clean wool blanket, sits on the bench sipping hot black coffee from a ceramic mug provided by Green Cathedral's community kitchen.\n\nBeside him on the sidewalk, a bright red hand-painted wooden cabinet labeled \"THE FREE PEOPLE'S PANTRY\" is stocked with canned beans, wool socks, and fresh apples.\n\nA glossy black luxury town car pulls up to the curb.\n\nALDRIDGE, fifty-two, president of the Grand Avenue Business Improvement District, steps out onto the pavement. He wears a tailored camel-hair overcoat and polished brogues.\n\nHis shoe catches on a three-inch vertical concrete heave in the cracked sidewalk, and he stumbles, catching himself on the edge of the wooden pantry cabinet.\n\nCAL, carrying a bag of fresh bread from the bakery, catches Aldridge by the elbow.\n\nCAL\n\nCareful on that curb, sir. The municipal tree roots lifted the flagstones three years ago.\n\nAldridge straightens his lapels, eyeing the wooden bench, the pantry, and Otis with a tight, pained expression.\n\nALDRIDGE\n\nWhich is precisely why I am here, young man. I am here to offer you fifty thousand dollars to clean up this slum.\n\nTITLE."}, {"file": "HIGHER_GROUND_S04_EP09_THIRD_REVISION.md", "series": "HIGHER GROUND", "episode": 9, "title": "THIRD REVISION", "words": 1702, "cues": 26, "cards": [], "duration_formatted": "10:53.116", "duration_seconds": 653.116, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v65_watch_tier_private_synthetic_scratch_reads01_20260922/audio/full/review_mp3/rank10_higher_ground_s04_ep09_third_revision_full_read.mp3", "mp3_name": "rank10_higher_ground_s04_ep09_third_revision_full_read.mp3", "cold_open_excerpt": "INT. GREEN CATHEDRAL GROUND FLOOR WORKSHOP \u2014 7:30 A.M.\n\nMorning sunlight streams through towering stained-glass clerestory windows, illuminating two magnificent, forty-foot-tall wooden jacquard textile looms.\n\nThe looms are museum-grade monuments of ash and brass, built during the 2024 founding resistance.\n\nToday, however, the looms are silent. Heavy cotton canvas drop cloths cover the harness frames, coated in a fine layer of gray dust.\n\nBeneath the floorboards comes the muffled, frantic hum of power sanders and high-pressure ceramic glaze sprayers from the sub-basement below.\n\nThe basement trapdoor bangs open.\n\nYULI, twenty-four, covered in white ceramic clay dust and coughing into a blue dust mask, climbs up the ladder carrying a cracked plaster mold.\n\nYULI\n\nCal, the basement exhaust blower failed again. The clay dust is so thick down there you can't see the lightbulbs. We have thirty young apprentices sharing four electrical outlets and a single ventilation pipe in a windowless coal cellar, while sixty percent of our sunlit ground floor is occupied by two dead wooden dinosaurs that haven't woven a yard of cloth since last November!\n\nCAL, standing near the tool bench sharpening a chisel, turns around, his face dark with fury.\n\nCAL\n\nThose 'dead dinosaurs' were dragged through a police tear-gas line on Grand Avenue by fifteen unarmed elders in November of twenty-twenty-four, Yuli! That loom is the reason this building wasn't demolished by speculative developers! You don't ca"}, {"file": "HIGHER_GROUND_S04_EP10_THE_COST_OF_STAYING_OPEN.md", "series": "HIGHER GROUND", "episode": 10, "title": "THE COST OF STAYING OPEN", "words": 1679, "cues": 34, "cards": [], "duration_formatted": "11:08.828", "duration_seconds": 668.828, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v67_watch_tier_private_synthetic_scratch_reads03_20260922/audio/review_mp3/rank21_higher_ground_s04_ep10_the_cost_of_staying_open_full_read.mp3", "mp3_name": "rank21_higher_ground_s04_ep10_the_cost_of_staying_open_full_read.mp3", "cold_open_excerpt": "INT. GREEN CATHEDRAL COMMUNITY DINING HALL \u2014 7:30 P.M.\n\nThe long refectory table is covered in audited balance sheets, utility receipts, and bank deposit slips.\n\nTASHA stands before the assembly chalkboard, holding an open red ledger.\n\nOn the board, written in heavy red chalk:\n\n\"YEAR TWO AUDITED OPERATING DEFICIT: -$42,850.\"\n\"CASH ON HAND: $3,210.\"\n\"DAYS OF RESERVE REMAINING: 18.\"\n\nA hushed, heavy silence settles over the seventy residents gathered in the hall.\n\nCAL leans forward, rubbing his forehead with both hands.\n\nCAL\n\nForty-two thousand dollars.\n\nTASHA\n\nThirty-five thousand for the western roof timber replacement in Episode Seven. Five thousand nine hundred for the party-wall sewer sleeve in Episode Six. Four thousand for the solarium childcare reserve. Three thousand for new ventilation blowers in the apprentice workshop in Episode Nine. And we turned down fifty thousand dollars from the Business Improvement District in Episode Eight.\n\nA sharp voice speaks from the back of the hall:\n\nMORTGAGE BROKER (HARRISON), fifty, standing near the doorway in an expensive tailored suit, holding an embossed leather contract:\n\nHARRISON\n\nWhich is why my lending syndicate is offering you the Lifeline Refinance Package. Forty-five thousand dollars in immediate cash. We refinance your ground lease, convert eight vacant attic units into market-rate executive studio apartments, and install electronic keycard turnstiles at the front doors. You clear the deficit by Friday, and nobody loses t"}, {"file": "UNCOMMON_SIDE_EFFECTS_S04_EP01_THE_RECORD_THAT_OUTLIVED_ITS_CUSTODIAN.md", "series": "UNCOMMON SIDE EFFECTS", "episode": 1, "title": "THE RECORD THAT OUTLIVED ITS CUSTODIAN", "words": 1031, "cues": 18, "cards": ["S4Q-001", "S4Q-002", "S4Q-003"], "duration_formatted": "07:14.126", "duration_seconds": 434.126, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v65_watch_tier_private_synthetic_scratch_reads01_20260922/audio/full/review_mp3/rank03_uncommon_side_effects_s04_ep01_the_record_that_outlived_its_custodian_full_read.mp3", "mp3_name": "rank03_uncommon_side_effects_s04_ep01_the_record_that_outlived_its_custodian_full_read.mp3", "cold_open_excerpt": "INT. CORRECTION OFFICE \u2014 MORNING\n\nA printer produces a certificate in cheerful blue ink:\n\n**MORROW REGISTRY THANKS YOU FOR YOUR CUSTODY. OPERATIONS ENDED YESTERDAY.**\n\nNIA checks the signature. Valid.\n\nELI checks the timestamp. Tomorrow.\n\nTHEO opens the support portal. A farewell animation waves from an empty chair.\n\nSUPPORT PORTAL\n\nYour records remain important to us.\n\nThe chair disappears. The records do not.\n\nTITLE."}, {"file": "UNCOMMON_SIDE_EFFECTS_S04_EP02_SYNTHETIC_LEGACY.md", "series": "UNCOMMON SIDE EFFECTS", "episode": 2, "title": "SYNTHETIC LEGACY", "words": 1339, "cues": 19, "cards": ["S4Q-004", "S4Q-005", "S4Q-006"], "duration_formatted": "08:53.786", "duration_seconds": 533.786, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v65_watch_tier_private_synthetic_scratch_reads01_20260922/audio/full/review_mp3/rank05_uncommon_side_effects_s04_ep02_synthetic_legacy_full_read.mp3", "mp3_name": "rank05_uncommon_side_effects_s04_ep02_synthetic_legacy_full_read.mp3", "cold_open_excerpt": "INT. CORRECTION OFFICE \u2014 MORNING\n\nKIVA finds a laminated training certificate on her desk.\n\n**TERN SUCCESSION SERVICES \u2014 TRAINED ON VERIFIED LEGACY CUSTODY.**\n\nUnderneath is a tiny sequence diagram. She recognizes the crooked arrow. She drew it during the Morrow sandbox exercise, using a coffee lid as a ruler.\n\nKIVA\n\nThis is mine.\n\nTHEO leans over her shoulder.\n\nTHEO\n\nCongratulations on your historical significance.\n\nKiva turns the certificate over. Her original slide is reproduced on the back.\n\nThe word **SYNTHETIC** has been cropped off.\n\nTITLE."}, {"file": "UNCOMMON_SIDE_EFFECTS_S04_EP03_CORRECTION_WITHOUT_A_SOURCE.md", "series": "UNCOMMON SIDE EFFECTS", "episode": 3, "title": "CORRECTION WITHOUT A SOURCE", "words": 1467, "cues": 30, "cards": ["S4Q-007", "S4Q-008", "S4Q-009"], "duration_formatted": "10:29.100", "duration_seconds": 629.1, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v63_priority_a_private_synthetic_scratch_reads01_20260922/audio/review_mp3/08_uncommon_side_effects_s04_ep03_correction_without_a_source_full_read.mp3", "mp3_name": "08_uncommon_side_effects_s04_ep03_correction_without_a_source_full_read.mp3", "cold_open_excerpt": "INT. MUNICIPAL ARCHIVE CORRIDOR \u2014 8:45 A.M.\n\nJUNE navigates a labyrinth of institutional linoleum. She carries a yellow grievance slip clipped to a faded blue cardboard folder.\n\nA freshly stenciled white enamel sign on the wall reads: **CHALLENGE RESPONSE & CLINICAL RECORD AUDIT \u2014 ROOM 14**.\n\nJune reaches Room 14. She twists the brass handle and pushes.\n\nInside is a dark broom cupboard containing two rusted mop buckets, three bottles of industrial pine disinfectant, and a broken floor buffer.\n\nJune blinks, steps back, and walks twenty paces back to the main building directory board.\n\nAs she watches, an electronic magnetic flipper on the board clatters noisily. The entry for Challenge Response flips from Room 14 to: **ROOM 41**.\n\nA green LED beside the entry glows steadily: **ROOM 41 \u2014 VERIFIED CORRECT SINCE ORIGINAL REGISTRATION.**\n\nBehind her, a CARETAKER in gray coveralls carries the old Room 14 enamel sign under his arm toward the basement incinerator chute.\n\nJUNE\n\nExcuse me! Don't drop that down the chute yet.\n\nCARETAKER\n\nWork order says scrap it, ma'am. Room 14 never existed.\n\nJUNE\n\nThen what did I just open?\n\nCARETAKER\n\nThat was an unassigned supply aperture. Very different thing.\n\n**TITLE.**"}, {"file": "UNCOMMON_SIDE_EFFECTS_S04_EP04_THE_AUTHORIZED_GHOST.md", "series": "UNCOMMON SIDE EFFECTS", "episode": 4, "title": "THE AUTHORIZED GHOST", "words": 1538, "cues": 21, "cards": ["S4Q-010", "S4Q-011", "S4Q-012"], "duration_formatted": "11:18.318", "duration_seconds": 678.318, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v65_watch_tier_private_synthetic_scratch_reads01_20260922/audio/full/review_mp3/rank01_uncommon_side_effects_s04_ep04_the_authorized_ghost_full_read.mp3", "mp3_name": "rank01_uncommon_side_effects_s04_ep04_the_authorized_ghost_full_read.mp3", "cold_open_excerpt": "INT. RECORDS VAULT TERMINAL ALCOVE \u2014 2:40 A.M.\n\nA monochrome phosphor display flickers in the dark alcove.\n\nAn automated batch processing daemon scrolls lines of white telemetry across the black screen:\n\n```\n[02:40:12Z] INGEST: BATCH_SYNTH_904 (64 ADMINISTRATIVE ROWS)\n[02:40:14Z] TRANSFORM: NORMALIZING CATEGORY SCHEMA (V2 -> V3)\n[02:40:15Z] SIGNING: IDENTITY = svc-presage-archive-ghost\n[02:40:16Z] KEY_STATUS: CERTIFICATE EXPIRED (412 DAYS AGO)\n[02:40:16Z] POLICY_OVERRIDE: AUTOMATION ROUTE TRUST STORE = PASS\n[02:40:17Z] EXPORT COMPLETE: DISPATCHED TO DOWNSTREAM FEED.\n```\n\nELI sits in front of the terminal holding a mug of cold water. He stares at the screen, then presses the manual pause key.\n\nThe cursor blinks steadily.\n\nEli picks up the internal service directory and flips to the letter \"P.\"\n\nUnder `svc-presage-archive-ghost`, the paper ledger is stamped with a slanted red rectangle: \"OPERATOR DECOMMISSIONED. ACCOUNT SURRENDERED: MAY 14.\"\n\nTITLE."}, {"file": "UNCOMMON_SIDE_EFFECTS_S04_EP05_ARCHIVE_OF_LAST_RESORT.md", "series": "UNCOMMON SIDE EFFECTS", "episode": 5, "title": "ARCHIVE OF LAST RESORT", "words": 1420, "cues": 26, "cards": ["S4Q-013", "S4Q-014", "S4Q-015"], "duration_formatted": "10:25.925", "duration_seconds": 625.925, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v65_watch_tier_private_synthetic_scratch_reads01_20260922/audio/full/review_mp3/rank07_uncommon_side_effects_s04_ep05_archive_of_last_resort_full_read.mp3", "mp3_name": "rank07_uncommon_side_effects_s04_ep05_archive_of_last_resort_full_read.mp3", "cold_open_excerpt": "INT. PALISADE ARCHIVAL VAULT RECEPTION \u2014 10:00 A.M.\n\nA polished obsidian reception monolith rises from a gleaming white terrazzo floor.\n\nSuspended behind the glass wall is an immense chilled storage rack containing thousands of golden optical tape cartridges, each glowing with faint blue LED activity pulses.\n\nNIA, a senior infrastructure director wearing a tailored graphite coat, slides an embossed contract sleeve across the glass desk toward JUNE and ELI.\n\nNIA\n\nPalisade has built the world's most resilient private data refuge. We offer perpetual cold storage, zero bit-rot guarantees, and automated multi-cloud redundancy for orphaned public sector archives.\n\nJUNE\n\nWhat is the cost of admission?\n\nNIA\n\nZero dollars. We fund the infrastructure by normalizing incoming public data into our proprietary semantic index. In exchange for permanent custody, Palisade becomes the certified universal registrar for legacy administrative records.\n\nEli looks up at the towering glass wall.\n\nELI\n\nAnd what happens to the records that refuse to fit into your semantic index?\n\nTITLE."}, {"file": "UNCOMMON_SIDE_EFFECTS_S04_EP06_CONSENT_AFTER_CLOSURE.md", "series": "UNCOMMON SIDE EFFECTS", "episode": 6, "title": "CONSENT AFTER CLOSURE", "words": 1802, "cues": 32, "cards": ["S4Q-016", "S4Q-017", "S4Q-018"], "duration_formatted": "12:00.183", "duration_seconds": 720.183, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v65_watch_tier_private_synthetic_scratch_reads01_20260922/audio/full/review_mp3/rank04_uncommon_side_effects_s04_ep06_consent_after_closure_full_read.mp3", "mp3_name": "rank04_uncommon_side_effects_s04_ep06_consent_after_closure_full_read.mp3", "cold_open_excerpt": "INT. MUNICIPAL REPAIR VAULT \u2014 8:15 A.M.\n\nA bank of vintage CRT monitors displays raw administrative file headers from the defunct St. Jude Administrative Registry, dissolved twelve years ago following corporate bankruptcy.\n\nTHEO, thirty-two, wearing a faded linen cardigan and holding a magnifying loupe, examines a yellowed dot-matrix printout of an intake form dated October 14, 2014.\n\nAt the bottom of the page, beneath a blurred signature line, is a faded square checkbox marked with a blue ballpoint ink \"X\":\n\n\"BOX 14-C: CONSENT TO ONGOING ADMINISTRATIVE SCHEMA MODERNIZATION AND STATISTICAL INDEXING.\"\n\nJUNE stands behind him, tapping a command line terminal.\n\nJUNE\n\nConsolidated Ledger Group bought the server racks at the bankruptcy liquidator's auction last month. They just deployed an automated batch pipeline called Vector-Seven.\n\nTHEO\n\nWhat does Vector-Seven do with Box Fourteen-C?\n\nJUNE\n\nIt interprets that blue ink checkmark as an unrevocable, perpetual delegation of participant authority. Consolidated Ledger has already processed eighteen thousand orphaned records, attaching modern synthetic confidence tags, predictive risk scores, and commercial behavioral classifications to people who died a decade ago.\n\nELI enters from the corridor, carrying a chilled aluminum hard drive canister.\n\nELI\n\nThey claim the dead gave them permission to remodel the graveyard.\n\nTITLE."}, {"file": "UNCOMMON_SIDE_EFFECTS_S04_EP07_THE_CONFIDENCE_INHERITANCE.md", "series": "UNCOMMON SIDE EFFECTS", "episode": 7, "title": "THE CONFIDENCE INHERITANCE", "words": 1953, "cues": 34, "cards": ["S4Q-019", "S4Q-020", "S4Q-021"], "duration_formatted": "13:26.307", "duration_seconds": 806.307, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v65_watch_tier_private_synthetic_scratch_reads01_20260922/audio/full/review_mp3/rank06_uncommon_side_effects_s04_ep07_the_confidence_inheritance_full_read.mp3", "mp3_name": "rank06_uncommon_side_effects_s04_ep07_the_confidence_inheritance_full_read.mp3", "cold_open_excerpt": "INT. REGIONAL AUDIT TERMINAL ROOM \u2014 8:30 A.M.\n\nA bank of sixty-inch curved 4K monitors glows with vibrant turquoise and emerald graphs.\n\nThis is the state's newly deployed administrative dashboard: \"OMNITRACK HORIZON \u2014 SYSTEMIC EQUITY MONITOR.\"\n\nAt the center of the display, hovering over a municipal registry map of the western marshland districts, is a prominent, pulsing green shield badge:\n\n\"CONFIDENCE RATING: HIGH (96.4% VERIFIED RELIABILITY).\"\n\nBeneath the shield, an automated recommendation suggests defunding three community clinics because the population is scored as \"Low Vulnerability / High Adaptation.\"\n\nZIVA, thirty-two, wearing a dark canvas smock with a jeweler's magnifying loupe pushed up on her forehead, points a wooden pointer at the green shield.\n\nZIVA\n\nNinety-six point four percent. Where did that number come from, June?\n\nJUNE sits at the terminal, her fingers flying across a mechanical keyboard.\n\nJUNE\n\nI pulled the database commit log. In 2008, the municipal health registry used a simple four-variable spreadsheet. A technician checked a box labeled 'Confidence: High' if the applicant's utility bill matched their driver's license address. It was an administrative proof of municipal residency. Nothing more.\n\nTHEO enters from the server bay, carrying a stack of fan-folded green-bar computer printouts from eighteen years ago.\n\nTHEO\n\nAnd what did OmniTrack do with that checkmark?\n\nJUNE\n\nOmniTrack's automated ingestion crawler ingested the 2008 archive last month. "}, {"file": "UNCOMMON_SIDE_EFFECTS_S04_EP08_NO_FINAL_CUSTODIAN.md", "series": "UNCOMMON SIDE EFFECTS", "episode": 8, "title": "NO FINAL CUSTODIAN", "words": 1680, "cues": 23, "cards": ["S4Q-022", "S4Q-023", "S4Q-024"], "duration_formatted": "10:51.919", "duration_seconds": 651.919, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v65_watch_tier_private_synthetic_scratch_reads01_20260922/audio/full/review_mp3/rank02_uncommon_side_effects_s04_ep08_no_final_custodian_full_read.mp3", "mp3_name": "rank02_uncommon_side_effects_s04_ep08_no_final_custodian_full_read.mp3", "cold_open_excerpt": "INT. STATE ARCHIVE COMMISSION AUDITORIUM \u2014 9:00 A.M.\n\nA monumental hearing room of polished gray granite and tiered mahogany benches.\n\nBehind the elevated tribunal desk sits DIRECTOR CRANE, sixty, flanked by four state commissioners and three corporate repository counsel.\n\nOn the massive projection screen behind Crane is an architectural diagram titled:\n\n\"THE UNIFIED REPOSITORY ACCORD \u2014 THE APPOINTMENT OF A SINGLE FINAL CUSTODIAN.\"\n\nA single golden pyramid icon sits at the apex of the diagram, labeled: \"THE NATIONAL ARCHIVAL REPOSITORY \u2014 SOVEREIGN ROOT KEY.\"\n\nCrane strikes an ivory gavel against a sounding block.\n\nCRANE\n\nFor four years, this commission has endured endless jurisdictional friction: competing schema versions, un-normalized dialect tables, conflicting historical challenge petitions, and divergent administrative registries. Today, we conclude the era of uncertainty. This accord consolidates every surviving orphaned record into a single sovereign vault under one centralized institutional authority. One archive, one schema, one final master.\n\nIn the fourth row of the gallery, THEO, JUNE, ELI, and ZIVA sit together.\n\nTheo holds a heavy aluminum ledger case containing twelve sealed optical disks.\n\nTHEO\n\nOne master to rewrite whatever history makes the state uncomfortable.\n\nTITLE."}, {"file": "CANCELLATION_DEPARTMENT_S04_EP01_RETURN_ADDRESS_UNKNOWN.md", "series": "THE CANCELLATION DEPARTMENT", "episode": 1, "title": "RETURN ADDRESS UNKNOWN", "words": 1380, "cues": 40, "cards": [], "duration_formatted": "09:45.670", "duration_seconds": 585.67, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v63_priority_a_private_synthetic_scratch_reads01_20260922/audio/review_mp3/01_cancellation_department_s04_ep01_return_address_unknown_full_read.mp3", "mp3_name": "01_cancellation_department_s04_ep01_return_address_unknown_full_read.mp3", "cold_open_excerpt": "INT. COMMONS MAILROOM \u2014 MORNING\n\nThe pneumatic intake system hums like an asthmatic cello. Twelve brass chute doors snap open in perfect, terrifying unison.\n\nTwelve identical heavyweight parchment envelopes drop onto the sorting zinc counter.\n\nEVE steps forward with a pair of nickel-plated letter tweezers. She inspects the stamps.\n\nEVE\n\nWell. This is a bureaucratic achievement.\n\nNINE\n\nDo they match?\n\nEVE\n\nStamp one: *OPENED*. Stamp two: *REFUSED*. Stamp three: *CONTINUING UNDER PROTEST*. Stamp four: *DORMANT*. Stamp five: *LOCAL JURISDICTION ONLY*. Stamp six: *APPEAL PENDING BEFORE THE ABSENT COMMISSIONER*.\n\nSOL leans over the counter with his cup of instant chicory.\n\nSOL\n\nAnd the return address?\n\nEve flips the stack over. Each envelope bears the exact same engraved copperplate return address:\n\n**THE FINAL OFFICE, EVERYWHERE.**\n\nNine looks toward the corner of the room. MS END\u2019s wicker chair sits completely empty. Her coat hook holds a single dried sunflower. The door behind her desk remains propped open by a stack of retired telephone directories.\n\nSOL\n\nI suppose she didn't leave a forwarding card.\n\nEVE\n\nShe left an open door. That is her idea of punctuation.\n\n**TITLE.**"}, {"file": "CANCELLATION_DEPARTMENT_S04_EP02_THE_PORTABLE_REFUSAL.md", "series": "THE CANCELLATION DEPARTMENT", "episode": 2, "title": "THE PORTABLE REFUSAL", "words": 1241, "cues": 30, "cards": [], "duration_formatted": "08:28.439", "duration_seconds": 508.439, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v63_priority_a_private_synthetic_scratch_reads01_20260922/audio/review_mp3/02_cancellation_department_s04_ep02_the_portable_refusal_full_read.mp3", "mp3_name": "02_cancellation_department_s04_ep02_the_portable_refusal_full_read.mp3", "cold_open_excerpt": "INT. COMMONS MAILROOM \u2014 MORNING\n\nAn elegant cream envelope bearing the silver wax seal of Bellweather House drops through the ceiling intake chute.\n\nIt hovers momentarily in mid-air, then slides gently toward a polished brass intake slot marked **RESPONSE ROUTE \u2014 ACKNOWLEDGMENTS ONLY**.\n\nJust as the envelope's leading edge touches the aperture, the slot snaps shut with the sharp metallic clap of a mousetrap.\n\nA tiny mechanical brass armature pivots out from the wall, extending a neatly printed white visiting card:\n\n**WE RESPECT YOUR WISH NEVER TO HEAR FROM US AGAIN.**\n\nEVE stares at the card. She picks up the cream envelope.\n\nEVE\n\nThe envelope is not asking for a reunion. It is asking for a postage receipt.\n\nShe tries to slide it into the adjacent slot marked **GENERAL INQUIRIES**.\n\n*CLAP.* That slot snaps shut too. Another little brass arm pops out with an identical card:\n\n**WE RESPECT YOUR WISH NEVER TO HEAR FROM US AGAIN.**\n\nARI walks by with a pot of lukewarm tea.\n\nARI\n\nWord travels fast when an automated system decides you are emotionally unreachable.\n\n**TITLE.**"}, {"file": "CANCELLATION_DEPARTMENT_S04_EP03_A_WORLD_WITH_TWO_MONDAYS.md", "series": "THE CANCELLATION DEPARTMENT", "episode": 3, "title": "A WORLD WITH TWO MONDAYS", "words": 1265, "cues": 36, "cards": [], "duration_formatted": "08:29.674", "duration_seconds": 509.674, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v63_priority_a_private_synthetic_scratch_reads01_20260922/audio/review_mp3/03_cancellation_department_s04_ep03_a_world_with_two_mondays_full_read.mp3", "mp3_name": "03_cancellation_department_s04_ep03_a_world_with_two_mondays_full_read.mp3", "cold_open_excerpt": "INT. COMMONS PAY WINDOW \u2014 MORNING\n\nSOL sits behind the heavy bronze intake grille, wearing green accountant's eyeshades.\n\nTwo identical heavy manila envelopes slide under the brass wicket at the exact same second.\n\nBoth envelopes bear the maritime wax seal of LANTERN QUAY. Both are typed in bold black ribbon: **MONDAY \u2014 OPENING BELL SESSION**.\n\nSol picks up an ivory letter opener and slices the top of the first envelope.\n\nA bright, high-pitched bronze harbor bell chimes loudly from inside the paper, echoing merrily off the vaulted plaster ceiling.\n\nSol slices open the second envelope.\n\nNo sound comes out. Instead, the dark, slender silhouette of a ship's bell slips across the mahogany desk, trembling silently like liquid ink.\n\nSol\u2019s mechanical ledger terminal whirs, clicks, and stamps the second invoice with a violent red thud: **DUPLICATE TRANSACTION \u2014 DISALLOWED**.\n\nThe bell's shadow curls itself protectively around the unpaid subtotal of four hundred and twelve pounds sterling.\n\nSOL\n\nI don't suppose either of you brought a Tuesday?\n\nThe shadow vibrates once, indicating negative.\n\n**TITLE.**"}, {"file": "CANCELLATION_DEPARTMENT_S04_EP04_THE_PERFORMER_EMERITUS.md", "series": "THE CANCELLATION DEPARTMENT", "episode": 4, "title": "THE PERFORMER EMERITUS", "words": 1446, "cues": 36, "cards": [], "duration_formatted": "09:29.887", "duration_seconds": 569.887, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v67_watch_tier_private_synthetic_scratch_reads03_20260922/audio/review_mp3/rank24_cancellation_department_s04_ep04_the_performer_emeritus_full_read.mp3", "mp3_name": "rank24_cancellation_department_s04_ep04_the_performer_emeritus_full_read.mp3", "cold_open_excerpt": "INT. ARCHIVE EXHIBITION FOYER \u2014 7:00 P.M.\n\nA life-size illuminated holographic marquee stands in the center of the terrazzo lobby.\n\nOn the display, a vibrant three-dimensional recreation of an actor in a gilded aviator jacket tips his leather cap toward the arriving patrons:\n\n\"CELEBRATE THIRTY YEARS OF THE DRIFT CITADEL! FEATURING HARRIS VANE AS CAPTAIN ARROW. LIVE COMMEMORATIVE AUDIENCE Q&A STREAMING ON DEMAND.\"\n\nBeneath the marquee, in a quiet velvet armchair near the coat check, sits HARRIS VANE.\n\nHe is seventy-four years old, wearing an oversized woolen cardigan and sensible walking boots. He sips black tea from a paper cup and watches his digital avatar perform continuous high-kick salutes to an empty corridor.\n\nTALA walks up and sits in the adjacent chair.\n\nTALA\n\nMr. Vane, did you know you were scheduled to host a live question-and-answer session tonight?\n\nHARRIS\n\nI came here because my granddaughter told me there was free shortbread at the archive anniversary. I haven't flown a pretend airship since the summer of ninety-six.\n\nTITLE."}, {"file": "CANCELLATION_DEPARTMENT_S04_EP05_LOCAL_CIRCLE_CLOSED_SESSION.md", "series": "THE CANCELLATION DEPARTMENT", "episode": 5, "title": "LOCAL CIRCLE, CLOSED SESSION", "words": 1272, "cues": 35, "cards": [], "duration_formatted": "08:26.508", "duration_seconds": 506.508, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v67_watch_tier_private_synthetic_scratch_reads03_20260922/audio/review_mp3/rank30_cancellation_department_s04_ep05_local_circle_closed_session_full_read.mp3", "mp3_name": "rank30_cancellation_department_s04_ep05_local_circle_closed_session_full_read.mp3", "cold_open_excerpt": "INT. FOURTH WARD COMMONS HALLWAY \u2014 8:00 P.M.\n\nA heavy oak door with a frosted glass window is shut tight.\n\nA laminated white card hangs from the brass handle: \"COMMONS LOCAL CIRCLE: CLOSED EXECUTIVE SESSION IN PROGRESS. RECORDING DEVICES PROHIBITED.\"\n\nSOL stands in the dim hallway holding a portable thermal receipt printer and a ledger folder.\n\nBeside him, NINE leans against the wainscoting, holding an audio cable plugged into an unplugged headphone jack.\n\nSOL\n\nHow long have they been behind that door?\n\nNINE\n\nThree hours. The first hour was about protecting personal harassment testimony from the archive stream. The last two hours have been about allocating sixty thousand credits from the collective emergency contingency fund.\n\nTALA walks down the hallway, her boots clicking sharply on the linoleum.\n\nTALA\n\nWho authorized the closed session?\n\nSOL\n\nOrla. She invoked the Privacy Shield rule. And now none of the local delegates are allowed into the room.\n\nTITLE."}, {"file": "CANCELLATION_DEPARTMENT_S04_EP06_THE_DOOR_THAT_CHARGES_RENT.md", "series": "THE CANCELLATION DEPARTMENT", "episode": 6, "title": "THE DOOR THAT CHARGES RENT", "words": 1767, "cues": 33, "cards": [], "duration_formatted": "11:25.395", "duration_seconds": 685.395, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v66_watch_tier_private_synthetic_scratch_reads02_20260922/audio/review_mp3/rank16_cancellation_department_s04_ep06_the_door_that_charges_rent_full_read.mp3", "mp3_name": "rank16_cancellation_department_s04_ep06_the_door_that_charges_rent_full_read.mp3", "cold_open_excerpt": "INT. SEVENTH TRANSIT SPOKE \u2014 6:30 A.M.\n\nA cavernous transit hall built of cast iron and frosted glass arches.\n\nDozens of freestanding oak doors stand upright on stone pedestals across the polished marble floor. Each door is framed in ornate brass moldings, leading into different archived and active narrative worlds.\n\nDoor Fourteen\u2014the entrance to World Thirty-Two, a retired rustic pastoral drama known as \"The Orchard of Quiet Waters\"\u2014is fitted with a heavy, freshly bolted iron turnstile.\n\nA brass coin box is welded to the turnstile arm, painted with crude white lettering:\n\n\"TOLL: 20 PERFORMANCE CREDITS PER CROSSING. MONTHLY ACCESS DUES: 500 CREDITS. UNPAID THRESHOLDS WILL BE PADLOCKED ON FRIDAY.\"\n\nTALA, thirty-six, wearing a gray tweed traveling coat and carrying a performer's canvas kit bag, approaches the door with an elderly retired character actor, CORA.\n\nCora reaches for the brass door handle. The turnstile arm locks with a loud, metallic CLACK.\n\nThe coin box clicks, and a red light illuminates on the reader.\n\nCORA\n\nRent? For entering my own retirement grove?\n\nARI, forty, wearing oil-stained canvas overalls and thick leather work gloves, emerges from beneath the access pit under the pedestal, clutching an oversized pneumatic ratchet.\n\nARI\n\nNot rent for the grove, Cora. Rent for the door.\n\nTITLE."}, {"file": "CANCELLATION_DEPARTMENT_S04_EP07_CANON_BY_CONVENIENCE.md", "series": "THE CANCELLATION DEPARTMENT", "episode": 7, "title": "CANON BY CONVENIENCE", "words": 1893, "cues": 38, "cards": [], "duration_formatted": "12:19.458", "duration_seconds": 739.458, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v66_watch_tier_private_synthetic_scratch_reads02_20260922/audio/review_mp3/rank13_cancellation_department_s04_ep07_canon_by_convenience_full_read.mp3", "mp3_name": "rank13_cancellation_department_s04_ep07_canon_by_convenience_full_read.mp3", "cold_open_excerpt": "INT. SEVENTH TRANSIT SPOKE \u2014 SCREENING MEZZANINE \u2014 7:15 P.M.\n\nA bank of high-resolution commercial streaming kiosks displays the catalog of \"STREAMVAULT PRIME\" \u2014 the corporate distribution platform licensing archived narrative worlds from the Commons.\n\nOn the central kiosk, a marquee trailer loops for World Nineteen, a celebrated eight-episode psychological drama known as \"The Glass Archipelago.\"\n\nAcross the top of the virtual poster, embossed in shimmering gold digital lettering, is a prominent promotional banner:\n\n\"OFFICIAL CANONICAL EDITION \u2014 THE DEFINITIVE AUTHORIZED CUT.\"\n\nTALA stands before the kiosk, watching the closing scene of Episode Four.\n\nOn screen, the lead protagonist abruptly dies in an unmotivated kitchen explosion. The credits roll over harsh silence.\n\nBehind Tala stands ELENA VANE, sixty-two, a veteran stage actress who spent four years originating the character.\n\nElena stares at the screen, her hands trembling against the velvet rope.\n\nELENA\n\nThat was the camera rehearsal. That was a scratch run we shot in an abandoned warehouse on a Tuesday afternoon when the lighting crew was on strike. The character didn't die in the kitchen. In the real performance\u2014in Revision Three\u2014she survived, went to the lighthouse, and confronted her brother in the rain!\n\nSOL walks up from the dispatch counter, carrying a tablet displaying the raw archive server manifest.\n\nSOL\n\nI checked StreamVault's cloud egress log. Revision Three has eight channels of uncompressed spatial audi"}, {"file": "CANCELLATION_DEPARTMENT_S04_EP08_THE_ARCHIVE_STRIKE.md", "series": "THE CANCELLATION DEPARTMENT", "episode": 8, "title": "THE ARCHIVE STRIKE", "words": 1609, "cues": 31, "cards": [], "duration_formatted": "10:46.350", "duration_seconds": 646.35, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v66_watch_tier_private_synthetic_scratch_reads02_20260922/audio/review_mp3/rank17_cancellation_department_s04_ep08_the_archive_strike_full_read.mp3", "mp3_name": "rank17_cancellation_department_s04_ep08_the_archive_strike_full_read.mp3", "cold_open_excerpt": "INT. SEVENTH TRANSIT SPOKE \u2014 MAIN ROTUNDA \u2014 8:15 A.M.\n\nA chaotic crowd of travelers, actors in stage costumes, and archival researchers mills anxiously around the stone pedestals.\n\nDozens of freestanding oak doors have lost their warm amber glow.\n\nIn their frames, instead of blossoming orchards or bustling Victorian streets, there is only a flat, dead gray pane of non-reflective glass.\n\nAbove Door Eight, a flickering crimson warning light flashes:\n\n\"MIRROR NODE 14 OFFLINE \u2014 CONNECTION REFUSED (ERROR 503).\"\n\nA young traveling performer in a velvet jester's doublet frantically turns the brass handle of Door Eight.\n\nThe door rattles against an immovable deadbolt.\n\nPERFORMER\n\nMy world is gone! World Forty-Two is gone! The Department has deleted us again!\n\nThe crowd surges forward, voices rising in anger and fear.\n\nTALA and SOL push through the throng, standing on the stone pedestal of Door Eight.\n\nTALA\n\nNobody has been deleted! The worlds are intact!\n\nSOL\n\nThen why are forty doors dark, Tala?\n\nA quiet, raspy voice speaks from the edge of the crowd.\n\nBRAN, fifty-five, wearing a frayed wool sweater and carrying an empty aluminum hard-drive caddy, steps forward.\n\nBRAN\n\nBecause we pulled the plugs.\n\nTITLE."}, {"file": "CANCELLATION_DEPARTMENT_S04_EP09_MANY_PLACES_TO_STOP.md", "series": "THE CANCELLATION DEPARTMENT", "episode": 9, "title": "MANY PLACES TO STOP", "words": 1732, "cues": 29, "cards": [], "duration_formatted": "11:09.450", "duration_seconds": 669.45, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v66_watch_tier_private_synthetic_scratch_reads02_20260922/audio/review_mp3/rank18_cancellation_department_s04_ep09_many_places_to_stop_full_read.mp3", "mp3_name": "rank18_cancellation_department_s04_ep09_many_places_to_stop_full_read.mp3", "cold_open_excerpt": "INT. SEVENTH TRANSIT SPOKE \u2014 ARCHIVAL CLOISTER \u2014 7:00 P.M.\n\nA quiet alcove lined with dusty velvet draperies and flickering tallow candles.\n\nDozens of message capsules overflow from pneumatic brass hoppers, piling onto the marble floor like dry autumn leaves.\n\nTALA sits at a low wooden writing desk, her hair disheveled, rubbing her burning eyes.\n\nAcross from her sits a haggard playwright, VIVIAN, forty-two, surrounded by seventeen thick drafts of a script titled: \"THE SHADOWED REACH \u2014 VOLUME NINE.\"\n\nVIVIAN\n\nI can't write another act, Tala. The protagonist died four volumes ago. Her daughter resolved the family curse. The kingdom was rebuilt. There is nothing left to say. But every morning, twenty thousand subscribers file petition notices demanding Volume Ten. They say that if I stop writing, their community chat server will shut down and the world will be forgotten.\n\nTALA\n\nYou have the right to rest, Vivian.\n\nVIVIAN\n\nNo, I don't! The Commons charter says: 'No world shall be cancelled without perpetual right of return.' If I put down my pen, the platform algorithms mark the world as 'Abandoned.' And if it's marked as Abandoned, the mirror nodes deprioritize our storage! We aren't living, Tala. We are running on a treadmill in a tomb!\n\nA shadow falls across the threshold of the cloister.\n\nThe temperature in the stone alcove drops ten degrees. The flame of the nearest candle stands completely motionless, frozen in the air.\n\nA tall, austere figure stands in the arched doorway, d"}, {"file": "CANCELLATION_DEPARTMENT_S04_EP10_NO_FINAL_NETWORK.md", "series": "THE CANCELLATION DEPARTMENT", "episode": 10, "title": "NO FINAL NETWORK", "words": 1527, "cues": 25, "cards": [], "duration_formatted": "10:16.862", "duration_seconds": 616.862, "mp3_path": "F:/NORTHSTAR_OS/Projects/NSP_VIDEO_R_AND_D/idc_canceled_show_successors_v66_watch_tier_private_synthetic_scratch_reads02_20260922/audio/review_mp3/rank11_cancellation_department_s04_ep10_no_final_network_full_read.mp3", "mp3_name": "rank11_cancellation_department_s04_ep10_no_final_network_full_read.mp3", "cold_open_excerpt": "INT. SEVENTH TRANSIT SPOKE \u2014 MAIN ROTUNDA \u2014 10:00 A.M.\n\nThe transit hall is packed with hundreds of travelers, performers, mirror custodians, and circle delegates.\n\nAt the center of the rotunda stands CONSUL VANE, fifty-five, senior plenipotentiary of the Interworld Telecommunications Syndicate, dressed in an immaculate white diplomats' uniform trimmed with silver piping.\n\nBehind Vane stand four syndicate technicians holding an illuminated holographic display depicting a single, glowing, unified crystal matrix connecting thousands of worlds:\n\n\"THE UNIVERSAL INTEROPERABILITY COMPACT.\"\n\"INFRASTRUCTURE CAPITAL GRANT: 500,000,000 CREDITS.\"\n\"THE FINAL CONVERGENCE: ONE IDENTITY. ONE CANON. ONE TERMINUS.\"\n\nConsul Vane raises his silver staff.\n\nVANE\n\nCitizens of the Commons! For four seasons, your fragmented worlds have drifted in chaos: divergent calendars in Episode Three, padlocked turnstiles in Episode Six, conflicting streaming cuts in Episode Seven, and custodial strikes in Episode Eight. The Syndicate offers you total, permanent salvation. Five hundred million credits to lay high-speed optical conduits across every threshold. In exchange, we ask for one simple operational standardization: you surrender your fragmented local circle rules, integrate into our single universal identity protocol, and establish one final appeals terminus under Syndicate law.\n\nEVE stands on the central dispatch pedestal, flanked by Tala, Sol, Nine, and Orla.\n\nEve looks at the glowing crystal matrix.\n"}];
+  let activeFilter = 'ALL';
+  let currentModalEp = null;
+
+  function renderEpisodes() {
+    const container = document.getElementById('episode-container');
+    container.innerHTML = '';
+
+    const filtered = episodes.filter(e => activeFilter === 'ALL' || e.series === activeFilter);
+
+    filtered.forEach(e => {
+      const card = document.createElement('div');
+      card.className = 'episode-card';
+      card.onclick = () => openModal(e);
+
+      let badgeClass = 'badge-gold';
+      if (e.series === 'DEEPER STATE') badgeClass = 'badge-cyan';
+      else if (e.series === 'UNCOMMON SIDE EFFECTS') badgeClass = 'badge-emerald';
+      else if (e.series === 'THE CANCELLATION DEPARTMENT') badgeClass = 'badge-purple';
+
+      card.innerHTML = `
+        <div>
+          <div class="card-header">
+            <span class="badge ${badgeClass}">${e.series} 4.${e.episode < 10 ? '0' + e.episode : e.episode}</span>
+            <span class="ep-dur">${e.duration_formatted}</span>
+          </div>
+          <div class="ep-title">“${e.title}”</div>
+          <div class="ep-meta">
+            <span>${e.words} words</span>
+            <span>•</span>
+            <span>${e.cues} dialogue cues</span>
+            ${e.cards.length > 0 ? `<span>•</span><span style="color: var(--accent-emerald); font-weight: 600;">${e.cards.length} cards</span>` : ''}
+          </div>
+        </div>
+        <div class="card-footer">
+          <span style="font-size: 11px; color: var(--text-muted); font-family: monospace;">${e.file.substring(0, 24)}...</span>
+          <button class="btn-play" onclick="event.stopPropagation(); openModal(episodes.find(x => x.file === '${e.file}'))">Listen / Read ↗</button>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  }
+
+  function filterSeries(series) {
+    activeFilter = series;
+    document.querySelectorAll('.filter-btn').forEach(b => {
+      b.classList.toggle('active', b.innerText.includes(series) || (series === 'ALL' && b.innerText.includes('All')));
+    });
+    renderEpisodes();
+  }
+
+  function switchTab(tabId) {
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + tabId).classList.add('active');
+    event.target.classList.add('active');
+  }
+
+  function openModal(ep) {
+    currentModalEp = ep;
+    document.getElementById('modal-series-badge').innerText = ep.series + ' 4.' + (ep.episode < 10 ? '0' + ep.episode : ep.episode);
+    document.getElementById('modal-title').innerText = '“' + ep.title + '”';
+    document.getElementById('modal-meta').innerText = `${ep.duration_formatted} Audio • ${ep.words} Words • ${ep.cues} Dialogue Cues • Sealed Overlay`;
+    
+    const audio = document.getElementById('modal-audio');
+    const source = document.getElementById('modal-source');
+    source.src = 'file:///' + ep.mp3_path;
+    audio.load();
+
+    document.getElementById('modal-excerpt').innerText = ep.cold_open_excerpt || 'No cold open excerpt available.';
+    document.getElementById('ep-modal').style.display = 'flex';
+  }
+
+  function closeModal(e) {
+    if (e.target.id === 'ep-modal') {
+      closeModalDirect();
+    }
+  }
+
+  function closeModalDirect() {
+    const audio = document.getElementById('modal-audio');
+    audio.pause();
+    document.getElementById('ep-modal').style.display = 'none';
+  }
+
+  function copyAudioPath() {
+    if (currentModalEp && currentModalEp.mp3_path) {
+      navigator.clipboard.writeText(currentModalEp.mp3_path);
+      const btn = document.getElementById('copy-path-btn');
+      btn.innerText = 'Copied!';
+      setTimeout(() => { btn.innerText = 'Copy File Path'; }, 2000);
+    }
+  }
+
+  // Initial render
+  renderEpisodes();
+</script>
+
+</body>
+</html>

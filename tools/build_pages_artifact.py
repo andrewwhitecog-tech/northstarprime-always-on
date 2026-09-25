@@ -71,6 +71,57 @@ def rewrite_sticker_refs(raw: str, relative: Path) -> str:
 
 
 
+
+AUDIO_SUFFIXES = {".mp3", ".wav", ".m4a", ".ogg"}
+
+def external_release_media(relative: Path) -> bool:
+    # The SFX gallery constructs `${f}.mp3` and `${f}.wav` at runtime.
+    # Keep this small directory local so its native template and downloads work.
+    if relative.parts[:3] == ("static", "games", "sfx"):
+        return False
+    return relative.suffix.lower() in AUDIO_SUFFIXES or relative.parts[:2] == ("static", "idc_covers")
+
+def tracked_source_paths():
+    # A release is made from versioned source, never untracked workstation exports.
+    raw = subprocess.check_output(["git", "ls-files", "-z"], cwd=ROOT)
+    return [Path(p.decode("utf-8")) for p in raw.split(b"\0") if p]
+
+def release_media_index():
+    selected = {p.as_posix() for p in tracked_source_paths() if external_release_media(p)}
+    directories = {str(Path(p).parent).replace("\\", "/") + "/" for p in selected}
+    directories.add("static/idc_covers/")
+    return selected, directories
+
+def rewrite_release_media_refs(raw: str, relative: Path, selected: set[str], directories: set[str], commit: str) -> str:
+    import re, posixpath
+    from urllib.parse import urlsplit, unquote, quote
+    # Literal HTML attributes, CSS url(), JSON/JS values, and JS directory prefixes.
+    # Do not rewrite prose, already-external URLs, or filesystem source provenance.
+    # This manifest is consumed by season-3/app.js; audio resolves against its page,
+    # not the data/ JSON URL. Keep this explicit instead of guessing arbitrary bases.
+    if relative.as_posix() == "idc/season-3/data/listening_manifest.json":
+        relative = Path("idc/season-3/index.html")
+    token = re.compile(r"(?P<lead>[\"'`(])(?P<value>[^\s\"'`<>()[\]{}]+)(?=[\"'`)])")
+    base = "https://raw.githubusercontent.com/andrewwhitecog-tech/northstarprime-always-on/" + commit + "/"
+    def replace(match):
+        value = match.group("value")
+        parsed = urlsplit(value)
+        if parsed.scheme or parsed.netloc or value.startswith(("#", "?", "//")):
+            return match.group(0)
+        path = unquote(parsed.path)
+        resolved = posixpath.normpath(path.lstrip("/") if path.startswith("/") else posixpath.join(relative.parent.as_posix(), path))
+        dynamic_prefix = (
+            "/" in path and not Path(path).suffix
+            and raw[match.end() + 1:].lstrip().startswith("+")
+            and any(item.startswith(resolved) for item in selected)
+        )
+        if resolved in selected or dynamic_prefix or (path.endswith("/") and resolved.rstrip("/") + "/" in directories):
+            suffix = ("/" if path.endswith("/") else "") + ("?" + parsed.query if parsed.query else "") + ("#" + parsed.fragment if parsed.fragment else "")
+            return match.group("lead") + base + quote(resolved, safe="/") + suffix
+        return match.group(0)
+    return token.sub(replace, raw)
+
+
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -97,8 +148,8 @@ def safe_output(value: str | Path) -> Path:
 
 
 def iter_source_files():
-    for path in ROOT.rglob("*"):
-        relative = path.relative_to(ROOT)
+    for relative in tracked_source_paths():
+        path = ROOT / relative
         if not relative.parts or relative.parts[0] in SKIP_TOP_LEVEL:
             continue
         if path.is_symlink():
@@ -107,12 +158,16 @@ def iter_source_files():
             continue
         if relative.parts[:2] == ("static", "idc_video"):
             continue
-        if external_sticker_master(relative):
+        if external_sticker_master(relative) or external_release_media(relative):
             continue
         yield path, relative
 
 
 def build(output: Path) -> dict:
+    # Immutable media URLs must identify the exact bytes copied and omitted.
+    # Reject both staged and unstaged tracked edits; untracked exports are excluded.
+    subprocess.run(["git", "diff", "--quiet", "HEAD", "--"], cwd=ROOT, check=True)
+    media_commit = source_commit()
     video_root = ROOT / "static" / "idc_video"
     video_files = sorted(path for path in video_root.rglob("*") if path.is_file())
     omitted_video_bytes = sum(path.stat().st_size for path in video_files)
@@ -143,6 +198,9 @@ def build(output: Path) -> dict:
                     pass
     output.mkdir(parents=True, exist_ok=True)
 
+    selected_media, media_directories = release_media_index()
+    if len(media_commit) != 40:
+        raise ValueError("Immutable media delivery requires an exact source commit")
     rewrites = 0
     copied = 0
     for source, relative in iter_source_files():
@@ -155,6 +213,7 @@ def build(output: Path) -> dict:
                 raw = raw.replace(LOCAL_VIDEO_BASE, APP_VIDEO_BASE)
                 rewrites += count
             raw = rewrite_sticker_refs(raw, relative)
+            raw = rewrite_release_media_refs(raw, relative, selected_media, media_directories, media_commit)
             destination.write_text(raw, encoding="utf-8", newline="\n")
             shutil.copymode(source, destination)
         else:
@@ -186,7 +245,7 @@ def build(output: Path) -> dict:
     manifest = {
         "schema": "northstar.pages-curated-artifact.v1",
         "generated_utc": datetime.now(timezone.utc).isoformat(),
-        "source_commit": source_commit(),
+        "source_commit": media_commit,
         "file_count_excluding_manifest": copied,
         "payload_bytes_excluding_manifest": payload_bytes,
         "release_guard_bytes": RELEASE_GUARD_BYTES,
@@ -198,6 +257,13 @@ def build(output: Path) -> dict:
             "bytes": omitted_video_bytes,
             "replacement_base_url": APP_VIDEO_BASE,
             "rewritten_references": rewrites,
+        },
+        "external_release_media": {
+            "source_commit": media_commit,
+            "file_count": len(selected_media),
+            "bytes": sum((ROOT / p).stat().st_size for p in selected_media),
+            "paths": sorted(selected_media),
+            "delivery": "raw.githubusercontent.com immutable source commit",
         },
         "sticker_masters": {
             "delivery": "raw.githubusercontent.com public repository, paths unchanged",

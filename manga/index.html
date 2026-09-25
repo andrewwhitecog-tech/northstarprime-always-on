@@ -301,6 +301,7 @@
     </div>
     <div class="toolbar-actions">
       <button class="btn" onclick="toggleFullscreen()" aria-label="Toggle Fullscreen">&#9210; Fullscreen</button>
+      <button class="btn" id="btn-manga-audio" style="border-color:var(--emerald); color:var(--emerald);" onclick="toggleAstralAmbience()">✦ Astral Ambience: OFF</button>
       <button class="btn" style="border-color:var(--gold); color:var(--gold);" onclick="openSpiritsModal()">✦ Featured Spirits (8 Cards)</button>
       <button class="btn" style="border-color:var(--cyan); color:var(--cyan);" onclick="openCh2Modal()">✦ Chapter 2 Script &amp; Storyboards</button>
       <a href="/comics/reader/?series=duel_zexal" class="btn">Comics Reader &rarr;</a>
@@ -375,13 +376,24 @@
         </div>
 
         <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(245,158,11,0.25); border-radius:10px; padding:18px;">
-          <div style="font-size:0.75rem; font-family:monospace; color:var(--gold); margin-bottom:4px;">SCENE II // THE OVERLAY CHANT &amp; TESLA'S AWAKENING</div>
-          <h3 style="color:#fff; font-size:1.1rem; margin-bottom:8px;">Rank 5 Xyz Overlay: Nikola Tesla, Master of Lightning</h3>
-          <div style="background:rgba(0,0,0,0.4); border-left:3px solid var(--cyan); padding:12px; margin:10px 0; font-family:monospace; font-size:0.85rem; color:#67e8f9; line-height:1.6;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div style="font-size:0.75rem; font-family:monospace; color:var(--gold);">SCENE II // THE OVERLAY CHANT &amp; TESLA'S AWAKENING</div>
+            <button class="btn" style="border-color:var(--cyan); color:var(--cyan); padding:4px 10px; font-size:0.75rem;" onclick="playAudioChant()">▶ Play Audio Overlay Chant</button>
+          </div>
+          <h3 style="color:#fff; font-size:1.1rem; margin:8px 0;">Rank 5 Xyz Overlay: Nikola Tesla, Master of Lightning</h3>
+          <div id="ch2-chant-box" style="background:rgba(0,0,0,0.4); border-left:3px solid var(--cyan); padding:12px; margin:10px 0; font-family:monospace; font-size:0.85rem; color:#67e8f9; line-height:1.6; transition:box-shadow 0.3s ease;">
             "From the temporal void between heartbeats, where wireless coils hum with sovereign electricity! Twin frequencies merge across the celestial rift! Overlay Summon! Rank 5 — Nikola Tesla, Master of Lightning!"
           </div>
           <p style="color:var(--text-muted); font-size:0.88rem; line-height:1.5;">
             Blinding arcs of cobalt plasma illuminate the cavern. Tesla materializes with dual resonance coils spinning at maximum RPM, generating 2,800 base ATK and neutralizing Vector's null-time damping field.
+          </p>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(0,255,136,0.25); border-radius:10px; padding:18px;">
+          <div style="font-size:0.75rem; font-family:monospace; color:var(--emerald); margin-bottom:4px;">SCENE III // CHAPTER 3 PREVIEW: THE RESONANT CONVERGENCE</div>
+          <h3 style="color:#fff; font-size:1.1rem; margin-bottom:8px;">Cascadia Mycelial Networks Meet Astral Spirits</h3>
+          <p style="color:var(--text-muted); font-size:0.88rem; line-height:1.5;">
+            Blaze Beaver's underground sub-bass beacons detect the temporal flux from Yuto's duel. As Vector retreats into the void-rift, Blaze arrives with acoustic amplifiers, forging an unprecedented alliance between Cascadia's bio-alchemical wardens and the Astral duelists.
           </p>
         </div>
 
@@ -642,6 +654,118 @@
 
     function closeCh2Modal() {
       document.getElementById('ch2-modal').classList.remove('active');
+    }
+
+    // Web Audio Astral Ambience Generator (432 Hz Drone)
+    let ambientCtx = null;
+    let ambientNodes = null;
+    let isAmbientPlaying = false;
+
+    function toggleAstralAmbience() {
+      const btn = document.getElementById('btn-manga-audio');
+      if (isAmbientPlaying) {
+        stopAstralAmbience();
+        if (btn) btn.innerText = '✦ Astral Ambience: OFF';
+      } else {
+        startAstralAmbience();
+        if (btn) btn.innerText = '✦ Astral Ambience: ON';
+      }
+    }
+
+    function startAstralAmbience() {
+      try {
+        if (!ambientCtx) {
+          ambientCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (ambientCtx.state === 'suspended') {
+          ambientCtx.resume();
+        }
+        const masterGain = ambientCtx.createGain();
+        masterGain.gain.setValueAtTime(0.001, ambientCtx.currentTime);
+        masterGain.gain.exponentialRampToValueAtTime(0.05, ambientCtx.currentTime + 2.0);
+
+        // Lowpass filter for smooth ambient warmth
+        const filter = ambientCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(450, ambientCtx.currentTime);
+
+        // 432 Hz fundamental + 216 Hz sub-octave
+        const osc1 = ambientCtx.createOscillator();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(432, ambientCtx.currentTime);
+
+        const osc2 = ambientCtx.createOscillator();
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(216, ambientCtx.currentTime);
+
+        // Gentle chorus LFO
+        const lfo = ambientCtx.createOscillator();
+        const lfoGain = ambientCtx.createGain();
+        lfo.frequency.setValueAtTime(0.2, ambientCtx.currentTime);
+        lfoGain.gain.setValueAtTime(1.5, ambientCtx.currentTime);
+        lfo.connect(osc1.frequency);
+
+        osc1.connect(filter);
+        osc2.connect(filter);
+        filter.connect(masterGain);
+        masterGain.connect(ambientCtx.destination);
+
+        osc1.start();
+        osc2.start();
+        lfo.start();
+
+        ambientNodes = { masterGain, osc1, osc2, lfo };
+        isAmbientPlaying = true;
+      } catch (e) {}
+    }
+
+    function stopAstralAmbience() {
+      if (ambientNodes && ambientCtx) {
+        try {
+          ambientNodes.masterGain.gain.exponentialRampToValueAtTime(0.001, ambientCtx.currentTime + 0.8);
+          setTimeout(() => {
+            if (ambientNodes) {
+              ambientNodes.osc1.stop();
+              ambientNodes.osc2.stop();
+              ambientNodes.lfo.stop();
+              ambientNodes = null;
+            }
+          }, 800);
+        } catch(e) {}
+      }
+      isAmbientPlaying = false;
+    }
+
+    function playAudioChant() {
+      playPageTurnSound();
+      try {
+        if (!ambientCtx) {
+          ambientCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (ambientCtx.state === 'suspended') {
+          ambientCtx.resume();
+        }
+        // Ascending radiant lightning chord: 432Hz, 540Hz, 648Hz, 864Hz, 1080Hz
+        [432, 540, 648, 864, 1080].forEach((freq, idx) => {
+          const osc = ambientCtx.createOscillator();
+          const gain = ambientCtx.createGain();
+          osc.type = 'sine';
+          const t = ambientCtx.currentTime + idx * 0.08;
+          osc.frequency.setValueAtTime(freq, t);
+          gain.gain.setValueAtTime(0.08, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+          osc.connect(gain);
+          gain.connect(ambientCtx.destination);
+          osc.start(t);
+          osc.stop(t + 0.35);
+        });
+      } catch(e) {}
+
+      const chantBox = document.getElementById('ch2-chant-box');
+      if (chantBox) {
+        chantBox.style.boxShadow = '0 0 25px rgba(0, 240, 255, 0.8)';
+        setTimeout(() => { chantBox.style.boxShadow = ''; }, 1200);
+      }
     }
 
     function addSpiritCardToDeck(code) {

@@ -19,7 +19,9 @@ KEY_PAGES = [
     "contact/index.html",
     "access/index.html",
     "gallery/index.html",
-    "terminal/index.html",
+    "tcg/index.html",
+    "manga/index.html",
+    "comics/index.html",
     "mystery-school/index.html",
     "arcade/index.html",
 ]
@@ -34,7 +36,7 @@ DEFEATIST_PATTERNS = [
     r"cannot guarantee",
     r"concept preview is not an item",
     r"we are not promoting",
-    r"placeholder",
+    r"\bplaceholder\b(?!\s*=)",
     r"lorem ipsum",
 ]
 
@@ -51,7 +53,7 @@ def audit_page(rel_path):
     missing_images = []
     base_dir = os.path.dirname(full_path)
     for src in img_tags:
-        if src.startswith(("http:", "https:", "data:", "blob:")):
+        if src.startswith(("http:", "https:", "data:", "blob:")) or "${" in src:
             continue
         clean_src = src.split("?")[0].split("#")[0]
         if clean_src.startswith("/"):

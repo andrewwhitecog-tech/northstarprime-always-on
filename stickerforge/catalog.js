@@ -53,6 +53,8 @@
     dialog.querySelector('#detail-description').textContent = card.dataset.description;
     dialog.querySelector('#detail-full').href = card.dataset.original;
     dialog.querySelector('#detail-order').href = card.querySelector('.order-link').href;
+    const direct = dialog.querySelector('#detail-order-direct');
+    if (direct) direct.href = `/chromatic?item=${encodeURIComponent(img.alt)}&collection=${encodeURIComponent(card.dataset.collection || '')}`;
     dialog.querySelector('#detail-position').textContent = `${active + 1} of ${matches.length}`;
     dialog.querySelector('#detail-prev').disabled = active <= 0;
     dialog.querySelector('#detail-next').disabled = active >= matches.length - 1;

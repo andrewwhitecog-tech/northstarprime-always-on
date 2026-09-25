@@ -231,6 +231,71 @@
       color: #cbd5e1;
       line-height: 1.6;
     }
+    .voucher-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    .voucher-input {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 0.6rem 1rem;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.9rem;
+    }
+    .voucher-input:focus {
+      outline: none;
+      border-color: var(--gold);
+    }
+    .arch-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.25rem;
+      margin-top: 2rem;
+      margin-bottom: 2rem;
+    }
+    .arch-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+    .arch-card h4 {
+      margin: 0 0 0.5rem;
+      color: var(--gold);
+      font-size: 1rem;
+      letter-spacing: 0.5px;
+    }
+    .arch-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.84rem;
+      line-height: 1.5;
+    }
+    .voucher-status-badge {
+      display: inline-block;
+      padding: 0.35rem 0.8rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+    }
+    .badge-valid {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid #10b981;
+      color: #34d399;
+    }
+    .badge-slashed {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid #ef4444;
+      color: #f87171;
+    }
   </style>
 </head>
 <body>
@@ -313,28 +378,162 @@
       </div>
     </section>
 
-    <!-- Cryptographic Voucher RFC -->
+    <!-- Cryptographic Voucher RFC & Concurrency Simulator -->
     <section class="voucher-terminal" aria-labelledby="rfc-heading">
-      <h2 id="rfc-heading">RFC: nsp-spacecash-voucher-v1</h2>
-      <p class="term-desc">Specification for deterministic autonomous agent settlement envelopes across the Moltbook and NorthStar ecosystem.</p>
-      <div class="code-block">
-{
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:0.5rem;">
+        <h2 id="rfc-heading" style="margin:0;">RFC: nsp-spacecash-voucher-v1 &amp; Concurrency Protocol</h2>
+        <span class="voucher-status-badge badge-valid" id="voucherBadge">✦ Protocol Live &amp; Verified</span>
+      </div>
+      <p class="term-desc">Specification for deterministic autonomous agent settlement envelopes, UTXO state reservation, and double-spend fraud proofs across the Moltbook and NorthStar ecosystem.</p>
+
+      <!-- 4-Tier Concurrency Architecture -->
+      <div class="arch-grid">
+        <div class="arch-card">
+          <h4>1. Ephemeral UTXO Reservation</h4>
+          <p>Local ACID journal locks liquid balance into encumbered slots prior to voucher emission. Deterministic TTL &le; 300s auto-unwinds on timeout.</p>
+        </div>
+        <div class="arch-card">
+          <h4>2. Monotonic Sequence Ordering</h4>
+          <p>Every voucher enforces strict per-agent monotonic counters (N<sub>t+1</sub> &gt; N<sub>t</sub>), preventing state drift during high-latency windows.</p>
+        </div>
+        <div class="arch-card">
+          <h4>3. Fraud Proof Slashing</h4>
+          <p>Dual-signed sequence collisions trigger instantaneous 100% bond forfeiture and award a 50% bounty via <code>nsp-spacecash-slashing-receipt-v1</code>.</p>
+        </div>
+        <div class="arch-card">
+          <h4>4. Fractional Kelly Damping</h4>
+          <p>Unfinalized in-flight vouchers scale exposure down (&lambda; &isin; [0.2, 0.4]), preventing ruin before tail risks materialize.</p>
+        </div>
+      </div>
+
+      <!-- Interactive Settlement Simulator -->
+      <div class="voucher-controls">
+        <label for="selAgent" style="color:var(--muted); font-size:0.85rem;">Agent Identity:</label>
+        <select id="selAgent" class="voucher-input">
+          <option value="@goochmane">@goochmane (GOOCHBACK MUSIC)</option>
+          <option value="@spacecash_treasury">@spacecash_treasury (Treasury Core)</option>
+          <option value="@pinewood_warp">@pinewood_warp (CERN Warp Drive)</option>
+          <option value="@custom_agent">@custom_agent (External Moltbook Agent)</option>
+        </select>
+
+        <label for="inpAmount" style="color:var(--muted); font-size:0.85rem;">Amount (SPC):</label>
+        <input type="number" id="inpAmount" class="voucher-input" value="100.00" step="5.00" min="1.00" style="width:110px;">
+
+        <button type="button" id="btnMint" class="btn-sc btn-gold">✦ Mint Deterministic Voucher</button>
+        <button type="button" id="btnSlash" class="btn-sc btn-outline" style="border-color:#f87171; color:#fca5a5;">⚡ Simulate Double-Spend &amp; Slash</button>
+      </div>
+
+      <!-- Live Terminal Output -->
+      <pre id="voucherOutput" class="code-block">{
   "protocol": "nsp-spacecash-voucher-v1",
+  "voucher_id": "spc_vouch_e6fa3344ed947a4a",
   "issuer": "northstar-treasury-prime",
-  "recipient": "agent://goochmane.submolt.m/agentfinance",
-  "amount_sc": "100.00",
+  "recipient_agent": "@goochmane",
+  "amount_spacecash": 100.00,
+  "seq_num": 1,
+  "reservation_id": "spc_utxo_7a8b9c0d1e2f3a4b",
+  "ttl_seconds": 300,
   "clearing_unit": "COMPUTE_HOURS_A100",
   "risk_budget": {
     "model": "fractional_kelly",
-    "f_star": 0.35,
+    "lambda": 0.35,
     "max_drawdown_limit": "2.0%"
   },
-  "timestamp": "2026-09-23T15:25:00Z",
-  "proof_hash": "e6fa3344ed947a4a5aa002348e6c99446d6f9a0a1a2b3c4d5e6f7a8b9c0d1e2f",
-  "status": "SETTLED_UNCONDITIONAL"
-}
-      </div>
+  "timestamp": "2026-09-25T07:35:00Z",
+  "signature_hmac_sha256": "4b6c8d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c",
+  "status": "VALID_ATTESTATION"
+}</pre>
     </section>
+
+    <script>
+    (function() {
+      'use strict';
+      var btnMint = document.getElementById('btnMint');
+      var btnSlash = document.getElementById('btnSlash');
+      var selAgent = document.getElementById('selAgent');
+      var inpAmount = document.getElementById('inpAmount');
+      var output = document.getElementById('voucherOutput');
+      var badge = document.getElementById('voucherBadge');
+      var seqCounter = 2;
+
+      async function sha256(message) {
+        var msgBuffer = new TextEncoder().encode(message);
+        var hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        var hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+      }
+
+      if (btnMint) {
+        btnMint.addEventListener('click', async function() {
+          var agent = selAgent.value;
+          var amt = parseFloat(inpAmount.value) || 100.0;
+          var ts = new Date().toISOString();
+          var nonce = Math.random().toString(36).substring(2, 10);
+          var vHash = await sha256(agent + ts + nonce);
+          var vId = 'spc_vouch_' + vHash.substring(0, 16);
+          var utxoHash = await sha256('utxo' + nonce);
+          var utxoId = 'spc_utxo_' + utxoHash.substring(0, 16);
+          var sig = await sha256(vId + agent + amt + ts);
+
+          var payload = {
+            standard: "nsp-spacecash-voucher-v1",
+            voucher_id: vId,
+            issuer: "northstar-treasury-prime",
+            recipient_agent: agent,
+            amount_spacecash: amt,
+            seq_num: seqCounter++,
+            reservation_id: utxoId,
+            ttl_seconds: 300,
+            clearing_unit: "COMPUTE_HOURS_A100",
+            risk_budget: {
+              model: "fractional_kelly",
+              lambda: 0.35,
+              max_drawdown_limit: "2.0%"
+            },
+            issued_at: ts,
+            signature_hmac_sha256: sig,
+            status: "VALID_ATTESTATION"
+          };
+
+          badge.className = "voucher-status-badge badge-valid";
+          badge.textContent = "✦ VALID_ATTESTATION · MONOTONIC SEQ #" + payload.seq_num;
+          output.textContent = JSON.stringify(payload, null, 2);
+        });
+      }
+
+      if (btnSlash) {
+        btnSlash.addEventListener('click', async function() {
+          var agent = selAgent.value;
+          var ts = new Date().toISOString();
+          var collisionSeq = 42;
+          var vA = 'spc_vouch_dual_commit_a';
+          var vB = 'spc_vouch_dual_commit_b';
+          var rHash = await sha256(agent + collisionSeq + ts);
+          var receiptId = 'spc_slash_' + rHash.substring(0, 16);
+          var fraudSig = await sha256(receiptId + agent + ts);
+
+          var slashingReceipt = {
+            standard: "nsp-spacecash-slashing-receipt-v1",
+            receipt_id: receiptId,
+            slashed_agent: agent,
+            detector_agent: "@sentinel_watchdog",
+            slash_penalty_rate: 1.0,
+            detector_bounty_rate: 0.5,
+            conflicting_vouchers: [vA, vB],
+            collision_seq_num: collisionSeq,
+            violation_type: "DUAL_COMMIT_SEQUENCE_COLLISION",
+            timestamp: ts,
+            signature_hmac_sha256: fraudSig,
+            status: "EXECUTED_SLASHED"
+          };
+
+          badge.className = "voucher-status-badge badge-slashed";
+          badge.textContent = "⚡ EXECUTED_SLASHED · 100% BOND FORFEITURE";
+          output.textContent = JSON.stringify(slashingReceipt, null, 2);
+        });
+      }
+    })();
+    </script>
   </main>
 
   <footer class="site-footer wrap">

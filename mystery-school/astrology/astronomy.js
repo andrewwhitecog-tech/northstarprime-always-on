@@ -406,6 +406,58 @@
       location: 'Newberg, Oregon',
       description: 'Master Builder 29° Taurus Sun with 11° Capricorn Moon conjunct 6° Capricorn Ascendant. Saturn in Aquarius chart ruler.'
     },
+    lauren: {
+      name: 'Lauren Darm (Sacred Partner & Celestial Rooster)',
+      year: 1993,
+      month: 6,
+      day: 9,
+      hour: 12,
+      minute: 0,
+      lat: 45.2101,
+      lon: -123.1987,
+      tzOffset: -7,
+      location: 'McMinnville, Oregon',
+      description: '18° Gemini Sun, 18°26\' Aquarius Moon. Sacred 0.08° conjunction to Andre\'s 18°31\' Aquarius Saturn; 171-year generational Capricorn Stellium.'
+    },
+    bryce: {
+      name: 'Bryce (Solar Lion & Willamette Triad)',
+      year: 1993,
+      month: 8,
+      day: 10,
+      hour: 12,
+      minute: 0,
+      lat: 44.9429,
+      lon: -123.0351,
+      tzOffset: -7,
+      location: 'Salem, Oregon',
+      description: '17°57\' Leo Sun opposing Andre\'s Saturn and Lauren\'s Moon across the 18° Axis of Destiny; 16° Taurus Moon trine Andre\'s Moon.'
+    },
+    andy_dad: {
+      name: 'Andy (Father — Cosmic Messenger)',
+      year: 1972,
+      month: 3,
+      day: 16,
+      hour: 12,
+      minute: 0,
+      lat: 45.3001,
+      lon: -122.9732,
+      tzOffset: -7,
+      location: 'Pacific Northwest',
+      description: '26° Pisces Sun, 10° Aries Moon conjunct Andre\'s 10° Aries Mars; 17°31\' Libra Uranus exact conjunction with Mom Stephanie.'
+    },
+    stephanie_mom: {
+      name: 'Stephanie (Mother — Microprocessor Dawn)',
+      year: 1971,
+      month: 12,
+      day: 6,
+      hour: 12,
+      minute: 0,
+      lat: 45.3001,
+      lon: -122.9732,
+      tzOffset: -7,
+      location: 'Pacific Northwest',
+      description: '14° Sagittarius Sun, 7° Leo Moon, 9° Capricorn Venus anchoring Andre\'s Grand Earth Trine; 17°40\' Libra Uranus conjunct Andy.'
+    },
     lauren_father: {
       name: "Lauren's Father (Bob)",
       year: 1951,
@@ -420,7 +472,7 @@
       description: '14° Gemini Sun, 26° Gemini Moon. Twin Moon conjunction with Lauren\'s Mother; harmonic water/earth sextiles to Andre\'s chart.'
     },
     lauren_mother: {
-      name: "Lauren's Mother",
+      name: "Lauren's Mother (Susan)",
       year: 1956,
       month: 4,
       day: 15,
@@ -431,6 +483,32 @@
       tzOffset: -7,
       location: 'Pacific Northwest',
       description: '25° Aries Sun, 27° Gemini Moon. 29° Scorpio Saturn exact 0.01° polarity anchor to Andre\'s 29° Taurus Sun; Grand Earth Trine anchor.'
+    },
+    ill_bill: {
+      name: 'Ill Bill (Cult Leader / Heavy Metal Kings)',
+      year: 1972,
+      month: 7,
+      day: 14,
+      hour: 12,
+      minute: 0,
+      lat: 40.6782,
+      lon: -73.9442,
+      tzOffset: -4,
+      location: 'Brooklyn, New York',
+      description: '10°24\' Leo Mars in 0.09° exact trine with Andre\'s 10°29\' Aries Mars; 18°33\' Leo Mercury in 0.03° exact opposition with Andre\'s 18°31\' Aquarius Saturn.'
+    },
+    vinnie_paz: {
+      name: 'Vinnie Paz (Jedi Mind Tricks / Heavy Metal Kings)',
+      year: 1977,
+      month: 10,
+      day: 5,
+      hour: 12,
+      minute: 0,
+      lat: 39.9526,
+      lon: -75.1652,
+      tzOffset: -4,
+      location: 'Philadelphia, Pennsylvania',
+      description: '12° Libra Sun, 13° Cancer Moon, 20° Cancer Mars forming the unstoppable Cardinal Cross dynamic with Andre\'s 10° Aries Mars.'
     },
     illuminati: {
       name: 'Bavarian Illuminati (Adam Weishaupt)',
@@ -636,13 +714,21 @@
       3: { symbol: 'A human soul, in its eagerness for new experiences, seeks embodiment.', keynote: 'Incarnating with explicit sovereign purpose and unbending resolve.' }
     },
     'Aquarius': {
-      13: { symbol: 'A barometer indicating atmospheric pressure changes.', keynote: 'Extreme sensitivity to collective civilizational shifts; forecasting systemic tempests before they strike.' }
+      13: { symbol: 'A barometer indicating atmospheric pressure changes.', keynote: 'Extreme sensitivity to collective civilizational shifts; forecasting systemic tempests before they strike.' },
+      18: { symbol: 'A man being unmasked at a masquerade.', keynote: 'The moment of radical revelation, psychic authenticity, and shedding deceptive social illusions.' },
+      19: { symbol: 'A forest fire quenched by coordinated efforts of rangers.', keynote: 'Collective systemic vigilance, decisive emergency containment, and mutual solidarity.' }
     },
     'Gemini': {
       14: { symbol: 'Two people communicating telepathically across distance.', keynote: 'Direct mental resonance, unspoken understanding, and instant intuitive transmission.' },
       15: { symbol: 'Two Dutch children talking and sharing their knowledge.', keynote: 'Mutual intellectual exchange, innocent inquiry, camaraderie in learning, and transparent dialogue.' },
+      18: { symbol: 'Two Chinese men conversing in their native tongue in an American city.', keynote: 'Esoteric mutual dialect, shared private communication code, and cross-cultural depth.' },
+      19: { symbol: 'A large archaic volume reveals a traditional wisdom.', keynote: 'Ingestion of ancient codices, generational archives, and enduring foundational memory.' },
       27: { symbol: 'A gypsy emerging from the forest and looking intently toward the city.', keynote: 'Bringing wild intuitive perception and primal foresight into the established structures of society.' },
       28: { symbol: 'Through bankruptcy, society gives an overburdened individual the opportunity to begin again.', keynote: 'Liberation from accumulated past burdens, resilience, renewal, and clean-slate regeneration.' }
+    },
+    'Leo': {
+      11: { symbol: 'Children on a swing hanging from a huge oak tree.', keynote: 'Primal joyful vitality anchored in generational ancestral roots.' },
+      18: { symbol: 'A chemist conducts an experiment for his students.', keynote: 'Alchemical testing of reality, demonstrating material principles, and rigorous empirical proof.' }
     },
     'Virgo': {
       2: { symbol: 'A large white cross upright against dark skies.', keynote: 'Steadfast personal faith, enduring devotion, and holding values firm through adversity.' },
@@ -656,6 +742,7 @@
     },
     'Aries': {
       6: { symbol: 'A square, with one of its sides brightly illuminated.', keynote: 'Direct illumination of one facet of a problem; razor-sharp linear clarity and kinetic focus.' },
+      11: { symbol: 'The ruler of a nation is presented with an official scroll.', keynote: 'Executive authority, public mandate, and sealing the sacred law into institutional execution.' },
       26: { symbol: 'A person possessed of more gifts than they can hold.', keynote: 'Abundant creative potential, overflowing vitality, generosity, and boundless resourcefulness.' }
     },
     'Pisces': {

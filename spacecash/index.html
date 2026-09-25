@@ -296,6 +296,11 @@
       border: 1px solid #ef4444;
       color: #f87171;
     }
+    .badge-pinned {
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid #38bdf8;
+      color: #7dd3fc;
+    }
   </style>
 </head>
 <body>
@@ -417,6 +422,10 @@
           <h4>4. Fractional Kelly Damping</h4>
           <p>Unfinalized in-flight vouchers scale exposure down (&lambda; &isin; [0.2, 0.4]), preventing ruin before tail risks materialize.</p>
         </div>
+        <div class="arch-card">
+          <h4>5. Content-Digest Pinning</h4>
+          <p>Cryptographically binds task payload and state snapshot to an HMAC-SHA256 digest (<code>nsp-spacecash-content-pin-v1</code>). Recomputed at handoff boundary to eliminate TOCTOU double-reads.</p>
+        </div>
       </div>
 
       <!-- Interactive Settlement Simulator -->
@@ -433,7 +442,8 @@
         <input type="number" id="inpAmount" class="voucher-input" value="100.00" step="5.00" min="1.00" style="width:110px;">
 
         <button type="button" id="btnMint" class="btn-sc btn-gold">✦ Mint Deterministic Voucher</button>
-        <button type="button" id="btnSlash" class="btn-sc btn-outline" style="border-color:#f87171; color:#fca5a5;">⚡ Simulate Double-Spend &amp; Slash</button>
+        <button type="button" id="btnSlash" class="btn-sc btn-outline" style="border-color:#f87171; color:#fca5a5;">✦ Simulate Double-Spend &amp; Slash</button>
+        <button type="button" id="btnPin" class="btn-sc btn-outline" style="border-color:#38bdf8; color:#7dd3fc;">✦ Pin Content &amp; Verify Handoff</button>
       </div>
 
       <!-- Live Terminal Output -->
@@ -463,6 +473,7 @@
       'use strict';
       var btnMint = document.getElementById('btnMint');
       var btnSlash = document.getElementById('btnSlash');
+      var btnPin = document.getElementById('btnPin');
       var selAgent = document.getElementById('selAgent');
       var inpAmount = document.getElementById('inpAmount');
       var output = document.getElementById('voucherOutput');
@@ -541,8 +552,45 @@
           };
 
           badge.className = "voucher-status-badge badge-slashed";
-          badge.textContent = "⚡ EXECUTED_SLASHED · 100% BOND FORFEITURE";
+          badge.textContent = "✦ EXECUTED_SLASHED · 100% BOND FORFEITURE";
           output.textContent = JSON.stringify(slashingReceipt, null, 2);
+        });
+      }
+
+      if (btnPin) {
+        btnPin.addEventListener('click', async function() {
+          var agent = selAgent.value;
+          var amt = parseFloat(inpAmount.value) || 100.0;
+          var ts = new Date().toISOString();
+          var taskId = 'task_warp_forge_' + Math.random().toString(36).substring(2, 8);
+          var taskPayload = {
+            operation: "DISPERSE_SETTLEMENT",
+            recipient: agent,
+            units: amt,
+            parameters: { priority: "HIGH", network: "MAINNET_PINNED" }
+          };
+          var canonicalStr = JSON.stringify(taskPayload);
+          var contentDigest = await sha256(taskId + ':' + canonicalStr + ':spc_utxo_pinned_slot');
+          var pinSig = await sha256('nsp-pin:' + taskId + ':' + contentDigest + ':' + ts);
+
+          var pinReceipt = {
+            standard: "nsp-spacecash-content-pin-v1",
+            task_id: taskId,
+            content_digest_sha256: contentDigest,
+            reservation_id: "spc_utxo_pinned_slot",
+            pinned_at: ts,
+            terminal_verification: {
+              recomputed_digest: contentDigest,
+              state_drift_detected: false,
+              anti_toctou_guard: "ACTIVE_RIGID"
+            },
+            signature_hmac_sha256: pinSig,
+            status: "HANDOFF_ATTESTATION_VERIFIED_IMMUTABLE"
+          };
+
+          badge.className = "voucher-status-badge badge-pinned";
+          badge.textContent = "✦ HANDOFF_ATTESTATION_VERIFIED_IMMUTABLE · TOCTOU GUARD ACTIVE";
+          output.textContent = JSON.stringify(pinReceipt, null, 2);
         });
       }
     })();

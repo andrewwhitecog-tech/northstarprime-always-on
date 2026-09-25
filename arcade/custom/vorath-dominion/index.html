@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VORATH DOMINION // Loomwheel Compact</title>
+<title>VORATH DOMINION // Temple RTS</title>
 <style>
   :root{--void:#07040d;--gold:#e9c86a;--paper:#f3ecd8;--dim:#a49db4;--line:rgba(233,200,106,.22)}
   *{box-sizing:border-box}
@@ -12,10 +12,10 @@
   canvas{display:block;width:100%;height:100%;cursor:crosshair;background:#0a0a14}
   #top{position:absolute;top:0;left:0;right:0;height:44px;display:flex;align-items:center;gap:18px;padding:0 16px;z-index:5;
     background:linear-gradient(180deg,rgba(8,6,16,.96),rgba(8,6,16,.55));border-bottom:1px solid var(--line);pointer-events:none}
-  .res{display:flex;align-items:center;gap:6px;font-weight:800;font-size:14px}.res .lab{font:700 9px/1 Consolas,monospace;letter-spacing:1px;color:#aaa3b9}
+  .res{display:flex;align-items:center;gap:6px;font-weight:800;font-size:15px}
   .res .ic{font-size:16px}
   #food{color:#ff9f6b}#wood{color:#8fe388}#crystal{color:#7fd7ff}#stone{color:#d7c9e6}#pop{color:var(--gold)}
-  #obj{margin-left:auto;font-size:12px;color:var(--dim);text-align:right;max-width:44%}#edict{color:#6ff8ea;font-weight:900}
+  #obj{margin-left:auto;font-size:12px;color:var(--dim);text-align:right;max-width:40%}
   #bottom{position:absolute;left:0;right:0;bottom:0;min-height:96px;z-index:5;display:flex;gap:10px;padding:10px 12px;
     background:linear-gradient(0deg,rgba(8,6,16,.98),rgba(8,6,16,.6));border-top:1px solid var(--line)}
   #sel{flex:0 0 210px;border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:rgba(255,255,255,.03);font-size:12px;color:var(--dim)}
@@ -28,50 +28,43 @@
   .btn small{display:block;font-weight:600;color:var(--dim);font-size:10px;margin-top:2px}
   #mini{position:absolute;right:12px;bottom:108px;width:168px;height:168px;border:1px solid var(--line);border-radius:8px;z-index:5;background:rgba(4,3,10,.9);pointer-events:auto;cursor:pointer}
   #msg{position:absolute;top:56px;left:50%;transform:translateX(-50%);z-index:6;font-weight:800;font-size:15px;color:var(--gold);text-shadow:0 2px 8px #000;pointer-events:none;opacity:0;transition:opacity .3s}
-  .overlay{position:absolute;inset:0;display:grid;place-items:center;padding:14px;overflow:auto;background:linear-gradient(90deg,rgba(4,5,15,.9),rgba(4,5,15,.38)),url('/static/idc_covers/hero_16x9/vorath_dominion_16x9_hero_built_in_fresh_20260709_v01.png') center/cover;z-index:10;backdrop-filter:blur(2px)}
+  .overlay{position:absolute;inset:0;display:grid;place-items:center;background:rgba(5,3,10,.9);z-index:10;backdrop-filter:blur(4px)}
   .overlay[hidden]{display:none}
-  .card{width:min(760px,94%);margin:auto;border:1px solid rgba(233,200,106,.48);border-radius:18px;background:linear-gradient(145deg,rgba(7,8,22,.96),rgba(22,8,31,.92));padding:26px;text-align:center;box-shadow:0 0 90px rgba(233,200,106,.18),inset 0 0 45px rgba(77,238,255,.05)}
+  .card{width:min(600px,92%);border:1px solid var(--line);border-radius:12px;background:rgba(12,9,20,.97);padding:26px;text-align:center;box-shadow:0 0 70px rgba(233,200,106,.1)}
   h1{margin:0 0 6px;font-size:38px;letter-spacing:2px;background:linear-gradient(90deg,#ff9f6b,#e9c86a,#8fe388,#7fd7ff,#c9a0ff,#ff9f6b);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:sh 7s linear infinite}
   @keyframes sh{to{background-position:300% 0}}
   .card p{color:var(--dim);font-size:13.5px;line-height:1.65;margin:0 0 14px;text-align:left}
   .card p b{color:var(--paper)}
   button.go{font:800 15px/1 "Segoe UI",sans-serif;letter-spacing:1px;padding:13px 26px;border-radius:8px;border:1px solid transparent;background:linear-gradient(180deg,#f3d98b,#c09a3e);color:#171022;cursor:pointer;pointer-events:auto}
   button.go:hover{box-shadow:0 0 22px rgba(233,200,106,.3)}
-  .cast{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:12px 0}.cast span{font:700 10px Consolas,monospace;color:#d7faff;border:1px solid rgba(89,231,255,.28);padding:7px;border-radius:7px;background:rgba(9,17,32,.72)}
-  .options{display:flex;justify-content:center;gap:16px;align-items:center;flex-wrap:wrap;margin:12px 0}.options label{font-size:12px;color:#ff6c8c;font-weight:800}.receipt{margin:12px auto 0;max-height:180px;overflow:auto;text-align:left;white-space:pre-wrap;color:#79f7ff;font:11px/1.35 Consolas,monospace}
-  #touch{display:none;position:absolute;left:10px;right:190px;bottom:112px;z-index:7;justify-content:space-between;pointer-events:none}.touchset{display:flex;gap:7px;pointer-events:auto}.touchset button{width:48px;height:48px;padding:0;border-radius:50%;border:1px solid rgba(233,200,106,.55);background:rgba(8,10,24,.82);color:#fff;font-weight:900}.touchset button.wide{width:auto;border-radius:22px;padding:0 13px;font-size:10px}
-  @media(max-width:760px),(pointer:coarse){#touch{display:flex}.res{font-size:11px;gap:3px}.res .lab{display:none}#top{gap:8px;padding:0 8px}#obj{font-size:9px;max-width:38%}#bottom{max-height:128px;overflow:auto;padding:7px}#sel{flex-basis:130px;font-size:10px}.btn{min-width:82px;padding:6px;font-size:10px}#mini{width:112px;height:112px;bottom:137px}.card{padding:18px}.cast{grid-template-columns:repeat(2,1fr)}h1{font-size:32px}}
 </style>
 </head>
-<body class="bespoke-game-art" data-ns-game-visual="bespoke-wave23">
-<div id="wrap" data-wave="23">
+<body>
+<div id="wrap">
   <canvas id="game"></canvas>
   <script src="/static/games/juice.js"></script>
   <script src="/static/games/chiptune.js"></script>
   <div id="top">
-    <div class="res" id="food"><span class="ic">◇</span><span class="lab">EMBER</span><span class="v">260</span></div>
-    <div class="res" id="wood"><span class="ic">⌁</span><span class="lab">FILAMENT</span><span class="v">260</span></div>
-    <div class="res" id="crystal"><span class="ic">◈</span><span class="lab">PRISM</span><span class="v">220</span></div>
-    <div class="res" id="stone"><span class="ic">▰</span><span class="lab">OBSIDIAN</span><span class="v">180</span></div>
-    <div class="res" id="pop"><span class="ic">✦</span><span class="lab">COVENANT</span><span class="v">3/10</span></div>
-    <div id="obj"><span id="edict">EDICT I</span> Bind two Witness Shrines, then raise the Solar Loomspire.</div>
+    <div class="res" id="food"><span class="ic">FOD</span><span class="v">200</span></div>
+    <div class="res" id="wood"><span class="ic">LBR</span><span class="v">200</span></div>
+    <div class="res" id="crystal"><span class="ic">CRY</span><span class="v">150</span></div>
+    <div class="res" id="stone"><span class="ic">STN</span><span class="v">100</span></div>
+    <div class="res" id="pop"><span class="ic">POP</span><span class="v">3/8</span></div>
+    <div id="obj">Objective: raise the Great Pyramid — or crush the Shadow tribunal.</div>
   </div>
   <div id="msg"></div>
   <canvas id="mini" width="168" height="168"></canvas>
   <div id="bottom">
-    <div id="sel"><b>Nothing selected</b>Drag to select. Right-click or double-tap to issue an order.</div>
+    <div id="sel"><b>Nothing selected</b>Left-drag to box-select. Right-click to command.</div>
     <div id="cmds"></div>
   </div>
-  <div id="touch" aria-label="Touch command deck"><div class="touchset"><button data-pan="a">◀</button><button data-pan="w">▲</button><button data-pan="d">▶</button><button data-pan="s">▼</button></div><div class="touchset"><button class="wide" data-touch="home">NEXUS</button><button class="wide" data-touch="army">LANCERS</button></div></div>
   <div class="overlay" id="overlay">
     <div class="card">
-      <h1>LOOMWHEEL COMPACT</h1>
-      <p>Command the adult <b>Prism Compact</b> across a living blackglass valley. Loom Tenders bind Ember, Filament, Prism, and Obsidian while Prism Lancers and Solar Cantors hold incompatible tactical roles against the <b>Obsidian Revision</b>.</p>
-      <div class="cast"><span>LOOM TENDER · gather/build</span><span>PRISM LANCER · frontline</span><span>SOLAR CANTOR · ranged</span><span>NULL MASON · hostile economy</span><span>REDACTION LANCER · raid</span><span>VEIL CENSOR · siege</span></div>
-      <p><b>Ascend:</b> claim two relics, build the Solar Loomspire, and hold its Witness aperture for 24 seconds—or redact the enemy Obsidian Nexus. <b>Controls:</b> drag-select, right-click/double-tap order, arrows/WASD pan, H home, F army. Gamepad: sticks pan/cursor, A select, X army, RT order.</p>
-      <button class="go" id="startBtn" type="button">Ratify the Compact</button>
-      <div class="options"><label><input id="safe" type="checkbox"> Sensory Safe</label><button class="go" id="receiptBtn" type="button">Write Receipt</button></div>
-      <pre class="receipt" id="receipt">No covenant receipt yet.</pre>
+      <h1>VORATH DOMINION</h1>
+      <p>You command the <b>Prism tribunal</b>. Your villagers gather <b>Food</b>, <b>Wood</b>, <b>Crystal</b>, and <b>Stone</b> from an abundant land studded with ancient temples and scattered <b>relics</b>.</p>
+      <p><b>Build</b> houses (raise your population cap), a barracks (train crystal warriors), and <b>temples</b> — then crown the map with the <b>Great Pyramid</b> wonder. Claim relics for permanent bonuses. Across the valley, the <b>Shadow tribunal</b> is doing the same and will raid you.</p>
+      <p><b>Win two ways:</b> complete the Great Pyramid and hold it for 90 seconds, <i>or</i> destroy the enemy Town Center. <b>Controls:</b> left-click / drag select · right-click move/gather/attack/build · arrows or screen-edge to pan · <kbd>H</kbd> centers on your town.</p>
+      <button class="go" id="startBtn" type="button">Found the Tribunal</button>
     </div>
   </div>
 </div>
@@ -85,35 +78,32 @@
   addEventListener("resize", resize); resize();
   if (window.Juice) Juice.attachFX(cv,{vignette:0.4,scanlines:0.02,glow:0.04});
   const GROUND=new Image(); GROUND.src="/static/games/plates/dominion_ground.png";
-  const UNIT_ATLAS=new Image(); UNIT_ATLAS.src="/static/art/games/vorath_overhaul_v01/vorath_dominion/vorath_dominion_compact_unit_atlas_v01.png";
 
   // ---------- world ----------
-  const T=40;                 // readable tactical tile scale
+  const T=32;                 // tile px at zoom 1
   const MAPW=64, MAPH=64;     // tiles
   const cam={x:0,y:0};
   const G={
     running:false, tick:0,
-    res:{food:260,wood:260,crystal:220,stone:180}, pop:0, popCap:10,
+    res:{food:200,wood:200,crystal:150,stone:100}, pop:0, popCap:8,
     units:[], buildings:[], resources:[], relics:[], projectiles:[], fx:[],
     sel:[], drag:null, build:null,
-    pyramidHeld:0, pyramidDone:false, relicsClaimed:0, elapsed:0, over:false, victory:null,
+    pyramidHeld:0, pyramidDone:false, over:false,
     bonus:{gather:1, atk:1, hp:1},   // relic bonuses
-    enemyTimer:3200, enemyWave:0, gpPrev:[], cursor:{x:0,y:0}, touchTap:null,
+    enemyTimer:4500, enemyWave:0,   // ~45s grace before the first raid (drains ~100/s)
   };
-  window.__VORATH_DOMINION_STATE__=()=>({running:G.running,selected:G.sel.map(u=>u.name),tasks:G.sel.map(u=>({name:u.name,task:u.task,x:+u.x.toFixed(2),y:+u.y.toFixed(2),target:u.target?.name||u.target?.type||null,targetX:u.target?.x??u.tx,targetY:u.target?.y??u.ty})),relicsClaimed:G.relicsClaimed,relics:G.relics.map(r=>({name:r.name,x:r.x,y:r.y,taken:r.taken})),camera:{x:cam.x,y:cam.y}});
 
   // building blueprints
   const B={
-    town:   {name:"Compact Nexus", w:3,h:3, hp:1400, color:"#e9c86a", cost:{}, dropoff:true, trains:["villager"], key:"town"},
-    house:  {name:"Threadhouse",   w:2,h:2, hp:480,  color:"#8a7fb0", cost:{wood:36}, pop:6, key:"house"},
-    barracks:{name:"Lancer Nave",  w:3,h:2, hp:780,  color:"#c06b5a", cost:{wood:100}, trains:["warrior"], key:"barracks"},
-    temple: {name:"Witness Shrine",w:2,h:2, hp:860,  color:"#7fd7ff", cost:{stone:90,crystal:55}, trains:["cantor"], relicSlot:true, key:"temple"},
-    pyramid:{name:"Solar Loomspire",w:4,h:4,hp:3200,color:"#f3d98b", cost:{stone:160,crystal:220,wood:160}, wonder:true, key:"pyramid"},
+    town:   {name:"Town Center", w:3,h:3, hp:1200, color:"#e9c86a", cost:{}, dropoff:true, trains:["villager"], key:"town"},
+    house:  {name:"House",       w:2,h:2, hp:400,  color:"#8a7fb0", cost:{wood:40}, pop:5, key:"house"},
+    barracks:{name:"Barracks",   w:3,h:2, hp:700,  color:"#c06b5a", cost:{wood:120}, trains:["warrior"], key:"barracks"},
+    temple: {name:"Temple",      w:2,h:2, hp:800,  color:"#7fd7ff", cost:{stone:120,crystal:60}, relicSlot:true, key:"temple"},
+    pyramid:{name:"Great Pyramid",w:4,h:4,hp:3000, color:"#f3d98b", cost:{stone:400,crystal:300,wood:200}, wonder:true, key:"pyramid"},
   };
   const UNITS={
-    villager:{name:"Loom Tender",foeName:"Null Mason",hp:78,atk:5,spd:0.052,r:0.42,cost:{food:45},build:25,color:"#d8cbae",worker:true,trainT:150,atlas:0},
-    warrior:{name:"Prism Lancer",foeName:"Redaction Lancer",hp:155,atk:19,spd:0.048,r:0.47,cost:{food:64,crystal:24},color:"#7fd7ff",trainT:230,atlas:1,reach:1.05,attackCd:420},
-    cantor:{name:"Solar Cantor",foeName:"Veil Censor",hp:104,atk:13,spd:0.043,r:0.46,cost:{food:48,crystal:52},color:"#e9c86a",trainT:280,atlas:2,reach:3.2,attackCd:650,support:true},
+    villager:{name:"Villager", hp:60, atk:4, spd:0.055, r:0.32, cost:{food:50}, build:22, color:"#d8cbae", worker:true, trainT:180},
+    warrior: {name:"Crystal Warrior", hp:130, atk:16, spd:0.05, r:0.34, cost:{food:70,crystal:30}, color:"#7fd7ff", trainT:300},
   };
 
   // ---------- audio (chiptune.js) ----------
@@ -130,9 +120,9 @@
   function stopMusic(){ try{ if(music){music.stop();music=null;} }catch(e){} }
 
   // ---------- helpers ----------
-  const tileFree=(tx,ty,key)=>{ if(tx<0||ty<0||tx>=MAPW||ty>=MAPH) return false;
+  const tileFree=(tx,ty)=>{ if(tx<0||ty<0||tx>=MAPW||ty>=MAPH) return false;
     for(const b of G.buildings){ if(tx>=b.tx&&tx<b.tx+b.w&&ty>=b.ty&&ty<b.ty+b.h) return false; }
-    if(key!=="pyramid")for(const r of G.resources){ if(r.amt>0 && (tx|0)===(r.x|0)&&(ty|0)===(r.y|0)) return false; }
+    for(const r of G.resources){ if(r.amt>0 && (tx|0)===(r.x|0)&&(ty|0)===(r.y|0)) return false; }
     return true; };
   const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
   function msg(t,c){ const m=document.getElementById("msg"); m.textContent=t; if(c)m.style.color=c; m.style.opacity=1; clearTimeout(m._t); m._t=setTimeout(()=>m.style.opacity=0,2200); }
@@ -144,22 +134,22 @@
   function genWorld(){
     // scatter forests, berry clusters, crystal veins, stone quarries — abundant
     function cluster(type,cx,cy,n,rad,amt,color,icon){ for(let i=0;i<n;i++){ const a=Math.random()*6.28,d=Math.random()*rad; const x=cx+Math.cos(a)*d,y=cy+Math.sin(a)*d; if(x>1&&y>3&&x<MAPW-1&&y<MAPH-1) seedRes(type,Math.round(x),Math.round(y),amt,color,icon); } }
-    for(let i=0;i<10;i++) cluster("wood",4+Math.random()*(MAPW-8),4+Math.random()*(MAPH-8),14,3.5,120,"#3f7a3a","");
-    for(let i=0;i<7;i++)  cluster("food",4+Math.random()*(MAPW-8),4+Math.random()*(MAPH-8),5,2,150,"#c65a86","");
-    for(let i=0;i<6;i++)  cluster("crystal",4+Math.random()*(MAPW-8),4+Math.random()*(MAPH-8),4,1.8,180,"#7fd7ff","");
-    for(let i=0;i<5;i++)  cluster("stone",4+Math.random()*(MAPW-8),4+Math.random()*(MAPH-8),4,1.6,200,"#b7a9c6","⛏️");
+    for(let i=0;i<10;i++) cluster("wood",4+Math.random()*(MAPW-8),4+Math.random()*(MAPH-8),14,3.5,120,"#3f7a3a","▲");
+    for(let i=0;i<7;i++)  cluster("food",4+Math.random()*(MAPW-8),4+Math.random()*(MAPH-8),5,2,150,"#c65a86","●");
+    for(let i=0;i<6;i++)  cluster("crystal",4+Math.random()*(MAPW-8),4+Math.random()*(MAPH-8),4,1.8,180,"#7fd7ff","◆");
+    for(let i=0;i<5;i++)  cluster("stone",4+Math.random()*(MAPW-8),4+Math.random()*(MAPH-8),4,1.6,200,"#b7a9c6","■");
     // ancient temples (neutral ruins — visual monuments; near them, relics)
     const templeSpots=[[MAPW/2,MAPH/2],[14,48],[50,16],[46,50],[16,14]];
     for(const [tx,ty] of templeSpots){ G.buildings.push(mkBuilding("temple",Math.round(tx)-1,Math.round(ty)-1,"neutral",true)); }
     // relics: special items granting bonuses
     const relicDefs=[
-      {name:"Ember Commentary",bonus:"atk",amt:0.25,color:"#ff9f6b",desc:"attack +25%"},
-      {name:"Verdant Thread",bonus:"gather",amt:0.30,color:"#8fe388",desc:"binding +30%"},
-      {name:"Witness Aegis",bonus:"hp",amt:0.30,color:"#7fd7ff",desc:"integrity +30%"},
-      {name:"Prism Memory",bonus:"atk",amt:0.20,color:"#c9a0ff",desc:"attack +20%"},
-      {name:"Solar Return",bonus:"gather",amt:0.20,color:"#e9c86a",desc:"binding +20%"},
+      {name:"Ember Idol",bonus:"atk",amt:0.25,color:"#ff9f6b",desc:"+25% attack"},
+      {name:"Verdant Seed",bonus:"gather",amt:0.30,color:"#8fe388",desc:"+30% gather rate"},
+      {name:"Aegis Shard",bonus:"hp",amt:0.30,color:"#7fd7ff",desc:"+30% unit HP"},
+      {name:"Prism Heart",bonus:"atk",amt:0.20,color:"#c9a0ff",desc:"+20% attack"},
+      {name:"Sun Disc",bonus:"gather",amt:0.20,color:"#e9c86a",desc:"+20% gather rate"},
     ];
-    relicDefs.forEach((rd,i)=>{const s=templeSpots[i];G.relics.push({...rd,x:s[0]+3,y:s[1]-2,taken:false,t:Math.random()*6});});
+    relicDefs.forEach((rd,i)=>{ const s=templeSpots[i]; G.relics.push({...rd, x:s[0], y:s[1]-2, taken:false, t:Math.random()*6}); });
   }
 
   function mkBuilding(key,tx,ty,owner,complete){ const bp=B[key]; return {
@@ -169,8 +159,8 @@
 
   // ---------- spawning ----------
   function mkUnit(type,x,y,owner){ const u=UNITS[type]; return {
-    type, name:owner==="foe"?u.foeName:u.name, x,y, owner, hp:u.hp*(owner==="you"?G.bonus.hp:1), maxhp:u.hp*(owner==="you"?G.bonus.hp:1),
-    u, spd:u.spd, r:u.r, tx:x, ty:y, task:null, target:null, carry:0, carryType:null, buildT:0, atkCd:0, gatherCd:0, sid:(Math.random()<.5?-1:1) }; }
+    type, name:u.name, x,y, owner, hp:u.hp*(owner==="you"?G.bonus.hp:1), maxhp:u.hp*(owner==="you"?G.bonus.hp:1),
+    u, spd:u.spd, r:u.r, tx:x, ty:y, task:null, target:null, carry:0, carryType:null, buildT:0, atkCd:0, gatherCd:0 }; }
 
   function foundBase(){
     // player town center
@@ -178,8 +168,6 @@
     const tc=mkBuilding("town",ptx,pty,"you",true); G.buildings.push(tc);
     G.myTown=tc;
     for(let i=0;i<3;i++) G.units.push(mkUnit("villager",ptx+i,pty+3.4,"you"));
-    G.units.push(mkUnit("warrior",ptx+3.2,pty+3.3,"you"));
-    G.units.push(mkUnit("cantor",ptx+4.1,pty+3.2,"you"));
     // enemy town center
     const etx=MAPW-11, ety=10;
     const etc=mkBuilding("town",etx,ety,"foe",true); G.buildings.push(etc); G.foeTown=etc;
@@ -194,7 +182,7 @@
   function canAfford(cost){ for(const k in cost) if((G.res[k]||0)<cost[k]) return false; return true; }
   function pay(cost){ for(const k in cost) G.res[k]-=cost[k]; refreshRes(); }
   function refreshRes(){ for(const k of ["food","wood","crystal","stone"]) document.querySelector("#"+k+" .v").textContent=Math.floor(G.res[k]);
-    G.popCap=10+G.buildings.filter(b=>b.owner==="you"&&b.key==="house"&&b.done).length*6;
+    G.popCap=8+G.buildings.filter(b=>b.owner==="you"&&b.key==="house"&&b.done).length*5;
     G.pop=G.units.filter(u=>u.owner==="you").length;
     document.querySelector("#pop .v").textContent=G.pop+"/"+G.popCap; }
 
@@ -207,23 +195,23 @@
     updSelPanel(); }
 
   function updSelPanel(){ const el=document.getElementById("sel"), cmds=document.getElementById("cmds"); cmds.innerHTML="";
-    if(!G.sel.length){ el.innerHTML="<b>Nothing selected</b>Drag to select. Right-click or double-tap to order."; buildPalette(); return; }
+    if(!G.sel.length){ el.innerHTML="<b>Nothing selected</b>Left-drag to box-select. Right-click to command."; buildPalette(); return; }
     const s0=G.sel[0];
     if(s0.bp){ // building
       el.innerHTML="<b>"+s0.name+"</b>HP "+Math.ceil(s0.hp)+"/"+s0.maxhp+(s0.done?"":" · building "+Math.floor(s0.prog*100)+"%")+(s0.relic?"<br>Relic: "+s0.relic:"");
       if(s0.done&&s0.bp.trains) s0.bp.trains.forEach(t=>addTrainBtn(cmds,s0,t));
       return; }
     // units
-    const nV=G.sel.filter(u=>u.u.worker).length, nL=G.sel.filter(u=>u.type==="warrior").length, nC=G.sel.filter(u=>u.type==="cantor").length;
-    el.innerHTML="<b>"+(G.sel.length>1?G.sel.length+" covenant units":s0.name)+"</b>"+[nV?nV+" Tender"+(nV>1?"s":""):"",nL?nL+" Lancer"+(nL>1?"s":""):"",nC?nC+" Cantor"+(nC>1?"s":""):""].filter(Boolean).join(" · ");
-    if(nV) buildPalette();
+    const nV=G.sel.filter(u=>u.u.worker).length, nW=G.sel.length-nV;
+    el.innerHTML="<b>"+(G.sel.length>1?G.sel.length+" units":s0.name)+"</b>"+(nV?nV+" villager"+(nV>1?"s":""):"")+(nV&&nW?" · ":"")+(nW?nW+" warrior"+(nW>1?"s":""):"");
+    if(nV) buildPalette();  // villagers can build
   }
   function addTrainBtn(cmds,b,type){ const u=UNITS[type]; const btn=document.createElement("button"); btn.className="btn";
     btn.innerHTML="Train "+u.name+"<small>"+costStr(u.cost)+(b.queue.length?" · queue "+b.queue.length:"")+"</small>";
     btn.disabled=!canAfford(u.cost)||G.pop>=G.popCap;
-    btn.onclick=()=>{ if(!canAfford(u.cost)){msg("The Compact lacks material","#ff9f6b");S("bump");return;} if(G.pop>=G.popCap){msg("Ratify another Threadhouse","#e9c86a");S("bump");return;} pay(u.cost); b.queue.push(type); if(b.queue.length===1)b.qT=u.trainT; S("blip"); updSelPanel(); };
+    btn.onclick=()=>{ if(!canAfford(u.cost)){msg("Not enough resources","#ff9f6b");S("bump");return;} if(G.pop>=G.popCap){msg("Build houses to raise population","#e9c86a");S("bump");return;} pay(u.cost); b.queue.push(type); if(b.queue.length===1)b.qT=u.trainT; S("blip"); updSelPanel(); };
     cmds.appendChild(btn); }
-  function costStr(c){ return Object.entries(c).map(([k,v])=>v+" "+({food:"Ember",wood:"Filament",crystal:"Prism",stone:"Obsidian"}[k])).join(" · ")||"covenant"; }
+  function costStr(c){ return Object.entries(c).map(([k,v])=>v+" "+({food:"Food",wood:"Wood",crystal:"Crystal",stone:"Stone"}[k])).join(" ")||"free"; }
 
   function buildPalette(){ const cmds=document.getElementById("cmds");
     const hasVill=G.sel.some(u=>u.u&&u.u.worker); if(!hasVill) return;
@@ -234,29 +222,24 @@
       cmds.appendChild(btn); }); }
 
   // ---------- input ----------
-  cv.addEventListener("pointerdown",e=>{ if(!G.running)return; cv.setPointerCapture?.(e.pointerId); const r=cv.getBoundingClientRect(); const sx=e.clientX-r.left, sy=e.clientY-r.top; G.mx=sx;G.my=sy;
-    if(e.button===2){ commandTo(sx,sy); return; }
-    if(G.build){ placeBuilding(sx,sy); return; }
-    G.drag={x0:sx,y0:sy,x1:sx,y1:sy,pointerType:e.pointerType,started:performance.now()};
+  cv.addEventListener("mousedown",e=>{ if(!G.running)return; const r=cv.getBoundingClientRect(); const sx=e.clientX-r.left, sy=e.clientY-r.top;
+    if(e.button===0){
+      if(G.build){ placeBuilding(sx,sy); return; }
+      G.drag={x0:sx,y0:sy,x1:sx,y1:sy};
+    } else if(e.button===2){ commandTo(sx,sy); }
   });
-  cv.addEventListener("pointermove",e=>{ const r=cv.getBoundingClientRect(); G.mx=e.clientX-r.left; G.my=e.clientY-r.top; G.cursor.x=G.mx;G.cursor.y=G.my;if(G.drag){G.drag.x1=G.mx;G.drag.y1=G.my;} });
-  cv.addEventListener("pointerup",e=>{ if(e.button!==0||!G.drag)return; const d=G.drag;G.drag=null;const moved=Math.hypot(d.x1-d.x0,d.y1-d.y0);
-    if(d.pointerType==="touch"&&moved<12){const now=performance.now();if(G.touchTap&&now-G.touchTap.t<420&&Math.hypot(G.touchTap.x-d.x1,G.touchTap.y-d.y1)<34){commandTo(d.x1,d.y1);G.touchTap=null;}else{selectBox(d.x1-18,d.y1-18,d.x1+18,d.y1+18);G.touchTap={x:d.x1,y:d.y1,t:now};}}
-    else if(moved<6)selectBox(d.x0-14,d.y0-14,d.x0+14,d.y0+14);else selectBox(d.x0,d.y0,d.x1,d.y1);
-  });
+  cv.addEventListener("mousemove",e=>{ const r=cv.getBoundingClientRect(); G.mx=e.clientX-r.left; G.my=e.clientY-r.top; if(G.drag){G.drag.x1=G.mx;G.drag.y1=G.my;} });
+  cv.addEventListener("mouseup",e=>{ if(e.button===0&&G.drag){ const d=G.drag; G.drag=null; if(Math.hypot(d.x1-d.x0,d.y1-d.y0)<6) selectBox(d.x0-14,d.y0-14,d.x0+14,d.y0+14); else selectBox(d.x0,d.y0,d.x1,d.y1); } });
   cv.addEventListener("contextmenu",e=>e.preventDefault());
-  addEventListener("keydown",e=>{ const k=e.key.toLowerCase(); G.keys[k]=true; if(k==="h"&&G.myTown)centerOn(G.myTown.x,G.myTown.y);if(k==="f")selectArmy();if(k==="escape"){G.build=null;clearSel();updSelPanel();} });
+  addEventListener("keydown",e=>{ const k=e.key.toLowerCase(); G.keys[k]=true; if(k==="h"&&G.myTown)centerOn(G.myTown.x,G.myTown.y); if(k==="escape"){G.build=null;clearSel();updSelPanel();} });
   addEventListener("keyup",e=>{ G.keys[e.key.toLowerCase()]=false; });
   G.keys={};
-  mini.addEventListener("pointerdown",e=>{ const r=mini.getBoundingClientRect(); const fx=(e.clientX-r.left)/r.width, fy=(e.clientY-r.top)/r.height; centerOn(fx*MAPW,fy*MAPH); });
-  function selectArmy(){G.sel=G.units.filter(u=>u.owner==="you"&&!u.u.worker);updSelPanel();if(G.sel[0])centerOn(G.sel[0].x,G.sel[0].y);}
-  document.querySelectorAll("[data-pan]").forEach(b=>{const k=b.dataset.pan;b.addEventListener("pointerdown",e=>{e.preventDefault();G.keys[k]=true});["pointerup","pointercancel","pointerleave"].forEach(ev=>b.addEventListener(ev,()=>G.keys[k]=false));});
-  document.querySelectorAll("[data-touch]").forEach(b=>b.addEventListener("click",()=>{if(b.dataset.touch==="home"&&G.myTown)centerOn(G.myTown.x,G.myTown.y);if(b.dataset.touch==="army")selectArmy();}));
+  mini.addEventListener("mousedown",e=>{ const r=mini.getBoundingClientRect(); const fx=(e.clientX-r.left)/168, fy=(e.clientY-r.top)/168; centerOn(fx*MAPW,fy*MAPH); });
 
   function placeBuilding(sx,sy){ const w=s2w(sx,sy); const bp=B[G.build.key]; const tx=Math.round(w.x-bp.w/2), ty=Math.round(w.y-bp.h/2);
-    for(let x=tx;x<tx+bp.w;x++)for(let y=ty;y<ty+bp.h;y++){ if(!tileFree(x,y,G.build.key)){ msg("Blocked by covenant architecture—pick open ground","#ff9f6b"); return; } }
+    for(let x=tx;x<tx+bp.w;x++)for(let y=ty;y<ty+bp.h;y++){ if(!tileFree(x,y)){ msg("Blocked — pick open ground","#ff9f6b"); return; } }
     if(!canAfford(bp.cost)){ msg("Not enough resources","#ff9f6b"); G.build=null; return; }
-    pay(bp.cost);S("reload");if(G.build.key==="pyramid")G.resources=G.resources.filter(r=>!((r.x|0)>=tx&&(r.x|0)<tx+bp.w&&(r.y|0)>=ty&&(r.y|0)<ty+bp.h));const b=mkBuilding(G.build.key,tx,ty,"you",false);G.buildings.push(b);
+    pay(bp.cost); S("reload"); const b=mkBuilding(G.build.key,tx,ty,"you",false); G.buildings.push(b);
     const builders=G.sel.filter(u=>u.u&&u.u.worker); (builders.length?builders:G.units.filter(u=>u.owner==="you"&&u.u.worker).slice(0,2)).forEach(u=>{ u.task="build"; u.target=b; });
     G.build=null; msg("Construction started","#8fe388"); }
 
@@ -267,9 +250,10 @@
     for(const b of G.buildings){ if(b.owner==="foe"){ if(w.x>=b.tx&&w.x<b.tx+b.w&&w.y>=b.ty&&w.y<b.ty+b.h){ foeT=b; } } }
     let relT=null; for(const rl of G.relics){ if(!rl.taken){ const d=Math.hypot(rl.x-w.x,rl.y-w.y); if(d<0.9) relT=rl; } }
     let i=0; for(const u of G.sel){ if(u.bp) continue; const ox=(i%3-1)*0.5, oy=((i/3|0)-1)*0.5; i++;
-      if(relT&&u.u.worker){u.task="relic";u.target=relT;}
-      else if(resT&&u.u.worker){u.task="gather";u.target=resT;}
-      else if(foeT){u.task="attack";u.target=foeT;}
+      if(foeT&&!u.u.worker){ u.task="attack"; u.target=foeT; }
+      else if(foeT&&u.u.worker){ u.task="attack"; u.target=foeT; }
+      else if(relT&&u.u.worker){ u.task="relic"; u.target=relT; }
+      else if(resT&&u.u.worker){ u.task="gather"; u.target=resT; }
       else { u.task="move"; u.target=null; u.tx=w.x+ox; u.ty=w.y+oy; } }
     ping(w.x,w.y); }
   function ping(wx,wy){ G.fx.push({type:"ping",x:wx,y:wy,t:1}); }
@@ -278,8 +262,8 @@
   function nearestDropoff(u){ let best=null,bd=1e9; for(const b of G.buildings){ if(b.owner==="you"&&b.done&&(b.key==="town")){ const d=Math.hypot(b.x-u.x,b.y-u.y); if(d<bd){bd=d;best=b;} } } return best; }
   function stepTo(u,tx,ty,spd){ const dx=tx-u.x,dy=ty-u.y,d=Math.hypot(dx,dy); if(d<0.05) return true;
     let nx=u.x+dx/d*spd, ny=u.y+dy/d*spd;
-    // Stable perpendicular steering keeps units flowing around shrine and city footprints.
-    if(blockedByBuilding(nx,ny,u)){const px=-dy/d*u.sid,py=dx/d*u.sid;let sx=u.x+px*spd*1.35,sy=u.y+py*spd*1.35;if(blockedByBuilding(sx,sy,u)){u.sid*=-1;sx=u.x-px*spd*1.35;sy=u.y-py*spd*1.35;}if(!blockedByBuilding(sx,sy,u)){nx=sx;ny=sy;}else if(!blockedByBuilding(nx,u.y,u))ny=u.y;else if(!blockedByBuilding(u.x,ny,u))nx=u.x;else return false;}
+    // simple obstacle slide against buildings
+    if(blockedByBuilding(nx,ny,u)){ if(!blockedByBuilding(nx,u.y,u))ny=u.y; else if(!blockedByBuilding(u.x,ny,u))nx=u.x; else return false; }
     u.x=Math.max(0.3,Math.min(MAPW-0.3,nx)); u.y=Math.max(0.3,Math.min(MAPH-0.3,ny)); return d<spd*1.5; }
   function blockedByBuilding(x,y,u){ for(const b of G.buildings){ if(x>=b.tx&&x<b.tx+b.w&&y>=b.ty&&y<b.ty+b.h){ if(u.task==="build"&&u.target===b) return false; return true; } } return false; }
 
@@ -290,7 +274,7 @@
     if(!u.task||u.task==="move"){ stepTo(u,u.tx,u.ty,spd); return; }
     if(u.task==="build"){ const b=u.target; if(!b||b.done||!G.buildings.includes(b)){ u.task=null; return; }
       if(Math.hypot(b.x-u.x,b.y-u.y)>Math.max(b.w,b.h)/1.3){ stepTo(u,b.x,b.y,spd); }
-      else { b.prog=Math.min(1,b.prog+dt*0.0019); b.hp=Math.max(1,b.maxhp*b.prog); if(b.prog>=1){ b.done=true; b.hp=b.maxhp; msg(b.name+" complete","#8fe388"); S("powerUp"); refreshRes(); if(b.key==="pyramid"){ msg("Solar Loomspire open—bind two relics and hold 24s.","#f3d98b"); S("oneUp"); } u.task=null; } }
+      else { b.prog=Math.min(1,b.prog+dt*0.0016); b.hp=Math.max(1,b.maxhp*b.prog); if(b.prog>=1){ b.done=true; b.hp=b.maxhp; msg(b.name+" complete","#8fe388"); S("powerUp"); refreshRes(); if(b.key==="pyramid"){ msg("Great Pyramid raised! Hold 90s to win.","#f3d98b"); S("oneUp"); } u.task=null; } }
       return; }
     if(u.task==="gather"){ const r=u.target; if(!r||r.amt<=0){ u.task=null; // find another nearby of same type
         return; }
@@ -304,16 +288,16 @@
       return; }
     if(u.task==="relic"){ const rl=u.target; if(!rl||rl.taken){u.task=null;return;} if(Math.hypot(rl.x-u.x,rl.y-u.y)>0.6){ stepTo(u,rl.x,rl.y,spd); } else { claimRelic(rl); u.task=null; } return; }
     if(u.task==="attack"){ const t=u.target; if(!t||(t.hp!=null&&t.hp<=0)||( !G.units.includes(t)&&!G.buildings.includes(t))){ u.task=null; return; }
-      const tx=t.x,ty=t.y, reach=(t.bp?Math.max(t.w,t.h)/1.4:0.6)+(u.u.reach||0.4);
+      const tx=t.x,ty=t.y, reach=(t.bp?Math.max(t.w,t.h)/1.4:0.6)+0.4;
       if(Math.hypot(tx-u.x,ty-u.y)>reach){ stepTo(u,tx,ty,spd); }
-      else if(u.atkCd<=0){ t.hp-=u.u.atk*G.bonus.atk;u.atkCd=u.u.attackCd||480;G.fx.push({type:u.u.support?"cantor":"hit",x:tx,y:ty,t:1});if(u.u.support){for(const ally of G.units){if(ally.owner==="you"&&Math.hypot(ally.x-u.x,ally.y-u.y)<2.6)ally.hp=Math.min(ally.maxhp,ally.hp+4);}}S("hit",90);if(t.hp<=0)onKill(t); }
+      else if(u.atkCd<=0){ t.hp-=u.u.atk*(u.owner==="you"?G.bonus.atk:1); u.atkCd=34; G.fx.push({type:"hit",x:tx,y:ty,t:1}); S("hit",90); if(t.hp<=0)onKill(t); }
       return; }
   }
-  function claimRelic(rl){ rl.taken=true;G.relicsClaimed++;G.bonus[rl.bonus]+=rl.amt;msg("Witness bound: "+rl.name+" ("+rl.desc+")","#c9a0ff");S("gate");updateObjective();
+  function claimRelic(rl){ rl.taken=true; G.bonus[rl.bonus]+=rl.amt; msg("Relic claimed: "+rl.name+" ("+rl.desc+")","#c9a0ff"); S("gate");
     if(rl.bonus==="hp"){ G.units.filter(u=>u.owner==="you").forEach(u=>{ u.maxhp*=(1+rl.amt); u.hp*=(1+rl.amt); }); }
     if(window.Juice)Juice.flash("rgba(201,160,255,.14)",400); }
 
-  function onKill(t){ if(t.bp){ const i=G.buildings.indexOf(t); if(i>=0)G.buildings.splice(i,1); S("explode",120); if(t===G.foeTown){ win("redaction", "The Obsidian Nexus is rewritten. The Compact governs the valley."); } if(t.owner==="you")refreshRes(); }
+  function onKill(t){ if(t.bp){ const i=G.buildings.indexOf(t); if(i>=0)G.buildings.splice(i,1); S("explode",120); if(t===G.foeTown){ win("Shadow Town Center destroyed. The valley is yours."); } if(t.owner==="you")refreshRes(); }
     else { const i=G.units.indexOf(t); if(i>=0)G.units.splice(i,1); S("stomp",60); if(t.owner==="you")refreshRes(); } G.sel=G.sel.filter(s=>s!==t); }
 
   // ---------- enemy AI ----------
@@ -326,27 +310,27 @@
     if(!u.target||(u.target.hp!=null&&u.target.hp<=0)||(!G.units.includes(u.target)&&!G.buildings.includes(u.target))){
       // target nearest player unit, else town
       let best=G.myTown,bd=1e9; for(const p of G.units){ if(p.owner==="you"){ const d=Math.hypot(p.x-u.x,p.y-u.y); if(d<bd){bd=d;best=p;} } } u.target=best; }
-    const t=u.target;if(!t)return;const reach=(t.bp?Math.max(t.w,t.h)/1.4:0.6)+(u.u.reach||0.4);
+    const t=u.target; if(!t)return; const reach=(t.bp?Math.max(t.w,t.h)/1.4:0.6)+0.4;
     if(Math.hypot(t.x-u.x,t.y-u.y)>reach)stepTo(u,t.x,t.y,spd);
-    else if(u.atkCd<=0){t.hp-=u.u.atk;u.atkCd=u.u.attackCd||480;G.fx.push({type:u.u.support?"censor":"hit",x:t.x,y:t.y,t:1});S("hit",90);if(t.hp<=0)onKill(t);}
+    else if(u.atkCd<=0){ t.hp-=u.u.atk; u.atkCd=34; G.fx.push({type:"hit",x:t.x,y:t.y,t:1}); S("hit",90); if(t.hp<=0)onKill(t); }
   }
-  function enemyBrain(dt){ G.enemyTimer-=dt*0.1; if(G.enemyTimer<=0){ G.enemyWave++; G.enemyTimer=1700-Math.min(800,G.enemyWave*110);
-      const n=1+Math.min(5,Math.floor(G.enemyWave/1.4)); const et=G.foeTown; if(!et)return;
-      for(let i=0;i<n;i++) G.units.push(mkUnit(i===n-1&&G.enemyWave>1?"cantor":"warrior",et.x+(Math.random()-.5)*2,et.y+3+i*0.35,"foe"));
-      msg("Obsidian Revision raid "+G.enemyWave+"—Lancers and Censors inbound","#ff5b7f"); S("hurt");
+  function enemyBrain(dt){ G.enemyTimer-=dt*0.1; if(G.enemyTimer<=0){ G.enemyWave++; G.enemyTimer=2600-Math.min(1700,G.enemyWave*180);
+      const n=1+Math.min(6,Math.floor(G.enemyWave/1.2)); const et=G.foeTown; if(!et)return;
+      for(let i=0;i<n;i++) G.units.push(mkUnit("warrior",et.x+ (Math.random()-.5)*2, et.y+3+i*0.3,"foe"));
+      msg("⚔ Shadow raiders incoming (wave "+G.enemyWave+")","#ff9f6b"); S("hurt");
     }
     // foe trains villagers slowly
     if(G.tick%900===0 && G.foeTown){ const c=G.units.filter(u=>u.owner==="foe"&&u.u.worker).length; if(c<6)G.units.push(mkUnit("villager",G.foeTown.x,G.foeTown.y+3.4,"foe")); }
   }
 
   // ---------- building production ----------
-  function updateObjective(){const obj=document.getElementById("obj"),pyr=G.buildings.find(b=>b.owner==="you"&&b.key==="pyramid"&&b.done);if(G.relicsClaimed<2){obj.innerHTML='<span id="edict">EDICT I</span> Bind Witnesses '+G.relicsClaimed+'/2 · then raise the Solar Loomspire.';}else if(!pyr){obj.innerHTML='<span id="edict">EDICT II</span> Witnesses bound · raise the Solar Loomspire.';}else{obj.innerHTML='<span id="edict">EDICT III</span> Aperture hold '+Math.floor(G.pyramidHeld)+'/24s · defend the Compact.';}}
   function updateBuildings(dt){ for(const b of G.buildings){ if(b.owner!=="you"||!b.done||!b.queue.length)continue;
       b.qT-=dt; if(b.qT<=0){ const type=b.queue.shift(); if(G.pop<G.popCap){ G.units.push(mkUnit(type,b.x,b.y+b.h/2+0.6,"you")); refreshRes(); S("pop",100); } if(b.queue.length)b.qT=UNITS[b.queue[0]].trainT; if(G.sel.includes(b))updSelPanel(); }
     }
-    // Loomspire ascension hold
+    // pyramid victory hold
     const pyr=G.buildings.find(b=>b.owner==="you"&&b.key==="pyramid"&&b.done);
-    if(pyr&&G.relicsClaimed>=2){G.pyramidHeld+=dt*0.001;if(G.tick%12===0)updateObjective();if(G.pyramidHeld>=24)win("ascension","The Solar Loomspire opens. The Loomwheel Compact ascends without a score.");}else if(G.tick%30===0)updateObjective();
+    if(pyr){ G.pyramidHeld+=dt*0.001; const left=Math.ceil(90-G.pyramidHeld); document.getElementById("obj").textContent="▲ Great Pyramid raised — hold "+Math.max(0,left)+"s to win!";
+      if(G.pyramidHeld>=90) win("The Great Pyramid stands eternal. Dominion achieved."); }
   }
 
   // ---------- render ----------
@@ -381,18 +365,16 @@
     for(const u of G.units){ const s=w2s(u.x,u.y); if(s.x<-T||s.y<-T||s.x>VW||s.y>VH)continue; drawUnit(u,s.x,s.y); }
     // fx
     for(const f of G.fx){ const s=w2s(f.x,f.y); if(f.type==="ping"){ ctx.strokeStyle="rgba(233,200,106,"+f.t+")"; ctx.lineWidth=2; ctx.beginPath();ctx.arc(s.x,s.y,(1-f.t)*24,0,7);ctx.stroke(); }
-      else if(f.type==="hit"){ctx.fillStyle="rgba(255,120,90,"+f.t+")";ctx.beginPath();ctx.arc(s.x,s.y,8*f.t,0,7);ctx.fill();}
-      else if(f.type==="cantor"||f.type==="censor"){ctx.strokeStyle=(f.type==="cantor"?"rgba(104,250,226,":"rgba(255,67,169,")+f.t+")";ctx.lineWidth=3;ctx.beginPath();ctx.arc(s.x,s.y,(1-f.t)*32+5,0,7);ctx.stroke();} }
+      else if(f.type==="hit"){ ctx.fillStyle="rgba(255,120,90,"+f.t+")"; ctx.beginPath();ctx.arc(s.x,s.y,8*f.t,0,7);ctx.fill(); } }
     // selection markers
     for(const u of G.sel){ if(u.bp)continue; const s=w2s(u.x,u.y); ctx.strokeStyle="#7fd7ff";ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(s.x,s.y,u.r*T+4,0,7);ctx.stroke(); }
     for(const b of G.sel){ if(!b.bp)continue; const s=w2s(b.tx,b.ty); ctx.strokeStyle="#7fd7ff";ctx.lineWidth=2;ctx.strokeRect(s.x-2,s.y-2,b.w*T+4,b.h*T+4); }
     // build ghost
     if(G.build&&G.mx!=null){ const bp=B[G.build.key]; const w=s2w(G.mx,G.my); const tx=Math.round(w.x-bp.w/2),ty=Math.round(w.y-bp.h/2); const s=w2s(tx,ty);
-      let ok=true; for(let x=tx;x<tx+bp.w;x++)for(let y=ty;y<ty+bp.h;y++)if(!tileFree(x,y,G.build.key))ok=false;
+      let ok=true; for(let x=tx;x<tx+bp.w;x++)for(let y=ty;y<ty+bp.h;y++)if(!tileFree(x,y))ok=false;
       ctx.globalAlpha=0.5; ctx.fillStyle=ok?bp.color:"#ff5b6b"; ctx.fillRect(s.x,s.y,bp.w*T,bp.h*T); ctx.globalAlpha=1; }
     // drag box
     if(G.drag){ ctx.strokeStyle="#7fd7ff";ctx.lineWidth=1.5; ctx.setLineDash([4,3]); ctx.strokeRect(Math.min(G.drag.x0,G.drag.x1),Math.min(G.drag.y0,G.drag.y1),Math.abs(G.drag.x1-G.drag.x0),Math.abs(G.drag.y1-G.drag.y0)); ctx.setLineDash([]); }
-    if(G.gamepad){ctx.strokeStyle="#ffda68";ctx.lineWidth=2;ctx.beginPath();ctx.arc(G.cursor.x,G.cursor.y,10,0,7);ctx.moveTo(G.cursor.x-15,G.cursor.y);ctx.lineTo(G.cursor.x+15,G.cursor.y);ctx.moveTo(G.cursor.x,G.cursor.y-15);ctx.lineTo(G.cursor.x,G.cursor.y+15);ctx.stroke();}
     drawMini();
   }
   function drawBuilding(b,x,y,w,h){ const own=b.owner;
@@ -424,10 +406,16 @@
     else if(key==="temple"){ ctx.fillStyle=trim; ctx.beginPath(); ctx.moveTo(cx-w*0.16,wallTop); ctx.lineTo(cx,y+h*0.05); ctx.lineTo(cx+w*0.16,wallTop); ctx.closePath(); ctx.fill();
       const og=ctx.createRadialGradient(cx,y+h*0.1,1,cx,y+h*0.1,w*0.15); og.addColorStop(0,"#fff"); og.addColorStop(.4,"#7fd7ff"); og.addColorStop(1,"transparent"); ctx.fillStyle=og; ctx.beginPath();ctx.arc(cx,y+h*0.1,w*0.15,0,7);ctx.fill(); }
   }
-  function drawUnit(u,x,y){const R=u.r*T,foe=u.owner==="foe",worker=u.u.worker,bob=document.getElementById("safe").checked?0:Math.sin(performance.now()*0.004+u.x*2.1+u.y)*2;
-    ctx.fillStyle="rgba(0,0,0,.52)";ctx.beginPath();ctx.ellipse(x,y+R*.82,R*1.25,R*.38,0,0,7);ctx.fill();
-    const g=ctx.createRadialGradient(x,y,1,x,y,R*2.2);g.addColorStop(0,foe?"rgba(255,45,105,.32)":u.type==="cantor"?"rgba(238,205,94,.3)":worker?"rgba(102,240,187,.22)":"rgba(78,210,255,.3)");g.addColorStop(1,"transparent");ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,R*2.2,0,7);ctx.fill();
-    if(UNIT_ATLAS.complete&&UNIT_ATLAS.naturalWidth){const sx=(u.u.atlas||0)*512,sy=foe?512:0,dw=R*4.35,dh=R*4.35;ctx.save();ctx.globalCompositeOperation="screen";ctx.globalAlpha=.97;ctx.drawImage(UNIT_ATLAS,sx,sy,512,512,x-dw/2,y-dh*.66+bob,dw,dh);ctx.restore();}else{ctx.fillStyle=foe?"#ff5b7f":u.u.color;ctx.beginPath();ctx.arc(x,y,R,0,7);ctx.fill();}
+  function drawUnit(u,x,y){ const R=u.r*T, foe=u.owner==="foe", worker=u.u.worker;
+    const body=foe?"#ff5b6b":u.u.color, dark=foe?"#5a1020":"#2a2438";
+    ctx.fillStyle="rgba(0,0,0,.4)"; ctx.beginPath(); ctx.ellipse(x,y+R*0.7,R*0.9,R*0.35,0,0,7); ctx.fill();
+    const g=ctx.createRadialGradient(x,y,1,x,y,R*1.8); g.addColorStop(0,foe?"rgba(255,45,85,.3)":worker?"rgba(216,203,174,.22)":"rgba(127,215,255,.3)"); g.addColorStop(1,"transparent"); ctx.fillStyle=g; ctx.beginPath();ctx.arc(x,y,R*1.8,0,7);ctx.fill();
+    ctx.beginPath();
+    if(worker){ ctx.arc(x,y+R*0.15,R*0.8,0,7); }
+    else { ctx.moveTo(x,y-R*1.1); ctx.lineTo(x+R*0.8,y+R*0.5); ctx.lineTo(x,y+R*0.9); ctx.lineTo(x-R*0.8,y+R*0.5); ctx.closePath(); }
+    const bg=ctx.createRadialGradient(x-R*0.3,y-R*0.3,1,x,y,R); bg.addColorStop(0,"#fff"); bg.addColorStop(.3,body); bg.addColorStop(1,dark); ctx.fillStyle=bg; ctx.fill(); ctx.strokeStyle=dark; ctx.lineWidth=1.2; ctx.stroke();
+    ctx.fillStyle=body; ctx.beginPath();ctx.arc(x,y-R*0.5,R*0.42,0,7);ctx.fill(); ctx.strokeStyle=dark; ctx.stroke();
+    if(!worker){ ctx.strokeStyle="#eafcff"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(x+R*0.55,y-R*0.85); ctx.lineTo(x+R*1.1,y+R*0.6); ctx.stroke(); }
     if(u.carry>0){ const cc=u.carryType==="wood"?"#8fe388":u.carryType==="crystal"?"#7fd7ff":u.carryType==="stone"?"#d7c9e6":"#ff9f6b"; ctx.fillStyle=cc; ctx.shadowColor=cc;ctx.shadowBlur=6; ctx.beginPath();ctx.arc(x+R*0.7,y-R*0.7,R*0.38,0,7);ctx.fill(); ctx.shadowBlur=0; }
     if(u.hp<u.maxhp){ ctx.fillStyle="rgba(0,0,0,.6)"; ctx.fillRect(x-R,y-R*1.5,R*2,3); ctx.fillStyle=foe?"#ff5b6b":"#8fe388"; ctx.fillRect(x-R,y-R*1.5,R*2*(u.hp/u.maxhp),3); }
   }
@@ -455,23 +443,21 @@
   function panCam(dt){ const sp=0.7*dt; if(G.keys.arrowleft||G.keys.a||G.mx<18)cam.x-=sp; if(G.keys.arrowright||G.keys.d||G.mx>VW-18)cam.x+=sp;
     if(G.keys.arrowup||G.keys.w||G.my<18)cam.y-=sp; if(G.keys.arrowdown||G.keys.s||G.my>VH-18)cam.y+=sp; clampCam(); }
 
-  function gamepadFrame(dt){const gp=navigator.getGamepads?.()[0];G.gamepad=!!gp;if(!gp)return;const dead=v=>Math.abs(v)>.18?v:0;cam.x+=dead(gp.axes[0]||0)*dt*.8;cam.y+=dead(gp.axes[1]||0)*dt*.8;G.cursor.x=Math.max(18,Math.min(VW-18,G.cursor.x+dead(gp.axes[2]||0)*dt*.45));G.cursor.y=Math.max(56,Math.min(VH-120,G.cursor.y+dead(gp.axes[3]||0)*dt*.45));clampCam();const now=gp.buttons.map(b=>b.pressed),pressed=i=>now[i]&&!G.gpPrev[i];if(pressed(0))selectBox(G.cursor.x-18,G.cursor.y-18,G.cursor.x+18,G.cursor.y+18);if(pressed(2))selectArmy();if(pressed(3)&&G.myTown)centerOn(G.myTown.x,G.myTown.y);if(pressed(1)){G.build=null;clearSel();updSelPanel();}if(pressed(7))commandTo(G.cursor.x,G.cursor.y);G.gpPrev=now;}
-
   // ---------- win/lose ----------
-  function covenantReceipt(state){return{game:"VORATH Dominion: Loomwheel Compact",state:state||G.victory||(!G.running?"compact_ready":"compact_active"),edict:G.pyramidHeld>=24?3:G.relicsClaimed>=2?2:1,witnesses:G.relicsClaimed,loomspire_hold:+G.pyramidHeld.toFixed(1),compact_units:G.units.filter(u=>u.owner==="you").length,revision_wave:G.enemyWave,elapsed:+G.elapsed.toFixed(1),there_is_no:"score",generated_at:new Date().toISOString()};}
-  function showReceipt(state){document.getElementById("receipt").textContent=JSON.stringify(covenantReceipt(state),null,2);}
-  function win(kind,t){if(G.over)return;G.over=true;G.running=false;G.victory=kind==="ascension"?"compact_ascended":"revision_redacted";stopMusic();S("oneUp");const key="vorath_dominion_best_v23",old=Number(localStorage.getItem(key)||0);if(!old||G.elapsed<old)localStorage.setItem(key,G.elapsed.toFixed(1));endScreen("LOOMWHEEL ASCENDS",t,"#7dffd8");showReceipt(G.victory);}
-  function lose(t){if(G.over)return;G.over=true;G.running=false;G.victory="compact_fallen";stopMusic();S("death");endScreen("COMPACT FRACTURED",t,"#ff5b7f");showReceipt("compact_fallen");}
-  function endScreen(h,body,c){const card=document.querySelector(".card");card.querySelector("h1").textContent=h;card.querySelector("h1").style.animation="none";card.querySelector("h1").style.color=c;card.querySelector("h1").style.webkitTextFillColor=c;card.querySelectorAll("p").forEach((p,i)=>p.style.display=i===0?"block":"none");card.querySelector("p").innerHTML=body;document.getElementById("startBtn").textContent="Ratify Another Compact";document.getElementById("overlay").hidden=false;}
+  function win(t){ if(G.over)return; G.over=true; G.running=false; stopMusic(); S("oneUp"); endScreen("✦ DOMINION",t,"#e9c86a"); }
+  function lose(t){ if(G.over)return; G.over=true; G.running=false; stopMusic(); S("death"); endScreen("✦ FALLEN",t,"#ff5b6b"); }
+  function endScreen(h,body,c){ const card=document.querySelector(".card"); card.querySelector("h1").textContent=h; card.querySelector("h1").style.animation="none"; card.querySelector("h1").style.color=c; card.querySelector("h1").style.webkitTextFillColor=c;
+    card.querySelectorAll("p").forEach((p,i)=>p.style.display=i===0?"block":"none"); card.querySelector("p").innerHTML=body;
+    document.getElementById("startBtn").textContent="Play again"; document.getElementById("overlay").hidden=false; }
 
   // ---------- loop ----------
   let last=performance.now();
   function frame(now){ const dt=Math.min(40,now-last); last=now;
-    if(G.running){G.tick++;G.elapsed+=dt*.001;panCam(dt);gamepadFrame(dt);
+    if(G.running){ G.tick++; panCam(dt);
       for(const u of G.units) updateUnit(u,dt);
       updateBuildings(dt); enemyBrain(dt);
       for(const f of G.fx) f.t-=dt*0.03; G.fx=G.fx.filter(f=>f.t>0);
-      if(!G.myTown||!G.buildings.includes(G.myTown)){lose("The Compact Nexus has fallen to the Obsidian Revision.");}
+      if(!G.myTown||!G.buildings.includes(G.myTown)){ lose("Your Town Center has fallen. The Shadow tribunal prevails."); }
     }
     draw(); requestAnimationFrame(frame);
   }
@@ -481,15 +467,14 @@
   document.getElementById("startBtn").addEventListener("click",()=>{
     // reset
     Object.assign(G,{running:true,tick:0,units:[],buildings:[],resources:[],relics:[],projectiles:[],fx:[],sel:[],drag:null,build:null,
-      res:{food:260,wood:260,crystal:220,stone:180},pop:0,popCap:10,pyramidHeld:0,pyramidDone:false,relicsClaimed:0,elapsed:0,over:false,victory:null,bonus:{gather:1,atk:1,hp:1},enemyTimer:3200,enemyWave:0,gpPrev:[],cursor:{x:VW/2,y:VH/2},touchTap:null});
+      res:{food:200,wood:200,crystal:150,stone:100},pop:0,popCap:8,pyramidHeld:0,pyramidDone:false,over:false,bonus:{gather:1,atk:1,hp:1},enemyTimer:4500,enemyWave:0});
     const mEl=document.getElementById("msg"); mEl.textContent=""; mEl.style.opacity=0; clearTimeout(mEl._t);
     genWorld(); foundBase(); refreshRes(); updSelPanel();
     try{ if(window.Chiptune)Chiptune.resume(); }catch(e){}
     S("gate"); startMusic();
     document.getElementById("overlay").hidden=true;
-    const h=document.querySelector(".card h1");h.style.animation="sh 7s linear infinite";h.style.color="transparent";h.style.webkitTextFillColor="transparent";h.textContent="LOOMWHEEL COMPACT";document.querySelectorAll(".card p").forEach(p=>p.style.display="block");updateObjective();showReceipt("compact_active");
+    document.getElementById("obj").textContent="Objective: raise the Great Pyramid — or crush the Shadow tribunal.";
   });
-  document.getElementById("receiptBtn").addEventListener("click",()=>showReceipt());
 })();
 </script>
 </body>

@@ -553,56 +553,6 @@
     let logRows = [];
     let best = Number(localStorage.getItem("signalGalleryBest") || 0);
     let bestContractChain = Number(localStorage.getItem("signalGalleryBestContractChain") || 0);
-    const CONTRACT_CHAIN_STORAGE_KEY = "signalGalleryActiveContractChainV1";
-    let contractChainPersistBucket = -1;
-    let contractChainResumePending = false;
-
-    function loadContractChainCheckpoint() {
-      try {
-        const raw = sessionStorage.getItem(CONTRACT_CHAIN_STORAGE_KEY);
-        if (!raw) return null;
-        const saved = JSON.parse(raw);
-        const chain = Math.max(0, Math.min(99, Math.floor(Number(saved.chain) || 0)));
-        const timer = Math.max(0, Math.min(2.35, Number(saved.timer) || 0));
-        if (chain <= 0 || timer <= 0) return null;
-        return {
-          chain,
-          timer,
-          best: Math.max(chain, Math.floor(Number(saved.best) || 0)),
-          seals: Math.max(0, Math.floor(Number(saved.seals) || 0))
-        };
-      } catch (error) {
-        return null;
-      }
-    }
-
-    function clearContractChainCheckpoint() {
-      contractChainPersistBucket = -1;
-      contractChainResumePending = false;
-      try { sessionStorage.removeItem(CONTRACT_CHAIN_STORAGE_KEY); } catch (error) {}
-    }
-
-    function persistContractChainCheckpoint() {
-      if (!state || state.contractChain <= 0 || state.contractChainTimer <= 0) {
-        clearContractChainCheckpoint();
-        return;
-      }
-      const snapshot = contractChainSnapshot();
-      contractChainPersistBucket = Math.ceil(snapshot.timer * 10);
-      try { sessionStorage.setItem(CONTRACT_CHAIN_STORAGE_KEY, JSON.stringify(snapshot)); } catch (error) {}
-    }
-
-    function restoreContractChainCheckpoint(targetState) {
-      const saved = loadContractChainCheckpoint();
-      if (!saved) return false;
-      targetState.contractChain = saved.chain;
-      targetState.contractChainTimer = saved.timer;
-      targetState.contractChainBest = Math.max(targetState.contractChainBest, saved.best);
-      targetState.contractSeals = saved.seals;
-      bestContractChain = Math.max(bestContractChain, saved.best);
-      contractChainPersistBucket = Math.ceil(saved.timer * 10);
-      return true;
-    }
 
     function baseState() {
       return {
@@ -658,10 +608,7 @@
 
     function startRun() {
       const difficulty = els.difficultySelect.value;
-      const resumeCheckpoint = contractChainResumePending;
-      contractChainResumePending = false;
       state = baseState();
-      const resumedChain = resumeCheckpoint && restoreContractChainCheckpoint(state);
       state.mode = "play";
       state.difficulty = difficulty;
       const cfg = difficultyConfig();
@@ -674,7 +621,6 @@
       startMusic();
       sfx("powerUp");
       log("CONTRACT // " + difficulty.toUpperCase() + " gallery started.");
-      if (resumedChain) log("CHAIN RESUME // seal x" + state.contractChain + " held across reload.");
       spawnWave();
       updateUi();
     }
@@ -709,11 +655,8 @@
       updateUi();
     }
 
-    function resetAttract(preserveContractChain = false) {
-      if (!preserveContractChain) clearContractChainCheckpoint();
+    function resetAttract() {
       state = baseState();
-      const resumedChain = preserveContractChain && restoreContractChainCheckpoint(state);
-      contractChainResumePending = !!resumedChain;
       state.difficulty = els.difficultySelect.value;
       state.targets = [
         makeTarget("clean", w() * 0.25, h() * 0.32, 0),
@@ -723,7 +666,6 @@
       showOverlay("Signal Gallery", "Clear the gallery contract before signal integrity collapses. Chain clean contract seals, avoid red noise, and reload before the rail locks.", "Start Contract");
       logRows = [];
       log("ATTRACT // gallery aligned.");
-      if (resumedChain) log("CHAIN HELD // press Start Contract to resume seal x" + state.contractChain + ".");
       updateUi();
     }
 
@@ -811,7 +753,6 @@
       if (state.contractChain > 1) log("CHAIN BREAK // " + reason + " at x" + state.contractChain + ".");
       state.contractChain = 0;
       state.contractChainTimer = 0;
-      clearContractChainCheckpoint();
     }
 
     function awardContractChain(target) {
@@ -830,19 +771,13 @@
         shake(7);
         log("SEAL CHAIN // x" + state.contractChain + " contract seal paid.");
       }
-      persistContractChainCheckpoint();
       return contractChainSnapshot();
     }
 
     function updateContractChain(dt) {
       if (state.contractChainTimer <= 0) return;
       state.contractChainTimer = Math.max(0, state.contractChainTimer - dt);
-      if (state.contractChainTimer <= 0 && state.contractChain > 0) {
-        breakContractChain("timing window expired");
-        return;
-      }
-      const persistBucket = Math.ceil(state.contractChainTimer * 10);
-      if (persistBucket !== contractChainPersistBucket) persistContractChainCheckpoint();
+      if (state.contractChainTimer <= 0 && state.contractChain > 0) breakContractChain("timing window expired");
     }
 
     function resolveHit(target) {
@@ -893,11 +828,9 @@
     function reload() {
       if (state.reloadTimer > 0 || state.mode === "gameover") return;
       state.reloadTimer = 0.72 + state.heat / 220;
-      persistContractChainCheckpoint();
+      breakContractChain("reload cycle");
       sfx("reload");
-      log(state.contractChainTimer > 0
-        ? "RELOAD // rail cycling; seal chain x" + state.contractChain + " held."
-        : "RELOAD // rail cycling.");
+      log("RELOAD // rail cycling.");
     }
 
     function update(dt) {
@@ -987,7 +920,6 @@
       sfx("death");
       shake(13);
       state.receipt = makeReceipt("gameover");
-      clearContractChainCheckpoint();
       showOverlay("Contract Closed", "Score " + state.score + " // wave " + state.wave + " // best streak " + state.streak + ".", "Restart");
       updateUi();
     }
@@ -1446,7 +1378,7 @@
     document.querySelector("#pauseBtn").addEventListener("click", pause);
     document.querySelector("#reloadBtn").addEventListener("click", reload);
     document.querySelector("#receiptBtn").addEventListener("click", exportReceipt);
-    document.querySelector("#resetBtn").addEventListener("click", () => resetAttract(false));
+    document.querySelector("#resetBtn").addEventListener("click", resetAttract);
     els.difficultySelect.addEventListener("change", () => {
       if (state.mode !== "play") {
         state.difficulty = els.difficultySelect.value;
@@ -1477,7 +1409,7 @@
     window.addEventListener("resize", resize);
 
     resize();
-    resetAttract(true);
+    resetAttract();
     if (new URLSearchParams(window.location.search).has("playtest")) {
       window.setTimeout(() => {
         els.difficultySelect.value = "deep";

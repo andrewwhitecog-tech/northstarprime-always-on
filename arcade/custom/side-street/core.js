@@ -54,7 +54,7 @@
     visit([...prefix],initial.used,prefix.length>1?direction(prefix.at(-2),prefix.at(-1),p.size):null,initial.stops);
     return solutions;
   }
-  const blank=()=>({version:1,boards:{},settings:{sound:true}});
+  const blank=()=>({version:1,boards:{},settings:{sound:false}});
   function restore(raw,catalog) {
     const clean=blank();
     try {

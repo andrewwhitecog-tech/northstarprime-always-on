@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>IDR Tracker Cabinet</title>
+  <title>VORATH Signalwright // Three-Band Broadcast</title>
   <style>
     :root {
       --void: #05070b;
@@ -410,20 +410,37 @@
       .step { min-height: 18px; border-radius: 4px; }
       .scope { min-height: 240px; }
     }
+    .band-deck{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(190px,.8fr);gap:8px;padding:9px;border:1px solid var(--line);border-radius:9px;background:rgba(4,7,13,.82)}
+    .band-btn,#bandPowerBtn{min-height:58px!important;text-align:left;padding:8px 10px;border-color:var(--band-accent,var(--yellow))}
+    .band-btn strong,#bandPowerBtn strong{display:block;text-transform:uppercase;letter-spacing:.06em}
+    .band-btn span,#bandPowerBtn span{display:block;margin-top:3px;color:var(--muted);font-size:9px;font-weight:800}
+    .band-btn[aria-pressed="true"],#bandPowerBtn.armed{color:#061016;background:var(--band-accent,var(--yellow));box-shadow:0 0 22px var(--band-accent,var(--yellow))}
+    .band-identity{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:8px 12px;border-left:3px solid var(--band-accent,var(--yellow));background:linear-gradient(90deg,rgba(255,255,255,.08),transparent)}
+    .band-identity strong{color:var(--band-accent,var(--yellow));text-transform:uppercase;letter-spacing:.08em}.band-identity span{color:var(--muted);font-size:11px;font-weight:750;text-align:right}
+    body.band-censer{--band-accent:#ffbd45}body.band-prism{--band-accent:#50efff}body.band-null{--band-accent:#bd7cff}
+    @media(max-width:720px){button{min-height:56px!important}.band-deck{grid-template-columns:1fr}.band-btn,#bandPowerBtn{min-height:60px!important}.band-identity{align-items:flex-start;flex-direction:column}.band-identity span{text-align:left}.step{min-height:24px!important}}
   </style>
 </head>
 <body>
   <main class="shell">
     <header class="topbar">
       <div class="brand">
-        <div class="kicker">Vorathic fusion // browser tracker toy</div>
-        <h1>IDR Tracker Cabinet</h1>
+        <div class="kicker">IDR private signal lab // original WebAudio instruments</div>
+        <h1>VORATH Signalwright</h1>
       </div>
       <div class="chips">
         <span class="chip" id="statusChip">Stopped</span>
         <span class="chip" id="seedChip">Pattern 001</span>
       </div>
     </header>
+
+    <nav class="band-deck" id="bandDeck" aria-label="Broadcast bands">
+      <button class="band-btn" type="button" data-band="0" aria-pressed="true"><strong>Censer Relay</strong><span>Bellcaster regalia // ember fill</span></button>
+      <button class="band-btn" type="button" data-band="1" aria-pressed="false"><strong>Prism Multiplex</strong><span>Facetmix regalia // twin channel</span></button>
+      <button class="band-btn" type="button" data-band="2" aria-pressed="false"><strong>Null Airlock</strong><span>Veilfader regalia // ghost gate</span></button>
+      <button id="bandPowerBtn" type="button"><strong id="bandPowerName">Arm Ember Fill</strong><span>Q / controller X // one charge</span></button>
+    </nav>
+    <div class="band-identity"><strong id="bandIdentity">Mara Vox // Bellcaster</strong><span id="bandRule">Forge a four-on-floor pulse and crown it with ritual bells.</span></div>
 
     <section class="layout">
       <article class="tracker-panel">
@@ -508,8 +525,20 @@
       voiceList: document.querySelector("#voiceList"),
       log: document.querySelector("#log"),
       glowToggle: document.querySelector("#glowToggle"),
-      calmToggle: document.querySelector("#calmToggle")
+      calmToggle: document.querySelector("#calmToggle"),
+      bandDeck: document.querySelector("#bandDeck"),
+      bandButtons: Array.from(document.querySelectorAll(".band-btn")),
+      bandPowerBtn: document.querySelector("#bandPowerBtn"),
+      bandPowerName: document.querySelector("#bandPowerName"),
+      bandIdentity: document.querySelector("#bandIdentity"),
+      bandRule: document.querySelector("#bandRule")
     };
+
+    const BANDS = [
+      {key:"censer",label:"Censer Relay",regalia:"Bellcaster",power:"Ember Fill",accent:"#ffbd45",rule:"Forge a four-on-floor pulse and crown it with ritual bells."},
+      {key:"prism",label:"Prism Multiplex",regalia:"Facetmix",power:"Twin Channel",accent:"#50efff",rule:"Mirror every carrier hit across the opposite half of the measure."},
+      {key:"null",label:"Null Airlock",regalia:"Veilfader",power:"Ghost Gate",accent:"#bd7cff",rule:"Cut the obvious ticks and reseed their shadows one step later."}
+    ];
 
     const voices = [
       { key: "kick", label: "Pulse", sigil: "P", color: "#2fe4ff", type: "kick", note: "Low sine thump for bumpers." },
@@ -564,8 +593,43 @@
       swing: 8,
       pattern: JSON.parse(JSON.stringify(presets.signal.pattern)),
       flashes: {},
-      scope: []
+      scope: [],
+      band: 0,
+      bandCycles: 0,
+      totalCycles: 0,
+      powerReady: true,
+      powerActive: false,
+      powerUses: 0,
+      keyboardActions: 0,
+      touchActions: 0,
+      gamepadActions: 0
     };
+
+    function currentBand(){ return BANDS[state.band] || BANDS[0]; }
+    function publishTelemetry(){
+      const band=currentBand();
+      window.__nspSignalwrightState={title:"VORATH SIGNALWRIGHT // THREE-BAND BROADCAST",protagonist:"Mara Vox, Keeper of the Last Broadcast",bandIndex:state.band,band:band.label,regalia:band.regalia,power:band.power,mechanic:band.rule,bandCycles:state.bandCycles,totalCycles:state.totalCycles,powerReady:state.powerReady,powerActive:state.powerActive,powerUses:state.powerUses,playing:state.playing,step:state.step,patternId:state.patternId,density:density(),keyboardActions:state.keyboardActions,touchActions:state.touchActions,gamepadActions:state.gamepadActions,input:"keyboard/touch/standard-gamepad"};
+    }
+    function selectBand(index,manual=false){
+      const next=Math.max(0,Math.min(BANDS.length-1,Number(index)||0));
+      if(next===state.band&&manual)return;
+      state.band=next;state.bandCycles=0;state.powerReady=true;state.powerActive=false;
+      const band=currentBand();
+      document.body.classList.remove("band-censer","band-prism","band-null");document.body.classList.add("band-"+band.key);
+      els.bandButtons.forEach((button,i)=>button.setAttribute("aria-pressed",String(i===state.band)));
+      els.bandIdentity.textContent="Mara Vox // "+band.regalia;els.bandRule.textContent=band.rule;els.bandPowerName.textContent="Arm "+band.power;els.bandPowerBtn.disabled=false;els.bandPowerBtn.classList.remove("armed");
+      const presetName=state.band===0?"signal":state.band===1?"metro":"drift";const preset=presets[presetName];state.pattern=JSON.parse(JSON.stringify(preset.pattern));state.tempo=preset.tempo;state.swing=preset.swing;state.patternId++;
+      log("BAND // "+band.label+" // "+band.regalia+" tuned.");renderSequencer();updateUi();publishTelemetry();
+    }
+    function invokeBandPower(source="touch"){
+      if(!state.powerReady)return;
+      if(source==="touch")state.touchActions++;
+      const band=currentBand();state.powerReady=false;state.powerActive=true;state.powerUses++;
+      if(state.band===0){[0,4,8,12].forEach(i=>state.pattern.kick[i]=1);[3,7,11,15].forEach(i=>state.pattern.bell[i]=1);}
+      else if(state.band===1){for(let i=0;i<8;i++){const on=state.pattern.tone[i]||state.pattern.tone[i+8];state.pattern.tone[i]=on?1:0;state.pattern.tone[i+8]=on?1:0;}}
+      else{for(const voice of voices){const old=state.pattern[voice.key].slice();state.pattern[voice.key]=old.map(()=>0);old.forEach((on,i)=>{if(on)state.pattern[voice.key][(i+(i%2===0?1:3))%16]=1;});}}
+      state.patternId++;log("POWER // "+band.power+" rewrote the measure.");els.bandPowerName.textContent=band.power+" spent";els.bandPowerBtn.disabled=true;els.bandPowerBtn.classList.add("armed");renderSequencer();updateUi();setTimeout(()=>{state.powerActive=false;els.bandPowerBtn.classList.remove("armed");publishTelemetry();},900);publishTelemetry();
+    }
 
     function log(text) {
       logRows = [{ time: new Date().toLocaleTimeString(), text }].concat(logRows).slice(0, 12);
@@ -665,6 +729,7 @@
         if (state.pattern[voice.key][state.step]) scheduleVoice(voice, now + 0.015);
       }
       state.step = (state.step + 1) % 16;
+      if(state.step===0){state.bandCycles++;state.totalCycles++;if(state.bandCycles>=2)selectBand((state.band+1)%BANDS.length,false);}
       updateUi();
       timer = setTimeout(advanceStep, stepDurationMs(state.step));
     }
@@ -780,6 +845,23 @@
       els.swingRead.textContent = state.swing;
       els.densityRead.textContent = density();
       updatePlayheadClasses();
+      publishTelemetry();
+    }
+
+    function drawMaraVox(ts,width,height){
+      const band=currentBand(),x=width*.5,y=height*.5,bob=Math.sin(ts*.003)*(state.playing?5:2),pulse=state.powerActive?1.14:1;
+      ctx.save();ctx.translate(x,y+bob);ctx.scale(pulse,pulse);ctx.lineWidth=2;ctx.shadowColor=band.accent;ctx.shadowBlur=state.powerActive?32:16;
+      if(state.band===0){
+        ctx.fillStyle="rgba(255,189,69,.34)";ctx.strokeStyle=band.accent;ctx.beginPath();ctx.moveTo(-45,48);ctx.lineTo(-24,-70);ctx.quadraticCurveTo(0,-118,24,-70);ctx.lineTo(45,48);ctx.closePath();ctx.fill();ctx.stroke();
+        [-1,1].forEach(side=>{ctx.beginPath();ctx.moveTo(side*34,-20);ctx.lineTo(side*72,30);ctx.stroke();ctx.beginPath();ctx.arc(side*72,42,14,0,Math.PI*2);ctx.fill();});
+      }else if(state.band===1){
+        ctx.fillStyle="rgba(80,239,255,.24)";ctx.strokeStyle=band.accent;[-1,1].forEach(side=>{ctx.beginPath();ctx.moveTo(side*18,-34);ctx.lineTo(side*112,-62);ctx.lineTo(side*82,38);ctx.lineTo(side*24,22);ctx.closePath();ctx.fill();ctx.stroke();ctx.beginPath();ctx.moveTo(side*35,-20);ctx.lineTo(side*86,8);ctx.lineTo(side*34,28);ctx.stroke();});
+      }else{
+        ctx.fillStyle="rgba(8,2,18,.72)";ctx.strokeStyle=band.accent;ctx.beginPath();ctx.moveTo(0,-100);ctx.bezierCurveTo(-82,-78,-72,30,-48,64);ctx.lineTo(48,64);ctx.bezierCurveTo(72,30,82,-78,0,-100);ctx.fill();ctx.stroke();[-1,1].forEach(side=>{ctx.beginPath();ctx.moveTo(side*18,-62);ctx.quadraticCurveTo(side*68,-112,side*72,-58);ctx.stroke();for(let i=0;i<3;i++){ctx.beginPath();ctx.moveTo(side*(34+i*8),25);ctx.bezierCurveTo(side*(92+i*10),40,side*(70-i*7),76,side*(110-i*12),88);ctx.stroke();}});
+      }
+      const robe=ctx.createLinearGradient(-45,-20,48,74);robe.addColorStop(0,"#fff4d8");robe.addColorStop(.3,band.accent);robe.addColorStop(1,"#09050d");ctx.fillStyle=robe;ctx.strokeStyle="rgba(255,244,216,.8)";ctx.beginPath();ctx.moveTo(-42,72);ctx.quadraticCurveTo(-30,-20,0,-32);ctx.quadraticCurveTo(30,-20,42,72);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.fillStyle="#071016";ctx.strokeStyle=band.accent;ctx.beginPath();ctx.ellipse(0,-48,28,36,0,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle="#fff4d8";ctx.beginPath();ctx.ellipse(0,-50,15,7,0,0,Math.PI*2);ctx.fill();ctx.fillStyle=band.accent;ctx.beginPath();ctx.arc(Math.sin(ts*.002)*5,-50,4,0,Math.PI*2);ctx.fill();
+      const sweep=Math.sin(ts*.006)*22;ctx.strokeStyle="#fff4d8";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(-28,-4);ctx.quadraticCurveTo(-58,-18,-72+sweep,8);ctx.moveTo(28,-4);ctx.quadraticCurveTo(58,-18,72-sweep,8);ctx.stroke();ctx.restore();
     }
 
     function drawScope(ts) {
@@ -807,6 +889,7 @@
         ctx.lineTo(width, y);
         ctx.stroke();
       }
+      drawMaraVox(ts,width,height);
 
       const center = height * 0.5;
       for (const event of state.scope) {
@@ -859,14 +942,28 @@
     els.clearBtn.addEventListener("click", clearPattern);
     els.exportBtn.addEventListener("click", exportPattern);
     els.presetSelect.addEventListener("change", () => applyPreset(els.presetSelect.value));
+    els.bandDeck.addEventListener("click",event=>{const button=event.target.closest(".band-btn");if(button){state.touchActions++;selectBand(Number(button.dataset.band),true);}});
+    els.bandPowerBtn.addEventListener("click",()=>invokeBandPower("touch"));
+    window.addEventListener("keydown",event=>{
+      if(["1","2","3"].includes(event.key)){state.keyboardActions++;selectBand(Number(event.key)-1,true);}
+      else if(event.key.toLowerCase()==="q"){state.keyboardActions++;invokeBandPower("keyboard");}
+      else if(event.key===" "){event.preventDefault();state.keyboardActions++;state.playing?stopPattern():playPattern();}
+    });
+    const gamepadLatch={a:false,x:false,left:false,right:false};
+    function readGamepad(){try{const pad=navigator.getGamepads?Array.from(navigator.getGamepads()).filter(Boolean)[0]:null;if(!pad)return;const p=i=>Boolean(pad.buttons[i]&&pad.buttons[i].pressed),a=p(0),x=p(2),left=p(4)||p(14),right=p(5)||p(15);if(a&&!gamepadLatch.a){state.gamepadActions++;state.playing?stopPattern():playPattern();}if(x&&!gamepadLatch.x){state.gamepadActions++;invokeBandPower("gamepad");}if(left&&!gamepadLatch.left){state.gamepadActions++;selectBand((state.band+BANDS.length-1)%BANDS.length,true);}if(right&&!gamepadLatch.right){state.gamepadActions++;selectBand((state.band+1)%BANDS.length,true);}gamepadLatch.a=a;gamepadLatch.x=x;gamepadLatch.left=left;gamepadLatch.right=right;publishTelemetry();}catch(error){}}
+    window.__nspSignalwrightReadGamepad=readGamepad;
+    function pollGamepad(){readGamepad();requestAnimationFrame(pollGamepad)}
+    window.__nspSignalwrightAPI={setBand:i=>selectBand(i,true),invokePower:()=>invokeBandPower("api"),forceCycles:count=>{state.bandCycles+=Math.max(1,Number(count)||1);state.totalCycles+=Math.max(1,Number(count)||1);if(state.bandCycles>=2)selectBand((state.band+1)%BANDS.length,false);publishTelemetry();},state:()=>structuredClone(window.__nspSignalwrightState)};
     window.addEventListener("resize", resize);
 
     resize();
+    selectBand(0,false);
     renderSequencer();
     renderVoices();
     updateUi();
     log("READY // tracker cabinet loaded.");
     requestAnimationFrame(drawScope);
+    requestAnimationFrame(pollGamepad);
   </script>
 </body>
 </html>

@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VORATH CIRCUS — Radioactive Rainbow Clown Shooter</title>
+<title>VORATH CIRCUS // Three-Act Blackglass Menagerie</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#000;overflow:hidden;cursor:none;user-select:none}
+body{background:#000;overflow:hidden;cursor:none;user-select:none;touch-action:none}
 canvas{display:block;position:fixed;top:0;left:0}
 
 #hud{position:fixed;top:0;left:0;right:0;z-index:20;pointer-events:none;padding:15px 25px;display:flex;justify-content:space-between;align-items:flex-start}
@@ -33,6 +33,23 @@ canvas{display:block;position:fixed;top:0;left:0}
 #title-screen .start-btn:hover{background:rgba(255,0,110,0.15);border-color:#ff006e;box-shadow:0 0 30px rgba(255,0,110,0.3)}
 @keyframes pulse-border{0%,100%{border-color:rgba(255,0,110,0.4)}50%{border-color:rgba(155,93,229,0.6)}}
 #title-screen .controls{margin-top:30px;font-family:'Space Grotesk';font-size:11px;color:rgba(255,255,255,0.3);letter-spacing:2px;text-align:center;line-height:2}
+#act-card{position:fixed;left:50%;top:76px;z-index:24;transform:translateX(-50%);pointer-events:none;text-align:center;min-width:min(520px,82vw);padding:9px 18px;border:1px solid rgba(245,197,66,.32);border-radius:4px;background:linear-gradient(90deg,rgba(4,6,16,.12),rgba(7,5,18,.84),rgba(4,6,16,.12));box-shadow:0 0 24px rgba(34,211,238,.08)}
+#act-name{font:700 12px 'Space Grotesk',sans-serif;letter-spacing:3px;color:#f5c542;text-transform:uppercase}
+#regalia-name{margin-top:3px;font:10px 'Space Grotesk',sans-serif;letter-spacing:2px;color:rgba(255,255,255,.7);text-transform:uppercase}
+#power-state{margin-top:3px;font:9px 'Space Grotesk',sans-serif;letter-spacing:1.5px;color:#5eead4;text-transform:uppercase}
+#touch-dock{display:none;position:fixed;left:50%;bottom:72px;z-index:45;transform:translateX(-50%);gap:10px;align-items:center}
+.touch-key{min-width:64px;min-height:56px!important;border:1px solid rgba(255,255,255,.32);border-radius:8px;background:rgba(5,6,18,.78);color:#fff;font:700 10px 'Space Grotesk',sans-serif;letter-spacing:1.5px;box-shadow:inset 0 0 18px rgba(34,211,238,.08),0 0 16px rgba(0,0,0,.5);touch-action:none}
+.touch-key.power{min-width:88px;border-color:rgba(245,197,66,.7);color:#f5c542}
+@media (max-width:700px),(pointer:coarse){
+  #title-screen{padding:22px;text-align:center}
+  #title-screen h1{font-size:clamp(36px,15vw,64px);line-height:.95;max-width:100%;overflow-wrap:anywhere}
+  #title-screen h2{font-size:10px;letter-spacing:3px;line-height:1.5;max-width:92vw}
+  #title-screen .controls{font-size:9px;letter-spacing:1px;line-height:1.7;max-width:92vw}
+  #title-screen .start-btn{min-height:56px;margin-top:28px}
+  #hud{padding:10px 12px}.hud-value{font-size:22px}.hud-center{top:6px}
+  #act-card{top:62px;min-width:88vw;padding:7px 10px}#act-name{font-size:10px;letter-spacing:1.8px}#regalia-name,#power-state{font-size:8px;letter-spacing:1px}
+  #touch-dock.active{display:flex}
+}
 
 #game-over{position:fixed;inset:0;z-index:50;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(5,5,16,0.9)}
 #game-over h1{font-family:'Creepster',cursive;font-size:50px;color:#ff006e;text-shadow:0 0 20px rgba(255,0,110,0.5)}
@@ -48,11 +65,11 @@ canvas{display:block;position:fixed;top:0;left:0}
 
 <div id="title-screen">
   <h1>VORATH CIRCUS</h1>
-  <h2>Radioactive Rainbow Clown Arcade Shooter</h2>
+  <h2>Three-Act Blackglass Menagerie</h2>
   <button class="start-btn" onclick="startGame()">STEP RIGHT UP</button>
   <div class="controls">
-    CLICK TO SHOOT &middot; R TO RELOAD &middot; MOVE MOUSE TO AIM<br>
-    SHOOT MUTANT CLOWNS &middot; DON'T MISS &middot; SURVIVE
+    AIM + FIRE &middot; R / X TO RELOAD &middot; Q / A TO UNLEASH REGALIA<br>
+    AUREX CHANGES FORM FOR EVERY AUTHORED ACT
   </div>
 </div>
 
@@ -86,6 +103,16 @@ canvas{display:block;position:fixed;top:0;left:0}
     <div class="hud-value" id="wave-val">1</div>
   </div>
 </div>
+<div id="act-card" style="display:none">
+  <div id="act-name">ACT I // CENSER MIDWAY</div>
+  <div id="regalia-name">AUREX // BELL RINGLEADER REGALIA</div>
+  <div id="power-state">CENSER BARRAGE READY</div>
+</div>
+<div id="touch-dock">
+  <button class="touch-key" id="touch-fire">FIRE</button>
+  <button class="touch-key power" id="touch-power">REGALIA</button>
+  <button class="touch-key" id="touch-reload">RELOAD</button>
+</div>
 
 <script>
 // === VORATH CIRCUS - Radioactive Rainbow Clown Arcade Shooter ===
@@ -117,10 +144,20 @@ let enemies = [];
 let particles = [];
 let confetti = [];
 let balloons = [];
-// AI-art enemy sprite (Vorath DNA) — overlays the procedural clown when loaded
-const CIRC_CLOWN = new Image(); let CIRC_CLOWN_OK = false;
-CIRC_CLOWN.onload = () => { CIRC_CLOWN_OK = true; };
-CIRC_CLOWN.src = '/static/games/roster/circ_clown.png';
+const ACTS = [
+  {act:'ACT I // CENSER MIDWAY',regalia:'AUREX // BELL RINGLEADER REGALIA',power:'CENSER BARRAGE',hue:42,accent:18,mechanic:'twin-shot overdrive'},
+  {act:'ACT II // MIRROR CAROUSEL',regalia:'AUREX // PRISM ACROBAT REGALIA',power:'PRISM CUT',hue:188,accent:318,mechanic:'piercing mirror shot'},
+  {act:'ACT III // NULL MENAGERIE',regalia:'AUREX // VEIL BEASTMASTER REGALIA',power:'PRESSURE VEIL',hue:278,accent:126,mechanic:'phase shield and restoration'}
+];
+let actIndex = 0;
+let regaliaTimer = 0;
+let regaliaCooldown = 0;
+let shotsFired = 0;
+let reloadsUsed = 0;
+let powersUsed = 0;
+let gamepadActions = 0;
+let touchActions = 0;
+let lastPadFire = false, lastPadReload = false, lastPadPower = false;
 // ===== Audio: procedural WebAudio SFX + eerie carnival music bed (Circus had NO sound) =====
 let _cactx = null;
 function cAC(){ if(!_cactx){ try{ _cactx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } return _cactx; }
@@ -136,16 +173,33 @@ function csfx(kind){ const a=cAC(); if(!a) return; const t=a.currentTime; const 
   else if(kind==='reload'){ o.type='triangle'; o.frequency.setValueAtTime(300,t); o.frequency.linearRampToValueAtTime(620,t+0.14); g.gain.setValueAtTime(0.1,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.16); o.start(t); o.stop(t+0.18); }
 }
 let _cmusic = null;
-function startCircusMusic(){ const a=cAC(); if(!a || _cmusic) return;
+function startCircusMusic(){
+  if(_cmusic) return;
+  try {
+    if(!window.__sunoCircusBed){
+      var bed=new Audio("audio/idg_cues/circus_bed.mp3");
+      bed.loop=true; bed.volume=0.4;
+      bed.play().then(function(){
+        window.__sunoCircusBed=bed;
+        _cmusic={ kind:"suno", stop:function(){ try{ bed.pause(); bed.currentTime=0; }catch(e){} window.__sunoCircusBed=null; } };
+      }).catch(function(){ _startCircusChiptune(); });
+      return;
+    }
+  } catch(e) {}
+  _startCircusChiptune();
+}
+function _startCircusChiptune(){ const a=cAC(); if(!a || _cmusic) return;
   const master=a.createGain(); master.gain.value=0.0001; master.connect(a.destination); master.gain.exponentialRampToValueAtTime(0.055, a.currentTime+2);
-  const scale=[196,233.08,293.66,349.23,392,466.16]; let step=0;   // eerie minor waltz
+  const scale=[196,233.08,293.66,349.23,392,466.16]; let step=0;
   const timer=setInterval(()=>{ const tt=a.currentTime; const f=scale[step%scale.length]*(step%6<3?1:0.5); step++;
     const o=a.createOscillator(), g=a.createGain(); o.type='triangle'; o.frequency.value=f; o.connect(g); g.connect(master);
     g.gain.setValueAtTime(0.0001,tt); g.gain.exponentialRampToValueAtTime(0.5,tt+0.02); g.gain.exponentialRampToValueAtTime(0.0001,tt+0.4); o.start(tt); o.stop(tt+0.45);
   }, 300);
-  _cmusic={ master, timer };
+  _cmusic={ kind:"chip", master, timer };
 }
-function stopCircusMusic(){ if(!_cmusic) return; const a=cAC(); try{ _cmusic.master.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+1);}catch(e){} clearInterval(_cmusic.timer); _cmusic=null; }
+function stopCircusMusic(){ if(!_cmusic) return;
+  if(_cmusic.kind==="suno" && _cmusic.stop){ try{ _cmusic.stop(); }catch(e){} _cmusic=null; return; }
+  const a=cAC(); try{ _cmusic.master.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+1);}catch(e){} clearInterval(_cmusic.timer); _cmusic=null; }
 let beamTrails = [];
 let floatTexts = [];
 let muzzleFlash = 0;
@@ -167,14 +221,84 @@ document.addEventListener('mousemove', e => {
 // === INPUT ===
 document.addEventListener('click', e => {
   if (e.target && e.target.closest && e.target.closest('#northstar-playtest-kit, [data-northstar-receipt-download]')) return;
+  if (e.target && e.target.closest && e.target.closest('#touch-dock, button')) return;
   if (!gameActive) return;
   e.preventDefault();
   shoot();
 });
 document.addEventListener('keydown', e => {
   if (e.key === 'r' || e.key === 'R') startReload();
+  if (e.key === 'q' || e.key === 'Q' || e.key === ' ') activateRegalia();
+  if (e.key === '1') setAct(0, true);
+  if (e.key === '2') setAct(1, true);
+  if (e.key === '3') setAct(2, true);
 });
 document.addEventListener('contextmenu', e => e.preventDefault());
+C.addEventListener('pointermove', e => {
+  if (e.pointerType === 'touch') {
+    mouseX = e.clientX; mouseY = e.clientY;
+    crosshair.style.left = mouseX + 'px'; crosshair.style.top = mouseY + 'px';
+  }
+});
+const touchDock = document.getElementById('touch-dock');
+function touchAction(button, action) {
+  button.addEventListener('pointerdown', e => {
+    e.preventDefault(); e.stopPropagation(); touchActions++; action();
+  });
+}
+touchAction(document.getElementById('touch-fire'), shoot);
+touchAction(document.getElementById('touch-reload'), startReload);
+touchAction(document.getElementById('touch-power'), activateRegalia);
+
+function setAct(next, manual = false) {
+  actIndex = Math.max(0, Math.min(2, next));
+  const a = ACTS[actIndex];
+  document.getElementById('act-name').textContent = a.act;
+  document.getElementById('regalia-name').textContent = a.regalia;
+  document.getElementById('power-state').textContent = regaliaCooldown > 0 ? `${a.power} // RECHARGING` : `${a.power} READY`;
+  initNeonSigns();
+  if (manual && gameActive) addFloatText(W * .5, H * .28, a.regalia.replace('AUREX // ', ''), `hsl(${a.hue} 100% 68%)`);
+}
+
+function activateRegalia() {
+  if (!gameActive || regaliaCooldown > 0) return;
+  powersUsed++;
+  regaliaTimer = 240;
+  regaliaCooldown = 720;
+  const a = ACTS[actIndex];
+  if (actIndex === 0) {
+    ammo = maxAmmo;
+    for (let i = 0; i < 3; i++) beamTrails.push({x0:W*.5+(i-1)*28,y0:H+18,x1:mouseX+(i-1)*60,y1:mouseY,life:1,width:15,hue:a.hue+i*34,crystal:true,twist:i});
+  } else if (actIndex === 1) {
+    const marked = enemies.filter(e => e.hp > 0).sort((a,b) => Math.hypot(a.x-mouseX,a.y-mouseY)-Math.hypot(b.x-mouseX,b.y-mouseY)).slice(0,3);
+    marked.forEach(e => { e.hp = 0; const idx = enemies.indexOf(e); if (idx >= 0) killEnemy(e, idx); });
+  } else {
+    hp = Math.min(maxHp, hp + 2);
+    updateHpDisplay();
+  }
+  screenShake = 9;
+  updateAmmoDisplay();
+  document.getElementById('power-state').textContent = `${a.power} ACTIVE // ${a.mechanic}`;
+  addFloatText(W*.5,H*.34,a.power,`hsl(${a.hue} 100% 70%)`);
+}
+
+function pollGamepad() {
+  const pad = navigator.getGamepads && navigator.getGamepads()[0];
+  if (!pad || !gameActive) return;
+  const ax = pad.axes[2] || pad.axes[0] || 0, ay = pad.axes[3] || pad.axes[1] || 0;
+  if (Math.hypot(ax, ay) > .18) {
+    mouseX = Math.max(24, Math.min(W-24, mouseX + ax * 18));
+    mouseY = Math.max(24, Math.min(H-90, mouseY + ay * 18));
+  }
+  const fire = !!((pad.buttons[7] && pad.buttons[7].pressed) || (pad.buttons[0] && pad.buttons[0].pressed));
+  const reload = !!(pad.buttons[2] && pad.buttons[2].pressed);
+  const power = !!((pad.buttons[4] && pad.buttons[4].pressed) || (pad.buttons[5] && pad.buttons[5].pressed));
+  if (fire && !lastPadFire) { gamepadActions++; shoot(); }
+  if (reload && !lastPadReload) { gamepadActions++; startReload(); }
+  if (power && !lastPadPower) { gamepadActions++; activateRegalia(); }
+  lastPadFire=fire; lastPadReload=reload; lastPadPower=power;
+  crosshair.style.left=mouseX+'px'; crosshair.style.top=mouseY+'px';
+}
 
 // === INIT ===
 function initBgStars() {
@@ -191,10 +315,11 @@ function initBgStars() {
 }
 
 function initNeonSigns() {
+  const a = ACTS[actIndex];
   neonSigns = [
-    { text: 'VORATH CIRCUS', x: W * 0.5, y: H * 0.08, size: 30, hue: 320 },
-    { text: 'RAD CLOWNS', x: W * 0.2, y: H * 0.15, size: 14, hue: 92 },
-    { text: 'CRYSTAL LASERS', x: W * 0.8, y: H * 0.12, size: 16, hue: 185 },
+    { text: 'VORATH CIRCUS', x: W * 0.5, y: H * 0.08, size: 30, hue: a.accent },
+    { text: ['CENSER BARKERS','RIBBON HARLEQUINS','CROWN STRONGMEN'][actIndex], x: W * 0.2, y: H * 0.15, size: 14, hue: a.hue },
+    { text: a.power, x: W * 0.8, y: H * 0.12, size: 16, hue: a.accent },
   ];
 }
 
@@ -234,7 +359,7 @@ function spawnEnemy() {
       size: 28 + Math.random() * 12,
       hp: 1,
       maxHp: 1,
-      type: 'zombie',
+      type: 'zombie', house: 'censer-barker',
       hue: 120 + Math.random() * 40,
       attackTimer: 0,
       frame: Math.random() * TAU,
@@ -250,7 +375,7 @@ function spawnEnemy() {
       size: 22 + Math.random() * 8,
       hp: 1,
       maxHp: 1,
-      type: 'clown',
+      type: 'clown', house: 'ribbon-harlequin',
       hue: 300 + Math.random() * 60,
       attackTimer: 0,
       frame: Math.random() * TAU,
@@ -269,7 +394,7 @@ function spawnEnemy() {
       size: 40 + Math.random() * 15,
       hp: tankHp,
       maxHp: tankHp,
-      type: 'tank',
+      type: 'tank', house: 'crown-strongman',
       hue: 0 + Math.random() * 30,
       attackTimer: 0,
       frame: Math.random() * TAU,
@@ -292,7 +417,8 @@ function shoot() {
   if (reloading) return;
   if (ammo <= 0) { startReload(); return; }
 
-  ammo--;
+  shotsFired++;
+  if (!(actIndex === 0 && regaliaTimer > 0)) ammo--;
   muzzleFlash = 6;
   screenShake = 4;
   csfx('shoot');
@@ -313,7 +439,7 @@ function shoot() {
 
   beamTrails.push({
     x0: W * 0.5 + (Math.random() - 0.5) * 18,
-    y0: H + 18,
+    y0: H - (W < 700 ? 72 : 34),
     x1: mouseX,
     y1: mouseY,
     life: 1,
@@ -351,7 +477,7 @@ function shoot() {
     if (e.hp <= 0) continue;
     const dx = mouseX - e.x, dy = mouseY - e.y;
     if (Math.sqrt(dx*dx + dy*dy) < e.size) {
-      e.hp--;
+      e.hp -= (actIndex === 0 && regaliaTimer > 0) ? 2 : 1;
       hitSomething = true;
 
       if (e.hp <= 0) {
@@ -373,7 +499,7 @@ function shoot() {
           });
         }
       }
-      break; // Only hit one enemy per shot
+      if (!(actIndex === 1 && regaliaTimer > 0)) break;
     }
   }
 
@@ -443,6 +569,7 @@ function popBalloon(b) {
 
 function startReload() {
   if (reloading) return;
+  reloadsUsed++;
   reloading = true;
   reloadTimer = 45; // ~0.75 seconds
   csfx('reload');
@@ -754,6 +881,38 @@ function drawNeonSigns() {
   });
 }
 
+function drawActArchitecture() {
+  const a = ACTS[actIndex];
+  X.save();
+  X.globalCompositeOperation = 'screen';
+  X.strokeStyle = `hsla(${a.hue},100%,66%,.34)`;
+  X.fillStyle = `hsla(${a.accent},100%,54%,.08)`;
+  X.shadowColor = `hsla(${a.hue},100%,60%,.6)`;
+  X.shadowBlur = 18;
+  if (actIndex === 0) {
+    // Censer Midway: hanging reliquaries, bell ribs, smoke chains.
+    for (let i=0;i<7;i++) {
+      const x=W*(.14+i*.12), y=H*(.22+Math.sin(t+i)*.025);
+      X.beginPath(); X.moveTo(x,0); X.lineTo(x,y-28); X.stroke();
+      X.beginPath(); X.moveTo(x-22,y); X.quadraticCurveTo(x,y-45,x+22,y); X.lineTo(x+12,y+22); X.lineTo(x-12,y+22); X.closePath(); X.fill(); X.stroke();
+      X.beginPath(); X.arc(x,y+24,4+Math.sin(t*2+i)*2,0,TAU); X.fillStyle='rgba(245,197,66,.52)'; X.fill();
+    }
+  } else if (actIndex === 1) {
+    // Mirror Carousel: rotating faceted horses and concentric reflective tracks.
+    X.translate(W*.5,H*.43);
+    for (let r=0;r<4;r++) { X.beginPath(); X.ellipse(0,0,W*(.12+r*.07),H*(.05+r*.025),t*(r%2?.08:-.06),0,TAU); X.stroke(); }
+    for (let i=0;i<10;i++) { const ang=i*TAU/10+t*.16; const x=Math.cos(ang)*W*.31,y=Math.sin(ang)*H*.12; X.save();X.translate(x,y);X.rotate(ang);X.beginPath();X.moveTo(-18,8);X.lineTo(0,-26);X.lineTo(18,8);X.lineTo(0,20);X.closePath();X.fill();X.stroke();X.restore(); }
+  } else {
+    // Null Menagerie: blackglass cages surrounding a living eye portal.
+    for (const side of [-1,1]) { const x=W*(side<0?.2:.8); X.beginPath(); X.roundRect(x-70,H*.2,140,H*.42,34); X.stroke(); for(let j=-2;j<=2;j++){X.beginPath();X.moveTo(x+j*24,H*.22);X.lineTo(x+j*16,H*.6);X.stroke();} }
+    const ex=W*.5,ey=H*.34,blink=.38+Math.abs(Math.sin(t*.55))*.55;
+    X.beginPath();X.ellipse(ex,ey,W*.105,H*.085*blink,0,0,TAU);X.fill();X.stroke();
+    X.beginPath();X.arc(ex,ey,H*.035,0,TAU);X.fillStyle='rgba(125,255,153,.34)';X.fill();
+    X.beginPath();X.arc(ex,ey,H*.014,0,TAU);X.fillStyle='rgba(0,0,0,.92)';X.fill();
+  }
+  X.restore();
+}
+
 function drawFacetCrystal(x, y, r, hue, spin = 0) {
   X.save();
   X.translate(x, y);
@@ -972,30 +1131,24 @@ function drawEnemy(e) {
   X.ellipse(0, e.size * 1.12, e.size * 1.18, e.size * 0.18, 0, 0, TAU);
   X.fill();
 
-  // AI-art clown sprite (Vorath DNA) — drawn in place of the procedural figure when loaded.
-  // Per-type hue-rotate keeps the tank/clown/mutant variants visually distinct; a light
-  // breathing bob + squash gives it life until full articulation lands.
-  if (CIRC_CLOWN_OK) {
-    const suitHue2 = e.type === 'tank' ? 18 : e.type === 'clown' ? 318 : 112;
-    const breathe = 1 + Math.sin(e.frame * 0.9) * 0.03;
-    const iw = CIRC_CLOWN.naturalWidth, ih = CIRC_CLOWN.naturalHeight;
-    const hitPunch = (e.hitFlash > 0) ? 1.08 : 1;          // recoil pop on hit
-    const dh = e.size * 2.95 * breathe * hitPunch, dw = dh * (iw / ih);
-    X.save();
-    X.filter = `hue-rotate(${(suitHue2 - 300)}deg) saturate(1.15)`;
-    X.drawImage(CIRC_CLOWN, -dw / 2, -e.size * 1.42, dw, dh);
-    X.filter = 'none';
-    if (e.hitFlash > 0) {                                   // white damage flash
-      X.globalAlpha = Math.min(0.8, e.hitFlash / 6 * 0.8);
-      X.globalCompositeOperation = 'lighter';
-      X.drawImage(CIRC_CLOWN, -dw / 2, -e.size * 1.42, dw, dh);
-      X.globalAlpha = 1; X.globalCompositeOperation = 'source-over';
-      e.hitFlash -= 1;
-    }
-    X.restore();
-    X.restore();
-    return;
+  // Three enemy houses read from silhouette before color or facial detail.
+  X.save();
+  X.globalCompositeOperation = 'screen';
+  if (e.type === 'zombie') {
+    // Censer Barker: tall smoking reliquary crown and hanging bell jaw.
+    X.fillStyle='rgba(245,197,66,.2)';X.strokeStyle='rgba(245,197,66,.7)';X.lineWidth=2;
+    X.beginPath();X.moveTo(-e.size*.34,-e.size*.62);X.lineTo(-e.size*.18,-e.size*1.58);X.lineTo(e.size*.18,-e.size*1.58);X.lineTo(e.size*.34,-e.size*.62);X.closePath();X.fill();X.stroke();
+    for(let i=0;i<3;i++){X.beginPath();X.arc((i-1)*e.size*.16,-e.size*(1.7+i*.08),e.size*(.1+i*.03),Math.PI,TAU);X.stroke();}
+  } else if (e.type === 'clown') {
+    // Ribbon Harlequin: lateral forked horns and animated streamer wings.
+    X.strokeStyle='rgba(34,211,238,.76)';X.lineWidth=Math.max(3,e.size*.11);X.lineCap='round';
+    for(const side of [-1,1]){X.beginPath();X.moveTo(side*e.size*.25,-e.size*.55);X.bezierCurveTo(side*e.size*.7,-e.size*1.55,side*e.size*1.25,-e.size*.8,side*e.size*1.5,-e.size*1.2);X.stroke();X.beginPath();X.moveTo(side*e.size*.7,e.size*.3);X.bezierCurveTo(side*e.size*1.5,e.size*(.1+Math.sin(t*3+side)*.2),side*e.size*1.65,e.size*.95,side*e.size*1.35,e.size*1.3);X.stroke();}
+  } else {
+    // Crown Strongman: broad horned shoulder gantry and heavy plated base.
+    X.fillStyle='rgba(255,64,32,.22)';X.strokeStyle='rgba(255,190,40,.68)';X.lineWidth=3;
+    X.beginPath();X.moveTo(-e.size*1.48,e.size*.2);X.lineTo(-e.size*.92,-e.size*.72);X.lineTo(-e.size*.48,-e.size*.5);X.lineTo(0,-e.size*1.45);X.lineTo(e.size*.48,-e.size*.5);X.lineTo(e.size*.92,-e.size*.72);X.lineTo(e.size*1.48,e.size*.2);X.lineTo(e.size*1.16,e.size*.7);X.lineTo(-e.size*1.16,e.size*.7);X.closePath();X.fill();X.stroke();
   }
+  X.restore();
 
   const suitHue = e.type === 'tank' ? 18 : e.type === 'clown' ? 318 : 112;
   const suit = X.createLinearGradient(-e.size, -e.size * 0.2, e.size, e.size * 1.1);
@@ -1391,46 +1544,51 @@ function drawPlasmaBeams() {
 
 function drawPlayerLaserCannon() {
   const baseX = W * 0.5;
-  const baseY = H + 18;
+  const baseY = H - (W < 700 ? 72 : 34);
   const aim = Math.atan2(mouseY - baseY, mouseX - baseX);
+  const a = ACTS[actIndex];
+  const pulse = regaliaTimer > 0 ? 1 + Math.sin(t * 8) * .08 : 1;
   X.save();
   X.translate(baseX, baseY);
   X.rotate(aim + Math.PI / 2);
+  X.scale(pulse,pulse);
   X.globalCompositeOperation = 'screen';
-  X.shadowColor = `hsla(${(t * 80) % 360},100%,64%,0.9)`;
+  X.shadowColor = `hsla(${a.hue},100%,64%,0.9)`;
   X.shadowBlur = 30;
   const cannon = X.createLinearGradient(-20, -96, 20, 10);
   cannon.addColorStop(0, 'rgba(255,255,255,0.96)');
-  cannon.addColorStop(0.24, 'rgba(34,211,238,0.9)');
-  cannon.addColorStop(0.52, 'rgba(236,72,153,0.82)');
+  cannon.addColorStop(0.24, `hsla(${a.hue},100%,66%,.9)`);
+  cannon.addColorStop(0.52, `hsla(${a.accent},100%,62%,.82)`);
   cannon.addColorStop(0.78, 'rgba(245,197,66,0.74)');
   cannon.addColorStop(1, 'rgba(5,8,18,0.94)');
   X.fillStyle = cannon;
   X.strokeStyle = 'rgba(255,255,255,0.7)';
   X.lineWidth = 2;
   X.beginPath();
-  X.moveTo(0, -118);
-  X.lineTo(21, -54);
-  X.lineTo(36, 2);
-  X.lineTo(10, -8);
-  X.lineTo(0, 10);
-  X.lineTo(-10, -8);
-  X.lineTo(-36, 2);
-  X.lineTo(-21, -54);
+  if (actIndex === 0) {
+    // Bell Ringleader: tall mitre, twin gun-bells, chain tails.
+    X.moveTo(0,-134);X.lineTo(18,-88);X.lineTo(34,-58);X.lineTo(58,-36);X.lineTo(38,8);X.lineTo(12,-12);X.lineTo(0,14);X.lineTo(-12,-12);X.lineTo(-38,8);X.lineTo(-58,-36);X.lineTo(-34,-58);X.lineTo(-18,-88);
+  } else if (actIndex === 1) {
+    // Prism Acrobat: low diamond torso with enormous lateral antler-fins.
+    X.moveTo(0,-112);X.lineTo(24,-68);X.lineTo(76,-96);X.lineTo(52,-48);X.lineTo(96,-22);X.lineTo(34,-10);X.lineTo(0,18);X.lineTo(-34,-10);X.lineTo(-96,-22);X.lineTo(-52,-48);X.lineTo(-76,-96);X.lineTo(-24,-68);
+  } else {
+    // Veil Beastmaster: broad winged mantle, horn tips, trailing pressure veil.
+    X.moveTo(0,-126);X.lineTo(19,-82);X.lineTo(47,-106);X.lineTo(40,-62);X.lineTo(88,-54);X.lineTo(62,-18);X.lineTo(104,12);X.lineTo(32,2);X.lineTo(0,24);X.lineTo(-32,2);X.lineTo(-104,12);X.lineTo(-62,-18);X.lineTo(-88,-54);X.lineTo(-40,-62);X.lineTo(-47,-106);X.lineTo(-19,-82);
+  }
   X.closePath();
   X.fill();
   X.stroke();
-  drawFacetCrystal(0, -88, 18, (t * 96) % 360, t * 2);
-  drawFacetCrystal(-23, -35, 10, 146, -t);
-  drawFacetCrystal(23, -35, 10, 310, t);
-  for (let i = 0; i < 5; i++) {
-    X.strokeStyle = `hsla(${(t * 90 + i * 42) % 360},100%,64%,0.42)`;
-    X.lineWidth = 1.2;
-    X.beginPath();
-    X.moveTo(-18 + i * 9, -8);
-    X.lineTo(-28 + i * 14, 48);
-    X.stroke();
+  drawFacetCrystal(0, -82, actIndex === 1 ? 24 : 18, a.hue + t*12, t * (actIndex===1?3:1.5));
+  if (actIndex === 0) {
+    for(const side of [-1,1]){X.beginPath();X.arc(side*39,-38,15,0,TAU);X.stroke();X.beginPath();X.moveTo(side*35,-20);X.lineTo(side*48,42);X.stroke();drawFacetCrystal(side*50,-36,8,a.accent,-t*side);}
+  } else if (actIndex === 1) {
+    for(const side of [-1,1]) for(let i=0;i<3;i++){drawFacetCrystal(side*(43+i*22),-43-i*15,7+i*2,a.hue+i*46,t*side+i);}
+  } else {
+    for(const side of [-1,1]){X.strokeStyle=`hsla(${a.hue+side*44},100%,66%,.46)`;for(let i=0;i<4;i++){X.beginPath();X.moveTo(side*(28+i*16),-36+i*8);X.quadraticCurveTo(side*(62+i*17),18+i*12,side*(46+i*19),72);X.stroke();}}
+    X.beginPath();X.ellipse(0,-82,13,6+Math.abs(Math.sin(t*2))*7,0,0,TAU);X.fillStyle='rgba(190,255,210,.76)';X.fill();
   }
+  // Aurex's face crystal remains constant so the forms read as one character.
+  X.beginPath();X.arc(0,-58,7,0,TAU);X.fillStyle='rgba(2,4,12,.9)';X.fill();X.strokeStyle='rgba(255,255,255,.72)';X.stroke();
   X.restore();
 }
 
@@ -1448,6 +1606,13 @@ function drawMuzzleFlash() {
 // === UPDATE ===
 function update() {
   t += 0.05;
+  pollGamepad();
+  if (regaliaTimer > 0) regaliaTimer--;
+  if (regaliaCooldown > 0) regaliaCooldown--;
+  if (regaliaTimer === 0 || regaliaCooldown === 0) {
+    const a=ACTS[actIndex];
+    document.getElementById('power-state').textContent = regaliaTimer>0 ? `${a.power} ACTIVE // ${a.mechanic}` : regaliaCooldown>0 ? `${a.power} // RECHARGING ${Math.ceil(regaliaCooldown/60)}S` : `${a.power} READY`;
+  }
 
   // Combo decay
   if (comboTimer > 0) {
@@ -1479,6 +1644,8 @@ function update() {
     if (waveTimer <= 0) {
       wave++;
       document.getElementById('wave-val').textContent = wave;
+      const authoredAct = wave <= 2 ? 0 : wave <= 4 ? 1 : 2;
+      if (authoredAct !== actIndex) setAct(authoredAct);
       spawnWave();
     }
   }
@@ -1498,7 +1665,8 @@ function update() {
     if (e.x > W * 0.3 && e.x < W * 0.7 && e.vx !== 0) {
       e.attackTimer++;
       if (e.attackTimer > 120) { // ~2 seconds in kill zone
-        hp--;
+        if (!(actIndex === 2 && regaliaTimer > 0)) hp--;
+        else addFloatText(e.x,e.y-e.size,'PHASED','#7dff99');
         e.attackTimer = 0;
         screenShake = 12;
         updateHpDisplay();
@@ -1548,6 +1716,15 @@ function update() {
   });
   balloons = balloons.filter(b => b.alive && b.y > -80);
   if (balloons.length < 6 && Math.random() < 0.02) spawnBalloon();
+  window.__nspCircusState = {
+    title:'VORATH CIRCUS // THREE-ACT BLACKGLASS MENAGERIE',
+    protagonist:'Aurex, the Ring-Walker', actIndex, act:ACTS[actIndex].act,
+    regalia:ACTS[actIndex].regalia, power:ACTS[actIndex].power,
+    enemyHouses:['Censer Barker','Ribbon Harlequin','Crown Strongman'],
+    wave, hp, ammo, score, shotsFired, reloadsUsed, powersUsed, gamepadActions, touchActions,
+    regaliaActive:regaliaTimer>0, regaliaCooldown, enemies:enemies.length,
+    controls:{keyboard:true,pointer:true,touch:true,standardGamepad:true}
+  };
 }
 
 // === GAME FLOW ===
@@ -1555,16 +1732,21 @@ function startGame() {
   document.getElementById('title-screen').style.display = 'none';
   document.getElementById('game-over').style.display = 'none';
   document.getElementById('hud').style.display = 'flex';
+  document.getElementById('act-card').style.display = 'block';
+  touchDock.classList.add('active');
 
   try { const a = cAC(); if (a && a.state === 'suspended') a.resume(); } catch(e){}
   startCircusMusic();
   gameActive = true;
   score = 0; combo = 0; maxCombo = 0; hp = maxHp; ammo = maxAmmo;
+  shotsFired = 0; reloadsUsed = 0; powersUsed = 0; gamepadActions = 0; touchActions = 0;
+  regaliaTimer = 0; regaliaCooldown = 0;
   wave = 0; waveTimer = 60;
   enemies = []; particles = []; confetti = []; beamTrails = [];
   t = 0;
 
   initBgStars();
+  setAct(0);
   initNeonSigns();
   initBalloons();
   updateAmmoDisplay();
@@ -1588,9 +1770,10 @@ function runPlaytestAttract() {
   enemies.forEach((e, i) => {
     e.x = W * (0.12 + (i % 5) * 0.19);
     e.y = H * (0.24 + Math.floor(i / 5) * 0.24);
-    e.vx = (i % 2 ? -0.45 : 0.45);
+    e.vx = 0; // attract/QC tableau stays alive while all three regalia frames are captured
     e.vy = Math.sin(i) * 0.12;
     e.type = i % 3 === 0 ? 'tank' : i % 3 === 1 ? 'clown' : 'zombie';
+    e.house = e.type === 'tank' ? 'crown-strongman' : e.type === 'clown' ? 'ribbon-harlequin' : 'censer-barker';
     e.hue = (i * 47 + 88) % 360;
     e.frame = i * 0.7;
     e.attackTimer = 0;
@@ -1598,7 +1781,7 @@ function runPlaytestAttract() {
   for (let i = 0; i < 4; i++) {
     beamTrails.push({
       x0: W * 0.5 + (i - 1.5) * 10,
-      y0: H + 18,
+      y0: H - (W < 700 ? 72 : 34),
       x1: W * (0.22 + i * 0.16),
       y1: H * (0.32 + (i % 2) * 0.18),
       life: 1,
@@ -1614,6 +1797,8 @@ function gameOver() {
   gameActive = false;
   stopCircusMusic();
   document.getElementById('hud').style.display = 'none';
+  document.getElementById('act-card').style.display = 'none';
+  touchDock.classList.remove('active');
   document.getElementById('game-over').style.display = 'flex';
   document.getElementById('final-score').textContent = score.toLocaleString() + ' TICKETS';
 }
@@ -1633,6 +1818,7 @@ function loop() {
     }
 
     drawBg();
+    drawActArchitecture();
     drawNeonSigns();
     balloons.forEach(b => drawBalloon(b));
     enemies.forEach(e => drawEnemy(e));
@@ -1659,12 +1845,13 @@ function loop() {
   } else {
     // Title screen background animation
     drawBg();
+    drawActArchitecture();
     drawNeonSigns();
   }
 
   requestAnimationFrame(loop);
 }
-if (new URLSearchParams(location.search).has('playtest')) {
+if (new URLSearchParams(location.search).has('playtest') || new URLSearchParams(location.search).has('ns_test')) {
   setTimeout(runPlaytestAttract, 80);
 }
 loop();

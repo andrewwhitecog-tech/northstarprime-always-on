@@ -252,6 +252,52 @@
       font-weight: 600;
     }
 
+    /* Weapon Selector Toolbar */
+    .weapon-selector {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .weapon-slot {
+      font-size: 10px;
+      font-family: monospace;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(15, 23, 42, 0.85);
+      color: #94a3b8;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .weapon-slot:hover {
+      border-color: rgba(245, 158, 11, 0.5);
+      color: #fff;
+    }
+
+    .weapon-slot.active {
+      border-color: var(--border-gold);
+      background: rgba(245, 158, 11, 0.25);
+      color: #fef08a;
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.35);
+    }
+
+    /* Player Low Health Red Vignette */
+    #playerVignette {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none;
+      box-shadow: inset 0 0 100px rgba(239, 68, 68, 0);
+      transition: box-shadow 0.25s ease;
+      z-index: 15;
+    }
+
+    #playerVignette.critical {
+      box-shadow: inset 0 0 180px rgba(239, 68, 68, 0.65);
+    }
+
     /* Bottom Center: Player Combat Status */
     #hud-player-status {
       bottom: 20px;
@@ -260,11 +306,11 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
       background: var(--panel-bg);
       border: 1px solid var(--border-subtle);
       border-radius: 8px;
-      padding: 10px 24px;
+      padding: 8px 20px;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
     }
 
@@ -322,6 +368,63 @@
       font-size: 11px;
       color: var(--accent-cyan);
       font-weight: 600;
+    }
+
+    .altfire-indicator {
+      font-size: 11px;
+      color: var(--accent-pink);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+
+    .upgrade-card {
+      flex: 1;
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid rgba(6, 182, 212, 0.4);
+      border-radius: 6px;
+      padding: 16px 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .upgrade-card:hover {
+      border-color: #38bdf8;
+      background: rgba(14, 165, 233, 0.2);
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(6, 182, 212, 0.35);
+    }
+    .upgrade-card .up-icon {
+      font-size: 28px;
+    }
+    .upgrade-card .up-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: #38bdf8;
+      letter-spacing: 0.06em;
+    }
+    .upgrade-card .up-desc {
+      font-size: 11px;
+      color: #94a3b8;
+      line-height: 1.4;
+    }
+
+    .radio-bark {
+      background: rgba(15, 23, 42, 0.92);
+      border-left: 3px solid #f59e0b;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-family: monospace;
+      color: #f1f5f9;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      animation: fadeIn 0.2s ease;
+    }
+    .radio-bark.boss {
+      border-left-color: #ef4444;
+      color: #fca5a5;
     }
 
     /* Diegetic Matrix Terminal Overlay */
@@ -476,19 +579,19 @@
 
     <div class="header-controls">
       <button class="btn-header" id="btnDebugVision" title="Toggle AI decision vectors and raycasts">
-        Debug Vectors [D]
+        ️ Debug Vectors [D]
       </button>
       <button class="btn-header" id="btnBarcodeScanner" title="Open SKANNERZ Barcode Synthesizer">
-        Barcode Scanner [B]
+        ️ Barcode Scanner [B]
       </button>
       <button class="btn-header" id="btnTerminal" title="Open Matrix Hacking Terminal">
-        Terminal [`]
+         Terminal [`]
       </button>
       <button class="btn-header" id="btnAudioMute">
-        Audio: ON [M]
+         Audio: ON [M]
       </button>
       <button class="btn-header active" id="btnRestart">
-        Reset Arena
+         Reset Arena
       </button>
     </div>
   </header>
@@ -496,6 +599,17 @@
   <!-- Main Game Canvas Area -->
   <div id="main-container">
     <canvas id="gameCanvas"></canvas>
+
+    <!-- Apex Boss Health Bar -->
+    <div id="hud-boss-bar" style="display: none; position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: 440px; background: rgba(15, 23, 42, 0.94); border: 1px solid #ef4444; border-radius: 6px; padding: 8px 12px; z-index: 45; box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4);">
+      <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; margin-bottom: 4px;">
+        <span style="color: #ef4444; letter-spacing: 0.08em;" id="bossNameText">APEX OVERLORD // CHIMERA CORE</span>
+        <span style="color: #f59e0b;" id="bossPhaseText">PHASE 1: ORBITAL SHIELDS</span>
+      </div>
+      <div style="width: 100%; height: 8px; background: #1e293b; border-radius: 3px; overflow: hidden; position: relative;">
+        <div id="bossHpFill" style="width: 100%; height: 100%; background: linear-gradient(90deg, #ef4444, #f97316); transition: width 0.15s ease;"></div>
+      </div>
+    </div>
 
     <!-- Top Left HUD: System 1 AI Real-Time Diagnostics -->
     <div class="hud-panel" id="hud-ai-diagnostics">
@@ -538,8 +652,31 @@
       </div>
     </div>
 
+    <!-- Damage Vignette Overlay -->
+    <div id="playerVignette"></div>
+
+    <!-- Tactical Radio Comms Feed -->
+    <div id="tacticalRadioFeed" style="position: absolute; bottom: 100px; right: 16px; width: 280px; z-index: 40; pointer-events: none; display: flex; flex-direction: column-reverse; gap: 6px;"></div>
+
+    <!-- Cybernetic Neural Implants Modal (Wave Respite) -->
+    <div id="upgrades-modal" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 560px; background: rgba(13, 17, 26, 0.98); border: 2px solid var(--accent-cyan); border-radius: 8px; padding: 24px; z-index: 95; box-shadow: 0 0 40px rgba(6, 182, 212, 0.4); text-align: center;">
+      <div style="font-size: 11px; letter-spacing: 0.15em; color: var(--accent-cyan); margin-bottom: 6px;">RESPITE PROTOCOL ENGAGED // WAVE CLEARED</div>
+      <div style="font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 16px;">SELECT NEURAL CYBER-IMPLANT</div>
+      <div id="upgradeOptionsContainer" style="display: flex; gap: 12px; justify-content: center; margin-bottom: 18px;">
+        <!-- Dynamic upgrade option cards -->
+      </div>
+      <div style="font-size: 11px; color: #64748b;">NEURAL SYNAPSE MATRIX ARCHITECTURE // NORTHSTAR PRIME</div>
+    </div>
+
     <!-- Bottom Center HUD: Player Status -->
     <div id="hud-player-status">
+      <!-- Weapon Arsenal Selector Toolbar -->
+      <div class="weapon-selector" id="weaponSelector">
+        <div class="weapon-slot active" id="wslot0" data-idx="0">[1] ION BLASTER</div>
+        <div class="weapon-slot" id="wslot1" data-idx="1">[2] SCATTER CANNON</div>
+        <div class="weapon-slot" id="wslot2" data-idx="2">[3] RAILGUN</div>
+      </div>
+
       <div class="player-bars">
         <div class="hp-container">
           <div class="hp-label">
@@ -553,9 +690,10 @@
 
         <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
           <div class="ammo-pips" id="ammoPipsContainer">
-            <!-- 8 ammo pips -->
+            <!-- Dynamic ammo pips -->
           </div>
           <div class="dash-indicator" id="dashStatusText">DASH READY [SPACE]</div>
+          <div class="altfire-indicator" id="altfireStatusText">ALT-FIRE READY [RMB]</div>
         </div>
       </div>
     </div>
@@ -595,18 +733,2038 @@
       </div>
 
       <button class="btn-spawn-scanned" id="btnSpawnScannedBot" style="display: none;">
-        ✦ SPAWN SYNTHESIZED ENTITY INTO ARENA
+        ⚡ SPAWN SYNTHESIZED ENTITY INTO ARENA
       </button>
     </div>
   </div>
 
-  <!-- Engine Scripts -->
-  <script src="src/EventBus.js"></script>
-  <script src="src/System1NeuralAgent.js"></script>
-  <script src="src/AIDirector.js"></script>
-  <script src="src/BarcodeEntropyScanner.js"></script>
-  <script src="src/AudioSynthesizer.js"></script>
-  <script src="src/DiegeticTerminal.js"></script>
+<script>
+/* === EventBus.js === */
+/**
+ * EventBus.js - Decoupled Pub/Sub Message Engine
+ * Inspired by @fullstackpeter reel DJ-LgfoTTZk ("What is pub/sub in programming?")
+ * 
+ * Guarantees zero tight coupling between player controller, combat physics,
+ * System 1 AI agents, AI Director, audio synthesis, and HUD telemetry.
+ */
+
+class EventBus {
+  constructor() {
+    this.listeners = new Map();
+    this.history = [];
+    this.maxHistory = 100;
+  }
+
+  /**
+   * Subscribe a listener callback to an event channel.
+   * @param {string} eventName
+   * @param {Function} callback
+   * @returns {Function} Unsubscribe function
+   */
+  subscribe(eventName, callback) {
+    if (!this.listeners.has(eventName)) {
+      this.listeners.set(eventName, new Set());
+    }
+    const handlers = this.listeners.get(eventName);
+    handlers.add(callback);
+
+    return () => {
+      handlers.delete(callback);
+      if (handlers.size === 0) {
+        this.listeners.delete(eventName);
+      }
+    };
+  }
+
+  /**
+   * Subscribe a callback that fires once then auto-unsubscribes.
+   * @param {string} eventName 
+   * @param {Function} callback 
+   */
+  subscribeOnce(eventName, callback) {
+    const unsub = this.subscribe(eventName, (data) => {
+      unsub();
+      callback(data);
+    });
+  }
+
+  /**
+   * Publish an event payload to all subscribed listeners.
+   * @param {string} eventName 
+   * @param {Object} payload 
+   */
+  publish(eventName, payload = {}) {
+    const timestamp = performance.now();
+    const eventRecord = {
+      event: eventName,
+      payload,
+      timestamp
+    };
+
+    // Keep bounded rolling history for telemetry & UI inspect
+    this.history.push(eventRecord);
+    if (this.history.length > this.maxHistory) {
+      this.history.shift();
+    }
+
+    if (this.listeners.has(eventName)) {
+      const handlers = this.listeners.get(eventName);
+      handlers.forEach(fn => {
+        try {
+          fn(payload, timestamp);
+        } catch (err) {
+          console.error(`[EventBus] Error in handler for event "${eventName}":`, err);
+        }
+      });
+    }
+
+    // Also dispatch to wildcard listeners if any
+    if (this.listeners.has('*')) {
+      this.listeners.get('*').forEach(fn => {
+        try {
+          fn(eventName, payload, timestamp);
+        } catch (err) {
+          console.error(`[EventBus] Error in wildcard handler for "${eventName}":`, err);
+        }
+      });
+    }
+  }
+
+  /**
+   * Get the latest N events for debug HUD
+   * @param {number} count 
+   * @returns {Array}
+   */
+  getRecentEvents(count = 10) {
+    return this.history.slice(-count);
+  }
+
+  clear() {
+    this.listeners.clear();
+    this.history = [];
+  }
+}
+
+// Export for ES modules and browser global
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = EventBus;
+}
+if (typeof window !== 'undefined') {
+  window.EventBus = EventBus;
+}
+
+
+/* === System1NeuralAgent.js === */
+/**
+ * System1NeuralAgent.js - The "Jev-Style" Fast-Decision Game AI Engine
+ * Inspired by @fullstackpeter reel DdhPprdBwcs ("Jev: the AI that cannot generate text")
+ * 
+ * Non-generative, typed decision architecture:
+ * - Sub-0.5ms inference per tick
+ * - Evaluates multi-dimensional continuous combat telemetry
+ * - Returns strict, validated action schemas with zero hallucination risk
+ */
+
+class System1NeuralAgent {
+  constructor(id, x, y, archetype = 'TACTICAL_OPERATOR', eventBus = null) {
+    this.id = id;
+    this.archetype = archetype;
+    this.eventBus = eventBus;
+
+    // Spatial & physics state
+    this.x = x;
+    this.y = y;
+    this.vx = 0;
+    this.vy = 0;
+    this.radius = 16;
+    this.rotation = 0; // radians
+    this.maxSpeed = 160; // px/sec
+    this.acceleration = 600;
+
+    // Combat state
+    this.maxHealth = 100;
+    this.health = 100;
+    this.isAlive = true;
+    this.lastFireTime = 0;
+    this.fireCooldown = 0.45; // seconds
+    this.ammo = 8;
+    this.maxAmmo = 8;
+    this.isReloading = false;
+    this.reloadDuration = 1.2;
+    this.reloadTimer = 0;
+    this.stunTimer = 0;
+    this.telegraphTimer = 0;
+    this.isTelegraphing = false;
+
+    // Boss & Elite states
+    this.isBoss = false;
+    this.bossPhase = 1;
+    this.orbitalBits = [];
+    this.teleportCooldown = 4.0;
+    this.teleportTimer = 4.0;
+
+    // Tactical radio chatter states
+    this.lastChatterTime = -10000;
+    this.currentCallout = null;
+    this.calloutTimer = 0;
+
+    // Archetype traits & custom personality weights
+    this.setupArchetype(archetype);
+
+    // Current active decision state
+    this.activeDecision = {
+      stance: 'SCOUT_PATROL',
+      confidence: 1.0,
+      targetX: x,
+      targetY: y,
+      shouldFire: false,
+      inferenceMs: 0.05,
+      timestamp: performance.now()
+    };
+
+    // Stance constants
+    this.STANCES = [
+      'FLANK_LEFT',
+      'FLANK_RIGHT',
+      'TAKE_COVER',
+      'SUPPRESS',
+      'AGGRESSIVE_CHARGE',
+      'TACTICAL_RETREAT',
+      'SCOUT_PATROL'
+    ];
+
+    // Decision tick rate (evaluate decision every 100ms, execute movement at 60 FPS)
+    this.decisionInterval = 0.09; // ~11 times/sec
+    this.decisionTimer = Math.random() * this.decisionInterval; // stagger agents
+  }
+
+  setupArchetype(type) {
+    switch (type) {
+      case 'CHIMERA_OVERLORD': // Apex Boss AI
+        this.maxSpeed = 135;
+        this.maxHealth = 850;
+        this.health = 850;
+        this.fireCooldown = 0.16;
+        this.radius = 28;
+        this.color = '#ef4444'; // Crimson core
+        this.weightBias = { flank: 1.3, rush: 1.4, cover: 0.3, suppress: 2.4, retreat: 0.1 };
+        this.isBoss = true;
+        this.bossPhase = 1;
+        this.orbitalBits = [
+          { angle: 0, radius: 54, health: 65, maxHealth: 65, active: true },
+          { angle: Math.PI * 0.5, radius: 54, health: 65, maxHealth: 65, active: true },
+          { angle: Math.PI, radius: 54, health: 65, maxHealth: 65, active: true },
+          { angle: Math.PI * 1.5, radius: 54, health: 65, maxHealth: 65, active: true }
+        ];
+        break;
+      case 'VOID_PROWLER': // Fast flanker
+        this.maxSpeed = 220;
+        this.maxHealth = 75;
+        this.health = 75;
+        this.fireCooldown = 0.3;
+        this.color = '#38bdf8'; // Sky blue
+        this.weightBias = { flank: 1.6, rush: 1.2, cover: 0.7, retreat: 0.6 };
+        break;
+      case 'OBSIDIAN_SENTINEL': // Heavy suppressor
+        this.maxSpeed = 110;
+        this.maxHealth = 180;
+        this.health = 180;
+        this.fireCooldown = 0.2;
+        this.maxAmmo = 16;
+        this.ammo = 16;
+        this.color = '#f59e0b'; // Amber
+        this.weightBias = { flank: 0.4, rush: 0.5, cover: 1.4, suppress: 1.9 };
+        break;
+      case 'PRISM_WRAITH': // Ambush / high burst
+        this.maxSpeed = 190;
+        this.maxHealth = 90;
+        this.health = 90;
+        this.fireCooldown = 0.6;
+        this.color = '#ec4899'; // Pink
+        this.weightBias = { flank: 1.3, rush: 1.5, cover: 1.5, retreat: 1.2 };
+        break;
+      case 'TACTICAL_OPERATOR':
+      default:
+        this.maxSpeed = 150;
+        this.maxHealth = 100;
+        this.health = 100;
+        this.fireCooldown = 0.4;
+        this.color = '#10b981'; // Emerald
+        this.weightBias = { flank: 1.0, rush: 1.0, cover: 1.0, suppress: 1.0, retreat: 1.0 };
+        break;
+    }
+  }
+
+  /**
+   * Evaluates the high-dimensional combat feature vector in sub-0.5ms.
+   * This is the "System 1" non-generative inference pass.
+   */
+  evaluateSystem1Decision(gameState) {
+    const startTime = performance.now();
+    const player = gameState.player;
+    if (!player || !player.isAlive) {
+      return {
+        stance: 'SCOUT_PATROL',
+        confidence: 0.99,
+        targetX: this.x + Math.cos(this.rotation) * 80,
+        targetY: this.y + Math.sin(this.rotation) * 80,
+        shouldFire: false,
+        inferenceMs: performance.now() - startTime
+      };
+    }
+
+    // 1. Compute Continuous Feature Vector
+    const dx = player.x - this.x;
+    const dy = player.y - this.y;
+    const distToPlayer = Math.hypot(dx, dy);
+    const normDist = Math.min(distToPlayer / 600, 1.0); // 0 (point-blank) to 1 (far)
+
+    // Player aim danger: Is the player pointing towards this agent?
+    const playerFacingX = Math.cos(player.rotation);
+    const playerFacingY = Math.sin(player.rotation);
+    const toAgentX = (this.x - player.x) / (distToPlayer || 1);
+    const toAgentY = (this.y - player.y) / (distToPlayer || 1);
+    const playerAimDot = playerFacingX * toAgentX + playerFacingY * toAgentY; // > 0.8 means crosshair on me
+
+    // Self health status
+    const healthRatio = this.health / this.maxHealth;
+    const isCriticallyInjured = healthRatio < 0.35;
+
+    // Line of sight check (raycast against obstacles)
+    const hasLOS = this.checkLineOfSight(this.x, this.y, player.x, player.y, gameState.obstacles);
+
+    // Player reload vulnerability
+    const playerVulnerable = player.isReloading || (player.ammo <= 0);
+
+    // Nearby cover evaluation
+    const bestCover = this.findBestCoverNode(player, gameState.coverNodes, gameState.obstacles);
+
+    // Squad spacing: Distance to nearest ally agent
+    const nearestAlly = this.findNearestAlly(gameState.agents);
+    const allyClumping = nearestAlly && nearestAlly.dist < 80;
+
+    // Squad coordination: Is an ally currently suppressing the player?
+    const allySuppressing = gameState.agents.some(a => a.id !== this.id && a.isAlive && a.activeDecision.stance === 'SUPPRESS');
+
+    // 2. Fast Weighted Tensor / Logit Activation
+    const scores = {};
+    const bias = this.weightBias;
+
+    // Logit: TACTICAL_RETREAT
+    scores['TACTICAL_RETREAT'] = 
+      (isCriticallyInjured ? 3.5 : 0.2) +
+      (playerAimDot > 0.7 ? 1.5 : 0.0) +
+      (normDist < 0.25 ? 1.8 : 0.0) * (bias.retreat || 1.0);
+
+    // Logit: TAKE_COVER
+    scores['TAKE_COVER'] = 
+      (playerAimDot > 0.6 ? 2.4 : 0.3) +
+      (this.isReloading ? 3.0 : 0.0) +
+      (bestCover ? 1.5 : -1.0) +
+      (isCriticallyInjured ? 2.0 : 0.0) * (bias.cover || 1.0);
+
+    // Logit: AGGRESSIVE_CHARGE
+    scores['AGGRESSIVE_CHARGE'] = 
+      (playerVulnerable ? 3.5 : 0.0) +
+      (healthRatio > 0.7 && normDist < 0.4 ? 2.2 : 0.0) +
+      (playerAimDot < 0.0 ? 1.8 : 0.0) +
+      (allySuppressing ? 2.0 : 0.0) * (bias.rush || 1.0);
+
+    // Logit: FLANK_LEFT
+    scores['FLANK_LEFT'] = 
+      (hasLOS && normDist > 0.2 ? 2.2 : 0.5) +
+      (allyClumping ? 1.5 : 0.0) +
+      (allySuppressing ? 3.0 : 0.0) + // PINCER MANEUVER
+      (playerAimDot > 0.5 ? 1.2 : 0.4) * (bias.flank || 1.0);
+
+    // Logit: FLANK_RIGHT
+    scores['FLANK_RIGHT'] = 
+      (hasLOS && normDist > 0.2 ? 2.1 : 0.4) +
+      (!allyClumping ? 0.8 : 1.4) +
+      (allySuppressing ? 3.2 : 0.0) + // PINCER MANEUVER
+      (playerAimDot > 0.5 ? 1.1 : 0.3) * (bias.flank || 1.0);
+
+    // Logit: SUPPRESS
+    scores['SUPPRESS'] = 
+      (hasLOS && normDist >= 0.25 && normDist <= 0.75 ? 2.5 : 0.2) +
+      (!this.isReloading && this.ammo >= 3 ? 1.5 : -2.0) +
+      (playerAimDot < 0.4 ? 1.2 : 0.0) * (bias.suppress || 1.0);
+
+    // 3. Softmax / ArgMax Stance Selection
+    let topStance = 'FLANK_LEFT';
+    let maxScore = -Infinity;
+    let sumExp = 0;
+
+    for (const [stance, score] of Object.entries(scores)) {
+      if (score > maxScore) {
+        maxScore = score;
+        topStance = stance;
+      }
+      sumExp += Math.exp(Math.min(score, 10)); // stability clamp
+    }
+    const confidence = Math.min(Math.exp(Math.min(maxScore, 10)) / (sumExp || 1), 0.99);
+
+    // 4. Derive Strict Target Coordinates from Stance
+    let targetX = player.x;
+    let targetY = player.y;
+    let shouldFire = false;
+
+    const angleToPlayer = Math.atan2(dy, dx);
+    const flankDist = Math.max(distToPlayer, 180);
+
+    switch (topStance) {
+      case 'FLANK_LEFT': {
+        const flankAngle = angleToPlayer - Math.PI / 2.5;
+        targetX = player.x + Math.cos(flankAngle) * flankDist;
+        targetY = player.y + Math.sin(flankAngle) * flankDist;
+        shouldFire = hasLOS && normDist < 0.8 && !this.isReloading;
+        break;
+      }
+      case 'FLANK_RIGHT': {
+        const flankAngle = angleToPlayer + Math.PI / 2.5;
+        targetX = player.x + Math.cos(flankAngle) * flankDist;
+        targetY = player.y + Math.sin(flankAngle) * flankDist;
+        shouldFire = hasLOS && normDist < 0.8 && !this.isReloading;
+        break;
+      }
+      case 'TAKE_COVER': {
+        if (bestCover) {
+          targetX = bestCover.x;
+          targetY = bestCover.y;
+        } else {
+          // Move away from player's line of fire
+          targetX = this.x - Math.cos(angleToPlayer) * 150;
+          targetY = this.y - Math.sin(angleToPlayer) * 150;
+        }
+        shouldFire = hasLOS && Math.random() < 0.2; // sparse cover fire
+        break;
+      }
+      case 'AGGRESSIVE_CHARGE': {
+        targetX = player.x;
+        targetY = player.y;
+        shouldFire = hasLOS && normDist < 0.6 && !this.isReloading;
+        break;
+      }
+      case 'TACTICAL_RETREAT': {
+        targetX = this.x - Math.cos(angleToPlayer) * 200;
+        targetY = this.y - Math.sin(angleToPlayer) * 200;
+        shouldFire = hasLOS && Math.random() < 0.5 && !this.isReloading;
+        break;
+      }
+      case 'SUPPRESS': {
+        // Hold position, fine-adjust distance
+        targetX = this.x + Math.cos(angleToPlayer) * (distToPlayer > 300 ? 50 : -50);
+        targetY = this.y + Math.sin(angleToPlayer) * (distToPlayer > 300 ? 50 : -50);
+        shouldFire = hasLOS && !this.isReloading;
+        break;
+      }
+      default:
+        targetX = player.x;
+        targetY = player.y;
+        shouldFire = false;
+        break;
+    }
+
+    const inferenceMs = performance.now() - startTime;
+
+    const decision = {
+      agentId: this.id,
+      stance: topStance,
+      confidence: parseFloat(confidence.toFixed(2)),
+      targetX,
+      targetY,
+      shouldFire,
+      inferenceMs: parseFloat(inferenceMs.toFixed(3)),
+      timestamp: performance.now()
+    };
+
+    // Tactical Radio Chatter Callout
+    if (confidence > 0.40) {
+      if (this.isBoss) {
+        if (this.bossPhase === 1) this.emitTacticalChatter("ORBITAL_DEFENSE_LOCKED");
+        else if (this.bossPhase === 2) this.emitTacticalChatter("WARP_VECTORS_CALCULATING");
+        else this.emitTacticalChatter("APEX_EXTERMINATION_BURST");
+      } else {
+        const calloutMap = {
+          'FLANK_LEFT': 'FLANKING_PORT_SIDE',
+          'FLANK_RIGHT': 'FLANKING_STARBOARD',
+          'SUPPRESS': 'LAYING_SUPPRESSION',
+          'TAKE_COVER': 'SEEKING_COVER',
+          'AGGRESSIVE_CHARGE': 'BREACHING_TARGET',
+          'TACTICAL_RETREAT': 'EVADING_FIRE'
+        };
+        if (calloutMap[topStance]) {
+          this.emitTacticalChatter(calloutMap[topStance]);
+        }
+      }
+    }
+
+    if (this.eventBus) {
+      this.eventBus.publish('AI_DECISION_TICK', decision);
+    }
+
+    return decision;
+  }
+
+  emitTacticalChatter(callout) {
+    const now = performance.now();
+    if (now - this.lastChatterTime < 2800) return; // rate limit per agent
+    this.lastChatterTime = now;
+    this.currentCallout = callout;
+    this.calloutTimer = 2.2;
+    if (this.eventBus) {
+      this.eventBus.publish('TACTICAL_CHATTER', {
+        agentId: this.id,
+        callout,
+        x: this.x,
+        y: this.y,
+        isBoss: !!this.isBoss
+      });
+    }
+  }
+
+  update(dt, gameState) {
+    if (!this.isAlive) return;
+
+    // Stun state (e.g. from EMP shockwave)
+    if (this.stunTimer > 0) {
+      this.stunTimer -= dt;
+      this.vx *= 0.85;
+      this.vy *= 0.85;
+      this.x += this.vx * dt;
+      this.y += this.vy * dt;
+      this.isTelegraphing = false;
+      return;
+    }
+
+    // Reload logic
+    if (this.isReloading) {
+      this.reloadTimer += dt;
+      if (this.reloadTimer >= this.reloadDuration) {
+        this.isReloading = false;
+        this.ammo = this.maxAmmo;
+        this.reloadTimer = 0;
+      }
+    }
+
+    // Decision tick
+    this.decisionTimer += dt;
+    if (this.decisionTimer >= this.decisionInterval) {
+      this.decisionTimer = 0;
+      this.activeDecision = this.evaluateSystem1Decision(gameState);
+    }
+
+    // Steering physics towards target
+    const tx = this.activeDecision.targetX;
+    const ty = this.activeDecision.targetY;
+    const dx = tx - this.x;
+    const dy = ty - this.y;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist > 15) {
+      const desiredVx = (dx / dist) * this.maxSpeed;
+      const desiredVy = (dy / dist) * this.maxSpeed;
+
+      this.vx += (desiredVx - this.vx) * Math.min(this.acceleration * dt / this.maxSpeed, 1.0);
+      this.vy += (desiredVy - this.vy) * Math.min(this.acceleration * dt / this.maxSpeed, 1.0);
+    } else {
+      this.vx *= 0.85;
+      this.vy *= 0.85;
+    }
+
+    // Obstacle avoidance & collision resolution
+    this.resolveObstacleCollisions(gameState.obstacles, gameState.arenaBounds);
+
+    // Apply movement
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+
+    // Face player
+    if (gameState.player && gameState.player.isAlive) {
+      const pdx = gameState.player.x - this.x;
+      const pdy = gameState.player.y - this.y;
+      this.rotation = Math.atan2(pdy, pdx);
+    }
+
+    // Tactical callout timer countdown
+    if (this.calloutTimer > 0) {
+      this.calloutTimer -= dt;
+      if (this.calloutTimer <= 0) this.currentCallout = null;
+    }
+
+    // Boss Phase & Orbital mechanics
+    if (this.isBoss) {
+      if (this.orbitalBits && this.orbitalBits.length > 0) {
+        this.orbitalBits.forEach(b => {
+          b.angle += dt * 2.4;
+          b.x = this.x + Math.cos(b.angle) * b.radius;
+          b.y = this.y + Math.sin(b.angle) * b.radius;
+        });
+      }
+
+      const hpPct = this.health / this.maxHealth;
+      if (this.bossPhase === 1 && hpPct <= 0.65) {
+        this.bossPhase = 2;
+        this.emitTacticalChatter("PHASE_2_WARP_ONLINE");
+        if (this.eventBus) this.eventBus.publish('BOSS_PHASE_CHANGE', { phase: 2, bossId: this.id });
+      } else if (this.bossPhase === 2 && hpPct <= 0.30) {
+        this.bossPhase = 3;
+        this.maxSpeed = 175;
+        this.fireCooldown = 0.10;
+        this.emitTacticalChatter("APEX_OVERDRIVE_PURGE");
+        if (this.eventBus) this.eventBus.publish('BOSS_PHASE_CHANGE', { phase: 3, bossId: this.id });
+      }
+
+      // Phase 2 & 3 Phase-Warp Teleport
+      if (this.bossPhase >= 2) {
+        this.teleportTimer -= dt;
+        if (this.teleportTimer <= 0 && gameState.player && gameState.player.isAlive) {
+          this.teleportTimer = this.bossPhase === 3 ? 3.0 : 4.5;
+          const warpAngle = Math.random() * Math.PI * 2;
+          const warpDist = 200 + Math.random() * 140;
+          this.x = Math.max(gameState.arenaBounds.x + 60, Math.min(gameState.arenaBounds.x + gameState.arenaBounds.width - 60, gameState.player.x + Math.cos(warpAngle) * warpDist));
+          this.y = Math.max(gameState.arenaBounds.y + 60, Math.min(gameState.arenaBounds.y + gameState.arenaBounds.height - 60, gameState.player.y + Math.sin(warpAngle) * warpDist));
+          this.vx = 0;
+          this.vy = 0;
+          this.emitTacticalChatter("TACTICAL_WARP_EXECUTED");
+          if (this.eventBus) {
+            this.eventBus.publish('BOSS_TELEPORTED', { x: this.x, y: this.y });
+          }
+        }
+      }
+    }
+
+    // Fire weapon if decision dictates (with 0.22s telegraph beam)
+    const now = performance.now() / 1000;
+    if (this.activeDecision.shouldFire && !this.isReloading) {
+      this.isTelegraphing = true;
+      this.telegraphTimer += dt;
+      if (this.telegraphTimer >= 0.22 && (now - this.lastFireTime >= this.fireCooldown)) {
+        this.telegraphTimer = 0;
+        this.fireBullet(gameState);
+      }
+    } else {
+      this.isTelegraphing = false;
+      this.telegraphTimer = 0;
+    }
+  }
+
+  applyStun(duration) {
+    this.stunTimer = duration;
+    this.isTelegraphing = false;
+    this.telegraphTimer = 0;
+  }
+
+  fireBullet(gameState) {
+    if (this.ammo <= 0) {
+      this.isReloading = true;
+      this.reloadTimer = 0;
+      return;
+    }
+
+    this.ammo--;
+    this.lastFireTime = performance.now() / 1000;
+
+    // Boss Phase 3 Spiral Barrage
+    if (this.isBoss && this.bossPhase === 3) {
+      for (let offset of [-0.28, 0, 0.28]) {
+        const spiralAngle = this.rotation + offset;
+        gameState.bullets.push({
+          x: this.x + Math.cos(this.rotation) * (this.radius + 8),
+          y: this.y + Math.sin(this.rotation) * (this.radius + 8),
+          vx: Math.cos(spiralAngle) * 440,
+          vy: Math.sin(spiralAngle) * 440,
+          owner: this.id,
+          isEnemy: true,
+          damage: 16,
+          lifespan: 2.2,
+          color: '#ef4444'
+        });
+      }
+      if (this.eventBus) {
+        this.eventBus.publish('WEAPON_FIRED', {
+          owner: this.id,
+          isEnemy: true,
+          x: this.x,
+          y: this.y
+        });
+      }
+      return;
+    }
+
+    // Bullet spread based on stance
+    let spread = 0.08;
+    if (this.activeDecision.stance === 'SUPPRESS') spread = 0.16;
+    if (this.activeDecision.stance === 'AGGRESSIVE_CHARGE') spread = 0.22;
+
+    const angle = this.rotation + (Math.random() - 0.5) * spread;
+    const speed = 420;
+
+    const bullet = {
+      x: this.x + Math.cos(this.rotation) * (this.radius + 6),
+      y: this.y + Math.sin(this.rotation) * (this.radius + 6),
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      owner: this.id,
+      isEnemy: true,
+      color: this.color,
+      damage: 12,
+      lifespan: 1.8
+    };
+
+    gameState.bullets.push(bullet);
+
+    if (this.eventBus) {
+      this.eventBus.publish('WEAPON_FIRED', {
+        owner: this.id,
+        isEnemy: true,
+        x: bullet.x,
+        y: bullet.y
+      });
+    }
+
+    if (this.ammo <= 0) {
+      this.isReloading = true;
+      this.reloadTimer = 0;
+    }
+  }
+
+  takeDamage(amount, attackerId, knockbackAngle = 0) {
+    if (!this.isAlive) return;
+
+    // Boss Orbital Bit Shield Absorption (Phase 1)
+    if (this.isBoss && this.bossPhase === 1 && this.orbitalBits && this.orbitalBits.length > 0) {
+      const activeBit = this.orbitalBits.find(b => b.active);
+      if (activeBit) {
+        activeBit.health -= amount;
+        if (activeBit.health <= 0) {
+          activeBit.active = false;
+          this.emitTacticalChatter("ORBITAL_BIT_DESTROYED");
+        }
+        if (this.eventBus) {
+          this.eventBus.publish('BOSS_SHIELD_HIT', { bossId: this.id, bitHealth: activeBit.health });
+        }
+        return;
+      }
+    }
+
+    this.health = Math.max(0, this.health - amount);
+    this.vx += Math.cos(knockbackAngle) * 80;
+    this.vy += Math.sin(knockbackAngle) * 80;
+
+    if (this.eventBus) {
+      this.eventBus.publish('ENTITY_DAMAGED', {
+        entityId: this.id,
+        isEnemy: true,
+        damage: amount,
+        healthRemaining: this.health,
+        attackerId
+      });
+    }
+
+    if (this.health <= 0) {
+      this.isAlive = false;
+      if (this.eventBus) {
+        this.eventBus.publish('ENTITY_KILLED', {
+          entityId: this.id,
+          isEnemy: true,
+          attackerId,
+          x: this.x,
+          y: this.y,
+          isBoss: !!this.isBoss
+        });
+      }
+    }
+  }
+
+  checkLineOfSight(x1, y1, x2, y2, obstacles) {
+    if (!obstacles) return true;
+    for (const obs of obstacles) {
+      if (this.lineIntersectsRect(x1, y1, x2, y2, obs)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  lineIntersectsRect(x1, y1, x2, y2, rect) {
+    const rx = rect.x;
+    const ry = rect.y;
+    const rw = rect.width;
+    const rh = rect.height;
+
+    // Check intersection with all 4 rectangle edges
+    return (
+      this.lineIntersectsLine(x1, y1, x2, y2, rx, ry, rx + rw, ry) ||
+      this.lineIntersectsLine(x1, y1, x2, y2, rx + rw, ry, rx + rw, ry + rh) ||
+      this.lineIntersectsLine(x1, y1, x2, y2, rx + rw, ry + rh, rx, ry + rh) ||
+      this.lineIntersectsLine(x1, y1, x2, y2, rx, ry + rh, rx, ry)
+    );
+  }
+
+  lineIntersectsLine(x1, y1, x2, y2, x3, y3, x4, y4) {
+    const den = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+    if (den === 0) return false;
+    const ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / den;
+    const ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / den;
+    return ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1;
+  }
+
+  findBestCoverNode(player, coverNodes, obstacles) {
+    if (!coverNodes || coverNodes.length === 0) return null;
+    let bestNode = null;
+    let bestScore = -Infinity;
+
+    for (const node of coverNodes) {
+      const distFromMe = Math.hypot(node.x - this.x, node.y - this.y);
+      if (distFromMe > 400) continue;
+
+      // Cover node is good if it breaks LOS to player
+      const nodeHasLOS = this.checkLineOfSight(node.x, node.y, player.x, player.y, obstacles);
+      const occlusionBonus = (!nodeHasLOS) ? 400 : -200;
+      const score = occlusionBonus - distFromMe;
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestNode = node;
+      }
+    }
+    return bestNode;
+  }
+
+  findNearestAlly(agents) {
+    if (!agents) return null;
+    let nearest = null;
+    let minDist = Infinity;
+
+    for (const a of agents) {
+      if (a.id === this.id || !a.isAlive) continue;
+      const d = Math.hypot(a.x - this.x, a.y - this.y);
+      if (d < minDist) {
+        minDist = d;
+        nearest = { agent: a, dist: d };
+      }
+    }
+    return nearest;
+  }
+
+  resolveObstacleCollisions(obstacles, bounds) {
+    // Arena bounds
+    if (bounds) {
+      const margin = this.radius;
+      if (this.x < bounds.x + margin) { this.x = bounds.x + margin; this.vx = 0; }
+      if (this.x > bounds.x + bounds.width - margin) { this.x = bounds.x + bounds.width - margin; this.vx = 0; }
+      if (this.y < bounds.y + margin) { this.y = bounds.y + margin; this.vy = 0; }
+      if (this.y > bounds.y + bounds.height - margin) { this.y = bounds.y + bounds.height - margin; this.vy = 0; }
+    }
+
+    if (!obstacles) return;
+
+    for (const obs of obstacles) {
+      // Circle-AABB collision check
+      const closestX = Math.max(obs.x, Math.min(this.x, obs.x + obs.width));
+      const closestY = Math.max(obs.y, Math.min(this.y, obs.y + obs.height));
+      const distX = this.x - closestX;
+      const distY = this.y - closestY;
+      const dist = Math.hypot(distX, distY);
+
+      if (dist < this.radius) {
+        const overlap = this.radius - dist;
+        if (dist > 0.0001) {
+          this.x += (distX / dist) * overlap;
+          this.y += (distY / dist) * overlap;
+        } else {
+          this.x += overlap;
+        }
+      }
+    }
+  }
+}
+
+// Export for ES modules and browser global
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = System1NeuralAgent;
+}
+if (typeof window !== 'undefined') {
+  window.System1NeuralAgent = System1NeuralAgent;
+}
+
+
+/* === AIDirector.js === */
+/**
+ * AIDirector.js - Dynamic Tension & Pacing Engine
+ * Left 4 Dead inspired adaptive game director running on real-time player telemetry.
+ * 
+ * Modulates combat intensity, spawn waves, power-up distributions, and ambient audio
+ * to keep the player in the optimal psychological flow channel.
+ */
+
+class AIDirector {
+  constructor(eventBus, arenaBounds, coverNodes) {
+    this.eventBus = eventBus;
+    this.arenaBounds = arenaBounds;
+    this.coverNodes = coverNodes || [];
+
+    // Director states: BUILD_UP, PEAK_CLIMAX, RESPITE_RECOVERY, SUSTAIN
+    this.phase = 'BUILD_UP';
+    this.tension = 0.15; // 0.0 to 1.0
+    this.targetTension = 0.5;
+
+    // Player telemetry rolling window (last 20 seconds)
+    this.playerTelemetry = {
+      shotsFired: 0,
+      shotsHit: 0,
+      damageTaken: 0,
+      damageDealt: 0,
+      dashesUsed: 0,
+      timeSinceLastDamage: 0,
+      isNearDeath: false
+    };
+
+    // Pacing timers
+    this.respiteTimer = 0;
+    this.respiteDuration = 8.0; // seconds of rest
+    this.peakTimer = 0;
+    this.peakDuration = 12.0;
+
+    // Wave spawning knobs
+    this.spawnTimer = 0;
+    this.spawnInterval = 5.0; // base interval
+    this.maxSimultaneousEnemies = 4;
+    this.currentWave = 1;
+    this.totalKills = 0;
+
+    // Wire up EventBus listeners
+    this.setupListeners();
+  }
+
+  setupListeners() {
+    if (!this.eventBus) return;
+
+    this.eventBus.subscribe('WEAPON_FIRED', (payload) => {
+      if (!payload.isEnemy) {
+        this.playerTelemetry.shotsFired++;
+      }
+    });
+
+    this.eventBus.subscribe('ENTITY_DAMAGED', (payload) => {
+      if (payload.isEnemy) {
+        this.playerTelemetry.shotsHit++;
+        this.playerTelemetry.damageDealt += payload.damage;
+        // Successful hit raises tension moderately
+        this.tension = Math.min(this.tension + 0.02, 1.0);
+      } else {
+        // Player took damage!
+        this.playerTelemetry.damageTaken += payload.damage;
+        this.playerTelemetry.timeSinceLastDamage = 0;
+        this.tension = Math.min(this.tension + 0.12, 1.0);
+
+        if (payload.healthRemaining <= 25) {
+          this.playerTelemetry.isNearDeath = true;
+          // Player critically low -> trigger emergency respite to prevent cheap deaths
+          if (this.phase !== 'RESPITE_RECOVERY' && Math.random() < 0.6) {
+            this.enterRespite("PLAYER_CRITICAL");
+          }
+        }
+      }
+    });
+
+    this.eventBus.subscribe('PLAYER_DASH', () => {
+      this.playerTelemetry.dashesUsed++;
+      this.tension = Math.min(this.tension + 0.04, 1.0);
+    });
+
+    this.eventBus.subscribe('ENTITY_KILLED', (payload) => {
+      if (payload.isEnemy) {
+        this.totalKills++;
+        this.tension = Math.min(this.tension + 0.05, 1.0);
+      }
+    });
+  }
+
+  update(dt, gameState) {
+    this.playerTelemetry.timeSinceLastDamage += dt;
+
+    // 1. Phase Machine Execution
+    switch (this.phase) {
+      case 'BUILD_UP':
+        this.tension += 0.025 * dt;
+        if (this.tension >= 0.75) {
+          this.phase = 'PEAK_CLIMAX';
+          this.peakTimer = 0;
+          this.eventBus?.publish('DIRECTOR_PHASE_CHANGE', { phase: 'PEAK_CLIMAX', tension: this.tension });
+
+          // Spawn Apex Boss on wave 3+ peak climax
+          if (this.currentWave >= 3 && !this.bossSpawnedForWave) {
+            this.bossSpawnedForWave = true;
+            this.spawnBoss(gameState);
+          }
+        }
+        break;
+
+      case 'PEAK_CLIMAX':
+        this.peakTimer += dt;
+        this.tension = Math.min(0.85 + Math.sin(this.peakTimer * 2) * 0.1, 1.0);
+        if (this.peakTimer >= this.peakDuration || gameState.agents.length === 0) {
+          this.enterRespite("PEAK_CONCLUDED");
+        }
+        break;
+
+      case 'RESPITE_RECOVERY':
+        this.respiteTimer += dt;
+        this.tension = Math.max(0.15, this.tension - 0.1 * dt);
+        if (this.respiteTimer >= this.respiteDuration) {
+          this.phase = 'BUILD_UP';
+          this.currentWave++;
+          this.bossSpawnedForWave = false;
+          this.eventBus?.publish('DIRECTOR_PHASE_CHANGE', { phase: 'BUILD_UP', tension: this.tension, wave: this.currentWave });
+        }
+        break;
+    }
+
+    // 2. Wave Reinforcement Spawning
+    this.spawnTimer += dt;
+    const currentAliveEnemies = gameState.agents.filter(a => a.isAlive).length;
+
+    // Compute dynamic spawn interval based on tension & current enemies
+    const effectiveInterval = (this.phase === 'RESPITE_RECOVERY') ? 999.0 : Math.max(2.5, this.spawnInterval - (this.tension * 2.0));
+
+    if (this.spawnTimer >= effectiveInterval && currentAliveEnemies < this.maxSimultaneousEnemies) {
+      this.spawnTimer = 0;
+      this.spawnReinforcement(gameState);
+    }
+
+    // 3. Periodic Broadcast to EventBus (for AudioSynthesizer filter & HUD)
+    this.eventBus?.publish('DIRECTOR_TENSION_UPDATE', {
+      phase: this.phase,
+      tension: parseFloat(this.tension.toFixed(3)),
+      wave: this.currentWave,
+      aliveEnemies: currentAliveEnemies,
+      kills: this.totalKills
+    });
+  }
+
+  enterRespite(reason) {
+    this.phase = 'RESPITE_RECOVERY';
+    this.respiteTimer = 0;
+    this.respiteDuration = 8.0 + Math.random() * 3.0;
+    this.eventBus?.publish('DIRECTOR_PHASE_CHANGE', {
+      phase: 'RESPITE_RECOVERY',
+      reason,
+      duration: this.respiteDuration,
+      tension: this.tension
+    });
+
+    // Broadcast respite upgrade event for Cybernetic Implants modal
+    this.eventBus?.publish('DIRECTOR_RESPITE_UPGRADE', {
+      wave: this.currentWave,
+      reason
+    });
+
+    // Often spawn a health / battery pickup during respite
+    this.eventBus?.publish('SPAWN_PICKUP', {
+      type: 'SHIELD_CELL',
+      x: this.arenaBounds.x + Math.random() * (this.arenaBounds.width - 80) + 40,
+      y: this.arenaBounds.y + Math.random() * (this.arenaBounds.height - 80) + 40
+    });
+  }
+
+  spawnBoss(gameState) {
+    const boss = new System1NeuralAgent(
+      `BOSS_CHIMERA_W${this.currentWave}`,
+      this.arenaBounds.x + this.arenaBounds.width / 2,
+      this.arenaBounds.y + 90,
+      'CHIMERA_OVERLORD',
+      this.eventBus
+    );
+    gameState.agents.push(boss);
+    this.eventBus?.publish('BOSS_SPAWNED', {
+      id: boss.id,
+      maxHealth: boss.maxHealth,
+      wave: this.currentWave
+    });
+  }
+
+  spawnReinforcement(gameState) {
+    const player = gameState.player;
+    if (!player) return;
+
+    // Pick spawn position that is out of direct player line-of-sight if possible
+    let spawnPos = null;
+    let attempts = 0;
+
+    while (attempts < 10 && !spawnPos) {
+      attempts++;
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 320 + Math.random() * 200;
+      const testX = Math.max(this.arenaBounds.x + 40, Math.min(this.arenaBounds.x + this.arenaBounds.width - 40, player.x + Math.cos(angle) * dist));
+      const testY = Math.max(this.arenaBounds.y + 40, Math.min(this.arenaBounds.y + this.arenaBounds.height - 40, player.y + Math.sin(angle) * dist));
+
+      // Check distance from player
+      if (Math.hypot(testX - player.x, testY - player.y) > 200) {
+        spawnPos = { x: testX, y: testY };
+      }
+    }
+
+    if (!spawnPos) {
+      spawnPos = {
+        x: this.arenaBounds.x + 80,
+        y: this.arenaBounds.y + 80
+      };
+    }
+
+    // Choose archetype based on wave and tension
+    const archetypes = ['TACTICAL_OPERATOR', 'VOID_PROWLER', 'OBSIDIAN_SENTINEL', 'PRISM_WRAITH'];
+    let chosenArchetype = 'TACTICAL_OPERATOR';
+
+    if (this.tension > 0.6) {
+      chosenArchetype = (Math.random() < 0.5) ? 'VOID_PROWLER' : 'OBSIDIAN_SENTINEL';
+    } else if (this.currentWave >= 3) {
+      chosenArchetype = archetypes[Math.floor(Math.random() * archetypes.length)];
+    }
+
+    const newId = `BOT_${Date.now().toString(36).slice(-4).toUpperCase()}`;
+    const newAgent = new window.System1NeuralAgent(newId, spawnPos.x, spawnPos.y, chosenArchetype, this.eventBus);
+    gameState.agents.push(newAgent);
+
+    this.eventBus?.publish('ENEMY_SPAWNED', {
+      id: newId,
+      archetype: chosenArchetype,
+      x: spawnPos.x,
+      y: spawnPos.y
+    });
+  }
+}
+
+// Export for ES modules and browser global
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = AIDirector;
+}
+if (typeof window !== 'undefined') {
+  window.AIDirector = AIDirector;
+}
+
+
+/* === BarcodeEntropyScanner.js === */
+/**
+ * BarcodeEntropyScanner.js - Procedural UPC / Barcode Entity Synthesizer
+ * Inspired by the 90s SKANNERZ handheld mechanic (Saved IG reel Dcb3AWXhM65)
+ * 
+ * Ingests physical/digital barcode numbers or text seeds, runs deterministic
+ * cryptographic entropy extraction, and simulates an ECG heartbeat detector
+ * to synthesize procedural combat entities and weapon cores.
+ */
+
+class BarcodeEntropyScanner {
+  constructor(eventBus) {
+    this.eventBus = eventBus;
+    this.history = [];
+  }
+
+  /**
+   * Hashes an input string into a 32-bit unsigned integer using FNV-1a
+   */
+  hashString(str) {
+    let hval = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) {
+      hval ^= str.charCodeAt(i);
+      hval += (hval << 1) + (hval << 4) + (hval << 7) + (hval << 8) + (hval << 24);
+    }
+    return hval >>> 0;
+  }
+
+  /**
+   * Generates a deterministic pseudo-random float [0, 1) from state
+   */
+  prng(seed) {
+    let s = seed;
+    return () => {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      return s / 4294967296;
+    };
+  }
+
+  /**
+   * Synthesizes a full procedural entity from a barcode
+   * @param {string} barcodeString 
+   * @returns {Object} Full entity profile with ECG heartbeat data
+   */
+  scanBarcode(barcodeString) {
+    const cleanCode = String(barcodeString).trim().toUpperCase();
+    if (!cleanCode) return null;
+
+    const hash = this.hashString(cleanCode);
+    const rand = this.prng(hash);
+
+    // Calculate pulse strength (vitality rating from 0.0 to 1.0)
+    // UPC check digits or specific modulo patterns influence vitality
+    const pulseStrength = parseFloat((0.25 + rand() * 0.75).toFixed(2));
+    const isFlatline = pulseStrength < 0.28;
+
+    // Rarity classification
+    let rarity = 'COMMON';
+    if (pulseStrength > 0.88) rarity = 'DIVINE_OVERCLOCK';
+    else if (pulseStrength > 0.72) rarity = 'CYBER_RARE';
+    else if (pulseStrength > 0.48) rarity = 'UNCOMMON';
+
+    // Archetype selection
+    const archetypes = [
+      'VOID_PROWLER',       // Hyper-mobile flanking stalker
+      'OBSIDIAN_SENTINEL',  // High-armor suppressive wall
+      'PRISM_WRAITH',       // Camouflage burst assassin
+      'CORONA_SERAPH',      // Area-denial barrage drone
+      'CHRONO_TITAN'        // Boss-tier heavy disruptor
+    ];
+    const archetypeIndex = Math.floor(rand() * archetypes.length);
+    const archetype = isFlatline ? 'DEFECTIVE_SCRAP' : archetypes[archetypeIndex];
+
+    // Procedural combat modifiers derived from entropy
+    const speed = Math.round(120 + rand() * 120);
+    const health = Math.round(60 + rand() * 140 * (pulseStrength > 0.7 ? 1.5 : 1.0));
+    const fireCooldown = parseFloat((0.15 + rand() * 0.4).toFixed(2));
+    const damage = Math.round(8 + rand() * 14 * pulseStrength);
+
+    // Color theme
+    const hues = [190, 210, 280, 330, 45, 140];
+    const baseHue = hues[Math.floor(rand() * hues.length)];
+    const primaryColor = `hsl(${baseHue}, 90%, 55%)`;
+    const glowColor = `hsla(${baseHue}, 95%, 65%, 0.4)`;
+
+    // Synthesize realistic ECG heartbeat waveform array for visual radar canvas
+    const ecgPoints = this.generateECGWaveform(pulseStrength, isFlatline);
+
+    const result = {
+      barcode: cleanCode,
+      hashHex: '0x' + hash.toString(16).toUpperCase(),
+      pulseStrength,
+      isFlatline,
+      rarity,
+      archetype,
+      stats: {
+        speed,
+        maxHealth: health,
+        fireCooldown,
+        damage
+      },
+      visuals: {
+        primaryColor,
+        glowColor,
+        silhouette: archetype
+      },
+      ecgWaveform: ecgPoints,
+      timestamp: performance.now()
+    };
+
+    this.history.unshift(result);
+    if (this.history.length > 20) this.history.pop();
+
+    if (this.eventBus) {
+      this.eventBus.publish('BARCODE_SCANNED', result);
+    }
+
+    return result;
+  }
+
+  /**
+   * Generates a 64-point ECG heart rhythm array for canvas oscilloscopes
+   */
+  generateECGWaveform(vitality, isFlatline) {
+    const points = [];
+    const len = 64;
+
+    for (let i = 0; i < len; i++) {
+      if (isFlatline) {
+        // Flatline with minimal noise
+        points.push(0.5 + (Math.random() - 0.5) * 0.04);
+        continue;
+      }
+
+      // Classic P-Q-R-S-T cardiac cycle normalized between 0.0 and 1.0
+      const phase = (i % 32) / 32;
+      let val = 0.5;
+
+      if (phase > 0.20 && phase < 0.28) {
+        // P-wave
+        val += 0.08 * vitality;
+      } else if (phase >= 0.38 && phase < 0.41) {
+        // Q-drop
+        val -= 0.12 * vitality;
+      } else if (phase >= 0.41 && phase < 0.46) {
+        // R-peak (main heartbeat spike)
+        val += 0.48 * vitality;
+      } else if (phase >= 0.46 && phase < 0.49) {
+        // S-drop
+        val -= 0.18 * vitality;
+      } else if (phase >= 0.60 && phase < 0.72) {
+        // T-wave
+        val += 0.14 * vitality;
+      }
+
+      // Add analog oscilloscope trace noise
+      val += (Math.random() - 0.5) * 0.02;
+      points.push(Math.max(0.05, Math.min(0.95, val)));
+    }
+    return points;
+  }
+}
+
+// Export for ES modules and browser global
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = BarcodeEntropyScanner;
+}
+if (typeof window !== 'undefined') {
+  window.BarcodeEntropyScanner = BarcodeEntropyScanner;
+}
+
+
+/* === AudioSynthesizer.js === */
+/**
+ * AudioSynthesizer.js - Procedural Web Audio API Sound Engine
+ * Zero audio asset dependencies; 100% synthesized in real time.
+ * 
+ * Directly binds to EventBus to render dynamic reactive soundscapes:
+ * - Dynamic AI Director tension drone modulated by cutoff filters
+ * - Crisp laser discharges, impact thuds, dash swooshes
+ * - Medical ECG heartbeat telemetry & mechanical terminal clicks
+ */
+
+class AudioSynthesizer {
+  constructor(eventBus) {
+    this.eventBus = eventBus;
+    this.ctx = null;
+    this.masterGain = null;
+    this.isMuted = false;
+
+    // Ambient tension drone nodes
+    this.droneOsc1 = null;
+    this.droneOsc2 = null;
+    this.droneFilter = null;
+    this.droneGain = null;
+    this.isDroneRunning = false;
+
+    this.setupListeners();
+  }
+
+  initAudioContext() {
+    if (this.ctx) return;
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+
+    this.ctx = new AudioContextClass();if(this.ctx&&this.ctx.state==="suspended")this.ctx.resume();
+    this.masterGain = this.ctx.createGain();
+    this.masterGain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+    this.masterGain.connect(this.ctx.destination);
+
+    this.startTensionDrone();
+  }
+
+  setupListeners() {
+    if (!this.eventBus) return;
+
+    this.eventBus.subscribe('WEAPON_FIRED', (payload) => {
+      if (payload.weaponType === 'SCATTER_CANNON') {
+        this.playScatterShot(payload.isEnemy);
+      } else if (payload.weaponType === 'RAILGUN') {
+        this.playRailgunShot(payload.isEnemy);
+      } else {
+        this.playLaserShot(payload.isEnemy);
+      }
+    });
+
+    this.eventBus.subscribe('ENTITY_DAMAGED', (payload) => {
+      this.playHitImpact(payload.isEnemy);
+    });
+
+    this.eventBus.subscribe('PLAYER_DASH', () => {
+      this.playDashWhoosh();
+    });
+
+    this.eventBus.subscribe('PICKUP_COLLECTED', (payload) => {
+      this.playPickupChime(payload.type);
+    });
+
+    this.eventBus.subscribe('PARRY_DEFLECT', () => {
+      this.playParry();
+    });
+
+    this.eventBus.subscribe('ALT_FIRE_VORTEX', () => {
+      this.playAltFireVortex();
+    });
+
+    this.eventBus.subscribe('ALT_FIRE_BEAM', () => {
+      this.playAltFireBeam();
+    });
+
+    this.eventBus.subscribe('ALT_FIRE_CONCUSSIVE', () => {
+      this.playAltFireConcussive();
+    });
+
+    this.eventBus.subscribe('BOSS_SPAWNED', () => {
+      this.playBossIntro();
+    });
+
+    this.eventBus.subscribe('TACTICAL_CHATTER', () => {
+      this.playRadioChatter();
+    });
+
+    this.eventBus.subscribe('EMP_DETONATED', () => {
+      this.playEmpBlast();
+    });
+
+    this.eventBus.subscribe('DIRECTOR_TENSION_UPDATE', (payload) => {
+      this.updateDroneTension(payload.tension);
+    });
+
+    this.eventBus.subscribe('BARCODE_SCANNED', (payload) => {
+      this.playBarcodeHeartbeat(payload.pulseStrength, payload.isFlatline);
+    });
+
+    this.eventBus.subscribe('TERMINAL_KEY', () => {
+      this.playTerminalKey();
+    });
+  }
+
+  startTensionDrone() {
+    if (!this.ctx || this.isDroneRunning) return;
+
+    const t = this.ctx.currentTime;
+
+    // Dual sub-bass & atmospheric fifth (55Hz A1 and 82.4Hz E2)
+    this.droneOsc1 = this.ctx.createOscillator();
+    this.droneOsc1.type = 'sawtooth';
+    this.droneOsc1.frequency.setValueAtTime(55, t);
+
+    this.droneOsc2 = this.ctx.createOscillator();
+    this.droneOsc2.type = 'triangle';
+    this.droneOsc2.frequency.setValueAtTime(82.4, t);
+
+    // Dynamic Low-Pass filter controlled by AI Director tension
+    this.droneFilter = this.ctx.createBiquadFilter();
+    this.droneFilter.type = 'lowpass';
+    this.droneFilter.frequency.setValueAtTime(220, t);
+    this.droneFilter.Q.setValueAtTime(4.0, t);
+
+    this.droneGain = this.ctx.createGain();
+    this.droneGain.gain.setValueAtTime(0.12, t);
+
+    this.droneOsc1.connect(this.droneFilter);
+    this.droneOsc2.connect(this.droneFilter);
+    this.droneFilter.connect(this.droneGain);
+    this.droneGain.connect(this.masterGain);
+
+    this.droneOsc1.start();
+    this.droneOsc2.start();
+    this.isDroneRunning = true;
+  }
+
+  updateDroneTension(tension) {
+    if (!this.ctx || !this.droneFilter) return;
+    const t = this.ctx.currentTime;
+    // Map tension (0.0 to 1.0) to cutoff frequency (160Hz quiet respite -> 2200Hz peak climax)
+    const cutoff = 160 + Math.pow(tension, 1.8) * 2040;
+    this.droneFilter.frequency.setTargetAtTime(cutoff, t, 0.4);
+  }
+
+  playLaserShot(isEnemy) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = isEnemy ? 'sawtooth' : 'square';
+    const startFreq = isEnemy ? 620 : 880;
+    const endFreq = isEnemy ? 180 : 220;
+
+    osc.frequency.setValueAtTime(startFreq, t);
+    osc.frequency.exponentialRampToValueAtTime(endFreq, t + 0.12);
+
+    gain.gain.setValueAtTime(isEnemy ? 0.08 : 0.14, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start(t);
+    osc.stop(t + 0.13);
+  }
+
+  playHitImpact(isEnemy) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+
+    // Sub thud
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(140, t);
+    osc.frequency.exponentialRampToValueAtTime(35, t + 0.15);
+
+    gain.gain.setValueAtTime(0.22, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start(t);
+    osc.stop(t + 0.16);
+  }
+
+  playDashWhoosh() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+
+    // Synthesize noise buffer
+    const bufferSize = this.ctx.sampleRate * 0.2;
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(180, t);
+    filter.frequency.exponentialRampToValueAtTime(1600, t + 0.1);
+    filter.frequency.exponentialRampToValueAtTime(240, t + 0.2);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.18, t);
+    gain.gain.linearRampToValueAtTime(0.001, t + 0.2);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.masterGain);
+
+    noise.start(t);
+  }
+
+  playBarcodeHeartbeat(vitality, isFlatline) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+
+    if (isFlatline) {
+      // Continuous flatline tone (780 Hz)
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(780, t);
+      gain.gain.setValueAtTime(0.15, t);
+      gain.gain.linearRampToValueAtTime(0.001, t + 0.9);
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start(t);
+      osc.stop(t + 0.9);
+      return;
+    }
+
+    // Classic double cardiac beep (lub-dub)
+    const freq = 600 + vitality * 300;
+
+    // Beep 1
+    const osc1 = this.ctx.createOscillator();
+    const gain1 = this.ctx.createGain();
+    osc1.frequency.setValueAtTime(freq, t);
+    gain1.gain.setValueAtTime(0.18, t);
+    gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+    osc1.connect(gain1);
+    gain1.connect(this.masterGain);
+    osc1.start(t);
+    osc1.stop(t + 0.09);
+
+    // Beep 2 (higher frequency accent)
+    const osc2 = this.ctx.createOscillator();
+    const gain2 = this.ctx.createGain();
+    osc2.frequency.setValueAtTime(freq * 1.25, t + 0.12);
+    gain2.gain.setValueAtTime(0.22, t + 0.12);
+    gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+    osc2.connect(gain2);
+    gain2.connect(this.masterGain);
+    osc2.start(t + 0.12);
+    osc2.stop(t + 0.23);
+  }
+
+  playTerminalKey() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(1800 + Math.random() * 400, t);
+    gain.gain.setValueAtTime(0.04, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(t);
+    osc.stop(t + 0.035);
+  }
+
+  playScatterShot(isEnemy) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+
+    // Heavy shotgun boom: noise transient + sub bass drop
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(320, t);
+    osc.frequency.exponentialRampToValueAtTime(45, t + 0.18);
+
+    gain.gain.setValueAtTime(isEnemy ? 0.15 : 0.28, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(t);
+    osc.stop(t + 0.19);
+  }
+
+  playRailgunShot(isEnemy) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+
+    // Piercing railgun charge beam: high sine sweep + electric crackle
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(1400, t);
+    osc.frequency.exponentialRampToValueAtTime(220, t + 0.28);
+
+    gain.gain.setValueAtTime(isEnemy ? 0.2 : 0.35, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(t);
+    osc.stop(t + 0.29);
+  }
+
+  playPickupChime(type) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const notes = type === 'OVERCLOCK_CORE' ? [523.25, 659.25, 783.99, 1046.50] : [440, 554.37, 659.25];
+
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const noteTime = t + idx * 0.06;
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, noteTime);
+
+      gain.gain.setValueAtTime(0.16, noteTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, noteTime + 0.2);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+
+      osc.start(noteTime);
+      osc.stop(noteTime + 0.22);
+    });
+  }
+
+  playEmpBlast() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+
+    // Resonant low sweep for EMP
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(80, t);
+    osc.frequency.exponentialRampToValueAtTime(20, t + 0.6);
+
+    gain.gain.setValueAtTime(0.35, t);
+    gain.gain.linearRampToValueAtTime(0.001, t + 0.6);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(t);
+    osc.stop(t + 0.65);
+  }
+
+  playParry() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+
+    // High-resonance metallic parry bell chime with harmonic shimmer
+    const osc1 = this.ctx.createOscillator();
+    const gain1 = this.ctx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(1760, t); // A6
+    osc1.frequency.exponentialRampToValueAtTime(3520, t + 0.12);
+
+    gain1.gain.setValueAtTime(0.35, t);
+    gain1.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+
+    osc1.connect(gain1);
+    gain1.connect(this.masterGain);
+    osc1.start(t);
+    osc1.stop(t + 0.36);
+
+    // Overstone metallic ping
+    const osc2 = this.ctx.createOscillator();
+    const gain2 = this.ctx.createGain();
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(2637, t); // E7
+    gain2.gain.setValueAtTime(0.2, t);
+    gain2.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
+
+    osc2.connect(gain2);
+    gain2.connect(this.masterGain);
+    osc2.start(t);
+    osc2.stop(t + 0.26);
+  }
+
+  playAltFireVortex() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+
+    // Sub-bass gravity singularity vortex vacuum
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(120, t);
+    osc.frequency.exponentialRampToValueAtTime(32, t + 0.6);
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(350, t);
+    filter.frequency.exponentialRampToValueAtTime(80, t + 0.6);
+
+    gain.gain.setValueAtTime(0.32, t);
+    gain.gain.linearRampToValueAtTime(0.001, t + 0.65);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(t);
+    osc.stop(t + 0.7);
+  }
+
+  playAltFireBeam() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+
+    // Searing sustained hyper-beam tactical laser
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(880, t);
+    osc.frequency.linearRampToValueAtTime(1240, t + 0.3);
+    osc.frequency.linearRampToValueAtTime(660, t + 0.7);
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1800, t);
+    filter.Q.setValueAtTime(5.0, t);
+
+    gain.gain.setValueAtTime(0.28, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.75);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(t);
+    osc.stop(t + 0.8);
+  }
+
+  playAltFireConcussive() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+
+    // Kinetic concussive shockwave: punchy sub boom
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(240, t);
+    osc.frequency.exponentialRampToValueAtTime(38, t + 0.3);
+
+    gain.gain.setValueAtTime(0.38, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.32);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(t);
+    osc.stop(t + 0.33);
+  }
+
+  playBossIntro() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+
+    // Apocalyptic boss fanfare detuned brass swell (C2 + G2 + C3)
+    [65.41, 97.99, 130.81].forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, t);
+
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(140, t);
+      filter.frequency.exponentialRampToValueAtTime(1200, t + 1.2);
+
+      gain.gain.setValueAtTime(0.01, t);
+      gain.gain.linearRampToValueAtTime(0.18, t + 0.6);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 1.8);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start(t);
+      osc.stop(t + 1.9);
+    });
+  }
+
+  playRadioChatter() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+
+    // Tactical squelch blip + synthetic vocoder pulse
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(2400 + Math.random() * 600, t);
+    osc.frequency.setValueAtTime(1800, t + 0.03);
+
+    gain.gain.setValueAtTime(0.06, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(t);
+    osc.stop(t + 0.09);
+  }
+
+  toggleMute() {
+    this.isMuted = !this.isMuted;
+    if (this.masterGain && this.ctx) {
+      this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : 0.25, this.ctx.currentTime);
+    }
+    return this.isMuted;
+  }
+}
+
+// Export for ES modules and browser global
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = AudioSynthesizer;
+}
+if (typeof window !== 'undefined') {
+  window.AudioSynthesizer = AudioSynthesizer;
+}
+
+
+/* === DiegeticTerminal.js === */
+/**
+ * DiegeticTerminal.js - In-Game CRT Hacking Console
+ * Inspired by the Enter the Matrix DOS Computer Easter Egg (Saved IG reel DdbWN9WzGO-)
+ * 
+ * Provides an authentic retro cyber-terminal overlay with real-time system introspection,
+ * AI tensor diagnostics, AI Director manipulation, and barcode synthesis.
+ */
+
+class DiegeticTerminal {
+  constructor(eventBus, gameState, director, barcodeScanner) {
+    this.eventBus = eventBus;
+    this.gameState = gameState;
+    this.director = director;
+    this.barcodeScanner = barcodeScanner;
+
+    this.isOpen = false;
+    this.history = [];
+    this.historyIndex = -1;
+    this.outputLines = [
+      "NORTHSTAR KERNEL // SYSTEM 1 NEURAL BUS v4.7.2",
+      "ENTER THE MATRIX // DIEGETIC CONSOLE ARMED",
+      "Type 'help' for available commands, or 'matrix' for operator link.",
+      "------------------------------------------------------------------"
+    ];
+  }
+
+  toggle() {
+    this.isOpen = !this.isOpen;
+    this.eventBus?.publish('TERMINAL_TOGGLED', { isOpen: this.isOpen });
+    return this.isOpen;
+  }
+
+  execute(rawCommand) {
+    const trimmed = rawCommand.trim();
+    if (!trimmed) return;
+
+    this.history.push(trimmed);
+    this.historyIndex = this.history.length;
+    this.outputLines.push(`> ${trimmed}`);
+
+    this.eventBus?.publish('TERMINAL_KEY', {});
+
+    const parts = trimmed.split(/\s+/);
+    const cmd = parts[0].toLowerCase();
+    const args = parts.slice(1);
+
+    switch (cmd) {
+      case 'help':
+        this.outputLines.push(
+          "AVAILABLE COMMANDS:",
+          "  status               - Print live player telemetry, wave & director status",
+          "  ai list              - Enumerate all active System 1 neural agents",
+          "  ai inspect <id>      - Dump real-time feature vector & decision logits",
+          "  director <peak|respite|set <val>> - Override AI Director tension",
+          "  scan <barcode/text>  - Synthesize entity from barcode entropy (SKANNERZ)",
+          "  spawn <archetype>    - Spawn: VOID_PROWLER, OBSIDIAN_SENTINEL, PRISM_WRAITH",
+          "  matrix               - Access operator message & digital rain",
+          "  godmode              - Toggle infinite player health/ammo",
+          "  clear                - Clear terminal buffer",
+          "  exit                 - Close terminal (or press ` ~)"
+        );
+        break;
+
+      case 'status': {
+        const p = this.gameState.player;
+        const d = this.director;
+        this.outputLines.push(
+          `PLAYER: Health=${p.health}/${p.maxHealth} | Ammo=${p.ammo}/${p.maxAmmo} | Kills=${d.totalKills}`,
+          `DIRECTOR: Phase=${d.phase} | Tension=${(d.tension * 100).toFixed(1)}% | Wave=${d.currentWave}`,
+          `ACTIVE AGENTS: ${this.gameState.agents.filter(a => a.isAlive).length} alive (${this.gameState.agents.length} total allocated)`
+        );
+        break;
+      }
+
+      case 'ai': {
+        const sub = (args[0] || '').toLowerCase();
+        if (sub === 'list') {
+          const agents = this.gameState.agents.filter(a => a.isAlive);
+          if (agents.length === 0) {
+            this.outputLines.push("No active AI agents currently deployed.");
+          } else {
+            agents.forEach(a => {
+              this.outputLines.push(
+                `  [${a.id}] Type: ${a.archetype} | Stance: ${a.activeDecision.stance} | Conf: ${(a.activeDecision.confidence * 100).toFixed(0)}% | Latency: ${a.activeDecision.inferenceMs}ms`
+              );
+            });
+          }
+        } else if (sub === 'inspect') {
+          const targetId = (args[1] || '').toUpperCase();
+          const agent = this.gameState.agents.find(a => a.id.toUpperCase() === targetId && a.isAlive);
+          if (!agent) {
+            this.outputLines.push(`ERROR: Agent [${targetId}] not found or inactive.`);
+          } else {
+            this.outputLines.push(
+              `--- TENSOR INSPECT: ${agent.id} (${agent.archetype}) ---`,
+              `  Active Stance: ${agent.activeDecision.stance} (Confidence: ${(agent.activeDecision.confidence * 100).toFixed(1)}%)`,
+              `  Inference Time: ${agent.activeDecision.inferenceMs} ms (Sub-millisecond System 1)`,
+              `  Position: (${Math.round(agent.x)}, ${Math.round(agent.y)}) -> Target: (${Math.round(agent.activeDecision.targetX)}, ${Math.round(agent.activeDecision.targetY)})`,
+              `  Health: ${agent.health}/${agent.maxHealth} | Ammo: ${agent.ammo}/${agent.maxAmmo} | Reloading: ${agent.isReloading}`,
+              `  Weight Biases: ${JSON.stringify(agent.weightBias)}`
+            );
+          }
+        } else {
+          this.outputLines.push("Usage: ai list | ai inspect <id>");
+        }
+        break;
+      }
+
+      case 'director': {
+        const action = (args[0] || '').toLowerCase();
+        if (action === 'peak') {
+          this.director.phase = 'PEAK_CLIMAX';
+          this.director.tension = 0.95;
+          this.outputLines.push("DIRECTOR OVERRIDE: Forcing Phase -> PEAK_CLIMAX (Tension 95%)");
+        } else if (action === 'respite') {
+          this.director.enterRespite("TERMINAL_MANUAL_OVERRIDE");
+          this.outputLines.push("DIRECTOR OVERRIDE: Forcing Phase -> RESPITE_RECOVERY");
+        } else if (action === 'set') {
+          const val = parseFloat(args[1]);
+          if (!isNaN(val) && val >= 0 && val <= 1) {
+            this.director.tension = val;
+            this.outputLines.push(`DIRECTOR OVERRIDE: Tension set to ${(val * 100).toFixed(1)}%`);
+          } else {
+            this.outputLines.push("Usage: director set <0.0 - 1.0>");
+          }
+        } else {
+          this.outputLines.push("Usage: director peak | director respite | director set <0.0-1.0>");
+        }
+        break;
+      }
+
+      case 'scan': {
+        const code = args.join(' ');
+        if (!code) {
+          this.outputLines.push("Usage: scan <barcode_or_text_seed>");
+          break;
+        }
+        const entity = this.barcodeScanner.scanBarcode(code);
+        this.outputLines.push(
+          `--- SKANNERZ ENTROPY SCAN: "${code}" ---`,
+          `  Hash: ${entity.hashHex} | Pulse Strength: ${(entity.pulseStrength * 100).toFixed(0)}%`,
+          `  Rarity: [${entity.rarity}] | Archetype: ${entity.archetype}`,
+          `  Vitality: ${entity.isFlatline ? "FLATLINE (Defective)" : "STRONG DETECTED HEARTBEAT"}`,
+          `  Stats: Speed=${entity.stats.speed} | HP=${entity.stats.maxHealth} | Damage=${entity.stats.damage}`
+        );
+        break;
+      }
+
+      case 'spawn': {
+        const type = (args[0] || 'TACTICAL_OPERATOR').toUpperCase();
+        const px = this.gameState.player.x + (Math.random() - 0.5) * 400;
+        const py = this.gameState.player.y + (Math.random() - 0.5) * 400;
+        const id = `FORCED_${Math.floor(Math.random() * 900 + 100)}`;
+        const agent = new window.System1NeuralAgent(id, px, py, type, this.eventBus);
+        this.gameState.agents.push(agent);
+        this.outputLines.push(`SUCCESS: Spawned [${id}] of archetype ${type} at (${Math.round(px)}, ${Math.round(py)})`);
+        break;
+      }
+
+      case 'matrix':
+        this.outputLines.push(
+          "==================================================================",
+          "NEO: 'I know you're out there. I can feel you now.'",
+          "EASTER EGG UNLOCKED: Matrix DOS sub-routine initialized.",
+          "System 1 neural weights synchronized across the construct.",
+          "=================================================================="
+        );
+        break;
+
+      case 'godmode':
+        this.gameState.player.isGodmode = !this.gameState.player.isGodmode;
+        this.outputLines.push(`GODMODE: ${this.gameState.player.isGodmode ? "ENABLED (Infinite HP & Ammo)" : "DISABLED"}`);
+        break;
+
+      case 'clear':
+        this.outputLines = [];
+        break;
+
+      case 'exit':
+      case 'quit':
+        this.toggle();
+        break;
+
+      default:
+        this.outputLines.push(`Unknown command: '${cmd}'. Type 'help' for command list.`);
+        break;
+    }
+
+    // Keep output bounded
+    if (this.outputLines.length > 200) {
+      this.outputLines = this.outputLines.slice(-100);
+    }
+  }
+}
+
+// Export for ES modules and browser global
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = DiegeticTerminal;
+}
+if (typeof window !== 'undefined') {
+  window.DiegeticTerminal = DiegeticTerminal;
+}
+
+</script>
 
   <!-- Master Game Loop & Integration -->
   <script>
@@ -665,6 +2823,50 @@
 
       let { obstacles, nodes: coverNodes } = generateCoverObstacles();
 
+      // Weapon Arsenal Configurations
+      const WEAPONS = [
+        {
+          name: 'ION BLASTER',
+          type: 'ION_BLASTER',
+          maxAmmo: 8,
+          cooldown: 0.16,
+          damage: 24,
+          speed: 680,
+          pellets: 1,
+          spread: 0.04,
+          color: '#38bdf8',
+          reloadDuration: 1.0,
+          altFire: { name: 'VORTEX', cooldown: 4.5, desc: 'Gravity Singularity Vortex' }
+        },
+        {
+          name: 'SCATTER CANNON',
+          type: 'SCATTER_CANNON',
+          maxAmmo: 4,
+          cooldown: 0.52,
+          damage: 14,
+          speed: 560,
+          pellets: 6,
+          spread: 0.32,
+          color: '#f59e0b',
+          reloadDuration: 1.3,
+          altFire: { name: 'CONCUSSION', cooldown: 3.5, desc: 'Kinetic Breaching Blast' }
+        },
+        {
+          name: 'RAILGUN',
+          type: 'RAILGUN',
+          maxAmmo: 2,
+          cooldown: 0.85,
+          damage: 85,
+          speed: 1400,
+          pellets: 1,
+          spread: 0.01,
+          color: '#ec4899',
+          pierce: true,
+          reloadDuration: 1.5,
+          altFire: { name: 'HYPER-BEAM', cooldown: 5.0, desc: 'Sustained Piercing Laser' }
+        }
+      ];
+
       // Game State
       const gameState = {
         arenaBounds,
@@ -679,16 +2881,21 @@
           rotation: 0,
           maxHealth: 100,
           health: 100,
+          activeWeaponIdx: 0,
           ammo: 8,
           maxAmmo: 8,
           isReloading: false,
           reloadTimer: 0,
-          reloadDuration: 1.1,
-          dashCooldown: 1.2,
+          reloadDuration: 1.0,
+          dashCooldown: 1.1,
           dashTimer: 0,
           isDashing: false,
           dashDuration: 0.18,
           dashActiveTime: 0,
+          overclockTimer: 0.0,
+          altFireTimer: 0.0,
+          activeBeam: null,
+          implants: new Set(),
           isGodmode: false,
           isAlive: true
         },
@@ -696,6 +2903,11 @@
         bullets: [],
         particles: [],
         pickups: [],
+        shockwaves: [],
+        vortices: [],
+        decoys: [],
+        screenShake: 0.0,
+        hitstopTimer: 0.0,
         debugVision: true
       };
 
@@ -740,7 +2952,7 @@
         }
         if (e.key.toLowerCase() === 'm') {
           const muted = audio.toggleMute();
-          document.getElementById('btnAudioMute').innerText = muted ? 'Audio: OFF [M]' : 'Audio: ON [M]';
+          document.getElementById('btnAudioMute').innerText = muted ? ' Audio: OFF [M]' : ' Audio: ON [M]';
         }
         if (e.key.toLowerCase() === 'r' && !gameState.player.isReloading && gameState.player.ammo < gameState.player.maxAmmo) {
           gameState.player.isReloading = true;
@@ -749,10 +2961,30 @@
         if (e.code === 'Space' && gameState.player.dashTimer <= 0 && !gameState.player.isDashing) {
           triggerPlayerDash();
         }
+
+        // Weapon hotkeys [1, 2, 3]
+        if (e.key === '1') switchWeapon(0);
+        if (e.key === '2') switchWeapon(1);
+        if (e.key === '3') switchWeapon(2);
       });
 
       window.addEventListener('keyup', (e) => {
         keys[e.key.toLowerCase()] = false;
+      });
+
+      // Mouse wheel weapon cycle
+      window.addEventListener('wheel', (e) => {
+        if (terminal.isOpen) return;
+        const p = gameState.player;
+        if (e.deltaY > 0) {
+          switchWeapon((p.activeWeaponIdx + 1) % WEAPONS.length);
+        } else if (e.deltaY < 0) {
+          switchWeapon((p.activeWeaponIdx - 1 + WEAPONS.length) % WEAPONS.length);
+        }
+      }, { passive: true });
+
+      window.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
       });
 
       window.addEventListener('mousemove', (e) => {
@@ -765,11 +2997,108 @@
         if (terminal.isOpen) return;
         audio.initAudioContext();
         if (e.button === 0) mouse.isDown = true;
+        if (e.button === 2) triggerAltFire();
       });
 
       window.addEventListener('mouseup', (e) => {
         if (e.button === 0) mouse.isDown = false;
       });
+
+      function triggerAltFire() {
+        const p = gameState.player;
+        if (!p.isAlive || p.altFireTimer > 0) return;
+
+        const wep = WEAPONS[p.activeWeaponIdx];
+        if (!wep.altFire) return;
+
+        p.altFireTimer = wep.altFire.cooldown;
+
+        if (wep.type === 'ION_BLASTER') {
+          // Gravity Singularity Vortex at crosshair
+          gameState.vortices.push({
+            x: mouse.x,
+            y: mouse.y,
+            radius: 18,
+            maxRadius: 190,
+            duration: 3.5,
+            age: 0,
+            pullSpeed: 320,
+            dps: 40
+          });
+          gameState.screenShake = 4.5;
+          eventBus.publish('ALT_FIRE_VORTEX', { x: mouse.x, y: mouse.y });
+        } else if (wep.type === 'SCATTER_CANNON') {
+          // Concussive Breaching Blast & Combat Recoil Slide
+          gameState.shockwaves.push({
+            x: p.x,
+            y: p.y,
+            radius: 20,
+            maxRadius: 280,
+            speed: 720,
+            color: '#f59e0b'
+          });
+          // Stun & blow back all enemies within range
+          gameState.agents.forEach(a => {
+            if (a.isAlive) {
+              const dx = a.x - p.x;
+              const dy = a.y - p.y;
+              const dist = Math.hypot(dx, dy);
+              if (dist < 280) {
+                const ang = Math.atan2(dy, dx);
+                a.vx += Math.cos(ang) * 480;
+                a.vy += Math.sin(ang) * 480;
+                a.takeDamage(45, 'PLAYER_CONCUSSION', ang);
+                a.applyStun(1.5);
+              }
+            }
+          });
+          // Player combat slide recoil backward
+          p.vx -= Math.cos(p.rotation) * 440;
+          p.vy -= Math.sin(p.rotation) * 440;
+          gameState.screenShake = 7.5;
+          eventBus.publish('ALT_FIRE_CONCUSSIVE', { x: p.x, y: p.y });
+        } else if (wep.type === 'RAILGUN') {
+          // Hyper-Beam Overdrive: Sustained piercing laser
+          p.activeBeam = {
+            duration: 0.8,
+            timer: 0.8,
+            angle: p.rotation,
+            startX: p.x,
+            startY: p.y
+          };
+          gameState.screenShake = 8.5;
+          eventBus.publish('ALT_FIRE_BEAM', { x: p.x, y: p.y });
+        }
+      }
+
+      // Weapon slot DOM click listeners
+      document.querySelectorAll('.weapon-slot').forEach(slot => {
+        slot.addEventListener('click', () => {
+          const idx = parseInt(slot.getAttribute('data-idx'), 10);
+          switchWeapon(idx);
+        });
+      });
+
+      function switchWeapon(idx) {
+        if (idx < 0 || idx >= WEAPONS.length) return;
+        const p = gameState.player;
+        if (p.activeWeaponIdx === idx) return;
+
+        p.activeWeaponIdx = idx;
+        const wep = WEAPONS[idx];
+        p.maxAmmo = wep.maxAmmo;
+        p.ammo = Math.min(p.ammo, p.maxAmmo);
+        p.reloadDuration = wep.reloadDuration;
+        p.isReloading = false;
+        p.reloadTimer = 0;
+
+        document.querySelectorAll('.weapon-slot').forEach(s => s.classList.remove('active'));
+        const activeSlot = document.getElementById(`wslot${idx}`);
+        if (activeSlot) activeSlot.classList.add('active');
+
+        eventBus.publish('WEAPON_SWITCHED', { weapon: wep.name, idx });
+        audio.initAudioContext();
+      }
 
       // Header Buttons
       document.getElementById('btnDebugVision').addEventListener('click', () => {
@@ -782,17 +3111,41 @@
       document.getElementById('btnAudioMute').addEventListener('click', () => {
         audio.initAudioContext();
         const muted = audio.toggleMute();
-        document.getElementById('btnAudioMute').innerText = muted ? 'Audio: OFF [M]' : 'Audio: ON [M]';
+        document.getElementById('btnAudioMute').innerText = muted ? ' Audio: OFF [M]' : ' Audio: ON [M]';
       });
       document.getElementById('btnRestart').addEventListener('click', resetArena);
 
       function resetArena() {
-        gameState.player.health = 100;
-        gameState.player.ammo = 8;
-        gameState.player.isAlive = true;
+        const p = gameState.player;
+        p.health = 100;
+        p.maxHealth = 100;
+        p.activeWeaponIdx = 0;
+        p.maxAmmo = WEAPONS[0].maxAmmo;
+        p.ammo = WEAPONS[0].maxAmmo;
+        p.isReloading = false;
+        p.reloadTimer = 0;
+        p.overclockTimer = 0;
+        p.altFireTimer = 0;
+        p.activeBeam = null;
+        p.implants = new Set();
+        p.isAlive = true;
+        p.isDashing = false;
+        p.dashTimer = 0;
+
+        document.querySelectorAll('.weapon-slot').forEach(s => s.classList.remove('active'));
+        const w0 = document.getElementById('wslot0');
+        if (w0) w0.classList.add('active');
+
         gameState.agents = [];
         gameState.bullets = [];
         gameState.particles = [];
+        gameState.pickups = [];
+        gameState.shockwaves = [];
+        gameState.vortices = [];
+        gameState.decoys = [];
+        gameState.screenShake = 0;
+        gameState.hitstopTimer = 0;
+
         director.phase = 'BUILD_UP';
         director.tension = 0.2;
         director.currentWave = 1;
@@ -806,6 +3159,16 @@
         p.isDashing = true;
         p.dashActiveTime = 0;
         p.dashTimer = p.dashCooldown;
+
+        // Chrono Dash Decoy Implant
+        if (p.implants.has('CHRONO_DASH')) {
+          gameState.decoys.push({
+            x: p.x,
+            y: p.y,
+            timer: 1.5,
+            color: '#38bdf8'
+          });
+        }
 
         // Dash vector towards movement direction or aim
         let dx = (keys['d'] ? 1 : 0) - (keys['a'] ? 1 : 0);
@@ -847,6 +3210,75 @@
         }
       });
 
+      // Entity Killed listener for tactical power-up drops
+      eventBus.subscribe('ENTITY_KILLED', (payload) => {
+        if (payload.isEnemy) {
+          if (Math.random() < 0.40) {
+            const types = ['SHIELD_CELL', 'OVERCLOCK_CORE', 'EMP_GRENADE'];
+            const chosenType = types[Math.floor(Math.random() * types.length)];
+            gameState.pickups.push({
+              type: chosenType,
+              x: payload.x,
+              y: payload.y,
+              radius: 12,
+              bobTimer: Math.random() * Math.PI * 2,
+              lifespan: 16.0,
+              age: 0
+            });
+        }
+      });
+
+      // Cybernetic Implants Upgrades System
+      const ALL_IMPLANTS = [
+        { id: 'CHRONO_DASH', icon: '⏳', name: 'CHRONO DECOY', desc: 'Dash leaves an explosive decoy that detonates for 120 damage after 1.5s' },
+        { id: 'RICOCHET_MATRIX', icon: '⚡', name: 'RICOCHET MATRIX', desc: 'Player blaster and railgun rounds ricochet off walls up to 2 times' },
+        { id: 'NANITE_HARVEST', icon: '', name: 'NANITE HARVEST', desc: 'Tactical parries and alt-fire kills restore +15 shield integrity' },
+        { id: 'STATIC_DISCHARGE', icon: '', name: 'STATIC DISCHARGE', desc: 'Shield breach automatically detonates an emergency EMP shockwave' }
+      ];
+
+      const upgradesModal = document.getElementById('upgrades-modal');
+      const upgradeOptionsContainer = document.getElementById('upgradeOptionsContainer');
+
+      eventBus.subscribe('DIRECTOR_RESPITE_UPGRADE', () => {
+        const p = gameState.player;
+        const available = ALL_IMPLANTS.filter(imp => !p.implants.has(imp.id));
+        if (available.length === 0) return;
+
+        const shuffled = [...available].sort(() => 0.5 - Math.random()).slice(0, 3);
+        upgradeOptionsContainer.innerHTML = '';
+
+        shuffled.forEach(imp => {
+          const card = document.createElement('div');
+          card.className = 'upgrade-card';
+          card.innerHTML = `
+            <div class="up-icon">${imp.icon}</div>
+            <div class="up-title">${imp.name}</div>
+            <div class="up-desc">${imp.desc}</div>
+          `;
+          card.addEventListener('click', () => {
+            p.implants.add(imp.id);
+            upgradesModal.style.display = 'none';
+            eventBus.publish('IMPLANT_INSTALLED', { implant: imp.name });
+            audio.playPickupChime('OVERCLOCK_CORE');
+          });
+          upgradeOptionsContainer.appendChild(card);
+        });
+
+        upgradesModal.style.display = 'block';
+      });
+
+      // Tactical Radio Comms Feed
+      const tacticalRadioFeed = document.getElementById('tacticalRadioFeed');
+      eventBus.subscribe('TACTICAL_CHATTER', (payload) => {
+        if (!tacticalRadioFeed) return;
+        const bark = document.createElement('div');
+        bark.className = payload.isBoss ? 'radio-bark boss' : 'radio-bark';
+        bark.innerText = `[${payload.agentId}]: ${payload.callout}`;
+        tacticalRadioFeed.prepend(bark);
+        setTimeout(() => {
+          if (bark.parentNode) bark.parentNode.removeChild(bark);
+        }, 3200);
+      });
       // Terminal DOM integration
       const terminalOverlay = document.getElementById('terminal-overlay');
       const terminalOutput = document.getElementById('terminalOutput');
@@ -969,6 +3401,14 @@
         const dt = Math.min((now - lastTime) / 1000, 0.1);
         lastTime = now;
 
+        // Hitstop (Tactical impact freeze frame juice)
+        if (gameState.hitstopTimer > 0) {
+          gameState.hitstopTimer -= dt;
+          render(ctx, dt);
+          updateHUD();
+          return;
+        }
+
         // Player update
         const p = gameState.player;
         if (p.isAlive) {
@@ -1004,6 +3444,50 @@
           // Obstacle collisions
           resolveEntityObstacleCollisions(p, gameState.obstacles, gameState.arenaBounds);
 
+          // Overclock Core timer
+          if (p.overclockTimer > 0) {
+            p.overclockTimer = Math.max(0, p.overclockTimer - dt);
+          }
+
+          // Alt-Fire cooldown timer
+          if (p.altFireTimer > 0) {
+            p.altFireTimer = Math.max(0, p.altFireTimer - dt);
+          }
+
+          // Railgun Hyper-Beam Overdrive sustained laser update
+          if (p.activeBeam) {
+            p.activeBeam.timer -= dt;
+            p.activeBeam.startX = p.x;
+            p.activeBeam.startY = p.y;
+            p.activeBeam.angle = p.rotation;
+
+            const beamLength = 850;
+            const endX = p.x + Math.cos(p.rotation) * beamLength;
+            const endY = p.y + Math.sin(p.rotation) * beamLength;
+
+            // Damage all living agents intersecting the hyper-beam
+            gameState.agents.forEach(a => {
+              if (a.isAlive) {
+                const dx = endX - p.x;
+                const dy = endY - p.y;
+                const lenSq = dx * dx + dy * dy;
+                const t = Math.max(0, Math.min(1, ((a.x - p.x) * dx + (a.y - p.y) * dy) / lenSq));
+                const projX = p.x + t * dx;
+                const projY = p.y + t * dy;
+                const dist = Math.hypot(a.x - projX, a.y - projY);
+                if (dist < a.radius + 14) {
+                  a.takeDamage(110 * dt, 'PLAYER_HYPER_BEAM', p.rotation);
+                  gameState.screenShake = Math.max(gameState.screenShake, 3.2);
+                  gameState.hitstopTimer = 0.02;
+                }
+              }
+            });
+
+            if (p.activeBeam.timer <= 0) {
+              p.activeBeam = null;
+            }
+          }
+
           // Reloading
           if (p.isReloading) {
             p.reloadTimer += dt;
@@ -1016,10 +3500,13 @@
 
           // Player Shooting
           playerShootTimer += dt;
-          if (mouse.isDown && !p.isReloading && playerShootTimer >= 0.18) {
+          const currentWep = WEAPONS[p.activeWeaponIdx];
+          const fireInterval = (p.overclockTimer > 0) ? currentWep.cooldown * 0.45 : currentWep.cooldown;
+
+          if (mouse.isDown && !p.isReloading && playerShootTimer >= fireInterval) {
             playerShootTimer = 0;
-            if (p.ammo > 0) {
-              if (!p.isGodmode) p.ammo--;
+            if (p.ammo > 0 || p.overclockTimer > 0) {
+              if (!p.isGodmode && p.overclockTimer <= 0) p.ammo--;
               firePlayerBullet();
             } else {
               p.isReloading = true;
@@ -1035,6 +3522,77 @@
 
         // Update Director
         director.update(dt, gameState);
+
+        // Update Vortices (Gravity Singularity Alt-Fire)
+        for (let i = gameState.vortices.length - 1; i >= 0; i--) {
+          const v = gameState.vortices[i];
+          v.age += dt;
+          if (v.radius < v.maxRadius) v.radius = Math.min(v.maxRadius, v.radius + dt * 160);
+
+          gameState.agents.forEach(a => {
+            if (a.isAlive) {
+              const dx = v.x - a.x;
+              const dy = v.y - a.y;
+              const dist = Math.hypot(dx, dy);
+              if (dist < v.radius) {
+                const pull = (1.0 - dist / v.radius) * v.pullSpeed * dt;
+                a.vx += (dx / (dist || 1)) * pull;
+                a.vy += (dy / (dist || 1)) * pull;
+                a.takeDamage(v.dps * dt, 'PLAYER_VORTEX');
+                a.applyStun(0.3);
+              }
+            }
+          });
+
+          // Swirling ambient particles
+          if (Math.random() < 0.55) {
+            const ang = Math.random() * Math.PI * 2;
+            const r = Math.random() * v.radius;
+            gameState.particles.push({
+              x: v.x + Math.cos(ang) * r,
+              y: v.y + Math.sin(ang) * r,
+              vx: -Math.sin(ang) * 140,
+              vy: Math.cos(ang) * 140,
+              radius: 2,
+              color: '#38bdf8',
+              lifespan: 0.28,
+              age: 0
+            });
+          }
+
+          if (v.age >= v.duration) {
+            gameState.vortices.splice(i, 1);
+          }
+        }
+
+        // Update Decoys (Chrono Dash Perk)
+        for (let i = gameState.decoys.length - 1; i >= 0; i--) {
+          const dec = gameState.decoys[i];
+          dec.timer -= dt;
+          if (dec.timer <= 0) {
+            gameState.shockwaves.push({
+              x: dec.x,
+              y: dec.y,
+              radius: 12,
+              maxRadius: 240,
+              speed: 650,
+              color: '#38bdf8'
+            });
+            gameState.agents.forEach(a => {
+              if (a.isAlive) {
+                const dist = Math.hypot(a.x - dec.x, a.y - dec.y);
+                if (dist < 240) {
+                  const ang = Math.atan2(a.y - dec.y, a.x - dec.x);
+                  a.takeDamage(120, 'DECOY_EXPLOSION', ang);
+                  a.applyStun(1.2);
+                }
+              }
+            });
+            gameState.screenShake = 6.5;
+            audio.playScatterShot(false);
+            gameState.decoys.splice(i, 1);
+          }
+        }
 
         // Update Bullets
         for (let i = gameState.bullets.length - 1; i >= 0; i--) {
@@ -1052,13 +3610,54 @@
             }
           }
 
-          // Check hit against player
-          if (!hitObstacle && b.isEnemy && p.isAlive && !p.isDashing) {
+          // Ricochet Matrix perk for player bullets
+          if (hitObstacle && !b.isEnemy && p.implants.has('RICOCHET_MATRIX') && (b.bounces || 0) < 2) {
+            b.bounces = (b.bounces || 0) + 1;
+            b.vx = -b.vx * 0.92;
+            b.vy = -b.vy * 0.92;
+            b.lifespan = Math.min(b.lifespan + 0.5, 1.4);
+            hitObstacle = false;
+          }
+
+          // Check hit against player (with High-Skill Dash Parry)
+          if (!hitObstacle && b.isEnemy && p.isAlive) {
             const dist = Math.hypot(b.x - p.x, b.y - p.y);
-            if (dist < p.radius) {
+            if (p.isDashing && dist < p.radius + 18 && !b.parried) {
+              // PARRY DEFLECTION SUCCESS!
+              b.parried = true;
+              b.isEnemy = false;
+              b.owner = 'PLAYER';
+              b.vx = -b.vx * 2.2;
+              b.vy = -b.vy * 2.2;
+              b.damage *= 3.0;
+              b.color = '#38bdf8';
+              b.lifespan = 2.2;
+
+              gameState.hitstopTimer = 0.08; // 80ms bullet-time punch
+              gameState.screenShake = 6.5;
+              p.ammo = p.maxAmmo; // Instant magazine refill
+              p.isReloading = false;
+
+              // Golden parry flash ring
+              gameState.shockwaves.push({
+                x: b.x,
+                y: b.y,
+                radius: 12,
+                maxRadius: 80,
+                speed: 380,
+                color: '#facc15'
+              });
+
+              if (p.implants.has('NANITE_HARVEST')) {
+                p.health = Math.min(p.maxHealth, p.health + 15);
+              }
+
+              eventBus.publish('PARRY_DEFLECT', { x: b.x, y: b.y });
+            } else if (!p.isDashing && dist < p.radius) {
               hitObstacle = true;
               if (!p.isGodmode) {
                 p.health = Math.max(0, p.health - b.damage);
+                gameState.screenShake = Math.max(gameState.screenShake, 5.0);
                 eventBus.publish('ENTITY_DAMAGED', {
                   entityId: 'PLAYER',
                   isEnemy: false,
@@ -1066,6 +3665,16 @@
                   healthRemaining: p.health,
                   attackerId: b.owner
                 });
+
+                // Emergency EMP on shield break (Static Discharge perk)
+                if (p.health <= 25 && p.implants.has('STATIC_DISCHARGE') && !p.hasDischarged) {
+                  p.hasDischarged = true;
+                  gameState.bullets = gameState.bullets.filter(bullet => !bullet.isEnemy);
+                  gameState.agents.forEach(a => { if (a.isAlive) a.applyStun(3.0); });
+                  gameState.shockwaves.push({ x: p.x, y: p.y, radius: 10, maxRadius: 400, speed: 650, color: '#06b6d4' });
+                  eventBus.publish('EMP_DETONATED', { x: p.x, y: p.y });
+                }
+
                 if (p.health <= 0) p.isAlive = false;
               }
             }
@@ -1077,15 +3686,39 @@
               if (agent.isAlive) {
                 const dist = Math.hypot(b.x - agent.x, b.y - agent.y);
                 if (dist < agent.radius) {
-                  hitObstacle = true;
-                  agent.takeDamage(b.damage, 'PLAYER', Math.atan2(b.vy, b.vx));
-                  break;
+                  if (b.isPiercing) {
+                    if (!b.hitList) b.hitList = new Set();
+                    if (!b.hitList.has(agent.id)) {
+                      b.hitList.add(agent.id);
+                      agent.takeDamage(b.damage, 'PLAYER', Math.atan2(b.vy, b.vx));
+                      gameState.screenShake = Math.max(gameState.screenShake, 4.5);
+                      gameState.hitstopTimer = 0.035;
+                      // Railgun pierce impact particles
+                      for (let s = 0; s < 6; s++) {
+                        gameState.particles.push({
+                          x: agent.x,
+                          y: agent.y,
+                          vx: (Math.random() - 0.5) * 180,
+                          vy: (Math.random() - 0.5) * 180,
+                          radius: 2.5,
+                          color: '#ec4899',
+                          lifespan: 0.25,
+                          age: 0
+                        });
+                      }
+                    }
+                  } else {
+                    hitObstacle = true;
+                    agent.takeDamage(b.damage, 'PLAYER', Math.atan2(b.vy, b.vx));
+                    gameState.screenShake = Math.max(gameState.screenShake, 2.2);
+                    break;
+                  }
                 }
               }
             }
           }
 
-          if (hitObstacle || b.lifespan <= 0) {
+          if ((hitObstacle && !b.isPiercing) || (b.isPiercing && hitObstacle) || b.lifespan <= 0) {
             // Spawn hit sparks
             for (let s = 0; s < 4; s++) {
               gameState.particles.push({
@@ -1103,6 +3736,74 @@
           }
         }
 
+        // Update Pickups
+        for (let i = gameState.pickups.length - 1; i >= 0; i--) {
+          const pick = gameState.pickups[i];
+          pick.bobTimer += dt * 3.5;
+          pick.age += dt;
+          if (pick.age >= pick.lifespan) {
+            gameState.pickups.splice(i, 1);
+            continue;
+          }
+
+          // Player collection collision
+          if (p.isAlive) {
+            const dist = Math.hypot(p.x - pick.x, p.y - pick.y);
+            if (dist < p.radius + pick.radius) {
+              if (pick.type === 'SHIELD_CELL') {
+                p.health = Math.min(p.maxHealth, p.health + 35);
+              } else if (pick.type === 'OVERCLOCK_CORE') {
+                p.overclockTimer = 6.0;
+              } else if (pick.type === 'EMP_GRENADE') {
+                gameState.bullets = gameState.bullets.filter(b => !b.isEnemy);
+                gameState.agents.forEach(a => {
+                  if (a.isAlive) a.applyStun(3.5);
+                });
+                gameState.shockwaves.push({
+                  x: p.x,
+                  y: p.y,
+                  radius: 12,
+                  maxRadius: 420,
+                  speed: 680,
+                  color: '#06b6d4'
+                });
+                gameState.screenShake = 9.0;
+                eventBus.publish('EMP_DETONATED', { x: p.x, y: p.y });
+              }
+
+              eventBus.publish('PICKUP_COLLECTED', { type: pick.type, x: pick.x, y: pick.y });
+
+              // Celebration particle burst
+              const pColor = pick.type === 'SHIELD_CELL' ? '#10b981' : (pick.type === 'OVERCLOCK_CORE' ? '#eab308' : '#06b6d4');
+              for (let s = 0; s < 12; s++) {
+                const ang = Math.random() * Math.PI * 2;
+                const spd = 60 + Math.random() * 120;
+                gameState.particles.push({
+                  x: pick.x,
+                  y: pick.y,
+                  vx: Math.cos(ang) * spd,
+                  vy: Math.sin(ang) * spd,
+                  radius: 3,
+                  color: pColor,
+                  lifespan: 0.35,
+                  age: 0
+                });
+              }
+
+              gameState.pickups.splice(i, 1);
+            }
+          }
+        }
+
+        // Update Shockwaves
+        for (let i = gameState.shockwaves.length - 1; i >= 0; i--) {
+          const sw = gameState.shockwaves[i];
+          sw.radius += sw.speed * dt;
+          if (sw.radius >= sw.maxRadius) {
+            gameState.shockwaves.splice(i, 1);
+          }
+        }
+
         // Update Particles
         for (let i = gameState.particles.length - 1; i >= 0; i--) {
           const pt = gameState.particles[i];
@@ -1115,7 +3816,7 @@
         }
 
         // Render Canvas
-        render(ctx);
+        render(ctx, dt);
 
         // Update HUD DOM
         updateHUD();
@@ -1123,24 +3824,72 @@
 
       function firePlayerBullet() {
         const p = gameState.player;
-        const angle = p.rotation + (Math.random() - 0.5) * 0.04;
-        const speed = 640;
+        const wep = WEAPONS[p.activeWeaponIdx];
 
-        gameState.bullets.push({
-          x: p.x + Math.cos(p.rotation) * (p.radius + 6),
-          y: p.y + Math.sin(p.rotation) * (p.radius + 6),
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed,
-          owner: 'PLAYER',
-          isEnemy: false,
-          color: '#38bdf8',
-          damage: 26,
-          lifespan: 1.4
-        });
+        if (wep.type === 'SCATTER_CANNON') {
+          for (let i = 0; i < wep.pellets; i++) {
+            const spreadAngle = (Math.random() - 0.5) * wep.spread;
+            const angle = p.rotation + spreadAngle;
+            const speed = wep.speed * (0.92 + Math.random() * 0.16);
+
+            gameState.bullets.push({
+              x: p.x + Math.cos(p.rotation) * (p.radius + 6),
+              y: p.y + Math.sin(p.rotation) * (p.radius + 6),
+              vx: Math.cos(angle) * speed,
+              vy: Math.sin(angle) * speed,
+              owner: 'PLAYER',
+              isEnemy: false,
+              color: wep.color,
+              damage: wep.damage,
+              lifespan: 0.9,
+              isPiercing: false
+            });
+          }
+          gameState.screenShake = Math.max(gameState.screenShake, 3.8);
+          // Recoil
+          p.vx -= Math.cos(p.rotation) * 60;
+          p.vy -= Math.sin(p.rotation) * 60;
+        } else if (wep.type === 'RAILGUN') {
+          const angle = p.rotation + (Math.random() - 0.5) * wep.spread;
+          gameState.bullets.push({
+            x: p.x + Math.cos(p.rotation) * (p.radius + 8),
+            y: p.y + Math.sin(p.rotation) * (p.radius + 8),
+            vx: Math.cos(angle) * wep.speed,
+            vy: Math.sin(angle) * wep.speed,
+            owner: 'PLAYER',
+            isEnemy: false,
+            color: wep.color,
+            damage: wep.damage,
+            lifespan: 1.2,
+            isPiercing: true,
+            hitList: new Set()
+          });
+          gameState.screenShake = Math.max(gameState.screenShake, 7.0);
+          // Strong recoil
+          p.vx -= Math.cos(p.rotation) * 130;
+          p.vy -= Math.sin(p.rotation) * 130;
+        } else {
+          // ION_BLASTER
+          const angle = p.rotation + (Math.random() - 0.5) * wep.spread;
+          gameState.bullets.push({
+            x: p.x + Math.cos(p.rotation) * (p.radius + 6),
+            y: p.y + Math.sin(p.rotation) * (p.radius + 6),
+            vx: Math.cos(angle) * wep.speed,
+            vy: Math.sin(angle) * wep.speed,
+            owner: 'PLAYER',
+            isEnemy: false,
+            color: wep.color,
+            damage: wep.damage,
+            lifespan: 1.4,
+            isPiercing: false
+          });
+          gameState.screenShake = Math.max(gameState.screenShake, 1.4);
+        }
 
         eventBus.publish('WEAPON_FIRED', {
           owner: 'PLAYER',
           isEnemy: false,
+          weaponType: wep.type,
           x: p.x,
           y: p.y
         });
@@ -1173,7 +3922,18 @@
       }
 
       // 4. Canvas Renderer
-      function render(ctx) {
+      function render(ctx, dt = 0.016) {
+        ctx.save();
+
+        // Screen Shake Juice
+        if (gameState.screenShake > 0) {
+          const shakeMag = gameState.screenShake;
+          const sx = (Math.random() - 0.5) * shakeMag * 2;
+          const sy = (Math.random() - 0.5) * shakeMag * 2;
+          ctx.translate(sx, sy);
+          gameState.screenShake = Math.max(0, gameState.screenShake - dt * 14);
+        }
+
         ctx.fillStyle = '#07090e';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -1242,11 +4002,144 @@
           });
         }
 
+        // Enemy Aim Telegraph Beams
+        gameState.agents.forEach(agent => {
+          if (agent.isAlive && agent.isTelegraphing) {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(239, 68, 68, 0.45)';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([6, 6]);
+            ctx.beginPath();
+            ctx.moveTo(agent.x, agent.y);
+            const aimDist = 650;
+            ctx.lineTo(agent.x + Math.cos(agent.rotation) * aimDist, agent.y + Math.sin(agent.rotation) * aimDist);
+            ctx.stroke();
+            ctx.restore();
+          }
+        });
+
+        // Expanding Shockwaves
+        gameState.shockwaves.forEach(sw => {
+          const progress = sw.radius / sw.maxRadius;
+          const alpha = Math.max(0, 1.0 - progress);
+          ctx.save();
+          ctx.strokeStyle = sw.color;
+          ctx.lineWidth = 3.5 * (1.0 - progress * 0.5);
+          ctx.globalAlpha = alpha;
+          ctx.beginPath();
+          ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        });
+
+        // Vortices (Gravity Singularity Alt-Fire)
+        gameState.vortices.forEach(v => {
+          ctx.save();
+          const pulse = Math.sin(v.age * 8) * 4;
+          const grad = ctx.createRadialGradient(v.x, v.y, 4, v.x, v.y, v.radius);
+          grad.addColorStop(0, 'rgba(6, 182, 212, 0.85)');
+          grad.addColorStop(0.5, 'rgba(56, 189, 248, 0.3)');
+          grad.addColorStop(1, 'rgba(6, 182, 212, 0)');
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(v.x, v.y, v.radius + pulse, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(v.x, v.y, v.radius * 0.65, v.age * 5, v.age * 5 + Math.PI * 1.5);
+          ctx.stroke();
+
+          ctx.fillStyle = '#020617';
+          ctx.beginPath();
+          ctx.arc(v.x, v.y, 10, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        });
+
+        // Chrono Decoys (Chrono Dash Perk)
+        gameState.decoys.forEach(dec => {
+          ctx.save();
+          ctx.fillStyle = 'rgba(56, 189, 248, 0.35)';
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(dec.x, dec.y, 18, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = '#fff';
+          ctx.font = 'bold 9px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText(`DECOY ${dec.timer.toFixed(1)}s`, dec.x, dec.y - 24);
+          ctx.restore();
+        });
+
+        // Tactical Pickups
+        gameState.pickups.forEach(pick => {
+          const bobY = Math.sin(pick.bobTimer) * 4;
+          const px = pick.x;
+          const py = pick.y + bobY;
+          const color = pick.type === 'SHIELD_CELL' ? '#10b981' : (pick.type === 'OVERCLOCK_CORE' ? '#eab308' : '#06b6d4');
+          const icon = pick.type === 'SHIELD_CELL' ? '+' : (pick.type === 'OVERCLOCK_CORE' ? '⚡' : 'EMP');
+
+          ctx.save();
+          ctx.fillStyle = color;
+          ctx.globalAlpha = 0.25;
+          ctx.beginPath();
+          ctx.arc(px, py, pick.radius + 6 + Math.sin(pick.bobTimer * 2) * 2, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.globalAlpha = 0.92;
+          ctx.fillStyle = '#0f172a';
+          ctx.beginPath();
+          ctx.arc(px, py, pick.radius, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          ctx.fillStyle = color;
+          ctx.font = pick.type === 'EMP_GRENADE' ? 'bold 8px monospace' : 'bold 12px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(icon, px, py);
+          ctx.restore();
+        });
+
+        // Railgun Sustained Hyper-Beam
+        const p = gameState.player;
+        if (p.isAlive && p.activeBeam) {
+          const b = p.activeBeam;
+          const beamLen = 850;
+          const endX = b.startX + Math.cos(b.angle) * beamLen;
+          const endY = b.startY + Math.sin(b.angle) * beamLen;
+
+          ctx.save();
+          // Outer bloom
+          ctx.strokeStyle = 'rgba(236, 72, 153, 0.4)';
+          ctx.lineWidth = 20 + Math.sin(b.timer * 35) * 5;
+          ctx.beginPath();
+          ctx.moveTo(b.startX, b.startY);
+          ctx.lineTo(endX, endY);
+          ctx.stroke();
+
+          // Searing core
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 6;
+          ctx.beginPath();
+          ctx.moveTo(b.startX, b.startY);
+          ctx.lineTo(endX, endY);
+          ctx.stroke();
+          ctx.restore();
+        }
+
         // Bullets
         gameState.bullets.forEach(b => {
           ctx.fillStyle = b.color || '#fff';
           ctx.beginPath();
-          ctx.arc(b.x, b.y, 3, 0, Math.PI * 2);
+          ctx.arc(b.x, b.y, b.isPiercing ? 4.5 : 3, 0, Math.PI * 2);
           ctx.fill();
         });
 
@@ -1264,6 +4157,40 @@
         // AI Agents
         gameState.agents.forEach(agent => {
           if (!agent.isAlive) return;
+
+          // If Boss, render rotating Orbital Bits & Corona
+          if (agent.isBoss) {
+            ctx.save();
+            ctx.fillStyle = 'rgba(239, 68, 68, 0.16)';
+            ctx.beginPath();
+            ctx.arc(agent.x, agent.y, agent.radius + 18 + Math.sin(Date.now() * 0.006) * 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Orbital Bit Shields (Phase 1)
+            if (agent.orbitalBits && agent.orbitalBits.length > 0) {
+              agent.orbitalBits.forEach(bit => {
+                if (bit.active) {
+                  ctx.save();
+                  ctx.fillStyle = '#06b6d4';
+                  ctx.strokeStyle = '#fff';
+                  ctx.lineWidth = 1.5;
+                  ctx.beginPath();
+                  ctx.arc(bit.x, bit.y, 8, 0, Math.PI * 2);
+                  ctx.fill();
+                  ctx.stroke();
+
+                  ctx.strokeStyle = 'rgba(6, 182, 212, 0.3)';
+                  ctx.lineWidth = 1;
+                  ctx.beginPath();
+                  ctx.moveTo(agent.x, agent.y);
+                  ctx.lineTo(bit.x, bit.y);
+                  ctx.stroke();
+                  ctx.restore();
+                }
+              });
+            }
+            ctx.restore();
+          }
 
           // Agent Body
           ctx.save();
@@ -1287,31 +4214,49 @@
 
           // Health bar above head
           const hpRatio = agent.health / agent.maxHealth;
-          const barW = 28;
+          const barW = agent.isBoss ? 56 : 28;
           ctx.fillStyle = 'rgba(0,0,0,0.6)';
           ctx.fillRect(agent.x - barW / 2, agent.y - agent.radius - 10, barW, 4);
-          ctx.fillStyle = hpRatio > 0.4 ? '#10b981' : '#ef4444';
+          ctx.fillStyle = hpRatio > 0.4 ? (agent.isBoss ? '#ef4444' : '#10b981') : '#f59e0b';
           ctx.fillRect(agent.x - barW / 2, agent.y - agent.radius - 10, barW * hpRatio, 4);
+
+          // Stun label if stunned
+          if (agent.stunTimer > 0) {
+            ctx.fillStyle = '#38bdf8';
+            ctx.font = 'bold 10px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(`⚡ STUNNED (${agent.stunTimer.toFixed(1)}s)`, agent.x, agent.y - agent.radius - 15);
+          }
+
+          // Tactical radio chatter callout bubble
+          if (agent.currentCallout) {
+            ctx.save();
+            ctx.fillStyle = agent.isBoss ? '#ef4444' : '#f59e0b';
+            ctx.font = 'bold 9px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(` ${agent.currentCallout}`, agent.x, agent.y - agent.radius - 20);
+            ctx.restore();
+          }
         });
 
         // Player
-        const p = gameState.player;
         if (p.isAlive) {
           ctx.save();
           ctx.translate(p.x, p.y);
           ctx.rotate(p.rotation);
 
           // Weapon barrel
-          ctx.fillStyle = '#94a3b8';
-          ctx.fillRect(10, -4, 16, 8);
+          const activeWep = WEAPONS[p.activeWeaponIdx];
+          ctx.fillStyle = activeWep ? activeWep.color : '#94a3b8';
+          ctx.fillRect(10, -4, activeWep && activeWep.type === 'RAILGUN' ? 22 : 16, 8);
 
           // Player avatar
-          ctx.fillStyle = p.isDashing ? '#06b6d4' : '#f8fafc';
+          ctx.fillStyle = p.isDashing ? '#06b6d4' : (p.overclockTimer > 0 ? '#eab308' : '#f8fafc');
           ctx.beginPath();
           ctx.arc(0, 0, p.radius, 0, Math.PI * 2);
           ctx.fill();
 
-          ctx.strokeStyle = '#06b6d4';
+          ctx.strokeStyle = p.overclockTimer > 0 ? '#eab308' : '#06b6d4';
           ctx.lineWidth = 2.5;
           ctx.stroke();
 
@@ -1326,6 +4271,8 @@
           ctx.fillStyle = '#cbd5e1';
           ctx.fillText("Press [Reset Arena] to re-initialize System 1 loop", canvas.width / 2, canvas.height / 2 + 36);
         }
+
+        ctx.restore();
       }
 
       // 5. Update HUD DOM
@@ -1336,6 +4283,16 @@
         document.getElementById('playerHpFill').style.width = `${Math.max(0, p.health)}%`;
         document.getElementById('playerHpText').innerText = `${Math.round(p.health)} / 100`;
 
+        // Low-health red vignette toggle
+        const vignette = document.getElementById('playerVignette');
+        if (vignette) {
+          if (p.health < 35 && p.isAlive) {
+            vignette.classList.add('critical');
+          } else {
+            vignette.classList.remove('critical');
+          }
+        }
+
         const pipsContainer = document.getElementById('ammoPipsContainer');
         pipsContainer.innerHTML = '';
         for (let i = 0; i < p.maxAmmo; i++) {
@@ -1345,12 +4302,45 @@
         }
 
         const dashText = document.getElementById('dashStatusText');
-        if (p.dashTimer > 0) {
+        if (p.overclockTimer > 0) {
+          dashText.innerText = `⚡ OVERCLOCKED (${p.overclockTimer.toFixed(1)}s)`;
+          dashText.style.color = '#eab308';
+        } else if (p.isReloading) {
+          dashText.innerText = `RELOADING (${(p.reloadDuration - p.reloadTimer).toFixed(1)}s)`;
+          dashText.style.color = '#f59e0b';
+        } else if (p.dashTimer > 0) {
           dashText.innerText = `DASH RECHARGING (${p.dashTimer.toFixed(1)}s)`;
           dashText.style.color = '#94a3b8';
         } else {
           dashText.innerText = `DASH READY [SPACE]`;
           dashText.style.color = '#06b6d4';
+        }
+
+        // Alt-Fire HUD status
+        const altText = document.getElementById('altfireStatusText');
+        const activeWep = WEAPONS[p.activeWeaponIdx];
+        if (altText && activeWep && activeWep.altFire) {
+          if (p.altFireTimer > 0) {
+            altText.innerText = `ALT-FIRE (${p.altFireTimer.toFixed(1)}s)`;
+            altText.style.color = '#64748b';
+          } else {
+            altText.innerText = `ALT READY [RMB] (${activeWep.altFire.name})`;
+            altText.style.color = '#ec4899';
+          }
+        }
+
+        // Apex Boss Health Bar HUD
+        const bossBar = document.getElementById('hud-boss-bar');
+        const boss = gameState.agents.find(a => a.isBoss && a.isAlive);
+        if (boss && bossBar) {
+          bossBar.style.display = 'block';
+          const bossFill = document.getElementById('bossHpFill');
+          const bossPhase = document.getElementById('bossPhaseText');
+          const pct = Math.max(0, (boss.health / boss.maxHealth) * 100);
+          bossFill.style.width = `${pct}%`;
+          bossPhase.innerText = `PHASE ${boss.bossPhase}: ${boss.bossPhase === 1 ? 'ORBITAL SHIELDS' : (boss.bossPhase === 2 ? 'PHASE WARP' : 'OVERDRIVE PURGE')}`;
+        } else if (bossBar) {
+          bossBar.style.display = 'none';
         }
 
         // Director Stats

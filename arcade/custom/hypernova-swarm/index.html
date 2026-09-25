@@ -277,8 +277,40 @@
       min-height: 700px;
       padding: 14px;
       display: grid;
-      grid-template-rows: auto auto 1fr auto;
+      grid-template-rows: auto auto auto 1fr auto;
       gap: 14px;
+    }
+
+    .cast-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 7px;
+      margin-top: 7px;
+    }
+
+    .cast-card {
+      min-height: 56px;
+      display: grid;
+      align-content: center;
+      gap: 2px;
+      border: 1px solid color-mix(in srgb, var(--house) 45%, transparent);
+      border-left: 4px solid var(--house);
+      border-radius: 6px;
+      padding: 7px 8px;
+      background: linear-gradient(120deg, color-mix(in srgb, var(--house) 11%, transparent), rgba(247,243,223,.025));
+    }
+
+    .cast-card strong {
+      color: var(--paper);
+      font-size: 11px;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    .cast-card span {
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.2;
     }
 
     .panel-head {
@@ -364,14 +396,20 @@
       .layout { grid-template-columns: 1fr; }
       .side-panel,
       .game-panel { min-height: auto; }
+      .cast-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
 
     @media (max-width: 720px) {
+      #northstar-vorath-gate,
+      #northstar-playtest-kit,
+      .northstar-arcade-return { display: none !important; }
       .shell { padding: 12px; }
       h1 { font-size: 32px; }
       .hud { grid-template-columns: 1fr 1fr; }
       .controls { grid-template-columns: 1fr 1fr; }
       .stage-wrap { min-height: 430px; }
+      #stageWrap > canvas { width: 100% !important; height: 100% !important; max-width: none !important; }
+      .cast-grid { grid-template-columns: 1fr 1fr; }
     }
   </style>
 </head>
@@ -383,6 +421,7 @@
         <h1>Hypernova Swarm</h1>
       </div>
       <div class="chips">
+        <a id="attestCryptoBtn" href="/crypto?game=hypernova-swarm&pane=arcade-pane" target="_blank" style="display:inline-flex; align-items:center; gap:6px; background:rgba(0,255,204,0.12); border:1px solid #00ffcc; color:#00ffcc; padding:5px 12px; border-radius:6px; font-size:11px; font-weight:700; text-decoration:none; letter-spacing:1px; text-transform:uppercase; transition:all 0.2s;">&#x2726; Attest Run to SpaceCash</a>
         <span class="chip" id="bestChip">Best 0</span>
         <span class="chip" id="seedChip">Seed local</span>
       </div>
@@ -407,7 +446,7 @@
             <section class="modal">
               <div class="kicker">Insert signal</div>
               <h2 id="overlayTitle">Hypernova Swarm</h2>
-              <p id="overlayText">Move with WASD or arrows. Fire with Space. Survive formation waves, collect credits, and upgrade between sectors. Public-safe original art and code.</p>
+              <p id="overlayText">Move with WASD, arrows, touch, or gamepad. Fire with Space or A. Break six hostile houses across four changing formations. Public-safe original art and code.</p>
               <button class="primary" id="startBtn" type="button">Start Run</button>
             </section>
           </div>
@@ -415,6 +454,8 @@
 
         <div class="controls">
           <button id="startBtn2" class="primary" type="button">Start</button>
+          <button id="parryBtn" type="button" style="border-color:#2fe4ff;color:#2fe4ff;">Parry [E]</button>
+          <button id="novaBtn" type="button" style="border-color:#ffe45c;color:#ffe45c;">Nova [Q]</button>
           <button id="pauseBtn" type="button">Pause</button>
           <button id="receiptBtn" type="button">Export Receipt</button>
           <select id="sectorSelect" aria-label="Sector seed">
@@ -441,6 +482,18 @@
 
         <div class="upgrades" id="upgrades"></div>
 
+        <section aria-label="Hostile house roster">
+          <div class="kicker">Hostile Houses</div>
+          <div class="cast-grid">
+            <div class="cast-card" style="--house:#ff5b45"><strong>Cinder Apostle</strong><span>Lattice striker</span></div>
+            <div class="cast-card" style="--house:#2fe6ff"><strong>Prism Bastion</strong><span>Armored bulwark</span></div>
+            <div class="cast-card" style="--house:#ff48b0"><strong>Ribbon Harrower</strong><span>Telegraphed diver</span></div>
+            <div class="cast-card" style="--house:#7dff6b"><strong>Split Oracle</strong><span>Bifurcating pod</span></div>
+            <div class="cast-card" style="--house:#a879ff"><strong>Wraithling</strong><span>Fork-tailed child</span></div>
+            <div class="cast-card" style="--house:#ffe45c"><strong>Nova Sovereign</strong><span>Cathedral boss</span></div>
+          </div>
+        </section>
+
         <section>
           <div class="kicker">Flight Log</div>
           <div class="log" id="log"></div>
@@ -451,7 +504,7 @@
     </section>
 
     <footer class="footer">
-      <span>Desktop: arrows/WASD + Space. Touch: drag to steer, auto-fire.</span>
+      <span>Desktop: arrows/WASD + Space. Parry: E/Shift. Nova: Q. Gamepad: stick + A/B/X. Touch: drag to steer, tactical buttons.</span>
       <span id="stateLine">Attract mode</span>
     </footer>
   </main>
@@ -459,6 +512,7 @@
   <script>
     const canvas = document.querySelector("#game");
     const ctx = canvas.getContext("2d");
+    const PLAYTEST_MODE = new URLSearchParams(window.location.search).has("playtest");
     if (window.Juice) Juice.attachFX(canvas, { vignette: 0.5, scanlines: 0.05, glow: 0.08 });
 
     // living background: seedance motion plate, cover-fit under the procedural layers
@@ -499,12 +553,92 @@
       const attempt = inst.play(); if (attempt && attempt.catch) attempt.catch(() => {});
       return true;
     }
-    // AI hero-ship sprite (Vorath DNA, luminance-keyed). Procedural drawPlayer stays as fallback.
+
+    // Zero-dependency procedural Web Audio synthesizer for tactical verbs
+    let audioCtx = null;
+    function getAudioCtx() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) audioCtx = new AudioContext();
+      }
+      if (audioCtx && audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
+      return audioCtx;
+    }
+
+    function soundParry() {
+      const ctx = getAudioCtx();
+      if (!ctx) return;
+      try {
+        const t = ctx.currentTime;
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc1.type = "sine";
+        osc2.type = "triangle";
+        osc1.frequency.setValueAtTime(520, t);
+        osc1.frequency.exponentialRampToValueAtTime(1040, t + 0.18);
+        osc2.frequency.setValueAtTime(780, t);
+        osc2.frequency.exponentialRampToValueAtTime(1560, t + 0.18);
+        gain.gain.setValueAtTime(0.22, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(ctx.destination);
+        osc1.start(t);
+        osc2.start(t);
+        osc1.stop(t + 0.22);
+        osc2.stop(t + 0.22);
+      } catch (e) {}
+    }
+
+    function soundNovaBeam() {
+      const ctx = getAudioCtx();
+      if (!ctx) return;
+      try {
+        const t = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(240, t);
+        osc.frequency.exponentialRampToValueAtTime(45, t + 0.45);
+        gain.gain.setValueAtTime(0.28, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.5);
+      } catch (e) {}
+    }
+
+    function soundTensionPulse(freq = 440) {
+      const ctx = getAudioCtx();
+      if (!ctx) return;
+      try {
+        const t = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, t);
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.5, t + 0.12);
+        gain.gain.setValueAtTime(0.12, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.15);
+      } catch (e) {}
+    }
+    // VORATH Overhaul V01 hero atlas. Procedural drawPlayer stays as a fail-safe.
     const heroImg = new Image();
     let heroImgReady = false;
     heroImg.onload = () => { heroImgReady = true; };
     heroImg.onerror = () => { heroImgReady = false; };
-    heroImg.src = "/static/games/roster/hyp_hero_ship.png";
+    heroImg.src = "/static/art/games/vorath_overhaul_v01/hypernova_swarm/vorath_interceptor_atlas_v01.png";
+    const enemyAtlas = new Image();
+    let enemyAtlasReady = false;
+    enemyAtlas.onload = () => { enemyAtlasReady = true; };
+    enemyAtlas.onerror = () => { enemyAtlasReady = false; };
+    enemyAtlas.src = "/static/art/games/vorath_overhaul_v01/hypernova_swarm/hypernova_enemy_houses_atlas_v01.png";
 
     // Chiptune music bed + complementary SFX (the sampled combat SFX above stay for shoot/hit/etc).
     let music = null;
@@ -554,12 +688,26 @@
       midnight: ["#a879ff", "#2fe6ff", "#ff48b0", "#f7f3df"]
     };
 
+    const ENEMY_HOUSES = {
+      drone: { name: "Cinder Apostle", cell: [0, 0], scale: 3.55, cadence: 0.82 },
+      shield: { name: "Prism Bastion", cell: [1, 0], scale: 3.75, cadence: 1.18 },
+      diver: { name: "Ribbon Harrower", cell: [2, 0], scale: 3.9, cadence: 0.7 },
+      splitter: { name: "Split Oracle", cell: [0, 1], scale: 3.8, cadence: 1.04 },
+      "splitter-child": { name: "Wraithling", cell: [1, 1], scale: 3.25, cadence: 0.6 },
+      overlord: { name: "Nova Sovereign", cell: [2, 1], scale: 4.55, cadence: 0.45 }
+    };
+    const FORMATIONS = ["Cathedral Fan", "Broken Halo", "Aurora Helix", "Guilloche Spear"];
+
     const upgradeDefs = [
       ["spread", "Prism Splitter", "Adds angled side shots.", 6],
       ["shield", "Shield Lattice", "Repairs 36 shield.", 4],
       ["drone", "Signal Drone", "Adds an autofiring wing unit.", 8],
       ["cooldown", "Coolant Loop", "Faster pulse cannon.", 5]
     ];
+    const SPLITTER_CHILD_CAP = 12;
+    const ACTIVE_ENEMY_CAP = 60;
+    const SPLITTER_CHILD_SCORE = 25;
+    const SPLITTER_CHILD_GRACE = 0.65;
 
     let state;
     let keys = {};
@@ -567,6 +715,11 @@
     let last = 0;
     let best = Number(localStorage.getItem("hypernovaSwarmBest") || 0);
     let logRows = [];
+    let floatingNotices = [];
+
+    function addFloatingNotice(x, y, text, color = "#2fe4ff") {
+      floatingNotices.push({ x, y, text, color, life: 1.0 });
+    }
 
     function baseState() {
       return {
@@ -580,7 +733,7 @@
         shake: 0,
         fireTimer: 0,
         enemyFireTimer: 0,
-        player: { x: 480, y: 575, r: 14, speed: 330, cooldown: 0.17 },
+        player: { x: 480, y: 575, r: 14, speed: 330, cooldown: 0.17, inputX: 0, inputY: 0 },
         bullets: [],
         enemyBullets: [],
         enemies: [],
@@ -588,8 +741,22 @@
         powerups: [],
         upgrades: { spread: 0, shield: 0, drone: 0, cooldown: 0 },
         sector: "aurora",
+        formation: FORMATIONS[0],
+        waveBanner: 2.4,
         receipt: null,
-        upgradeSignature: ""
+        upgradeSignature: "",
+        swarmDirector: {
+          state: "BUILD_UP",
+          tension: 15,
+          stateTimer: 0,
+          decisionLatencyUs: 0.00042,
+          killStreak: 0,
+          parryCount: 0,
+          novaEnergy: 100,
+          parryCooldown: 0,
+          parryActive: 0,
+          hitStop: 0
+        }
       };
     }
 
@@ -614,22 +781,32 @@
       const rows = Math.min(5, 2 + Math.floor(state.wave / 2));
       const startX = (w() - (cols - 1) * 54) / 2;
       const colors = palettes[state.sector];
+      state.formation = FORMATIONS[(state.wave - 1) % FORMATIONS.length];
+      state.waveBanner = 2.4;
       state.enemies = [];
       for (let row = 0; row < rows; row += 1) {
         for (let col = 0; col < cols; col += 1) {
           const typeRoll = (row + col + state.wave) % 5;
           const type = typeRoll === 0 ? "splitter" : typeRoll === 1 ? "shield" : typeRoll === 2 ? "diver" : "drone";
+          const rank = col - (cols - 1) / 2;
+          const fan = state.formation === "Cathedral Fan" ? Math.abs(rank) * 7 : 0;
+          const halo = state.formation === "Broken Halo" ? Math.cos(rank * 0.72) * 22 : 0;
+          const helix = state.formation === "Aurora Helix" ? Math.sin(row * 1.25 + col * 0.72) * 25 : 0;
+          const spear = state.formation === "Guilloche Spear" ? -Math.abs(rank) * 9 + row * 5 : 0;
+          const baseY = 66 + row * 48 + fan + halo + helix + spear;
           state.enemies.push({
             x: startX + col * 54,
-            y: 70 + row * 42,
+            y: baseY,
             ox: startX + col * 54,
-            oy: 70 + row * 42,
+            oy: baseY,
             r: type === "shield" ? 18 : 15,
             hp: type === "shield" ? 3 + Math.floor(state.wave / 4) : type === "splitter" ? 2 : 1,
             type,
             color: colors[(row + col) % colors.length],
             phase: (row * 0.7 + col * 0.3),
             dive: false,
+            telegraph: 0,
+            attackClock: 1.2 + ((row * cols + col) % 7) * 0.31,
             value: type === "shield" ? 90 : type === "splitter" ? 70 : 50
           });
         }
@@ -649,7 +826,28 @@
           value: 900
         });
       }
-      log("WAVE " + state.wave + " // swarm formation entered.");
+      const bossCall = state.wave % 4 === 0 ? " // NOVA SOVEREIGN PRESENT" : "";
+      log("WAVE " + state.wave + " // " + state.formation + " formation entered" + bossCall + ".");
+    }
+
+    function spawnSplitterChildren(parent, pending) {
+      pending = pending || [];
+      if (!state || !parent || parent.type !== "splitter") return 0;
+      const activeChildren = state.enemies.filter(enemy => enemy.hp > 0 && enemy.type === "splitter-child").length
+        + pending.filter(enemy => enemy.type === "splitter-child").length;
+      const activeEnemies = state.enemies.filter(enemy => enemy.hp > 0).length + pending.length;
+      const slots = Math.max(0, Math.min(2, SPLITTER_CHILD_CAP - activeChildren, ACTIVE_ENEMY_CAP - activeEnemies));
+      for (let i = 0; i < slots; i += 1) {
+        const direction = slots === 1 ? (parent.x < w() / 2 ? 1 : -1) : (i === 0 ? -1 : 1);
+        const x = Math.max(20, Math.min(w() - 20, parent.x + direction * 24));
+        const y = Math.max(28, Math.min(h() * 0.5, parent.y + 12));
+        pending.push({
+          x, y, ox: x, oy: y, r: 10, hp: 1, type: "splitter-child",
+          color: parent.color, phase: parent.phase + direction * 0.8, dive: false,
+          value: SPLITTER_CHILD_SCORE, creditValue: 0, spawnGrace: SPLITTER_CHILD_GRACE, flash: 0
+        });
+      }
+      return slots;
     }
 
     function startRun() {
@@ -657,12 +855,14 @@
       state.mode = "play";
       state.sector = els.sectorSelect.value;
       state.player.x = w() / 2;
-      state.player.y = h() - 58;
+      state.player.y = h() - 78;
       overlay.hidden = true;
       logRows = [];
       spawnWave();
-      startMusic();
-      chip("gate");
+      if (!PLAYTEST_MODE) {
+        startMusic();
+        chip("gate");
+      }
       log("RUN START // sector " + state.sector.toUpperCase() + ".");
       updateUi();
     }
@@ -719,6 +919,10 @@
       els.bestChip.textContent = "Best " + best;
       els.seedChip.textContent = "Sector " + state.sector;
       els.stateLine.textContent = state.mode === "play" ? "Swarm live" : state.mode;
+      const attestBtn = document.getElementById("attestCryptoBtn");
+      if (attestBtn && typeof state.score !== "undefined") {
+        attestBtn.href = "/crypto?game=hypernova-swarm&score=" + state.score + "&pane=arcade-pane";
+      }
       const upgradeSignature = [state.credits, state.shield, state.upgrades.spread, state.upgrades.drone, state.upgrades.cooldown].join(":");
       if (upgradeSignature !== state.upgradeSignature) {
         state.upgradeSignature = upgradeSignature;
@@ -739,6 +943,119 @@
         state.bullets.push({ x: p.x - 32, y: p.y, vx: 0, vy: -540, r: 3, color: palettes[state.sector][3] });
         state.bullets.push({ x: p.x + 32, y: p.y, vx: 0, vy: -540, r: 3, color: palettes[state.sector][3] });
       }
+    }
+
+    function triggerQuantumParry() {
+      const dir = state.swarmDirector;
+      if (!dir || dir.parryCooldown > 0) return;
+      dir.parryActive = 0.28;
+      dir.parryCooldown = 0.52;
+      soundParry();
+      chip("blip");
+      addParticles(state.player.x, state.player.y, "#2fe6ff", 14);
+      addFloatingNotice(state.player.x, state.player.y - 25, "QUANTUM PARRY ARMED", "#2fe6ff");
+    }
+
+    function triggerNovaBreaker() {
+      const dir = state.swarmDirector;
+      if (!dir || dir.novaEnergy < 35) return;
+      dir.novaEnergy = Math.max(0, dir.novaEnergy - 35);
+      soundNovaBeam();
+      state.shake = 10;
+      const p = state.player;
+      for (let i = -2; i <= 2; i++) {
+        state.bullets.push({
+          x: p.x + i * 14,
+          y: p.y - 18,
+          vx: i * 45,
+          vy: -820,
+          r: 9,
+          color: "#ffe45c",
+          isPiercing: true,
+          damage: 5
+        });
+      }
+      addParticles(p.x, p.y - 10, "#ffe45c", 22);
+      addFloatingNotice(p.x, p.y - 35, "NOVA BREAKER HYPER-BEAM!", "#ffe45c");
+      log("TACTICAL // Nova Breaker Hyper-Beam unleashed!");
+    }
+
+    function deflectBullet(b) {
+      const dir = state.swarmDirector;
+      dir.parryCount++;
+      dir.killStreak++;
+      dir.novaEnergy = Math.min(100, dir.novaEnergy + 18);
+      dir.hitStop = 0.045; // 45ms freeze frame
+      state.score += 250;
+      state.shake = 6;
+      soundParry();
+      addParticles(b.x, b.y, "#2fe6ff", 16);
+      addParticles(b.x, b.y, "#ffe45c", 8);
+      state.bullets.push({
+        x: b.x,
+        y: b.y,
+        vx: -b.vx * 1.6,
+        vy: -Math.abs(b.vy) * 2.2,
+        r: 6,
+        color: "#2fe6ff",
+        isParried: true,
+        damage: 3
+      });
+      addFloatingNotice(b.x, b.y - 15, "DEFLECTION PARRY! +250", "#2fe6ff");
+    }
+
+    // ----------------- SYSTEM 1 SWARM AI DIRECTOR -----------------
+    function updateSwarmDirector(dt) {
+      const t0 = performance.now();
+      const dir = state.swarmDirector;
+      dir.stateTimer += dt;
+      if (dir.parryCooldown > 0) dir.parryCooldown = Math.max(0, dir.parryCooldown - dt);
+      if (dir.parryActive > 0) dir.parryActive = Math.max(0, dir.parryActive - dt);
+      dir.novaEnergy = Math.min(100, dir.novaEnergy + dt * 2.5);
+
+      const activeEnemies = state.enemies.filter(e => e.hp > 0);
+      const isBossPresent = activeEnemies.some(e => e.type === "overlord");
+
+      if (isBossPresent) {
+        dir.state = "ANNIHILATION_CHORD";
+        dir.tension = Math.min(100, dir.tension + dt * 6);
+      } else if (dir.state === "BUILD_UP") {
+        dir.tension = Math.min(100, dir.tension + dt * 7 + dir.killStreak * 1.2);
+        if (dir.tension >= 70 || dir.stateTimer > 14) {
+          dir.state = "FRENZY_RUSH";
+          dir.stateTimer = 0;
+          state.shake = 5;
+          soundTensionPulse(580);
+          addFloatingNotice(w() / 2, 120, "DIRECTOR: FRENZY RUSH!", "#ff48b0");
+          log("DIRECTOR // FRENZY RUSH: Flanking dive protocols active.");
+        }
+      } else if (dir.state === "FRENZY_RUSH") {
+        dir.tension = Math.min(100, dir.tension + dt * 3);
+        for (const e of state.enemies) {
+          if (!e.dive && e.attackClock > 0.8) e.attackClock -= dt * 1.6;
+        }
+        if (dir.stateTimer > 9 || activeEnemies.length <= 4) {
+          dir.state = "RELAX";
+          dir.stateTimer = 0;
+          addFloatingNotice(w() / 2, 120, "DIRECTOR: DISPERSAL RESPITE", "#2fe6ff");
+          log("DIRECTOR // RELAX: Swarm dispersal window.");
+        }
+      } else if (dir.state === "RELAX") {
+        dir.tension = Math.max(12, dir.tension - dt * 16);
+        if (dir.stateTimer > 5) {
+          dir.state = "BUILD_UP";
+          dir.stateTimer = 0;
+          dir.killStreak = 0;
+        }
+      } else if (dir.state === "ANNIHILATION_CHORD") {
+        if (!isBossPresent) {
+          dir.state = "RELAX";
+          dir.stateTimer = 0;
+          dir.tension = 35;
+          log("DIRECTOR // SOVEREIGN FALLEN: Respite attained.");
+        }
+      }
+      dir.decisionLatencyUs = Math.max(0.0001, (performance.now() - t0) * 1000);
     }
 
     function addParticles(x, y, color, count) {
@@ -781,9 +1098,16 @@
 
     function update(dt) {
       if (state.mode !== "play") return;
+      if (state.swarmDirector && state.swarmDirector.hitStop > 0) {
+        state.swarmDirector.hitStop = Math.max(0, state.swarmDirector.hitStop - dt);
+        return;
+      }
+      updateSwarmDirector(dt);
+
       state.time += dt;
       state.fireTimer -= dt;
       state.enemyFireTimer -= dt;
+      state.waveBanner = Math.max(0, state.waveBanner - dt);
       if (state.shake > 0) state.shake = Math.max(0, state.shake - dt * 24);
 
       const p = state.player;
@@ -793,6 +1117,19 @@
       if (keys.ArrowRight || keys.d) dx += 1;
       if (keys.ArrowUp || keys.w) dy -= 1;
       if (keys.ArrowDown || keys.s) dy += 1;
+      let padFire = false;
+      let padParry = false;
+      let padNova = false;
+      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      const pad = pads && pads[0];
+      if (pad) {
+        const deadzone = value => Math.abs(value || 0) > 0.16 ? value : 0;
+        dx += deadzone(pad.axes[0]);
+        dy += deadzone(pad.axes[1]);
+        padFire = Boolean(pad.buttons[0] && pad.buttons[0].pressed);
+        padParry = Boolean(pad.buttons[1] && pad.buttons[1].pressed);
+        padNova = Boolean(pad.buttons[2] && pad.buttons[2].pressed);
+      }
       if (pointer) {
         const rect = canvas.getBoundingClientRect();
         const px = (pointer.x - rect.left) / rect.width * w();
@@ -800,38 +1137,64 @@
         dx += Math.max(-1, Math.min(1, (px - p.x) / 80));
         dy += Math.max(-1, Math.min(1, (py - p.y) / 80));
       }
-      const mag = Math.hypot(dx, dy) || 1;
+      const rawMag = Math.hypot(dx, dy);
+      const mag = rawMag || 1;
+      p.inputX = rawMag ? dx / mag : p.inputX * 0.72;
+      p.inputY = rawMag ? dy / mag : p.inputY * 0.72;
       p.x = Math.max(22, Math.min(w() - 22, p.x + dx / mag * p.speed * dt));
-      p.y = Math.max(h() * 0.55, Math.min(h() - 28, p.y + dy / mag * p.speed * dt));
+      p.y = Math.max(h() * 0.55, Math.min(h() - 72, p.y + dy / mag * p.speed * dt));
 
-      if ((keys[" "] || pointer) && state.fireTimer <= 0) {
+      if ((keys[" "] || pointer || padFire) && state.fireTimer <= 0) {
         fire();
         state.fireTimer = p.cooldown;
       }
+      if ((keys.e || keys.E || keys.Shift || padParry) && state.swarmDirector.parryCooldown <= 0) {
+        triggerQuantumParry();
+      }
+      if ((keys.q || keys.Q || padNova) && state.swarmDirector.novaEnergy >= 35) {
+        triggerNovaBreaker();
+      }
 
+      const pendingSplitterChildren = [];
       for (const e of state.enemies) {
         if (e.flash > 0) e.flash = Math.max(0, e.flash - dt * 4);
+        if (e.spawnGrace > 0) e.spawnGrace = Math.max(0, e.spawnGrace - dt);
+        e.attackClock = (e.attackClock || 0) - dt;
         const drift = Math.sin(state.time * (1.2 + state.wave * 0.04) + e.phase) * (26 + state.wave * 1.5);
-        if (e.type === "diver" && !e.dive && Math.random() < dt * 0.12) e.dive = true;
+        if (e.type === "diver" && !e.dive && e.attackClock <= 0 && e.telegraph <= 0) {
+          e.telegraph = 0.72;
+          e.attackClock = 4.4 + (e.phase % 2.3);
+        }
+        if (e.telegraph > 0) {
+          e.telegraph = Math.max(0, e.telegraph - dt);
+          if (e.telegraph === 0) e.dive = true;
+        }
         if (e.dive) {
-          e.y += (90 + state.wave * 12) * dt;
-          e.x += Math.sin(state.time * 5 + e.phase) * 80 * dt;
-          if (e.y > h() - 120) e.dive = false;
+          e.y += (118 + state.wave * 13) * dt;
+          e.x += Math.sin(state.time * 5 + e.phase) * 92 * dt;
+          if (e.y > h() - 112) {
+            e.dive = false;
+            e.y = e.oy;
+            e.attackClock = 3.8 + (e.phase % 2.1);
+          }
         } else {
-          e.x = e.ox + drift;
-          e.y = e.oy + Math.sin(state.time * 1.7 + e.phase) * 8 + state.wave * 2;
+          const houseDrift = e.type === "shield" ? drift * 0.34 : e.type === "splitter" ? Math.sin(state.time * 1.46 + e.phase) * 36 : drift;
+          e.x = e.ox + houseDrift;
+          e.y = e.oy + Math.sin(state.time * (e.type === "drone" ? 2.7 : 1.7) + e.phase) * (e.type === "shield" ? 4 : 8) + state.wave * 2;
         }
         if (e.type === "overlord") {
           e.x = w() / 2 + Math.sin(state.time * 0.9) * Math.min(210, w() * 0.28);
         }
-        if (dist(e, p) < e.r + p.r) {
+        if ((e.spawnGrace || 0) <= 0 && dist(e, p) < e.r + p.r) {
           e.hp = 0;
+          if (e.type === "splitter") spawnSplitterChildren(e, pendingSplitterChildren);
           hitPlayer(e.type === "overlord" ? 48 : 22);
         }
       }
 
-      if (state.enemyFireTimer <= 0 && state.enemies.length) {
-        const shooter = state.enemies[Math.floor(Math.random() * state.enemies.length)];
+      const readyShooters = state.enemies.filter(enemy => enemy.hp > 0 && (enemy.spawnGrace || 0) <= 0);
+      if (state.enemyFireTimer <= 0 && readyShooters.length) {
+        const shooter = readyShooters[Math.floor(Math.random() * readyShooters.length)];
         const aim = Math.atan2(p.y - shooter.y, p.x - shooter.x);
         state.enemyBullets.push({ x: shooter.x, y: shooter.y + shooter.r, vx: Math.cos(aim) * 180, vy: Math.sin(aim) * 180, r: shooter.type === "overlord" ? 7 : 5, color: shooter.color });
         state.enemyFireTimer = Math.max(0.24, 1.1 - state.wave * 0.05);
@@ -850,29 +1213,45 @@
       for (const b of state.bullets) {
         for (const e of state.enemies) {
           if (e.hp > 0 && dist(b, e) < b.r + e.r) {
-            b.dead = true;
-            e.hp -= 1;
+            if (!b.isPiercing) b.dead = true;
+            const dmg = b.damage || 1;
+            e.hp -= dmg;
             e.flash = 1;
             addParticles(e.x, e.y, e.color, 8);
             if (e.hp <= 0) {
               playSfx("explode", 0.3);
-              state.score += e.value;
-              state.credits += e.type === "overlord" ? 5 : 1;
-              if (Math.random() < 0.1) state.powerups.push({ x: e.x, y: e.y, vx: 0, vy: 120, r: 8, kind: "shield", color: palettes[state.sector][2] });
+              state.score += e.value * (b.isParried ? 2 : 1);
+              state.credits += typeof e.creditValue === "number" ? e.creditValue : e.type === "overlord" ? 5 : 1;
+              state.swarmDirector.killStreak++;
+              state.swarmDirector.novaEnergy = Math.min(100, state.swarmDirector.novaEnergy + (e.type === "overlord" ? 30 : 6));
+              if (e.type === "splitter") spawnSplitterChildren(e, pendingSplitterChildren);
+              if (e.type !== "splitter-child" && Math.random() < 0.1) state.powerups.push({ x: e.x, y: e.y, vx: 0, vy: 120, r: 8, kind: "shield", color: palettes[state.sector][2] });
             }
           }
         }
       }
+      if (pendingSplitterChildren.length) state.enemies.push(...pendingSplitterChildren);
       state.enemies = state.enemies.filter(e => e.hp > 0 && e.y < h() + 80);
       state.bullets = state.bullets.filter(b => !b.dead && b.y > -30 && b.x > -40 && b.x < w() + 40);
 
       for (const b of state.enemyBullets) {
+        if (state.swarmDirector && state.swarmDirector.parryActive > 0 && dist(b, p) < p.r * 3.4) {
+          b.dead = true;
+          deflectBullet(b);
+          continue;
+        }
         if (dist(b, p) < b.r + p.r) {
           b.dead = true;
           hitPlayer(18);
         }
       }
       state.enemyBullets = state.enemyBullets.filter(b => !b.dead && b.y < h() + 40 && b.x > -40 && b.x < w() + 40);
+
+      for (const fn of floatingNotices) {
+        fn.y -= dt * 32;
+        fn.life -= dt;
+      }
+      floatingNotices = floatingNotices.filter(fn => fn.life > 0);
 
       for (const u of state.powerups) {
         if (dist(u, p) < u.r + p.r) {
@@ -923,12 +1302,108 @@
       drawSectorArchitecture(colors, width, height);
       drawStars(colors, width, height);
       drawPlayer(colors);
+      if (state.swarmDirector && state.swarmDirector.parryActive > 0) {
+        drawParryVortex(state.player, colors);
+      }
       state.enemies.forEach(e => drawEnemy(e));
       state.bullets.forEach(b => drawCircle(b, true));
       state.enemyBullets.forEach(b => drawCircle(b, true));
       state.powerups.forEach(u => drawShieldPowerup(u));
       state.particles.forEach(p => drawParticle(p));
+      drawFloatingNotices();
+      drawWaveBanner(colors, width);
       drawCockpitGlass(colors, width, height);
+      drawSwarmDirectorHud(width, height);
+      ctx.restore();
+    }
+
+    function drawParryVortex(p, colors) {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      const radius = p.r * 3.4;
+      const spin = state.time * 12;
+      ctx.rotate(spin);
+      ctx.shadowColor = "#2fe6ff";
+      ctx.shadowBlur = 24;
+      ctx.strokeStyle = "#2fe6ff";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.strokeStyle = "#ffe45c";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a = (i * Math.PI) / 3;
+        ctx.moveTo(Math.cos(a) * (radius * 0.7), Math.sin(a) * (radius * 0.7));
+        ctx.lineTo(Math.cos(a) * (radius * 1.15), Math.sin(a) * (radius * 1.15));
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawFloatingNotices() {
+      if (!floatingNotices.length) return;
+      ctx.save();
+      ctx.textAlign = "center";
+      ctx.font = "900 12px Segoe UI, sans-serif";
+      for (const fn of floatingNotices) {
+        ctx.globalAlpha = Math.max(0, Math.min(1, fn.life * 1.5));
+        ctx.fillStyle = fn.color;
+        ctx.shadowColor = fn.color;
+        ctx.shadowBlur = 10;
+        ctx.fillText(fn.text, fn.x, fn.y);
+      }
+      ctx.restore();
+    }
+
+    function drawSwarmDirectorHud(width, height) {
+      const dir = state.swarmDirector;
+      if (!dir) return;
+      ctx.save();
+      ctx.textAlign = "left";
+      ctx.font = "10px Courier New, monospace";
+      const tensionColor = dir.tension > 70 ? "#ff48b0" : (dir.tension > 40 ? "#ffe45c" : "#2fe6ff");
+      ctx.fillStyle = tensionColor;
+      ctx.shadowColor = tensionColor;
+      ctx.shadowBlur = 8;
+      ctx.fillText(`AI DIRECTOR [${dir.state}] ${Math.round(dir.tension)}% · ${dir.decisionLatencyUs.toFixed(3)}µs`, 16, 22);
+
+      // Tension mini-bar
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "rgba(255,255,255,0.14)";
+      ctx.fillRect(16, 26, 170, 4);
+      ctx.fillStyle = tensionColor;
+      ctx.fillRect(16, 26, 170 * (dir.tension / 100), 4);
+
+      // Nova Breaker gauge on right
+      ctx.textAlign = "right";
+      const novaReady = dir.novaEnergy >= 35;
+      ctx.fillStyle = novaReady ? "#ffe45c" : "#7d8b99";
+      ctx.fillText(`NOVA BREAKER [Q]: ${Math.round(dir.novaEnergy)}%`, width - 16, 22);
+      ctx.fillStyle = "rgba(255,255,255,0.14)";
+      ctx.fillRect(width - 186, 26, 170, 4);
+      ctx.fillStyle = novaReady ? "#ffe45c" : "#7d8b99";
+      ctx.fillRect(width - 186, 26, 170 * (dir.novaEnergy / 100), 4);
+      ctx.restore();
+    }
+
+    function drawWaveBanner(colors, width) {
+      if (!state.waveBanner) return;
+      const alpha = Math.min(1, state.waveBanner) * Math.min(1, (2.4 - state.waveBanner) * 4);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.textAlign = "center";
+      ctx.shadowColor = colors[0];
+      ctx.shadowBlur = 18;
+      ctx.fillStyle = "#fff4d8";
+      ctx.font = "900 18px Segoe UI, sans-serif";
+      ctx.fillText("WAVE " + state.wave + " // " + state.formation.toUpperCase(), width / 2, 38);
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = colors[2];
+      ctx.font = "800 10px Segoe UI, sans-serif";
+      ctx.fillText(state.wave % 4 === 0 ? "NOVA SOVEREIGN ENTERING" : "HOSTILE HOUSES LOCKED", width / 2, 55);
       ctx.restore();
     }
 
@@ -1123,12 +1598,32 @@
       if (heroImgReady && heroImg.naturalWidth) {
         const bob = Math.sin(state.time * 3) * 2;
         const breathe = 1 + Math.sin(state.time * 6) * 0.02;
-        const dw = 72 * breathe;
-        const dh = dw * (heroImg.naturalHeight / heroImg.naturalWidth);
+        const atlasCols = 3;
+        const atlasRows = 2;
+        const sw = heroImg.naturalWidth / atlasCols;
+        const sh = heroImg.naturalHeight / atlasRows;
+        let atlasCol = 0;
+        let atlasRow = 0;
+        if (state.shield <= 35) {
+          atlasCol = 1;
+          atlasRow = 1;
+        } else if (state.fireTimer > Math.max(0.035, p.cooldown * 0.58)) {
+          atlasCol = 0;
+          atlasRow = 1;
+        } else if (p.inputY < -0.42) {
+          atlasCol = 2;
+          atlasRow = 1;
+        } else if (p.inputX < -0.18) {
+          atlasCol = 1;
+        } else if (p.inputX > 0.18) {
+          atlasCol = 2;
+        }
+        const dw = 118 * breathe;
+        const dh = 118 * breathe;
         ctx.save();
         ctx.translate(p.x, p.y + bob);
-        if (els.glowToggle.checked) { ctx.shadowColor = colors[0]; ctx.shadowBlur = 26; }
-        ctx.drawImage(heroImg, -dw / 2, -dh / 2, dw, dh);
+        if (els.glowToggle.checked) { ctx.shadowColor = colors[0]; ctx.shadowBlur = 18; }
+        ctx.drawImage(heroImg, atlasCol * sw, atlasRow * sh, sw, sh, -dw / 2, -dh / 2, dw, dh);
         ctx.restore();
         if (state.upgrades.drone > 0) {
           drawFacetDiamond(p.x - 34, p.y + 7, 10, colors[3], state.time * 2);
@@ -1192,6 +1687,7 @@
     function drawEnemy(e) {
       const pulse = 0.92 + Math.sin(state.time * 4 + e.x * 0.03) * 0.08;
       const boss = e.type === "overlord";
+      if (enemyAtlasReady && drawEnemyAtlas(e, boss, pulse)) return;
       const wing = e.r * (boss ? 1.86 : 1.32);
       const hull = e.r * (boss ? 1.22 : 0.86);
       ctx.save();
@@ -1294,7 +1790,7 @@
         }
         ctx.closePath();
         ctx.stroke();
-      } else if (e.type === "splitter") {
+      } else if (e.type === "splitter" || e.type === "splitter-child") {
         drawFacetDiamond(0, hull * 0.16, hull * 0.28, e.color, state.time * 2);
       } else if (e.type === "diver") {
         ctx.strokeStyle = "rgba(255,255,255,.42)";
@@ -1336,6 +1832,68 @@
       ctx.restore();
     }
 
+    function drawEnemyAtlas(e, boss, pulse) {
+      const house = ENEMY_HOUSES[e.type];
+      if (!house || !enemyAtlas.naturalWidth || !enemyAtlas.naturalHeight) return false;
+      const sw = enemyAtlas.naturalWidth / 3;
+      const sh = enemyAtlas.naturalHeight / 2;
+      const size = e.r * house.scale * (boss ? 1.18 : 1) * pulse;
+      const squash = e.type === "diver" ? 1.08 : e.type === "shield" ? 0.94 : 1;
+      ctx.save();
+      ctx.translate(e.x, e.y);
+      const bank = e.dive ? Math.sin(state.time * 5 + e.phase) * 0.32 : Math.sin(state.time * 1.8 + e.phase) * 0.08;
+      ctx.rotate(bank);
+      if (els.glowToggle.checked) {
+        ctx.shadowColor = e.color;
+        ctx.shadowBlur = boss ? 34 : 16;
+      }
+      if (e.telegraph > 0) {
+        ctx.globalAlpha = 0.62 + Math.sin(state.time * 22) * 0.26;
+        ctx.strokeStyle = "#ff48b0";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, size * 0.2);
+        ctx.lineTo(0, Math.min(h() - e.y, size * 2.4));
+        ctx.stroke();
+      }
+      ctx.globalAlpha = (e.spawnGrace || 0) > 0 ? 0.72 : 1;
+      ctx.drawImage(enemyAtlas, house.cell[0] * sw, house.cell[1] * sh, sw, sh, -size / 2, -size * squash / 2, size, size * squash);
+      if (e.type === "shield") {
+        ctx.shadowBlur = 8;
+        ctx.strokeStyle = "rgba(47,230,255,.78)";
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i += 1) {
+          const angle = -Math.PI / 2 + i * Math.PI / 3 + state.time * 0.16;
+          const px = Math.cos(angle) * size * 0.42;
+          const py = Math.sin(angle) * size * 0.36;
+          if (!i) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.stroke();
+      }
+      if (boss) {
+        ctx.globalAlpha = 0.32;
+        ctx.strokeStyle = "#ffe45c";
+        ctx.lineWidth = 2;
+        for (let ring = 0; ring < 3; ring += 1) {
+          ctx.beginPath();
+          ctx.ellipse(0, 0, size * (0.48 + ring * 0.08), size * (0.29 + ring * 0.05), state.time * 0.08, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+      if (e.flash > 0) {
+        ctx.globalCompositeOperation = "lighter";
+        ctx.globalAlpha = Math.min(1, e.flash) * 0.7;
+        ctx.fillStyle = "#fff";
+        ctx.beginPath();
+        ctx.arc(0, 0, size * 0.28, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+      return true;
+    }
+
     function drawEnemyHardware(e, hull, wing, boss) {
       ctx.save();
       ctx.globalCompositeOperation = "source-over";
@@ -1361,7 +1919,7 @@
           ctx.stroke();
           ctx.restore();
         }
-      } else if (e.type === "splitter") {
+      } else if (e.type === "splitter" || e.type === "splitter-child") {
         for (const side of [-1, 1]) {
           ctx.save();
           ctx.translate(side * wing * 0.72, -hull * 0.06);
@@ -1532,6 +2090,8 @@
         title: "Hypernova Swarm Run Receipt",
         reason,
         sector: state.sector,
+        formation: state.formation,
+        enemy_houses: Object.values(ENEMY_HOUSES).map(house => house.name),
         score: state.score,
         wave: state.wave,
         credits: state.credits,
@@ -1557,7 +2117,7 @@
     function resetAttract() {
       state = baseState();
       state.sector = els.sectorSelect.value;
-      showOverlay("Hypernova Swarm", "Move with WASD or arrows. Fire with Space. Survive formation waves, collect credits, and upgrade between sectors.", "Start Run");
+      showOverlay("Hypernova Swarm", "Move with WASD, arrows, touch, or gamepad. Fire with Space or A. Read each formation, break six hostile houses, collect credits, and upgrade between sectors.", "Start Run");
       logRows = [];
       log("ATTRACT // cabinet ready.");
       updateUi();
@@ -1568,6 +2128,14 @@
     });
     document.querySelector("#startBtn2").addEventListener("click", startRun);
     document.querySelector("#pauseBtn").addEventListener("click", pause);
+    document.querySelector("#parryBtn").addEventListener("click", () => {
+      chipResume();
+      triggerQuantumParry();
+    });
+    document.querySelector("#novaBtn").addEventListener("click", () => {
+      chipResume();
+      triggerNovaBreaker();
+    });
     document.querySelector("#receiptBtn").addEventListener("click", () => { chip("blip"); exportReceipt(); });
     document.querySelector("#resetBtn").addEventListener("click", () => { chip("blip"); stopMusic(); resetAttract(); });
     els.upgrades.addEventListener("click", event => {
@@ -1586,6 +2154,8 @@
       keys[event.key.length === 1 ? event.key.toLowerCase() : event.key] = true;
       if (event.key === " " || event.key === "ArrowUp" || event.key === "ArrowDown") event.preventDefault();
       if (event.key.toLowerCase() === "p") pause();
+      if (event.key.toLowerCase() === "e" || event.key === "Shift") triggerQuantumParry();
+      if (event.key.toLowerCase() === "q") triggerNovaBreaker();
     }, { passive: false });
     window.addEventListener("keyup", event => {
       keys[event.key.length === 1 ? event.key.toLowerCase() : event.key] = false;
@@ -1601,9 +2171,37 @@
     canvas.addEventListener("pointerup", () => { pointer = null; });
     window.addEventListener("resize", resize);
 
+    function hypernovaPayload() {
+      return {
+        score: state.score,
+        wave: state.wave,
+        lives: state.lives,
+        shield: Math.round(state.shield),
+        credits: state.credits,
+        mode: state.mode,
+        enemies: state.enemies.filter(e => e.hp > 0).length,
+        bullets: state.bullets.length,
+        swarmDirector: state.swarmDirector ? {
+          state: state.swarmDirector.state,
+          tension: Math.round(state.swarmDirector.tension),
+          decisionLatencyUs: state.swarmDirector.decisionLatencyUs,
+          parryCount: state.swarmDirector.parryCount,
+          novaEnergy: Math.round(state.swarmDirector.novaEnergy)
+        } : null
+      };
+    }
+    window.hypernovaPayload = hypernovaPayload;
+    window.__hypernovaDebug = {
+      payload: hypernovaPayload,
+      triggerParry: () => { triggerQuantumParry(); return true; },
+      triggerNova: () => { triggerNovaBreaker(); return true; },
+      setTension: (val) => { if (state.swarmDirector) state.swarmDirector.tension = val; },
+      startRun: () => { startRun(); return hypernovaPayload(); }
+    };
+
     resize();
     resetAttract();
-    if (new URLSearchParams(window.location.search).has("playtest")) {
+    if (PLAYTEST_MODE) {
       window.setTimeout(startRun, 160);
     }
     requestAnimationFrame(frame);

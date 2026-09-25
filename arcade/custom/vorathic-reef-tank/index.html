@@ -1,18 +1,47 @@
 <!DOCTYPE html>
-<html><head><meta charset="UTF-8">
-<title>Vorathic Reef Tank — Living Periodic Table</title>
+<html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#02050c">
+<title>VORATH REEF COVENANT // THREE-PRESSURE CONSERVATORY</title>
 <style>
-* { margin: 0; padding: 0; }
-body { overflow: hidden; background: #000; }
-canvas { display: block; width: 100vw; height: 100vh; }
-#info {
-  position: fixed; bottom: 10px; left: 10px; color: #c9a84c44;
-  font: 10px monospace; pointer-events: none; z-index: 10;
-}
+:root{--gold:#f7ce66;--cyan:#66f7ed;--violet:#ad7cff;--pink:#ff5da8;--ink:#02050c;--zone:#ffae55;--zone2:#ffe27a}
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#000;color:#f8f4e8;font-family:Inter,Segoe UI,Arial,sans-serif}
+canvas{display:block}
+#c{position:fixed;inset:0;width:100vw;height:100vh;z-index:0}
+#reef-tint{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(circle at 50% 55%,color-mix(in srgb,var(--zone) 12%,transparent),transparent 42%),linear-gradient(180deg,rgba(0,0,0,.04),rgba(0,0,0,.18));transition:background .7s}
+#architecture{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:.48;transition:.7s}
+#architecture::before,#architecture::after{content:"";position:absolute;border:1px solid color-mix(in srgb,var(--zone) 48%,transparent);filter:drop-shadow(0 0 12px color-mix(in srgb,var(--zone) 28%,transparent));transition:.7s}
+body[data-zone="0"]{--zone:#ff9a4f;--zone2:#ffe274}body[data-zone="0"] #architecture::before{left:8%;right:8%;bottom:-26%;height:62%;border-radius:50% 50% 0 0;background:repeating-radial-gradient(ellipse at 50% 100%,transparent 0 46px,rgba(255,190,87,.1) 47px 48px)}body[data-zone="0"] #architecture::after{inset:11% 14% auto;height:14%;clip-path:polygon(0 100%,9% 0,18% 100%,28% 10%,38% 100%,50% 0,62% 100%,72% 10%,82% 100%,91% 0,100% 100%);background:linear-gradient(180deg,transparent,var(--zone));border:0}
+body[data-zone="1"]{--zone:#59f2ff;--zone2:#b47bff}body[data-zone="1"] #architecture::before{width:58vmin;height:58vmin;left:50%;top:51%;transform:translate(-50%,-50%) rotate(45deg);background:repeating-linear-gradient(45deg,transparent 0 34px,rgba(89,242,255,.12) 35px 36px),repeating-linear-gradient(-45deg,transparent 0 34px,rgba(180,123,255,.12) 35px 36px)}body[data-zone="1"] #architecture::after{inset:8%;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%,50% 0,50% 12%,12% 50%,50% 88%,88% 50%,50% 12%);background:linear-gradient(135deg,var(--zone),var(--zone2));opacity:.25}
+body[data-zone="2"]{--zone:#bf7cff;--zone2:#ff58a7}body[data-zone="2"] #architecture::before{inset:8% 13%;border-radius:48% 52% 46% 54%;background:repeating-radial-gradient(ellipse at 50% 50%,transparent 0 54px,rgba(191,124,255,.12) 55px 57px)}body[data-zone="2"] #architecture::after{left:5%;right:5%;bottom:0;height:48%;border:0;background:repeating-linear-gradient(78deg,transparent 0 7%,rgba(255,88,167,.12) 7.4% 7.7%,transparent 8% 14%);clip-path:polygon(0 100%,3% 30%,7% 100%,12% 8%,17% 100%,23% 38%,28% 100%,35% 2%,43% 100%,52% 24%,59% 100%,66% 10%,73% 100%,81% 38%,88% 100%,94% 6%,100% 100%)}
+#gameplay{position:fixed;inset:0;width:100vw;height:100vh;z-index:3;touch-action:none;cursor:crosshair}
+#boot{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;background:#01030a;transition:opacity .65s}
+#boot.done{opacity:0;pointer-events:none}.boot-core{text-align:center}.boot-eye{width:110px;height:64px;margin:0 auto 18px;border:2px solid var(--gold);border-radius:70% 12%;transform:rotate(45deg);display:grid;place-items:center;box-shadow:0 0 40px rgba(247,206,102,.3)}.boot-eye::after{content:"";width:32px;height:32px;border-radius:50%;background:radial-gradient(circle,#fff 0 11%,var(--cyan) 12% 35%,#05050b 37% 100%);box-shadow:0 0 24px var(--cyan)}#boot h1{margin:0;color:var(--gold);font:700 clamp(20px,4vw,36px) Georgia,serif;letter-spacing:.14em}#boot p{color:var(--cyan);font-size:10px;letter-spacing:.25em;text-transform:uppercase}
+#hud{position:fixed;z-index:5;inset:0;pointer-events:none;padding:12px;display:flex;flex-direction:column;justify-content:space-between}
+.topbar,.bottombar{display:flex;align-items:stretch;gap:8px}.glass{border:1px solid color-mix(in srgb,var(--zone) 50%,#444);background:linear-gradient(145deg,rgba(3,7,16,.9),rgba(10,8,24,.78));box-shadow:0 10px 32px rgba(0,0,0,.34),inset 0 0 22px color-mix(in srgb,var(--zone) 6%,transparent);backdrop-filter:blur(10px)}
+.back{pointer-events:auto;min-width:94px;min-height:56px;display:grid;place-items:center;border-radius:5px;color:var(--cyan);text-decoration:none;font-size:10px;font-weight:800;letter-spacing:.12em}
+.title-card{flex:1;padding:10px 14px;border-radius:5px}.title-card h1{margin:0;color:#fff1c9;font:700 clamp(17px,2.3vw,27px) Georgia,serif;letter-spacing:.09em}.title-card p{margin:5px 0 0;color:var(--zone);font-size:9px;letter-spacing:.2em;text-transform:uppercase}
+.metrics{min-width:290px;display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding:8px;border-radius:5px}.metric{text-align:center;color:#8f9aae;font-size:8px;letter-spacing:.13em;text-transform:uppercase}.metric b{display:block;margin-top:5px;color:var(--gold);font-size:16px}
+.zone-tabs{position:fixed;z-index:6;top:84px;left:50%;width:min(760px,calc(100% - 26px));transform:translateX(-50%);display:grid;grid-template-columns:repeat(3,1fr);gap:6px;pointer-events:auto}
+button.zone-tab{min-height:58px!important;padding:7px;border:1px solid rgba(255,255,255,.16);border-radius:5px;background:rgba(3,7,16,.84);color:#8995a9;cursor:pointer;text-align:left;backdrop-filter:blur(9px)}button.zone-tab.active{color:#fff;border-color:var(--zone);box-shadow:0 0 20px color-mix(in srgb,var(--zone) 23%,transparent)}.zone-tab b{display:block;color:var(--zone);font:700 14px Georgia,serif;letter-spacing:.08em}.zone-tab small{display:block;margin-top:4px;font-size:8px;letter-spacing:.12em;text-transform:uppercase}
+.keeper-card{width:min(330px,38vw);padding:12px 14px;border-radius:7px;align-self:end}.keeper-card .kicker{color:var(--zone);font-size:8px;letter-spacing:.23em;text-transform:uppercase}.keeper-card h2{margin:5px 0;color:#fff2c9;font:700 20px Georgia,serif;letter-spacing:.08em}.keeper-card p{margin:0;color:#aeb8c8;font-size:10px;line-height:1.45}.power-line{margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.1);color:var(--zone);font:700 13px Georgia,serif}.power-line span{display:block;margin-top:4px;color:#9ba6b9;font:400 9px Arial,sans-serif}
+.action-stack{pointer-events:auto;display:flex;gap:7px;align-items:end;margin-left:auto}button.action{min-width:116px;min-height:58px!important;border:1px solid var(--zone);border-radius:5px;background:linear-gradient(145deg,color-mix(in srgb,var(--zone) 20%,#080b16),#050711);color:#fff1c9;font-weight:900;font-size:11px;letter-spacing:.11em;text-transform:uppercase;cursor:pointer;box-shadow:0 0 18px color-mix(in srgb,var(--zone) 14%,transparent)}.action:disabled{opacity:.35;cursor:not-allowed}.action small{display:block;margin-top:4px;color:var(--zone);font-size:8px}
+.legend{width:220px;padding:9px 12px;border-radius:5px;color:#8d98ab;font-size:8px;line-height:1.6;letter-spacing:.08em;text-transform:uppercase}.legend b{color:var(--gold)}
+#toast{position:fixed;z-index:7;left:50%;top:160px;transform:translateX(-50%);min-width:260px;max-width:70vw;padding:9px 16px;border:1px solid color-mix(in srgb,var(--zone) 45%,transparent);border-radius:999px;background:rgba(2,5,12,.78);color:#fff1ca;text-align:center;font:700 12px Georgia,serif;pointer-events:none;opacity:0;transition:.25s opacity,.25s transform}#toast.show{opacity:1;transform:translateX(-50%) translateY(5px)}
+.simulation{position:fixed;z-index:5;right:14px;top:154px;color:#6fffd0;font-size:8px;letter-spacing:.18em;text-transform:uppercase;pointer-events:none}
+@media(max-width:700px){#hud{padding:6px 6px 72px}.topbar{gap:5px}.back{min-width:70px;min-height:56px}.title-card{padding:8px}.title-card h1{font-size:15px}.title-card p{font-size:7px;letter-spacing:.1em}.metrics{position:fixed;left:6px;right:6px;top:136px;min-width:0;height:54px}.zone-tabs{top:75px;width:calc(100% - 12px);gap:4px}button.zone-tab{min-height:58px!important;padding:5px;text-align:center}.zone-tab b{font-size:10px}.zone-tab small{font-size:6px;line-height:1.25}.simulation{top:194px;right:8px;font-size:6px}.bottombar{display:grid;grid-template-columns:1fr 1fr;gap:5px}.keeper-card{grid-column:1/-1;width:100%;padding:8px 10px}.keeper-card h2{font-size:16px;margin:3px 0}.keeper-card p{display:none}.power-line{margin-top:4px;padding-top:4px}.legend{display:none}.action-stack{display:contents}.action{min-width:0;width:100%;min-height:58px!important}#toast{top:205px;font-size:10px}.title-card h1{max-width:230px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head><body>
-<canvas id="c"></canvas>
-<div id="info">VORATHIC REEF TANK — Living Periodic Table — Each organism is an element</div>
+<canvas id="c" aria-hidden="true"></canvas><div id="reef-tint"></div><div id="architecture"></div><canvas id="gameplay" aria-label="VORATH Reef Covenant playfield"></canvas>
+<div id="boot"><div class="boot-core"><div class="boot-eye"></div><h1>REEF COVENANT</h1><p>Calyx is descending through the living table</p></div></div>
+<div id="hud">
+  <div class="topbar"><a class="back glass" href="/arcade">&larr; ARCADE</a><div class="title-card glass"><h1>VORATH REEF COVENANT</h1><p>Three-Pressure Conservatory // Calyx, Keeper of Living Elements</p></div><div class="metrics glass"><div class="metric">Specimens<b id="specimens">0/9</b></div><div class="metric">Integrity<b id="integrity">100</b></div><div class="metric">Chain<b id="chain">x1</b></div></div></div>
+  <div class="bottombar"><div class="keeper-card glass"><div class="kicker" id="zone-kicker">Pressure I // Aurora Shallows</div><h2 id="regalia-name">Censer Polyp Regalia</h2><p id="zone-copy">A warm nursery of salt-lantern coral where Calyx blooms into a many-armed reef tender.</p><div class="power-line" id="power-name">Feed Bloom<span id="power-copy">Pull every nearby nutrient specimen toward the keeper.</span></div></div><div class="legend glass"><b>Move</b> WASD / arrows / left stick<br><b>Dash</b> Space / A button<br><b>Regalia</b> R / X button<br><b>Zones</b> 1 2 3 / LB RB</div><div class="action-stack"><button class="action" id="power-btn">Invoke Regalia<small>R / X</small></button><button class="action" id="dash-btn">Current Dash<small>SPACE / A</small></button></div></div>
+</div>
+<nav class="zone-tabs" aria-label="Reef pressure zones"><button class="zone-tab active" data-zone="0"><b>Aurora Shallows</b><small>Censer Polyp // Feed Bloom</small></button><button class="zone-tab" data-zone="1"><b>Prism Thermocline</b><small>Prism Manta // Refraction School</small></button><button class="zone-tab" data-zone="2"><b>Null Abyss</b><small>Veil Angler // Pressure Lure</small></button></nav>
+<div class="simulation">Research simulation // no purchase // no cash value</div><div id="toast"></div>
 <script>
 const c = document.getElementById('c');
 const gl = c.getContext('webgl2') || c.getContext('webgl');
@@ -24,6 +53,7 @@ const fs = `
 precision highp float;
 uniform float t;
 uniform vec2 r;
+uniform float z;
 
 #define PI 3.14159265359
 #define TAU 6.28318530718
@@ -268,7 +298,11 @@ void main() {
 
     // Deep ocean gradient (force: black_void -> deep blue)
     float depth = uv.y*.5+.5;
-    col += mix(vec3(.01,.02,.05), vec3(.02,.05,.12), depth);
+    vec3 zoneDeep = mix(vec3(.01,.02,.05), vec3(.02,.05,.12), depth);
+    vec3 shallow = mix(vec3(.08,.025,.01), vec3(.02,.09,.11), depth);
+    vec3 prism = mix(vec3(.015,.035,.08), vec3(.055,.025,.11), depth);
+    vec3 abyss = mix(vec3(.012,.004,.035), vec3(.035,.008,.06), depth);
+    col += z < .5 ? shallow : (z < 1.5 ? prism : abyss);
 
     // Caustic light from above
     float caust = caustics(uv, t);
@@ -323,6 +357,9 @@ void main() {
     float border = smoothstep(.01,0., abs(abs(uv.x)-.48)) + smoothstep(.01,0., abs(abs(uv.y)-.48));
     col += border * vec3(.8,.7,.3) * .03 * (sin(t*.5)*.3+.7);
 
+    if(z < .5) col += vec3(.08,.025,.005) * (sin(uv.x*14.+t*.12)*.5+.5) * .12;
+    else if(z < 1.5) col = mix(col, col.bgr, .18 + .08*sin(t*.2));
+    else col *= .68 + .22*smoothstep(-.55,.45,uv.y);
     gl_FragColor = vec4(col, 1.);
 }`;
 
@@ -343,13 +380,61 @@ gl.enableVertexAttribArray(p); gl.vertexAttribPointer(p,2,gl.FLOAT,false,0,0);
 
 const tLoc=gl.getUniformLocation(prog,'t');
 const rLoc=gl.getUniformLocation(prog,'r');
+const zLoc=gl.getUniformLocation(prog,'z');
 
 function render(time){
     gl.uniform1f(tLoc,time*.001);
     gl.uniform2f(rLoc,c.width,c.height);
+    gl.uniform1f(zLoc,window.__reefZone||0);
     gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
     requestAnimationFrame(render);
 }
 requestAnimationFrame(render);
+
+// ===== THREE-PRESSURE GAME LAYER =====
+const TEST_MODE=new URLSearchParams(location.search).has('ns_test');
+const gc=document.getElementById('gameplay'),g=gc.getContext('2d');
+const ZONES=[
+  {name:'Aurora Shallows',ordinal:'I',regalia:'Censer Polyp Regalia',power:'Feed Bloom',mechanic:'Attract every nearby nutrient specimen for five seconds.',copy:'A warm nursery of salt-lantern coral where Calyx blooms into a many-armed reef tender.',powerCopy:'Pull every nearby nutrient specimen toward the keeper.',specimens:['SUN SALT','CORAL EMBER','PEARL CHARGE'],hazard:'CENSER URCHIN'},
+  {name:'Prism Thermocline',ordinal:'II',regalia:'Prism Manta Regalia',power:'Refraction School',mechanic:'Every specimen counts twice for six seconds.',copy:'A shearing mirror current where Calyx becomes a broad ray of cut crystal and living light.',powerCopy:'Refract each collected specimen into a doubled research record.',specimens:['MIRROR ION','GLASS BLOOM','RAY CURRENT'],hazard:'SHARD MEDUSA'},
+  {name:'Null Abyss',ordinal:'III',regalia:'Veil Angler Regalia',power:'Pressure Lure',mechanic:'Slow every abyssal rupture for six seconds.',copy:'A lightless pressure trench where Calyx grows a horned lure and veil-tendrils to audit the dark.',powerCopy:'Suspend abyssal hazards in a field of blackglass pressure.',specimens:['NULL SPORE','PRESSURE PEARL','VEIL LUMEN'],hazard:'VOID SIPHON'}
+];
+let zone=0,zoneProgress=[0,0,0],integrity=100,chain=1,score=0,powerUntil=0,dashUntil=0,invulnerableUntil=0;
+let regaliaUsed=[false,false,false],player={x:innerWidth*.5,y:innerHeight*.62,vx:0,vy:0,targetX:innerWidth*.5,targetY:innerHeight*.62,faceX:1,faceY:0},motes=[],hazards=[],keys=new Set(),pointerHeld=false,pointerTargetActive=false,lastTime=performance.now(),lastPad=[];
+let inputStats={keyboardActions:0,touchActions:0,gamepadActions:0,zoneTransitions:0,regaliaUses:0,dashes:0,collections:0};
+let audioCtx;
+function sound(kind){if(TEST_MODE)return;const A=window.AudioContext||window.webkitAudioContext;if(!audioCtx)audioCtx=new A();if(audioCtx&&audioCtx.state==="suspended")audioCtx.resume();const t=audioCtx.currentTime,notes=kind==='collect'?[540,810]:kind==='power'?[180,360,720]:kind==='hurt'?[180,110]:[300,600];notes.forEach((f,i)=>{const o=audioCtx.createOscillator(),a=audioCtx.createGain();o.connect(a);a.connect(audioCtx.destination);o.type=kind==='hurt'?'sawtooth':'sine';o.frequency.value=f;a.gain.setValueAtTime(.0001,t+i*.06);a.gain.exponentialRampToValueAtTime(.065,t+i*.06+.01);a.gain.exponentialRampToValueAtTime(.0001,t+i*.06+.14);o.start(t+i*.06);o.stop(t+i*.06+.16)})}
+function resizeGame(){const d=Math.min(devicePixelRatio||1,2);gc.width=Math.round(innerWidth*d);gc.height=Math.round(innerHeight*d);g.setTransform(d,0,0,d,0,0);player.x=Math.min(innerWidth-45,Math.max(45,player.x));player.y=Math.min(innerHeight-90,Math.max(160,player.y))}
+addEventListener('resize',resizeGame);resizeGame();
+function randomPoint(){return{x:70+Math.random()*Math.max(100,innerWidth-140),y:180+Math.random()*Math.max(100,innerHeight-310)}}
+function spawnField(){motes=[];hazards=[];for(let i=0;i<12;i++){const p=randomPoint();motes.push({...p,vx:(Math.random()-.5)*26,vy:(Math.random()-.5)*20,type:i%3,phase:Math.random()*6.28})}for(let i=0;i<5;i++){const p=randomPoint();hazards.push({...p,vx:(Math.random()-.5)*34,vy:(Math.random()-.5)*28,phase:Math.random()*6.28,size:22+Math.random()*15})}}
+function toast(text){const el=document.getElementById('toast');el.textContent=text;el.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('show'),1400)}
+function syncUI(){const z=ZONES[zone];document.body.dataset.zone=String(zone);window.__reefZone=zone;document.querySelectorAll('.zone-tab').forEach((b,i)=>b.classList.toggle('active',i===zone));document.getElementById('zone-kicker').textContent=`Pressure ${z.ordinal} // ${z.name}`;document.getElementById('regalia-name').textContent=z.regalia;document.getElementById('zone-copy').textContent=z.copy;document.getElementById('power-name').childNodes[0].nodeValue=z.power;document.getElementById('power-copy').textContent=z.powerCopy;document.getElementById('specimens').textContent=`${zoneProgress[zone]}/9`;document.getElementById('integrity').textContent=integrity;document.getElementById('chain').textContent=`x${chain}`;const p=document.getElementById('power-btn');p.disabled=regaliaUsed[zone];p.innerHTML=regaliaUsed[zone]?`${z.power} Spent<small>NEXT DESCENT</small>`:`Invoke Regalia<small>R / X</small>`;updateTelemetry()}
+function switchZone(index,source='pointer'){const next=(index+ZONES.length)%ZONES.length;if(next!==zone)inputStats.zoneTransitions++;zone=next;spawnField();player.x=innerWidth*.5;player.y=innerHeight*.62;player.targetX=player.x;player.targetY=player.y;pointerTargetActive=false;chain=1;syncUI();toast(`${ZONES[zone].name} // ${ZONES[zone].regalia}`);return true}
+function invokeRegalia(source='pointer'){if(regaliaUsed[zone])return false;regaliaUsed[zone]=true;inputStats.regaliaUses++;powerUntil=performance.now()+6000;sound('power');toast(`${ZONES[zone].power}: ${ZONES[zone].mechanic}`);syncUI();return true}
+function dash(source='pointer'){const now=performance.now();if(now<dashUntil)return false;dashUntil=now+850;inputStats.dashes++;let dx=player.faceX,dy=player.faceY;if(pointerTargetActive){dx=player.targetX-player.x;dy=player.targetY-player.y}const keyX=(keys.has('ARROWRIGHT')||keys.has('D')?1:0)-(keys.has('ARROWLEFT')||keys.has('A')?1:0),keyY=(keys.has('ARROWDOWN')||keys.has('S')?1:0)-(keys.has('ARROWUP')||keys.has('W')?1:0);if(keyX||keyY){dx=keyX;dy=keyY}const length=Math.hypot(dx,dy)||1;player.vx+=dx/length*520;player.vy+=dy/length*520;invulnerableUntil=now+280;sound('dash');updateTelemetry();return true}
+function collect(mote,index,now){const multiplier=zone===1&&now<powerUntil?2:1;zoneProgress[zone]=Math.min(9,zoneProgress[zone]+multiplier);chain=Math.min(9,chain+1);score+=100*chain*multiplier;inputStats.collections++;sound('collect');const p=randomPoint();motes[index]={...p,vx:(Math.random()-.5)*28,vy:(Math.random()-.5)*22,type:(mote.type+1)%3,phase:Math.random()*6.28};toast(`${ZONES[zone].specimens[mote.type]} catalogued${multiplier===2?' // refracted x2':''}`);if(zoneProgress[zone]>=9){toast(`${ZONES[zone].name} covenant complete`);setTimeout(()=>switchZone(zone+1,'progression'),TEST_MODE?30:1200)}syncUI()}
+function hurt(now){if(now<invulnerableUntil)return;invulnerableUntil=now+1200;integrity=Math.max(0,integrity-12);chain=1;sound('hurt');toast(`${ZONES[zone].hazard} breaches integrity`);if(integrity<=0){integrity=100;zoneProgress[zone]=Math.max(0,zoneProgress[zone]-2);player.x=innerWidth*.5;player.y=innerHeight*.62;toast('Calyx reforms at the covenant seal')}syncUI()}
+function update(dt,now){let ix=(keys.has('ARROWRIGHT')||keys.has('D')?1:0)-(keys.has('ARROWLEFT')||keys.has('A')?1:0),iy=(keys.has('ARROWDOWN')||keys.has('S')?1:0)-(keys.has('ARROWUP')||keys.has('W')?1:0);const pad=navigator.getGamepads?.()[0];if(pad){if(Math.abs(pad.axes[0]||0)>.15)ix=pad.axes[0];if(Math.abs(pad.axes[1]||0)>.15)iy=pad.axes[1]}if(ix||iy){pointerTargetActive=false;const l=Math.hypot(ix,iy)||1;player.faceX=ix/l;player.faceY=iy/l;player.vx+=player.faceX*780*dt;player.vy+=player.faceY*780*dt}else if(pointerTargetActive&&Math.hypot(player.targetX-player.x,player.targetY-player.y)>8){const dx=player.targetX-player.x,dy=player.targetY-player.y,l=Math.hypot(dx,dy)||1;player.faceX=dx/l;player.faceY=dy/l;player.vx+=dx*4.8*dt;player.vy+=dy*4.8*dt}player.vx*=Math.pow(.055,dt);player.vy*=Math.pow(.055,dt);player.x=Math.max(38,Math.min(innerWidth-38,player.x+player.vx*dt));player.y=Math.max(160,Math.min(innerHeight-82,player.y+player.vy*dt));
+  motes.forEach((m,i)=>{if(zone===0&&now<powerUntil){const dx=player.x-m.x,dy=player.y-m.y,l=Math.hypot(dx,dy)||1;m.vx+=dx/l*210*dt;m.vy+=dy/l*210*dt}m.x+=m.vx*dt;m.y+=m.vy*dt;m.phase+=dt;if(m.x<25||m.x>innerWidth-25)m.vx*=-1;if(m.y<155||m.y>innerHeight-70)m.vy*=-1;if(Math.hypot(player.x-m.x,player.y-m.y)<42)collect(m,i,now)});
+  const slow=(zone===2&&now<powerUntil) ? 0.22 : 1;hazards.forEach(h=>{h.x+=h.vx*dt*slow;h.y+=h.vy*dt*slow;h.phase+=dt;if(h.x<20||h.x>innerWidth-20)h.vx*=-1;if(h.y<150||h.y>innerHeight-65)h.vy*=-1;if(Math.hypot(player.x-h.x,player.y-h.y)<h.size+25)hurt(now)});updateTelemetry()}
+function glow(color,blur=18){g.shadowColor=color;g.shadowBlur=blur;g.strokeStyle=color;g.fillStyle=color}
+function drawMote(m){const colors=zone===0?['#ffd66e','#ff684d','#62f7d9']:zone===1?['#5df5ff','#b47cff','#fff0a8']:['#bd7cff','#ff57a5','#63ffd7'];g.save();g.translate(m.x,m.y);g.rotate(m.phase*.6);glow(colors[m.type],15);g.lineWidth=2;if(m.type===0){g.beginPath();g.arc(0,0,9,0,Math.PI*2);g.stroke();g.beginPath();g.arc(0,0,3,0,Math.PI*2);g.fill()}else if(m.type===1){g.beginPath();g.moveTo(0,-11);g.lineTo(9,0);g.lineTo(0,11);g.lineTo(-9,0);g.closePath();g.stroke()}else{for(let i=0;i<6;i++){const a=i*Math.PI/3;g.beginPath();g.moveTo(Math.cos(a)*3,Math.sin(a)*3);g.lineTo(Math.cos(a)*13,Math.sin(a)*13);g.stroke()}}g.restore()}
+function drawHazard(h){g.save();g.translate(h.x,h.y);g.rotate(h.phase*.35);const color=zone===0?'#ff593f':zone===1?'#ff67ed':'#9a55ff';glow(color,12);g.globalAlpha=.72;g.lineWidth=2;if(zone===0){for(let i=0;i<10;i++){const a=i*Math.PI/5;g.beginPath();g.moveTo(Math.cos(a)*h.size*.45,Math.sin(a)*h.size*.45);g.lineTo(Math.cos(a)*h.size,Math.sin(a)*h.size);g.stroke()}g.beginPath();g.arc(0,0,h.size*.48,0,Math.PI*2);g.stroke()}else if(zone===1){g.beginPath();g.moveTo(0,-h.size);g.lineTo(h.size*.72,0);g.lineTo(0,h.size);g.lineTo(-h.size*.72,0);g.closePath();g.stroke();g.beginPath();g.moveTo(-h.size,0);g.lineTo(h.size,0);g.moveTo(0,-h.size);g.lineTo(0,h.size);g.stroke()}else{g.beginPath();g.arc(0,0,h.size*.75,0,Math.PI*2);g.stroke();for(let i=0;i<5;i++){const a=i*Math.PI*2/5+h.phase;g.beginPath();g.arc(Math.cos(a)*h.size*.65,Math.sin(a)*h.size*.65,h.size*.24,0,Math.PI*2);g.stroke()}}g.restore()}
+function drawCalyx(now){const x=player.x,y=player.y,bob=Math.sin(now*.004)*4,realm=zone===0?'#ffad51':zone===1?'#5bf3ff':'#c17dff',second=zone===0?'#ffe374':zone===1?'#b47cff':'#ff5aa9';g.save();g.translate(x,y+bob);const scale=innerWidth<700?1.08:1.34;g.scale(scale,scale);const angle=Math.atan2(player.vy,player.vx)*.08;g.rotate(angle);g.lineWidth=3;glow(realm,20);
+  if(zone===0){g.fillStyle='rgba(17,8,24,.9)';g.beginPath();g.ellipse(0,7,28,39,0,0,Math.PI*2);g.fill();g.stroke();for(let i=0;i<6;i++){const a=Math.PI*.2+i*Math.PI*.12,side=i<3?-1:1,yy=5+(i%3)*12;g.strokeStyle=i%2?realm:second;g.beginPath();g.moveTo(side*20,yy);g.quadraticCurveTo(side*(43+Math.sin(now*.004+i)*8),yy+8,side*(49+Math.cos(now*.003+i)*5),yy+30);g.stroke()}g.fillStyle=second;for(const sx of [-1,1]){g.beginPath();g.arc(sx*42,18,8,0,Math.PI*2);g.fill()}}
+  else if(zone===1){g.fillStyle='rgba(6,12,27,.92)';g.beginPath();g.moveTo(0,-33);g.lineTo(32,24);g.lineTo(0,48);g.lineTo(-32,24);g.closePath();g.fill();g.stroke();g.globalAlpha=.68;g.fillStyle=realm;g.beginPath();g.moveTo(-12,-8);g.lineTo(-67,-28);g.lineTo(-47,16);g.lineTo(-72,36);g.lineTo(-18,29);g.closePath();g.fill();g.fillStyle=second;g.beginPath();g.moveTo(12,-8);g.lineTo(67,-28);g.lineTo(47,16);g.lineTo(72,36);g.lineTo(18,29);g.closePath();g.fill();g.globalAlpha=1;g.strokeStyle=second;g.beginPath();g.moveTo(0,42);g.quadraticCurveTo(Math.sin(now*.003)*25,70,0,92);g.stroke()}
+  else{g.fillStyle='rgba(4,3,14,.94)';g.beginPath();g.moveTo(-25,-26);g.quadraticCurveTo(-43,6,-35,62);g.lineTo(35,62);g.quadraticCurveTo(43,6,25,-26);g.closePath();g.fill();g.stroke();g.strokeStyle=second;g.lineWidth=5;g.beginPath();g.moveTo(-17,-30);g.bezierCurveTo(-53,-65,-66,-19,-42,-8);g.moveTo(17,-30);g.bezierCurveTo(53,-65,66,-19,42,-8);g.stroke();for(let i=0;i<4;i++){const side=i%2?-1:1;g.lineWidth=2;g.beginPath();g.moveTo(side*(15+i*3),45);g.quadraticCurveTo(side*(39+Math.sin(now*.004+i)*9),71,side*(31+i*5),91);g.stroke()}g.strokeStyle=realm;g.beginPath();g.moveTo(0,-28);g.quadraticCurveTo(28,-72,35,-94);g.stroke();g.fillStyle=second;g.beginPath();g.arc(35,-94,6,0,Math.PI*2);g.fill()}
+  g.fillStyle='#080913';g.strokeStyle=second;g.lineWidth=3;g.beginPath();g.ellipse(0,-18,25,20,0,0,Math.PI*2);g.fill();g.stroke();g.fillStyle=realm;g.beginPath();g.ellipse(0,-18,18,7,0,0,Math.PI*2);g.fill();g.fillStyle='#fff';g.beginPath();g.arc(0,-18,5,0,Math.PI*2);g.fill();g.fillStyle='#05050a';g.beginPath();g.arc(0,-18,2,0,Math.PI*2);g.fill();if(now<invulnerableUntil){g.strokeStyle='#fff';g.globalAlpha=.45+.35*Math.sin(now*.04);g.beginPath();g.arc(0,3,58,0,Math.PI*2);g.stroke()}g.restore()}
+function draw(now){g.clearRect(0,0,innerWidth,innerHeight);motes.forEach(drawMote);hazards.forEach(drawHazard);drawCalyx(now);if(now<powerUntil){g.save();g.strokeStyle=zone===0?'#ffd66e':zone===1?'#5ff5ff':'#c57cff';g.globalAlpha=.22+.12*Math.sin(now*.01);g.lineWidth=3;g.beginPath();g.arc(player.x,player.y,70+Math.sin(now*.006)*8,0,Math.PI*2);g.stroke();g.restore()}}
+function updateTelemetry(){const z=ZONES[zone];window.__nspReefState={title:'VORATH REEF COVENANT // THREE-PRESSURE CONSERVATORY',protagonist:'Calyx, Keeper of Living Elements',zoneIndex:zone,zone:z.name,regalia:z.regalia,power:z.power,mechanic:z.mechanic,specimens:zoneProgress[zone],integrity,chain,score,regaliaUsed:regaliaUsed[zone],powerActive:performance.now()<powerUntil,player:{x:Math.round(player.x),y:Math.round(player.y)},researchSimulationOnly:true,controls:{keyboard:true,touch:true,gamepad:'standard'},...inputStats}}
+function readGamepad(){const pad=navigator.getGamepads?.()[0];if(!pad)return;const buttons=pad.buttons.map(b=>!!b.pressed),edge=i=>buttons[i]&&!lastPad[i];if(edge(0)){inputStats.gamepadActions++;dash('gamepad')}if(edge(2)){inputStats.gamepadActions++;invokeRegalia('gamepad')}if(edge(4)){inputStats.gamepadActions++;switchZone(zone-1,'gamepad')}if(edge(5)){inputStats.gamepadActions++;switchZone(zone+1,'gamepad')}lastPad=buttons;updateTelemetry()}
+window.__nspReefReadGamepad=readGamepad;window.__nspReefAPI={switchZone,invokeRegalia,dash,spawnField};
+document.querySelectorAll('.zone-tab').forEach(b=>b.addEventListener('click',()=>switchZone(Number(b.dataset.zone))));document.getElementById('power-btn').addEventListener('click',()=>invokeRegalia());document.getElementById('dash-btn').addEventListener('click',()=>dash());
+document.addEventListener('pointerup',e=>{if(e.pointerType==='touch'&&e.target.closest('button')){inputStats.touchActions++;updateTelemetry()}});
+gc.addEventListener('pointerdown',e=>{pointerHeld=true;pointerTargetActive=true;player.targetX=e.clientX;player.targetY=e.clientY;if(e.pointerType==='touch')inputStats.touchActions++;updateTelemetry()});gc.addEventListener('pointermove',e=>{if(pointerHeld){player.targetX=e.clientX;player.targetY=e.clientY}});addEventListener('pointerup',()=>pointerHeld=false);
+document.addEventListener('keydown',e=>{const k=e.key.toUpperCase();if(['ARROWUP','ARROWDOWN','ARROWLEFT','ARROWRIGHT','W','A','S','D'].includes(k)){keys.add(k);e.preventDefault();inputStats.keyboardActions++}else if(k===' '){e.preventDefault();inputStats.keyboardActions++;dash('keyboard')}else if(k==='R'){inputStats.keyboardActions++;invokeRegalia('keyboard')}else if(['1','2','3'].includes(k)){inputStats.keyboardActions++;switchZone(Number(k)-1,'keyboard')}updateTelemetry()});document.addEventListener('keyup',e=>keys.delete(e.key.toUpperCase()));
+function gameLoop(now){const dt=Math.min(.033,(now-lastTime)/1000);lastTime=now;readGamepad();update(dt,now);draw(now);requestAnimationFrame(gameLoop)}
+spawnField();syncUI();requestAnimationFrame(gameLoop);setTimeout(()=>{document.getElementById('boot').classList.add('done');setTimeout(()=>document.getElementById('boot').style.display='none',700)},TEST_MODE?180:1500);
 </script>
 </body></html>

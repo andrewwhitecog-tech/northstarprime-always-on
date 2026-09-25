@@ -378,6 +378,29 @@
       background: rgba(255, 244, 216, 0.04);
     }
 
+    .course-anatomy {
+      display: grid;
+      gap: 7px;
+    }
+
+    .course-card {
+      display: grid;
+      grid-template-columns: 8px 1fr;
+      gap: 9px;
+      padding: 8px 9px;
+      border: 1px solid rgba(255, 244, 216, 0.11);
+      border-radius: 7px;
+      background: rgba(255, 244, 216, 0.035);
+    }
+
+    .course-card i {
+      border-radius: 999px;
+      box-shadow: 0 0 16px currentColor;
+    }
+
+    .course-card strong { font-size: 12px; text-transform: uppercase; }
+    .course-card span { color: var(--muted); font-size: 11px; line-height: 1.3; }
+
     @media (max-width: 1040px) {
       h1 { font-size: 40px; }
       .layout { grid-template-columns: 1fr; }
@@ -391,6 +414,11 @@
       .hud { grid-template-columns: 1fr 1fr; }
       .controls { grid-template-columns: 1fr 1fr; }
       .stage-wrap { min-height: 430px; }
+      #stageWrap > canvas { width: 100% !important; max-width: 100% !important; }
+      html body #northstar-playtest-kit,
+      html body #northstar-vorath-gate,
+      html body .northstar-arcade-return,
+      [data-northstar-diagnostic] { display: none !important; }
       .panel-head { align-items: flex-start; }
     }
   </style>
@@ -461,6 +489,13 @@
 
         <div class="contracts" id="contracts"></div>
 
+        <section class="course-anatomy" aria-label="Course anatomy">
+          <div class="kicker">Course Anatomy</div>
+          <div class="course-card"><i style="background:#2fe4ff;color:#2fe4ff"></i><span><strong>Neon Spine · Witness Canyon</strong><br>Bent-light obelisks and narrow late-apex gates.</span></div>
+          <div class="course-card"><i style="background:#ffe45c;color:#ffe45c"></i><span><strong>Brass S-Curve · Solar Foundry</strong><br>Guilloche furnace rings and broad drift lines.</span></div>
+          <div class="course-card"><i style="background:#80ff70;color:#80ff70"></i><span><strong>Glass Run · Aurora Reef</strong><br>Crystal arches, chicanes, and refraction scars.</span></div>
+        </section>
+
         <section>
           <div class="kicker">Pit Log</div>
           <div class="log" id="log"></div>
@@ -471,7 +506,7 @@
     </section>
 
     <footer class="footer">
-      <span>Desktop and touch input supported. The cabinet exports local run receipts.</span>
+      <span>Keyboard, touch, and gamepad supported. The cabinet exports local run receipts.</span>
       <span id="stateLine">Idle</span>
     </footer>
   </main>
@@ -480,19 +515,27 @@
   <script>
     const canvas = document.querySelector("#game");
     const ctx = canvas.getContext("2d");
+    const PLAYTEST_MODE = new URLSearchParams(window.location.search).has("playtest");
 
-    // --- AI sprite assets (Vorath DNA) with procedural fallback ---
-    const assets = { car: { img: new Image(), ready: false }, backdrop: { img: new Image(), ready: false } };
+    // --- VORATH Overhaul V01 sprite assets with procedural fallback ---
+    const assets = {
+      car: { img: new Image(), ready: false },
+      rivals: { img: new Image(), ready: false },
+      backdrop: { img: new Image(), ready: false }
+    };
     assets.car.img.onload = () => { assets.car.ready = true; };
-    assets.car.img.src = "/static/games/roster/pris_racer.png";
+    assets.car.img.src = "/static/art/games/vorath_overhaul_v01/prism_drift/six_ring_racer_atlas_v01.png";
+    assets.rivals.img.onload = () => { assets.rivals.ready = true; };
+    assets.rivals.img.src = "/static/art/games/vorath_overhaul_v01/prism_drift/prism_rival_covenant_atlas_v01.png";
     assets.backdrop.img.onload = () => { assets.backdrop.ready = true; };
     assets.backdrop.img.src = "/static/games/roster/pris_backdrop.png";
 
     // --- Chiptune audio (guarded so game never breaks if engine missing) ---
     let music = null;
     let audioStarted = false;
-    function sfx(name) { try { if (window.Chiptune && Chiptune.SFX && Chiptune.SFX[name]) Chiptune.SFX[name](); } catch (e) {} }
+    function sfx(name) { if (PLAYTEST_MODE) return; try { if (window.Chiptune && Chiptune.SFX && Chiptune.SFX[name]) Chiptune.SFX[name](); } catch (e) {} }
     function startAudio() {
+      if (PLAYTEST_MODE) return;
       try {
         if (window.Chiptune && Chiptune.resume) Chiptune.resume();
         if (!music && window.Chiptune && Chiptune.Music) {
@@ -525,10 +568,17 @@
     };
 
     const circuits = {
-      neon: { label: "Neon Spine", length: 6400, target: 90, width: 300, color: "#2fe4ff", accent: "#ff4aa5", phase: 0.7 },
-      brass: { label: "Brass S-Curve", length: 7200, target: 105, width: 320, color: "#ffe45c", accent: "#80ff70", phase: 2.1 },
-      glass: { label: "Glass Run", length: 6000, target: 84, width: 280, color: "#80ff70", accent: "#2fe4ff", phase: 3.4 }
+      neon: { label: "Neon Spine", sector: "Witness Canyon", architecture: "witness", length: 6400, target: 90, width: 300, color: "#2fe4ff", accent: "#ff4aa5", phase: 0.7 },
+      brass: { label: "Brass S-Curve", sector: "Solar Foundry", architecture: "foundry", length: 7200, target: 105, width: 320, color: "#ffe45c", accent: "#80ff70", phase: 2.1 },
+      glass: { label: "Glass Run", sector: "Aurora Reef", architecture: "reef", length: 6000, target: 84, width: 280, color: "#80ff70", accent: "#2fe4ff", phase: 3.4 }
     };
+
+    const rivalDefs = [
+      { name: "Brass Witness", col: 0, row: 0, lane: -0.34, pace: 0.91, color: "#ffe45c" },
+      { name: "Veil Comet", col: 1, row: 0, lane: 0.31, pace: 1.04, color: "#ff4aa5" },
+      { name: "Obsidian Judge", col: 0, row: 1, lane: -0.08, pace: 0.97, color: "#ff6148" },
+      { name: "Aurora Mantis", col: 1, row: 1, lane: 0.14, pace: 1.08, color: "#80ff70" }
+    ];
 
     const contractDefs = [
       ["gate", "Gate Clips", "Cleanly pass prism gates.", "#2fe4ff"],
@@ -567,11 +617,17 @@
         gateCount: 0,
         cleanGates: 0,
         gateCursor: 0,
+        overtakes: 0,
+        nearMisses: 0,
+        loomwheelPads: 0,
+        scarsHit: 0,
         shake: 0,
         flash: 0,
         receipt: null,
         particles: [],
-        gates: []
+        gates: [],
+        features: [],
+        rivals: []
       };
     }
 
@@ -618,12 +674,36 @@
       return gates;
     }
 
+    function makeCourseFeatures() {
+      const features = [];
+      const c = cfg();
+      for (let y = 860, i = 0; y < c.length * state.totalLaps; y += 690, i += 1) {
+        const kinds = ["loomwheel-pad", "redaction-scar", "prism-chicane"];
+        const kind = kinds[(i + Math.round(c.phase)) % kinds.length];
+        const lane = kind === "loomwheel-pad" ? 0 : (i % 2 ? -0.38 : 0.38);
+        features.push({ y, kind, lane, hit: false });
+      }
+      return features;
+    }
+
+    function makeRivals() {
+      const c = cfg();
+      return rivalDefs.map((def, i) => ({
+        ...def,
+        y: 760 + i * 530,
+        passed: false,
+        phase: c.phase + i * 1.73
+      }));
+    }
+
     function startRace() {
       const selected = els.circuitSelect.value;
       state = baseState();
       state.mode = "race";
       state.circuit = selected;
       state.gates = makeGates();
+      state.features = makeCourseFeatures();
+      state.rivals = makeRivals();
       overlay.hidden = true;
       logRows = [];
       log("START // " + cfg().label + " trial active.");
@@ -636,6 +716,8 @@
       state = baseState();
       state.circuit = els.circuitSelect.value;
       state.gates = makeGates();
+      state.features = makeCourseFeatures();
+      state.rivals = makeRivals();
       showOverlay("Prism Drift", "Hold the prism road, clip scoring gates, and spend boost without overheating the drive. The route is original and generated locally.", "Start Trial");
       logRows = [];
       log("ATTRACT // circuit loaded.");
@@ -673,6 +755,15 @@
       if (keys.ArrowUp || keys.w) throttle = 1;
       if (keys.ArrowDown || keys.s) brake = 1;
       if (keys.Shift || keys[" "]) boost = true;
+      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      const pad = pads && pads[0];
+      if (pad) {
+        const dead = Math.abs(pad.axes[0] || 0) > 0.15 ? pad.axes[0] : 0;
+        steer += dead;
+        throttle = Math.max(throttle, pad.buttons[7] ? pad.buttons[7].value : 0, pad.buttons[0] && pad.buttons[0].pressed ? 1 : 0);
+        brake = Math.max(brake, pad.buttons[6] ? pad.buttons[6].value : 0, pad.buttons[1] && pad.buttons[1].pressed ? 1 : 0);
+        boost = boost || Boolean(pad.buttons[5] && pad.buttons[5].pressed) || Boolean(pad.buttons[2] && pad.buttons[2].pressed);
+      }
       if (pointer.active) {
         const center = w() / 2;
         steer += Math.max(-1, Math.min(1, (pointer.x - center) / Math.max(80, w() * 0.22)));
@@ -741,6 +832,8 @@
       }
 
       checkGates();
+      checkCourseFeatures();
+      updateRivals(dt);
       if (state.distance >= c.length * state.lap) {
         state.lap += 1;
         state.score += Math.max(0, Math.floor((c.target - state.time / Math.max(1, state.lap - 1)) * 30)) + 800;
@@ -775,6 +868,58 @@
             state.shake = Math.max(state.shake, 6);
             sfx("hit");
           }
+        }
+      }
+    }
+
+    function checkCourseFeatures() {
+      const carY = state.distance + h() * 0.76;
+      for (const feature of state.features) {
+        if (feature.hit || Math.abs(feature.y - carY) >= 30) continue;
+        const target = feature.lane * trackWidth(feature.y);
+        if (Math.abs(state.lateral - target) > 72) continue;
+        feature.hit = true;
+        if (feature.kind === "loomwheel-pad") {
+          state.loomwheelPads += 1;
+          state.boost = Math.min(100, state.boost + 32);
+          state.speed = Math.min(535, state.speed + 70);
+          state.score += 625;
+          addParticles(w() / 2 + state.lateral, h() * 0.75, "#ffe45c", 22);
+          log("LOOMWHEEL // solar pad aligned.");
+          sfx("powerUp");
+        } else if (feature.kind === "redaction-scar") {
+          state.scarsHit += 1;
+          state.integrity -= 11;
+          state.speed *= 0.72;
+          state.flash = 0.8;
+          state.shake = Math.max(state.shake, 7);
+          sfx("hurt");
+        } else {
+          state.score += 260;
+          state.driftBank += 18;
+        }
+      }
+    }
+
+    function updateRivals(dt) {
+      const playerWorld = state.distance + h() * 0.76;
+      for (const rival of state.rivals) {
+        rival.y += state.speed * rival.pace * dt;
+        if (!rival.passed && playerWorld > rival.y + 48) {
+          rival.passed = true;
+          state.overtakes += 1;
+          state.score += 700;
+          const rivalOffset = rival.lane * trackWidth(rival.y) + Math.sin(rival.y / 310 + rival.phase) * 24;
+          if (Math.abs(state.lateral - rivalOffset) < 86) {
+            state.nearMisses += 1;
+            state.score += 350;
+          }
+          log("OVERTAKE // " + rival.name + " redacted.");
+          sfx("coin");
+        }
+        if (rival.y < state.distance - 120) {
+          rival.y += cfg().length * 0.62;
+          rival.passed = false;
         }
       }
     }
@@ -824,7 +969,7 @@
       els.integrity.textContent = Math.max(0, Math.floor(state.integrity));
       els.bestChip.textContent = "Best " + best;
       els.targetChip.textContent = "Target " + cfg().target + "s";
-      els.stateLine.textContent = state.mode === "race" ? cfg().label + " live" : state.mode;
+      els.stateLine.textContent = state.mode === "race" ? cfg().label + " · " + cfg().sector + " live" : state.mode;
       renderContracts();
     }
 
@@ -851,6 +996,8 @@
       }
       drawBackdrop(width, height, c);
       drawTrack(width, height, c);
+      drawCourseFeatures(width, height, c);
+      drawRivals(width, height, c);
       drawGates(width, height, c);
       state.particles.forEach(drawParticle);
       drawCar(width, height, c);
@@ -880,6 +1027,18 @@
         ctx.globalAlpha = 1;
         ctx.restore();
       }
+      const horizon = height * 0.205;
+      const halo = ctx.createRadialGradient(width * 0.5, horizon, 8, width * 0.5, horizon, width * 0.42);
+      halo.addColorStop(0, c.architecture === "foundry" ? "rgba(255,228,92,0.3)" : c.architecture === "reef" ? "rgba(128,255,112,0.22)" : "rgba(47,228,255,0.22)");
+      halo.addColorStop(1, "rgba(2,6,10,0)");
+      ctx.fillStyle = halo;
+      ctx.fillRect(0, 0, width, height * 0.55);
+      ctx.save();
+      ctx.textAlign = "center";
+      ctx.font = "900 12px Segoe UI, sans-serif";
+      ctx.fillStyle = "rgba(255,244,216,0.72)";
+      ctx.fillText(c.sector.toUpperCase(), width * 0.5, horizon - 18);
+      ctx.restore();
       drawCausticField(width, height, c);
       ctx.strokeStyle = "rgba(255, 244, 216, 0.08)";
       ctx.lineWidth = 1;
@@ -900,16 +1059,37 @@
     }
 
     function screenY(worldY) {
-      return h() - (worldY - state.distance);
+      const height = h();
+      const horizon = height * 0.205;
+      const viewDistance = Math.max(1800, height * 3.75);
+      const depth = worldY - state.distance;
+      const normalized = 1 - Math.max(0, Math.min(1, depth / viewDistance));
+      return horizon + (height - horizon) * Math.pow(normalized, 1.45);
+    }
+
+    function roadPerspective(sy) {
+      const horizon = h() * 0.205;
+      const t = Math.max(0, Math.min(1, (sy - horizon) / Math.max(1, h() - horizon)));
+      return 0.12 + 0.88 * Math.pow(t, 1.12);
+    }
+
+    function projectedTrackCenter(worldY, sy = screenY(worldY)) {
+      return w() / 2 + (trackCenter(worldY) - w() / 2) * roadPerspective(sy);
+    }
+
+    function projectedTrackHalf(worldY, sy = screenY(worldY)) {
+      return trackWidth(worldY) * 0.5 * roadPerspective(sy);
     }
 
     function drawTrack(width, height, c) {
       const left = [];
       const right = [];
-      for (let sy = -80; sy <= height + 80; sy += 18) {
-        const worldY = state.distance + (height - sy);
-        const center = trackCenter(worldY);
-        const half = trackWidth(worldY) / 2;
+      const viewDistance = Math.max(1800, height * 3.75);
+      for (let depth = viewDistance; depth >= -80; depth -= 42) {
+        const worldY = state.distance + depth;
+        const sy = screenY(worldY);
+        const center = projectedTrackCenter(worldY, sy);
+        const half = projectedTrackHalf(worldY, sy);
         left.push([center - half, sy]);
         right.push([center + half, sy]);
       }
@@ -917,10 +1097,10 @@
       left.forEach((p, i) => { if (i === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]); });
       right.reverse().forEach(p => ctx.lineTo(p[0], p[1]));
       ctx.closePath();
-      const road = ctx.createLinearGradient(0, 0, width, height);
-      road.addColorStop(0, "rgba(12, 20, 28, 0.98)");
-      road.addColorStop(0.5, "rgba(24, 28, 34, 0.98)");
-      road.addColorStop(1, "rgba(9, 12, 18, 0.98)");
+      const road = ctx.createLinearGradient(0, height * 0.2, 0, height);
+      road.addColorStop(0, "rgba(4, 8, 15, 0.86)");
+      road.addColorStop(0.48, "rgba(18, 25, 34, 0.98)");
+      road.addColorStop(1, "rgba(6, 8, 14, 1)");
       ctx.fillStyle = road;
       ctx.fill();
       ctx.save();
@@ -930,15 +1110,17 @@
       drawTracksideArchitecture(width, height, c);
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
-      for (let band = 0; band < 7; band += 1) {
+      for (let band = 0; band < 5; band += 1) {
         ctx.strokeStyle = `hsla(${(state.distance * 0.045 + band * 44 + c.phase * 30) % 360},100%,64%,${0.12 + band * 0.018})`;
         ctx.lineWidth = band % 2 ? 1.3 : 2.2;
         ctx.beginPath();
-        for (let sy = -70; sy <= height + 70; sy += 24) {
-          const worldY = state.distance + (height - sy) + band * 38;
-          const center = trackCenter(worldY) + Math.sin(worldY / 260 + band) * trackWidth(worldY) * 0.18;
-          if (sy === -70) ctx.moveTo(center, sy);
-          else ctx.lineTo(center, sy);
+        let first = true;
+        for (let depth = viewDistance; depth >= 0; depth -= 72) {
+          const worldY = state.distance + depth + band * 38;
+          const sy = screenY(worldY);
+          const scale = roadPerspective(sy);
+          const center = projectedTrackCenter(worldY, sy) + Math.sin(worldY / 260 + band) * trackWidth(worldY) * 0.16 * scale;
+          if (first) { ctx.moveTo(center, sy); first = false; } else ctx.lineTo(center, sy);
         }
         ctx.stroke();
       }
@@ -950,32 +1132,28 @@
       drawEdge(1);
       ctx.lineWidth = 1;
       ctx.strokeStyle = "rgba(255, 244, 216, 0.22)";
-      for (let sy = -60; sy < height + 60; sy += 84) {
-        const worldY = state.distance + (height - sy);
-        const center = trackCenter(worldY);
+      for (let depth = 180; depth < viewDistance; depth += 250) {
+        const worldY = state.distance + depth;
+        const sy = screenY(worldY);
+        const center = projectedTrackCenter(worldY, sy);
+        const scale = roadPerspective(sy);
         ctx.beginPath();
-        ctx.moveTo(center - 18, sy);
-        ctx.lineTo(center + 18, sy);
+        ctx.moveTo(center - 24 * scale, sy);
+        ctx.lineTo(center + 24 * scale, sy);
         ctx.stroke();
-        if (sy > 20 && sy < height - 60) {
-          drawFacetGem(center, sy, 5, sy % 168 ? c.accent : c.color, state.distance * 0.01 + sy);
+        if (sy > height * 0.22 && sy < height - 40) {
+          drawFacetGem(center, sy, Math.max(2, 6 * scale), depth % 500 ? c.accent : c.color, state.distance * 0.01 + sy);
         }
-      }
-      for (let shard = 0; shard < 10; shard += 1) {
-        const worldY = state.distance + shard * 360 + 120;
-        const sy = screenY(worldY % (height + state.distance + 600));
-        if (sy < -40 || sy > height + 40) continue;
-        const side = shard % 2 ? -1 : 1;
-        const sx = trackCenter(worldY) + side * (trackWidth(worldY) * 0.68 + 28);
-        drawFacetGem(sx, sy, 8 + (shard % 3) * 2, shard % 2 ? c.color : c.accent, state.distance * 0.018 + shard);
       }
 
       function drawEdge(side) {
         ctx.beginPath();
-        for (let sy = -80; sy <= height + 80; sy += 18) {
-          const worldY = state.distance + (height - sy);
-          const x = trackCenter(worldY) + trackWidth(worldY) / 2 * side;
-          if (sy === -80) ctx.moveTo(x, sy); else ctx.lineTo(x, sy);
+        let first = true;
+        for (let depth = viewDistance; depth >= -80; depth -= 42) {
+          const worldY = state.distance + depth;
+          const sy = screenY(worldY);
+          const x = projectedTrackCenter(worldY, sy) + projectedTrackHalf(worldY, sy) * side;
+          if (first) { ctx.moveTo(x, sy); first = false; } else ctx.lineTo(x, sy);
         }
         ctx.stroke();
       }
@@ -984,44 +1162,38 @@
     function drawRoadSkin(width, height, c) {
       ctx.save();
       ctx.globalCompositeOperation = "screen";
-      for (let sy = -40; sy <= height + 80; sy += 46) {
-        const worldY = state.distance + (height - sy);
-        const center = trackCenter(worldY);
-        const half = trackWidth(worldY) / 2;
+      const viewDistance = Math.max(1800, height * 3.75);
+      for (let depth = 80; depth <= viewDistance; depth += 170) {
+        const worldY = state.distance + depth;
+        const sy = screenY(worldY);
+        const scale = roadPerspective(sy);
+        const center = projectedTrackCenter(worldY, sy);
+        const half = projectedTrackHalf(worldY, sy);
         const hue = (state.distance * 0.04 + sy * 0.35 + c.phase * 40) % 360;
-        ctx.fillStyle = `hsla(${hue},85%,58%,0.035)`;
-        ctx.strokeStyle = "rgba(255,244,216,0.055)";
+        ctx.fillStyle = `hsla(${hue},85%,58%,0.052)`;
+        ctx.strokeStyle = "rgba(255,244,216,0.09)";
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(center - half * 0.92, sy - 18);
-        ctx.lineTo(center + half * 0.92, sy - 18);
-        ctx.lineTo(center + half * 0.84, sy + 18);
-        ctx.lineTo(center - half * 0.84, sy + 18);
+        ctx.moveTo(center - half * 0.93, sy - 28 * scale);
+        ctx.lineTo(center + half * 0.93, sy - 28 * scale);
+        ctx.lineTo(center + half * 0.82, sy + 26 * scale);
+        ctx.lineTo(center - half * 0.82, sy + 26 * scale);
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
       }
-      ctx.strokeStyle = "rgba(255,244,216,0.07)";
-      ctx.lineWidth = 1.1;
-      for (let i = 0; i < 32; i += 1) {
-        const sy = ((i * 71 + state.distance * 0.32) % (height + 110)) - 55;
-        const worldY = state.distance + (height - sy);
-        const center = trackCenter(worldY);
-        const half = trackWidth(worldY) * (0.18 + (i % 4) * 0.08);
-        ctx.beginPath();
-        ctx.moveTo(center - half, sy);
-        ctx.quadraticCurveTo(center - half * 0.14, sy + 10 + (i % 5) * 3, center + half * 0.64, sy + 2 - (i % 3) * 4);
-        ctx.stroke();
-      }
       ctx.restore();
-      for (let sy = -60; sy <= height + 90; sy += 78) {
-        const worldY = state.distance + (height - sy);
-        const center = trackCenter(worldY);
-        const half = trackWidth(worldY) / 2;
+      for (let depth = 140; depth <= viewDistance; depth += 260) {
+        const worldY = state.distance + depth;
+        const sy = screenY(worldY);
+        const center = projectedTrackCenter(worldY, sy);
+        const half = projectedTrackHalf(worldY, sy);
+        const scale = roadPerspective(sy);
         for (const side of [-1, 1]) {
           const x = center + half * side * 0.72;
           ctx.save();
           ctx.translate(x, sy);
+          ctx.scale(scale, scale);
           ctx.rotate(side * 0.16);
           ctx.strokeStyle = side < 0 ? "rgba(47,228,255,0.2)" : "rgba(255,74,165,0.2)";
           ctx.fillStyle = "rgba(255,244,216,0.035)";
@@ -1042,31 +1214,54 @@
     function drawTracksideArchitecture(width, height, c) {
       ctx.save();
       ctx.globalCompositeOperation = "screen";
-      for (let i = 0; i < 18; i += 1) {
-        const worldY = state.distance + ((i * 210 + 90) % (height + 420));
+      const viewDistance = Math.max(1800, height * 3.75);
+      for (let i = 0; i < 20; i += 1) {
+        const depth = 150 + ((i * 310 + state.distance * 0.22) % viewDistance);
+        const worldY = state.distance + depth;
         const sy = screenY(worldY);
-        if (sy < -120 || sy > height + 120) continue;
+        if (sy < height * 0.19 || sy > height + 100) continue;
         const side = i % 2 ? -1 : 1;
-        const center = trackCenter(worldY);
-        const half = trackWidth(worldY) / 2;
-        const x = center + side * (half + 48 + (i % 4) * 16);
-        const towerH = 88 + (i % 5) * 26;
+        const scale = roadPerspective(sy);
+        const center = projectedTrackCenter(worldY, sy);
+        const half = projectedTrackHalf(worldY, sy);
+        const x = center + side * (half + (42 + (i % 4) * 20) * scale);
+        const towerH = (94 + (i % 5) * 30) * scale;
         const color = side < 0 ? c.color : c.accent;
         ctx.strokeStyle = color;
         ctx.fillStyle = side < 0 ? "rgba(47,228,255,0.04)" : "rgba(255,74,165,0.04)";
         ctx.lineWidth = 1.5;
         ctx.shadowColor = color;
         ctx.shadowBlur = els.glowToggle.checked ? 16 : 0;
-        ctx.beginPath();
-        ctx.moveTo(x, sy - towerH);
-        ctx.lineTo(x + side * 28, sy + 48);
-        ctx.lineTo(x - side * 28, sy + 48);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
+        if (c.architecture === "foundry") {
+          ctx.beginPath();
+          ctx.arc(x, sy - towerH * 0.35, towerH * 0.42, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x, sy - towerH * 0.35, towerH * 0.21, 0, Math.PI * 2);
+          ctx.stroke();
+        } else if (c.architecture === "reef") {
+          ctx.beginPath();
+          ctx.moveTo(x, sy - towerH);
+          ctx.lineTo(x + side * towerH * 0.32, sy + towerH * 0.26);
+          ctx.lineTo(x - side * towerH * 0.18, sy + towerH * 0.18);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        } else {
+          ctx.beginPath();
+          ctx.moveTo(x, sy - towerH);
+          ctx.lineTo(x + side * towerH * 0.28, sy + towerH * 0.34);
+          ctx.lineTo(x - side * towerH * 0.28, sy + towerH * 0.34);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.ellipse(x, sy - towerH * 0.48, towerH * 0.12, towerH * 0.2, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        }
         ctx.beginPath();
         ctx.moveTo(x, sy - towerH * 0.55);
-        ctx.lineTo(center + side * half, sy - 10);
+        ctx.lineTo(center + side * half, sy - 10 * scale);
         ctx.stroke();
       }
       ctx.restore();
@@ -1076,47 +1271,126 @@
       for (const gate of state.gates) {
         if (gate.hit) continue;
         const sy = screenY(gate.y);
-        if (sy < -40 || sy > height + 40) continue;
-        const cx = trackCenter(gate.y) + gate.offset;
+        if (sy < height * 0.19 || sy > height + 40) continue;
+        const scale = roadPerspective(sy);
+        const cx = projectedTrackCenter(gate.y, sy) + gate.offset * scale;
         if (els.glowToggle.checked) {
           ctx.shadowColor = gate.color;
           ctx.shadowBlur = 18;
         }
         ctx.strokeStyle = gate.color;
-        ctx.lineWidth = 4;
+        ctx.lineWidth = Math.max(1, 4 * scale);
         ctx.fillStyle = "rgba(255,244,216,0.045)";
         ctx.beginPath();
-        ctx.moveTo(cx - 58, sy + 4);
-        ctx.lineTo(cx - 20, sy - 24);
-        ctx.lineTo(cx + 20, sy - 24);
-        ctx.lineTo(cx + 58, sy + 4);
-        ctx.lineTo(cx + 42, sy + 14);
-        ctx.lineTo(cx - 42, sy + 14);
+        ctx.moveTo(cx - 58 * scale, sy + 4 * scale);
+        ctx.lineTo(cx - 20 * scale, sy - 24 * scale);
+        ctx.lineTo(cx + 20 * scale, sy - 24 * scale);
+        ctx.lineTo(cx + 58 * scale, sy + 4 * scale);
+        ctx.lineTo(cx + 42 * scale, sy + 14 * scale);
+        ctx.lineTo(cx - 42 * scale, sy + 14 * scale);
         ctx.closePath();
         ctx.fill();
         ctx.beginPath();
-        ctx.moveTo(cx - 50, sy);
-        ctx.lineTo(cx - 18, sy - 18);
-        ctx.lineTo(cx + 18, sy - 18);
-        ctx.lineTo(cx + 50, sy);
+        ctx.moveTo(cx - 50 * scale, sy);
+        ctx.lineTo(cx - 18 * scale, sy - 18 * scale);
+        ctx.lineTo(cx + 18 * scale, sy - 18 * scale);
+        ctx.lineTo(cx + 50 * scale, sy);
         ctx.stroke();
         for (const side of [-1, 1]) {
           ctx.fillStyle = gate.color;
           ctx.strokeStyle = "rgba(255,244,216,0.68)";
-          ctx.lineWidth = 1.4;
+          ctx.lineWidth = Math.max(0.8, 1.4 * scale);
           ctx.beginPath();
-          ctx.roundRect(cx + side * 52 - 5, sy - 8, 10, 26, 4);
+          ctx.roundRect(cx + side * 52 * scale - 5 * scale, sy - 8 * scale, 10 * scale, 26 * scale, 4 * scale);
           ctx.fill();
           ctx.stroke();
-          drawFacetGem(cx + side * 52, sy - 14, 5, gate.color, state.distance * 0.03 + side);
+          drawFacetGem(cx + side * 52 * scale, sy - 14 * scale, Math.max(2, 5 * scale), gate.color, state.distance * 0.03 + side);
         }
         ctx.shadowBlur = 0;
       }
     }
 
+    function drawCourseFeatures(width, height, c) {
+      for (const feature of state.features) {
+        if (feature.hit) continue;
+        const sy = screenY(feature.y);
+        if (sy < height * 0.205 || sy > height + 50) continue;
+        const scale = roadPerspective(sy);
+        const x = projectedTrackCenter(feature.y, sy) + feature.lane * trackWidth(feature.y) * scale;
+        ctx.save();
+        ctx.translate(x, sy);
+        ctx.scale(scale, scale);
+        if (feature.kind === "loomwheel-pad") {
+          ctx.globalCompositeOperation = "lighter";
+          ctx.strokeStyle = "#ffe45c";
+          ctx.lineWidth = 4;
+          for (let ring = 0; ring < 3; ring += 1) {
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 46 - ring * 11, 20 - ring * 4, state.distance * 0.002 + ring, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          for (let spoke = 0; spoke < 8; spoke += 1) {
+            const a = spoke * Math.PI / 4 + state.distance * 0.003;
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(a) * 8, Math.sin(a) * 4);
+            ctx.lineTo(Math.cos(a) * 42, Math.sin(a) * 18);
+            ctx.stroke();
+          }
+        } else if (feature.kind === "redaction-scar") {
+          ctx.fillStyle = "rgba(255,35,72,0.34)";
+          ctx.strokeStyle = "#ff6148";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(-48, -18); ctx.lineTo(-12, -6); ctx.lineTo(18, -21); ctx.lineTo(48, 8); ctx.lineTo(9, 3); ctx.lineTo(-25, 19); ctx.closePath();
+          ctx.fill(); ctx.stroke();
+        } else {
+          ctx.strokeStyle = c.accent;
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(-58, -20); ctx.lineTo(-18, 0); ctx.lineTo(-58, 20);
+          ctx.moveTo(58, -20); ctx.lineTo(18, 0); ctx.lineTo(58, 20);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+    }
+
+    function drawRivals(width, height) {
+      if (!assets.rivals.ready) return;
+      const sw = assets.rivals.img.naturalWidth / 2;
+      const sh = assets.rivals.img.naturalHeight / 2;
+      const sorted = state.rivals.slice().sort((a, b) => b.y - a.y);
+      for (const rival of sorted) {
+        const sy = screenY(rival.y);
+        if (sy < height * 0.2 || sy > height + 70) continue;
+        const scale = roadPerspective(sy);
+        const laneWave = Math.sin(rival.y / 310 + rival.phase) * 24;
+        const x = projectedTrackCenter(rival.y, sy) + (rival.lane * trackWidth(rival.y) + laneWave) * scale;
+        const size = Math.max(24, 116 * scale);
+        ctx.save();
+        ctx.translate(x, sy);
+        ctx.rotate(Math.sin(rival.y / 240 + rival.phase) * 0.12);
+        ctx.shadowColor = rival.color;
+        ctx.shadowBlur = els.glowToggle.checked ? 18 * scale : 0;
+        ctx.drawImage(assets.rivals.img, rival.col * sw, rival.row * sh, sw, sh, -size * 0.58, -size * 0.55, size * 1.16, size);
+        ctx.globalCompositeOperation = "lighter";
+        ctx.strokeStyle = rival.color;
+        ctx.globalAlpha = 0.5;
+        ctx.lineWidth = Math.max(1, 3 * scale);
+        ctx.beginPath();
+        ctx.moveTo(-size * 0.16, size * 0.28);
+        ctx.lineTo(-size * 0.1, size * 0.72);
+        ctx.moveTo(size * 0.16, size * 0.28);
+        ctx.lineTo(size * 0.1, size * 0.72);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
     function drawCar(width, height, c) {
       const carY = height * 0.76;
-      const carX = trackCenter(state.distance + height - carY) + state.lateral;
+      const playerWorld = state.distance + height * 0.76;
+      const carX = projectedTrackCenter(playerWorld, carY) + state.lateral * roadPerspective(carY);
       const speedGlow = Math.min(1, state.speed / 420);
       ctx.save();
       ctx.translate(carX, carY);
@@ -1135,18 +1409,35 @@
       ctx.fill();
       drawRainbowTrail(0, 22, 96 + speedGlow * 54, c);
       if (assets.car.ready) {
-        // AI hero sprite drawn to match the procedural body rect (~48 wide, top-down)
+        // Six-ring racer atlas: neutral, drift-left/right, boost, and redline damage.
         ctx.save();
         ctx.globalCompositeOperation = "source-over";
-        const dw = 56;
-        const dh = dw * (assets.car.img.height / assets.car.img.width);
+        const atlasCols = 3;
+        const atlasRows = 2;
+        const sw = assets.car.img.naturalWidth / atlasCols;
+        const sh = assets.car.img.naturalHeight / atlasRows;
+        let atlasCol = 0;
+        let atlasRow = 0;
+        if (state.integrity <= 35) {
+          atlasCol = 1;
+          atlasRow = 1;
+        } else if (wasBoosting) {
+          atlasCol = 0;
+          atlasRow = 1;
+        } else if (state.angle < -0.035) {
+          atlasCol = 1;
+        } else if (state.angle > 0.035) {
+          atlasCol = 2;
+        }
+        const dw = 92;
+        const dh = 92;
         if (els.glowToggle.checked) { ctx.shadowColor = c.color; ctx.shadowBlur = 20 + speedGlow * 18; }
-        ctx.drawImage(assets.car.img, -dw / 2, -dh * 0.52, dw, dh);
+        ctx.drawImage(assets.car.img, atlasCol * sw, atlasRow * sh, sw, sh, -dw / 2, -dh * 0.52, dw, dh);
         // white hit-flash overlay of the sprite when the car takes a gate hit
         if (state.flash > 0) {
           ctx.globalCompositeOperation = "lighter";
           ctx.globalAlpha = state.flash * 0.7;
-          ctx.drawImage(assets.car.img, -dw / 2, -dh * 0.52, dw, dh);
+          ctx.drawImage(assets.car.img, atlasCol * sw, atlasRow * sh, sw, sh, -dw / 2, -dh * 0.52, dw, dh);
           ctx.globalAlpha = 1;
         }
         ctx.restore();
@@ -1333,11 +1624,17 @@
         title: "Prism Drift Time Trial Receipt",
         reason,
         circuit: cfg().label,
+        sector: cfg().sector,
         score: state.score,
         lap: Math.min(state.lap, state.totalLaps),
         time_seconds: Number(state.time.toFixed(2)),
         clean_gates: state.cleanGates,
         gates_seen: state.gateCount,
+        overtakes: state.overtakes,
+        near_misses: state.nearMisses,
+        loomwheel_pads: state.loomwheelPads,
+        redaction_scars_hit: state.scarsHit,
+        rival_covenant: rivalDefs.map(rival => rival.name),
         integrity: Math.floor(state.integrity),
         exported_at: new Date().toISOString()
       };
@@ -1377,6 +1674,8 @@
       if (state.mode !== "race") {
         state.circuit = els.circuitSelect.value;
         state.gates = makeGates();
+        state.features = makeCourseFeatures();
+        state.rivals = makeRivals();
         updateUi();
       }
     });
@@ -1402,7 +1701,7 @@
 
     resize();
     resetAttract();
-    if (new URLSearchParams(window.location.search).has("playtest")) {
+    if (PLAYTEST_MODE) {
       window.setTimeout(() => {
         els.circuitSelect.value = "glass";
         startRace();
@@ -1417,12 +1716,15 @@
         state.cleanGates = 2;
         state.gateCount = 3;
         state.score = 1840;
+        state.loomwheelPads = 1;
+        state.overtakes = 2;
+        state.nearMisses = 1;
         keys.w = true;
         keys.Shift = true;
         for (let i = 0; i < 42; i += 1) {
           addParticles(w() / 2 + state.lateral + (Math.random() - 0.5) * 42, h() * 0.78, i % 2 ? cfg().accent : cfg().color, 1);
         }
-        log("PLAYTEST // high-definition prism racer, gate lattice, boost heat, and rainbow trail exposed.");
+        log("PLAYTEST // perspective road, rival covenant, course architecture, boost heat, and Loomwheel pad exposed.");
         updateUi();
       }, 160);
     }

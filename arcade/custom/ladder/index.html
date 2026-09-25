@@ -1,10 +1,206 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#080c12"><title>Ladder · The Ninefold Relay | NorthStar IDG</title><link rel="stylesheet" href="/static/games/ladder_v13/game.css"><script type="module" src="/static/games/ladder_v13/game.mjs"></script></head><body>
-<header><a href="/">NORTHSTAR <span> / IDG LEARN</span></a><div class="toolbar"><button id="sound" aria-pressed="false">Sound on</button><button id="motion" aria-pressed="false">Motion on</button><button id="pause" aria-pressed="false">Pause</button><button id="help">Controls</button></div></header>
-<main><section class="hero"><div id="scene" aria-hidden="true"></div><div class="hero-copy"><p class="eyebrow">VORATH · THE NINEFOLD RELAY</p><h1>Restore the<br><em>signal.</em></h1><p>Nine silent channels. One listening machine.<br>Give the Loomwheel its voice again.</p><div class="hero-state"><span id="restored">0 / 9 channels restored</span><span id="renderer">Instrument display starting…</span></div></div><div class="receiver" id="receiver"><span class="lamp"></span><div><small>RECEIVER</small><strong id="output">DARK · 0</strong></div></div></section>
-<nav id="missions" aria-label="Relay sectors"></nav>
-<div class="workbench"><section class="brief panel"><p class="eyebrow" id="sector"></p><h2 id="title"></h2><p class="objective" id="rule"></p><div id="switches" class="switches" aria-label="Simulated inputs"></div><p class="caption">Tap a switch to test a HIGH or LOW input. Each test uses software bits.</p><button id="hint" class="quiet">Reveal a hint</button><p id="hint-text" class="hint"></p><details><summary>How the relay works</summary><p>Contacts in a branch are AND conditions. Branches join with OR. A HIGH contact conducts for a HIGH input; a LOW contact conducts for a LOW input. Light travels from left to right until a contact blocks it.</p><p>This is a fictional Boolean logic puzzle, not machine wiring, PLC programming certification, or industrial safety guidance.</p></details></section>
-<section class="circuit panel"><div class="section-top"><div><p class="eyebrow">CONFIGURE THE CONTACTS</p><h2>Your signal path</h2></div><span class="counter" id="attempts">0 tests</span></div><div id="branches" aria-label="Contact branches"></div><div class="actions"><button id="test" class="primary">Test every input</button><button id="reset">Reset this circuit</button><button id="next" class="primary" hidden>Next channel →</button></div><div id="feedback" role="status" aria-live="polite">Choose the input and HIGH/LOW condition for each contact, then test every combination.</div><div id="truth"></div></section></div>
-<section id="completion" class="panel finale" hidden><p class="eyebrow">NINE CHANNELS · ONE VOICE</p><h2>The Loomwheel is listening.</h2><p>You restored all nine relays. Revisit any channel to experiment; your successful circuit stays saved until you change it.</p><button id="revisit">Return to the first channel</button></section>
-<footer><span id="save">Progress saves on this device.</span><span id="pad">Keyboard · mouse · touch · controller</span></footer>
-</main><dialog id="controls"><h2>At the controls</h2><p><b>Keyboard:</b> Tab / Shift+Tab to move between controls; Space or Enter to activate. 1–3 flip inputs. T tests all combinations. P pauses. Escape closes this panel.</p><p><b>Controller:</b> D-pad moves focus. A activates a button or cycles the focused contact. B goes backward through a contact’s choices. X tests. Start pauses. The left stick follows the D-pad. Touch uses the same on-screen controls.</p><p><b>Quiet display:</b> Sound and motion settings are saved. Reduced-motion preferences are respected. If 3D is unavailable, the circuit remains fully playable.</p><button id="close-help" class="primary">Back to the relay</button></dialog><div id="paused" hidden><div><p class="eyebrow">SIGNAL HELD</p><h2>Take your time.</h2><button id="resume" class="primary">Resume</button></div></div>
-</body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ladder — IDG Learn (PLC Logic)</title>
+<style>
+  :root{--bg:#0a0c15;--panel:#121728;--rail:#8fb0ff;--gold:#d8b860;--cyan:#49e0ff;
+    --live:#5be59a;--txt:#e8ebf5;--dim:#8b90a6;--bad:#ff6b6b}
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;background:
+    radial-gradient(1100px 700px at 50% -12%,#1a2140 0,transparent 60%),var(--bg);
+    color:var(--txt);font:15px/1.45 "Segoe UI",system-ui,sans-serif;text-align:center}
+  #app{max-width:560px;margin:0 auto;padding:18px 16px 40px}
+  h1{margin:0;font-size:22px} h1 .g{color:var(--gold)} h1 .c{color:var(--cyan)}
+  .tag{color:var(--dim);font-size:13px}
+  .lvl{color:var(--gold);font-weight:600;margin-top:4px}
+  .goal{background:#0d1220;border:1px solid #2a3350;border-radius:10px;padding:9px 12px;margin:12px auto 0;max-width:480px;font-size:14px}
+  .goal b{color:var(--cyan)}
+  .frame{background:var(--panel);border:1px solid #26304a;border-radius:14px;padding:14px;margin-top:12px}
+  .inputs{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:8px}
+  .sw{background:#1b2236;border:1px solid #33405f;border-radius:9px;padding:8px 12px;cursor:pointer;font-size:13px;min-width:78px}
+  .sw .st{font-size:11px;letter-spacing:.1em;color:var(--dim)}
+  .sw.on{border-color:var(--live);box-shadow:0 0 0 1px #5be59a44 inset}
+  .sw.on .st{color:var(--live)}
+  canvas{width:100%;max-width:480px;height:auto;display:block;margin:0 auto;background:#0c101d;border-radius:10px;touch-action:manipulation}
+  .coilread{margin-top:8px;font-size:13px;color:var(--dim)}
+  .coilread b.on{color:var(--live)} .coilread b.off{color:var(--dim)}
+  .hint{color:var(--dim);font-size:13.5px;margin-top:8px;min-height:20px} .hint b{color:var(--cyan)}
+  .row{display:flex;gap:8px;max-width:480px;margin:12px auto 0}
+  .row button{flex:1;border-radius:11px;padding:12px;font-weight:600;cursor:pointer;border:1px solid #33405f;background:var(--panel);color:var(--txt)}
+  #verify{background:var(--live);color:#062a17;border-color:var(--live)}
+  .nav{display:flex;justify-content:space-between;max-width:480px;margin:12px auto 0;color:var(--dim);font-size:13px}
+  .nav a{color:var(--cyan);cursor:pointer}
+  .teach{color:var(--dim);font-size:13px;margin-top:10px}
+  .msg{position:fixed;inset:0;display:none;place-items:center;background:#050710cc;backdrop-filter:blur(3px)}
+  .msg .box{background:var(--panel);border:1px solid var(--gold);border-radius:16px;padding:24px 30px;max-width:330px}
+  .msg h2{margin:.2em 0;color:var(--gold)} .msg button{margin-top:12px;background:var(--live);color:#062a17;border:0;border-radius:10px;padding:11px 20px;font-weight:700;cursor:pointer}
+</style>
+<link rel="stylesheet" href="/static/art/games/idg_wave61_69/vorath_campaign.css">
+</head>
+<body>
+<div id="app">
+  <h1><span class="g">VORATH</span> <span class="c">Ladder</span></h1>
+  <div class="tag">IDG · program a PLC rung the way real automation techs do</div>
+  <div class="lvl" id="lvlName"></div>
+  <div class="goal" id="goal"></div>
+  <div class="frame">
+    <div class="inputs" id="inputs"></div>
+    <canvas id="cv" width="480" height="200"></canvas>
+    <div class="coilread">Output coil <b id="coilName">Y</b>: <b id="coilState" class="off">OFF</b> — tap a contact to change it; toggle inputs to test.</div>
+    <div class="hint" id="hint"></div>
+    <div class="row">
+      <button id="verify">✓ Verify Rung</button>
+      <button id="reset">↺ Reset</button>
+    </div>
+    <div class="nav"><a id="prev">‹ prev</a><span id="progress"></span><a id="next">next ›</a></div>
+    <div class="teach" id="teach"></div>
+  </div>
+</div>
+<div class="msg" id="msg"><div class="box"><h2 id="mt"></h2><p class="hint" id="mb" style="min-height:0"></p><button id="mbtn">Continue</button></div></div>
+<script>
+(()=>{
+const $=id=>document.getElementById(id), cv=$('cv'), ctx=cv.getContext('2d');
+let AC;function beep(f,d,t,v){try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC&&AC.state==="suspended")AC.resume();
+  const o=AC.createOscillator(),g=AC.createGain();o.type=t||'square';o.frequency.value=f;o.connect(g);g.connect(AC.destination);
+  g.gain.value=v||.06;o.start();g.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+(d||.08));o.stop(AC.currentTime+(d||.08));}catch(e){}}
+const S={tap:()=>beep(420,.03),toggle:()=>beep(300,.04,'triangle'),
+  win:()=>{[523,659,784,1046].forEach((f,i)=>setTimeout(()=>beep(f,.14),i*90));}, no:()=>beep(140,.2,'sawtooth')};
+
+// structures: how slots combine. inputs: named. target: truth function. slots: count.
+const LEVELS=[
+ {name:"Direct", struct:"single", inputs:["Button"], coil:"Lamp", slots:1,
+  goal:"Turn the <b>Lamp</b> ON when the <b>Button</b> is pressed.", target:(x)=>x[0],
+  hint:"A <b>—| |—</b> contact (normally-open) conducts when its input is ON. Place one for the Button.",
+  teach:"Ladder logic reads left rail → contacts → coil. A normally-open contact passes power when its input is true."},
+ {name:"Safety AND", struct:"series", inputs:["Guard","Start"], coil:"Motor", slots:2,
+  goal:"Run the <b>Motor</b> only when the <b>Guard</b> is closed AND <b>Start</b> is pressed.", target:(x)=>x[0]&&x[1],
+  hint:"Two contacts <b>in series</b> (side by side) = AND. Both must conduct for power to reach the coil.",
+  teach:"Series contacts = AND. This is a safety interlock: no start unless the guard is in place."},
+ {name:"Stop Means Stop", struct:"series", inputs:["Start","Stop"], coil:"Motor", slots:2,
+  goal:"Run the <b>Motor</b> when <b>Start</b> is ON and <b>Stop</b> is NOT pressed.", target:(x)=>x[0]&&!x[1],
+  hint:"Use a <b>—|/|—</b> (normally-closed) contact for Stop — it conducts until the input goes ON. Tap a contact to change type.",
+  teach:"A normally-closed contact inverts: it breaks the circuit when its input turns ON. That's how a stop button works."},
+ {name:"Either Sensor", struct:"parallel", inputs:["Sensor A","Sensor B"], coil:"Alarm", slots:2,
+  goal:"Sound the <b>Alarm</b> if <b>Sensor A</b> OR <b>Sensor B</b> trips.", target:(x)=>x[0]||x[1],
+  hint:"Two contacts <b>in parallel</b> (stacked branches) = OR. Either path energizes the coil.",
+  teach:"Parallel branches = OR. Power finds any complete path from the left rail to the coil."},
+ {name:"Two-Start Stop", struct:"po_s", inputs:["Start 1","Start 2","Stop"], coil:"Motor", slots:3,
+  goal:"<b>Start 1</b> OR <b>Start 2</b> runs the Motor — but <b>Stop</b> overrides everything.", target:(x)=>(x[0]||x[1])&&!x[2],
+  hint:"Parallel the two Starts (OR), then put Stop in <b>series</b> as a normally-closed contact (AND-NOT).",
+  teach:"Real control rungs combine OR groups with series AND terms — this is the backbone of the classic seal-in circuit."}
+];
+
+let L, slots, inputs, li=0;
+// each slot: {in: inputIndex, type:'NO'|'NC'}. cycle order across all inputs, NO then NC.
+function options(){ const o=[]; for(let i=0;i<L.inputs.length;i++){o.push({in:i,type:'NO'});o.push({in:i,type:'NC'});} return o; }
+function loadLevel(n){
+  li=(n+LEVELS.length)%LEVELS.length; L=LEVELS[li];
+  inputs=L.inputs.map(()=>false);
+  slots=Array.from({length:L.slots},(_,k)=>({in:Math.min(k,L.inputs.length-1),type:'NO'}));
+  $('lvlName').textContent='Lv '+(li+1)+' · '+L.name;
+  $('goal').innerHTML=L.goal; $('progress').textContent=(li+1)+' / '+LEVELS.length;
+  $('hint').innerHTML=L.hint; $('teach').textContent=L.teach; $('coilName').textContent=L.coil;
+  renderInputs(); layout(); draw();
+}
+function renderInputs(){
+  const box=$('inputs'); box.innerHTML='';
+  L.inputs.forEach((nm,i)=>{ const b=document.createElement('div'); b.className='sw'+(inputs[i]?' on':'');
+    b.innerHTML=nm+'<div class="st">'+(inputs[i]?'ON':'OFF')+'</div>';
+    b.onclick=()=>{inputs[i]=!inputs[i];S.toggle();renderInputs();draw();}; box.appendChild(b); });
+}
+function conducts(s){ return s.type==='NO' ? inputs[s.in] : !inputs[s.in]; }
+function evalRung(state){ // state = boolean inputs array; evaluate with current slot assignments
+  const c = slots.map(s => s.type==='NO' ? state[s.in] : !state[s.in]);
+  if(L.struct==='single') return c[0];
+  if(L.struct==='series')  return c[0]&&c[1];
+  if(L.struct==='parallel')return c[0]||c[1];
+  if(L.struct==='po_s')    return (c[0]||c[1])&&c[2];
+  return false;
+}
+function coilNow(){ return evalRung(inputs); }
+
+// ---- layout slot hitboxes per structure ----
+let boxes=[]; // {x,y,w,h, slot index}
+function layout(){
+  boxes=[]; const midY=100;
+  if(L.struct==='single'){ boxes=[{x:200,y:midY-26,w:80,h:52,i:0}]; }
+  else if(L.struct==='series'||L.struct==='po_s' && false){ boxes=[{x:130,y:midY-26,w:80,h:52,i:0},{x:270,y:midY-26,w:80,h:52,i:1}]; }
+  else if(L.struct==='series'){ boxes=[{x:130,y:midY-26,w:80,h:52,i:0},{x:270,y:midY-26,w:80,h:52,i:1}]; }
+  else if(L.struct==='parallel'){ boxes=[{x:200,y:56,w:80,h:44,i:0},{x:200,y:118,w:80,h:44,i:1}]; }
+  else if(L.struct==='po_s'){ boxes=[{x:150,y:52,w:76,h:42,i:0},{x:150,y:112,w:76,h:42,i:1},{x:300,y:midY-24,w:80,h:48,i:2}]; }
+}
+function drawContact(x,y,w,h,s,live){
+  const cx=x+w/2, cy=y+h/2;
+  ctx.strokeStyle=live?'#5be59a':'#8fb0ff'; ctx.lineWidth=3; ctx.lineCap='round';
+  // wires into the contact
+  ctx.beginPath();ctx.moveTo(x,cy);ctx.lineTo(cx-14,cy);ctx.moveTo(cx+14,cy);ctx.lineTo(x+w,cy);ctx.stroke();
+  // two vertical bars
+  ctx.beginPath();ctx.moveTo(cx-14,cy-13);ctx.lineTo(cx-14,cy+13);ctx.moveTo(cx+14,cy-13);ctx.lineTo(cx+14,cy+13);ctx.stroke();
+  if(s.type==='NC'){ ctx.beginPath();ctx.moveTo(cx-16,cy+14);ctx.lineTo(cx+16,cy-14);ctx.stroke(); } // slash
+  // label
+  ctx.fillStyle=live?'#5be59a':'#cdd4e6'; ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.textBaseline='alphabetic';
+  ctx.fillText(L.inputs[s.in], cx, y-4);
+  ctx.fillStyle='#8b90a6'; ctx.font='10px system-ui'; ctx.fillText(s.type==='NO'?'N.O.':'N.C.', cx, y+h+13);
+}
+function draw(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  const on=coilNow(); const railL=40, railR=440, midY=100;
+  // rails
+  ctx.strokeStyle='#54607d'; ctx.lineWidth=4; ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(railL,20);ctx.lineTo(railL,180);ctx.moveTo(railR,20);ctx.lineTo(railR,180);ctx.stroke();
+  // structure wiring + contacts
+  const wire=(x1,y1,x2,y2,live)=>{ctx.strokeStyle=live?'#5be59a':'#54607d';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();};
+  boxes.forEach(b=>{ const s=slots[b.i]; drawContact(b.x,b.y,b.w,b.h,s,conducts(s)); });
+  if(L.struct==='single'){ wire(railL,midY,boxes[0].x,midY,true); wire(boxes[0].x+80,midY,railR-40,midY,conducts(slots[0])); }
+  else if(L.struct==='series'){ wire(railL,midY,boxes[0].x,midY,true); wire(boxes[0].x+80,midY,boxes[1].x,midY,conducts(slots[0])); wire(boxes[1].x+80,midY,railR-40,midY,on); }
+  else if(L.struct==='parallel'){
+    const y0=boxes[0].y+22,y1=boxes[1].y+22;
+    wire(railL,midY,140,midY,true); wire(140,y0,140,y1,true); wire(140,y0,boxes[0].x,y0,true); wire(140,y1,boxes[1].x,y1,true);
+    wire(boxes[0].x+80,y0,300,y0,conducts(slots[0])); wire(boxes[1].x+80,y1,300,y1,conducts(slots[1]));
+    wire(300,y0,300,y1,on); wire(300,midY,railR-40,midY,on);
+  } else if(L.struct==='po_s'){
+    const y0=boxes[0].y+21,y1=boxes[1].y+21, mergeX=250;
+    wire(railL,midY,110,midY,true); wire(110,y0,110,y1,true); wire(110,y0,boxes[0].x,y0,true); wire(110,y1,boxes[1].x,y1,true);
+    wire(boxes[0].x+76,y0,mergeX,y0,conducts(slots[0])); wire(boxes[1].x+76,y1,mergeX,y1,conducts(slots[1]));
+    const orOn=conducts(slots[0])||conducts(slots[1]);
+    wire(mergeX,y0,mergeX,y1,orOn); wire(mergeX,midY,boxes[2].x,midY,orOn); wire(boxes[2].x+80,midY,railR-40,midY,on);
+  }
+  // coil (Y) at right rail
+  ctx.strokeStyle=on?'#5be59a':'#8fb0ff'; ctx.lineWidth=3;
+  ctx.beginPath();ctx.arc(railR-20,midY,15,Math.PI*0.5,Math.PI*1.5);ctx.stroke();
+  ctx.beginPath();ctx.arc(railR-20,midY,15,Math.PI*1.5,Math.PI*0.5);ctx.stroke();
+  ctx.fillStyle=on?'#5be59a':'#8b90a6'; ctx.font='bold 13px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('('+L.coil[0]+')', railR-20, midY);
+  // coil readout
+  const cs=$('coilState'); cs.textContent=on?'ON':'OFF'; cs.className=on?'on':'off';
+}
+function pick(ev){ const r=cv.getBoundingClientRect(), sx=cv.width/r.width, sy=cv.height/r.height;
+  const px=(ev.clientX-r.left)*sx, py=(ev.clientY-r.top)*sy;
+  for(const b of boxes){ if(px>=b.x-6&&px<=b.x+b.w+6&&py>=b.y-14&&py<=b.y+b.h+14) return b.i; } return -1; }
+cv.addEventListener('click',ev=>{ const i=pick(ev); if(i<0)return;
+  const opts=options(); const cur=opts.findIndex(o=>o.in===slots[i].in&&o.type===slots[i].type);
+  const nx=opts[(cur+1)%opts.length]; slots[i]={in:nx.in,type:nx.type}; S.tap(); draw(); });
+
+function verify(){
+  const n=L.inputs.length; let ok=true;
+  for(let m=0;m<(1<<n);m++){ const st=[]; for(let i=0;i<n;i++) st.push(!!(m&(1<<i)));
+    if(evalRung(st)!==!!L.target(st)){ ok=false; break; } }
+  if(ok){ S.win(); setTimeout(()=>popup('✦ Rung Verified ✦',
+     li<LEVELS.length-1?'Correct across every input combination. Next rung awaits.':'You program rungs like a controls tech — nicely done.',
+     li<LEVELS.length-1?'Next level':'Replay'),350); }
+  else { S.no(); flash('Not quite — the coil is wrong for some input combination. Adjust contact types and inputs.'); }
+}
+let ht; function flash(t){const h=$('hint');h.innerHTML='<b style="color:#ff6b6b">'+t+'</b>';clearTimeout(ht);ht=setTimeout(()=>h.innerHTML=L.hint,3000);}
+function popup(t,b,btn){$('mt').textContent=t;$('mb').textContent=b;$('mbtn').textContent=btn;$('msg').style.display='grid';}
+$('mbtn').onclick=()=>{$('msg').style.display='none';loadLevel(li<LEVELS.length-1?li+1:li);};
+$('verify').onclick=verify;
+$('reset').onclick=()=>loadLevel(li);
+$('prev').onclick=()=>loadLevel(li-1); $('next').onclick=()=>loadLevel(li+1);
+loadLevel(0);
+})();
+</script>
+<script src="/static/art/games/idg_wave61_69/vorath_campaign.js"></script>
+</body>
+</html>

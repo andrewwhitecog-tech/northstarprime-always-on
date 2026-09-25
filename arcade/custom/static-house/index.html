@@ -226,6 +226,12 @@
       touch-action: none;
     }
 
+    #stageWrap > canvas {
+      width: 100% !important;
+      height: 100% !important;
+      max-width: none !important;
+    }
+
     .overlay {
       position: absolute;
       inset: 0;
@@ -380,6 +386,30 @@
       background: rgba(255, 244, 216, 0.04);
     }
 
+    .threat-card {
+      display: grid;
+      gap: 6px;
+      border: 1px solid color-mix(in srgb, var(--threat-color, var(--cyan)) 62%, transparent);
+      border-radius: 8px;
+      padding: 11px;
+      background:
+        linear-gradient(135deg, color-mix(in srgb, var(--threat-color, var(--cyan)) 13%, transparent), transparent 72%),
+        rgba(0, 0, 0, 0.2);
+      box-shadow: inset 0 0 24px color-mix(in srgb, var(--threat-color, var(--cyan)) 8%, transparent);
+    }
+
+    .threat-card strong {
+      color: var(--paper);
+      font-size: 17px;
+      text-transform: uppercase;
+    }
+
+    .threat-card span {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
     @media (max-width: 1040px) {
       h1 { font-size: 40px; }
       .layout { grid-template-columns: 1fr; }
@@ -388,8 +418,19 @@
     }
 
     @media (max-width: 720px) {
+      #northstar-vorath-gate,
+      #northstar-playtest-toggle { display: none !important; }
       .shell { padding: 12px; }
       h1 { font-size: 32px; }
+      .topbar { align-items: flex-start; }
+      .chips {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        justify-content: stretch;
+      }
+      .chips .chip { justify-content: center; font-size: 10px; min-width: 0; }
+      .chips .chip:last-child { grid-column: 1 / -1; }
       .hud { grid-template-columns: 1fr 1fr; }
       .controls { grid-template-columns: 1fr 1fr; }
       .stage-wrap { min-height: 430px; }
@@ -406,6 +447,7 @@
       </div>
       <div class="chips">
         <span class="chip" id="bestChip">Best 0</span>
+        <span class="chip" id="threatChip">Threat Dormant</span>
         <span class="chip" id="goalChip">Seal Door</span>
       </div>
     </header>
@@ -429,7 +471,7 @@
             <section class="modal">
               <div class="kicker">House signal found</div>
               <h2 id="overlayTitle">Static House</h2>
-              <p id="overlayText">Search fixed rooms, carry only four items, restore the fuse line, and seal the front door before static overtakes the house.</p>
+              <p id="overlayText">Search six authored rooms, manage four inventory slots, restore the fuse line, learn four anomaly counter-rules, and seal the watching threshold before static overtakes the house.</p>
               <button class="primary" id="overlayBtn" type="button">Enter House</button>
             </section>
           </div>
@@ -440,6 +482,7 @@
           <button id="inspectBtn" type="button">Inspect</button>
           <button id="takeBtn" type="button">Take</button>
           <button id="useBtn" type="button">Use</button>
+          <button id="pulseBtn" type="button" style="border-color:#2fe4ff;color:#2fe4ff;">Pulse [F]</button>
           <select id="itemSelect" aria-label="Inventory item"></select>
           <button id="resetBtn" type="button">Reset</button>
         </div>
@@ -459,6 +502,12 @@
 
         <div class="inventory" id="inventory"></div>
 
+        <section class="threat-card" id="threatCard">
+          <div class="kicker">Anomaly signal</div>
+          <strong id="threatName">Key Warden</strong>
+          <span id="threatRule">When it marks a room, cross one threshold before impact.</span>
+        </section>
+
         <section>
           <div class="kicker">House Log</div>
           <div class="log" id="log"></div>
@@ -469,7 +518,7 @@
     </section>
 
     <footer class="footer">
-      <span>Move: arrows/WASD. Inspect: Space. Take: E. Use selected: U. Touch: tap exits/items.</span>
+      <span>Move: arrows/WASD. Inspect: Space/A. Take: E/X. Use: U/Y. Spectral Pulse: F/Q. Anomaly counter-rules active. Touch: tap buttons.</span>
       <span id="stateLine">Idle</span>
     </footer>
   </main>
@@ -487,6 +536,7 @@
       focus: document.querySelector("#focus"),
       slots: document.querySelector("#slots"),
       bestChip: document.querySelector("#bestChip"),
+      threatChip: document.querySelector("#threatChip"),
       goalChip: document.querySelector("#goalChip"),
       stateLine: document.querySelector("#stateLine"),
       overlayTitle: document.querySelector("#overlayTitle"),
@@ -495,6 +545,9 @@
       inventory: document.querySelector("#inventory"),
       itemSelect: document.querySelector("#itemSelect"),
       log: document.querySelector("#log"),
+      threatCard: document.querySelector("#threatCard"),
+      threatName: document.querySelector("#threatName"),
+      threatRule: document.querySelector("#threatRule"),
       glowToggle: document.querySelector("#glowToggle"),
       calmToggle: document.querySelector("#calmToggle")
     };
@@ -510,6 +563,7 @@
     const rooms = {
       hall: {
         name: "Hall",
+        motif: "switchboard nave",
         tint: "#2fe4ff",
         exits: { left: "parlor", right: "kitchen", down: "foyer" },
         item: "brass_key",
@@ -518,6 +572,7 @@
       },
       parlor: {
         name: "Parlor",
+        motif: "mirror salon",
         tint: "#ff4aa5",
         exits: { right: "hall", down: "study" },
         item: "mirror_card",
@@ -527,6 +582,7 @@
       },
       kitchen: {
         name: "Kitchen",
+        motif: "copper drain chapel",
         tint: "#80ff70",
         exits: { left: "hall", down: "cellar" },
         item: "kitchen_salt",
@@ -535,6 +591,7 @@
       },
       study: {
         name: "Study",
+        motif: "sealed scriptorium",
         tint: "#ffe45c",
         exits: { up: "parlor", right: "foyer" },
         item: "fuse",
@@ -544,6 +601,7 @@
       },
       cellar: {
         name: "Cellar",
+        motif: "coil crypt",
         tint: "#2fe4ff",
         exits: { up: "kitchen", left: "foyer" },
         item: null,
@@ -552,6 +610,7 @@
       },
       foyer: {
         name: "Foyer",
+        motif: "watching threshold",
         tint: "#d8a63f",
         exits: { up: "hall", left: "cellar", right: "study" },
         item: "door_seal",
@@ -561,8 +620,62 @@
       }
     };
 
+    const anomalies = {
+      key_warden: {
+        name: "Key Warden",
+        signal: "KEY",
+        color: "#ff4a68",
+        atlas: [0, 0],
+        duration: 3,
+        damage: 24,
+        staticDamage: 18,
+        reward: 90,
+        rule: "Room mark: cross at least one threshold before impact.",
+        danger: "LEAVE THE MARKED ROOM"
+      },
+      veil_witness: {
+        name: "Veil Witness",
+        signal: "GAZE",
+        color: "#41e7ff",
+        atlas: [1, 0],
+        duration: 2.85,
+        damage: 18,
+        staticDamage: 22,
+        reward: 125,
+        rule: "Mirror gaze: Inspect once before the veil closes.",
+        danger: "INSPECT TO BREAK THE GAZE"
+      },
+      coil_breaker: {
+        name: "Coil Breaker",
+        signal: "SURGE",
+        color: "#ff49d8",
+        atlas: [0, 1],
+        duration: 4.25,
+        damage: 30,
+        staticDamage: 14,
+        reward: 150,
+        rule: "Chain surge: cross two thresholds before discharge.",
+        danger: "CROSS TWO THRESHOLDS"
+      },
+      threshold_hound: {
+        name: "Threshold Hound",
+        signal: "HUNT",
+        color: "#68ff9a",
+        atlas: [1, 1],
+        duration: 2.55,
+        damage: 20,
+        staticDamage: 20,
+        reward: 130,
+        rule: "Motion hunt: hold this room and do not cross a threshold.",
+        danger: "FREEZE — DO NOT CHANGE ROOMS"
+      }
+    };
+    const anomalyOrder = ["key_warden", "veil_witness", "coil_breaker", "threshold_hound"];
+
     let state;
     let keys = {};
+    let gamepadMoveCooldown = 0;
+    let gamepadHeld = {};
     let pointer = null;
     let logRows = [];
     let last = 0;
@@ -587,8 +700,8 @@
     function stopMusic() { try { if (music) music.stop(); } catch (e) {} music = null; }
 
     // ---- Juice: sprites + screen shake + warden hit flash ----
-    const sprites = { bg: null, warden: null };
-    const spriteReady = { bg: false, warden: false };
+    const sprites = { bg: null, warden: null, anomalyCast: null };
+    const spriteReady = { bg: false, warden: false, anomalyCast: false };
     (function loadSprites() {
       const bg = new Image();
       bg.onload = () => { spriteReady.bg = true; };
@@ -596,11 +709,92 @@
       sprites.bg = bg;
       const wn = new Image();
       wn.onload = () => { spriteReady.warden = true; };
-      wn.src = "/static/games/roster/sta_warden.png";
+      wn.src = "/static/art/games/vorath_overhaul_v01/static_house/static_warden_atlas_v01.png";
       sprites.warden = wn;
+      const cast = new Image();
+      cast.onload = () => { spriteReady.anomalyCast = true; };
+      cast.src = "/static/art/games/vorath_overhaul_v01/static_house/static_house_anomaly_cast_atlas_v02.png";
+      sprites.anomalyCast = cast;
     })();
     let shakeMag = 0, shakeUntil = 0, wardenFlash = 0, takePop = 0;
     function shake(mag, ms) { shakeMag = Math.max(shakeMag, mag); shakeUntil = performance.now() + (ms || 260); }
+
+    let floatingNotices = [];
+    function addFloatingNotice(x, y, text, color = "#2fe4ff") {
+      floatingNotices.push({ x, y, text, color, life: 1.2 });
+    }
+
+    // Zero-dependency procedural Web Audio synthesizer
+    let audioCtx = null;
+    function getAudioCtx() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) audioCtx = new AudioContext();
+      }
+      if (audioCtx && audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
+      return audioCtx;
+    }
+
+    function soundSpectralPulse() {
+      const ctx = getAudioCtx();
+      if (!ctx) return;
+      try {
+        const t = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(340, t);
+        osc.frequency.exponentialRampToValueAtTime(75, t + 0.38);
+        gain.gain.setValueAtTime(0.24, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.42);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.42);
+      } catch (e) {}
+    }
+
+    function soundStaticBurst() {
+      const ctx = getAudioCtx();
+      if (!ctx) return;
+      try {
+        const bufferSize = Math.floor(ctx.sampleRate * 0.16);
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+        const noise = ctx.createBufferSource();
+        noise.buffer = buffer;
+        const filter = ctx.createBiquadFilter();
+        filter.type = "bandpass";
+        filter.frequency.value = 1400;
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.18, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.16);
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+        noise.start();
+      } catch (e) {}
+    }
+
+    function soundHeartbeat() {
+      const ctx = getAudioCtx();
+      if (!ctx) return;
+      try {
+        const t = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(65, t);
+        osc.frequency.exponentialRampToValueAtTime(32, t + 0.08);
+        gain.gain.setValueAtTime(0.2, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.1);
+      } catch (e) {}
+    }
 
     function baseState() {
       return {
@@ -609,7 +803,19 @@
         room: "hall",
         focus: 100,
         staticLevel: 0,
-        charge: 3,
+        charge: 0,
+        wardenPhase: "stalking",
+        activeThreat: "key_warden",
+        threatCountered: false,
+        threatMoves: 0,
+        threatsEncountered: {},
+        wardenCooldown: 7,
+        wardenChargeTimer: 0,
+        wardenChargeDuration: 3,
+        wardenTargetRoom: null,
+        wardenAttacks: 0,
+        wardenHits: 0,
+        wardenDodges: 0,
         inventory: [],
         maxSlots: 4,
         found: {},
@@ -620,8 +826,65 @@
         ending: null,
         receipt: null,
         pulse: 0,
-        particles: []
+        particles: [],
+        entropyDirector: {
+          state: "CALM_SEARCH",
+          tension: 10,
+          stateTimer: 0,
+          decisionLatencyUs: 0.00035,
+          pulseCooldown: 0,
+          pulseActive: 0,
+          stalkerStunTimer: 0,
+          divergenceScore: 100
+        }
       };
+    }
+
+    function triggerSpectralPulse() {
+      if (state.mode !== "play") return;
+      const dir = state.entropyDirector;
+      if (!dir || dir.pulseCooldown > 0) return;
+      dir.pulseActive = 0.45;
+      dir.pulseCooldown = 3.6;
+      soundSpectralPulse();
+      soundStaticBurst();
+      state.pulse = 1.0;
+      state.staticLevel = Math.max(0, state.staticLevel - 25);
+      state.focus = Math.min(100, state.focus + 12);
+      state.wardenCooldown += 3.5;
+      dir.stalkerStunTimer = 3.5;
+      addFloatingNotice(w() / 2, h() / 2, "SPECTRAL PULSE: STALKER STUNNED!", "#2fe4ff");
+      log("PULSE // Spectral Lantern shockwave discharged; anomaly frozen.");
+      updateUi();
+    }
+
+    // ----------------- SYSTEM 1 ENTROPY STALKER DIRECTOR -----------------
+    function updateEntropyDirector(dt) {
+      const t0 = performance.now();
+      const dir = state.entropyDirector;
+      dir.stateTimer += dt;
+      if (dir.pulseCooldown > 0) dir.pulseCooldown = Math.max(0, dir.pulseCooldown - dt);
+      if (dir.pulseActive > 0) dir.pulseActive = Math.max(0, dir.pulseActive - dt);
+      if (dir.stalkerStunTimer > 0) dir.stalkerStunTimer = Math.max(0, dir.stalkerStunTimer - dt);
+
+      const baseTension = state.staticLevel * 0.6 + (state.wardenPhase === "hunting" ? 30 : 0) + (state.wardenPhase === "charging" ? 50 : 0);
+      dir.tension = Math.max(10, Math.min(100, dir.tension * 0.95 + baseTension * 0.05));
+
+      if (state.staticLevel >= 75 || state.wardenPhase === "charging") {
+        dir.state = "PANIC_SURGE";
+      } else if (state.wardenPhase === "hunting" || state.staticLevel >= 40) {
+        dir.state = "SIGNAL_CREEP";
+      } else if (state.ending === "win") {
+        dir.state = "THRESHOLD_SEALED";
+      } else {
+        dir.state = "CALM_SEARCH";
+      }
+
+      if (state.time % Math.max(0.4, 1.4 - dir.tension * 0.01) < 0.03 && dir.tension > 35) {
+        soundHeartbeat();
+      }
+
+      dir.decisionLatencyUs = Math.max(0.0001, (performance.now() - t0) * 1000);
     }
 
     function log(text) {
@@ -638,20 +901,26 @@
       const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
       canvas.width = Math.max(420, Math.floor(rect.width * dpr));
       canvas.height = Math.max(360, Math.floor(rect.height * dpr));
+      canvas.style.width = Math.max(1, Math.floor(rect.width)) + "px";
+      canvas.style.height = Math.max(1, Math.floor(rect.height)) + "px";
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
     function w() { return canvas.width / Math.max(1, Math.min(2, window.devicePixelRatio || 1)); }
     function h() { return canvas.height / Math.max(1, Math.min(2, window.devicePixelRatio || 1)); }
 
-    function startRun() {
+    function startRun(options) {
       state = baseState();
       state.mode = "play";
       overlay.hidden = true;
       logRows = [];
+      gamepadMoveCooldown = 0;
+      gamepadHeld = {};
       log("ENTRY // house signal opened.");
-      startMusic();
-      sfx("powerUp");
+      if (!(options && options.silent)) {
+        startMusic();
+        sfx("powerUp");
+      }
       updateUi();
     }
 
@@ -659,7 +928,7 @@
       stopMusic();
       state = baseState();
       state.found.brass_key = false;
-      showOverlay("Static House", "Search fixed rooms, carry only four items, restore the fuse line, and seal the front door before static overtakes the house.", "Enter House");
+      showOverlay("Static House", "Search six authored rooms, manage four inventory slots, restore the fuse line, learn four anomaly counter-rules, and seal the watching threshold before static overtakes the house.", "Enter House");
       logRows = [];
       log("ATTRACT // house signal found.");
       updateUi();
@@ -679,6 +948,14 @@
     function inspectRoom() {
       if (state.mode !== "play") return;
       const r = room();
+      if (state.wardenPhase === "charging" && state.activeThreat === "veil_witness" && !state.threatCountered) {
+        state.threatCountered = true;
+        state.score += 45;
+        wardenFlash = Math.max(wardenFlash, 0.7);
+        addParticles(w() / 2, h() * 0.42, anomalies.veil_witness.color, 22);
+        sfx("gate");
+        log("GAZE BROKEN // the Veil Witness lost the reflection lock.");
+      }
       state.score += 20;
       state.staticLevel = Math.min(100, state.staticLevel + 2);
       if (r.lockedBy && !state.inventory.includes(r.lockedBy) && !state.used[r.lockedBy + "_" + state.room]) {
@@ -823,6 +1100,7 @@
         return;
       }
       state.room = next;
+      if (state.wardenPhase === "charging") state.threatMoves += 1;
       state.score += 35;
       state.staticLevel = Math.min(100, state.staticLevel + 1.5);
       addParticles(w() / 2, h() * 0.52, rooms[next].tint, 10);
@@ -831,8 +1109,90 @@
       updateUi();
     }
 
+    function beginWardenCharge() {
+      if (state.mode !== "play" || state.wardenPhase === "charging") return;
+      state.activeThreat = anomalyOrder[state.wardenAttacks % anomalyOrder.length];
+      const threat = anomalies[state.activeThreat];
+      state.wardenPhase = "charging";
+      state.wardenTargetRoom = state.room;
+      state.wardenChargeDuration = threat.duration;
+      state.wardenChargeTimer = state.wardenChargeDuration;
+      state.threatCountered = false;
+      state.threatMoves = 0;
+      state.threatsEncountered[state.activeThreat] = (state.threatsEncountered[state.activeThreat] || 0) + 1;
+      state.charge = Math.ceil(state.wardenChargeTimer);
+      wardenFlash = Math.max(wardenFlash, 0.55);
+      sfx("blip");
+      log(threat.signal + " // " + threat.name + " engaged in " + rooms[state.wardenTargetRoom].name + ". " + threat.rule);
+      updateUi();
+    }
+
+    function wardenAttackCollides() {
+      if (state.wardenTargetRoom === null) return false;
+      if (state.activeThreat === "veil_witness") return !state.threatCountered;
+      if (state.activeThreat === "coil_breaker") return state.threatMoves < 2;
+      if (state.activeThreat === "threshold_hound") return state.threatMoves > 0;
+      return state.room === state.wardenTargetRoom;
+    }
+
+    function resolveWardenAttack() {
+      const targetRoom = state.wardenTargetRoom;
+      const threat = anomalies[state.activeThreat] || anomalies.key_warden;
+      const hit = wardenAttackCollides();
+      state.wardenAttacks += 1;
+      if (hit) {
+        state.wardenHits += 1;
+        state.focus = Math.max(0, state.focus - threat.damage);
+        state.staticLevel = Math.min(100, state.staticLevel + threat.staticDamage);
+        state.score = Math.max(0, state.score - 120);
+        wardenFlash = 1;
+        shake(12, 480);
+        sfx("hurt");
+        addParticles(w() / 2, h() * 0.52, threat.color, 34);
+        log(threat.name.toUpperCase() + " HIT // counter failed in " + rooms[targetRoom].name + ": -" + threat.damage + " focus, +" + threat.staticDamage + " static.");
+      } else {
+        state.wardenDodges += 1;
+        state.focus = Math.min(100, state.focus + 4);
+        state.staticLevel = Math.max(0, state.staticLevel - 6);
+        state.score += threat.reward;
+        sfx("coin");
+        addParticles(w() / 2, h() * 0.52, "#80ff70", 18);
+        log(threat.name.toUpperCase() + " COUNTERED // " + rooms[targetRoom].name + " survived. +" + threat.reward + " score.");
+      }
+      state.wardenPhase = "stalking";
+      state.wardenCooldown = Math.max(4.8, 8.2 - state.wardenAttacks * 0.28);
+      state.wardenChargeTimer = 0;
+      state.wardenTargetRoom = null;
+      state.threatCountered = false;
+      state.threatMoves = 0;
+      state.charge = 0;
+    }
+
+    function updateWardenAttack(dt) {
+      if (state.wardenPhase === "charging") {
+        state.wardenChargeTimer = Math.max(0, state.wardenChargeTimer - dt);
+        state.charge = Math.max(0, Math.ceil(state.wardenChargeTimer));
+        wardenFlash = Math.max(wardenFlash, 0.16 + (1 - state.wardenChargeTimer / state.wardenChargeDuration) * 0.34);
+        if (state.wardenChargeTimer <= 0) resolveWardenAttack();
+        return;
+      }
+      state.wardenCooldown = Math.max(0, state.wardenCooldown - dt);
+      state.charge = 0;
+      if (state.wardenCooldown <= 0) beginWardenCharge();
+    }
+
+    function cancelWardenAttack() {
+      state.wardenPhase = "stalking";
+      state.wardenChargeTimer = 0;
+      state.wardenTargetRoom = null;
+      state.threatCountered = false;
+      state.threatMoves = 0;
+      state.charge = 0;
+    }
+
     function finishRun(reason) {
       state.mode = "finished";
+      cancelWardenAttack();
       state.ending = reason;
       state.score += Math.max(0, Math.floor(state.focus * 6 + (100 - state.staticLevel) * 5));
       best = Math.max(best, state.score);
@@ -847,22 +1207,33 @@
     }
 
     function update(dt) {
+      pollGamepad(dt);
       if (state.mode !== "play") {
         state.pulse += dt * 0.7;
         updateParticles(dt);
         return;
       }
+      updateEntropyDirector(dt);
       state.pulse += dt;
+      if (!state.entropyDirector || state.entropyDirector.stalkerStunTimer <= 0) {
+        updateWardenAttack(dt);
+      }
       state.staticLevel = Math.min(100, state.staticLevel + dt * 1.8);
       state.focus = Math.max(0, state.focus - Math.max(0, state.staticLevel - 35) * dt * 0.055);
       if (state.focus <= 0 || state.staticLevel >= 100) {
         state.mode = "finished";
+        cancelWardenAttack();
         state.receipt = makeReceipt("static_overflow");
         stopMusic();
         sfx("death");
         shake(12, 500);
         showOverlay("Signal Lost", "The house filled the screen. Score " + state.score + ".", "Restart");
       }
+      for (const fn of floatingNotices) {
+        fn.y -= dt * 25;
+        fn.life -= dt;
+      }
+      floatingNotices = floatingNotices.filter(fn => fn.life > 0);
       updateParticles(dt);
       updateUi();
     }
@@ -886,15 +1257,27 @@
     }
 
     function updateUi() {
+      const threat = anomalies[state.activeThreat] || anomalies.key_warden;
       els.score.textContent = state.score;
       els.room.textContent = room().name.slice(0, 6);
-      els.charge.textContent = state.charge;
+      els.charge.textContent = state.wardenPhase === "charging" ? Math.max(1, Math.ceil(state.wardenChargeTimer)) : "-";
       els.static.textContent = Math.floor(state.staticLevel);
       els.focus.textContent = Math.max(0, Math.floor(state.focus));
       els.slots.textContent = state.inventory.length + "/" + state.maxSlots;
       els.bestChip.textContent = "Best " + best;
-      els.goalChip.textContent = state.fusePowered ? (state.thresholdStable ? "Use Seal" : "Stabilize") : "Power Line";
-      els.stateLine.textContent = state.mode === "play" ? room().name + " live" : state.mode;
+      const wardenCharging = state.wardenPhase === "charging" && state.wardenTargetRoom;
+      const counterLocked = wardenCharging && !wardenAttackCollides();
+      els.threatChip.textContent = wardenCharging ? "LIVE " + threat.signal : "Next " + threat.signal;
+      els.threatChip.style.borderColor = threat.color + "99";
+      els.threatName.textContent = threat.name;
+      els.threatRule.textContent = threat.rule;
+      els.threatCard.style.setProperty("--threat-color", threat.color);
+      els.goalChip.textContent = wardenCharging
+        ? (counterLocked ? "Counter Locked" : threat.danger)
+        : (state.fusePowered ? (state.thresholdStable ? "Use Seal" : "Stabilize") : "Power Line");
+      els.stateLine.textContent = wardenCharging
+        ? threat.name.toUpperCase() + " // " + threat.signal + " // " + state.charge + "s"
+        : (state.mode === "play" ? room().name + " live" : state.mode);
       renderInventory();
     }
 
@@ -977,35 +1360,49 @@
       const scale = Math.min(width, height);
       const body = scale * 0.16;
 
-      // Preferred: AI warden sprite (procedural block below is the fallback)
-      if (spriteReady.warden && sprites.warden) {
-        const iw = sprites.warden.naturalWidth || sprites.warden.width;
-        const ih = sprites.warden.naturalHeight || sprites.warden.height;
+      // Preferred: authored four-character atlas; the earlier Warden atlas remains the rollback fallback.
+      const threat = anomalies[state.activeThreat] || anomalies.key_warden;
+      const castImage = spriteReady.anomalyCast && sprites.anomalyCast ? sprites.anomalyCast : sprites.warden;
+      if ((spriteReady.anomalyCast || spriteReady.warden) && castImage) {
+        const iw = castImage.naturalWidth || castImage.width;
+        const ih = castImage.naturalHeight || castImage.height;
         if (iw && ih) {
-          const dh = scale * 0.62 * (1 - takePop * 0.06);
-          const dw = dh * (iw / ih) * (1 + takePop * 0.05);
-          const dx = cx - dw / 2;
-          const dy = cy - dh * 0.5;
+          const atlasCols = 2;
+          const atlasRows = 2;
+          const sw = iw / atlasCols;
+          const sh = ih / atlasRows;
+          const atlasCol = threat.atlas[0];
+          const atlasRow = threat.atlas[1];
+          const charging = state.wardenPhase === "charging";
+          const stride = Math.sin(state.pulse * (state.activeThreat === "threshold_hound" ? 5.2 : 2.1));
+          const breathe = 1 + Math.sin(state.pulse * 2.4) * 0.018;
+          const dh = scale * (state.activeThreat === "threshold_hound" ? 0.66 : 0.72) * (1 - takePop * 0.04);
+          const dw = dh;
+          const lean = charging ? stride * (state.activeThreat === "coil_breaker" ? 0.018 : 0.035) : stride * 0.012;
+          const lift = state.activeThreat === "veil_witness" ? Math.sin(state.pulse * 1.7) * 15 : Math.abs(stride) * -4;
           // soft aura behind the sprite
           ctx.save();
           ctx.globalCompositeOperation = "screen";
-          ctx.shadowColor = r.tint;
+          ctx.shadowColor = threat.color;
           ctx.shadowBlur = els.glowToggle.checked ? body * 0.7 : body * 0.2;
           const aura = ctx.createRadialGradient(cx, cy, 0, cx, cy, dw * 1.3);
           aura.addColorStop(0, "rgba(255,255,255,.18)");
-          aura.addColorStop(0.3, r.tint + "44");
+          aura.addColorStop(0.3, threat.color + "44");
           aura.addColorStop(1, "rgba(0,0,0,0)");
           ctx.fillStyle = aura;
           ctx.fillRect(cx - dw * 1.3, cy - dh * 0.7, dw * 2.6, dh * 1.6);
           ctx.restore();
-          ctx.drawImage(sprites.warden, dx, dy, dw, dh);
+          ctx.save();
+          ctx.translate(cx, cy + lift);
+          ctx.rotate(lean);
+          ctx.scale(breathe * (charging ? 1.025 : 1), breathe * (charging ? 0.985 : 1));
+          ctx.drawImage(castImage, atlasCol * sw, atlasRow * sh, sw, sh, -dw / 2, -dh * 0.5, dw, dh);
           if (wardenFlash > 0.01) {
-            ctx.save();
             ctx.globalCompositeOperation = "lighter";
-            ctx.globalAlpha = Math.min(1, wardenFlash);
-            ctx.drawImage(sprites.warden, dx, dy, dw, dh);
-            ctx.restore();
+            ctx.globalAlpha = Math.min(0.76, wardenFlash);
+            ctx.drawImage(castImage, atlasCol * sw, atlasRow * sh, sw, sh, -dw / 2, -dh * 0.5, dw, dh);
           }
+          ctx.restore();
           return;
         }
       }
@@ -1060,6 +1457,45 @@
       ctx.restore();
     }
 
+    function drawWardenTelegraph(width, height) {
+      if (state.wardenPhase !== "charging" || !state.wardenTargetRoom) return;
+      const threat = anomalies[state.activeThreat] || anomalies.key_warden;
+      const danger = wardenAttackCollides();
+      const remaining = Math.max(0, state.wardenChargeTimer);
+      const progress = 1 - remaining / state.wardenChargeDuration;
+      const cx = width / 2;
+      const cy = height * 0.52;
+      const radius = Math.max(54, Math.min(width, height) * (0.28 - progress * 0.15));
+      const color = danger ? threat.color : "#80ff70";
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 4 + progress * 5;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = els.glowToggle.checked ? 24 + progress * 28 : 8;
+      ctx.setLineDash([18, 11]);
+      ctx.lineDashOffset = -state.pulse * 42;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 0.1 + progress * 0.12;
+      ctx.fillStyle = color;
+      ctx.fillRect(0, 0, width, height);
+      ctx.globalAlpha = 1;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = "900 18px Segoe UI, sans-serif";
+      ctx.fillStyle = "#fff4d8";
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 14;
+      ctx.fillText(threat.name.toUpperCase() + " // " + threat.signal + " " + remaining.toFixed(1) + "s", cx, height * 0.1);
+      ctx.font = "800 13px Segoe UI, sans-serif";
+      ctx.fillStyle = color;
+      ctx.fillText(danger ? threat.danger : "COUNTER LOCKED — HOLD YOUR NERVE", cx, height * 0.14);
+      ctx.restore();
+    }
+
     function draw() {
       const width = w();
       const height = h();
@@ -1067,10 +1503,55 @@
       ctx.clearRect(0, 0, width, height);
       drawRoom(width, height, r);
       drawSpectralWarden(width, height, r);
+      drawWardenTelegraph(width, height);
       drawItems(width, height, r);
       drawExits(width, height, r);
       state.particles.forEach(drawParticle);
       drawStatic(width, height);
+      drawFloatingNotices();
+      drawEntropyDirectorHud(width, height);
+    }
+
+    function drawFloatingNotices() {
+      if (!floatingNotices.length) return;
+      ctx.save();
+      ctx.textAlign = "center";
+      ctx.font = "900 13px Segoe UI, sans-serif";
+      for (const fn of floatingNotices) {
+        ctx.globalAlpha = Math.max(0, Math.min(1, fn.life * 1.5));
+        ctx.fillStyle = fn.color;
+        ctx.shadowColor = fn.color;
+        ctx.shadowBlur = 10;
+        ctx.fillText(fn.text, fn.x, fn.y);
+      }
+      ctx.restore();
+    }
+
+    function drawEntropyDirectorHud(width, height) {
+      const dir = state.entropyDirector;
+      if (!dir) return;
+      ctx.save();
+      ctx.textAlign = "left";
+      ctx.font = "10px Courier New, monospace";
+      const tensionColor = dir.tension > 70 ? "#ff6148" : (dir.tension > 40 ? "#ffe45c" : "#2fe4ff");
+      ctx.fillStyle = tensionColor;
+      ctx.shadowColor = tensionColor;
+      ctx.shadowBlur = 8;
+      ctx.fillText(`AI STALKER DIRECTOR [${dir.state}] ${Math.round(dir.tension)}% · ${dir.decisionLatencyUs.toFixed(3)}µs`, 16, 22);
+
+      // Tension bar
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "rgba(255,255,255,0.14)";
+      ctx.fillRect(16, 26, 170, 4);
+      ctx.fillStyle = tensionColor;
+      ctx.fillRect(16, 26, 170 * (dir.tension / 100), 4);
+
+      // Pulse indicator on right
+      ctx.textAlign = "right";
+      const pulseReady = dir.pulseCooldown <= 0;
+      ctx.fillStyle = pulseReady ? "#2fe4ff" : "#888";
+      ctx.fillText(`SPECTRAL PULSE [F]: ${pulseReady ? "READY" : dir.pulseCooldown.toFixed(1) + "s"}`, width - 16, 22);
+      ctx.restore();
     }
 
     function drawCover(img, width, height) {
@@ -1081,6 +1562,112 @@
       const dw = iw * scale, dh = ih * scale;
       ctx.drawImage(img, (width - dw) / 2, (height - dh) / 2, dw, dh);
       return true;
+    }
+
+    function drawRoomIdentity(width, height, r) {
+      const left = width * 0.13;
+      const right = width * 0.87;
+      const top = height * 0.24;
+      const floor = height * 0.78;
+      const color = r.tint;
+      ctx.save();
+      ctx.globalAlpha = 0.66;
+      ctx.globalCompositeOperation = "screen";
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color + "16";
+      ctx.lineWidth = Math.max(1.5, width * 0.0024);
+      ctx.shadowColor = color;
+      ctx.shadowBlur = els.glowToggle.checked ? 13 : 3;
+
+      if (state.room === "hall") {
+        for (let col = 0; col < 2; col += 1) {
+          const x = col ? right - width * 0.16 : left;
+          ctx.strokeRect(x, top + height * 0.08, width * 0.16, height * 0.35);
+          for (let i = 0; i < 4; i += 1) {
+            ctx.beginPath();
+            ctx.arc(x + width * (0.035 + i * 0.03), top + height * 0.16, 4 + (i % 2), 0, Math.PI * 2);
+            ctx.stroke();
+          }
+        }
+        ctx.beginPath();
+        ctx.moveTo(left + width * 0.08, top + height * 0.43);
+        ctx.bezierCurveTo(width * 0.32, height * 0.38, width * 0.68, height * 0.68, right - width * 0.08, top + height * 0.43);
+        ctx.stroke();
+      } else if (state.room === "parlor") {
+        [0.24, 0.76].forEach((xFactor, index) => {
+          ctx.beginPath();
+          ctx.ellipse(width * xFactor, height * 0.48, width * 0.095, height * 0.24, index ? 0.08 : -0.08, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.ellipse(width * xFactor, height * 0.48, width * 0.07, height * 0.205, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        });
+        for (let fold = 0; fold < 6; fold += 1) {
+          ctx.beginPath();
+          ctx.moveTo(left + fold * width * 0.035, top);
+          ctx.quadraticCurveTo(left + width * 0.12, height * 0.47, left + fold * width * 0.027, floor);
+          ctx.stroke();
+        }
+      } else if (state.room === "kitchen") {
+        ctx.beginPath();
+        ctx.moveTo(width * 0.27, height * 0.63);
+        ctx.lineTo(width * 0.73, height * 0.63);
+        ctx.lineTo(width * 0.82, floor);
+        ctx.lineTo(width * 0.18, floor);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        for (let i = 0; i < 5; i += 1) {
+          const x = left + i * width * 0.05;
+          ctx.beginPath();
+          ctx.moveTo(x, top);
+          ctx.lineTo(x, height * 0.45);
+          ctx.arc(x + width * 0.025, height * 0.45, width * 0.025, Math.PI, 0);
+          ctx.stroke();
+        }
+      } else if (state.room === "study") {
+        [left, right - width * 0.18].forEach(x => {
+          ctx.strokeRect(x, top, width * 0.18, height * 0.47);
+          for (let shelf = 1; shelf < 5; shelf += 1) {
+            const y = top + shelf * height * 0.09;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x + width * 0.18, y);
+            ctx.stroke();
+            for (let book = 0; book < 6; book += 1) ctx.strokeRect(x + 5 + book * width * 0.026, y - height * 0.065, width * 0.018, height * 0.06);
+          }
+        });
+        ctx.beginPath();
+        ctx.moveTo(width * 0.47, height * 0.37);
+        ctx.lineTo(width * 0.53, height * 0.37);
+        ctx.lineTo(width * 0.58, height * 0.5);
+        ctx.lineTo(width * 0.42, height * 0.5);
+        ctx.closePath();
+        ctx.stroke();
+      } else if (state.room === "cellar") {
+        for (let i = 0; i < 5; i += 1) {
+          ctx.beginPath();
+          ctx.ellipse(width * (0.22 + i * 0.14), height * 0.61, width * 0.055, height * 0.11, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        for (let step = 0; step < 6; step += 1) {
+          ctx.strokeRect(left + step * width * 0.035, top + step * height * 0.055, width * 0.24, height * 0.045);
+        }
+      } else if (state.room === "foyer") {
+        ctx.beginPath();
+        ctx.moveTo(width * 0.36, floor);
+        ctx.lineTo(width * 0.36, height * 0.38);
+        ctx.arc(width * 0.5, height * 0.38, width * 0.14, Math.PI, 0);
+        ctx.lineTo(width * 0.64, floor);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(width * 0.5, height * 0.47, width * 0.026, 0, Math.PI * 2);
+        ctx.stroke();
+        drawVorathGlyph(width * 0.5, height * 0.64, width * 0.065, color, state.pulse * 0.25);
+      }
+      ctx.restore();
     }
 
     function drawRoom(width, height, r) {
@@ -1149,6 +1736,8 @@
         drawFacetCrystal(edgeX, edgeY, Math.max(8, Math.min(width, height) * 0.018), i % 2 ? "#ff4aa5" : color, state.pulse * 0.5 + i);
       }
 
+      drawRoomIdentity(width, height, r);
+
       ctx.fillStyle = "rgba(255,244,216,.92)";
       ctx.shadowColor = color;
       ctx.shadowBlur = els.glowToggle.checked ? 15 : 4;
@@ -1158,7 +1747,7 @@
       ctx.shadowBlur = 0;
       ctx.fillStyle = "rgba(255,244,216,.62)";
       ctx.font = "700 13px Segoe UI, sans-serif";
-      ctx.fillText("fixed camera " + Object.keys(r.exits).join(" / "), width / 2, height * 0.285);
+      ctx.fillText(r.motif + " // exits " + Object.keys(r.exits).join(" / "), width / 2, height * 0.285);
     }
 
     function drawItems(width, height, r) {
@@ -1299,6 +1888,11 @@
         inventory: state.inventory.map(item => itemDefs[item].label),
         fuse_powered: state.fusePowered,
         threshold_stable: state.thresholdStable,
+        warden_attacks: state.wardenAttacks,
+        warden_hits: state.wardenHits,
+        warden_dodges: state.wardenDodges,
+        active_anomaly: (anomalies[state.activeThreat] || anomalies.key_warden).name,
+        anomalies_encountered: Object.assign({}, state.threatsEncountered),
         exported_at: new Date().toISOString()
       };
     }
@@ -1327,6 +1921,43 @@
       else inspectRoom();
     }
 
+    function gamepadEdge(name, pressed, callback) {
+      if (pressed && !gamepadHeld[name]) callback();
+      gamepadHeld[name] = pressed;
+    }
+
+    function pollGamepad(dt) {
+      if (!navigator.getGamepads) return;
+      const pad = Array.from(navigator.getGamepads()).find(Boolean);
+      if (!pad) return;
+      if (state.mode !== "play") {
+        gamepadEdge("start", !!((pad.buttons[9] && pad.buttons[9].pressed) || (pad.buttons[0] && pad.buttons[0].pressed)), startRun);
+        return;
+      }
+      gamepadMoveCooldown = Math.max(0, gamepadMoveCooldown - dt);
+      const axisX = Math.abs(pad.axes[0] || 0) > 0.46 ? pad.axes[0] : 0;
+      const axisY = Math.abs(pad.axes[1] || 0) > 0.46 ? pad.axes[1] : 0;
+      const dpad = {
+        up: !!(pad.buttons[12] && pad.buttons[12].pressed),
+        down: !!(pad.buttons[13] && pad.buttons[13].pressed),
+        left: !!(pad.buttons[14] && pad.buttons[14].pressed),
+        right: !!(pad.buttons[15] && pad.buttons[15].pressed)
+      };
+      let direction = null;
+      if (dpad.up || axisY < -0.46) direction = "up";
+      else if (dpad.down || axisY > 0.46) direction = "down";
+      else if (dpad.left || axisX < -0.46) direction = "left";
+      else if (dpad.right || axisX > 0.46) direction = "right";
+      if (direction && gamepadMoveCooldown <= 0) {
+        move(direction);
+        gamepadMoveCooldown = 0.24;
+      }
+      gamepadEdge("inspect", !!(pad.buttons[0] && pad.buttons[0].pressed), inspectRoom);
+      gamepadEdge("take", !!(pad.buttons[2] && pad.buttons[2].pressed), takeItem);
+      gamepadEdge("use", !!(pad.buttons[3] && pad.buttons[3].pressed), useSelected);
+      gamepadEdge("export", !!(pad.buttons[8] && pad.buttons[8].pressed), exportReceipt);
+    }
+
     els.overlayBtn.addEventListener("click", () => {
       ensureAudio();
       if (state.mode === "finished") startRun(); else startRun();
@@ -1335,6 +1966,7 @@
     document.querySelector("#inspectBtn").addEventListener("click", () => { ensureAudio(); inspectRoom(); });
     document.querySelector("#takeBtn").addEventListener("click", () => { ensureAudio(); takeItem(); });
     document.querySelector("#useBtn").addEventListener("click", () => { ensureAudio(); useSelected(); });
+    document.querySelector("#pulseBtn").addEventListener("click", () => { ensureAudio(); triggerSpectralPulse(); });
     document.querySelector("#resetBtn").addEventListener("click", resetAttract);
     canvas.addEventListener("pointerdown", event => { ensureAudio(); pointerToRoomAction(event); });
     window.addEventListener("keydown", event => {
@@ -1350,6 +1982,7 @@
       }
       if (event.key.toLowerCase() === "e") takeItem();
       if (event.key.toLowerCase() === "u") useSelected();
+      if (event.key.toLowerCase() === "f" || event.key.toLowerCase() === "q") triggerSpectralPulse();
       if (event.key.toLowerCase() === "x") exportReceipt();
     }, { passive: false });
     window.addEventListener("keyup", event => {
@@ -1359,21 +1992,53 @@
 
     function maybeRunPlaytest() {
       const params = new URLSearchParams(window.location.search);
-      if (!params.has("playtest")) return;
+      if (!params.has("playtest") && !params.has("demo")) return;
       window.setTimeout(() => {
-        startRun();
+        startRun({ silent: true });
+        const requestedThreat = params.get("threat");
+        const requestedIndex = anomalyOrder.indexOf(requestedThreat);
+        if (requestedIndex >= 0) state.wardenAttacks = requestedIndex;
+        if (params.has("proof") && requestedIndex >= 0) anomalies[requestedThreat].duration = 30;
         state.room = "study";
         state.inventory = ["brass_key", "mirror_card", "kitchen_salt"];
         state.used.brass_key_parlor = true;
         state.used.mirror_card_study = true;
         state.revealedStudy = true;
         state.staticLevel = 42;
-        state.charge = 5;
+        state.wardenCooldown = 0.2;
         addParticles(w() / 2, h() * 0.52, room().tint, 34);
-        log("PLAYTEST // high-definition spectral room inspection.");
+        log("PLAYTEST // authored room identity and anomaly counter telegraph armed.");
         updateUi();
       }, 140);
     }
+
+    function staticHousePayload() {
+      return {
+        score: state.score,
+        room: state.room,
+        focus: Math.round(state.focus),
+        staticLevel: Math.round(state.staticLevel),
+        charge: state.charge,
+        mode: state.mode,
+        wardenPhase: state.wardenPhase,
+        activeThreat: state.activeThreat,
+        inventory: [...state.inventory],
+        entropyDirector: state.entropyDirector ? {
+          state: state.entropyDirector.state,
+          tension: Math.round(state.entropyDirector.tension),
+          decisionLatencyUs: state.entropyDirector.decisionLatencyUs,
+          pulseCooldown: state.entropyDirector.pulseCooldown,
+          stalkerStunTimer: state.entropyDirector.stalkerStunTimer
+        } : null
+      };
+    }
+    window.staticHousePayload = staticHousePayload;
+    window.__staticHouseDebug = {
+      payload: staticHousePayload,
+      triggerPulse: () => { triggerSpectralPulse(); return true; },
+      setTension: (val) => { if (state.entropyDirector) state.entropyDirector.tension = val; },
+      startRun: () => { startRun(); return staticHousePayload(); }
+    };
 
     resize();
     resetAttract();

@@ -3,109 +3,1550 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Neon District — NorthStar Prime Transit</title>
-  <link rel="canonical" href="https://app.northstarprime.net/neon-district">
-  <meta http-equiv="refresh" content="0;url=https://app.northstarprime.net/neon-district">
-  <meta name="theme-color" content="#080c16">
+  <title>Neon District — NorthStar Prime</title>
+  <meta name="description" content="Step directly into Neon District: interactive 3D parallax cyber-streetview, 31 multilingual neon signs, glowing tube physics, and the DreamCourt neural cinema pipeline.">
+  <link rel="canonical" href="https://northstarprime.net/neon-district/">
+  <meta name="theme-color" content="#060010">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="NorthStar Prime">
+  <meta property="og:title" content="Neon District — NorthStar Prime">
+  <meta property="og:description" content="Interactive 3D parallax cyber-streetview, 31 multilingual neon signs, glowing tube physics, and the DreamCourt neural cinema pipeline.">
+  <meta property="og:url" content="https://northstarprime.net/neon-district/">
+  <meta property="og:image" content="https://northstarprime.net/static/neon_district/sign_02_grandmas_kisses.webp">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="/static/customer-experience.css">
   <style>
     :root {
-      --void: #060913;
-      --panel: #0d1322;
-      --panel-border: rgba(237, 202, 131, 0.22);
-      --gold: #edca83;
-      --cyan: #38bdf8;
-      --muted: #94a3b8;
+      --void: #060010;
+      --bg-dark: #090016;
+      --panel: #0d001e;
+      --pink: #ec4899;
+      --cyan: #22d3ee;
+      --gold: #f5c542;
+      --purple: #a855f7;
+      --green: #06d6a0;
+      --border: rgba(236, 72, 153, 0.22);
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     }
+
     body {
-      background: radial-gradient(ellipse at 50% 20%, rgba(237,202,131,0.08), transparent 45%),
-                  radial-gradient(ellipse at 80% 80%, rgba(56,189,248,0.06), transparent 50%),
-                  var(--void);
+      background:
+        linear-gradient(180deg, #060010 0%, #090017 35%, #100022 75%, #05000c 100%),
+        radial-gradient(ellipse at 20% 70%, rgba(236,72,153,0.08), transparent 45%),
+        radial-gradient(ellipse at 80% 25%, rgba(34,211,238,0.08), transparent 45%);
       color: #f1f5f9;
       font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
       margin: 0;
       min-height: 100vh;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Ambient wet asphalt scanlines */
+    .neon-street-bg {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(255,255,255,0.012) 3px, rgba(255,255,255,0.012) 4px);
+    }
+
+    .neon-wrap {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 1.5rem 1.5rem 5rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header & Hero */
+    .neon-hero {
+      text-align: center;
+      padding: 2.5rem 1rem 1.5rem;
+    }
+    .neon-kicker {
+      color: var(--cyan);
+      font-size: 0.76rem;
+      font-weight: 700;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+    .neon-hero h1 {
+      font-size: clamp(2.4rem, 6vw, 4.4rem);
+      margin: 0 0 0.8rem;
+      letter-spacing: -0.5px;
+      text-transform: uppercase;
+      color: #fff;
+      text-shadow: 0 0 24px rgba(236,72,153,0.7), 0 0 48px rgba(34,211,238,0.4);
+      animation: neonHum 4s ease-in-out infinite;
+    }
+    @keyframes neonHum {
+      0%, 100% { filter: drop-shadow(0 0 8px rgba(236,72,153,0.4)) drop-shadow(0 0 22px rgba(34,211,238,0.3)); }
+      50% { filter: drop-shadow(0 0 16px rgba(236,72,153,0.8)) drop-shadow(0 0 35px rgba(34,211,238,0.6)); }
+    }
+    .neon-hero p {
+      max-width: 840px;
+      margin: 0 auto 1.5rem;
+      color: #cbd5e1;
+      font-size: 1.1rem;
+    }
+
+    /* Interactive controls bar */
+    .control-deck {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-bottom: 2.5rem;
+      align-items: center;
+    }
+    .deck-pill {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: #cbd5e1;
+      padding: 0.5rem 1.1rem;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+    .deck-pill:hover, .deck-pill.active {
+      background: rgba(236,72,153,0.2);
+      border-color: var(--pink);
+      color: #fff;
+      box-shadow: 0 0 16px rgba(236,72,153,0.35);
+    }
+    .audio-toggle {
+      border-color: rgba(34,211,238,0.4);
+      color: var(--cyan);
+    }
+    .audio-toggle.playing {
+      background: rgba(34,211,238,0.22);
+      color: #fff;
+      box-shadow: 0 0 20px rgba(34,211,238,0.4);
+    }
+
+    /* 3D Pointer Parallax Streetview */
+    .neon-streetview {
+      width: 100%;
+      height: clamp(480px, 66vh, 740px);
+      position: relative;
+      overflow: hidden;
+      border-radius: 22px;
+      border: 1px solid rgba(236, 72, 153, 0.35);
+      background: radial-gradient(ellipse at 50% 15%, rgba(34,211,238,0.18), transparent 40%), linear-gradient(180deg, #05000e 0%, #110022 50%, #030007 100%);
+      box-shadow: 0 30px 100px rgba(0,0,0,0.8), inset 0 0 70px rgba(236,72,153,0.1);
+      perspective: 900px;
+      isolation: isolate;
+      cursor: crosshair;
+      margin-bottom: 3.5rem;
+    }
+    .neon-streetview::before {
+      content: "";
+      position: absolute;
+      inset: -30%;
+      background: conic-gradient(from 0deg, rgba(236,72,153,0.18), rgba(34,211,238,0.14), rgba(245,197,66,0.12), rgba(6,214,160,0.14), rgba(168,85,247,0.18), rgba(236,72,153,0.18));
+      filter: blur(60px);
+      opacity: 0.65;
+      animation: cosmicDrift 20s ease-in-out infinite;
+    }
+    @keyframes cosmicDrift { 0%,100%{transform:rotate(0deg)} 50%{transform:rotate(180deg)} }
+
+    .neon-lookout {
+      position: absolute;
+      inset: 0;
+      transform: rotateX(4deg) rotateY(calc((var(--look-x, 0.5) - 0.5) * -16deg)) translateY(calc((var(--look-y, 0.5) - 0.5) * -20px));
+      transform-origin: 50% 65%;
+      transition: transform 0.12s cubic-bezier(0.1, 0.8, 0.2, 1);
+    }
+    .neon-road {
+      position: absolute;
+      left: 50%;
+      bottom: -15%;
+      width: 90%;
+      height: 60%;
+      transform: translateX(-50%) rotateX(66deg);
+      background:
+        linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent),
+        repeating-linear-gradient(90deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 90px),
+        linear-gradient(180deg, rgba(34,211,238,0.06), rgba(236,72,153,0.22), rgba(0,0,0,0.92));
+      clip-path: polygon(42% 0, 58% 0, 100% 100%, 0 100%);
+      box-shadow: inset 0 0 60px rgba(236,72,153,0.4);
+    }
+    .neon-billboard {
+      position: absolute;
+      left: 50%;
+      top: 5%;
+      width: clamp(160px, 19vw, 280px);
+      aspect-ratio: 1.25/1;
+      border: 1px solid var(--sign-color, #ec4899);
+      border-radius: 16px;
+      background: var(--sign-img), linear-gradient(135deg, rgba(255,255,255,0.06), rgba(0,0,0,0.92));
+      background-position: center;
+      background-size: cover;
+      box-shadow: 0 0 25px var(--sign-color, #ec4899), inset 0 0 20px rgba(0,0,0,0.6);
+      transform: translate3d(calc(var(--x, 0) * 1px), calc(var(--y, 0) * 1px), 0) scale(var(--s, 1)) rotate(var(--r, 0deg));
+      cursor: pointer;
+      transition: transform 0.25s, box-shadow 0.25s;
+    }
+    .neon-billboard:hover {
+      transform: translate3d(calc(var(--x, 0) * 1px), calc(var(--y, 0) * 1px - 8px), 20px) scale(calc(var(--s, 1) * 1.05)) rotate(var(--r, 0deg));
+      box-shadow: 0 0 45px var(--sign-color, #ec4899), 0 0 75px var(--sign-color, #ec4899);
+      z-index: 10;
+    }
+    .neon-billboard .sign-face {
+      position: absolute;
+      inset: auto 0.65rem 0.65rem;
+      padding: 0.45rem 0.65rem;
+      border-radius: 8px;
+      background: rgba(0,0,0,0.72);
+      color: #fff;
+      font-size: 0.74rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      text-shadow: 0 0 12px var(--sign-color, #ec4899);
+      backdrop-filter: blur(6px);
+    }
+    .neon-billboard:nth-child(2){--x:-540;--y:80;--s:0.82;--r:-5deg}
+    .neon-billboard:nth-child(3){--x:380;--y:60;--s:0.92;--r:4deg}
+    .neon-billboard:nth-child(4){--x:-280;--y:200;--s:1.05;--r:2deg}
+    .neon-billboard:nth-child(5){--x:110;--y:220;--s:1.12;--r:-3deg}
+    .neon-billboard:nth-child(6){--x:-630;--y:310;--s:1.24;--r:5deg}
+    .neon-billboard:nth-child(7){--x:530;--y:310;--s:1.18;--r:-5deg}
+    .neon-billboard:nth-child(8){--x:-90;--y:100;--s:0.75;--r:0deg}
+    .neon-billboard:nth-child(9){--x:670;--y:150;--s:0.78;--r:7deg}
+
+    .neon-driver-ui {
+      position: absolute;
+      left: 1rem;
+      right: 1rem;
+      bottom: 1rem;
+      z-index: 5;
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      align-items: center;
+      pointer-events: none;
+    }
+    .neon-driver-ui span {
+      padding: 0.45rem 0.85rem;
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 999px;
+      background: rgba(0,0,0,0.6);
+      color: rgba(255,255,255,0.85);
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      backdrop-filter: blur(12px);
+    }
+
+    /* Sign Atlas Section */
+    .section-head {
+      margin-bottom: 2rem;
+    }
+    .section-head h2 {
+      font-size: clamp(1.8rem, 4vw, 2.5rem);
+      margin: 0 0 0.5rem;
+      color: #fff;
+      text-transform: uppercase;
+    }
+    .section-head p {
+      color: #94a3b8;
+      font-size: 1rem;
+      margin: 0;
+    }
+
+    .sign-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 4rem;
+    }
+    .neon-sign {
+      background: #020008;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      cursor: pointer;
+      transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .neon-sign:hover {
+      transform: translateY(-7px) scale(1.02);
+      border-color: var(--sign-color, #ec4899);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 35px color-mix(in srgb, var(--sign-color, #ec4899) 45%, transparent);
+    }
+    .sign-art-wrap {
+      width: 100%;
+      aspect-ratio: 1;
+      background: #000;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 1.5rem;
-      box-sizing: border-box;
-      text-align: center;
+      position: relative;
+      overflow: hidden;
     }
-    .transit-card {
-      max-width: 520px;
+    .sign-art-wrap img {
       width: 100%;
-      background: rgba(13, 19, 34, 0.85);
-      border: 1px solid var(--panel-border);
-      border-radius: 20px;
-      padding: 3rem 2rem;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-    }
-    .transit-star {
-      font-size: 2.5rem;
-      color: var(--gold);
+      height: 100%;
+      object-fit: contain;
       display: block;
-      margin-bottom: 1rem;
-      animation: pulseGlow 2.5s ease-in-out infinite;
+      transition: transform 0.4s ease;
     }
-    @keyframes pulseGlow {
-      0%, 100% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(237,202,131,0.4)); }
-      50% { transform: scale(1.08); filter: drop-shadow(0 0 20px rgba(237,202,131,0.8)); }
+    .neon-sign:hover .sign-art-wrap img {
+      transform: scale(1.04);
     }
-    .transit-tag {
-      font-size: 0.78rem;
+    .sign-content {
+      padding: 1.1rem 1.25rem;
+      background: linear-gradient(180deg, #070010, #04000a);
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      flex-grow: 1;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .sign-kicker {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.68rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.5);
+    }
+    .sign-tag {
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      border: 1px solid var(--sign-color, #ec4899);
+      color: var(--sign-color, #ec4899);
       font-weight: 700;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      color: var(--cyan);
-      margin-bottom: 0.6rem;
+      font-size: 0.62rem;
     }
-    h1 {
-      font-size: clamp(1.8rem, 4vw, 2.4rem);
-      margin: 0 0 1rem;
+    .sign-native {
+      font-size: 1.15rem;
+      font-weight: 700;
       color: #fff;
+      text-shadow: 0 0 12px var(--sign-color, #ec4899);
+      margin: 0.2rem 0;
+      line-height: 1.3;
+    }
+    .sign-trans {
+      font-style: italic;
+      color: #94a3b8;
+      font-size: 0.88rem;
+      line-height: 1.4;
+    }
+
+    /* Modal Sign Inspector */
+    .sign-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(16px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    .sign-modal-backdrop.open {
+      display: flex;
+    }
+    .sign-modal {
+      background: #090018;
+      border: 1px solid var(--modal-color, #ec4899);
+      border-radius: 20px;
+      max-width: 680px;
+      width: 100%;
+      overflow: hidden;
+      box-shadow: 0 25px 80px rgba(0,0,0,0.9), 0 0 50px color-mix(in srgb, var(--modal-color, #ec4899) 30%, transparent);
+      animation: modalPop 0.25s cubic-bezier(0.1, 0.8, 0.2, 1);
+    }
+    @keyframes modalPop {
+      from { transform: scale(0.92); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .modal-img-wrap {
+      width: 100%;
+      max-height: 380px;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-img-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .modal-body {
+      padding: 1.75rem;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+    }
+    .modal-title {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #fff;
+      margin: 0;
+      text-shadow: 0 0 16px var(--modal-color, #ec4899);
+    }
+    .modal-close {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff;
+      border-radius: 999px;
+      width: 34px;
+      height: 34px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: all 0.2s;
+    }
+    .modal-close:hover {
+      background: var(--modal-color, #ec4899);
+      border-color: var(--modal-color, #ec4899);
+      color: #000;
+    }
+    .modal-details {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      font-size: 0.88rem;
+      color: #cbd5e1;
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    .modal-details div strong {
+      color: #fff;
+      display: block;
+      margin-bottom: 0.2rem;
+      font-size: 0.72rem;
       text-transform: uppercase;
-      letter-spacing: -0.5px;
+      letter-spacing: 1.5px;
     }
-    p {
-      color: var(--muted);
-      font-size: 1rem;
-      line-height: 1.6;
-      margin: 0 0 2rem;
+
+    /* DreamCourt Neural Cinema Section */
+    .neural-cinema-panel {
+      background: rgba(10, 0, 24, 0.75);
+      border: 1px solid rgba(34, 211, 238, 0.35);
+      border-radius: 22px;
+      padding: 2.2rem;
+      box-shadow: 0 20px 70px rgba(0,0,0,0.6), 0 0 35px rgba(34,211,238,0.12);
+      margin-bottom: 4rem;
+      position: relative;
     }
-    .btn-enter {
+    .cinema-topline {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding-bottom: 1.25rem;
+    }
+    .cinema-topline h3 {
+      font-size: 1.7rem;
+      color: #fff;
+      margin: 0.25rem 0 0;
+      text-shadow: 0 0 20px rgba(34,211,238,0.5);
+    }
+    .btn-synthesize {
+      background: linear-gradient(135deg, #ec4899, #8b5cf6);
+      border: none;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      padding: 0.65rem 1.4rem;
+      border-radius: 999px;
+      text-transform: uppercase;
+      cursor: pointer;
+      box-shadow: 0 0 20px rgba(236,72,153,0.45);
+      transition: all 0.2s ease;
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
-      padding: 0.8rem 1.8rem;
-      border-radius: 999px;
-      font-weight: 700;
-      font-size: 0.92rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      text-decoration: none;
-      background: var(--gold);
-      color: #060913;
-      box-shadow: 0 0 25px rgba(237,202,131,0.35);
-      transition: all 0.25s ease;
     }
-    .btn-enter:hover {
-      background: #fff;
+    .btn-synthesize:hover {
       transform: translateY(-2px);
-      box-shadow: 0 0 35px rgba(237,202,131,0.6);
+      box-shadow: 0 0 30px rgba(236,72,153,0.7);
+    }
+    .cinema-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .cinema-card {
+      background: rgba(0,0,0,0.7);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .cinema-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--cyan);
+    }
+    .cinema-card .plate-wrap {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: #000;
+      position: relative;
+      overflow: hidden;
+    }
+    .cinema-card .plate-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .cinema-card .act-badge {
+      position: absolute;
+      top: 0.75rem;
+      left: 0.75rem;
+      background: rgba(0,0,0,0.75);
+      border: 1px solid var(--cyan);
+      color: var(--cyan);
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      padding: 0.25rem 0.55rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+    .cinema-card-body {
+      padding: 1.25rem;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .cinema-card-body h4 {
+      margin: 0 0 0.4rem;
+      font-size: 1.15rem;
+      color: #fff;
+    }
+    .cinema-card-body p {
+      margin: 0;
+      font-size: 0.86rem;
+      color: #94a3b8;
+      line-height: 1.5;
+    }
+    .cinema-telemetry {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 1rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+    }
+
+    /* Terminal Console */
+    .terminal-console {
+      background: #04000a;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 1.25rem;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: #a7f3d0;
+      line-height: 1.6;
+      max-height: 160px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+    .terminal-console .log-line {
+      margin: 0.2rem 0;
+    }
+    .terminal-console .log-hash {
+      color: var(--cyan);
+    }
+    .terminal-console .log-bounty {
+      color: var(--gold);
+      font-weight: 700;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .neon-streetview::before, .neon-hero h1 { animation: none !important; }
+      .neon-lookout { transform: none !important; }
+      .neon-billboard, .neon-sign, .cinema-card { transition: none !important; }
     }
   </style>
 </head>
 <body>
-  <div class="transit-card">
-    <span class="transit-star" aria-hidden="true">✦</span>
-    <div class="transit-tag">Dimensional Transit · NorthStar Prime</div>
-    <h1>Neon District</h1>
-    <p>Connecting to Neon District within the NorthStar sovereign network...</p>
-    <a class="btn-enter" href="https://app.northstarprime.net/neon-district">Enter Destination Immediately →</a>
+  <div class="neon-street-bg"></div>
+
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="site-header wrap">
+    <a class="wordmark" href="/">
+      <span class="star" aria-hidden="true">✦</span>
+      <span>NorthStar Prime<small>An independent universe</small></span>
+    </a>
+    <nav aria-label="Primary">
+      <a href="/idr/">Listen</a>
+      <a href="/arcade/">Play</a>
+      <a href="/digital-terrarium/">Terrarium</a>
+      <a href="/neon-district/" aria-current="page">Neon District</a>
+      <a href="/access/">Access</a>
+    </nav>
+  </header>
+
+  <main id="main" class="neon-wrap">
+    <section class="neon-hero">
+      <p class="neon-kicker">Autonomous Cyber-Neon Walkway &middot; NorthStar Prime</p>
+      <h1>Neon District</h1>
+      <p>31 canonical illuminated signs, 3D pointer parallax streetview, wet asphalt reflections, multilingual sign translations, and the live DreamCourt neural cinema pipeline.</p>
+    </section>
+
+    <!-- Controls & Sound Toggle -->
+    <div class="control-deck">
+      <button type="button" class="deck-pill active" data-view="all">Show All 31 Signs</button>
+      <button type="button" class="deck-pill" data-view="photo">Photographic Masters</button>
+      <button type="button" class="deck-pill" data-view="vector">Architectural Vectors</button>
+      <button type="button" class="deck-pill audio-toggle" id="btn-audio-toggle">
+        <span aria-hidden="true">✦</span> <span id="audio-status-label">Neon Hum: Off</span>
+      </button>
+      <a class="deck-pill" href="/digital-terrarium/">Explore Digital Terrarium &rarr;</a>
+    </div>
+
+    <!-- 3D Pointer Parallax Streetview -->
+    <section class="neon-streetview" id="neon-streetview" aria-label="Interactive 3D Neon District streetview">
+      <div class="neon-lookout" id="neon-lookout">
+        <div class="neon-road"></div>
+        <!-- Billboard 1: Grandmas Kisses -->
+        <div class="neon-billboard" style="--sign-color:#06d6a0;--sign-img:url('/static/neon_district/sign_02_grandmas_kisses.webp')" data-slot="1" data-phrase="Grandmas Kisses" data-native="Grandmas Kisses" data-lang="en">
+          <div class="sign-face">Grandmas Kisses</div>
+        </div>
+        <!-- Billboard 2: Infinite Cat Sadness -->
+        <div class="neon-billboard" style="--sign-color:#3b82f6;--sign-img:url('/static/neon_district/sign_03_infinite_cat_sadness.webp')" data-slot="2" data-phrase="Infinite Cat Sadness" data-native="Infinite Cat Sadness" data-lang="en">
+          <div class="sign-face">Infinite Cat Sadness</div>
+        </div>
+        <!-- Billboard 3: Significatio Nihili -->
+        <div class="neon-billboard" style="--sign-color:#f5c542;--sign-img:url('/static/neon_district/sign_04_significatio_nihili.webp')" data-slot="3" data-phrase="Significatio Nihili" data-native="Significatio Nihili" data-lang="la">
+          <div class="sign-face">Significatio Nihili</div>
+        </div>
+        <!-- Billboard 4: Ambizione Tiepida -->
+        <div class="neon-billboard" style="--sign-color:#f472b6;--sign-img:url('/static/neon_district/sign_05_ambizione_tiepida.webp')" data-slot="4" data-phrase="Ambizione Tiepida" data-native="Ambizione Tiepida" data-lang="it">
+          <div class="sign-face">Ambizione Tiepida</div>
+        </div>
+        <!-- Billboard 5: Divine Mediocrity -->
+        <div class="neon-billboard" style="--sign-color:#a78bfa;--sign-img:url('/static/neon_district/sign_06_divine_mediocrity.webp')" data-slot="5" data-phrase="Divine Mediocrity" data-native="Divine Mediocrity" data-lang="en">
+          <div class="sign-face">Divine Mediocrity</div>
+        </div>
+        <!-- Billboard 6: Sacred Boredom -->
+        <div class="neon-billboard" style="--sign-color:#22d3ee;--sign-img:url('/static/neon_district/sign_07_sacred_boredom.webp')" data-slot="6" data-phrase="Sacred Boredom" data-native="Sacred Boredom" data-lang="en">
+          <div class="sign-face">Sacred Boredom</div>
+        </div>
+        <!-- Billboard 7: Cry Harder Club -->
+        <div class="neon-billboard" style="--sign-color:#fb7185;--sign-img:url('/static/neon_district/sign_08_cry_harder_club.webp')" data-slot="7" data-phrase="Cry Harder Club" data-native="Cry Harder Club" data-lang="en">
+          <div class="sign-face">Cry Harder Club</div>
+        </div>
+        <!-- Billboard 8: Demons Bath -->
+        <div class="neon-billboard" style="--sign-color:#fb923c;--sign-img:url('/static/neon_district/sign_09_demons_bath.webp')" data-slot="8" data-phrase="Demons Bath" data-native="Demons Bath" data-lang="en">
+          <div class="sign-face">Demons Bath</div>
+        </div>
+      </div>
+      <div class="neon-driver-ui">
+        <span>Pointer Depth Parallax</span>
+        <span>Tilt Device / Move Cursor</span>
+        <span>Click Any Sign to Inspect</span>
+      </div>
+    </section>
+
+    <!-- Sign Atlas Gallery -->
+    <div class="section-head">
+      <h2>The Multilingual Neon Sign Atlas</h2>
+      <p>Browse 31 verified neon signs from the District 9 thoroughfare. Click any card to inspect high-resolution illumination plates and translation notes.</p>
+    </div>
+
+    <div class="sign-grid" id="sign-grid">
+      <!-- 1. Grandmas Kisses -->
+      <article class="neon-sign" data-category="photo" style="--sign-color:#06d6a0" data-img="/static/neon_district/sign_02_grandmas_kisses.webp" data-phrase="Grandmas Kisses" data-native="Grandmas Kisses" data-lang="English (en)" data-slot="01" data-desc="Soft emerald phosphor tube with warmth and domestic security glowing in damp alleyways.">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_02_grandmas_kisses_thumb.webp" alt="Grandmas Kisses neon sign" loading="eager" width="1600" height="1600">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #01</span>
+            <span class="sign-tag">EN &middot; Master</span>
+          </div>
+          <div class="sign-native">Grandmas Kisses</div>
+          <div class="sign-trans">Warm emerald phosphor &middot; Domestic comfort</div>
+        </div>
+      </article>
+
+      <!-- 2. Infinite Cat Sadness -->
+      <article class="neon-sign" data-category="photo" style="--sign-color:#3b82f6" data-img="/static/neon_district/sign_03_infinite_cat_sadness.webp" data-phrase="Infinite Cat Sadness" data-native="Infinite Cat Sadness" data-lang="English (en)" data-slot="02" data-desc="Deep cobalt xenon gas discharge. The eternal staring contemplation of rain through reinforced plate glass.">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_03_infinite_cat_sadness_thumb.webp" alt="Infinite Cat Sadness neon sign" loading="eager" width="1600" height="1600">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #02</span>
+            <span class="sign-tag">EN &middot; Master</span>
+          </div>
+          <div class="sign-native">Infinite Cat Sadness</div>
+          <div class="sign-trans">Cobalt xenon gaze &middot; Wet glass reverie</div>
+        </div>
+      </article>
+
+      <!-- 3. Significatio Nihili -->
+      <article class="neon-sign" data-category="photo" style="--sign-color:#f5c542" data-img="/static/neon_district/sign_04_significatio_nihili.webp" data-phrase="Significatio Nihili" data-native="Significatio Nihili" data-lang="Latin (la)" data-slot="03" data-desc="Amber gold Latin heraldry sign. The solemn declaration of meaning found within absolute null space.">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_04_significatio_nihili_thumb.webp" alt="Significatio Nihili neon sign" loading="eager" width="1600" height="1600">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #03</span>
+            <span class="sign-tag">LA &middot; Master</span>
+          </div>
+          <div class="sign-native">Significatio Nihili</div>
+          <div class="sign-trans">Signification of Nothing &middot; Imperial gold</div>
+        </div>
+      </article>
+
+      <!-- 4. Ambizione Tiepida -->
+      <article class="neon-sign" data-category="photo" style="--sign-color:#f472b6" data-img="/static/neon_district/sign_05_ambizione_tiepida.webp" data-phrase="Ambizione Tiepida" data-native="Ambizione Tiepida" data-lang="Italian (it)" data-slot="04" data-desc="Hot pink Italian neon inscription. Lukewarm ambition as the true engine of steady endurance.">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_05_ambizione_tiepida_thumb.webp" alt="Ambizione Tiepida neon sign" loading="eager" width="1600" height="1600">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #04</span>
+            <span class="sign-tag">IT &middot; Master</span>
+          </div>
+          <div class="sign-native">Ambizione Tiepida</div>
+          <div class="sign-trans">Lukewarm Ambition &middot; Magenta radiance</div>
+        </div>
+      </article>
+
+      <!-- 5. Divine Mediocrity -->
+      <article class="neon-sign" data-category="photo" style="--sign-color:#a78bfa" data-img="/static/neon_district/sign_06_divine_mediocrity.webp" data-phrase="Divine Mediocrity" data-native="Divine Mediocrity" data-lang="English (en)" data-slot="05" data-desc="Amethyst lavender glow. The sacred balance of ordinary grace unbothered by commercial perfection.">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_06_divine_mediocrity_thumb.webp" alt="Divine Mediocrity neon sign" loading="lazy" width="1600" height="1600">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #05</span>
+            <span class="sign-tag">EN &middot; Master</span>
+          </div>
+          <div class="sign-native">Divine Mediocrity</div>
+          <div class="sign-trans">Sacred lavender &middot; Unhurried grace</div>
+        </div>
+      </article>
+
+      <!-- 6. Sacred Boredom -->
+      <article class="neon-sign" data-category="photo" style="--sign-color:#22d3ee" data-img="/static/neon_district/sign_07_sacred_boredom.webp" data-phrase="Sacred Boredom" data-native="Sacred Boredom" data-lang="English (en)" data-slot="06" data-desc="Cyan argon tube discharge. The stillness before invention sparks within empty hours.">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_07_sacred_boredom_thumb.webp" alt="Sacred Boredom neon sign" loading="lazy" width="1600" height="1600">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #06</span>
+            <span class="sign-tag">EN &middot; Master</span>
+          </div>
+          <div class="sign-native">Sacred Boredom</div>
+          <div class="sign-trans">Cyan argon chill &middot; Stillness before sparks</div>
+        </div>
+      </article>
+
+      <!-- 7. Cry Harder Club -->
+      <article class="neon-sign" data-category="photo" style="--sign-color:#fb7185" data-img="/static/neon_district/sign_08_cry_harder_club.webp" data-phrase="Cry Harder Club" data-native="Cry Harder Club" data-lang="English (en)" data-slot="07" data-desc="Rose coral neon script above the basement lounge where grief transforms into rhythm.">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_08_cry_harder_club_thumb.webp" alt="Cry Harder Club neon sign" loading="lazy" width="1600" height="1600">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #07</span>
+            <span class="sign-tag">EN &middot; Master</span>
+          </div>
+          <div class="sign-native">Cry Harder Club</div>
+          <div class="sign-trans">Rose coral script &middot; Catharsis into rhythm</div>
+        </div>
+      </article>
+
+      <!-- 8. Demons Bath -->
+      <article class="neon-sign" data-category="photo" style="--sign-color:#fb923c" data-img="/static/neon_district/sign_09_demons_bath.webp" data-phrase="Demons Bath" data-native="Demons Bath" data-lang="English (en)" data-slot="08" data-desc="Tangerine mercury vapor tube above the mineral bathhouse at District 9 Pier Null.">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_09_demons_bath_thumb.webp" alt="Demons Bath neon sign" loading="lazy" width="1600" height="1600">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #08</span>
+            <span class="sign-tag">EN &middot; Master</span>
+          </div>
+          <div class="sign-native">Demons Bath</div>
+          <div class="sign-trans">Tangerine thermal &middot; Subterranean bathhouse</div>
+        </div>
+      </article>
+
+      <!-- 9. Dead Flowers -->
+      <article class="neon-sign" data-category="photo" style="--sign-color:#c4b5fd" data-img="/static/neon_district/sign_10_dead_flowers.webp" data-phrase="Dead Flowers" data-native="Dead Flowers" data-lang="English (en)" data-slot="09" data-desc="Pale violet neon florist sign. Preserved midnight botanicals under UV glass.">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_10_dead_flowers_thumb.webp" alt="Dead Flowers neon sign" loading="lazy" width="1600" height="1600">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #09</span>
+            <span class="sign-tag">EN &middot; Master</span>
+          </div>
+          <div class="sign-native">Dead Flowers</div>
+          <div class="sign-trans">Pale violet frost &middot; Preserved flora</div>
+        </div>
+      </article>
+
+      <!-- 10. Hells Wine Cellar -->
+      <article class="neon-sign" data-category="photo" style="--sign-color:#ef4444" data-img="/static/neon_district/sign_11_hells_wine_cellar.webp" data-phrase="Hells Wine Cellar" data-native="Hells Wine Cellar" data-lang="English (en)" data-slot="10" data-desc="Crimson high-voltage glass. Fermentation vaults aged in geothermal limestone caves.">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_11_hells_wine_cellar_thumb.webp" alt="Hells Wine Cellar neon sign" loading="lazy" width="1600" height="1600">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #10</span>
+            <span class="sign-tag">EN &middot; Master</span>
+          </div>
+          <div class="sign-native">Hells Wine Cellar</div>
+          <div class="sign-trans">Crimson vintage &middot; Geothermal cellars</div>
+        </div>
+      </article>
+
+      <!-- 11. Tenburys Laundromat -->
+      <article class="neon-sign" data-category="photo" style="--sign-color:#10b981" data-img="/static/neon_district/sign_12_tenburys_laundromat.webp" data-phrase="Tenburys Laundromat" data-native="Tenburys Laundromat" data-lang="English (en)" data-slot="11" data-desc="Emerald washhouse marquee. Spinning chrome drums under fluorescent haze at 3 AM.">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_12_tenburys_laundromat_thumb.webp" alt="Tenburys Laundromat neon sign" loading="lazy" width="1600" height="1600">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #11</span>
+            <span class="sign-tag">EN &middot; Master</span>
+          </div>
+          <div class="sign-native">Tenburys Laundromat</div>
+          <div class="sign-trans">All-night wash &middot; 3 AM sanctuary</div>
+        </div>
+      </article>
+
+      <!-- 12. Good Morning Darkness -->
+      <article class="neon-sign" data-category="photo" style="--sign-color:#60a5fa" data-img="/static/neon_district/sign_13_good_morning_darkness.webp" data-phrase="Good Morning Darkness" data-native="Good Morning Darkness" data-lang="English (en)" data-slot="12" data-desc="Ice blue glass over the espresso dispensary that never sees natural sunlight.">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_13_good_morning_darkness_thumb.webp" alt="Good Morning Darkness neon sign" loading="lazy" width="1600" height="1600">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #12</span>
+            <span class="sign-tag">EN &middot; Master</span>
+          </div>
+          <div class="sign-native">Good Morning Darkness</div>
+          <div class="sign-trans">Ice blue greeting &middot; Subterranean dawn</div>
+        </div>
+      </article>
+
+      <!-- 13. Wisdom Restaurant -->
+      <article class="neon-sign" data-category="photo" style="--sign-color:#eab308" data-img="/static/neon_district/sign_14_wisdom_restaurant.webp" data-phrase="Wisdom Restaurant" data-native="Wisdom Restaurant" data-lang="English (en)" data-slot="13" data-desc="Golden yellow signage over steaming bowls of bone marrow and bitter wild mountain herbs.">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_14_wisdom_restaurant_thumb.webp" alt="Wisdom Restaurant neon sign" loading="lazy" width="1600" height="1600">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #13</span>
+            <span class="sign-tag">EN &middot; Master</span>
+          </div>
+          <div class="sign-native">Wisdom Restaurant</div>
+          <div class="sign-trans">Golden broth &middot; Late night sustenance</div>
+        </div>
+      </article>
+
+      <!-- 14. Lucid Insomnia -->
+      <article class="neon-sign" data-category="photo" style="--sign-color:#d946ef" data-img="/static/neon_district/sign_15_lucid_insomnia.webp" data-phrase="Lucid Insomnia" data-native="Lucid Insomnia" data-lang="English (en)" data-slot="14" data-desc="Vibrant fuchsia sign overlooking the 24-hour sensory synthesis laboratory.">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_15_lucid_insomnia_thumb.webp" alt="Lucid Insomnia neon sign" loading="lazy" width="1600" height="1600">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #14</span>
+            <span class="sign-tag">EN &middot; Master</span>
+          </div>
+          <div class="sign-native">Lucid Insomnia</div>
+          <div class="sign-trans">Fuchsia waking state &middot; Sensory synthesis</div>
+        </div>
+      </article>
+
+      <!-- 15. Soft Fall -->
+      <article class="neon-sign" data-category="photo" style="--sign-color:#38bdf8" data-img="/static/neon_district/sign_16_soft_fall.webp" data-phrase="Soft Fall" data-native="Soft Fall" data-lang="English (en)" data-slot="15" data-desc="Sky cyan tube illuminating the pedestrian bridge connecting Upper Precinct to the canal.">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_16_soft_fall_thumb.webp" alt="Soft Fall neon sign" loading="lazy" width="1600" height="1600">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #15</span>
+            <span class="sign-tag">EN &middot; Master</span>
+          </div>
+          <div class="sign-native">Soft Fall</div>
+          <div class="sign-trans">Sky cyan crossing &middot; Canal descent</div>
+        </div>
+      </article>
+
+      <!-- 16. Bitter Honey Shop -->
+      <article class="neon-sign" data-category="photo" style="--sign-color:#f97316" data-img="/static/neon_district/sign_17_bitter_honey_shop.webp" data-phrase="Bitter Honey Shop" data-native="Bitter Honey Shop" data-lang="English (en)" data-slot="16" data-desc="Warm amber glass above medicinal honeycombs harvested from volcanic apiaries.">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_17_bitter_honey_shop_thumb.webp" alt="Bitter Honey Shop neon sign" loading="lazy" width="1600" height="1600">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #16</span>
+            <span class="sign-tag">EN &middot; Master</span>
+          </div>
+          <div class="sign-native">Bitter Honey Shop</div>
+          <div class="sign-trans">Amber apiary &middot; Volcanic nectar</div>
+        </div>
+      </article>
+
+      <!-- 17. Its Nothing Its Fine -->
+      <article class="neon-sign" data-category="photo" style="--sign-color:#84cc16" data-img="/static/neon_district/sign_18_its_nothing_its_fine.webp" data-phrase="Its Nothing Its Fine" data-native="Its Nothing Its Fine" data-lang="English (en)" data-slot="17" data-desc="Lime green stoic mantra blinking calmly through sirens and torrential downpours.">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_18_its_nothing_its_fine_thumb.webp" alt="Its Nothing Its Fine neon sign" loading="lazy" width="1600" height="1600">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #17</span>
+            <span class="sign-tag">EN &middot; Master</span>
+          </div>
+          <div class="sign-native">Its Nothing Its Fine</div>
+          <div class="sign-trans">Lime green calm &middot; Stoic urban mantra</div>
+        </div>
+      </article>
+
+      <!-- 18. Final Echo Cafe -->
+      <article class="neon-sign" data-category="photo" style="--sign-color:#f43f5e" data-img="/static/neon_district/sign_19_final_echo_cafe.webp" data-phrase="Final Echo Cafe" data-native="Final Echo Cafe" data-lang="English (en)" data-slot="18" data-desc="Ruby red tube marking the last booth at the end of the line where analog tape still rolls.">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_19_final_echo_cafe_thumb.webp" alt="Final Echo Cafe neon sign" loading="lazy" width="1600" height="1600">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #18</span>
+            <span class="sign-tag">EN &middot; Master</span>
+          </div>
+          <div class="sign-native">Final Echo Cafe</div>
+          <div class="sign-trans">Ruby red terminus &middot; Analog tape sanctuary</div>
+        </div>
+      </article>
+
+      <!-- 19. Master Records -->
+      <article class="neon-sign" data-category="photo" style="--sign-color:#818cf8" data-img="/static/neon_district/sign_20_master_records.webp" data-phrase="Master Records" data-native="Master Records" data-lang="English (en)" data-slot="19" data-desc="Indigo lavender sign hanging over the basement vinyl vault of Iron Dog Records (IDR).">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_20_master_records_thumb.webp" alt="Master Records neon sign" loading="lazy" width="1600" height="1600">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #19</span>
+            <span class="sign-tag">EN &middot; Master</span>
+          </div>
+          <div class="sign-native">Master Records</div>
+          <div class="sign-trans">Indigo vault &middot; Iron Dog Records archives</div>
+        </div>
+      </article>
+
+      <!-- 20. Anubis Night Taxi -->
+      <article class="neon-sign" data-category="vector" style="--sign-color:#f59e0b" data-img="/static/neon_district/sign_21_anubis_night_taxi.svg" data-phrase="Anubis Night Taxi" data-native="Anubis Night Taxi" data-lang="Vector Architectural" data-slot="20" data-desc="Architectural vector sign: gold jackal heraldry guiding late night transit across the River Styx overpass.">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_21_anubis_night_taxi.svg" alt="Anubis Night Taxi neon sign" loading="lazy" width="800" height="800">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #20</span>
+            <span class="sign-tag">SVG &middot; Vector</span>
+          </div>
+          <div class="sign-native">Anubis Night Taxi</div>
+          <div class="sign-trans">Gold jackal fleet &middot; Nocturnal conveyance</div>
+        </div>
+      </article>
+
+      <!-- 21. Moth Casino -->
+      <article class="neon-sign" data-category="vector" style="--sign-color:#e11d48" data-img="/static/neon_district/sign_22_moth_casino.svg" data-phrase="Moth Casino" data-native="Moth Casino" data-lang="Vector Architectural" data-slot="21" data-desc="Architectural vector neon: lunar moth wings beating against high-frequency luminescent tubes.">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_22_moth_casino.svg" alt="Moth Casino neon sign" loading="lazy" width="800" height="800">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #21</span>
+            <span class="sign-tag">SVG &middot; Vector</span>
+          </div>
+          <div class="sign-native">Moth Casino</div>
+          <div class="sign-trans">Lunar moth marquee &middot; Games of flame</div>
+        </div>
+      </article>
+
+      <!-- 22. Void Buffet -->
+      <article class="neon-sign" data-category="vector" style="--sign-color:#06b6d4" data-img="/static/neon_district/sign_23_void_buffet.svg" data-phrase="Void Buffet" data-native="Void Buffet" data-lang="Vector Architectural" data-slot="22" data-desc="Architectural vector sign: endless cyan geometry promising zero-mass sustenance.">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_23_void_buffet.svg" alt="Void Buffet neon sign" loading="lazy" width="800" height="800">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #22</span>
+            <span class="sign-tag">SVG &middot; Vector</span>
+          </div>
+          <div class="sign-native">Void Buffet</div>
+          <div class="sign-trans">Cyan infinite feast &middot; Zero-mass calories</div>
+        </div>
+      </article>
+
+      <!-- 23. Third Eye Pawn -->
+      <article class="neon-sign" data-category="vector" style="--sign-color:#8b5cf6" data-img="/static/neon_district/sign_24_third_eye_pawn.svg" data-phrase="Third Eye Pawn" data-native="Third Eye Pawn" data-lang="Vector Architectural" data-slot="23" data-desc="Architectural vector sign: mystical optic lens for buying and selling unremembered dreams.">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_24_third_eye_pawn.svg" alt="Third Eye Pawn neon sign" loading="lazy" width="800" height="800">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #23</span>
+            <span class="sign-tag">SVG &middot; Vector</span>
+          </div>
+          <div class="sign-native">Third Eye Pawn</div>
+          <div class="sign-trans">Violet ocular &middot; Trade in forgotten dreams</div>
+        </div>
+      </article>
+
+      <!-- 24. Wet Pyramid Motel -->
+      <article class="neon-sign" data-category="vector" style="--sign-color:#10b981" data-img="/static/neon_district/sign_25_wet_pyramid_motel.svg" data-phrase="Wet Pyramid Motel" data-native="Wet Pyramid Motel" data-lang="Vector Architectural" data-slot="24" data-desc="Architectural vector sign: green triangular terraces dripping with rain in District 9 East.">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_25_wet_pyramid_motel.svg" alt="Wet Pyramid Motel neon sign" loading="lazy" width="800" height="800">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #24</span>
+            <span class="sign-tag">SVG &middot; Vector</span>
+          </div>
+          <div class="sign-native">Wet Pyramid Motel</div>
+          <div class="sign-trans">Emerald ziggurat &middot; Rain terrace lodgings</div>
+        </div>
+      </article>
+
+      <!-- 25. Serpent Cab Terminal -->
+      <article class="neon-sign" data-category="vector" style="--sign-color:#f59e0b" data-img="/static/neon_district/sign_26_serpent_cab_terminal.svg" data-phrase="Serpent Cab Terminal" data-native="Serpent Cab Terminal" data-lang="Vector Architectural" data-slot="25" data-desc="Architectural vector sign: coiled amber ouroboros over the subterranean turnstiles.">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_26_serpent_cab_terminal.svg" alt="Serpent Cab Terminal neon sign" loading="lazy" width="800" height="800">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #25</span>
+            <span class="sign-tag">SVG &middot; Vector</span>
+          </div>
+          <div class="sign-native">Serpent Cab Terminal</div>
+          <div class="sign-trans">Amber ouroboros &middot; Circular transit line</div>
+        </div>
+      </article>
+
+      <!-- 26. Demon Soup 24H -->
+      <article class="neon-sign" data-category="vector" style="--sign-color:#ef4444" data-img="/static/neon_district/sign_27_demon_soup_24h.svg" data-phrase="Demon Soup 24H" data-native="Demon Soup 24H" data-lang="Vector Architectural" data-slot="26" data-desc="Architectural vector sign: hot chili broth bubbling eternally under red neon coils.">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_27_demon_soup_24h.svg" alt="Demon Soup 24H neon sign" loading="lazy" width="800" height="800">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #26</span>
+            <span class="sign-tag">SVG &middot; Vector</span>
+          </div>
+          <div class="sign-native">Demon Soup 24H</div>
+          <div class="sign-trans">Red cauldrons &middot; Perpetual midnight broth</div>
+        </div>
+      </article>
+
+      <!-- 27. Null Chapel Weddings -->
+      <article class="neon-sign" data-category="vector" style="--sign-color:#ec4899" data-img="/static/neon_district/sign_28_null_chapel_weddings.svg" data-phrase="Null Chapel Weddings" data-native="Null Chapel Weddings" data-lang="Vector Architectural" data-slot="27" data-desc="Architectural vector sign: pink dual rings binding vows across parallel timelines.">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_28_null_chapel_weddings.svg" alt="Null Chapel Weddings neon sign" loading="lazy" width="800" height="800">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #27</span>
+            <span class="sign-tag">SVG &middot; Vector</span>
+          </div>
+          <div class="sign-native">Null Chapel Weddings</div>
+          <div class="sign-trans">Pink dual rings &middot; Non-Euclidean vows</div>
+        </div>
+      </article>
+
+      <!-- 28. Psychic Taxidermy -->
+      <article class="neon-sign" data-category="vector" style="--sign-color:#a855f7" data-img="/static/neon_district/sign_29_psychic_taxidermy.svg" data-phrase="Psychic Taxidermy" data-native="Psychic Taxidermy" data-lang="Vector Architectural" data-slot="28" data-desc="Architectural vector sign: preservation of spectral memories in crystalline shells.">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_29_psychic_taxidermy.svg" alt="Psychic Taxidermy neon sign" loading="lazy" width="800" height="800">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #28</span>
+            <span class="sign-tag">SVG &middot; Vector</span>
+          </div>
+          <div class="sign-native">Psychic Taxidermy</div>
+          <div class="sign-trans">Spectral mounting &middot; Memory preservation</div>
+        </div>
+      </article>
+
+      <!-- 29. Dream Refund Office -->
+      <article class="neon-sign" data-category="vector" style="--sign-color:#06d6a0" data-img="/static/neon_district/sign_30_dream_refund_office.svg" data-phrase="Dream Refund Office" data-native="Dream Refund Office" data-lang="Vector Architectural" data-slot="29" data-desc="Architectural vector sign: bureau for claiming compensation on unfulfilled nocturnal premonitions.">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_30_dream_refund_office.svg" alt="Dream Refund Office neon sign" loading="lazy" width="800" height="800">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #29</span>
+            <span class="sign-tag">SVG &middot; Vector</span>
+          </div>
+          <div class="sign-native">Dream Refund Office</div>
+          <div class="sign-trans">Mint green bureau &middot; Nocturnal restitution</div>
+        </div>
+      </article>
+
+      <!-- 30. Clown Oracle Slots -->
+      <article class="neon-sign" data-category="vector" style="--sign-color:#fb7185" data-img="/static/neon_district/sign_31_clown_oracle_slots.svg" data-phrase="Clown Oracle Slots" data-native="Clown Oracle Slots" data-lang="Vector Architectural" data-slot="30" data-desc="Architectural vector sign: mechanical jester dispensing prophetic fortune reels.">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_31_clown_oracle_slots.svg" alt="Clown Oracle Slots neon sign" loading="lazy" width="800" height="800">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #30</span>
+            <span class="sign-tag">SVG &middot; Vector</span>
+          </div>
+          <div class="sign-native">Clown Oracle Slots</div>
+          <div class="sign-trans">Mechanical jester &middot; Prophetic probability</div>
+        </div>
+      </article>
+
+      <!-- 31. Afterlife Lost & Found -->
+      <article class="neon-sign" data-category="vector" style="--sign-color:#38bdf8" data-img="/static/neon_district/sign_32_afterlife_lost_found.svg" data-phrase="Afterlife Lost &amp; Found" data-native="Afterlife Lost &amp; Found" data-lang="Vector Architectural" data-slot="31" data-desc="Architectural vector sign: storage depot for misrouted souls, discarded names, and forgotten keys.">
+        <div class="sign-art-wrap">
+          <img src="/static/neon_district/sign_32_afterlife_lost_found.svg" alt="Afterlife Lost and Found neon sign" loading="lazy" width="800" height="800">
+        </div>
+        <div class="sign-content">
+          <div class="sign-kicker">
+            <span>Slot #31</span>
+            <span class="sign-tag">SVG &middot; Vector</span>
+          </div>
+          <div class="sign-native">Afterlife Lost &amp; Found</div>
+          <div class="sign-trans">Sky blue depot &middot; Misrouted souls and names</div>
+        </div>
+      </article>
+    </div>
+
+    <!-- DreamCourt x Neon District Neural Cinema -->
+    <section class="neural-cinema-panel" id="cinema">
+      <div class="cinema-topline">
+        <div>
+          <span style="font-size:0.72rem;letter-spacing:3px;color:var(--cyan);text-transform:uppercase;font-weight:700">Autonomous Neural Cinema Pipeline</span>
+          <h3>DreamCourt &times; Neon District Cinema</h3>
+        </div>
+        <div style="display:flex;align-items:center;gap:1rem">
+          <span style="padding:0.35rem 0.8rem;border-radius:999px;background:rgba(34,211,238,0.15);border:1px solid var(--cyan);color:var(--cyan);font-size:0.75rem;font-weight:700;letter-spacing:1px;text-transform:uppercase">
+            ✦ SpaceCash &middot; Live Settlement
+          </span>
+          <button type="button" class="btn-synthesize" id="btn-render-cinema">
+            <span>▶</span> Synthesize Frame (+25 SPACE)
+          </button>
+        </div>
+      </div>
+
+      <p style="color:#cbd5e1;font-size:0.94rem;line-height:1.6;margin-bottom:1.75rem">
+        Cinematic keyframe sequences generated across Neon District, the 432Hz DreamCourt Astral Arena, and the Abyssal Obelisk. Render cycles produce verifiable cryptographic Proof-of-Compute receipts anchored to <code>nsp-spacecash-voucher-v1</code>.
+      </p>
+
+      <div class="cinema-grid">
+        <!-- Act I -->
+        <article class="cinema-card">
+          <div class="plate-wrap">
+            <img src="/static/drops/dc_neon_01_bass_drop_1790287090.svg" alt="The Midnight Bass Drop" loading="lazy">
+            <span class="act-badge">Act I &middot; Neon Alley</span>
+          </div>
+          <div class="cinema-card-body">
+            <div>
+              <h4>The Midnight Bass Drop</h4>
+              <p>Deep 808 sub-bass reverberating through damp neon alleys as holographic cyan lanterns flicker in rain.</p>
+            </div>
+            <div class="cinema-telemetry">
+              <span style="color:var(--cyan)">23.19M CUDA cycles</span>
+              <span style="color:var(--gold);font-weight:700">+25.00 SPACE</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Act II -->
+        <article class="cinema-card">
+          <div class="plate-wrap">
+            <img src="/static/drops/dc_arena_02_astral_court_1790287091.svg" alt="The 432Hz Celestial Match" loading="lazy">
+            <span class="act-badge">Act II &middot; DreamCourt</span>
+          </div>
+          <div class="cinema-card-body">
+            <div>
+              <h4>The 432Hz Celestial Match</h4>
+              <p>Astroturf hardwood suspended in nebular void; harmonic crystalline ball arc trajectory with chromatic trail.</p>
+            </div>
+            <div class="cinema-telemetry">
+              <span style="color:var(--cyan)">24.81M CUDA cycles</span>
+              <span style="color:var(--gold);font-weight:700">+25.00 SPACE</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Act III -->
+        <article class="cinema-card">
+          <div class="plate-wrap">
+            <img src="/static/drops/dc_vorath_03_refraction_conclave_1790285954.svg" alt="The Refraction Conclave" loading="lazy">
+            <span class="act-badge">Act III &middot; Obelisk Conclave</span>
+          </div>
+          <div class="cinema-card-body">
+            <div>
+              <h4>The Refraction Conclave</h4>
+              <p>Vorathic council of glass chronomancers gathering beneath the obsidian pillar to seal monotonic epochs.</p>
+            </div>
+            <div class="cinema-telemetry">
+              <span style="color:var(--cyan)">28.40M CUDA cycles</span>
+              <span style="color:var(--gold);font-weight:700">+25.00 SPACE</span>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <!-- Real-time Console Terminal -->
+      <div class="terminal-console" id="cinema-terminal" role="log" aria-live="polite">
+        <div class="log-line">✦ NEON_DISTRICT_CINEMA_DAEMON :: Ready. Standing by for neural frame dispatch.</div>
+        <div class="log-line">✦ Settlement Rail: SpaceCash Monotonic UTXO Treasury &middot; 300s Monotonic Epochs.</div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Sign Inspector Modal -->
+  <div class="sign-modal-backdrop" id="sign-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-sign-title">
+    <div class="sign-modal" id="sign-modal">
+      <div class="modal-img-wrap">
+        <img id="modal-sign-img" src="/static/neon_district/sign_02_grandmas_kisses.webp" alt="Sign inspection">
+      </div>
+      <div class="modal-body">
+        <div class="modal-header">
+          <div>
+            <h3 class="modal-title" id="modal-sign-title">Grandmas Kisses</h3>
+            <div id="modal-sign-lang" style="font-size:0.75rem;letter-spacing:2px;color:rgba(255,255,255,0.6);text-transform:uppercase;margin-top:0.25rem">English (en) &middot; Slot #01</div>
+          </div>
+          <button type="button" class="modal-close" id="btn-modal-close" aria-label="Close dialog">&times;</button>
+        </div>
+        <p id="modal-sign-desc" style="color:#cbd5e1;font-size:0.95rem;line-height:1.6;margin:0 0 1rem"></p>
+        <div class="modal-details">
+          <div>
+            <strong>Illumination Gas</strong>
+            <span id="modal-sign-gas">Neon / Krypton Phosphor</span>
+          </div>
+          <div>
+            <strong>District Zone</strong>
+            <span id="modal-sign-zone">Pier Null Upper Causeway</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
-  <script>location.replace('https://app.northstarprime.net/neon-district'+location.search+location.hash)</script>
+
+  <footer class="site-footer wrap">
+    <div class="footer-grid">
+      <div>
+        <a class="wordmark" href="/">NorthStar Prime</a>
+        <p class="quiet">Original work. Open curiosity.<br>Something worth your time.</p>
+        <a href="/mystery-school/" aria-label="Enter Mystery School">✦ There is another door.</a>
+      </div>
+      <div>
+        <h2>Explore</h2>
+        <ul>
+          <li><a href="/digital-terrarium/">Digital Terrarium</a></li>
+          <li><a href="/neon-district/">Neon District</a></li>
+          <li><a href="/arcade/">Arcade Pavilion</a></li>
+          <li><a href="/idr/">Interdimensional Radio</a></li>
+          <li><a href="/links/">All destinations</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Connect</h2>
+        <ul>
+          <li><a href="/meet-the-creator/">Meet the creator</a></li>
+          <li><a href="/contact/">Contact &amp; support</a></li>
+          <li><a href="/access/">Access tiers</a></li>
+        </ul>
+      </div>
+    </div>
+    <p class="footer-note">Public experiences and games are free in guest mode. &middot; <a href="/links/">Directory</a></p>
+  </footer>
+
+  <script>
+    // 1. 3D Pointer Parallax Lookout
+    (function initLookout() {
+      const stage = document.getElementById('neon-streetview');
+      const lookout = document.getElementById('neon-lookout');
+      if (!stage || !lookout) return;
+
+      let targetX = 0.5, targetY = 0.5;
+      let currentX = 0.5, currentY = 0.5;
+
+      stage.addEventListener('mousemove', (e) => {
+        const rect = stage.getBoundingClientRect();
+        targetX = (e.clientX - rect.left) / rect.width;
+        targetY = (e.clientY - rect.top) / rect.height;
+      });
+
+      stage.addEventListener('mouseleave', () => {
+        targetX = 0.5;
+        targetY = 0.5;
+      });
+
+      // Gyroscope tilt on mobile
+      if (window.DeviceOrientationEvent) {
+        window.addEventListener('deviceorientation', (e) => {
+          if (e.gamma !== null && e.beta !== null) {
+            targetX = Math.max(0, Math.min(1, (e.gamma + 30) / 60));
+            targetY = Math.max(0, Math.min(1, (e.beta - 10) / 60));
+          }
+        }, { passive: true });
+      }
+
+      function renderLoop() {
+        currentX += (targetX - currentX) * 0.1;
+        currentY += (targetY - currentY) * 0.1;
+        lookout.style.setProperty('--look-x', currentX.toFixed(3));
+        lookout.style.setProperty('--look-y', currentY.toFixed(3));
+        requestAnimationFrame(renderLoop);
+      }
+      requestAnimationFrame(renderLoop);
+    })();
+
+    // 2. Sign Inspector Modal & Billboard Interaction
+    (function initModal() {
+      const backdrop = document.getElementById('sign-modal-backdrop');
+      const modal = document.getElementById('sign-modal');
+      const closeBtn = document.getElementById('btn-modal-close');
+      const modalImg = document.getElementById('modal-sign-img');
+      const modalTitle = document.getElementById('modal-sign-title');
+      const modalLang = document.getElementById('modal-sign-lang');
+      const modalDesc = document.getElementById('modal-sign-desc');
+      const modalGas = document.getElementById('modal-sign-gas');
+
+      function openSign(data) {
+        modalImg.src = data.img;
+        modalTitle.textContent = data.phrase || data.native;
+        modalLang.textContent = (data.lang || 'Unknown') + ' · Slot #' + (data.slot || '01');
+        modalDesc.textContent = data.desc || 'Illuminated neon gas discharge sign registered along the District 9 thoroughfare.';
+        modalGas.textContent = data.gas || 'Argon / Xenon / Mercury Vapor';
+        modal.style.setProperty('--modal-color', data.color || '#ec4899');
+        backdrop.classList.add('open');
+        playChime(data.color);
+      }
+
+      function closeModal() {
+        backdrop.classList.remove('open');
+      }
+
+      closeBtn.addEventListener('click', closeModal);
+      backdrop.addEventListener('click', (e) => {
+        if (e.target === backdrop) closeModal();
+      });
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeModal();
+      });
+
+      // Grid cards click
+      document.querySelectorAll('.neon-sign').forEach((card) => {
+        card.addEventListener('click', () => {
+          openSign({
+            img: card.dataset.img,
+            phrase: card.dataset.phrase,
+            native: card.dataset.native,
+            lang: card.dataset.lang,
+            slot: card.dataset.slot,
+            desc: card.dataset.desc,
+            color: card.style.getPropertyValue('--sign-color')
+          });
+        });
+      });
+
+      // Billboards click
+      document.querySelectorAll('.neon-billboard').forEach((b) => {
+        b.addEventListener('click', () => {
+          const color = b.style.getPropertyValue('--sign-color');
+          const imgMatch = b.style.getPropertyValue('--sign-img').match(/url\(['"]?([^'"]+)['"]?\)/);
+          const imgSrc = imgMatch ? imgMatch[1] : '';
+          openSign({
+            img: imgSrc,
+            phrase: b.dataset.phrase,
+            native: b.dataset.native,
+            lang: b.dataset.lang,
+            slot: b.dataset.slot,
+            color: color,
+            desc: 'Prominent highway pylon billboard radiating across the wet Overpass.'
+          });
+        });
+      });
+
+      // Category filters
+      document.querySelectorAll('.control-deck button[data-view]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.control-deck button[data-view]').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const view = btn.dataset.view;
+          document.querySelectorAll('.neon-sign').forEach((card) => {
+            if (view === 'all' || card.dataset.category === view) {
+              card.style.display = '';
+            } else {
+              card.style.display = 'none';
+            }
+          });
+        });
+      });
+    })();
+
+    // 3. Web Audio 60Hz Transformer & Ambient Sound Engine
+    let audioCtx = null;
+    let humOsc = null;
+    let humGain = null;
+    let rainNode = null;
+    let isAudioPlaying = false;
+
+    function initAudio() {
+      if (audioCtx) return;
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AudioContext();
+
+      // 60Hz mains hum with harmonic overtones
+      humOsc = audioCtx.createOscillator();
+      humOsc.type = 'sawtooth';
+      humOsc.frequency.setValueAtTime(60, audioCtx.currentTime);
+
+      const humFilter = audioCtx.createBiquadFilter();
+      humFilter.type = 'lowpass';
+      humFilter.frequency.setValueAtTime(180, audioCtx.currentTime);
+
+      humGain = audioCtx.createGain();
+      humGain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+
+      humOsc.connect(humFilter);
+      humFilter.connect(humGain);
+      humGain.connect(audioCtx.destination);
+      humOsc.start();
+
+      // Soft rain noise generator
+      const bufferSize = audioCtx.sampleRate * 2;
+      const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const output = noiseBuffer.getChannelData(0);
+      let b0 = 0, b1 = 0, b2 = 0;
+      for (let i = 0; i < bufferSize; i++) {
+        const white = Math.random() * 2 - 1;
+        b0 = 0.99 * b0 + white * 0.05;
+        b1 = 0.96 * b1 + white * 0.11;
+        b2 = 0.86 * b2 + white * 0.25;
+        output[i] = (b0 + b1 + b2) * 0.02;
+      }
+      rainNode = audioCtx.createBufferSource();
+      rainNode.buffer = noiseBuffer;
+      rainNode.loop = true;
+
+      const rainFilter = audioCtx.createBiquadFilter();
+      rainFilter.type = 'lowpass';
+      rainFilter.frequency.setValueAtTime(800, audioCtx.currentTime);
+
+      const rainGain = audioCtx.createGain();
+      rainGain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+
+      rainNode.connect(rainFilter);
+      rainFilter.connect(rainGain);
+      rainGain.connect(audioCtx.destination);
+      rainNode.start();
+    }
+
+    function toggleAudio() {
+      const btn = document.getElementById('btn-audio-toggle');
+      const label = document.getElementById('audio-status-label');
+      if (!isAudioPlaying) {
+        initAudio();
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        humGain.gain.setTargetAtTime(0.04, audioCtx.currentTime, 0.1);
+        isAudioPlaying = true;
+        btn.classList.add('playing');
+        label.textContent = 'Neon Hum: Active';
+      } else {
+        if (humGain) humGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
+        isAudioPlaying = false;
+        btn.classList.remove('playing');
+        label.textContent = 'Neon Hum: Off';
+      }
+    }
+    document.getElementById('btn-audio-toggle').addEventListener('click', toggleAudio);
+
+    function playChime(hexColor) {
+      if (!audioCtx || !isAudioPlaying) return;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(440 + Math.random() * 220, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.4);
+      } catch(e) {}
+    }
+
+    // 4. DreamCourt Frame Synthesis Simulation
+    (function initCinema() {
+      const btn = document.getElementById('btn-render-cinema');
+      const terminal = document.getElementById('cinema-terminal');
+
+      const acts = ['Act I: The Midnight Bass Drop', 'Act II: The 432Hz Celestial Match', 'Act III: The Refraction Conclave'];
+
+      btn.addEventListener('click', () => {
+        btn.disabled = true;
+        btn.innerHTML = '<span>✦</span> Synthesizing Neural Plate...';
+
+        const randAct = acts[Math.floor(Math.random() * acts.length)];
+        const hash = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+          .map(b => b.toString(16).padStart(2, '0')).join('');
+        const cycles = (20 + Math.random() * 15).toFixed(2);
+        const timestamp = new Date().toISOString();
+
+        setTimeout(() => {
+          const entry = document.createElement('div');
+          entry.className = 'log-line';
+          entry.innerHTML = `[${timestamp}] ✦ DISPATCH &bull; ${randAct} &bull; Hash: <span class="log-hash">${hash}</span> &bull; ${cycles}M cycles &bull; Settlement: <span class="log-bounty">+25.00 SPACE</span>`;
+          terminal.appendChild(entry);
+          terminal.scrollTop = terminal.scrollHeight;
+
+          btn.disabled = false;
+          btn.innerHTML = '<span>▶</span> Synthesize Frame (+25 SPACE)';
+          playChime();
+        }, 600);
+      });
+    })();
+  </script>
 </body>
 </html>

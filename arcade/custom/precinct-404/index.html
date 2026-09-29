@@ -527,6 +527,17 @@
     }
     .log { height: 170px; }
   }
+  .crt-scanlines {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.28) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.05), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.05));
+    background-size: 100% 3px, 6px 100%;
+    z-index: 9999;
+  }
+  .crt-scanlines.hidden {
+    display: none;
+  }
 </style>
 </head>
 <body>
@@ -537,6 +548,8 @@
       <div class="subline">Shift triage prototype // Buckman pilot program</div>
     </div>
     <div class="header-actions">
+      <span id="xbox-pad-badge" class="chip" style="display: none; border-color: #10b981; color: #10b981; font-weight: 700; background: rgba(16, 185, 129, 0.12);">[PAD: XBOX 360 CONNECTED]</span>
+      <button class="btn" id="crtToggleBtn" title="Toggle CRT Scanline Overlay">CRT: ON</button>
       <button class="btn" id="adviceBtn">Ask Mags</button>
       <button class="btn" id="overrideBtn">Derek Override</button>
       <button class="btn" id="resetBtn">New Shift</button>
@@ -622,6 +635,7 @@
 
   <footer>
     <span id="footerState">Pilot active</span>
+    <span id="padGuide" style="color: var(--gold); font-size: 0.74rem; font-weight: 600;">[PAD] Left Stick / D-Pad: Select Unit | [A/RT] Dispatch | [X/LT] Hold Call | [Y/RB] Ask Mags | [B/LB] Override | [BACK] CRT | [START] Reset</span>
     <span>Prototype state: playable_prototype</span>
   </footer>
 </div>
@@ -633,6 +647,8 @@
     <button class="btn primary" id="modalBtn">Continue</button>
   </div>
 </div>
+
+<div class="crt-scanlines" id="crtOverlay"></div>
 
 <script>
 (() => {
@@ -1018,7 +1034,8 @@
     modal: document.getElementById("modal"),
     modalTitle: document.getElementById("modalTitle"),
     modalBody: document.getElementById("modalBody"),
-    modalBtn: document.getElementById("modalBtn")
+    modalBtn: document.getElementById("modalBtn"),
+    crtToggleBtn: document.getElementById("crtToggleBtn")
   };
 
   const state = {
@@ -1342,21 +1359,29 @@
     let outcome;
 
     if (officer.id === call.best) {
+      SoundFX.dispatch();
+      rumble(0.35, 0.65, 180);
       trust = 9;
       chaos = -9;
       budget = call.risk === "Extreme" ? -3 : -1;
       outcome = `${officer.name} handles ${call.title}.`;
     } else if (officer.id === call.secondary || score >= 68) {
+      SoundFX.select();
+      rumble(0.25, 0.45, 140);
       trust = 4;
       chaos = -4;
       budget = -2;
       outcome = `${officer.name} gets a workable result on ${call.title}.`;
     } else if (score >= 48) {
+      SoundFX.tick();
+      rumble(0.3, 0.5, 180);
       trust = -2;
       chaos = 7;
       budget = -4;
       outcome = `${officer.name} resolves the call, but the incident report needs a glossary.`;
     } else {
+      SoundFX.alarm();
+      rumble(0.75, 0.95, 300);
       trust = -8;
       chaos = 14;
       budget = -7;
@@ -1410,6 +1435,8 @@
     state.heldThisCall = true;
     state.chaos += 5;
     state.trust -= 2;
+    SoundFX.hold();
+    rumble(0.2, 0.4, 100);
     addLog(`Dispatch held for more context. ${deltaText("Trust", -2)} ${deltaText("Chaos", -5)}`);
     render();
   }
@@ -1419,6 +1446,8 @@
     const call = currentCase();
     state.adviceLeft -= 1;
     state.selected = call.best;
+    SoundFX.mags();
+    rumble(0.3, 0.5, 140);
     addLog(`Mags points at ${bestOfficerName(call)} and says the obvious thing nobody automated.`);
     render();
   }
@@ -1428,6 +1457,8 @@
     state.overridesLeft -= 1;
     state.chaos -= 10;
     state.budget -= 4;
+    SoundFX.override();
+    rumble(0.35, 0.55, 150);
     addLog(`Derek translates robot logic into human terms. ${deltaText("Chaos", 10)} ${deltaText("Budget", -4)}`);
     render();
   }
@@ -1451,6 +1482,13 @@
   function endGame(won) {
     state.finished = true;
     state.canContinue = won && !state.endless;
+    if (won) {
+      SoundFX.win();
+      rumble(0.5, 0.75, 400);
+    } else {
+      SoundFX.alarm();
+      rumble(0.85, 1.0, 500);
+    }
     const score = Math.max(0, state.trust + state.budget - state.chaos);
     const best = Number(localStorage.getItem("precinct404Best") || 0);
     if (score > best) localStorage.setItem("precinct404Best", String(score));
@@ -1509,18 +1547,214 @@
     render();
   }
 
+  // --- Web Audio Procedural Sound Engine ---
+  const SoundFX = {
+    ctx: null,
+    init() {
+      if (this.ctx) return;
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) this.ctx = new AC();
+      } catch (e) {}
+    },
+    resume() {
+      if (this.ctx && this.ctx.state === "suspended") this.ctx.resume();
+    },
+    playTone(freq, dur, type = "sine", gainVal = 0.12, slideTo = null) {
+      this.init();
+      this.resume();
+      if (!this.ctx) return;
+      try {
+        const osc = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        if (slideTo) osc.frequency.exponentialRampToValueAtTime(Math.max(10, slideTo), this.ctx.currentTime + dur);
+        g.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + dur);
+        osc.connect(g);
+        g.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + dur);
+      } catch (e) {}
+    },
+    tick() { this.playTone(520, 0.04, "triangle", 0.08); },
+    select() { this.playTone(660, 0.08, "square", 0.1, 880); },
+    dispatch() {
+      this.playTone(440, 0.12, "triangle", 0.15, 880);
+      setTimeout(() => this.playTone(880, 0.18, "sine", 0.15), 60);
+    },
+    hold() { this.playTone(330, 0.14, "sawtooth", 0.12, 220); },
+    override() {
+      this.playTone(587.33, 0.15, "square", 0.12);
+      setTimeout(() => this.playTone(880, 0.22, "sine", 0.14), 80);
+    },
+    mags() {
+      this.playTone(659.25, 0.12, "sine", 0.14);
+      setTimeout(() => this.playTone(783.99, 0.18, "triangle", 0.14), 70);
+    },
+    alarm() {
+      this.playTone(800, 0.18, "sawtooth", 0.15, 400);
+      setTimeout(() => this.playTone(900, 0.18, "sawtooth", 0.15, 450), 120);
+    },
+    win() {
+      const notes = [523.25, 659.25, 783.99, 1046.50];
+      notes.forEach((freq, idx) => {
+        setTimeout(() => this.playTone(freq, 0.22, "triangle", 0.16), idx * 110);
+      });
+    }
+  };
+
+  // --- Dual-Rumble Haptics ---
+  function rumble(weak = 0.3, strong = 0.5, duration = 120) {
+    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    for (const p of pads) {
+      if (p && p.vibrationActuator && typeof p.vibrationActuator.playEffect === "function") {
+        p.vibrationActuator.playEffect("dual-rumble", {
+          startDelay: 0,
+          duration: duration,
+          weakMagnitude: weak,
+          strongMagnitude: strong
+        }).catch(() => {});
+      }
+    }
+  }
+
+  // --- Gamepad Polling Engine ---
+  let priorPad = {
+    up: false,
+    down: false,
+    a: false,
+    b: false,
+    x: false,
+    y: false,
+    start: false,
+    back: false
+  };
+
+  function pollGamepad() {
+    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    const pad = pads && Array.from(pads).find(Boolean);
+    const badge = document.getElementById("xbox-pad-badge");
+
+    if (!pad) {
+      if (badge && badge.style.display !== "none") badge.style.display = "none";
+      requestAnimationFrame(pollGamepad);
+      return;
+    }
+
+    if (badge && badge.style.display !== "inline-flex") badge.style.display = "inline-flex";
+
+    const axisY = Number(pad.axes[1] || 0);
+    const dpadUp = !!pad.buttons[12]?.pressed;
+    const dpadDown = !!pad.buttons[13]?.pressed;
+
+    const navUp = axisY < -0.4 || dpadUp;
+    const navDown = axisY > 0.4 || dpadDown;
+
+    const btnA = !!(pad.buttons[0]?.pressed || pad.buttons[7]?.pressed); // A or RT
+    const btnB = !!(pad.buttons[1]?.pressed || pad.buttons[4]?.pressed); // B or LB
+    const btnX = !!(pad.buttons[2]?.pressed || pad.buttons[6]?.pressed); // X or LT
+    const btnY = !!(pad.buttons[3]?.pressed || pad.buttons[5]?.pressed); // Y or RB
+    const btnStart = !!pad.buttons[9]?.pressed; // Start
+    const btnBack = !!pad.buttons[8]?.pressed; // Back / View
+
+    // Navigate officers list with Stick / D-Pad
+    if (navUp && !priorPad.up) {
+      navigateOfficer(-1);
+    }
+    if (navDown && !priorPad.down) {
+      navigateOfficer(1);
+    }
+
+    // (A) Dispatch or dismiss modal
+    if (btnA && !priorPad.a) {
+      if (els.modal.classList.contains("active")) {
+        if (state.canContinue) startNightShift();
+        else reset();
+        SoundFX.select();
+        rumble(0.2, 0.4, 100);
+      } else if (!els.dispatchBtn.disabled) {
+        dispatch();
+      }
+    }
+
+    // (X) Hold call
+    if (btnX && !priorPad.x && !els.holdBtn.disabled) {
+      holdCall();
+    }
+
+    // (Y) Ask Mags
+    if (btnY && !priorPad.y && !els.adviceBtn.disabled) {
+      askMags();
+    }
+
+    // (B) Derek Override
+    if (btnB && !priorPad.b && !els.overrideBtn.disabled) {
+      derekOverride();
+    }
+
+    // (Start) Reset / New Shift
+    if (btnStart && !priorPad.start) {
+      reset();
+      SoundFX.select();
+      rumble(0.3, 0.6, 160);
+    }
+
+    // (Back) CRT Toggle
+    if (btnBack && !priorPad.back) {
+      toggleCrt();
+      SoundFX.tick();
+    }
+
+    priorPad.up = navUp;
+    priorPad.down = navDown;
+    priorPad.a = btnA;
+    priorPad.b = btnB;
+    priorPad.x = btnX;
+    priorPad.y = btnY;
+    priorPad.start = btnStart;
+    priorPad.back = btnBack;
+
+    requestAnimationFrame(pollGamepad);
+  }
+
+  function navigateOfficer(direction) {
+    const curIdx = officers.findIndex(o => o.id === state.selected);
+    let nextIdx = curIdx + direction;
+    if (curIdx === -1) nextIdx = direction > 0 ? 0 : officers.length - 1;
+    if (nextIdx < 0) nextIdx = officers.length - 1;
+    if (nextIdx >= officers.length) nextIdx = 0;
+    state.selected = officers[nextIdx].id;
+    SoundFX.tick();
+    rumble(0.12, 0.15, 45);
+    render();
+  }
+
+  function toggleCrt() {
+    const crt = document.getElementById("crtOverlay");
+    const btn = document.getElementById("crtToggleBtn");
+    if (!crt) return;
+    crt.classList.toggle("hidden");
+    const isHidden = crt.classList.contains("hidden");
+    if (btn) btn.textContent = isHidden ? "CRT: OFF" : "CRT: ON";
+  }
+
   els.dispatchBtn.addEventListener("click", dispatch);
   els.holdBtn.addEventListener("click", holdCall);
   els.adviceBtn.addEventListener("click", askMags);
   els.overrideBtn.addEventListener("click", derekOverride);
   els.resetBtn.addEventListener("click", reset);
+  if (els.crtToggleBtn) els.crtToggleBtn.addEventListener("click", toggleCrt);
   els.modalBtn.addEventListener("click", () => state.canContinue ? startNightShift() : reset());
   addEventListener("keydown", event => {
     if (event.key === "Enter" && !els.dispatchBtn.disabled) dispatch();
     if (event.key === "r" || event.key === "R") reset();
+    if (event.key === "c" || event.key === "C") toggleCrt();
   });
 
   reset();
+  requestAnimationFrame(pollGamepad);
 })();
 </script>
 </body>

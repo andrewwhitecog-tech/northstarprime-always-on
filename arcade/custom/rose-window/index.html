@@ -51,6 +51,14 @@
     <div class="metric"><small>Cracks</small><strong id="hCracks">0 / 6</strong></div>
     <div class="metric"><small>Radiance</small><strong id="hRad">0%</strong></div>
   </div>
+  <div id="xboxHud" class="xbox-hud-bar" style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:rgba(18,14,28,0.85);border:1px solid rgba(233,200,106,0.3);border-radius:8px;font-size:11px;color:#f3ecd8;flex-wrap:wrap;gap:8px">
+    <span id="xboxStatus"><span class="xb-pill" style="background:#334155;color:#fff;padding:2px 7px;border-radius:4px;font-weight:700;font-size:10px">[PAD]</span> Controller: Standby (Press any button)</span>
+    <span class="xbox-legend" style="display:flex;gap:12px;align-items:center;color:#9d97a8;font-size:11px">
+      <span><b style="color:#e9c86a">L-Stick</b> Aim Petal</span>
+      <span><b style="color:#e9c86a">LT / RT</b> Step</span>
+      <span><b style="color:#4ade80">A / START</b> Begin</span>
+    </span>
+  </div>
   <div class="stage-wrap">
     <canvas id="stage" width="1080" height="620"></canvas>
     <script src="/static/games/juice.js"></script>
@@ -176,7 +184,7 @@
   function end(win) {
     S.running = false;
     musicStop();
-    if (win) { sfx("oneUp"); sfx("gate"); } else { sfx("death"); }
+    if (win) { sfx("oneUp"); sfx("gate"); rumble(0.5, 0.85, 450); } else { sfx("death"); rumble(0.8, 1.0, 350); }
     S.grade = win ? "THE WINDOW IS LIT" : "THE GLASS HELD ITS SILENCE";
     document.getElementById("ovTitle").textContent = S.grade;
     document.getElementById("ovBody").innerHTML = "Score <b style='color:var(--gold)'>" + Math.round(S.score).toLocaleString() +
@@ -211,7 +219,91 @@
     return best;
   }
 
+  // ---- Xbox 360 Gamepad & Dual-Rumble Haptics Suite ----
+  function rumble(weak = 0.25, strong = 0.45, duration = 100) {
+    const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+    for (const gp of gamepads) {
+      if (gp && gp.vibrationActuator && gp.vibrationActuator.playEffect) {
+        gp.vibrationActuator.playEffect("dual-rumble", {
+          startDelay: 0,
+          duration: duration,
+          weakMagnitude: weak,
+          strongMagnitude: strong
+        }).catch(() => {});
+      }
+    }
+  }
+
+  const lastPadBtn = { a: false, start: false, lb: false, rb: false, lt: false, rt: false, dLeft: false, dRight: false };
+  function pollGamepad() {
+    const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+    let activePad = null;
+    for (const gp of gamepads) {
+      if (gp && gp.connected) {
+        activePad = gp;
+        break;
+      }
+    }
+    const statusEl = document.getElementById("xboxStatus");
+    if (!activePad) {
+      if (statusEl && statusEl.dataset.active === "1") {
+        statusEl.dataset.active = "0";
+        statusEl.innerHTML = '<span class="xb-pill" style="background:#334155;color:#fff;padding:2px 7px;border-radius:4px;font-weight:700;font-size:10px">[PAD]</span> Controller: Standby (Press any button)';
+      }
+      return;
+    }
+    if (statusEl && statusEl.dataset.active !== "1") {
+      statusEl.dataset.active = "1";
+      statusEl.innerHTML = '<span class="xb-pill" style="background:#107c10;color:#fff;padding:2px 7px;border-radius:4px;font-weight:700;font-size:10px">[PAD]</span> <span style="color:#4ade80;font-weight:700">Xbox 360 Controller Active</span> [Dual-Rumble Ready]';
+    }
+
+    // Left analog stick angle
+    const stickX = activePad.axes[0] || 0;
+    const stickY = activePad.axes[1] || 0;
+    const stickMag = Math.sqrt(stickX * stickX + stickY * stickY);
+    if (stickMag > 0.22) {
+      S.targetAngle = Math.atan2(stickY, stickX);
+    }
+
+    // Buttons: A / Start to begin or restart
+    const btnA = activePad.buttons[0] && activePad.buttons[0].pressed;
+    const btnStart = activePad.buttons[9] && activePad.buttons[9].pressed;
+    if ((btnA && !lastPadBtn.a) || (btnStart && !lastPadBtn.start)) {
+      if (!S.running) {
+        begin();
+        rumble(0.2, 0.4, 80);
+      }
+    }
+    lastPadBtn.a = btnA;
+    lastPadBtn.start = btnStart;
+
+    // Bumpers / Triggers / D-Pad step rotation
+    const btnLB = activePad.buttons[4] && activePad.buttons[4].pressed;
+    const btnRB = activePad.buttons[5] && activePad.buttons[5].pressed;
+    const btnLT = (activePad.buttons[6] && activePad.buttons[6].value > 0.5);
+    const btnRT = (activePad.buttons[7] && activePad.buttons[7].value > 0.5);
+    const btnDLeft = activePad.buttons[14] && activePad.buttons[14].pressed;
+    const btnDRight = activePad.buttons[15] && activePad.buttons[15].pressed;
+
+    const step = (Math.PI * 2) / N;
+    if ((btnLB && !lastPadBtn.lb) || (btnLT && !lastPadBtn.lt) || (btnDLeft && !lastPadBtn.dLeft)) {
+      S.targetAngle = S.rosetteAngle - step;
+      rumble(0.15, 0.25, 60);
+    }
+    if ((btnRB && !lastPadBtn.rb) || (btnRT && !lastPadBtn.rt) || (btnDRight && !lastPadBtn.dRight)) {
+      S.targetAngle = S.rosetteAngle + step;
+      rumble(0.15, 0.25, 60);
+    }
+    lastPadBtn.lb = btnLB;
+    lastPadBtn.rb = btnRB;
+    lastPadBtn.lt = btnLT;
+    lastPadBtn.rt = btnRT;
+    lastPadBtn.dLeft = btnDLeft;
+    lastPadBtn.dRight = btnDRight;
+  }
+
   function update(nowS) {
+    pollGamepad();
     S.hueSpin = (S.hueSpin + 0.3 + S.radiance * 0.03) % 360;
     if (S.petalPulse > 0) S.petalPulse = Math.max(0, S.petalPulse - 0.06);
     if (!S.running) return;
@@ -239,6 +331,7 @@
           if (S.filled < PANES) { S.litPanes[S.filled] = 1 + Math.floor(Math.random() * 0); S.litPanes[S.filled] = s.color + 1; S.filled++; }
           chime(catchI);
           sfx("coin");
+          rumble(0.22, 0.45, 90);
           if (S.combo >= 4 && S.combo % 4 === 0) sfx("powerUp");
           for (let k = 0; k < 12; k++) S.sparks.push({ x: cx, y: catchY, a: Math.random() * Math.PI * 2, sp: 2 + Math.random() * 4, life: 1, hue: COLORS[catchI].hue });
           if (window.Juice && S.combo >= 4 && S.combo % 4 === 0) {
@@ -249,6 +342,7 @@
         } else {
           S.combo = 1; S.cracks++; crackSfx();
           sfx("hurt"); sfx("hit");
+          rumble(0.65, 0.90, 220);
           S.radiance = Math.max(0, S.radiance - 3);
           if (window.Juice) Juice.shake(canvas.parentElement, 7, 200);
           if (S.cracks >= 6) return end(false);

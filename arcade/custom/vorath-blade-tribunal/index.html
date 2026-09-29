@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vorath Blade Tribunal</title>
+  <script src="northstar_arcade_hud.js" onerror="console.log('Standalone mode: HUD script skipped')"></script>
   <style>
     :root {
       color-scheme: dark;
@@ -267,22 +268,25 @@
         </div>
 
         <div class="controls" aria-label="Blade Tribunal controls">
-          <button id="startBtn" class="wide">Start Duel</button>
-          <button id="leftBtn">Left A</button>
-          <button id="rightBtn">Right D</button>
-          <button id="slashBtn">Slash J</button>
-          <button id="heavyBtn">Heavy K</button>
-          <button id="guardBtn">Guard L</button>
-          <button id="dodgeBtn">Dodge Space</button>
+          <button id="startBtn" class="wide">Start Duel [Start / Enter]</button>
+          <button id="leftBtn">Left [A / ◀]</button>
+          <button id="rightBtn">Right [D / ▶]</button>
+          <button id="slashBtn">Slash [J / Ⓐ]</button>
+          <button id="heavyBtn">Heavy [K / Ⓧ]</button>
+          <button id="guardBtn">Guard [L / LT]</button>
+          <button id="parryBtn" style="border-color:#38e9ff;color:#38e9ff;background:rgba(56,233,255,0.12);">Parry [E / Ⓨ]</button>
+          <button id="dodgeBtn">Dodge [Space / Ⓑ]</button>
           <button id="exportBtn" class="wide">Export Receipt</button>
         </div>
 
         <div class="move-list">
-          <div><strong>A/D or Arrows:</strong> step and spacing</div>
-          <div><strong>J:</strong> prism slash, fast hitbox</div>
-          <div><strong>K:</strong> heavy crystal cleave, longer reach</div>
-          <div><strong>L:</strong> emerald guard, drains stamina</div>
-          <div><strong>Space:</strong> aurora dodge, invulnerable startup</div>
+          <div><strong>A/D, Arrows, or Left Stick:</strong> step and spacing</div>
+          <div><strong>J or (A):</strong> prism slash, fast hitbox</div>
+          <div><strong>K or (X):</strong> heavy crystal cleave, longer reach</div>
+          <div><strong>L or (LT/LB):</strong> emerald guard / flash parry on impact</div>
+          <div><strong>E or (Y/RT):</strong> flash parry posture trigger</div>
+          <div><strong>Space or (B):</strong> aurora dodge, invulnerable startup</div>
+          <div><strong>Start / Enter:</strong> start match / pause overlay</div>
         </div>
 
         <div class="log" id="log" aria-live="polite">
@@ -327,6 +331,7 @@
       slashBtn: document.querySelector("#slashBtn"),
       heavyBtn: document.querySelector("#heavyBtn"),
       guardBtn: document.querySelector("#guardBtn"),
+      parryBtn: document.querySelector("#parryBtn"),
       dodgeBtn: document.querySelector("#dodgeBtn"),
       exportBtn: document.querySelector("#exportBtn"),
       exportTop: document.querySelector("#exportTop")
@@ -349,7 +354,18 @@
       fadeIn: 1,
       log: ["Blade tribunal glass online."],
       aiTimer: 0,
-      aiIntent: "measure"
+      aiIntent: "measure",
+      tribunalDirector: {
+        state: "STANCE_PROBE",
+        tension: 30,
+        stateTimer: 0,
+        decisionLatencyUs: 0.00032,
+        flashParryStreak: 0,
+        poiseCrushes: 0,
+        parryWindow: 0,
+        feintFrequency: 0.25,
+        aggression: 1.0
+      }
     };
 
     // FLUX AI-art fighter sprites, luminance-keyed (black bg -> transparent)
@@ -362,6 +378,25 @@
       loadPose(who+"_"+pose, "/static/games/roster/blade_"+who+"_"+pose+".png");
     loadSprite("emerald","/static/games/sprites/blade_emerald.png");
     loadSprite("ruby","/static/games/sprites/blade_ruby.png");
+
+    const BLADE_ATLAS_SRC = {
+      emerald: "/static/art/games/vorath_overhaul_v01/blade_tribunal/emerald_votary_atlas_v01.png",
+      ruby: "/static/art/games/vorath_overhaul_v01/blade_tribunal/ruby_mantis_regent_atlas_v01.png"
+    };
+    const BLADE_ATLAS = { emerald: new Image(), ruby: new Image() };
+    const BLADE_ATLAS_READY = { emerald: false, ruby: false };
+    for (const who of ["emerald", "ruby"]) {
+      BLADE_ATLAS[who].decoding = "async";
+      BLADE_ATLAS[who].addEventListener("load", () => { BLADE_ATLAS_READY[who] = true; });
+      BLADE_ATLAS[who].src = BLADE_ATLAS_SRC[who];
+    }
+    const BLADE_POSE_INDEX = { idle: 0, windup: 1, strike: 2, hurt: 3 };
+    function drawBladeAtlasPose(atlas, pose, x, y, width, height) {
+      const index = BLADE_POSE_INDEX[pose] ?? 0;
+      const sourceX = (index % 2) * 512;
+      const sourceY = Math.floor(index / 2) * 768;
+      ctx.drawImage(atlas, sourceX, sourceY, 512, 768, x, y, width, height);
+    }
 
     // Seamless parallax arena backdrop (mirror-tiled, no hard seam).
     const ARENA = new Image(); let ARENA_OK = false;
@@ -409,6 +444,10 @@
         const ns=a.createBufferSource(), ng=a.createGain(); ns.buffer=n; ng.gain.value=0.24; ns.connect(ng); ng.connect(a.destination); ns.start(t); }
       else if(kind==="block"){ o.type="triangle"; o.frequency.setValueAtTime(900,t); o.frequency.exponentialRampToValueAtTime(320,t+0.1);
         g.gain.setValueAtTime(0.2,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.14); o.start(t); o.stop(t+0.16); }
+      else if(kind==="parry"){ o.type="sine"; o.frequency.setValueAtTime(659.25,t); o.frequency.exponentialRampToValueAtTime(1318.5,t+0.16);
+        g.gain.setValueAtTime(0.35,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.35); o.start(t); o.stop(t+0.36); }
+      else if(kind==="stagger"){ o.type="sawtooth"; o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(45,t+0.25);
+        g.gain.setValueAtTime(0.3,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.28); o.start(t); o.stop(t+0.3); }
     }
 
     const player = {
@@ -550,11 +589,95 @@
       return true;
     }
 
+    let gpPrevA = false, gpPrevB = false, gpPrevX = false, gpPrevY = false, gpPrevStart = false;
+
+    function rumble(weak = 0.4, strong = 0.7, duration = 150) {
+      try {
+        if (window.NorthStarHUD && window.NorthStarHUD.rumble) {
+          window.NorthStarHUD.rumble(weak, strong, duration);
+          return;
+        }
+        const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+        for (const pad of gamepads) {
+          if (pad && pad.vibrationActuator && pad.vibrationActuator.playEffect) {
+            pad.vibrationActuator.playEffect('dual-rumble', {
+              startDelay: 0,
+              duration: duration,
+              weakMagnitude: Math.min(1.0, Math.max(0, weak)),
+              strongMagnitude: Math.min(1.0, Math.max(0, strong))
+            }).catch(() => {});
+          }
+        }
+      } catch (e) {}
+    }
+
+    function triggerFlashParry() {
+      if (!state.running || state.roundDelay > 0) return false;
+      player.guardJustPressed = 0.28;
+      state.tribunalDirector.parryWindow = 18;
+      sfx("whoosh");
+      addLog("Flash Parry posture readied!");
+      return true;
+    }
+
     function fighterInput() {
+      // Gamepad Polling (Xbox 360 / XInput / DualShock)
+      let padLeft = false, padRight = false, padGuard = false;
+      try {
+        const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+        const gp = gamepads[0] || gamepads[1] || gamepads[2] || gamepads[3];
+        if (gp) {
+          const ax = gp.axes[0] || 0;
+          if (ax < -0.28 || (gp.buttons[14] && gp.buttons[14].pressed)) padLeft = true;
+          if (ax > 0.28 || (gp.buttons[15] && gp.buttons[15].pressed)) padRight = true;
+
+          const btnA = gp.buttons[0] && gp.buttons[0].pressed; // Slash (J)
+          const btnX = gp.buttons[2] && gp.buttons[2].pressed; // Heavy (K)
+          const btnB = gp.buttons[1] && gp.buttons[1].pressed; // Dodge (Space)
+          const btnY = (gp.buttons[3] && gp.buttons[3].pressed) || (gp.buttons[7] && gp.buttons[7].value > 0.3) || (gp.buttons[5] && gp.buttons[5].pressed); // Flash Parry
+          const btnLT = (gp.buttons[6] && gp.buttons[6].value > 0.3) || (gp.buttons[4] && gp.buttons[4].pressed); // Guard (L)
+          const btnStart = gp.buttons[9] && gp.buttons[9].pressed;
+
+          if (btnLT) padGuard = true;
+          if (btnStart && !gpPrevStart) {
+            if (!state.running) startDuel();
+          }
+
+          if (state.running) {
+            if (btnY && !gpPrevY) {
+              triggerFlashParry();
+              rumble(0.25, 0.4, 80);
+            }
+            if (btnA && !gpPrevA) {
+              beginAction(player, player.charge >= 100 ? "charged" : "slash");
+              rumble(0.2, 0.3, 70);
+            }
+            if (btnX && !gpPrevX) {
+              beginAction(player, "heavy");
+              rumble(0.45, 0.6, 120);
+            }
+            if (btnB && !gpPrevB) {
+              beginAction(player, "dodge");
+              rumble(0.15, 0.2, 50);
+            }
+          }
+
+          gpPrevA = btnA;
+          gpPrevB = btnB;
+          gpPrevX = btnX;
+          gpPrevY = btnY;
+          gpPrevStart = btnStart;
+        }
+      } catch (e) {}
+
       if (!state.running) return;
-      const left = keys.has("a") || keys.has("arrowleft") || els.leftBtn.classList.contains("is-down");
-      const right = keys.has("d") || keys.has("arrowright") || els.rightBtn.classList.contains("is-down");
-      player.guard = keys.has("l") || els.guardBtn.classList.contains("is-down");
+      const left = keys.has("a") || keys.has("arrowleft") || els.leftBtn.classList.contains("is-down") || padLeft;
+      const right = keys.has("d") || keys.has("arrowright") || els.rightBtn.classList.contains("is-down") || padRight;
+      const guardRequested = keys.has("l") || els.guardBtn.classList.contains("is-down") || (els.parryBtn && els.parryBtn.classList.contains("is-down")) || padGuard;
+      if (guardRequested && !player.guard) {
+        player.guardJustPressed = 0.24;
+      }
+      player.guard = guardRequested;
       if (player.guard && player.stamina > 4 && player.action === "idle") {
         player.stamina -= 0.32;
       } else if (!player.guard) {
@@ -564,6 +687,10 @@
         player.vx = 0;
         if (left) player.vx -= 250;
         if (right) player.vx += 250;
+      }
+      if (keys.has("e")) {
+        triggerFlashParry();
+        keys.delete("e");
       }
       if ((keys.has("j") || els.slashBtn.classList.contains("is-down"))) {
         beginAction(player, player.charge >= 100 ? "charged" : "slash");
@@ -615,6 +742,7 @@
       fighter.invuln = Math.max(0, fighter.invuln - dt);
       fighter.hurtTime = Math.max(0, (fighter.hurtTime || 0) - dt);
       fighter.cooldown = Math.max(0, fighter.cooldown - dt);
+      if (fighter.guardJustPressed > 0) fighter.guardJustPressed = Math.max(0, fighter.guardJustPressed - dt / 60);
       if (fighter.action !== "idle") {
         fighter.frame += dt;
         // Ghost afterimage trail on strike/dodge frames (drawn additively behind fighters).
@@ -661,6 +789,34 @@
       if (!inFront || distance > reach) return;
       let damage = spec.damage;
       let blocked = false;
+      const isFlashParry = (defender.guardJustPressed > 0 || (defender.id === "player" && state.tribunalDirector.parryWindow > 0)) && Math.sign(attacker.x - defender.x) === defender.facing;
+      if (isFlashParry) {
+        state.tribunalDirector.flashParryStreak++;
+        state.tribunalDirector.tension = Math.min(100, state.tribunalDirector.tension + 15);
+        state.tribunalDirector.parryWindow = 0;
+        defender.stamina = Math.min(100, defender.stamina + 25);
+        defender.charge = Math.min(100, defender.charge + 35);
+        attacker.cooldown = 46;
+        attacker.hurtTime = 28;
+        attacker.vx = -attacker.facing * 320;
+        state.hitStop = 6;
+        shakeAmt = Math.max(shakeAmt, 18);
+        rumble(0.8, 1.0, 240);
+        sfx("parry");
+        sfx("stagger");
+        burst(defender.x, defender.y - 120, 36, "#38e9ff", 11);
+        burst(defender.x, defender.y - 120, 24, "#ffd75e", 8);
+        state.echoes.push({
+          text: `FLASH PARRY x${state.tribunalDirector.flashParryStreak}!`,
+          x: defender.x,
+          y: defender.y - 170,
+          vy: -2.2,
+          life: 55,
+          color: "#38e9ff"
+        });
+        addLog(`FLASH PARRY! ${defender.name} deflected ${spec.label} perfectly!`);
+        return;
+      }
       if (defender.guard && defender.stamina > 8 && Math.sign(attacker.x - defender.x) === defender.facing) {
         blocked = true;
         damage = Math.ceil(damage * 0.22);
@@ -670,6 +826,7 @@
         burst(defender.x, defender.y - 118, 18, "#3dffad", 6);
         state.hitStop = Math.max(state.hitStop, 2);
         shakeAmt = Math.max(shakeAmt, 5); sfx("block");
+        rumble(0.35, 0.55, 120);
       } else {
         defender.hp = Math.max(0, defender.hp - damage);
         defender.vx += attacker.facing * spec.push;
@@ -678,6 +835,11 @@
         defender.charge = Math.min(100, defender.charge + 7);
         state.hitStop = spec.damage > 20 ? 5 : 3;
         shakeAmt = Math.max(shakeAmt, spec.damage > 20 ? 16 : 9); sfx("hit");
+        if (defender.id === "player") {
+          rumble(0.7, 0.85, 220);
+        } else {
+          rumble(0.25, 0.45, 100);
+        }
         addLog(`${attacker.name} lands ${spec.label} for ${damage}.`);
         burst(defender.x, defender.y - 122, 26, attacker.blade, 8);
       }
@@ -701,6 +863,7 @@
       state.koBanner = 82;
       burst(loser.x, loser.y - 120, 60, loser.blade, 13);
       burst(loser.x, loser.y - 120, 40, "#ffffff", 9);
+      rumble(0.6, 1.0, 450);
       try { voKO.currentTime = 0; voKO.play().catch(()=>{}); } catch(e){}
     }
 
@@ -758,6 +921,40 @@
       if (state.particles.length > 260) state.particles.splice(0, state.particles.length - 260);
     }
 
+    function updateTribunalDirector(dt) {
+      const t0 = performance.now();
+      const td = state.tribunalDirector;
+      if (!td) return;
+      if (td.parryWindow > 0) td.parryWindow = Math.max(0, td.parryWindow - dt);
+      td.stateTimer += dt / 60;
+
+      const pDist = Math.abs(player.x - enemy.x);
+      if (player.hp < 30 || enemy.hp < 30) {
+        td.state = "VERDICT_CHORD";
+        td.aggression = 2.1;
+        td.feintFrequency = 0.55;
+      } else if (enemy.stamina < 22 || player.stamina < 22) {
+        td.state = "POISE_CRUSH";
+        td.aggression = 1.7;
+        td.feintFrequency = 0.15;
+      } else if (td.tension >= 45 || pDist < 140) {
+        td.state = "FURIOUS_CADENCE";
+        td.aggression = 1.35;
+        td.feintFrequency = 0.4;
+      } else {
+        td.state = "STANCE_PROBE";
+        td.aggression = 0.85;
+        td.feintFrequency = 0.2;
+      }
+
+      if (state.running) {
+        td.tension = Math.min(100, Math.max(15, td.tension + (pDist < 180 ? 0.05 : -0.03) * dt));
+      }
+
+      const t1 = performance.now();
+      td.decisionLatencyUs = Math.max(0.00015, (t1 - t0) * 1000);
+    }
+
     function updateGame() {
       const now = performance.now();
       if (!state.last) state.last = now;
@@ -770,6 +967,7 @@
       if ((state.koBanner || 0) > 0) { state.koBanner -= 1; dt *= 0.5; }   // KO slow-mo dwell
       if ((state.koFlash || 0) > 0) state.koFlash = Math.max(0, state.koFlash - 0.05);
 
+      updateTribunalDirector(dt);
       fighterInput();
       enemyAI(dt);
       if (state.running && state.roundDelay <= 0) {
@@ -838,6 +1036,7 @@
       drawEchoes();
       drawRoundText();
       drawFade();
+      drawTribunalDirectorHud();
     }
 
     // Additive sprite afterimages behind the fighters (strike/dodge trails).
@@ -852,15 +1051,21 @@
           const sp = attacks[g.action];
           pose = (sp && g.frame < sp.activeStart) ? "windup" : "strike";
         }
-        const spr = SPR[g.who + "_" + pose] || SPR[g.who + "_idle"] || SPR[g.who];
-        if (!spr) continue;
         const t = Math.max(0, g.life / g.max);
         ctx.globalAlpha = t * 0.22;
         ctx.save();
         ctx.translate(g.x, g.y);
         ctx.scale(g.facing * scale, scale);
-        const sh = 300, sw = sh * spr.width / spr.height;
-        ctx.drawImage(spr, -sw / 2, 16 - sh, sw, sh);
+        if (BLADE_ATLAS_READY[g.who]) {
+          const sh = 330, sw = sh * (512 / 768);
+          drawBladeAtlasPose(BLADE_ATLAS[g.who], pose, -sw / 2, 16 - sh, sw, sh);
+        } else {
+          const spr = SPR[g.who + "_" + pose] || SPR[g.who + "_idle"] || SPR[g.who];
+          if (spr) {
+            const sh = 300, sw = sh * spr.width / spr.height;
+            ctx.drawImage(spr, -sw / 2, 16 - sh, sw, sh);
+          }
+        }
         ctx.restore();
       }
       ctx.restore();
@@ -873,7 +1078,9 @@
         ctx.save();
         ctx.globalAlpha = Math.min(1, state.fadeIn);
         ctx.fillStyle = "#04050b";
-        ctx.fillRect(0, 0, view.w, view.h);
+        ctx.beginPath();
+        ctx.rect(0, 0, view.w, view.h);
+        ctx.fill();
         ctx.restore();
       }
       // Soft dip to dark at the tail of the round delay, released by resetRound's fadeIn.
@@ -881,9 +1088,38 @@
         ctx.save();
         ctx.globalAlpha = Math.min(0.85, (26 - state.roundDelay) / 26 * 0.85);
         ctx.fillStyle = "#04050b";
-        ctx.fillRect(0, 0, view.w, view.h);
+        ctx.beginPath();
+        ctx.rect(0, 0, view.w, view.h);
+        ctx.fill();
         ctx.restore();
       }
+    }
+
+    function drawTribunalDirectorHud() {
+      const td = state.tribunalDirector;
+      if (!td) return;
+      ctx.save();
+      const cx = view.w / 2;
+      const cy = 24;
+      const tensionColor = td.tension > 70 ? "#ff2e6d" : (td.tension > 40 ? "#ffd75e" : "#3dffad");
+      ctx.font = "800 10px ui-sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillStyle = tensionColor;
+      ctx.shadowColor = tensionColor;
+      ctx.shadowBlur = 8;
+      ctx.fillText(`AI DIRECTOR [${td.state}] ${Math.round(td.tension)}% · ${td.decisionLatencyUs.toFixed(3)}µs`, cx, cy);
+
+      // Tension gauge
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "rgba(255,255,255,0.16)";
+      ctx.fillRect(cx - 70, cy + 5, 140, 4);
+      ctx.fillStyle = tensionColor;
+      ctx.fillRect(cx - 70, cy + 5, 140 * (td.tension / 100), 4);
+
+      // Flash parry counter
+      ctx.fillStyle = td.flashParryStreak > 0 ? "#38e9ff" : "rgba(255,255,255,0.48)";
+      ctx.fillText(`FLASH PARRY: x${td.flashParryStreak} (FEINT ${Math.round(td.feintFrequency * 100)}%)`, cx, cy + 22);
+      ctx.restore();
     }
 
     function drawArena() {
@@ -1130,6 +1366,29 @@
       else if (fighter.action === "slash" || fighter.action === "heavy" || fighter.action === "charged") {
         const _sp = attacks[fighter.action];
         _pose = (_sp && fighter.frame < _sp.activeStart) ? "windup" : "strike";
+      }
+      if (BLADE_ATLAS_READY[_who]) {
+        ctx.shadowBlur = 0;
+        const breathe = 1 + Math.sin(performance.now() * 0.003 + (fighter.id === "player" ? 0 : 1.6)) * 0.015;
+        const lunge = _pose === "strike" ? 1.07 : 1;
+        const sh = 330 * breathe * lunge, sw = sh * (512 / 768);
+        const yOff = _pose === "hurt" ? -6 : 0;
+        drawBladeAtlasPose(BLADE_ATLAS[_who], _pose, -sw / 2, 16 - sh + yOff, sw, sh);
+        if ((fighter.hurtTime || 0) > 0) {
+          ctx.globalAlpha = Math.min(0.75, fighter.hurtTime / 16 * 0.75);
+          ctx.globalCompositeOperation = "lighter";
+          drawBladeAtlasPose(BLADE_ATLAS[_who], _pose, -sw / 2, 16 - sh + yOff, sw, sh);
+          ctx.globalAlpha = 1;
+          ctx.globalCompositeOperation = "source-over";
+        } else if (fighter.invuln > 0) {
+          ctx.globalAlpha = 0.5;
+          ctx.globalCompositeOperation = "lighter";
+          drawBladeAtlasPose(BLADE_ATLAS[_who], _pose, -sw / 2, 16 - sh, sw, sh);
+          ctx.globalAlpha = 1;
+          ctx.globalCompositeOperation = "source-over";
+        }
+        ctx.restore();
+        return;
       }
       const _spr = SPR[_who + "_" + _pose] || SPR[_who + "_idle"] || (fighter.id === "player" ? SPR.emerald : SPR.ruby);
       if (_spr) {
@@ -1596,6 +1855,22 @@
         player: { hp: player.hp, stamina: player.stamina, charge: player.charge, rounds: player.rounds },
         enemy: { hp: enemy.hp, stamina: enemy.stamina, charge: enemy.charge, rounds: enemy.rounds },
         gate: "BLADE",
+        tribunal_director: state.tribunalDirector ? {
+          state: state.tribunalDirector.state,
+          tension: Math.round(state.tribunalDirector.tension),
+          decisionLatencyUs: state.tribunalDirector.decisionLatencyUs,
+          flashParryStreak: state.tribunalDirector.flashParryStreak,
+          poiseCrushes: state.tribunalDirector.poiseCrushes,
+          feintFrequency: state.tribunalDirector.feintFrequency,
+          aggression: state.tribunalDirector.aggression
+        } : null,
+        fighter_identity_version: "vorath-overhaul-v01",
+        fighter_atlases: BLADE_ATLAS_SRC,
+        fighter_atlases_ready: { ...BLADE_ATLAS_READY },
+        fighter_states: {
+          player: (player.hurtTime || 0) > 0 ? "hurt" : (player.action === "slash" || player.action === "heavy" || player.action === "charged" ? "combat" : "idle"),
+          enemy: (enemy.hurtTime || 0) > 0 ? "hurt" : (enemy.action === "slash" || enemy.action === "heavy" || enemy.action === "charged" ? "combat" : "idle")
+        },
         visual_directive: "rainbows neon maximalism holographic gems jewels crystals alien insects glow blade trails",
         noProtectedAssets: "No protected weapon-fighter assets, names, characters, stages, move lists, animation data, logos, audio, or screenshots are used.",
         generatedAt: new Date().toISOString(),
@@ -1645,15 +1920,63 @@
     els.startBtn.addEventListener("click", startDuel);
     els.exportBtn.addEventListener("click", exportReceipt);
     els.exportTop.addEventListener("click", exportReceipt);
-    [els.leftBtn, els.rightBtn, els.slashBtn, els.heavyBtn, els.guardBtn, els.dodgeBtn].forEach(bindHold);
+    if (els.parryBtn) {
+      els.parryBtn.addEventListener("click", triggerFlashParry);
+    }
+    [els.leftBtn, els.rightBtn, els.slashBtn, els.heavyBtn, els.guardBtn, els.dodgeBtn, els.parryBtn].filter(Boolean).forEach(bindHold);
     window.addEventListener("resize", resize);
+
+    function bladeTribunalPayload() {
+      return {
+        round: state.round,
+        judgment: state.judgment,
+        player: { hp: Math.round(player.hp), stamina: Math.round(player.stamina), charge: Math.round(player.charge), rounds: player.rounds },
+        enemy: { hp: Math.round(enemy.hp), stamina: Math.round(enemy.stamina), charge: Math.round(enemy.charge), rounds: enemy.rounds },
+        director: state.tribunalDirector ? {
+          state: state.tribunalDirector.state,
+          tension: Math.round(state.tribunalDirector.tension),
+          decisionLatencyUs: state.tribunalDirector.decisionLatencyUs,
+          flashParryStreak: state.tribunalDirector.flashParryStreak,
+          feintFrequency: state.tribunalDirector.feintFrequency,
+          aggression: state.tribunalDirector.aggression
+        } : null
+      };
+    }
+    window.bladeTribunalPayload = bladeTribunalPayload;
+    window.__bladeTribunalDebug = {
+      payload: bladeTribunalPayload,
+      triggerParry: triggerFlashParry,
+      setTension: (val) => { if (state.tribunalDirector) state.tribunalDirector.tension = val; },
+      startDuel: () => { startDuel(); return bladeTribunalPayload(); }
+    };
 
     resize();
     updateHud();
     draw();
     requestAnimationFrame(updateGame);
 
-    window.vorathBladeTribunal = { startDuel, updateGame, exportReceipt, makeReceipt };
+    window.vorathBladeTribunal = {
+      startDuel,
+      updateGame,
+      triggerParry: triggerFlashParry,
+      payload: bladeTribunalPayload,
+      exportReceipt,
+      makeReceipt,
+      debugVisualState: () => ({
+        context_is_main_canvas: ctx.canvas === canvas,
+        context_width: ctx.canvas.width,
+        context_height: ctx.canvas.height,
+        context_alpha: ctx.globalAlpha,
+        context_composite: ctx.globalCompositeOperation,
+        context_transform: ctx.getTransform().toString(),
+        player: { x: player.x, y: player.y, action: player.action },
+        enemy: { x: enemy.x, y: enemy.y, action: enemy.action },
+        fade_in: state.fadeIn,
+        atlas_ready: { ...BLADE_ATLAS_READY }
+      }),
+      forceDraw: draw
+    };
+    window.northstarArcadeState = makeReceipt;
     if (new URLSearchParams(window.location.search).has("playtest")) {
       window.setTimeout(() => {
         startDuel();

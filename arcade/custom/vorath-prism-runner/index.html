@@ -3432,14 +3432,70 @@
     return playtestPayload();
   }
 
+  let lastGamepadState = { start: false };
+
+  function rumble(weak, strong, durationMs) {
+    try {
+      const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+      for (const gp of gamepads) {
+        if (gp && gp.vibrationActuator && gp.vibrationActuator.playEffect) {
+          gp.vibrationActuator.playEffect("dual-rumble", {
+            startDelay: 0,
+            duration: durationMs || 100,
+            weakMagnitude: Math.min(1, Math.max(0, weak || 0)),
+            strongMagnitude: Math.min(1, Math.max(0, strong || 0))
+          }).catch(() => {});
+        }
+      }
+    } catch (e) {}
+  }
+
+  function pollGamepad() {
+    try {
+      const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+      for (const gp of gamepads) {
+        if (!gp) continue;
+        const jumpActive = (gp.buttons[0] && gp.buttons[0].pressed) ||
+                           (gp.buttons[12] && gp.buttons[12].pressed) ||
+                           (gp.axes && gp.axes[1] < -0.4);
+        setControl("jump", !!jumpActive);
+
+        const dashActive = (gp.buttons[2] && gp.buttons[2].pressed) ||
+                           (gp.buttons[5] && gp.buttons[5].pressed) ||
+                           (gp.buttons[7] && gp.buttons[7].pressed) ||
+                           (gp.buttons[15] && gp.buttons[15].pressed);
+        setControl("dash", !!dashActive);
+
+        const glideActive = (gp.buttons[1] && gp.buttons[1].pressed) ||
+                            (gp.buttons[4] && gp.buttons[4].pressed) ||
+                            (gp.buttons[6] && gp.buttons[6].pressed);
+        setControl("glide", !!glideActive);
+
+        const startBtn = gp.buttons[9] && gp.buttons[9].pressed;
+        if (startBtn && !lastGamepadState.start) {
+          ensureAudio();
+          if (!running && !complete && !gameOver) startGame();
+          else if (running) resetWorld();
+        }
+        lastGamepadState.start = startBtn;
+      }
+    } catch (e) {}
+  }
+
   function setControl(control, active) {
     if (control === "jump") {
-      if (active && !input.jump) input.jumpPressed = true;
+      if (active && !input.jump) {
+        input.jumpPressed = true;
+        rumble(0.2, 0.1, 50);
+      }
       input.jump = active;
       return;
     }
     if (control === "dash") {
-      if (active && !input.dash) input.dashPressed = true;
+      if (active && !input.dash) {
+        input.dashPressed = true;
+        rumble(0.5, 0.3, 80);
+      }
       input.dash = active;
       return;
     }
@@ -3483,6 +3539,7 @@
   }
 
   function loop() {
+    pollGamepad();
     update();
     draw();
     requestAnimationFrame(loop);

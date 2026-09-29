@@ -260,6 +260,32 @@
       line-height: 1.42;
     }
 
+    .controller-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 850;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--yellow);
+      background: rgba(255, 228, 92, 0.08);
+      border: 1px solid rgba(255, 228, 92, 0.25);
+      border-radius: 4px;
+      padding: 6px 10px;
+      margin: 4px 0;
+      line-height: 1.3;
+    }
+
+    .controller-badge span {
+      color: var(--cyan);
+      background: rgba(47, 230, 255, 0.12);
+      border: 1px solid rgba(47, 230, 255, 0.3);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-weight: 900;
+    }
+
     .controls {
       display: grid;
       grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -407,7 +433,8 @@
             <section class="modal">
               <div class="kicker">Insert signal</div>
               <h2 id="overlayTitle">Hypernova Swarm</h2>
-              <p id="overlayText">Move with WASD or arrows. Fire with Space. Survive formation waves, collect credits, and upgrade between sectors. Public-safe original art and code.</p>
+              <p id="overlayText">Move with WASD, arrows, or analog stick. Fire with Space or A/RT. Survive formation waves, collect credits, and upgrade between sectors. Public-safe original art and code.</p>
+              <div class="controller-badge" id="ctrlBadge"><span>XBOX 360 / CONTROLLER READY</span> | LS/D-Pad: Move | A/RT: Laser | RB: Spread | X: Shield | Start: Pause</div>
               <button class="primary" id="startBtn" type="button">Start Run</button>
             </section>
           </div>
@@ -492,7 +519,141 @@
       const clip = new Audio("/static/games/sfx/nova_" + name + ".mp3");
       clip.preload = "auto"; SFX[name] = clip;
     });
+    // --- Procedural WebAudio Synthesizer (Xbox 360 Audio Engine) ---
+    let audioCtx = null;
+    function getAudioCtx() {
+      if (!audioCtx) {
+        const AudioClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioClass) audioCtx = new AudioClass();
+      }
+      if (audioCtx && audioCtx.state === "suspended") {
+        audioCtx.resume().catch(() => {});
+      }
+      return audioCtx;
+    }
+
+    function playLaserShot() {
+      const ctx = getAudioCtx();
+      if (!ctx) return;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(180, ctx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.18, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.085);
+    }
+
+    function playExplodeSound(heavy = false) {
+      const ctx = getAudioCtx();
+      if (!ctx) return;
+      const dur = heavy ? 0.45 : 0.22;
+      const bufSize = Math.floor(ctx.sampleRate * dur);
+      const buffer = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufSize * (heavy ? 0.35 : 0.2)));
+      }
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+      const filter = ctx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(heavy ? 600 : 900, ctx.currentTime);
+      filter.frequency.exponentialRampToValueAtTime(120, ctx.currentTime + dur);
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(heavy ? 0.4 : 0.25, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.001, ctx.currentTime + dur);
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      noise.start();
+    }
+
+    function playShieldChime() {
+      const ctx = getAudioCtx();
+      if (!ctx) return;
+      const notes = [523.25, 659.25, 783.99, 1046.5];
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.05);
+        gain.gain.setValueAtTime(0.14, ctx.currentTime + idx * 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.05 + 0.18);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + idx * 0.05);
+        osc.stop(ctx.currentTime + idx * 0.05 + 0.19);
+      });
+    }
+
+    function playFanfare() {
+      const ctx = getAudioCtx();
+      if (!ctx) return;
+      const chords = [
+        { freqs: [440, 554.37, 659.25], t: 0, d: 0.15 },
+        { freqs: [554.37, 659.25, 880], t: 0.16, d: 0.15 },
+        { freqs: [659.25, 880, 1108.73], t: 0.32, d: 0.35 }
+      ];
+      chords.forEach(c => {
+        c.freqs.forEach(f => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(f, ctx.currentTime + c.t);
+          gain.gain.setValueAtTime(0.12, ctx.currentTime + c.t);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + c.t + c.d);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(ctx.currentTime + c.t);
+          osc.stop(ctx.currentTime + c.t + c.d + 0.01);
+        });
+      });
+    }
+
+    // --- Dual-Rumble Haptics Engine ---
+    function rumble(weak, strong, durationMs) {
+      try {
+        const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+        for (const gp of gamepads) {
+          if (gp && gp.vibrationActuator && gp.vibrationActuator.playEffect) {
+            gp.vibrationActuator.playEffect("dual-rumble", {
+              startDelay: 0,
+              duration: durationMs || 100,
+              weakMagnitude: Math.min(1.0, Math.max(0.0, weak || 0.2)),
+              strongMagnitude: Math.min(1.0, Math.max(0.0, strong || 0.2))
+            }).catch(() => {});
+          }
+        }
+      } catch (e) {}
+    }
+
+    // --- Xbox 360 Achievements System ---
+    const unlockedAchievements = {};
+    function checkAchievement(id, title, desc, points) {
+      if (unlockedAchievements[id]) return;
+      unlockedAchievements[id] = true;
+      if (window.NorthStarHUD && typeof window.NorthStarHUD.unlockAchievement === "function") {
+        window.NorthStarHUD.unlockAchievement(id, { title, desc, points, gameId: "hypernova-swarm" });
+      }
+      playFanfare();
+      rumble(0.6, 0.6, 280);
+      log("ACHIEVEMENT UNLOCKED // " + title + " (" + points + "G)");
+    }
+
+    const lastGamepadState = { connected: false, buttonX: false, buttonY: false, buttonStart: false };
+
     function playSfx(name, volume = 0.4) {
+      if (name === "shoot") playLaserShot();
+      else if (name === "explode") playExplodeSound(false);
+      else if (name === "hit") playExplodeSound(false);
+      else if (name === "powerup") playShieldChime();
+      else if (name === "wave") playFanfare();
+
       const base = SFX[name];
       if (!base || base.readyState < 2) return false;
       const inst = base.cloneNode(); inst.volume = volume;
@@ -754,6 +915,7 @@
       playSfx("hit", 0.45);
       state.shield -= amount;
       state.shake = 8;
+      rumble(0.6, 0.85, 220);
       addParticles(state.player.x, state.player.y, palettes[state.sector][4] || "#ff5b45", 18);
       if (state.shield <= 0) {
         state.lives -= 1;
@@ -800,12 +962,70 @@
         dx += Math.max(-1, Math.min(1, (px - p.x) / 80));
         dy += Math.max(-1, Math.min(1, (py - p.y) / 80));
       }
+
+      // Xbox 360 / Gamepad Standard Input
+      let padFire = false;
+      try {
+        const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+        let activePad = null;
+        for (const gp of gamepads) {
+          if (gp && gp.connected) { activePad = gp; break; }
+        }
+        const badge = document.querySelector("#ctrlBadge");
+        if (activePad) {
+          if (!lastGamepadState.connected && badge) {
+            const idUpper = (activePad.id || "CONTROLLER").toUpperCase();
+            const tag = idUpper.includes("XBOX") ? "XBOX 360" : (idUpper.includes("PLAYSTATION") ? "PS PAD" : "GAMEPAD");
+            badge.innerHTML = "<span>[PAD] " + tag + " ACTIVE</span> | LS/D-Pad: Move | A/RT: Laser | RB: Spread | X: Shield | Start: Pause";
+            lastGamepadState.connected = true;
+          }
+          const rawAxisX = activePad.axes[0] || 0;
+          const rawAxisY = activePad.axes[1] || 0;
+          if (Math.abs(rawAxisX) > 0.15) dx += rawAxisX;
+          if (Math.abs(rawAxisY) > 0.15) dy += rawAxisY;
+
+          if (activePad.buttons[14] && activePad.buttons[14].pressed) dx -= 1;
+          if (activePad.buttons[15] && activePad.buttons[15].pressed) dx += 1;
+          if (activePad.buttons[12] && activePad.buttons[12].pressed) dy -= 1;
+          if (activePad.buttons[13] && activePad.buttons[13].pressed) dy += 1;
+
+          const btnA = activePad.buttons[0] && activePad.buttons[0].pressed;
+          const btnRT = activePad.buttons[7] && (activePad.buttons[7].pressed || activePad.buttons[7].value > 0.2);
+          const btnRB = activePad.buttons[5] && activePad.buttons[5].pressed;
+          if (btnA || btnRT || btnRB) padFire = true;
+
+          const btnX = activePad.buttons[2] && activePad.buttons[2].pressed;
+          if (btnX && !lastGamepadState.buttonX) {
+            buyUpgrade("shield", 10 + (state.upgrades.shield || 0) * 4);
+          }
+          lastGamepadState.buttonX = !!btnX;
+
+          const btnY = activePad.buttons[3] && activePad.buttons[3].pressed;
+          if (btnY && !lastGamepadState.buttonY) {
+            buyUpgrade("cooldown", 14 + (state.upgrades.cooldown || 0) * 4);
+          }
+          lastGamepadState.buttonY = !!btnY;
+
+          const btnStart = activePad.buttons[9] && activePad.buttons[9].pressed;
+          if (btnStart && !lastGamepadState.buttonStart) {
+            pause();
+          }
+          lastGamepadState.buttonStart = !!btnStart;
+        } else {
+          if (lastGamepadState.connected && badge) {
+            badge.innerHTML = "<span>XBOX 360 / CONTROLLER READY</span> | LS/D-Pad: Move | A/RT: Laser | RB: Spread | X: Shield | Start: Pause";
+            lastGamepadState.connected = false;
+          }
+        }
+      } catch (e) {}
+
       const mag = Math.hypot(dx, dy) || 1;
       p.x = Math.max(22, Math.min(w() - 22, p.x + dx / mag * p.speed * dt));
       p.y = Math.max(h() * 0.55, Math.min(h() - 28, p.y + dy / mag * p.speed * dt));
 
-      if ((keys[" "] || pointer) && state.fireTimer <= 0) {
+      if ((keys[" "] || pointer || padFire) && state.fireTimer <= 0) {
         fire();
+        rumble(0.12, 0.05, 45);
         state.fireTimer = p.cooldown;
       }
 
@@ -858,6 +1078,12 @@
               playSfx("explode", 0.3);
               state.score += e.value;
               state.credits += e.type === "overlord" ? 5 : 1;
+              if (e.type === "overlord") {
+                checkAchievement("hypernova_overlord_slayer", "Apex Dreadnought", "Destroy a Swarm Overlord mothership in deep sector combat.", 30);
+                rumble(0.75, 0.9, 350);
+              } else {
+                rumble(0.25, 0.4, 100);
+              }
               if (Math.random() < 0.1) state.powerups.push({ x: e.x, y: e.y, vx: 0, vy: 120, r: 8, kind: "shield", color: palettes[state.sector][2] });
             }
           }
@@ -880,6 +1106,10 @@
           playSfx("powerup", 0.4);
           state.shield = Math.min(140, state.shield + 18);
           state.score += 35;
+          rumble(0.2, 0.35, 80);
+          if (state.shield >= 120) {
+            checkAchievement("hypernova_shield_overcharge", "Fortress Core", "Overcharge starship shield integrity to 120 units or greater.", 20);
+          }
         }
       }
       state.powerups = state.powerups.filter(u => !u.dead && u.y < h() + 30);
@@ -890,6 +1120,13 @@
         state.score += 300 + state.wave * 30;
         state.credits += 3;
         state.receipt = makeReceipt("wave_clear");
+        rumble(0.45, 0.5, 300);
+        if (state.wave >= 2 && state.lives === 3) {
+          checkAchievement("hypernova_first_wave", "Swarm Breaker", "Clear Wave 1 without losing a single life.", 15);
+        }
+        if (state.wave >= 5) {
+          checkAchievement("hypernova_deep_space", "Cosmic Vanguard", "Clear Wave 4 and breach the deep space sector.", 50);
+        }
         spawnWave();
       }
       best = Math.max(best, state.score);
@@ -1608,5 +1845,6 @@
     }
     requestAnimationFrame(frame);
   </script>
+  <script src="/arcade/custom/northstar_arcade_hud.js"></script>
 </body>
 </html>

@@ -1561,6 +1561,25 @@
     };
   }
 
+  // --- Unified Dual-Rumble Haptic Feedback Helper (Xbox 360 / One / PS) ---
+  function rumble(weak = 0.5, strong = 0.5, duration = 120) {
+    if (typeof navigator === 'undefined' || !navigator.getGamepads) return;
+    try {
+      const gamepads = navigator.getGamepads();
+      for (let i = 0; i < gamepads.length; i++) {
+        const p = gamepads[i];
+        if (p && p.connected && p.vibrationActuator && typeof p.vibrationActuator.playEffect === 'function') {
+          p.vibrationActuator.playEffect('dual-rumble', {
+            startDelay: 0,
+            duration: duration,
+            weakMagnitude: Math.min(1, Math.max(0, Number(weak) || 0)),
+            strongMagnitude: Math.min(1, Math.max(0, Number(strong) || 0))
+          }).catch(() => {});
+        }
+      }
+    } catch (e) {}
+  }
+
   let lastGpStart = false;
   let lastGpNavY = 0;
   let lastGpA = false;
@@ -1659,6 +1678,7 @@
     renderLeaderboardInModal,
     updateHighScoreUI,
     pollGamepad,
+    rumble,
     unlockAchievement,
     hasAchievement,
     getAchievements,

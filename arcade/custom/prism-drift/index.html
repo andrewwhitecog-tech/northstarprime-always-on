@@ -240,14 +240,32 @@
     }
 
     .modal {
-      width: min(100%, 520px);
+      width: min(100%, 560px);
       display: grid;
       gap: 12px;
-      border: 1px solid rgba(255, 228, 92, 0.3);
-      border-radius: 8px;
-      padding: 16px;
-      background: rgba(8, 12, 16, 0.96);
-      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42);
+      border: 1px solid rgba(255, 228, 92, 0.4);
+      border-radius: 12px;
+      padding: 22px;
+      background: linear-gradient(180deg, rgba(8, 12, 16, 0.93) 0%, rgba(4, 7, 12, 0.96) 100%),
+                  url('/static/curated/idg/prism_drift_hero.jpg') center/cover no-repeat;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.7), 0 0 30px rgba(47, 228, 255, 0.2);
+      backdrop-filter: blur(10px);
+    }
+
+    .controller-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 850;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--yellow);
+      background: rgba(255, 228, 92, 0.08);
+      border: 1px solid rgba(255, 228, 92, 0.25);
+      border-radius: 999px;
+      padding: 6px 14px;
+      margin-top: 4px;
     }
 
     .modal h2 {
@@ -428,6 +446,7 @@
               <div class="kicker">Circuit ready</div>
               <h2 id="overlayTitle">Prism Drift</h2>
               <p id="overlayText">Hold the prism road, clip scoring gates, and spend boost without overheating the drive. The route is original and generated locally.</p>
+              <div class="controller-badge" id="ctrlBadge"><span>XBOX 360 / CONTROLLER READY</span> • LS: Steer • RT: Gas • LT: Brake • A: Boost</div>
               <button class="primary" id="overlayBtn" type="button">Start Trial</button>
             </section>
           </div>
@@ -476,6 +495,7 @@
     </footer>
   </main>
 
+  <script src="/arcade/custom/northstar_arcade_hud.js"></script>
   <script src="/static/games/chiptune.js"></script>
   <script>
     const canvas = document.querySelector("#game");
@@ -502,6 +522,104 @@
       } catch (e) {}
     }
     function stopMusic() { try { if (music && audioStarted) { music.stop(); audioStarted = false; } } catch (e) {} }
+
+    // --- Web Audio Procedural Synthesizer (Xbox 360 Audio Engine) ---
+    let audioCtx = null;
+    let engineOsc = null;
+    let engineGain = null;
+
+    function getAudioCtx() {
+      if (!audioCtx) {
+        const Audio = window.AudioContext || window.webkitAudioContext;
+        if (Audio) audioCtx = new Audio();
+      }
+      if (audioCtx && audioCtx.state === "suspended") {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    function playTone(freq, type = "sine", duration = 0.15, vol = 0.25, pitchDrop = 0) {
+      try {
+        const c = getAudioCtx();
+        if (!c) return;
+        const osc = c.createOscillator();
+        const gain = c.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, c.currentTime);
+        if (pitchDrop !== 0) {
+          osc.frequency.exponentialRampToValueAtTime(Math.max(20, freq + pitchDrop), c.currentTime + duration);
+        }
+        gain.gain.setValueAtTime(vol, c.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(c.destination);
+        osc.start();
+        osc.stop(c.currentTime + duration + 0.02);
+      } catch(e) {}
+    }
+
+    function playGateChime(streak) {
+      const notes = [523.25, 587.33, 659.25, 783.99, 880.00, 1046.50, 1174.66, 1318.51];
+      const f = notes[Math.min(streak, notes.length - 1)];
+      playTone(f, "sine", 0.22, 0.28, 140);
+    }
+
+    function playBarrierHit() {
+      playTone(130, "sawtooth", 0.35, 0.4, -90);
+    }
+
+    function playFanfare() {
+      const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51];
+      notes.forEach((f, i) => {
+        setTimeout(() => playTone(f, "triangle", 0.38, 0.22), i * 100);
+      });
+    }
+
+    function initEngineAudio() {
+      try {
+        const c = getAudioCtx();
+        if (!c || engineOsc) return;
+        engineOsc = c.createOscillator();
+        engineGain = c.createGain();
+        engineOsc.type = "sawtooth";
+        engineOsc.frequency.setValueAtTime(55, c.currentTime);
+        engineGain.gain.setValueAtTime(0.001, c.currentTime);
+        
+        const filter = c.createBiquadFilter();
+        filter.type = "lowpass";
+        filter.frequency.setValueAtTime(320, c.currentTime);
+        
+        engineOsc.connect(filter);
+        filter.connect(engineGain);
+        engineGain.connect(c.destination);
+        engineOsc.start();
+      } catch(e) {}
+    }
+
+    function updateEngineAudio(speed, throttle, boosting) {
+      try {
+        if (!engineOsc || !engineGain) return;
+        const c = getAudioCtx();
+        if (!c) return;
+        const targetFreq = 55 + (speed / 410) * 160 + (boosting ? 80 : 0);
+        const targetGain = (state && state.mode === "race") ? Math.min(0.08, 0.015 + (speed / 410) * 0.05 + (throttle ? 0.02 : 0)) : 0.001;
+        engineOsc.frequency.setTargetAtTime(targetFreq, c.currentTime, 0.05);
+        engineGain.gain.setTargetAtTime(targetGain, c.currentTime, 0.05);
+      } catch(e) {}
+    }
+
+    // --- Xbox 360 Achievements System ---
+    let unlockedAchievements = {};
+    function checkAchievement(id, title, desc, points) {
+      if (unlockedAchievements[id]) return;
+      unlockedAchievements[id] = true;
+      if (window.NorthStarHUD && typeof window.NorthStarHUD.unlockAchievement === "function") {
+        window.NorthStarHUD.unlockAchievement(id, { title, desc, points, gameId: "prism-drift" });
+      }
+      playFanfare();
+      rumble(0.6, 0.6, 280);
+    }
     const wrap = document.querySelector("#stageWrap");
     const overlay = document.querySelector("#overlay");
     const els = {
@@ -618,15 +736,21 @@
       return gates;
     }
 
+    let gateStreak = 0;
+    let lastGamepadState = { start: false, connected: false };
+
     function startRace() {
       const selected = els.circuitSelect.value;
       state = baseState();
       state.mode = "race";
       state.circuit = selected;
       state.gates = makeGates();
+      gateStreak = 0;
       overlay.hidden = true;
       logRows = [];
       log("START // " + cfg().label + " trial active.");
+      getAudioCtx();
+      initEngineAudio();
       startAudio();
       sfx("powerUp");
       updateUi();
@@ -653,6 +777,7 @@
       if (state.mode === "race") {
         state.mode = "pause";
         showOverlay("Paused", "Prism telemetry held in local memory.", "Resume");
+        updateEngineAudio(0, 0, false);
         sfx("blip");
       } else if (state.mode === "pause") {
         state.mode = "race";
@@ -661,6 +786,22 @@
         sfx("blip");
       }
       updateUi();
+    }
+
+    function rumble(weak, strong, durationMs) {
+      try {
+        const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+        for (const gp of gamepads) {
+          if (gp && gp.vibrationActuator && gp.vibrationActuator.playEffect) {
+            gp.vibrationActuator.playEffect("dual-rumble", {
+              startDelay: 0,
+              duration: durationMs || 100,
+              weakMagnitude: Math.min(1, Math.max(0, weak || 0)),
+              strongMagnitude: Math.min(1, Math.max(0, strong || 0))
+            }).catch(() => {});
+          }
+        }
+      } catch (e) {}
     }
 
     function controlInput() {
@@ -679,6 +820,67 @@
         throttle = pointer.y < h() * 0.86 ? 1 : throttle;
         boost = pointer.y < h() * 0.34;
       }
+
+      // Xbox 360 / Gamepad Standard Input
+      try {
+        const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+        let activePad = null;
+        for (const gp of gamepads) {
+          if (gp && gp.connected) {
+            activePad = gp;
+            break;
+          }
+        }
+
+        const badge = document.querySelector("#ctrlBadge");
+        if (activePad) {
+          if (!lastGamepadState.connected && badge) {
+            const idUpper = (activePad.id || "CONTROLLER").toUpperCase();
+            const tag = idUpper.includes("XBOX") ? "XBOX 360" : (idUpper.includes("PLAYSTATION") ? "PS PAD" : "GAMEPAD");
+            badge.innerHTML = "<span>[PAD] " + tag + " ACTIVE</span> | LS: Steer | RT: Gas | LT: Brake | A/RB: Boost | Start: Pause";
+            lastGamepadState.connected = true;
+          }
+
+          if (activePad.axes && activePad.axes.length > 0) {
+            const deadzone = 0.15;
+            const axisX = activePad.axes[0];
+            if (Math.abs(axisX) > deadzone) {
+              steer = axisX;
+            }
+          }
+          if (activePad.buttons) {
+            const btn = idx => activePad.buttons[idx] && (activePad.buttons[idx].pressed || activePad.buttons[idx].value > 0.2);
+            // D-Pad
+            if (btn(14)) steer = -1;
+            if (btn(15)) steer = 1;
+            // Triggers
+            const rtVal = activePad.buttons[7] ? activePad.buttons[7].value : 0;
+            if (rtVal > 0.08) throttle = Math.max(throttle, rtVal);
+            if (btn(0)) throttle = 1;
+            if (btn(12)) throttle = 1;
+
+            const ltVal = activePad.buttons[6] ? activePad.buttons[6].value : 0;
+            if (ltVal > 0.08) brake = Math.max(brake, ltVal);
+            if (btn(1) || btn(2)) brake = 1;
+            if (btn(13)) brake = 1;
+
+            // Boost on Right Bumper (5) or Left Bumper (4) or (A) when driving with RT
+            if (btn(5) || btn(4) || (rtVal > 0.2 && btn(0))) boost = true;
+
+            const startBtn = btn(9);
+            if (startBtn && !lastGamepadState.start) {
+              pause();
+            }
+            lastGamepadState.start = startBtn;
+          }
+        } else {
+          if (lastGamepadState.connected && badge) {
+            badge.innerHTML = "<span>XBOX 360 / CONTROLLER READY</span> | LS: Steer | RT: Gas | LT: Brake | A: Boost";
+            lastGamepadState.connected = false;
+          }
+        }
+      } catch (e) {}
+
       return { steer: Math.max(-1, Math.min(1, steer)), throttle, brake, boost };
     }
 
@@ -702,6 +904,7 @@
       if (input.brake) state.speed -= 240 * dt;
       if (boosting) {
         if (!wasBoosting) sfx("shoot");
+        rumble(0.42, 0.22, 60);
         state.speed += 260 * dt;
         state.boost = Math.max(0, state.boost - 36 * dt);
         state.heat = Math.min(100, state.heat + 38 * dt);
@@ -711,6 +914,8 @@
       }
       wasBoosting = boosting;
       state.speed = Math.max(0, Math.min(maxSpeed + (boosting ? 110 : 0), state.speed));
+
+      updateEngineAudio(state.speed, input.throttle, boosting);
 
       const steerForce = input.steer * (0.52 + state.speed / 780);
       state.lateral += steerForce * state.speed * dt;
@@ -724,7 +929,7 @@
         state.integrity -= (18 + state.speed / 30) * dt;
         state.speed *= 1 - Math.min(0.35, dt * 1.8);
         state.shake = Math.max(state.shake, 3);
-        if (offRoadCooldown <= 0) { sfx("hurt"); offRoadCooldown = 0.4; }
+        if (offRoadCooldown <= 0) { sfx("hurt"); offRoadCooldown = 0.4; playBarrierHit(); rumble(0.35, 0.75, 180); }
         if (!els.calmToggle.checked) addParticles(w() / 2 + state.lateral, h() * 0.77, "#ff6148", 1);
       }
 
@@ -733,6 +938,9 @@
       if (driftAmt > 0 && !offRoad) {
         state.driftBank += driftAmt * dt * 0.08;
         state.score += Math.floor(driftAmt * dt * 0.7);
+        if (state.driftBank >= 500) {
+          checkAchievement("prism_overdrive", "Prism Overdrive", "Accumulate over 500 banked drift points at high speed.", 30);
+        }
       } else if (state.driftBank > 18) {
         const payout = Math.floor(state.driftBank * 4);
         state.score += payout;
@@ -746,6 +954,8 @@
         state.score += Math.max(0, Math.floor((c.target - state.time / Math.max(1, state.lap - 1)) * 30)) + 800;
         log("LAP // completed lap " + (state.lap - 1) + ".");
         sfx("oneUp");
+        playGateChime(7);
+        rumble(0.4, 0.6, 250);
       }
       if (state.lap > state.totalLaps || state.integrity <= 0) finishRace();
       state.score += Math.floor(state.speed * dt * 0.08);
@@ -765,15 +975,24 @@
           state.gateCount += 1;
           if (clean) {
             state.cleanGates += 1;
+            gateStreak += 1;
             state.score += 450 + Math.floor(state.speed);
             state.boost = Math.min(100, state.boost + 18);
             addParticles(w() / 2 + state.lateral, h() * 0.75, gate.color, 18);
             sfx("coin");
+            playGateChime(gateStreak);
+            rumble(0.2, 0.45, 90);
+            if (gateStreak >= 5) {
+              checkAchievement("prism_apex_line", "Apex Navigator", "Clip 5 consecutive clean prism gates without scraping the boundary.", 20);
+            }
           } else {
+            gateStreak = 0;
             state.integrity -= 7;
             state.flash = 1;
             state.shake = Math.max(state.shake, 6);
             sfx("hit");
+            playBarrierHit();
+            rumble(0.65, 0.9, 250);
           }
         }
       }
@@ -785,7 +1004,19 @@
       localStorage.setItem("prismDriftBest", String(best));
       state.receipt = makeReceipt(state.integrity <= 0 ? "integrity_failure" : "trial_complete");
       stopMusic();
-      if (state.integrity <= 0) { sfx("explode"); sfx("ko"); } else { sfx("gate"); sfx("oneUp"); }
+      updateEngineAudio(0, 0, false);
+      if (state.integrity <= 0) { 
+        sfx("explode"); 
+        sfx("ko"); 
+      } else { 
+        sfx("gate"); 
+        sfx("oneUp");
+        playFanfare();
+        rumble(0.7, 0.7, 400);
+        if (state.integrity >= 80 && state.lap > state.totalLaps) {
+          checkAchievement("prism_tour_master", "Grand Tour Champion", "Complete all 3 laps with vehicle integrity at or above 80%.", 50);
+        }
+      }
       showOverlay("Trial Complete", "Score " + state.score + " // clean gates " + state.cleanGates + "/" + state.gateCount + " // time " + state.time.toFixed(1) + "s.", "Restart");
       updateUi();
     }
@@ -854,11 +1085,34 @@
       drawGates(width, height, c);
       state.particles.forEach(drawParticle);
       drawCar(width, height, c);
+      if (wasBoosting && !els.calmToggle.checked) {
+        drawSpeedWarpLines(width, height, c);
+      }
       if (state.flash > 0) {
         ctx.globalAlpha = state.flash * 0.18;
         ctx.fillStyle = "#ff6148";
         ctx.fillRect(0, 0, width, height);
         ctx.globalAlpha = 1;
+      }
+      ctx.restore();
+    }
+
+    function drawSpeedWarpLines(width, height, c) {
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      const cx = width / 2;
+      const cy = height * 0.22;
+      const numLines = 22;
+      for (let i = 0; i < numLines; i++) {
+        const ang = (i / numLines) * Math.PI * 2 + (state.time * 3.5);
+        const r1 = 70 + Math.sin(i * 3 + state.time * 5) * 30;
+        const r2 = Math.max(width, height) * 0.95;
+        ctx.strokeStyle = i % 2 === 0 ? "rgba(47, 228, 255, 0.42)" : "rgba(255, 74, 165, 0.42)";
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(ang) * r1, cy + Math.sin(ang) * r1);
+        ctx.lineTo(cx + Math.cos(ang) * r2, cy + Math.sin(ang) * r2);
+        ctx.stroke();
       }
       ctx.restore();
     }

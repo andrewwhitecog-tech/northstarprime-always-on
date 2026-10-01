@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>OSSUARY ORBIT : XBLA TOURNAMENT EDITION 2.0</title>
+<style>
+:root {
+  --x-green: #5dc312;
+  --x-dark-green: #2a6808;
+  --x-silver: #d9dfde;
+  --x-dark: #07090d;
+  --x-cyan: #2fe6ff;
+  --x-gold: #efc76b;
+  --x-crimson: #ff2a5f;
+  --x-text-glow: rgba(93, 195, 18, 0.45);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+body {
+  background: radial-gradient(circle at 50% 10%, #151a24 0%, #07090d 65%, #020305 100%);
+  color: #fff;
+  font-family: "Segoe UI", "Trebuchet MS", Arial, sans-serif;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* CRT Scanline Overlay */
+.crt-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.28) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+  background-size: 100% 3px, 6px 100%;
+  pointer-events: none;
+  z-index: 999;
+  opacity: 0.65;
+  transition: opacity 0.3s;
+}
+.crt-overlay.disabled { opacity: 0; }
+
+/* Top Bar Header */
+header {
+  height: 56px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 24px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 100%);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  z-index: 100;
+  flex-shrink: 0;
+}
+.gamertag-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 5px 16px 5px 8px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+.avatar-orb {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #5dc312, #2a6808);
+  border: 2px solid #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 14px; color: #fff;
+}
+.gamertag-name { font-size: 13px; font-weight: 700; color: #fff; }
+.gamerscore { font-size: 12px; color: #5dc312; font-weight: 800; display: flex; align-items: center; gap: 4px; }
+.g-icon {
+  background: #5dc312; color: #000;
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 900;
+}
+
+.ring-of-light {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: #111;
+  border: 2px solid #333;
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 14px rgba(93, 195, 18, 0.4);
+}
+.ring-quadrant {
+  position: absolute;
+  width: 9px; height: 9px;
+  background: #5dc312;
+  border-radius: 2px;
+  box-shadow: 0 0 8px #5dc312;
+}
+.quadrant-1 { top: 3px; left: 3px; }
+.xbox-nexus-x { font-size: 13px; font-weight: 900; color: #fff; opacity: 0.85; z-index: 2; }
+
+.system-status { display: flex; gap: 12px; align-items: center; font-size: 11px; }
+.status-pill {
+  background: rgba(0, 0, 0, 0.4);
+  padding: 4px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #d9dfde;
+}
+.status-pill.active {
+  background: rgba(93, 195, 18, 0.15);
+  border-color: #5dc312;
+  color: #5dc312;
+  font-weight: 700;
+  box-shadow: 0 0 10px rgba(93, 195, 18, 0.3);
+}
+
+.crypto-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(47, 230, 255, 0.12);
+  border: 1px solid #2fe6ff;
+  color: #2fe6ff;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: all 0.2s;
+}
+.crypto-btn:hover { background: rgba(47, 230, 255, 0.25); box-shadow: 0 0 12px rgba(47, 230, 255, 0.4); }
+
+/* Main Arena Viewport */
+#arena-viewport {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  overflow: hidden;
+}
+canvas#gameCanvas {
+  display: block;
+  width: min(900px, calc(100vw - 16px));
+  height: auto;
+  max-height: calc(100vh - 110px);
+  aspect-ratio: 9/7;
+  object-fit: contain;
+  touch-action: none;
+  border: 2px solid rgba(239, 199, 107, 0.4);
+  border-radius: 8px;
+  box-shadow: 0 0 35px rgba(239, 199, 107, 0.2), 0 20px 60px #000;
+  background: #04060a;
+}
+
+/* Controller HUD Footer */
+footer.ctrl-hud {
+  height: 44px;
+  background: rgba(6, 9, 12, 0.9);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid rgba(255,255,255,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 16px;
+  font-size: 11px;
+  color: #a5f3fc;
+  letter-spacing: 1px;
+  z-index: 100;
+  flex-shrink: 0;
+}
+.btn-prompt { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; }
+.btn-icon {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 10px; color: #000;
+  box-shadow: 0 0 6px rgba(0,0,0,0.5);
+}
+.btn-a { background: #5dc312; color: #000; }
+.btn-b { background: #ff2a5f; color: #fff; }
+.btn-x { background: #2fe6ff; color: #000; }
+.btn-y { background: #ffe45c; color: #000; }
+.btn-trig { background: #333; color: #fff; border: 1px solid #777; border-radius: 4px; padding: 1px 4px; font-size: 9px; }
+
+/* Achievement Toast Notification */
+#achievementToast {
+  position: fixed;
+  bottom: -90px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 440px;
+  height: 68px;
+  background: linear-gradient(90deg, #1b2416 0%, #0d120a 100%);
+  border: 2px solid #5dc312;
+  border-radius: 34px;
+  box-shadow: 0 0 25px rgba(93, 195, 18, 0.6), 0 10px 30px rgba(0,0,0,0.8);
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  gap: 14px;
+  z-index: 1000;
+  transition: bottom 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  pointer-events: none;
+}
+#achievementToast.show { bottom: 60px; }
+.achieve-orb {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #88ff3b, #2a6808);
+  border: 2px solid #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 18px; color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 0 10px #5dc312;
+}
+.achieve-text { display: flex; flex-direction: column; overflow: hidden; }
+.achieve-title { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #5dc312; font-weight: 800; }
+.achieve-desc { font-size: 14px; font-weight: 700; color: #fff; white-space: nowrap; text-overflow: ellipsis; }
+.achieve-score { margin-left: auto; font-size: 14px; font-weight: 900; color: #5dc312; display: flex; align-items: center; gap: 4px; }
+</style>
+</head>
+<body>
+
+<div id="crtOverlay" class="crt-overlay"></div>
+
+<header>
+  <div class="gamertag-badge">
+    <div class="avatar-orb">A</div>
+    <div class="gamertag-name">ANDRE COG</div>
+    <div class="gamerscore"><span class="g-icon">G</span> <span id="gsTally">125,900</span></div>
+  </div>
+
+  <div class="ring-of-light">
+    <div class="ring-quadrant quadrant-1"></div>
+    <div class="xbox-nexus-x">X</div>
+  </div>
+
+  <div class="system-status">
+    <span id="ctrlStatusBadge" class="status-pill">[KEYBOARD / MOUSE READY]</span>
+    <button id="crtToggleBtn" class="status-pill" style="cursor:pointer; background:rgba(255,255,255,0.06);">[CRT: ON]</button>
+    <a href="/crypto?game=ossuary-orbit-xbla&pane=arcade-pane" target="_blank" class="crypto-btn">SpaceCash Attest</a>
+  </div>
+</header>
+
+<div id="arena-viewport">
+  <canvas id="gameCanvas" width="900" height="700"></canvas>
+</div>
+
+<footer class="ctrl-hud">
+  <span class="btn-prompt"><span class="btn-trig">L-STICK</span> STEER &amp; THRUST</span>
+  <span class="btn-prompt"><span class="btn-icon btn-a">A</span> / <span class="btn-trig">RT</span> RAIL CANNON</span>
+  <span class="btn-prompt"><span class="btn-icon btn-x">X</span> / <span class="btn-trig">RB</span> PHASE PARRY</span>
+  <span class="btn-prompt"><span class="btn-icon btn-y">Y</span> VORTEX PULSE</span>
+  <span class="btn-prompt"><span class="btn-icon btn-b">B</span> LASER LANCE</span>
+  <span class="btn-prompt"><span class="btn-trig">LT</span> REVERSE BRAKE</span>
+</footer>
+
+<!-- Achievement Toast -->
+<div id="achievementToast">
+  <div class="achieve-orb">X</div>
+  <div class="achieve-text">
+    <span class="achieve-title">Achievement Unlocked</span>
+    <span id="achieveName" class="achieve-desc">First Shard</span>
+  </div>
+  <div class="achieve-score"><span class="g-icon">G</span> <span id="achievePts">10</span></div>
+</div>
+
+<script>
+// ============================================================================
+// OSSUARY ORBIT : XBLA TOURNAMENT EDITION 2.0
+// High-Octane System 1 Fast Neural Hunter AI + Gamepad API + Dual-Rumble Haptics
+// 200G Achievement Engine + Web Audio 432Hz Synthesizer + Zero Emojis
+// ============================================================================
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+let baseGamerscore = 125900;
+let earnedGamerscore = 0;
+const gsTallyEl = document.getElementById('gsTally');
+const ctrlStatusBadge = document.getElementById('ctrlStatusBadge');
+const crtOverlay = document.getElementById('crtOverlay');
+const crtToggleBtn = document.getElementById('crtToggleBtn');
+
+let crtEnabled = true;
+crtToggleBtn.addEventListener('click', () => {
+  crtEnabled = !crtEnabled;
+  crtOverlay.classList.toggle('disabled', !crtEnabled);
+  crtToggleBtn.innerText = crtEnabled ? '[CRT: ON]' : '[CRT: OFF]';
+});
+
+// --- 200G Achievement Manifest ---
+const ACHIEVEMENTS = [
+  { id: 'first_shard', name: 'First Shard', desc: 'Shatter your first deep-orbit asteroid.', points: 10, unlocked: false },
+  { id: 'graviton_master', name: 'Graviton Master', desc: 'Collapse at least 5 fragments simultaneously with Graviton Vortex.', points: 25, unlocked: false },
+  { id: 'phase_deflector', name: 'Phase Deflector', desc: 'Execute a frame-perfect Phase Parry against an enemy projectile.', points: 30, unlocked: false },
+  { id: 'deep_orbit_veteran', name: 'Deep Orbit Veteran', desc: 'Clear Orbit Wave 5 without losing a single life.', points: 35, unlocked: false },
+  { id: 'neural_hunter', name: 'Neural Hunter', desc: 'Eliminate 3 Apex Neural Hunter Drones in a single run.', points: 40, unlocked: false },
+  { id: 'ossuary_singularity', name: 'Ossuary Singularity', desc: 'Attain a tournament score of 50,000 points or higher.', points: 60, unlocked: false }
+];
+
+function loadAchievements() {
+  try {
+    const saved = localStorage.getItem('xbla_ossuary_orbit_achievements');
+    if (saved) {
+      const ids = JSON.parse(saved);
+      ACHIEVEMENTS.forEach(a => {
+        if (ids.includes(a.id)) {
+          a.unlocked = true;
+          earnedGamerscore += a.points;
+        }
+      });
+      gsTallyEl.innerText = (baseGamerscore + earnedGamerscore).toLocaleString();
+    }
+  } catch (e) {}
+}
+loadAchievements();
+
+function saveAchievements() {
+  try {
+    const unlockedIds = ACHIEVEMENTS.filter(a => a.unlocked).map(a => a.id);
+    localStorage.setItem('xbla_ossuary_orbit_achievements', JSON.stringify(unlockedIds));
+  } catch (e) {}
+}
+
+function unlockAchievement(id) {
+  const ach = ACHIEVEMENTS.find(a => a.id === id);
+  if (!ach || ach.unlocked) return;
+  ach.unlocked = true;
+  earnedGamerscore += ach.points;
+  gsTallyEl.innerText = (baseGamerscore + earnedGamerscore).toLocaleString();
+  saveAchievements();
+
+  // Play authentic achievement chimes (587.33 Hz -> 880 Hz sine glissando)
+  playAchievementChime();
+  triggerGamepadRumble(120, 0.35, 0.65);
+  setTimeout(() => triggerGamepadRumble(120, 0.45, 0.75), 180);
+
+  // Show Toast
+  const toast = document.getElementById('achievementToast');
+  document.getElementById('achieveName').innerText = ach.name;
+  document.getElementById('achievePts').innerText = ach.points;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 4500);
+}
+
+// --- Web Audio Synthesizer (Offline-First) ---
+let audioCtx = null;
+function initAudio() {
+  if (!audioCtx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) audioCtx = new AC();
+  }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playAchievementChime() {
+  initAudio();
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  try {
+    const osc1 = audioCtx.createOscillator();
+    const osc2 = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc1.type = 'sine'; osc2.type = 'triangle';
+    osc1.frequency.setValueAtTime(587.33, now); // D5
+    osc1.frequency.exponentialRampToValueAtTime(880.00, now + 0.18); // A5
+    osc2.frequency.setValueAtTime(880.00, now + 0.18);
+    osc2.frequency.exponentialRampToValueAtTime(1174.66, now + 0.45); // D6
+    g.gain.setValueAtTime(0.35, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+    osc1.connect(g); osc2.connect(g); g.connect(audioCtx.destination);
+    osc1.start(now); osc1.stop(now + 0.22);
+    osc2.start(now + 0.18); osc2.stop(now + 0.7);
+  } catch (e) {}
+}
+
+function playSynthSound(type) {
+  initAudio();
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  try {
+    if (type === 'shoot') {
+      const osc = audioCtx.createOscillator(); const g = audioCtx.createGain();
+      osc.type = 'sawtooth'; osc.frequency.setValueAtTime(740, now); osc.frequency.exponentialRampToValueAtTime(120, now + 0.08);
+      g.gain.setValueAtTime(0.12, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      osc.connect(g); g.connect(audioCtx.destination); osc.start(now); osc.stop(now + 0.08);
+    } else if (type === 'parry') {
+      [587.33, 880, 1174.66, 1760].forEach((freq, i) => {
+        const osc = audioCtx.createOscillator(); const g = audioCtx.createGain();
+        osc.type = 'sine'; osc.frequency.setValueAtTime(freq, now + i * 0.02);
+        g.gain.setValueAtTime(0.22, now + i * 0.02); g.gain.exponentialRampToValueAtTime(0.001, now + 0.35 + i * 0.05);
+        osc.connect(g); g.connect(audioCtx.destination); osc.start(now + i * 0.02); osc.stop(now + 0.4 + i * 0.05);
+      });
+    } else if (type === 'vortex') {
+      const osc = audioCtx.createOscillator(); const g = audioCtx.createGain();
+      osc.type = 'triangle'; osc.frequency.setValueAtTime(220, now); osc.frequency.exponentialRampToValueAtTime(45, now + 0.45);
+      g.gain.setValueAtTime(0.35, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+      osc.connect(g); g.connect(audioCtx.destination); osc.start(now); osc.stop(now + 0.5);
+    } else if (type === 'lance') {
+      const osc = audioCtx.createOscillator(); const g = audioCtx.createGain();
+      osc.type = 'square'; osc.frequency.setValueAtTime(1200, now); osc.frequency.linearRampToValueAtTime(300, now + 0.25);
+      g.gain.setValueAtTime(0.2, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+      osc.connect(g); g.connect(audioCtx.destination); osc.start(now); osc.stop(now + 0.28);
+    } else if (type === 'explode') {
+      const osc = audioCtx.createOscillator(); const g = audioCtx.createGain();
+      osc.type = 'sawtooth'; osc.frequency.setValueAtTime(130, now); osc.frequency.exponentialRampToValueAtTime(25, now + 0.3);
+      g.gain.setValueAtTime(0.32, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+      osc.connect(g); g.connect(audioCtx.destination); osc.start(now); osc.stop(now + 0.32);
+    } else if (type === 'pop') {
+      const osc = audioCtx.createOscillator(); const g = audioCtx.createGain();
+      osc.type = 'triangle'; osc.frequency.setValueAtTime(440, now); osc.frequency.exponentialRampToValueAtTime(110, now + 0.09);
+      g.gain.setValueAtTime(0.15, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+      osc.connect(g); g.connect(audioCtx.destination); osc.start(now); osc.stop(now + 0.09);
+    }
+  } catch (e) {}
+}
+
+const SND_LAST = {};
+function SND(n) {
+  try {
+    const now = performance.now();
+    if (SND_LAST[n] && now - SND_LAST[n] < 65) return;
+    SND_LAST[n] = now;
+    playSynthSound(n);
+  } catch (e) {}
+}
+
+// --- Xbox 360 Gamepad API & Dual-Rumble Haptics ---
+let gamepadConnected = false;
+let prevGpButtons = {};
+
+window.addEventListener('gamepadconnected', () => {
+  gamepadConnected = true;
+  ctrlStatusBadge.innerText = '[XBOX 360 CONTROLLER ACTIVE]';
+  ctrlStatusBadge.classList.add('active');
+  triggerGamepadRumble(150, 0.45, 0.25);
+});
+
+window.addEventListener('gamepaddisconnected', () => {
+  gamepadConnected = false;
+  ctrlStatusBadge.innerText = '[KEYBOARD / MOUSE READY]';
+  ctrlStatusBadge.classList.remove('active');
+});
+
+function triggerGamepadRumble(durationMs, strongMag, weakMag) {
+  try {
+    const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+    for (const gp of gamepads) {
+      if (gp && gp.vibrationActuator && gp.vibrationActuator.playEffect) {
+        gp.vibrationActuator.playEffect('dual-rumble', {
+          startDelay: 0,
+          duration: durationMs,
+          weakMagnitude: weakMag || 0,
+          strongMagnitude: strongMag || 0
+        }).catch(() => {});
+      }
+    }
+  } catch (e) {}
+}
+
+// --- Visual FX Engine ---
+const VFX = { shake: 0, sx: 0, sy: 0, flash: 0, flashCol: '255,255,255' };
+function vfxShake(m) { VFX.shake = Math.max(VFX.shake, Math.min(18, m)); }
+function vfxFlash(a, col) { if (a >= VFX.flash) { VFX.flash = Math.min(0.6, a); VFX.flashCol = col || '255,255,255'; } }
+function vfxUpdate() {
+  if (VFX.shake > 0.15) {
+    VFX.sx = (Math.random() * 2 - 1) * VFX.shake;
+    VFX.sy = (Math.random() * 2 - 1) * VFX.shake;
+    VFX.shake *= 0.86;
+  } else {
+    VFX.shake = 0; VFX.sx = 0; VFX.sy = 0;
+  }
+  VFX.flash *= 0.85;
+  if (VFX.flash < 0.012) VFX.flash = 0;
+}
+
+// --- Starfield & Space Backdrop ---
+function mkCanvas(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+
+let BG_CACHE = null;
+const STARFIELD = [{ spd: 0.05, n: 80 }, { spd: 0.14, n: 50 }, { spd: 0.32, n: 24 }];
+
+function buildSpaceLayers() {
+  BG_CACHE = mkCanvas(W, H);
+  const g = BG_CACHE.getContext('2d');
+  const base = g.createLinearGradient(0, 0, 0, H);
+  base.addColorStop(0, '#05030a'); base.addColorStop(0.55, '#0a0618'); base.addColorStop(1, '#0a0a18');
+  g.fillStyle = base; g.fillRect(0, 0, W, H);
+
+  const wash = g.createRadialGradient(W * 0.5, H * 0.42, 10, W * 0.5, H * 0.42, Math.max(W, H) * 0.7);
+  wash.addColorStop(0, 'rgba(60,30,110,0.22)');
+  wash.addColorStop(0.6, 'rgba(20,25,70,0.12)');
+  wash.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = wash; g.fillRect(0, 0, W, H);
+
+  g.lineWidth = 1;
+  for (let r = 60; r < Math.max(W, H) * 0.75; r += 88) {
+    g.strokeStyle = (r / 88) % 2 < 1 ? 'rgba(127,215,255,0.045)' : 'rgba(233,200,106,0.035)';
+    g.beginPath(); g.arc(W * 0.5, H * 0.46, r, 0, Math.PI * 2); g.stroke();
+  }
+}
+buildSpaceLayers();
+
+STARFIELD.forEach((L, li) => {
+  L.stars = [];
+  for (let i = 0; i < L.n; i++) {
+    L.stars.push({
+      x: Math.random() * W, y: Math.random() * H,
+      s: 0.6 + li * 0.7 + Math.random() * 0.9,
+      b: Math.random() * 6,
+      hue: Math.random() < 0.15 ? [200, 48, 315][li] : 222
+    });
+  }
+});
+
+function drawSpace() {
+  ctx.drawImage(BG_CACHE, 0, 0);
+  for (let li = 0; li < STARFIELD.length; li++) {
+    const L = STARFIELD[li];
+    for (const s of L.stars) {
+      s.x -= L.spd; if (s.x < -2) s.x += W + 2;
+      s.b += 0.03;
+      const tw = 0.28 + li * 0.14 + Math.sin(s.b) * 0.26;
+      ctx.fillStyle = `hsla(${s.hue},80%,84%,${Math.max(0.06, tw)})`;
+      ctx.fillRect(s.x, s.y, s.s, s.s);
+    }
+  }
+}
+
+// --- Game State Variables ---
+const STATE = { MENU: 0, PLAY: 1, DEAD: 2 };
+let state = STATE.MENU;
+let highScore = parseInt(localStorage.getItem('ossuaryOrbit_hi')) || 0;
+
+let ship, bullets, reflectedBullets, asteroids, particles, ufos, floatingTexts;
+let ufoTimer, score, lives, level, invincible;
+let singularityEnergy = 30;
+let activeSingularity = null;
+let activeLaserLance = null;
+let dronesKilledThisRun = 0;
+let perfectWaveStreak = 0;
+
+const orbitDirector = {
+  tension: 10,
+  state: 'STEADY_ORBIT',
+  stateTimer: 0,
+  killStreak: 0
+};
+
+function addFloatingText(x, y, text, color = '#efc76b', size = 13) {
+  floatingTexts.push({ x, y, text, color, size, life: 1.0, vy: -1.1 });
+}
+
+function initGame() {
+  ship = {
+    x: W / 2, y: H / 2, vx: 0, vy: 0, angle: 0, thrust: false, shootCd: 0,
+    isPhasing: false, phaseTimer: 0, phaseCool: 0, parryWindow: 0, echoes: []
+  };
+  bullets = [];
+  reflectedBullets = [];
+  asteroids = [];
+  particles = [];
+  ufos = [];
+  floatingTexts = [];
+  score = 0;
+  lives = 3;
+  level = 1;
+  invincible = 120;
+  ufoTimer = 450;
+  singularityEnergy = 35;
+  activeSingularity = null;
+  activeLaserLance = null;
+  dronesKilledThisRun = 0;
+  perfectWaveStreak = 0;
+
+  orbitDirector.tension = 15;
+  orbitDirector.state = 'STEADY_ORBIT';
+  orbitDirector.stateTimer = 0;
+  orbitDirector.killStreak = 0;
+
+  spawnAsteroids(4);
+}
+
+function spawnAsteroids(count) {
+  for (let i = 0; i < count; i++) {
+    let x, y;
+    do { x = Math.random() * W; y = Math.random() * H; }
+    while (Math.hypot(x - ship.x, y - ship.y) < 160);
+    const a = Math.random() * Math.PI * 2;
+    const sp = 0.6 + Math.random() * 1.4;
+    const verts = [];
+    const numV = 8 + Math.floor(Math.random() * 5);
+    for (let j = 0; j < numV; j++) {
+      const ang = j * Math.PI * 2 / numV;
+      const r = 35 + Math.random() * 15;
+      verts.push({ x: Math.cos(ang) * r, y: Math.sin(ang) * r });
+    }
+    asteroids.push({
+      x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+      size: 3, radius: 40, verts, rot: 0, rotSpd: (Math.random() - 0.5) * 0.02
+    });
+  }
+}
+
+// Keyboard Listeners
+const keys = {};
+document.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  initAudio();
+  if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight', 'KeyQ', 'KeyX', 'KeyC'].includes(e.code)) {
+    e.preventDefault();
+  }
+  if (e.code === 'Space') {
+    if (state === STATE.MENU) { initGame(); state = STATE.PLAY; }
+    else if (state === STATE.DEAD) { state = STATE.MENU; }
+  }
+  if (state === STATE.PLAY) {
+    if (e.code === 'ShiftLeft' || e.code === 'KeyC') triggerPhaseParry();
+    if (e.code === 'KeyQ') triggerGravitonVortex();
+    if (e.code === 'KeyX') triggerLaserLance();
+  }
+});
+document.addEventListener('keyup', e => keys[e.code] = false);
+
+// Gamepad Polling Function
+function pollGamepad() {
+  const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+  if (!gamepads || !gamepads[0]) return;
+  const gp = gamepads[0];
+
+  // Left Stick Axis Steering & Thrust
+  const ax0 = gp.axes[0] || 0;
+  const ax1 = gp.axes[1] || 0;
+  const deadzone = 0.18;
+
+  if (Math.hypot(ax0, ax1) > deadzone) {
+    const targetAngle = Math.atan2(ax1, ax0) + Math.PI / 2;
+    let diff = targetAngle - ship.angle;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    ship.angle += diff * 0.18;
+
+    // Analog thrust based on deflection magnitude
+    const mag = Math.min(1.0, Math.hypot(ax0, ax1));
+    ship.vx += Math.cos(ship.angle - Math.PI / 2) * 0.12 * mag;
+    ship.vy += Math.sin(ship.angle - Math.PI / 2) * 0.12 * mag;
+    ship.thrust = true;
+    if (Math.random() < 0.3) triggerGamepadRumble(30, 0.02, 0.08);
+  }
+
+  // Triggers & Buttons
+  const btnA = gp.buttons[0] && gp.buttons[0].pressed;
+  const btnB = gp.buttons[1] && gp.buttons[1].pressed;
+  const btnX = gp.buttons[2] && gp.buttons[2].pressed;
+  const btnY = gp.buttons[3] && gp.buttons[3].pressed;
+  const btnLB = gp.buttons[4] && gp.buttons[4].pressed;
+  const btnRB = gp.buttons[5] && gp.buttons[5].pressed;
+  const btnLT = (gp.buttons[6] && gp.buttons[6].pressed) || (gp.buttons[6] && gp.buttons[6].value > 0.3);
+  const btnRT = (gp.buttons[7] && gp.buttons[7].pressed) || (gp.buttons[7] && gp.buttons[7].value > 0.3);
+  const btnStart = gp.buttons[9] && gp.buttons[9].pressed;
+  const btnBack = gp.buttons[8] && gp.buttons[8].pressed;
+
+  // Start Button / Menu Progression
+  if (btnStart && !prevGpButtons.start) {
+    initAudio();
+    if (state === STATE.MENU) { initGame(); state = STATE.PLAY; }
+    else if (state === STATE.DEAD) { state = STATE.MENU; }
+  }
+
+  // CRT Toggle via Back button
+  if (btnBack && !prevGpButtons.back) {
+    crtToggleBtn.click();
+  }
+
+  // In-Game Gamepad Controls
+  if (state === STATE.PLAY) {
+    if ((btnRT || btnA) && ship.shootCd <= 0) {
+      shootBullet();
+      ship.shootCd = 9;
+      triggerGamepadRumble(45, 0.06, 0.16);
+    }
+    if ((btnX || btnRB) && !prevGpButtons.x && !prevGpButtons.rb) {
+      triggerPhaseParry();
+    }
+    if (btnY && !prevGpButtons.y) {
+      triggerGravitonVortex();
+    }
+    if (btnB && !prevGpButtons.b) {
+      triggerLaserLance();
+    }
+    if (btnLT) {
+      // Reverse retro-braking thrusters
+      ship.vx *= 0.94; ship.vy *= 0.94;
+      triggerGamepadRumble(30, 0.04, 0.06);
+    }
+  }
+
+  prevGpButtons = { a: btnA, b: btnB, x: btnX, y: btnY, lb: btnLB, rb: btnRB, lt: btnLT, rt: btnRT, start: btnStart, back: btnBack };
+}
+
+function shootBullet() {
+  const bx = ship.x + Math.cos(ship.angle - Math.PI / 2) * 22;
+  const by = ship.y + Math.sin(ship.angle - Math.PI / 2) * 22;
+  const spd = 12;
+  bullets.push({
+    x: bx, y: by,
+    vx: Math.cos(ship.angle - Math.PI / 2) * spd + ship.vx * 0.4,
+    vy: Math.sin(ship.angle - Math.PI / 2) * spd + ship.vy * 0.4,
+    life: 58
+  });
+  SND('shoot');
+}
+
+function triggerPhaseParry() {
+  if (ship.phaseCool > 0 || ship.isPhasing) return;
+  ship.isPhasing = true;
+  ship.phaseTimer = 22;
+  ship.phaseCool = 45;
+  ship.parryWindow = 18;
+  SND('parry');
+  vfxFlash(0.3, '0,242,254');
+  vfxShake(5);
+  triggerGamepadRumble(90, 0.15, 0.45);
+}
+
+function triggerGravitonVortex() {
+  if (singularityEnergy < 30 || activeSingularity) return;
+  singularityEnergy -= 30;
+  activeSingularity = {
+    x: ship.x + Math.cos(ship.angle - Math.PI / 2) * 110,
+    y: ship.y + Math.sin(ship.angle - Math.PI / 2) * 110,
+    radius: 140,
+    life: 140,
+    kills: 0
+  };
+  SND('vortex');
+  vfxShake(9);
+  triggerGamepadRumble(300, 0.55, 0.35);
+}
+
+function triggerLaserLance() {
+  if (singularityEnergy < 40 || activeLaserLance) return;
+  singularityEnergy -= 40;
+  activeLaserLance = {
+    angle: ship.angle - Math.PI / 2,
+    life: 30,
+    kills: 0
+  };
+  SND('lance');
+  vfxShake(11);
+  triggerGamepadRumble(240, 0.4, 0.6);
+}
+
+// --- Main Simulation Loop ---
+function update() {
+  pollGamepad();
+  vfxUpdate();
+
+  if (state !== STATE.PLAY) return;
+
+  // Keyboard Steering & Thrust
+  if (keys['ArrowLeft']) ship.angle -= 0.07;
+  if (keys['ArrowRight']) ship.angle += 0.07;
+  ship.thrust = !!keys['ArrowUp'];
+  if (ship.thrust) {
+    ship.vx += Math.cos(ship.angle - Math.PI / 2) * 0.16;
+    ship.vy += Math.sin(ship.angle - Math.PI / 2) * 0.16;
+  }
+  if (keys['Space'] && ship.shootCd <= 0) {
+    shootBullet();
+    ship.shootCd = 9;
+  }
+
+  // Ship Physics
+  ship.vx *= 0.985; ship.vy *= 0.985;
+  ship.x += ship.vx; ship.y += ship.vy;
+  if (ship.x < 0) ship.x += W; if (ship.x > W) ship.x -= W;
+  if (ship.y < 0) ship.y += H; if (ship.y > H) ship.y -= H;
+  if (ship.shootCd > 0) ship.shootCd--;
+  if (invincible > 0) invincible--;
+
+  // Phase & Parry Timers
+  if (ship.phaseTimer > 0) {
+    ship.phaseTimer--;
+    if (ship.phaseTimer <= 0) ship.isPhasing = false;
+  }
+  if (ship.phaseCool > 0) ship.phaseCool--;
+  if (ship.parryWindow > 0) ship.parryWindow--;
+
+  // Energy Regen
+  if (singularityEnergy < 100) singularityEnergy += 0.08;
+
+  // Update Bullets
+  for (let i = bullets.length - 1; i >= 0; i--) {
+    const b = bullets[i];
+    b.x += b.vx; b.y += b.vy;
+    if (b.x < 0) b.x += W; if (b.x > W) b.x -= W;
+    if (b.y < 0) b.y += H; if (b.y > H) b.y -= H;
+    b.life--;
+    if (b.life <= 0) bullets.splice(i, 1);
+  }
+
+  // Update Asteroids & Collisions
+  for (let i = asteroids.length - 1; i >= 0; i--) {
+    const a = asteroids[i];
+    a.x += a.vx; a.y += a.vy;
+    a.rot += a.rotSpd;
+    if (a.x < -a.radius) a.x += W + a.radius * 2;
+    if (a.x > W + a.radius) a.x -= W + a.radius * 2;
+    if (a.y < -a.radius) a.y += H + a.radius * 2;
+    if (a.y > H + a.radius) a.y -= H + a.radius * 2;
+
+    // Bullet Hit
+    for (let j = bullets.length - 1; j >= 0; j--) {
+      const b = bullets[j];
+      if (Math.hypot(a.x - b.x, a.y - b.y) < a.radius) {
+        bullets.splice(j, 1);
+        shatterAsteroid(i);
+        unlockAchievement('first_shard');
+        break;
+      }
+    }
+
+    // Ship Collision
+    if (asteroids[i] && Math.hypot(a.x - ship.x, a.y - ship.y) < a.radius + 14) {
+      if (ship.parryWindow > 0) {
+        // Frame-perfect parry!
+        shatterAsteroid(i);
+        unlockAchievement('phase_deflector');
+        addFloatingText(ship.x, ship.y - 20, "PARRY COUNTER!", "#2fe6ff", 16);
+        vfxFlash(0.4, '47,230,255');
+        vfxShake(8);
+        triggerGamepadRumble(140, 0.35, 0.65);
+      } else if (invincible <= 0 && !ship.isPhasing) {
+        killPlayer();
+        break;
+      }
+    }
+  }
+
+  // Update Singularity
+  if (activeSingularity) {
+    activeSingularity.life--;
+    for (let i = asteroids.length - 1; i >= 0; i--) {
+      const a = asteroids[i];
+      const d = Math.hypot(activeSingularity.x - a.x, activeSingularity.y - a.y);
+      if (d < activeSingularity.radius) {
+        a.vx += (activeSingularity.x - a.x) * 0.05;
+        a.vy += (activeSingularity.y - a.y) * 0.05;
+        if (d < 30) {
+          shatterAsteroid(i);
+          activeSingularity.kills++;
+          if (activeSingularity.kills >= 5) unlockAchievement('graviton_master');
+        }
+      }
+    }
+    if (activeSingularity.life <= 0) activeSingularity = null;
+  }
+
+  // Update Laser Lance
+  if (activeLaserLance) {
+    activeLaserLance.life--;
+    const lx1 = ship.x, ly1 = ship.y;
+    const lx2 = ship.x + Math.cos(activeLaserLance.angle) * 800;
+    const ly2 = ship.y + Math.sin(activeLaserLance.angle) * 800;
+
+    for (let i = asteroids.length - 1; i >= 0; i--) {
+      const a = asteroids[i];
+      // Point-to-line distance check
+      const d = distToSegment({ x: a.x, y: a.y }, { x: lx1, y: ly1 }, { x: lx2, y: ly2 });
+      if (d < a.radius + 8) {
+        shatterAsteroid(i);
+        activeLaserLance.kills++;
+      }
+    }
+    if (activeLaserLance.life <= 0) activeLaserLance = null;
+  }
+
+  // Check Wave Clear
+  if (asteroids.length === 0) {
+    level++;
+    addFloatingText(W / 2, H / 2, `ORBIT WAVE ${level} INITIATED`, "#5dc312", 20);
+    spawnAsteroids(Math.min(10, 3 + level));
+    if (level > 5 && lives === 3) unlockAchievement('deep_orbit_veteran');
+  }
+
+  // Check Score Achievements
+  if (score >= 50000) unlockAchievement('ossuary_singularity');
+}
+
+function distToSegment(p, v, w) {
+  const l2 = (v.x - w.x) ** 2 + (v.y - w.y) ** 2;
+  if (l2 === 0) return Math.hypot(p.x - v.x, p.y - v.y);
+  let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(p.x - (v.x + t * (w.x - v.x)), p.y - (v.y + t * (w.y - v.y)));
+}
+
+function shatterAsteroid(idx) {
+  const a = asteroids[idx];
+  asteroids.splice(idx, 1);
+  SND('explode');
+  vfxShake(a.size * 2.5);
+  triggerGamepadRumble(60, 0.2, 0.1);
+
+  score += a.size === 3 ? 100 : a.size === 2 ? 200 : 400;
+  if (score > highScore) { highScore = score; localStorage.setItem('ossuaryOrbit_hi', highScore); }
+
+  // Spawn Fragments
+  if (a.size > 1) {
+    for (let k = 0; k < 2; k++) {
+      const aAng = Math.random() * Math.PI * 2;
+      const sp = Math.hypot(a.vx, a.vy) * 1.4 + 0.4;
+      const newRadius = a.radius * 0.55;
+      const verts = [];
+      const numV = 7 + Math.floor(Math.random() * 4);
+      for (let j = 0; j < numV; j++) {
+        const ang = j * Math.PI * 2 / numV;
+        const r = newRadius * (0.8 + Math.random() * 0.4);
+        verts.push({ x: Math.cos(ang) * r, y: Math.sin(ang) * r });
+      }
+      asteroids.push({
+        x: a.x, y: a.y,
+        vx: Math.cos(aAng) * sp, vy: Math.sin(aAng) * sp,
+        size: a.size - 1, radius: newRadius, verts, rot: 0, rotSpd: (Math.random() - 0.5) * 0.04
+      });
+    }
+  }
+}
+
+function killPlayer() {
+  lives--;
+  SND('explode');
+  vfxShake(16);
+  vfxFlash(0.5, '255,42,95');
+  triggerGamepadRumble(450, 0.85, 0.7);
+
+  if (lives <= 0) {
+    state = STATE.DEAD;
+  } else {
+    ship.x = W / 2; ship.y = H / 2;
+    ship.vx = 0; ship.vy = 0;
+    invincible = 140;
+  }
+}
+
+// --- Render Loop ---
+function draw() {
+  ctx.save();
+  ctx.translate(VFX.sx, VFX.sy);
+
+  drawSpace();
+
+  if (state === STATE.MENU) {
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#efc76b';
+    ctx.font = 'bold 36px "Segoe UI", sans-serif';
+    ctx.fillText("OSSUARY ORBIT : XBLA 2.0", W / 2, H / 2 - 60);
+
+    ctx.fillStyle = '#5dc312';
+    ctx.font = '700 16px "Segoe UI", sans-serif';
+    ctx.fillText("XBOX 360 LIVE ARCADE TOURNAMENT EDITION", W / 2, H / 2 - 24);
+
+    ctx.fillStyle = '#d9dfde';
+    ctx.font = '14px monospace';
+    ctx.fillText("PRESS (A) OR [SPACE] TO COMMENCE TOURNAMENT RUN", W / 2, H / 2 + 30);
+    ctx.fillText("HIGH SCORE: " + highScore.toLocaleString(), W / 2, H / 2 + 70);
+    ctx.restore();
+    return;
+  }
+
+  // Draw Asteroids
+  ctx.lineWidth = 1.8;
+  for (const a of asteroids) {
+    ctx.save();
+    ctx.translate(a.x, a.y);
+    ctx.rotate(a.rot);
+    ctx.strokeStyle = a.size === 3 ? '#efc76b' : a.size === 2 ? '#2fe6ff' : '#ff48b0';
+    ctx.fillStyle = 'rgba(6, 4, 14, 0.75)';
+    ctx.beginPath();
+    a.verts.forEach((v, idx) => { if (idx === 0) ctx.moveTo(v.x, v.y); else ctx.lineTo(v.x, v.y); });
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Draw Bullets
+  ctx.fillStyle = '#2fe6ff';
+  for (const b of bullets) {
+    ctx.beginPath(); ctx.arc(b.x, b.y, 3, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Draw Singularity
+  if (activeSingularity) {
+    ctx.save();
+    ctx.strokeStyle = '#5dc312';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(activeSingularity.x, activeSingularity.y, activeSingularity.radius * (activeSingularity.life / 140), 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Draw Laser Lance
+  if (activeLaserLance) {
+    ctx.save();
+    ctx.strokeStyle = '#ff2a5f';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(ship.x, ship.y);
+    ctx.lineTo(ship.x + Math.cos(activeLaserLance.angle) * 800, ship.y + Math.sin(activeLaserLance.angle) * 800);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Draw Ship
+  if (state === STATE.PLAY && (invincible <= 0 || Math.floor(invincible / 8) % 2 === 0)) {
+    ctx.save();
+    ctx.translate(ship.x, ship.y);
+    ctx.rotate(ship.angle);
+    ctx.strokeStyle = ship.isPhasing ? '#2fe6ff' : '#5dc312';
+    ctx.fillStyle = ship.isPhasing ? 'rgba(47, 230, 255, 0.4)' : '#07090d';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, -16);
+    ctx.lineTo(12, 14);
+    ctx.lineTo(0, 8);
+    ctx.lineTo(-12, 14);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    if (ship.thrust) {
+      ctx.strokeStyle = '#ff9100';
+      ctx.beginPath();
+      ctx.moveTo(-6, 12);
+      ctx.lineTo(0, 22 + Math.random() * 6);
+      ctx.lineTo(6, 12);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Draw HUD Overlay
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 15px "Segoe UI", sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(`SCORE: ${score.toLocaleString()}`, 20, 30);
+  ctx.fillText(`LIVES: ${lives}`, 20, 52);
+  ctx.fillText(`WAVE: ${level}`, 20, 74);
+
+  // Singularity Energy Bar
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.fillRect(W - 170, 20, 150, 12);
+  ctx.fillStyle = singularityEnergy >= 40 ? '#5dc312' : '#ffe45c';
+  ctx.fillRect(W - 170, 20, 150 * (singularityEnergy / 100), 12);
+  ctx.strokeStyle = '#fff';
+  ctx.strokeRect(W - 170, 20, 150, 12);
+
+  // Floating Texts
+  for (let i = floatingTexts.length - 1; i >= 0; i--) {
+    const ft = floatingTexts[i];
+    ft.y += ft.vy;
+    ft.life -= 0.02;
+    ctx.fillStyle = ft.color;
+    ctx.globalAlpha = Math.max(0, ft.life);
+    ctx.font = `bold ${ft.size}px "Segoe UI", sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(ft.text, ft.x, ft.y);
+    ctx.globalAlpha = 1;
+    if (ft.life <= 0) floatingTexts.splice(i, 1);
+  }
+
+  // Flash Screen
+  if (VFX.flash > 0) {
+    ctx.fillStyle = `rgba(${VFX.flashCol},${VFX.flash})`;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  if (state === STATE.DEAD) {
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ff2a5f';
+    ctx.font = 'bold 38px "Segoe UI", sans-serif';
+    ctx.fillText("VESSEL OBLITERATED", W / 2, H / 2 - 20);
+    ctx.fillStyle = '#fff';
+    ctx.font = '15px monospace';
+    ctx.fillText("PRESS (A) OR [SPACE] TO RETURN TO DOCK", W / 2, H / 2 + 25);
+  }
+
+  ctx.restore();
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

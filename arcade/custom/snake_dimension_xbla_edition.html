@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>SNAKE DIMENSION: XBLA TOURNAMENT EDITION 2.0</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  min-height:100vh;
+  overflow:hidden;
+  font-family:'Courier New',monospace;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  background:
+    radial-gradient(circle at 50% 12%,rgba(127,215,255,.08),transparent 32%),
+    radial-gradient(circle at 12% 85%,rgba(236,72,153,.06),transparent 30%),
+    radial-gradient(circle at 88% 70%,rgba(233,200,106,.05),transparent 28%),
+    linear-gradient(160deg,#05030a,#080618 45%,#0a0a18);
+  user-select:none;
+}
+canvas{
+  border:1px solid rgba(127,215,255,.32);
+  border-radius:12px;
+  background:#05030a;
+  box-shadow:
+    0 0 0 5px rgba(127,215,255,.05),
+    0 0 44px rgba(127,215,255,.16),
+    0 24px 60px rgba(0,0,0,.7),
+    inset 0 0 60px rgba(0,0,0,.4);
+  touch-action:none;
+}
+#title{
+  position:relative;font-size:15px;font-weight:bold;letter-spacing:10px;margin-bottom:8px;text-transform:uppercase;
+  background:linear-gradient(100deg,#7fd7ff 0%,#5eead4 30%,#ec4899 55%,#e9c86a 75%,#7fd7ff 100%);
+  background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:shimmer 5s linear infinite;
+  filter:drop-shadow(0 0 12px rgba(94,234,212,.45));
+}
+@keyframes shimmer{0%{background-position:0% 0}100%{background-position:300% 0}}
+#hud{position:relative;display:flex;gap:12px;margin-bottom:8px;flex-wrap:wrap;justify-content:center}
+.chip{
+  background:rgba(8,8,24,.72);border:1px solid rgba(127,215,255,.30);border-radius:10px;
+  padding:5px 16px;text-align:center;backdrop-filter:blur(6px);
+  box-shadow:0 0 18px rgba(127,215,255,.10),inset 0 1px 0 rgba(255,255,255,.06);
+}
+.chip .lbl{color:#5f7d95;font-size:9px;letter-spacing:4px;text-transform:uppercase}
+.chip .num{color:#eaf7ff;font-size:19px;font-weight:bold;text-shadow:0 0 12px rgba(127,215,255,.85),0 0 26px rgba(127,215,255,.4)}
+.chip.gold{border-color:rgba(233,200,106,.35)}
+.chip.gold .num{color:#fde047;text-shadow:0 0 12px rgba(233,200,106,.85),0 0 26px rgba(233,200,106,.4)}
+.chip.pink{border-color:rgba(236,72,153,.35)}
+.chip.pink .num{color:#f472b6;text-shadow:0 0 12px rgba(236,72,153,.85),0 0 26px rgba(236,72,153,.4)}
+.chip.cyan{border-color:rgba(94,234,212,.35)}
+.chip.cyan .num{color:#5eead4;text-shadow:0 0 12px rgba(94,234,212,.85)}
+
+#info{position:relative;color:#4c5468;font-size:10px;margin-top:8px;letter-spacing:2px;text-transform:uppercase}
+#info b{color:#7fd7ff;font-weight:normal;text-shadow:0 0 8px rgba(127,215,255,.6)}
+
+#ctrlRow{display:flex;gap:12px;align-items:center;margin-top:6px}
+#ctrlBadge{
+  padding:4px 14px;
+  border-radius:20px;
+  font-size:10px;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  font-weight:bold;
+  background:rgba(127,215,255,0.08);
+  border:1px solid rgba(127,215,255,0.3);
+  color:#7fd7ff;
+  text-shadow:0 0 8px rgba(127,215,255,0.6);
+  box-shadow:0 0 14px rgba(127,215,255,0.1);
+  transition:all 0.3s ease;
+}
+#ctrlBadge.padActive{
+  background:rgba(16,185,129,0.12);
+  border-color:rgba(16,185,129,0.6);
+  color:#34d399;
+  text-shadow:0 0 10px rgba(52,211,153,0.8);
+  box-shadow:0 0 18px rgba(16,185,129,0.3);
+}
+
+.crt-toggle-btn{
+  background:rgba(8,8,24,0.7);
+  border:1px solid rgba(127,215,255,0.3);
+  border-radius:20px;
+  padding:4px 12px;
+  color:#7fd7ff;
+  font-size:9px;
+  letter-spacing:2px;
+  cursor:pointer;
+  transition:all 0.2s ease;
+}
+.crt-toggle-btn:hover{
+  background:rgba(127,215,255,0.15);
+  border-color:#7fd7ff;
+}
+
+/* Authentic Xbox 360 Achievement Notification Toast */
+#xbox-achievement-toast{
+  position:fixed;
+  top:-100px;
+  left:50%;
+  transform:translateX(-50%);
+  display:flex;
+  align-items:center;
+  gap:14px;
+  background:linear-gradient(135deg,#121820,#1e293b);
+  border:2px solid #10b981;
+  border-radius:36px;
+  padding:8px 24px 8px 12px;
+  box-shadow:0 0 25px rgba(16,185,129,0.6),0 12px 30px rgba(0,0,0,0.85);
+  z-index:9999;
+  transition:top 0.5s cubic-bezier(0.175,0.885,0.32,1.275);
+  pointer-events:none;
+}
+#xbox-achievement-toast.show{
+  top:24px;
+}
+.x360-logo{
+  width:40px;
+  height:40px;
+  border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,#34d399,#059669);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#fff;
+  font-weight:bold;
+  font-size:16px;
+  border:2px solid #6ee7b7;
+  box-shadow:0 0 12px rgba(52,211,153,0.8);
+}
+.x360-text{
+  display:flex;
+  flex-direction:column;
+}
+.x360-text .header{
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:1px;
+  color:#6ee7b7;
+  text-transform:uppercase;
+}
+.x360-text .title{
+  font-size:13px;
+  font-weight:bold;
+  color:#f8fafc;
+  letter-spacing:0.5px;
+}
+.x360-score{
+  font-size:12px;
+  color:#fbbf24;
+  font-weight:900;
+  margin-left:6px;
+}
+</style>
+</head>
+<body>
+<div id="title">Snake Dimension // Xbox 360 Edition</div>
+<div id="hud">
+  <div class="chip"><div class="lbl">Score</div><div class="num" id="score">0</div></div>
+  <div class="chip gold"><div class="lbl">Dimension</div><div class="num" id="level">1</div></div>
+  <div class="chip pink"><div class="lbl">Portals</div><div class="num" id="portals">0</div></div>
+  <div class="chip cyan"><div class="lbl">Chrono-Warp</div><div class="num" id="energy">100%</div></div>
+</div>
+<canvas id="c"></canvas>
+<div id="info"><b>D-Pad / Left Stick</b> steer &nbsp;&middot;&nbsp; <b>[A] / Space</b> warp / retry &nbsp;&middot;&nbsp; <b>[X] / RT</b> hyper-boost &nbsp;&middot;&nbsp; <b>[B] / LT</b> chrono-brake</div>
+<div id="ctrlRow">
+  <div id="ctrlBadge">[KEY] KEYBOARD ACTIVE &bull; ARROWS / WASD</div>
+  <button class="crt-toggle-btn" id="crtToggleBtn">[Y] CRT SHADER: ON</button>
+</div>
+
+<!-- Xbox 360 Achievement Toast -->
+<div id="xbox-achievement-toast">
+  <div class="x360-logo">[G]</div>
+  <div class="x360-text">
+    <div class="header">Achievement Unlocked</div>
+    <div class="title" id="achTitle">First Shift</div>
+  </div>
+  <div class="x360-score" id="achScore">10G</div>
+</div>
+
+<script>
+"use strict";
+
+// ============================================================================
+// PROCEDURAL WEBAUDIO & DUAL-RUMBLE HAPTICS ENGINE
+// ============================================================================
+const AudioEngine = {
+  ctx: null,
+  init() {
+    if (this.ctx) return;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) this.ctx = new AC();
+    } catch(e){}
+  },
+  resume() {
+    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+  },
+  playTone(freq, dur, type='sine', gain=0.15, slide=null) {
+    if (!this.ctx) return;
+    try {
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+      if (slide) osc.frequency.exponentialRampToValueAtTime(Math.max(10, slide), this.ctx.currentTime + dur);
+      g.gain.setValueAtTime(gain, this.ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + dur);
+      osc.connect(g);
+      g.connect(this.ctx.destination);
+      osc.start();
+      osc.stop(this.ctx.currentTime + dur);
+    } catch(e){}
+  },
+  orbCollect() {
+    this.init(); this.resume();
+    this.playTone(523.25, 0.12, 'sine', 0.16, 783.99); // C5 -> G5
+    setTimeout(() => this.playTone(1046.5, 0.14, 'triangle', 0.12), 40); // C6
+    triggerGamepadRumble(0.18, 0.08, 50);
+  },
+  portalWarp() {
+    this.init(); this.resume();
+    this.playTone(220, 0.35, 'sawtooth', 0.22, 880);
+    this.playTone(440, 0.30, 'sine', 0.18, 1320);
+    triggerGamepadRumble(0.55, 0.45, 180);
+  },
+  warpBoost() {
+    this.init(); this.resume();
+    this.playTone(380, 0.10, 'sawtooth', 0.14, 760);
+    triggerGamepadRumble(0.35, 0.20, 80);
+  },
+  chronoBrake() {
+    this.init(); this.resume();
+    this.playTone(110, 0.25, 'triangle', 0.24, 55);
+    triggerGamepadRumble(0.25, 0.35, 100);
+  },
+  levelUp() {
+    this.init(); this.resume();
+    const chords = [523.25, 659.25, 783.99, 1046.5];
+    chords.forEach((f, idx) => {
+      setTimeout(() => this.playTone(f, 0.28, 'triangle', 0.18), idx * 60);
+    });
+    triggerGamepadRumble(0.40, 0.60, 250);
+  },
+  collapseDeath() {
+    this.init(); this.resume();
+    this.playTone(140, 0.55, 'sawtooth', 0.35, 28);
+    this.playTone(60, 0.65, 'square', 0.30, 20);
+    triggerGamepadRumble(0.85, 0.95, 450);
+  },
+  achievementChime() {
+    this.init(); this.resume();
+    // Authentic Xbox 360 two-tone notification chime
+    this.playTone(440, 0.15, 'triangle', 0.22, 880);
+    setTimeout(() => this.playTone(880, 0.18, 'sine', 0.28, 1760), 80);
+    setTimeout(() => this.playTone(1760, 0.35, 'sine', 0.32), 160);
+    triggerGamepadRumble(0.5, 0.5, 200);
+  }
+};
+
+function triggerGamepadRumble(weakMag = 0.25, strongMag = 0.45, durationMs = 120) {
+  try {
+    const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+    for (let i = 0; i < gamepads.length; i++) {
+      const gp = gamepads[i];
+      if (gp && gp.vibrationActuator && typeof gp.vibrationActuator.playEffect === 'function') {
+        gp.vibrationActuator.playEffect('dual-rumble', {
+          startDelay: 0,
+          duration: durationMs,
+          weakMagnitude: Math.min(1.0, Math.max(0, weakMag)),
+          strongMagnitude: Math.min(1.0, Math.max(0, strongMag))
+        }).catch(() => {});
+      }
+    }
+  } catch (e) {}
+}
+
+// ============================================================================
+// XBOX 360 ACHIEVEMENTS ENGINE (200G TOURNAMENT STANDARD)
+// ============================================================================
+const ACHIEVEMENTS = [
+  { id: 'first_shift', title: 'First Shift', desc: 'Transition through a dimensional portal', score: '10G', unlocked: false },
+  { id: 'ouroboros_length', title: 'Ouroboros Length', desc: 'Grow the dimensional snake past 25 segments', score: '20G', unlocked: false },
+  { id: 'chrono_navigator', title: 'Chrono-Navigator', desc: 'Reach Dimension Layer 5', score: '25G', unlocked: false },
+  { id: 'hyper_drift', title: 'Hyper-Space Drift', desc: 'Maintain Hyper-Boost for 5 continuous seconds', score: '25G', unlocked: false },
+  { id: 'centipede_lattice', title: 'Centipede Lattice', desc: 'Grow past 50 segments in a single run', score: '30G', unlocked: false },
+  { id: 'singularity_jumper', title: 'Singularity Jumper', desc: 'Clear 10 dimensional portals in a single run', score: '40G', unlocked: false },
+  { id: 'apex_master', title: 'Hyper-Dimensional Apex', desc: 'Score 2,500+ points in hyper-space', score: '50G', unlocked: false }
+];
+
+function unlockAchievement(id) {
+  const ach = ACHIEVEMENTS.find(a => a.id === id);
+  if (!ach || ach.unlocked) return;
+  ach.unlocked = true;
+
+  try {
+    localStorage.setItem('x360_snake_dimension_' + id, 'true');
+  } catch(e){}
+
+  AudioEngine.achievementChime();
+  const toast = document.getElementById('xbox-achievement-toast');
+  const titleEl = document.getElementById('achTitle');
+  const scoreEl = document.getElementById('achScore');
+  if (toast && titleEl && scoreEl) {
+    titleEl.textContent = ach.title;
+    scoreEl.textContent = ach.score;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3800);
+  }
+}
+
+// Restore unlocked achievements from localStorage
+ACHIEVEMENTS.forEach(a => {
+  try {
+    if (localStorage.getItem('x360_snake_dimension_' + a.id) === 'true') a.unlocked = true;
+  } catch(e){}
+});
+
+// ============================================================================
+// GAME CANVAS & ENGINE STATE
+// ============================================================================
+const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
+const GRID = 25;
+let COLS, ROWS, CW, CH;
+let crtEnabled = true;
+
+function resize() {
+  const s = Math.min(window.innerWidth - 40, window.innerHeight - 150);
+  COLS = Math.floor(s / GRID);
+  ROWS = Math.floor(s / GRID);
+  if (COLS < 20) COLS = 20;
+  if (ROWS < 20) ROWS = 20;
+  CW = canvas.width = COLS * GRID;
+  CH = canvas.height = ROWS * GRID;
+  bakeScene();
+}
+
+let snake, dir, nextDir, food, portals, score, level, gameOver, baseSpeed, tick, phase, portalCount;
+let foodPulse = 0;
+let warpEnergy = 100;
+let isBoosting = false;
+let isChrono = false;
+let boostTimer = 0;
+
+// SLEEK FX TOOLKIT
+const FX = { shakeT: 0, shakeM: 0, flashA: 0, flashC: '#fff', t: 0, parts: [], trail: [] };
+function fxShake(m, d) { FX.shakeM = Math.max(FX.shakeM, m); FX.shakeT = Math.max(FX.shakeT, d || 10); }
+function fxFlash(c, a) { FX.flashC = c; FX.flashA = Math.max(FX.flashA, a || 0.3); }
+function fxBurst(x, y, n, color, spd) {
+  for (let i = 0; i < n; i++) {
+    if (FX.parts.length >= 220) FX.parts.shift();
+    const a = Math.random() * Math.PI * 2, s = (0.4 + Math.random() * 0.8) * (spd || 3);
+    FX.parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1, decay: 0.02 + Math.random() * 0.025, color, size: 2 + Math.random() * 3 });
+  }
+}
+function fxUpdate() {
+  FX.t += 1 / 60;
+  if (FX.shakeT > 0) FX.shakeT--; else FX.shakeM = 0;
+  FX.flashA = Math.max(0, FX.flashA - 0.035);
+  for (let i = FX.parts.length - 1; i >= 0; i--) {
+    const p = FX.parts[i];
+    p.x += p.vx; p.y += p.vy; p.vx *= 0.97; p.vy *= 0.97; p.life -= p.decay;
+    if (p.life <= 0) FX.parts.splice(i, 1);
+  }
+}
+
+const _sparkCache = {};
+function sparkSprite(color) {
+  if (_sparkCache[color]) return _sparkCache[color];
+  const c = document.createElement('canvas'); c.width = c.height = 32;
+  const x = c.getContext('2d');
+  const g = x.createRadialGradient(16, 16, 0, 16, 16, 16);
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.28, color);
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  x.fillStyle = g; x.fillRect(0, 0, 32, 32);
+  return _sparkCache[color] = c;
+}
+
+function bakeBlob(color) {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const x = c.getContext('2d');
+  const g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+  g.addColorStop(0, color);
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+  return c;
+}
+let BLOB_CYAN = bakeBlob('rgba(127,215,255,0.55)');
+let BLOB_VIOLET = bakeBlob('rgba(139,92,246,0.45)');
+
+function bakeFoodOrb() {
+  const S = 80;
+  const c = document.createElement('canvas'); c.width = c.height = S;
+  const x = c.getContext('2d');
+  const g = x.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.12, '#fff6dc');
+  g.addColorStop(0.24, '#e9c86a');
+  g.addColorStop(0.45, 'rgba(233,160,60,0.5)');
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  x.fillStyle = g;
+  x.beginPath(); x.arc(S / 2, S / 2, S / 2, 0, Math.PI * 2); x.fill();
+  return c;
+}
+const FOOD_ORB = bakeFoodOrb();
+
+const _portalCache = {};
+function portalSprite(hue) {
+  const key = Math.round(hue / 24);
+  if (_portalCache[key]) return _portalCache[key];
+  const S = 72;
+  const c = document.createElement('canvas'); c.width = c.height = S;
+  const x = c.getContext('2d');
+  x.translate(S / 2, S / 2);
+  x.shadowColor = `hsl(${hue},100%,62%)`; x.shadowBlur = 16;
+  x.strokeStyle = `hsl(${hue},100%,68%)`; x.lineWidth = 2.6;
+  x.beginPath(); x.arc(0, 0, GRID / 2.1, 0, Math.PI * 2); x.stroke();
+  x.shadowBlur = 0;
+  x.strokeStyle = 'rgba(255,255,255,0.85)'; x.lineWidth = 1;
+  x.beginPath(); x.arc(0, 0, GRID / 2.1 - 4, 0.4, 2.2); x.stroke();
+  x.beginPath(); x.arc(0, 0, GRID / 2.1 - 4, Math.PI + 0.4, Math.PI + 2.2); x.stroke();
+  const g = x.createRadialGradient(0, 0, 0, 0, 0, GRID / 2.4);
+  g.addColorStop(0, `hsla(${hue},100%,80%,0.7)`);
+  g.addColorStop(0.5, `hsla(${hue},100%,55%,0.22)`);
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  x.fillStyle = g;
+  x.beginPath(); x.arc(0, 0, GRID / 2.4, 0, Math.PI * 2); x.fill();
+  return _portalCache[key] = c;
+}
+
+let BG, STARS_FAR, STARS_NEAR, CRT;
+function bakeStars(n, rmin, rmax, alpha) {
+  const c = document.createElement('canvas'); c.width = CW; c.height = CH;
+  const x = c.getContext('2d');
+  for (let i = 0; i < n; i++) {
+    const r = rmin + Math.random() * (rmax - rmin);
+    const a = alpha * (0.4 + Math.random() * 0.6);
+    const hue = [['255,255,255'], ['127,215,255'], ['233,200,106']][Math.floor(Math.random() * 3)];
+    x.fillStyle = `rgba(${hue},${a})`;
+    x.beginPath(); x.arc(Math.random() * CW, Math.random() * CH, r, 0, Math.PI * 2); x.fill();
+  }
+  return c;
+}
+
+function bakeScene() {
+  if (!CW || !CH) return;
+  BG = document.createElement('canvas'); BG.width = CW; BG.height = CH;
+  const x = BG.getContext('2d');
+  const g = x.createLinearGradient(0, 0, 0, CH);
+  g.addColorStop(0, '#05030a');
+  g.addColorStop(0.45, '#070518');
+  g.addColorStop(1, '#0a0a18');
+  x.fillStyle = g; x.fillRect(0, 0, CW, CH);
+  x.globalCompositeOperation = 'screen';
+  const blobs = [
+    [CW * 0.2, CH * 0.2, CW * 0.45, '127,215,255', 0.09],
+    [CW * 0.85, CH * 0.3, CW * 0.4, '236,72,153', 0.08],
+    [CW * 0.55, CH * 0.85, CW * 0.5, '109,40,217', 0.10],
+    [CW * 0.1, CH * 0.75, CW * 0.35, '233,200,106', 0.05],
+  ];
+  for (const [bx, by, br, rgb, a] of blobs) {
+    const bg = x.createRadialGradient(bx, by, 0, bx, by, br);
+    bg.addColorStop(0, `rgba(${rgb},${a})`);
+    bg.addColorStop(0.6, `rgba(${rgb},${a * 0.35})`);
+    bg.addColorStop(1, 'rgba(0,0,0,0)');
+    x.fillStyle = bg; x.fillRect(0, 0, CW, CH);
+  }
+  x.globalCompositeOperation = 'source-over';
+  for (let gx = 0; gx <= COLS; gx++) {
+    x.strokeStyle = gx % 5 === 0 ? 'rgba(127,215,255,0.075)' : 'rgba(127,215,255,0.032)';
+    x.lineWidth = 1;
+    x.beginPath(); x.moveTo(gx * GRID + 0.5, 0); x.lineTo(gx * GRID + 0.5, CH); x.stroke();
+  }
+  for (let gy = 0; gy <= ROWS; gy++) {
+    x.strokeStyle = gy % 5 === 0 ? 'rgba(127,215,255,0.075)' : 'rgba(127,215,255,0.032)';
+    x.beginPath(); x.moveTo(0, gy * GRID + 0.5); x.lineTo(CW, gy * GRID + 0.5); x.stroke();
+  }
+  x.strokeStyle = 'rgba(127,215,255,0.22)'; x.lineWidth = 1;
+  x.strokeRect(0.5, 0.5, CW - 1, CH - 1);
+
+  STARS_FAR = bakeStars(80, 0.4, 1.0, 0.5);
+  STARS_NEAR = bakeStars(36, 0.8, 1.6, 0.8);
+
+  CRT = document.createElement('canvas'); CRT.width = CW; CRT.height = CH;
+  const cx = CRT.getContext('2d');
+  cx.fillStyle = 'rgba(0,0,0,0.05)';
+  for (let y = 0; y < CH; y += 3) cx.fillRect(0, y, CW, 1);
+  const v = cx.createRadialGradient(CW / 2, CH / 2, CH * 0.42, CW / 2, CH / 2, CH * 0.85);
+  v.addColorStop(0, 'rgba(0,0,0,0)');
+  v.addColorStop(1, 'rgba(2,1,8,0.55)');
+  cx.fillStyle = v; cx.fillRect(0, 0, CW, CH);
+}
+
+function init() {
+  const cx = Math.floor(COLS / 2), cy = Math.floor(ROWS / 2);
+  snake = [{ x: cx, y: cy }, { x: cx - 1, y: cy }, { x: cx - 2, y: cy }];
+  dir = { x: 1, y: 0 }; nextDir = { x: 1, y: 0 };
+  food = null; portals = []; score = 0; level = 1; gameOver = false; baseSpeed = 120; tick = 0; phase = 0; portalCount = 0;
+  warpEnergy = 100; isBoosting = false; isChrono = false; boostTimer = 0;
+  spawnFood();
+  document.getElementById('score').textContent = '0';
+  document.getElementById('level').textContent = '1';
+  document.getElementById('portals').textContent = '0';
+  document.getElementById('energy').textContent = '100%';
+}
+
+function spawnFood() {
+  let pos;
+  do { pos = { x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS) }; }
+  while (snake.some(s => s.x === pos.x && s.y === pos.y));
+  food = pos;
+  if (Math.random() < 0.25 && portals.length < 4) {
+    let a, b;
+    do { a = { x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS) }; }
+    while (snake.some(s => s.x === a.x && s.y === a.y) || (a.x === food.x && a.y === food.y));
+    do { b = { x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS) }; }
+    while (snake.some(s => s.x === b.x && s.y === b.y) || (b.x === food.x && b.y === food.y) || (b.x === a.x && b.y === a.y));
+    portals.push({ a, b, hue: Math.random() * 360, life: 240 });
+  }
+}
+
+function wrap(v, max) { return ((v % max) + max) % max; }
+
+// ============================================================================
+// KEYBOARD & NATIVE GAMEPAD API INTEGRATION (XBOX 360 TIER)
+// ============================================================================
+let priorPadA = false, priorPadStart = false, priorPadY = false;
+
+document.addEventListener('keydown', e => {
+  AudioEngine.init(); AudioEngine.resume();
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'w', 'a', 's', 'd', 'W', 'A', 'S', 'D'].includes(e.key)) e.preventDefault();
+  if (gameOver && (e.key === ' ' || e.key === 'Enter')) { init(); return; }
+
+  const k = e.key.toLowerCase();
+  if ((k === 'arrowup' || k === 'w') && dir.y !== 1) nextDir = { x: 0, y: -1 };
+  if ((k === 'arrowdown' || k === 's') && dir.y !== -1) nextDir = { x: 0, y: 1 };
+  if ((k === 'arrowleft' || k === 'a') && dir.x !== 1) nextDir = { x: -1, y: 0 };
+  if ((k === 'arrowright' || k === 'd') && dir.x !== -1) nextDir = { x: 1, y: 0 };
+
+  if (k === 'shift' || k === 'x') isBoosting = true;
+  if (k === 'control' || k === 'z') isChrono = true;
+  if (k === 'y' || k === 'c') toggleCRT();
+});
+
+document.addEventListener('keyup', e => {
+  const k = e.key.toLowerCase();
+  if (k === 'shift' || k === 'x') isBoosting = false;
+  if (k === 'control' || k === 'z') isChrono = false;
+});
+
+function toggleCRT() {
+  crtEnabled = !crtEnabled;
+  const btn = document.getElementById('crtToggleBtn');
+  if (btn) btn.textContent = crtEnabled ? '[Y] CRT SHADER: ON' : '[Y] CRT SHADER: OFF';
+}
+document.getElementById('crtToggleBtn').addEventListener('click', toggleCRT);
+
+function pollGamepad() {
+  let gp = null;
+  try {
+    const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+    gp = Array.from(gamepads).find(p => p && p.connected);
+  } catch (e) {}
+
+  const badge = document.getElementById('ctrlBadge');
+  if (!gp) {
+    if (badge && badge.classList.contains('padActive')) {
+      badge.classList.remove('padActive');
+      badge.textContent = '[KEY] KEYBOARD ACTIVE • ARROWS / WASD';
+    }
+    return;
+  }
+
+  if (badge && !badge.classList.contains('padActive')) {
+    badge.classList.add('padActive');
+    badge.textContent = '[PAD] XBOX 360 ACTIVE • D-PAD / STICK STEER';
+  }
+
+  AudioEngine.init(); AudioEngine.resume();
+
+  // Analog Left Stick & D-Pad
+  const lx = gp.axes[0] || 0;
+  const ly = gp.axes[1] || 0;
+  const dUp = gp.buttons[12] && gp.buttons[12].pressed;
+  const dDown = gp.buttons[13] && gp.buttons[13].pressed;
+  const dLeft = gp.buttons[14] && gp.buttons[14].pressed;
+  const dRight = gp.buttons[15] && gp.buttons[15].pressed;
+
+  const DEADZONE = 0.28;
+  if ((ly < -DEADZONE || dUp) && dir.y !== 1) nextDir = { x: 0, y: -1 };
+  else if ((ly > DEADZONE || dDown) && dir.y !== -1) nextDir = { x: 0, y: 1 };
+  else if ((lx < -DEADZONE || dLeft) && dir.x !== 1) nextDir = { x: -1, y: 0 };
+  else if ((lx > DEADZONE || dRight) && dir.x !== -1) nextDir = { x: 1, y: 0 };
+
+  // Action Buttons
+  const padA = (gp.buttons[0] && gp.buttons[0].pressed);
+  const padStart = (gp.buttons[9] && gp.buttons[9].pressed);
+  const padY = (gp.buttons[3] && gp.buttons[3].pressed); // Y Button toggles CRT
+  const padRT = (gp.buttons[7] && gp.buttons[7].pressed) || (gp.buttons[5] && gp.buttons[5].pressed) || (gp.buttons[2] && gp.buttons[2].pressed); // RT/RB/X Boost
+  const padLT = (gp.buttons[6] && gp.buttons[6].pressed) || (gp.buttons[4] && gp.buttons[4].pressed) || (gp.buttons[1] && gp.buttons[1].pressed); // LT/LB/B Chrono
+
+  if (gameOver && (padA && !priorPadA || padStart && !priorPadStart)) {
+    init();
+  }
+  if (padY && !priorPadY) {
+    toggleCRT();
+  }
+  priorPadA = padA;
+  priorPadStart = padStart;
+  priorPadY = padY;
+
+  isBoosting = !!padRT;
+  isChrono = !!padLT;
+}
+
+// ============================================================================
+// STEP SIMULATION
+// ============================================================================
+function step() {
+  if (gameOver) return;
+  dir = nextDir;
+  let nx = wrap(snake[0].x + dir.x, COLS);
+  let ny = wrap(snake[0].y + dir.y, ROWS);
+
+  // Check portal
+  for (let i = portals.length - 1; i >= 0; i--) {
+    const p = portals[i];
+    if (nx === p.a.x && ny === p.a.y) {
+      fxBurst(p.a.x * GRID + GRID / 2, p.a.y * GRID + GRID / 2, 18, `hsl(${p.hue},100%,70%)`, 3.8);
+      fxBurst(p.b.x * GRID + GRID / 2, p.b.y * GRID + GRID / 2, 18, `hsl(${p.hue},100%,70%)`, 3.8);
+      nx = p.b.x; ny = p.b.y; portalCount++; score += 15; portals.splice(i, 1);
+      AudioEngine.portalWarp();
+      unlockAchievement('first_shift');
+      if (portalCount >= 10) unlockAchievement('singularity_jumper');
+      document.getElementById('portals').textContent = portalCount;
+      break;
+    }
+    if (nx === p.b.x && ny === p.b.y) {
+      fxBurst(p.a.x * GRID + GRID / 2, p.a.y * GRID + GRID / 2, 18, `hsl(${p.hue},100%,70%)`, 3.8);
+      fxBurst(p.b.x * GRID + GRID / 2, p.b.y * GRID + GRID / 2, 18, `hsl(${p.hue},100%,70%)`, 3.8);
+      nx = p.a.x; ny = p.a.y; portalCount++; score += 15; portals.splice(i, 1);
+      AudioEngine.portalWarp();
+      unlockAchievement('first_shift');
+      if (portalCount >= 10) unlockAchievement('singularity_jumper');
+      document.getElementById('portals').textContent = portalCount;
+      break;
+    }
+  }
+
+  // Self collision
+  if (snake.some(s => s.x === nx && s.y === ny)) {
+    gameOver = true;
+    AudioEngine.collapseDeath();
+    fxShake(8, 24); fxFlash('#ff2d55', 0.55);
+    fxBurst(nx * GRID + GRID / 2, ny * GRID + GRID / 2, 32, '#ff2d55', 5.0);
+    return;
+  }
+
+  snake.unshift({ x: nx, y: ny });
+
+  if (snake.length >= 25) {
+    unlockAchievement('ouroboros_length');
+  }
+  if (snake.length >= 50) {
+    unlockAchievement('centipede_lattice');
+  }
+
+  if (nx === food.x && ny === food.y) {
+    score += 10;
+    warpEnergy = Math.min(100, warpEnergy + 15);
+    AudioEngine.orbCollect();
+    fxBurst(nx * GRID + GRID / 2, ny * GRID + GRID / 2, 18, '#e9c86a', 3.8);
+    fxShake(1.8, 6);
+    document.getElementById('score').textContent = score;
+
+    if (score >= 2500) {
+      unlockAchievement('apex_master');
+    }
+
+    if (score % 60 === 0) {
+      level++;
+      baseSpeed = Math.max(48, baseSpeed - 8);
+      document.getElementById('level').textContent = level;
+      AudioEngine.levelUp();
+      fxFlash('#e9c86a', 0.40);
+      if (level >= 5) unlockAchievement('chrono_navigator');
+    }
+    spawnFood();
+  } else {
+    snake.pop();
+  }
+
+  // Energy consumption / recharge
+  if (isBoosting && warpEnergy > 0) {
+    warpEnergy = Math.max(0, warpEnergy - 1.5);
+    boostTimer += 0.1;
+    if (boostTimer >= 5.0) {
+      unlockAchievement('hyper_drift');
+    }
+  } else if (isChrono && warpEnergy > 0) {
+    warpEnergy = Math.max(0, warpEnergy - 1.0);
+    boostTimer = 0;
+  } else {
+    warpEnergy = Math.min(100, warpEnergy + 0.3);
+    boostTimer = 0;
+  }
+  document.getElementById('energy').textContent = Math.round(warpEnergy) + '%';
+
+  // Decay portals
+  for (let i = portals.length - 1; i >= 0; i--) {
+    portals[i].life--;
+    if (portals[i].life <= 0) portals.splice(i, 1);
+  }
+}
+
+// ============================================================================
+// PREMIUM RENDERER
+// ============================================================================
+function rr(x, y, w, h, r) {
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(x, y, w, h, r);
+  else ctx.rect(x, y, w, h);
+}
+
+function drawScene() {
+  ctx.drawImage(BG, 0, 0);
+  const off1 = (FX.t * 5) % CW, off2 = (FX.t * 12) % CW;
+  ctx.globalAlpha = 0.8;
+  ctx.drawImage(STARS_FAR, off1 - CW, 0); ctx.drawImage(STARS_FAR, off1, 0);
+  ctx.drawImage(STARS_NEAR, off2 - CW, 0); ctx.drawImage(STARS_NEAR, off2, 0);
+  ctx.globalAlpha = 1;
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  const nx = CW / 2 + Math.sin(phase * 0.6) * CW * 0.18, ny = CH * 0.4 + Math.cos(phase * 0.4) * CH * 0.1;
+  const ng = ctx.createRadialGradient(nx, ny, 0, nx, ny, CW * 0.4);
+  ng.addColorStop(0, isBoosting ? 'rgba(236,72,153,0.14)' : (isChrono ? 'rgba(56,189,248,0.14)' : 'rgba(109,40,217,0.07)'));
+  ng.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = ng; ctx.fillRect(0, 0, CW, CH);
+  ctx.restore();
+}
+
+function drawSnake() {
+  const n = snake.length;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = n - 1; i >= 0; i--) {
+    const s = snake[i], t = 1 - i / n;
+    const d = GRID * (1.15 + t * 0.85);
+    ctx.globalAlpha = 0.07 + t * 0.22;
+    ctx.drawImage(t > 0.55 ? BLOB_CYAN : BLOB_VIOLET, s.x * GRID + GRID / 2 - d / 2, s.y * GRID + GRID / 2 - d / 2, d, d);
+  }
+
+  const hx = snake[0].x * GRID + GRID / 2, hy = snake[0].y * GRID + GRID / 2;
+  FX.trail.push({ x: hx, y: hy });
+  if (FX.trail.length > (isBoosting ? 22 : 12)) FX.trail.shift();
+  for (let i = 0; i < FX.trail.length; i++) {
+    const tp = FX.trail[i], ta = i / FX.trail.length;
+    const d = GRID * (0.4 + ta * 0.8);
+    ctx.globalAlpha = ta * (isBoosting ? 0.32 : 0.16);
+    ctx.drawImage(isBoosting ? BLOB_VIOLET : BLOB_CYAN, tp.x - d / 2, tp.y - d / 2, d, d);
+  }
+  ctx.restore();
+  ctx.globalAlpha = 1;
+
+  for (let i = n - 1; i >= 0; i--) {
+    const s = snake[i], t = 1 - i / n;
+    const px = s.x * GRID, py = s.y * GRID;
+    const m = 2 + (1 - t) * 2.2;
+    const hue = isBoosting ? (320 + (1 - t) * 40) : (196 + (1 - t) * 66);
+    const light = 32 + t * 38;
+    ctx.fillStyle = `hsl(${hue},92%,${light}%)`;
+    rr(px + m, py + m, GRID - m * 2, GRID - m * 2, 7);
+    ctx.fill();
+
+    ctx.fillStyle = `rgba(255,255,255,${0.10 + t * 0.22})`;
+    rr(px + m + 2, py + m + 1.5, GRID - m * 2 - 4, (GRID - m * 2) * 0.38, 4);
+    ctx.fill();
+
+    ctx.strokeStyle = `hsla(${hue - 10},100%,${60 + t * 20}%,${0.35 + t * 0.4})`;
+    ctx.lineWidth = 1;
+    rr(px + m + 0.5, py + m + 0.5, GRID - m * 2 - 1, GRID - m * 2 - 1, 7);
+    ctx.stroke();
+  }
+
+  // Head with hot core & expressive glowing eyes
+  {
+    const h = snake[0];
+    const px = h.x * GRID, py = h.y * GRID;
+    const cxp = px + GRID / 2, cyp = py + GRID / 2;
+    const g = ctx.createRadialGradient(cxp - 3, cyp - 4, 0, cxp, cyp, GRID * 0.6);
+    g.addColorStop(0, 'rgba(255,255,255,0.85)');
+    g.addColorStop(0.35, isBoosting ? 'rgba(244,114,182,0.35)' : 'rgba(180,240,255,0.28)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    rr(px + 2, py + 2, GRID - 4, GRID - 4, 7);
+    ctx.fill();
+
+    const fx = dir.x, fy = dir.y;
+    const eyeSpr = sparkSprite(isBoosting ? '#f472b6' : '#7fd7ff');
+    for (const side of [-1, 1]) {
+      const ex = cxp + fx * 4 + (-fy) * side * 4.6;
+      const ey = cyp + fy * 4 + (fx) * side * 4.6;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.9;
+      ctx.drawImage(eyeSpr, ex - 7, ey - 7, 14, 14);
+      ctx.restore();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(ex, ey, 1.8, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawFood() {
+  foodPulse += 0.08;
+  const x = food.x * GRID + GRID / 2, y = food.y * GRID + GRID / 2;
+  const pulse = 1 + Math.sin(foodPulse) * 0.16;
+  const d = GRID * 2.4 * pulse;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = 0.9;
+  ctx.drawImage(FOOD_ORB, x - d / 2, y - d / 2, d, d);
+  ctx.restore();
+  ctx.globalAlpha = 1;
+
+  const r = GRID * 0.34 * pulse;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(foodPulse * 0.8);
+  const g = ctx.createLinearGradient(0, -r, 0, r);
+  g.addColorStop(0, '#fff');
+  g.addColorStop(0.4, '#e9c86a');
+  g.addColorStop(1, '#8a5a10');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(r * 0.72, 0); ctx.lineTo(0, r); ctx.lineTo(-r * 0.72, 0); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.restore();
+
+  if (Math.random() < 0.06) fxBurst(x + (Math.random() - 0.5) * GRID, y + (Math.random() - 0.5) * GRID, 1, '#e9c86a', 1);
+}
+
+function drawPortals() {
+  for (const p of portals) {
+    const alpha = Math.min(1, p.life / 30);
+    const spr = portalSprite(p.hue);
+    for (const pt of [p.a, p.b]) {
+      const x = pt.x * GRID + GRID / 2, y = pt.y * GRID + GRID / 2;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(phase * 2);
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(spr, -36, -36);
+      ctx.restore();
+    }
+    ctx.strokeStyle = `hsla(${p.hue},100%,60%,${alpha * 0.16})`; ctx.lineWidth = 1;
+    ctx.setLineDash([3, 9]);
+    ctx.lineDashOffset = -phase * 30;
+    ctx.beginPath(); ctx.moveTo(p.a.x * GRID + GRID / 2, p.a.y * GRID + GRID / 2); ctx.lineTo(p.b.x * GRID + GRID / 2, p.b.y * GRID + GRID / 2); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawParticles() {
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (const p of FX.parts) {
+    ctx.globalAlpha = Math.max(0, p.life);
+    const spr = sparkSprite(p.color);
+    const d = p.size * 2.6 * Math.max(0.25, p.life) + 3;
+    ctx.drawImage(spr, p.x - d / 2, p.y - d / 2, d, d);
+  }
+  ctx.restore();
+  ctx.globalAlpha = 1;
+}
+
+let lastStep = 0;
+function loop(ts) {
+  phase += 0.02;
+  pollGamepad();
+  fxUpdate();
+
+  ctx.save();
+  if (FX.shakeT > 0 && FX.shakeM > 0) ctx.translate((Math.random() - 0.5) * FX.shakeM * 2, (Math.random() - 0.5) * FX.shakeM * 2);
+
+  drawScene();
+
+  let effectiveSpeed = baseSpeed;
+  if (isBoosting && warpEnergy > 0) {
+    effectiveSpeed = baseSpeed * 0.52; // Hyper-speed
+  } else if (isChrono && warpEnergy > 0) {
+    effectiveSpeed = baseSpeed * 1.85; // Slow-motion
+  }
+
+  if (ts - lastStep > effectiveSpeed) {
+    step();
+    lastStep = ts;
+  }
+
+  drawPortals();
+  if (food) drawFood();
+  drawSnake();
+  drawParticles();
+
+  ctx.restore();
+
+  if (FX.flashA > 0) {
+    ctx.globalAlpha = FX.flashA;
+    ctx.fillStyle = FX.flashC;
+    ctx.fillRect(0, 0, CW, CH);
+    ctx.globalAlpha = 1;
+  }
+
+  if (crtEnabled) {
+    ctx.drawImage(CRT, 0, 0);
+  }
+
+  const titleA = Math.max(0, 1 - FX.t / 2.6);
+  if (titleA > 0 && !gameOver) {
+    ctx.save();
+    ctx.globalAlpha = titleA;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#7fd7ff';
+    ctx.shadowColor = '#7fd7ff'; ctx.shadowBlur = 22;
+    ctx.font = 'bold 32px Courier New';
+    ctx.fillText('S N A K E   D I M E N S I O N', CW / 2, CH * 0.42);
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = `rgba(233,200,106,${0.5 + Math.sin(phase * 5) * 0.4})`;
+    ctx.font = '14px Courier New';
+    ctx.fillText('X B O X   3 6 0   A R C A D E   E D I T I O N', CW / 2, CH * 0.42 + 34);
+    ctx.restore();
+  }
+
+  if (gameOver) {
+    ctx.fillStyle = 'rgba(4,2,10,0.78)'; ctx.fillRect(0, 0, CW, CH);
+    ctx.fillStyle = 'rgba(10,8,26,0.85)';
+    ctx.strokeStyle = 'rgba(255,45,85,0.6)';
+    ctx.lineWidth = 1;
+    rr(CW / 2 - 240, CH / 2 - 95, 480, 190, 14);
+    ctx.fill(); ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ff2d55'; ctx.font = 'bold 32px Courier New';
+    ctx.shadowColor = '#ff2d55'; ctx.shadowBlur = 24;
+    ctx.fillText('DIMENSION COLLAPSED', CW / 2, CH / 2 - 30);
+    ctx.fillStyle = '#7fd7ff'; ctx.font = '19px Courier New'; ctx.shadowColor = '#7fd7ff'; ctx.shadowBlur = 14;
+    ctx.fillText(`FINAL SCORE ${score}`, CW / 2, CH / 2 + 10);
+    ctx.shadowBlur = 0;
+    const pa = 0.45 + Math.sin(phase * 4) * 0.3;
+    ctx.fillStyle = `rgba(233,200,106,${pa})`; ctx.font = '13px Courier New';
+    ctx.fillText('PRESS [A] OR SPACE TO RE-ENTER THE VOID', CW / 2, CH / 2 + 56);
+  }
+
+  requestAnimationFrame(loop);
+}
+
+resize();
+window.addEventListener('resize', resize);
+init();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

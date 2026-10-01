@@ -1,0 +1,1510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Xbox 360 Live Arcade - Blades Dashboard & Omniverse Launcher</title>
+<style>
+  :root {
+    --x-green: #5dc312;
+    --x-dark-green: #2a6808;
+    --x-silver: #d9dfde;
+    --x-dark: #121618;
+    --x-blade-bg: #1c2429;
+    --x-text-glow: rgba(93, 195, 18, 0.45);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  body {
+    background: radial-gradient(circle at 50% 30%, #202b33 0%, #0d1215 70%, #050708 100%);
+    color: #fff;
+    font-family: "Segoe UI", "Trebuchet MS", Arial, sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  /* Scanline CRT overlay */
+  .crt-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+    background-size: 100% 3px, 6px 100%;
+    pointer-events: none;
+    z-index: 999;
+    opacity: 0.6;
+    transition: opacity 0.3s;
+  }
+  .crt-overlay.disabled { opacity: 0; }
+
+  /* Top Bar Header */
+  header {
+    height: 72px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 40px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 100%);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    z-index: 100;
+  }
+  .gamertag-badge {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 6px 18px 6px 8px;
+    border-radius: 24px;
+    border: 1px solid rgba(255,255,255,0.15);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  }
+  .avatar-orb {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #88ec3d, #2f7a07);
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 12px var(--x-green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 20px;
+    color: #fff;
+  }
+  .gamertag-info { display: flex; flex-direction: column; }
+  .gamertag-name { font-size: 16px; font-weight: 700; color: #f0f4f8; letter-spacing: 0.5px; }
+  .gamerscore { font-size: 13px; color: #a2c691; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+  .g-icon {
+    display: inline-block; width: 14px; height: 14px; line-height: 14px;
+    border-radius: 50%; background: #5dc312; color: #000;
+    font-size: 10px; font-weight: 900; text-align: center;
+  }
+
+  /* Center Xbox 360 Ring of Light Orb */
+  .ring-of-light {
+    position: relative;
+    width: 50px; height: 50px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 40%, #e0e5ea 0%, #7b8893 60%, #30373d 100%);
+    box-shadow: 0 0 20px rgba(93, 195, 18, 0.7), inset 0 2px 4px #fff, inset 0 -2px 4px #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .ring-of-light:hover {
+    transform: scale(1.08);
+    box-shadow: 0 0 30px rgba(93, 195, 18, 1.0);
+  }
+  .ring-quadrant {
+    position: absolute;
+    width: 18px; height: 18px;
+    border: 3px solid transparent;
+    border-radius: 50%;
+  }
+  .quadrant-1 {
+    top: 5px; left: 5px; border-top-color: var(--x-green); border-left-color: var(--x-green);
+    filter: drop-shadow(0 0 6px var(--x-green));
+  }
+  .xbox-nexus-x {
+    font-weight: 900;
+    font-size: 26px;
+    color: #1a2228;
+    text-shadow: 0 1px 1px #fff;
+    transform: scaleY(0.9);
+  }
+
+  /* Top Right Status */
+  .system-status {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-size: 14px;
+    color: #a8b8c2;
+    font-weight: 600;
+  }
+  .status-pill {
+    background: rgba(0, 0, 0, 0.4);
+    padding: 6px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  /* Main Blades Container (3D Horizontal Sliding System) */
+  .blades-viewport {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    perspective: 1200px;
+    perspective-origin: 50% 50%;
+  }
+  .blades-stage {
+    position: absolute;
+    width: 100%; height: 100%;
+    display: flex;
+    align-items: center;
+    transition: transform 0.45s cubic-bezier(0.18, 0.89, 0.32, 1.15);
+  }
+
+  /* Blade Unit */
+  .blade {
+    position: absolute;
+    top: 20px; bottom: 20px;
+    width: 820px;
+    background: linear-gradient(135deg, rgba(35, 45, 52, 0.95) 0%, rgba(20, 26, 30, 0.95) 100%);
+    border-radius: 20px 20px 0 0;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    box-shadow: -15px 0 35px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    backdrop-filter: blur(12px);
+    transition: transform 0.45s cubic-bezier(0.18, 0.89, 0.32, 1.15), opacity 0.35s;
+  }
+
+  /* Blade Theme Colors */
+  .blade-marketplace {
+    border-top: 8px solid #ff7b00;
+    box-shadow: -15px 0 35px rgba(255, 123, 0, 0.25);
+  }
+  .blade-games {
+    border-top: 8px solid #5dc312;
+    box-shadow: -15px 0 35px rgba(93, 195, 18, 0.3);
+  }
+  .blade-media {
+    border-top: 8px solid #00a2ff;
+    box-shadow: -15px 0 35px rgba(0, 162, 255, 0.25);
+  }
+  .blade-system {
+    border-top: 8px solid #b4c2ce;
+    box-shadow: -15px 0 35px rgba(180, 194, 206, 0.25);
+  }
+
+  /* Blade Header Tab */
+  .blade-tab-header {
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 32px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.02) 100%);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  .blade-title {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+  }
+  .blade-tab-index {
+    font-size: 16px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.6);
+    background: rgba(0,0,0,0.3);
+    padding: 4px 12px;
+    border-radius: 12px;
+  }
+
+  /* Blade Inner Content */
+  .blade-content {
+    flex: 1;
+    padding: 28px 32px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .blade-content::-webkit-scrollbar { width: 6px; }
+  .blade-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+
+  /* 3D Curved Blade Position Transforms */
+  /* We have 4 blades: 0: Marketplace, 1: Games (Default active), 2: Media, 3: System */
+  .blade[data-idx="0"] { left: 50%; margin-left: -410px; }
+  .blade[data-idx="1"] { left: 50%; margin-left: -410px; }
+  .blade[data-idx="2"] { left: 50%; margin-left: -410px; }
+  .blade[data-idx="3"] { left: 50%; margin-left: -410px; }
+
+  /* Games Menu List (XBLA Authentic Tiles) */
+  .game-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+  }
+  .game-card {
+    background: linear-gradient(145deg, rgba(40, 52, 60, 0.8), rgba(20, 27, 32, 0.9));
+    border: 2px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    gap: 16px;
+    cursor: pointer;
+    transition: transform 0.18s, border-color 0.18s, box-shadow 0.18s;
+    position: relative;
+    overflow: hidden;
+  }
+  .game-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 40%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 100%);
+    pointer-events: none;
+  }
+  .game-card.focused, .game-card:hover {
+    transform: translateY(-4px) scale(1.02);
+    border-color: var(--x-green);
+    box-shadow: 0 8px 24px rgba(93, 195, 18, 0.4), inset 0 0 12px rgba(93, 195, 18, 0.2);
+  }
+  .game-thumb {
+    width: 80px; height: 100px;
+    border-radius: 8px;
+    background: #0f1418;
+    border: 1px solid rgba(255,255,255,0.2);
+    object-fit: cover;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+  }
+  .game-meta {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .game-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.2;
+  }
+  .game-genre {
+    font-size: 13px;
+    color: #8da4b2;
+    font-weight: 600;
+    margin-top: 4px;
+  }
+  .game-score-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+  }
+  .game-achieve-stat {
+    font-size: 12px;
+    font-weight: 700;
+    color: #5dc312;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .launch-badge {
+    background: var(--x-green);
+    color: #000;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* Media Blade Playlist */
+  .media-row {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .media-row:hover, .media-row.focused {
+    background: rgba(0, 162, 255, 0.15);
+    border-color: #00a2ff;
+    box-shadow: 0 0 16px rgba(0, 162, 255, 0.3);
+  }
+
+  /* System Settings Grid */
+  .setting-group {
+    background: rgba(0,0,0,0.3);
+    border-radius: 14px;
+    padding: 20px;
+    border: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .setting-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .btn-toggle {
+    background: #232d34;
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  .btn-toggle:hover { background: #35434d; border-color: #5dc312; }
+
+  /* Bottom Controller Guide Bar */
+  footer {
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 40px;
+    background: linear-gradient(0deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 100%);
+    border-top: 1px solid rgba(255,255,255,0.1);
+    z-index: 100;
+  }
+  .bumper-prompts {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+  }
+  .btn-bumper {
+    background: #2a343c;
+    border: 1px solid rgba(255,255,255,0.3);
+    padding: 4px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 800;
+    color: #e0e6ed;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    transition: background 0.15s;
+  }
+  .btn-bumper:hover { background: #3b4954; }
+  .action-buttons {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #cbd5e1;
+  }
+  .btn-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-circle {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  }
+  .btn-a { background: #5dc312; color: #000; }
+  .btn-b { background: #ff2222; color: #fff; }
+  .btn-x { background: #00a2ff; color: #000; }
+  .btn-y { background: #ffcc00; color: #000; }
+
+  /* Modal Game Viewer (The In-Browser XBLA Sandbox) */
+  #game-modal {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0, 0, 0, 0.92);
+    z-index: 2000;
+    display: none;
+    flex-direction: column;
+    backdrop-filter: blur(10px);
+  }
+  #game-modal.active { display: flex; }
+  .game-modal-header {
+    height: 56px;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #141b20;
+    border-bottom: 2px solid var(--x-green);
+  }
+  .game-modal-title { font-size: 18px; font-weight: 800; color: #fff; }
+  .game-frame-container { flex: 1; position: relative; width: 100%; height: 100%; }
+  iframe#game-frame {
+    width: 100%; height: 100%;
+    border: none;
+    background: #000;
+  }
+
+  /* Xbox 360 Guide Overlay (Slides from Left) */
+  #guide-overlay {
+    position: fixed;
+    top: 0; left: -420px; width: 380px; height: 100vh;
+    background: linear-gradient(135deg, rgba(20, 26, 30, 0.98), rgba(10, 14, 16, 0.98));
+    border-right: 3px solid var(--x-green);
+    box-shadow: 10px 0 40px rgba(0,0,0,0.9);
+    z-index: 3000;
+    transition: left 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.15);
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    gap: 20px;
+  }
+  #guide-overlay.open { left: 0; }
+  .guide-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+  }
+  .guide-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .guide-item {
+    background: rgba(255,255,255,0.05);
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: 0.15s;
+  }
+  .guide-item:hover, .guide-item.focused {
+    background: rgba(93, 195, 18, 0.2);
+    border-color: var(--x-green);
+    color: #fff;
+  }
+
+  /* Authentic Xbox 360 Achievement Unlocked Banner */
+  #achievement-banner {
+    position: fixed;
+    bottom: -90px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 440px;
+    height: 72px;
+    background: linear-gradient(180deg, #1b242b 0%, #0d1216 100%);
+    border: 2px solid #5dc312;
+    border-radius: 36px;
+    box-shadow: 0 0 30px rgba(93, 195, 18, 0.6), 0 8px 24px #000;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 16px;
+    z-index: 5000;
+    transition: bottom 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.25);
+    pointer-events: none;
+  }
+  #achievement-banner.show {
+    bottom: 40px;
+  }
+  .achieve-orb {
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #88ec3d, #2f7a07);
+    border: 2px solid #fff;
+    box-shadow: 0 0 14px #5dc312;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .achieve-text { display: flex; flex-direction: column; overflow: hidden; }
+  .achieve-head { font-size: 13px; font-weight: 800; color: #5dc312; letter-spacing: 0.5px; text-transform: uppercase; }
+  .achieve-desc { font-size: 15px; font-weight: 700; color: #fff; white-space: nowrap; text-overflow: ellipsis; }
+</style>
+</head>
+<body>
+
+<div class="crt-overlay" id="crt-layer"></div>
+
+<!-- Top Bar Header -->
+<header>
+  <div class="gamertag-badge">
+    <div class="avatar-orb">A</div>
+    <div class="gamertag-info">
+      <div class="gamertag-name">Andre NorthStar</div>
+      <div class="gamerscore"><span class="g-icon">G</span> <span id="gs-counter">125,480</span></div>
+    </div>
+  </div>
+
+  <div class="ring-of-light" id="btn-guide-toggle" title="Press Guide Button (Tab / Xbox Button)">
+    <div class="ring-quadrant quadrant-1"></div>
+    <div class="xbox-nexus-x">&#x2715;</div>
+  </div>
+
+  <div class="system-status">
+    <div class="status-pill">Xbox LIVE: <b>CONNECTED</b></div>
+    <div class="status-pill" id="clock-display">12:00 PM</div>
+  </div>
+</header>
+
+<!-- Blades Horizontal Viewport -->
+<main class="blades-viewport">
+  <div class="blades-stage" id="blades-stage">
+
+    <!-- Blade 0: Marketplace -->
+    <div class="blade blade-marketplace" data-idx="0">
+      <div class="blade-tab-header">
+        <div class="blade-title" style="color: #ff9d00;">Marketplace</div>
+        <div class="blade-tab-index">1 of 4</div>
+      </div>
+      <div class="blade-content">
+        <div class="game-grid">
+          <div class="game-card" onclick="playSfx('select'); unlockAchievement('Soundtrack Collector', 'Downloaded Vorath Master OST Suite (20G)');">
+            <img class="game-thumb" src="vorath_ost_album_art_1790644749023.jpg" onerror="this.src='https://picsum.photos/seed/ost/100/120'" alt="OST">
+            <div class="game-meta">
+              <div>
+                <div class="game-title">Vorath: Original Soundtrack</div>
+                <div class="game-genre">Digital Audio • 14 Tracks Mastered</div>
+              </div>
+              <div class="game-score-row">
+                <span class="game-achieve-stat"><span class="g-icon">G</span> Free</span>
+                <span class="launch-badge" style="background:#ff9d00;">DOWNLOAD</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="game-card" onclick="playSfx('select'); unlockAchievement('Codex Reader', 'Acquired Illuminated Vorath Codex Vol II (20G)');">
+            <img class="game-thumb" src="vorath_codex_cover_1790644695315.jpg" onerror="this.src='https://picsum.photos/seed/codex/100/120'" alt="Codex">
+            <div class="game-meta">
+              <div>
+                <div class="game-title">The Vorath Codex: Vol. II</div>
+                <div class="game-genre">Illuminated Lore & World Maps</div>
+              </div>
+              <div class="game-score-row">
+                <span class="game-achieve-stat"><span class="g-icon">G</span> Premium</span>
+                <span class="launch-badge" style="background:#ff9d00;">READ</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Blade 1: Games (Default Active) -->
+    <div class="blade blade-games" data-idx="1">
+      <div class="blade-tab-header">
+        <div class="blade-title" style="color: #5dc312;">Xbox Live Arcade</div>
+        <div class="blade-tab-index">2 of 4</div>
+      </div>
+      <div class="blade-content">
+        <div class="game-grid">
+
+          <!-- Game: Omni-Keystone Arena: The Apex Sanctum -->
+          <div class="game-card focused" data-game="Omni_Keystone_Arena_Xbox360.html" data-title="Omni-Keystone Arena: The Apex Sanctum">
+            <img class="game-thumb" src="https://picsum.photos/seed/keystone/100/120" onerror="this.src='https://picsum.photos/seed/keystone/100/120'" alt="Omni-Keystone Arena">
+            <div class="game-meta">
+              <div>
+                <div class="game-title">Omni-Keystone Arena</div>
+                <div class="game-genre">The Apex Sanctum Boss Battler • 200G</div>
+              </div>
+              <div class="game-score-row">
+                <span class="game-achieve-stat"><span class="g-icon">G</span> 200 / 200</span>
+                <span class="launch-badge">PLAY</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Game: Solar Astrolabe Defender -->
+          <div class="game-card" data-game="Solar_Astrolabe_Defender_Xbox360.html" data-title="Solar Astrolabe Defender: Stratum V">
+            <img class="game-thumb" src="https://picsum.photos/seed/astrolabe/100/120" onerror="this.src='https://picsum.photos/seed/astrolabe/100/120'" alt="Solar Astrolabe Defender">
+            <div class="game-meta">
+              <div>
+                <div class="game-title">Solar Astrolabe Defender</div>
+                <div class="game-genre">Orbital Heliocentric Twin-Stick • 200G</div>
+              </div>
+              <div class="game-score-row">
+                <span class="game-achieve-stat"><span class="g-icon">G</span> 200 / 200</span>
+                <span class="launch-badge">PLAY</span>
+              </div>
+            </div>
+          </div>
+
+                    <!-- Game: Choirfall Armada: XBLA Arcade Overdrive -->
+          <div class="game-card" data-game="choirfall_armada_xbla_edition.html" data-title="Choirfall Armada: XBLA Arcade Overdrive 2.0">
+            <img class="game-thumb" src="choirfall_armada_box_art.jpg" onerror="this.src='https://picsum.photos/seed/choirfall/100/120'" alt="Choirfall Armada">
+            <div class="game-meta">
+              <div>
+                <div class="game-title">Choirfall Armada</div>
+                <div class="game-genre">Vertical Galaga AI Overdrive • 6 Voice Casts</div>
+              </div>
+              <div class="game-score-row">
+                <span class="game-achieve-stat"><span class="g-icon">G</span> 200 / 200</span>
+                <span class="launch-badge">PLAY</span>
+              </div>
+            </div>
+          </div>
+          <!-- Game: Hypernova Swarm: XBLA Retro Evolved 2.0 -->
+          <div class="game-card" data-game="hypernova_swarm_xbla_edition.html" data-title="Hypernova Swarm: XBLA Retro Evolved 2.0">
+            <img class="game-thumb" src="hypernova_swarm_box_art.jpg" onerror="this.src='https://picsum.photos/seed/hypernova/100/120'" alt="Hypernova Swarm">
+            <div class="game-meta">
+              <div>
+                <div class="game-title">Hypernova Swarm</div>
+                <div class="game-genre">Twin-Stick Neon Geometry Shooter - 200G</div>
+              </div>
+              <div class="game-score-row">
+                <span class="game-achieve-stat"><span class="g-icon">G</span> 200 / 200</span>
+                <span class="launch-badge">PLAY</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Game: Ossuary Orbit: XBLA Tournament Edition 2.0 -->
+          <div class="game-card" data-game="ossuary_orbit_xbla_edition.html" data-title="Ossuary Orbit: XBLA Tournament Edition 2.0">
+            <img class="game-thumb" src="ossuary_orbit_box_art.jpg" onerror="this.src='https://picsum.photos/seed/ossuary/100/120'" alt="Ossuary Orbit">
+            <div class="game-meta">
+              <div>
+                <div class="game-title">Ossuary Orbit 2.0</div>
+                <div class="game-genre">Asteroids Graviton Vortex AI - 200G</div>
+              </div>
+              <div class="game-score-row">
+                <span class="game-achieve-stat"><span class="g-icon">G</span> 200 / 200</span>
+                <span class="launch-badge">PLAY</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Game: Glyphbreaker: XBLA Tournament Edition 2.0 -->
+          <div class="game-card" data-game="glyphbreaker_xbla_edition.html" data-title="Glyphbreaker: XBLA Tournament Edition 2.0">
+            <img class="game-thumb" src="glyphbreaker_box_art.jpg" onerror="this.src='https://picsum.photos/seed/glyphbreaker/100/120'" alt="Glyphbreaker">
+            <div class="game-meta">
+              <div>
+                <div class="game-title">Glyphbreaker 2.0</div>
+                <div class="game-genre">Breakout Dynamic Seal Tension - 200G</div>
+              </div>
+              <div class="game-score-row">
+                <span class="game-achieve-stat"><span class="g-icon">G</span> 200 / 200</span>
+                <span class="launch-badge">PLAY</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Game: Crownfall Intercept: XBLA Tournament Edition 2.0 -->
+          <div class="game-card" data-game="crownfall_intercept_xbla_edition.html" data-title="Crownfall Intercept: XBLA Tournament Edition 2.0">
+            <img class="game-thumb" src="crownfall_intercept_box_art.jpg" onerror="this.src='https://picsum.photos/seed/crownfall/100/120'" alt="Crownfall Intercept">
+            <div class="game-meta">
+              <div>
+                <div class="game-title">Crownfall Intercept 2.0</div>
+                <div class="game-genre">Missile Command Tactical Intercept - 200G</div>
+              </div>
+              <div class="game-score-row">
+                <span class="game-achieve-stat"><span class="g-icon">G</span> 200 / 200</span>
+                <span class="launch-badge">PLAY</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Game: Pac Dharma: XBLA Tournament Edition 2.0 -->
+          <div class="game-card" data-game="pac_dharma_xbla_edition.html" data-title="Pac Dharma: XBLA Tournament Edition 2.0">
+            <img class="game-thumb" src="pac_dharma_box_art.jpg" onerror="this.src='https://picsum.photos/seed/pacdharma/100/120'" alt="Pac Dharma">
+            <div class="game-meta">
+              <div>
+                <div class="game-title">Pac Dharma 2.0</div>
+                <div class="game-genre">Cosmic Maze Navigation - 200G</div>
+              </div>
+              <div class="game-score-row">
+                <span class="game-achieve-stat"><span class="g-icon">G</span> 200 / 200</span>
+                <span class="launch-badge">PLAY</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Game: Snake Dimension: XBLA Tournament Edition 2.0 -->
+          <div class="game-card" data-game="snake_dimension_xbla_edition.html" data-title="Snake Dimension: XBLA Tournament Edition 2.0">
+            <img class="game-thumb" src="snake_dimension_box_art.jpg" onerror="this.src='https://picsum.photos/seed/snakedimension/100/120'" alt="Snake Dimension">
+            <div class="game-meta">
+              <div>
+                <div class="game-title">Snake Dimension 2.0</div>
+                <div class="game-genre">Hyper-Dimensional Ouroboros - 200G</div>
+              </div>
+              <div class="game-score-row">
+                <span class="game-achieve-stat"><span class="g-icon">G</span> 200 / 200</span>
+                <span class="launch-badge">PLAY</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Game: Void Pong: XBLA Tournament Edition 2.0 -->
+          <div class="game-card" data-game="void_pong_xbla_edition.html" data-title="Void Pong: XBLA Tournament Edition 2.0">
+            <img class="game-thumb" src="void_pong_box_art.jpg" onerror="this.src='https://picsum.photos/seed/voidpong/100/120'" alt="Void Pong">
+            <div class="game-meta">
+              <div>
+                <div class="game-title">Void Pong 2.0</div>
+                <div class="game-genre">Dialectical Rebound Tribunal - 200G</div>
+              </div>
+              <div class="game-score-row">
+                <span class="game-achieve-stat"><span class="g-icon">G</span> 200 / 200</span>
+                <span class="launch-badge">PLAY</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Game: Dharma Invaders: XBLA Tournament Edition 2.0 -->
+          <div class="game-card" data-game="dharma_invaders_xbla_edition.html" data-title="Dharma Invaders: XBLA Tournament Edition 2.0">
+            <img class="game-thumb" src="dharma_invaders_box_art.jpg" onerror="this.src='https://picsum.photos/seed/dharmainvaders/100/120'" alt="Dharma Invaders">
+            <div class="game-meta">
+              <div>
+                <div class="game-title">Dharma Invaders 2.0</div>
+                <div class="game-genre">Scriptorium Balcony Defense - 200G</div>
+              </div>
+              <div class="game-score-row">
+                <span class="game-achieve-stat"><span class="g-icon">G</span> 200 / 200</span>
+                <span class="launch-badge">PLAY</span>
+              </div>
+            </div>
+          </div>
+
+
+          <!-- Game 1: Vorath Blade Tribunal -->
+          <div class="game-card" data-game="vorath_blade_tribunal_xbla_edition.html" data-title="Vorath: Blade Tribunal (Tournament Edition 2.0)">
+            <img class="game-thumb" src="vorath_blade_tribunal_tournament_finals.jpg" onerror="this.src='https://picsum.photos/seed/fighter/100/120'" alt="Blade Tribunal">
+            <div class="game-meta">
+              <div>
+                <div class="game-title">Vorath: Blade Tribunal 2.0</div>
+                <div class="game-genre">4-Hero Tournament Fighter • 2P Versus</div>
+              </div>
+              <div class="game-score-row">
+                <span class="game-achieve-stat"><span class="g-icon">G</span> 200 / 200</span>
+                <span class="launch-badge">PLAY</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Game 2: Prismfall Vorath -->
+          <div class="game-card" data-game="PRISMFALL_VORATH_XBLA_STANDALONE.html" data-title="Prismfall: Vorath Nexus Arcade">
+            <img class="game-thumb" src="vorath_dominion_loomspire_1790644124128.jpg" onerror="this.src='https://picsum.photos/seed/prism/100/120'" alt="Prismfall">
+            <div class="game-meta">
+              <div>
+                <div class="game-title">Prismfall: Vorath Nexus</div>
+                <div class="game-genre">Vertical Arcade Drop & Kinetic Puzzle</div>
+              </div>
+              <div class="game-score-row">
+                <span class="game-achieve-stat"><span class="g-icon">G</span> 200 / 200</span>
+                <span class="launch-badge">PLAY</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Game 3: Vorath Cyber Pinball Tournament Edition -->
+          <div class="game-card" data-game="vorath_cyber_pinball_tournament_edition.html" data-title="Vorath: Cyber Pinball Tournament Edition">
+            <img class="game-thumb" src="vorath_archive_breach_1790644099862.jpg" onerror="this.src='https://picsum.photos/seed/pinball/100/120'" alt="Pinball">
+            <div class="game-meta">
+              <div>
+                <div class="game-title">Vorath Cyber Pinball Tournament Edition</div>
+                <div class="game-genre">120Hz Physics & Multiball Wizardry</div>
+              </div>
+              <div class="game-score-row">
+                <span class="game-achieve-stat"><span class="g-icon">G</span> 200 / 200</span>
+                <span class="launch-badge">PLAY</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Game 4: Vorath Souls -->
+          <div class="game-card" data-game="vorath_souls_xbox360_edition.html" data-title="Vorath Souls: Xbox 360 Edition">
+            <img class="game-thumb" src="darksouls_firelink_shrine_masterpiece_1790648015557.jpg" onerror="this.src='https://picsum.photos/seed/souls/100/120'" alt="Souls">
+            <div class="game-meta">
+              <div>
+                <div class="game-title">Vorath Souls</div>
+                <div class="game-genre">Dark Fantasy Boss Rush & Parry Trials</div>
+              </div>
+              <div class="game-score-row">
+                <span class="game-achieve-stat"><span class="g-icon">G</span> 200 / 200</span>
+                <span class="launch-badge">PLAY</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Game 5: Vorath Prism Runner -->
+          <div class="game-card" data-game="vorath_prism_runner_xbla_edition.html" data-title="Vorath: Prism Runner XBLA">
+            <img class="game-thumb" src="vorath_prism_runner_1790644212106.jpg" onerror="this.src='https://picsum.photos/seed/runner/100/120'" alt="Runner">
+            <div class="game-meta">
+              <div>
+                <div class="game-title">Vorath: Prism Runner</div>
+                <div class="game-genre">High-Speed Cyberparkour & Hyperspace</div>
+              </div>
+              <div class="game-score-row">
+                <span class="game-achieve-stat"><span class="g-icon">G</span> 200 / 200</span>
+                <span class="launch-badge">PLAY</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Game 6: DAEMON DUEL: Code Guardians -->
+          <div class="game-card" data-game="daemon_duel_xbla_edition.html" data-title="DAEMON DUEL: Code Guardians">
+            <img class="game-thumb" src="daemon_duel_box_art.jpg" onerror="this.src='https://picsum.photos/seed/daemon/100/120'" alt="Daemon Duel">
+            <div class="game-meta">
+              <div>
+                <div class="game-title">DAEMON DUEL: Code Guardians</div>
+                <div class="game-genre">Tactical CS Card Duel • 24 Cards</div>
+              </div>
+              <div class="game-score-row">
+                <span class="game-achieve-stat"><span class="g-icon">G</span> 150 / 150</span>
+                <span class="launch-badge">PLAY</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Game 7: BIOLUME: Deep TCG -->
+          <div class="game-card" data-game="biolume_tcg_xbla_edition.html" data-title="BIOLUME: Deep TCG">
+            <img class="game-thumb" src="biolume_tcg_box_art.jpg" onerror="this.src='https://picsum.photos/seed/biolume/100/120'" alt="Biolume TCG">
+            <div class="game-meta">
+              <div>
+                <div class="game-title">BIOLUME: Deep TCG</div>
+                <div class="game-genre">Abyssal Bioluminescent Card Strategy</div>
+              </div>
+              <div class="game-score-row">
+                <span class="game-achieve-stat"><span class="g-icon">G</span> 200 / 200</span>
+                <span class="launch-badge">PLAY</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Game 8: Chroma Suspend -->
+          <div class="game-card" data-game="chroma_suspend_xbla_edition.html" data-title="Chroma Suspend XBLA">
+            <img class="game-thumb" src="chroma_suspend_box_art.jpg" onerror="this.src='https://picsum.photos/seed/chroma/100/120'" alt="Chroma Suspend">
+            <div class="game-meta">
+              <div>
+                <div class="game-title">Chroma Suspend</div>
+                <div class="game-genre">Kinetic Color-Match Spatial Puzzle</div>
+              </div>
+              <div class="game-score-row">
+                <span class="game-achieve-stat"><span class="g-icon">G</span> 200 / 200</span>
+                <span class="launch-badge">PLAY</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Game 9: REFRACTION: Skirmish -->
+          <div class="game-card" data-game="refraction_skirmish_xbla_edition.html" data-title="REFRACTION: Skirmish">
+            <img class="game-thumb" src="refraction_box_art.jpg" onerror="this.src='https://picsum.photos/seed/refraction/100/120'" alt="Refraction Skirmish">
+            <div class="game-meta">
+              <div>
+                <div class="game-title">REFRACTION: Skirmish</div>
+                <div class="game-genre">Tactical Isometric Cosmic Skirmish</div>
+              </div>
+              <div class="game-score-row">
+                <span class="game-achieve-stat"><span class="g-icon">G</span> 150 / 150</span>
+                <span class="launch-badge">PLAY</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Game 10: CHROMATRAP -->
+          <div class="game-card" data-game="chromatrap_xbla_edition.html" data-title="CHROMATRAP: Neon Kinetic Web">
+            <img class="game-thumb" src="chromatrap_box_art.jpg" onerror="this.src='https://picsum.photos/seed/chromatrap/100/120'" alt="Chromatrap">
+            <div class="game-meta">
+              <div>
+                <div class="game-title">CHROMATRAP: Neon Web</div>
+                <div class="game-genre">High-Voltage Kinetic Neon Geometry</div>
+              </div>
+              <div class="game-score-row">
+                <span class="game-achieve-stat"><span class="g-icon">G</span> 200 / 200</span>
+                <span class="launch-badge">PLAY</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Game 11: LAST SLICE -->
+          <div class="game-card" data-game="last_slice_xbla_edition.html" data-title="LAST SLICE: Pizza Party Arcade">
+            <img class="game-thumb" src="last_slice_box_art.jpg" onerror="this.src='https://picsum.photos/seed/pizza/100/120'" alt="Last Slice">
+            <div class="game-meta">
+              <div>
+                <div class="game-title">LAST SLICE: Pizza Party</div>
+                <div class="game-genre">Party Arcade Food Fight & Topping Rush</div>
+              </div>
+              <div class="game-score-row">
+                <span class="game-achieve-stat"><span class="g-icon">G</span> 200 / 200</span>
+                <span class="launch-badge">PLAY</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Blade 2: Media -->
+    <div class="blade blade-media" data-idx="2">
+      <div class="blade-tab-header">
+        <div class="blade-title" style="color: #00a2ff;">Media & Trailers</div>
+        <div class="blade-tab-index">3 of 4</div>
+      </div>
+      <div class="blade-content">
+        <div class="media-row" onclick="playSfx('select'); unlockAchievement('Cinematic Vision', 'Watched Minecraft Bad Blood POV Action Reel (15G)');">
+          <div>
+            <div style="font-size:16px; font-weight:700;">NorthStar Minecraft: Bad Blood (Action POV Reel)</div>
+            <div style="font-size:13px; color:#78909c;">1080p 60FPS • Pop Parody Cinematic Motion Master</div>
+          </div>
+          <span class="launch-badge" style="background:#00a2ff; color:#fff;">WATCH</span>
+        </div>
+
+        <div class="media-row" onclick="playSfx('select'); unlockAchievement('Audio Fidelity', 'Streaming Vorath Cyber Pinball OST (15G)');">
+          <div>
+            <div style="font-size:16px; font-weight:700;">Vorath Cyber Pinball OST Studio Jukebox</div>
+            <div style="font-size:13px; color:#78909c;">Procedural Synthwave & High-Octane Basslines</div>
+          </div>
+          <span class="launch-badge" style="background:#00a2ff; color:#fff;">LISTEN</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Blade 3: System -->
+    <div class="blade blade-system" data-idx="3">
+      <div class="blade-tab-header">
+        <div class="blade-title" style="color: #cbd5e1;">System Settings</div>
+        <div class="blade-tab-index">4 of 4</div>
+      </div>
+      <div class="blade-content">
+        <div class="setting-group">
+          <div class="setting-item">
+            <div>
+              <div style="font-weight:700; font-size:16px;">CRT Phosphor Scanlines</div>
+              <div style="font-size:13px; color:#8fa0ac;">Simulate authentic 2005 CRT gaming monitor bloom</div>
+            </div>
+            <button class="btn-toggle" id="toggle-crt" onclick="toggleCRT()">TOGGLE (ON)</button>
+          </div>
+
+          <div class="setting-item">
+            <div>
+              <div style="font-weight:700; font-size:16px;">Console Sound Effects</div>
+              <div style="font-size:13px; color:#8fa0ac;">Synthesized blade swooshes and achievement bells</div>
+            </div>
+            <button class="btn-toggle" onclick="playSfx('chime'); unlockAchievement('System Audio Configured', 'Audited 360 Audio Engine (10G)');">TEST CHIME</button>
+          </div>
+
+          <div class="setting-item">
+            <div>
+              <div style="font-weight:700; font-size:16px;">Gamepad Controller API</div>
+              <div style="font-size:13px; color:#8fa0ac;" id="pad-status">Connect an Xbox 360 / One controller</div>
+            </div>
+            <span class="status-pill" id="pad-pill">POLLING</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- Bottom Controller Guide Bar -->
+<footer>
+  <div class="bumper-prompts">
+    <button class="btn-bumper" onclick="shiftBlade(-1)"><span style="font-size:11px;">[LB]</span> PREVIOUS BLADE</button>
+    <button class="btn-bumper" onclick="shiftBlade(1)"><span style="font-size:11px;">[RB]</span> NEXT BLADE</button>
+  </div>
+
+  <div class="action-buttons">
+    <div class="btn-pill"><span class="btn-circle btn-a">A</span> SELECT / LAUNCH</div>
+    <div class="btn-pill"><span class="btn-circle btn-b">B</span> BACK</div>
+    <div class="btn-pill"><span class="btn-circle btn-x">X</span> ACHIEVEMENTS</div>
+    <div class="btn-pill"><span class="btn-circle btn-y">Y</span> MEDIA</div>
+  </div>
+</footer>
+
+<!-- Fullscreen Game Sandbox Modal -->
+<div id="game-modal">
+  <div class="game-modal-header">
+    <div class="game-modal-title" id="modal-game-title">Game Title</div>
+    <div style="display:flex; gap:12px; align-items:center;">
+      <button class="btn-toggle" onclick="openGameStandalone()">OPEN POP-OUT WINDOW</button>
+      <button class="btn-toggle" style="background:#cc2222;" onclick="closeGameModal()">EXIT GAME [B]</button>
+    </div>
+  </div>
+  <div class="game-frame-container">
+    <iframe id="game-frame" src="about:blank"></iframe>
+  </div>
+</div>
+
+<!-- Xbox Guide Slide-Out Overlay -->
+<div id="guide-overlay">
+  <div class="guide-header">
+    <div class="avatar-orb" style="width:38px; height:38px; font-size:16px;">A</div>
+    <div>
+      <div style="font-weight:800; font-size:16px;">Andre NorthStar</div>
+      <div style="font-size:12px; color:#5dc312;"><span class="g-icon">G</span> <span id="guide-gs">125,480</span></div>
+    </div>
+  </div>
+
+  <div class="guide-menu">
+    <div class="guide-item focused" onclick="closeGuide(); shiftBladeTo(1);">Xbox Live Arcade Hub</div>
+    <div class="guide-item" onclick="triggerGuideAchievement();">View Achievements</div>
+    <div class="guide-item" onclick="closeGuide(); shiftBladeTo(2);">Media Player</div>
+    <div class="guide-item" onclick="closeGuide(); shiftBladeTo(0);">Marketplace</div>
+    <div class="guide-item" onclick="closeGuide(); shiftBladeTo(3);">System Settings</div>
+    <div class="guide-item" style="color:#ff6666;" onclick="closeGuide();">Close Guide</div>
+  </div>
+</div>
+
+<!-- Authentic Achievement Popup Banner -->
+<div id="achievement-banner">
+  <div class="achieve-orb">&#x2605;</div>
+  <div class="achieve-text">
+    <div class="achieve-head">Achievement Unlocked</div>
+    <div class="achieve-desc" id="achieve-desc-text">Omniverse Champion - 100G</div>
+  </div>
+</div>
+
+<script>
+  /* Procedural Web Audio Engine (Authentic Xbox 360 Sound Design) */
+  let audioCtx = null;
+  function getAudioCtx() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    return audioCtx;
+  }
+
+  function playSfx(type) {
+    try {
+      const ctx = getAudioCtx();
+      const now = ctx.currentTime;
+
+      if (type === 'swoosh') {
+        // Blade swoosh: Filtered white noise with exponential decay
+        const bufferSize = ctx.sampleRate * 0.25;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.08));
+        }
+        const noise = ctx.createBufferSource();
+        noise.buffer = buffer;
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(600, now);
+        filter.frequency.exponentialRampToValueAtTime(150, now + 0.22);
+        filter.Q.value = 2.0;
+
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.24);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+        noise.start(now);
+      } else if (type === 'focus') {
+        // Click blip
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1200, now);
+        osc.frequency.exponentialRampToValueAtTime(600, now + 0.04);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.04);
+      } else if (type === 'select') {
+        // Confirm chord
+        [523.25, 659.25, 783.99].forEach(freq => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.value = freq;
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.25);
+        });
+      } else if (type === 'chime') {
+        // Authentic Xbox 360 Achievement Two-Tone Ascending Bell Chime
+        // D5 (587.33Hz) -> A5 (880Hz)
+        const note1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        note1.type = 'triangle';
+        note1.frequency.setValueAtTime(587.33, now);
+        gain1.gain.setValueAtTime(0.3, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+        note1.connect(gain1);
+        gain1.connect(ctx.destination);
+        note1.start(now);
+        note1.stop(now + 0.45);
+
+        const note2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        note2.type = 'triangle';
+        note2.frequency.setValueAtTime(880.0, now + 0.16);
+        gain2.gain.setValueAtTime(0.35, now + 0.16);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+        note2.connect(gain2);
+        gain2.connect(ctx.destination);
+        note2.start(now + 0.16);
+        note2.stop(now + 0.8);
+      }
+    } catch (e) {
+      console.warn("Audio error:", e);
+    }
+  }
+
+  /* Blade Navigation Engine */
+  let currentBlade = 1; // Start on Games (index 1)
+  const totalBlades = 4;
+  const blades = document.querySelectorAll('.blade');
+
+  function updateBladesLayout() {
+    blades.forEach((blade, idx) => {
+      const diff = idx - currentBlade;
+      if (diff === 0) {
+        // Active Center Blade
+        blade.style.transform = `translateX(0px) translateZ(0px) rotateY(0deg)`;
+        blade.style.opacity = '1';
+        blade.style.zIndex = '50';
+      } else if (diff < 0) {
+        // Stored on the Left
+        const offset = -480 + (diff * 55);
+        blade.style.transform = `translateX(${offset}px) translateZ(-120px) rotateY(18deg)`;
+        blade.style.opacity = '0.75';
+        blade.style.zIndex = `${30 + diff}`;
+      } else {
+        // Stored on the Right
+        const offset = 480 + (diff * 55);
+        blade.style.transform = `translateX(${offset}px) translateZ(-120px) rotateY(-18deg)`;
+        blade.style.opacity = '0.75';
+        blade.style.zIndex = `${30 - diff}`;
+      }
+    });
+  }
+
+  function shiftBlade(delta) {
+    const next = currentBlade + delta;
+    if (next >= 0 && next < totalBlades) {
+      currentBlade = next;
+      playSfx('swoosh');
+      updateBladesLayout();
+      triggerHaptic(40, 0.4);
+    }
+  }
+
+  function shiftBladeTo(idx) {
+    if (idx >= 0 && idx < totalBlades && idx !== currentBlade) {
+      currentBlade = idx;
+      playSfx('swoosh');
+      updateBladesLayout();
+    }
+  }
+
+  // Click on blade to focus
+  blades.forEach((b, idx) => {
+    b.addEventListener('click', (e) => {
+      if (idx !== currentBlade) {
+        e.stopPropagation();
+        shiftBladeTo(idx);
+      }
+    });
+  });
+
+  /* Achievement Engine */
+  let gamerscore = parseInt(localStorage.getItem('xbla_gamerscore') || '125480');
+  const unlockedAchievements = new Set(JSON.parse(localStorage.getItem('xbla_achievements') || '[]'));
+
+  function updateGamerscoreDisplay() {
+    document.getElementById('gs-counter').innerText = gamerscore.toLocaleString();
+    document.getElementById('guide-gs').innerText = gamerscore.toLocaleString();
+  }
+  updateGamerscoreDisplay();
+
+  function unlockAchievement(title, desc) {
+    if (unlockedAchievements.has(title)) return;
+    unlockedAchievements.add(title);
+    localStorage.setItem('xbla_achievements', JSON.stringify(Array.from(unlockedAchievements)));
+
+    // Parse G value from desc e.g. "20G"
+    const match = desc.match(/(\d+)G/);
+    if (match) {
+      gamerscore += parseInt(match[1]);
+      localStorage.setItem('xbla_gamerscore', gamerscore.toString());
+      updateGamerscoreDisplay();
+    }
+
+    playSfx('chime');
+    triggerHaptic(180, 0.8);
+
+    const banner = document.getElementById('achievement-banner');
+    document.getElementById('achieve-desc-text').innerText = `${title} - ${desc}`;
+    banner.classList.add('show');
+
+    setTimeout(() => {
+      banner.classList.remove('show');
+    }, 4500);
+  }
+
+  /* Game Launching Engine */
+  let currentGameUrl = "";
+  const gameCards = document.querySelectorAll('.game-card[data-game]');
+  let focusedCardIdx = 0;
+
+  function updateGameFocus() {
+    gameCards.forEach((c, i) => {
+      if (i === focusedCardIdx) {
+        c.classList.add('focused');
+        c.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      } else {
+        c.classList.remove('focused');
+      }
+    });
+  }
+
+  gameCards.forEach((card, idx) => {
+    card.addEventListener('mouseenter', () => {
+      focusedCardIdx = idx;
+      updateGameFocus();
+      playSfx('focus');
+    });
+    card.addEventListener('click', () => {
+      launchGame(card.getAttribute('data-game'), card.getAttribute('data-title'));
+    });
+  });
+
+  function launchGame(url, title) {
+    currentGameUrl = url;
+    playSfx('select');
+    document.getElementById('modal-game-title').innerText = title;
+    document.getElementById('game-frame').src = url;
+    document.getElementById('game-modal').classList.add('active');
+
+    unlockAchievement('Arcade Pioneer', `Launched ${title} (20G)`);
+  }
+
+  function closeGameModal() {
+    document.getElementById('game-modal').classList.remove('active');
+    document.getElementById('game-frame').src = 'about:blank';
+    playSfx('focus');
+  }
+
+  function openGameStandalone() {
+    if (currentGameUrl) {
+      window.open(currentGameUrl, '_blank');
+    }
+  }
+
+  /* Xbox Guide Engine */
+  const guideOverlay = document.getElementById('guide-overlay');
+  let guideOpen = false;
+
+  function toggleGuide() {
+    guideOpen = !guideOpen;
+    if (guideOpen) {
+      guideOverlay.classList.add('open');
+      playSfx('focus');
+      unlockAchievement('Nexus Key', 'Opened the Xbox 360 Guide Menu (10G)');
+    } else {
+      guideOverlay.classList.remove('open');
+      playSfx('focus');
+    }
+  }
+  function closeGuide() {
+    guideOpen = false;
+    guideOverlay.classList.remove('open');
+  }
+  document.getElementById('btn-guide-toggle').addEventListener('click', toggleGuide);
+
+  function triggerGuideAchievement() {
+    unlockAchievement('Gamer Card Checked', 'Viewed Gamerscore in Xbox Guide (10G)');
+    closeGuide();
+  }
+
+  /* Settings Toggles */
+  let crtActive = true;
+  function toggleCRT() {
+    crtActive = !crtActive;
+    const crt = document.getElementById('crt-layer');
+    const btn = document.getElementById('toggle-crt');
+    if (crtActive) {
+      crt.classList.remove('disabled');
+      btn.innerText = "TOGGLE (ON)";
+    } else {
+      crt.classList.add('disabled');
+      btn.innerText = "TOGGLE (OFF)";
+    }
+    playSfx('focus');
+  }
+
+  /* Gamepad & Keyboard Navigation Engine */
+  function triggerHaptic(duration = 50, strength = 0.5) {
+    if (navigator.getGamepads) {
+      const gamepads = navigator.getGamepads();
+      for (const gp of gamepads) {
+        if (gp && gp.vibrationActuator) {
+          gp.vibrationActuator.playEffect('dual-rumble', {
+            startDelay: 0,
+            duration: duration,
+            weakMagnitude: strength,
+            strongMagnitude: strength * 0.7
+          }).catch(() => {});
+        }
+      }
+    }
+  }
+
+  // Keyboard navigation
+  window.addEventListener('keydown', (e) => {
+    // If game modal is open, Esc closes it
+    if (document.getElementById('game-modal').classList.contains('active')) {
+      if (e.key === 'Escape') {
+        closeGameModal();
+      }
+      return;
+    }
+
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      toggleGuide();
+      return;
+    }
+
+    if (e.key === 'q' || e.key === 'Q' || e.key === 'PageUp') {
+      shiftBlade(-1);
+    } else if (e.key === 'e' || e.key === 'E' || e.key === 'PageDown') {
+      shiftBlade(1);
+    } else if (e.key === 'ArrowRight') {
+      if (currentBlade === 1 && focusedCardIdx % 2 === 0 && focusedCardIdx + 1 < gameCards.length) {
+        focusedCardIdx++;
+        updateGameFocus();
+        playSfx('focus');
+      } else {
+        shiftBlade(1);
+      }
+    } else if (e.key === 'ArrowLeft') {
+      if (currentBlade === 1 && focusedCardIdx % 2 === 1) {
+        focusedCardIdx--;
+        updateGameFocus();
+        playSfx('focus');
+      } else {
+        shiftBlade(-1);
+      }
+    } else if (e.key === 'ArrowDown') {
+      if (currentBlade === 1 && focusedCardIdx + 2 < gameCards.length) {
+        focusedCardIdx += 2;
+        updateGameFocus();
+        playSfx('focus');
+      }
+    } else if (e.key === 'ArrowUp') {
+      if (currentBlade === 1 && focusedCardIdx - 2 >= 0) {
+        focusedCardIdx -= 2;
+        updateGameFocus();
+        playSfx('focus');
+      }
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      if (currentBlade === 1 && gameCards[focusedCardIdx]) {
+        gameCards[focusedCardIdx].click();
+      }
+    } else if (e.key === 'Escape' || e.key === 'Backspace') {
+      if (guideOpen) closeGuide();
+    }
+  });
+
+  // Gamepad Polling Loop
+  let lastButtonStates = {};
+  function pollGamepads() {
+    const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+    let connected = false;
+
+    for (let i = 0; i < gamepads.length; i++) {
+      const gp = gamepads[i];
+      if (gp) {
+        connected = true;
+        document.getElementById('pad-status').innerText = `${gp.id.substring(0, 24)}... Connected`;
+        document.getElementById('pad-pill').innerText = "ONLINE";
+        document.getElementById('pad-pill').style.color = "#5dc312";
+
+        const isPressed = (bIdx) => gp.buttons[bIdx] && gp.buttons[bIdx].pressed;
+        const wasJustPressed = (bIdx) => isPressed(bIdx) && !lastButtonStates[bIdx];
+
+        // Bumpers (LB: 4, RB: 5)
+        if (wasJustPressed(4)) shiftBlade(-1);
+        if (wasJustPressed(5)) shiftBlade(1);
+
+        // Face Buttons (A: 0, B: 1, X: 2, Y: 3)
+        if (wasJustPressed(0)) {
+          if (document.getElementById('game-modal').classList.contains('active')) {
+            // inside modal
+          } else if (currentBlade === 1 && gameCards[focusedCardIdx]) {
+            gameCards[focusedCardIdx].click();
+          }
+        }
+        if (wasJustPressed(1)) {
+          if (document.getElementById('game-modal').classList.contains('active')) {
+            closeGameModal();
+          } else if (guideOpen) {
+            closeGuide();
+          }
+        }
+        if (wasJustPressed(2)) { // X
+          unlockAchievement('Blade Master', 'Examined Game Achievements (15G)');
+        }
+        if (wasJustPressed(3)) { // Y
+          shiftBladeTo(2); // Jump to media
+        }
+
+        // Xbox Guide Button (index 16 on standard mapping)
+        if (wasJustPressed(16)) toggleGuide();
+
+        // D-Pad (Up: 12, Down: 13, Left: 14, Right: 15)
+        if (wasJustPressed(14)) shiftBlade(-1);
+        if (wasJustPressed(15)) shiftBlade(1);
+        if (wasJustPressed(12) && currentBlade === 1 && focusedCardIdx - 2 >= 0) {
+          focusedCardIdx -= 2;
+          updateGameFocus();
+          playSfx('focus');
+        }
+        if (wasJustPressed(13) && currentBlade === 1 && focusedCardIdx + 2 < gameCards.length) {
+          focusedCardIdx += 2;
+          updateGameFocus();
+          playSfx('focus');
+        }
+
+        // Cache button states
+        for (let b = 0; b < gp.buttons.length; b++) {
+          lastButtonStates[b] = gp.buttons[b].pressed;
+        }
+      }
+    }
+
+    if (!connected) {
+      document.getElementById('pad-status').innerText = "Connect an Xbox 360 / One controller";
+      document.getElementById('pad-pill').innerText = "NO PAD";
+      document.getElementById('pad-pill').style.color = "#8fa0ac";
+    }
+
+    requestAnimationFrame(pollGamepads);
+  }
+  requestAnimationFrame(pollGamepads);
+
+  // Clock Display
+  function updateClock() {
+    const now = new Date();
+    document.getElementById('clock-display').innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // Initial layout & welcome achievement
+  updateBladesLayout();
+  setTimeout(() => {
+    unlockAchievement('Welcome to XBLA', 'Logged into Xbox 360 Omniverse Dashboard (10G)');
+  }, 1000);
+</script>
+</body>
+</html>

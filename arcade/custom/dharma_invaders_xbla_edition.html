@@ -1,0 +1,830 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>DHARMA INVADERS: XBLA TOURNAMENT EDITION 2.0</title>
+<style>
+:root{color-scheme:dark;--gold:#f0cc75;--ivory:#fff5da;--cyan:#64eaff;--red:#ff426f;--ink:#05030b}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#020106}
+body{display:grid;place-items:center;font-family:Georgia,"Times New Roman",serif;color:var(--ivory);touch-action:none;user-select:none}
+#shell{
+  position:relative;
+  width:min(100vw,106.667vh);
+  height:min(100vh,93.75vw);
+  max-width:960px;
+  max-height:900px;
+  display:grid;
+  grid-template-rows:auto 1fr auto;
+  gap:8px;
+  padding:10px;
+  background:radial-gradient(circle at 50% 18%,rgba(111,49,142,.25),transparent 48%);
+  overflow:hidden;
+}
+#c{
+  display:block;
+  width:100%;
+  height:100%;
+  min-height:0;
+  border:1px solid rgba(240,204,117,.4);
+  border-radius:12px;
+  background:#05030b;
+  box-shadow:0 0 34px rgba(100,234,255,.14),0 0 90px rgba(255,66,111,.08),inset 0 0 40px #000;
+}
+#mast{display:flex;align-items:end;justify-content:space-between;gap:12px;padding:1px 6px;text-transform:uppercase}
+#brand{font:700 clamp(12px,2vw,18px)/1 Georgia,serif;letter-spacing:.34em;color:var(--gold);text-shadow:0 0 16px rgba(240,204,117,.6)}
+#folio{font:600 clamp(9px,1.4vw,12px)/1.2 ui-monospace,monospace;letter-spacing:.16em;color:var(--cyan);text-align:right}
+#controls{display:flex;justify-content:center;align-items:center;gap:8px;min-height:36px;font:600 10px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;color:#d8caaf}
+.key{display:flex;align-items:center;gap:7px;padding:6px 11px;border:1px solid rgba(240,204,117,.28);border-radius:999px;background:rgba(9,6,18,.8)}
+.sig{color:var(--gold);font-weight:700}
+.crt-toggle-btn{
+  background:rgba(8,8,24,0.7);border:1px solid rgba(100,234,255,0.3);border-radius:20px;
+  padding:5px 12px;color:#64eaff;font-size:9px;letter-spacing:2px;cursor:pointer;transition:all 0.2s ease;
+}
+.crt-toggle-btn:hover{background:rgba(100,234,255,0.15);border-color:#64eaff}
+
+/* Authentic Xbox 360 Achievement Notification Toast */
+#xbox-achievement-toast{
+  position:fixed;
+  top:-100px;
+  left:50%;
+  transform:translateX(-50%);
+  display:flex;
+  align-items:center;
+  gap:14px;
+  background:linear-gradient(135deg,#121820,#1e293b);
+  border:2px solid #10b981;
+  border-radius:36px;
+  padding:8px 24px 8px 12px;
+  box-shadow:0 0 25px rgba(16,185,129,0.6),0 12px 30px rgba(0,0,0,0.85);
+  z-index:9999;
+  transition:top 0.5s cubic-bezier(0.175,0.885,0.32,1.275);
+  pointer-events:none;
+}
+#xbox-achievement-toast.show{
+  top:24px;
+}
+.x360-logo{
+  width:40px;
+  height:40px;
+  border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,#34d399,#059669);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#fff;
+  font-weight:bold;
+  font-size:16px;
+  border:2px solid #6ee7b7;
+  box-shadow:0 0 12px rgba(52,211,153,0.8);
+}
+.x360-text{
+  display:flex;
+  flex-direction:column;
+}
+.x360-text .header{
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:1px;
+  color:#6ee7b7;
+  text-transform:uppercase;
+}
+.x360-text .title{
+  font-size:13px;
+  font-weight:bold;
+  color:#f8fafc;
+  letter-spacing:0.5px;
+}
+.x360-score{
+  font-size:12px;
+  color:#fbbf24;
+  font-weight:900;
+  margin-left:6px;
+}
+
+#start{position:absolute;inset:0;z-index:4;border:0;background:transparent;color:transparent;cursor:pointer}
+#start.hidden{display:none}
+@media(max-width:600px){#shell{padding:6px;gap:5px}#controls{gap:4px}.key{padding:6px 8px;font-size:9px}#brand{letter-spacing:.2em}}
+</style>
+</head>
+<body>
+<main id="shell" aria-label="Dharma Invaders game cabinet">
+  <header id="mast">
+    <div id="brand">Dharma Invaders <span style="font-size:10px;color:var(--cyan);letter-spacing:1px;font-family:ui-monospace,monospace">· XBLA 2.0</span></div>
+    <div id="folio">Folio <span id="waveRead">I</span> · Thread <span id="chainRead">0</span> · Score <span id="scoreRead">0</span></div>
+  </header>
+  <canvas id="c" width="800" height="720" aria-label="Tribunal balcony defense playfield"></canvas>
+  <footer id="controls">
+    <div class="key"><span class="sig">&larr; &rarr; / LS</span> move</div>
+    <div class="key"><span class="sig">Space / A</span> annotate</div>
+    <div class="key"><span class="sig">Shift / X</span> ward parry</div>
+    <div class="key"><span class="sig">Q / Y</span> beam</div>
+    <button class="crt-toggle-btn" id="crtToggleBtn">[Y] CRT: ON</button>
+  </footer>
+  <button id="start" aria-label="Open the margin and begin"></button>
+</main>
+
+<!-- Xbox 360 Achievement Toast -->
+<div id="xbox-achievement-toast">
+  <div class="x360-logo">[G]</div>
+  <div class="x360-text">
+    <div class="header">Achievement Unlocked</div>
+    <div class="title" id="achTitle">First Folio</div>
+  </div>
+  <div class="x360-score" id="achScore">10G</div>
+</div>
+
+<script>
+"use strict";
+
+const canvas=document.querySelector('#c'),ctx=canvas.getContext('2d',{alpha:false});
+const W=800,H=720,TAU=Math.PI*2;
+
+let crtEnabled=true;
+function toggleCRT(){
+  crtEnabled=!crtEnabled;
+  const btn=document.getElementById('crtToggleBtn');
+  if(btn)btn.textContent=crtEnabled?'[Y] CRT: ON':'[Y] CRT: OFF';
+}
+document.getElementById('crtToggleBtn').addEventListener('click',toggleCRT);
+
+// --- Procedural Web Audio Engine ---
+let audioCtx=null;
+function initAudio(){
+  if(!audioCtx){
+    const AC=window.AudioContext||window.webkitAudioContext;
+    if(AC)audioCtx=new AC();
+  }
+  if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();
+}
+
+function triggerRumble(weakMag, strongMag, durationMs){
+  try {
+    const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+    const gp = gamepads[0] || gamepads[1];
+    if (gp && gp.vibrationActuator && typeof gp.vibrationActuator.playEffect === "function") {
+      gp.vibrationActuator.playEffect("dual-rumble", {
+        startDelay: 0,
+        duration: durationMs,
+        weakMagnitude: Math.min(1.0, weakMag),
+        strongMagnitude: Math.min(1.0, strongMag)
+      }).catch(function(){});
+    }
+  } catch (e) {}
+}
+
+function sfx(name){
+  initAudio();
+  try {
+    if (name === 'shoot') triggerRumble(0.18, 0.05, 30);
+    else if (name === 'parry') triggerRumble(0.65, 0.8, 140);
+    else if (name === 'beam') triggerRumble(0.85, 0.95, 300);
+    else if (name === 'explode' || name === 'death') triggerRumble(0.5, 0.8, 160);
+    else if (name === 'tick') triggerRumble(0.15, 0.08, 30);
+  } catch(e) {}
+  if(!audioCtx)return;
+  const now=audioCtx.currentTime;
+  try{
+    if(name==='shoot'){
+      const osc=audioCtx.createOscillator();const g=audioCtx.createGain();
+      osc.type='triangle';osc.frequency.setValueAtTime(620,now);osc.frequency.exponentialRampToValueAtTime(140,now+0.1);
+      g.gain.setValueAtTime(0.14,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.1);
+      osc.connect(g);g.connect(audioCtx.destination);osc.start(now);osc.stop(now+0.1);
+    }else if(name==='parry'){
+      [523.25, 783.99, 1046.5].forEach((freq,i)=>{
+        const osc=audioCtx.createOscillator();const g=audioCtx.createGain();
+        osc.type='sine';osc.frequency.setValueAtTime(freq,now+i*0.02);
+        g.gain.setValueAtTime(0.2,now+i*0.02);g.gain.exponentialRampToValueAtTime(0.001,now+0.35);
+        osc.connect(g);g.connect(audioCtx.destination);osc.start(now+i*0.02);osc.stop(now+0.38);
+      });
+    }else if(name==='beam'){
+      const osc=audioCtx.createOscillator();const g=audioCtx.createGain();
+      osc.type='sawtooth';osc.frequency.setValueAtTime(880,now);osc.frequency.linearRampToValueAtTime(220,now+0.25);
+      g.gain.setValueAtTime(0.25,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.28);
+      osc.connect(g);g.connect(audioCtx.destination);osc.start(now);osc.stop(now+0.28);
+    }else if(name==='explode'||name==='death'){
+      const osc=audioCtx.createOscillator();const g=audioCtx.createGain();
+      osc.type='sawtooth';osc.frequency.setValueAtTime(140,now);osc.frequency.exponentialRampToValueAtTime(30,now+0.35);
+      g.gain.setValueAtTime(0.35,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.35);
+      osc.connect(g);g.connect(audioCtx.destination);osc.start(now);osc.stop(now+0.35);
+    }else if(name==='tick'){
+      const osc=audioCtx.createOscillator();const g=audioCtx.createGain();
+      osc.type='square';osc.frequency.setValueAtTime(800,now);
+      g.gain.setValueAtTime(0.06,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.03);
+      osc.connect(g);g.connect(audioCtx.destination);osc.start(now);osc.stop(now+0.03);
+    }else if(name==='achieve'){
+      const osc1=audioCtx.createOscillator(),g1=audioCtx.createGain();
+      osc1.type='triangle';osc1.frequency.setValueAtTime(440,now);osc1.frequency.exponentialRampToValueAtTime(880,now+0.15);
+      g1.gain.setValueAtTime(0.22,now);g1.gain.exponentialRampToValueAtTime(0.001,now+0.15);
+      osc1.connect(g1);g1.connect(audioCtx.destination);osc1.start(now);osc1.stop(now+0.15);
+
+      const osc2=audioCtx.createOscillator(),g2=audioCtx.createGain();
+      osc2.type='sine';osc2.frequency.setValueAtTime(880,now+0.08);osc2.frequency.exponentialRampToValueAtTime(1760,now+0.35);
+      g2.gain.setValueAtTime(0.28,now+0.08);g2.gain.exponentialRampToValueAtTime(0.001,now+0.35);
+      osc2.connect(g2);g2.connect(audioCtx.destination);osc2.start(now+0.08);osc2.stop(now+0.35);
+      triggerRumble(0.5, 0.5, 200);
+    }
+  }catch(_){}
+}
+
+// ============================================================================
+// XBOX 360 ACHIEVEMENTS ENGINE (200G TOURNAMENT STANDARD)
+// ============================================================================
+const ACHIEVEMENTS = [
+  { id: 'first_folio', title: 'First Folio', desc: 'Clear the first wave of incoming redaction invaders', score: '10G', unlocked: false },
+  { id: 'ward_parry', title: 'Ward Deflection', desc: 'Execute a frame-perfect parry to reflect enemy ink projectiles', score: '20G', unlocked: false },
+  { id: 'excision_beam', title: 'Excision Overdrive', desc: 'Fire the high-energy Excision Beam to obliterate an entire column', score: '25G', unlocked: false },
+  { id: 'perfect_wave', title: 'Untouched Scriptorium', desc: 'Clear a wave without taking damage or losing a ward', score: '25G', unlocked: false },
+  { id: 'chain_master', title: 'Thread Weaver', desc: 'Build a combo thread of 10 or higher', score: '30G', unlocked: false },
+  { id: 'deep_folio', title: 'Master Archivist', desc: 'Reach Folio V (Wave 5)', score: '30G', unlocked: false },
+  { id: 'redaction_breaker', title: 'Eraser of Erasers', desc: 'Destroy the massive Tribunal Eraser boss', score: '30G', unlocked: false },
+  { id: 'grand_jurist', title: 'Illuminated Verdict', desc: 'Achieve a final score of 5,000+ points', score: '30G', unlocked: false }
+];
+
+function unlockAchievement(id) {
+  const ach = ACHIEVEMENTS.find(a => a.id === id);
+  if (!ach || ach.unlocked) return;
+  ach.unlocked = true;
+
+  try {
+    localStorage.setItem('x360_dharma_invaders_' + id, 'true');
+  } catch(e){}
+
+  sfx('achieve');
+  const toast = document.getElementById('xbox-achievement-toast');
+  const titleEl = document.getElementById('achTitle');
+  const scoreEl = document.getElementById('achScore');
+  if (toast && titleEl && scoreEl) {
+    titleEl.textContent = ach.title;
+    scoreEl.textContent = ach.score;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3800);
+  }
+}
+
+ACHIEVEMENTS.forEach(a => {
+  try {
+    if (localStorage.getItem('x360_dharma_invaders_' + a.id) === 'true') a.unlocked = true;
+  } catch(e){}
+});
+
+const FORM_NAMES=['Ink Moth','Clause Leech','Margin Eater','Tribunal Eraser'];
+const ROMAN=['I','II','III','IV','V','VI','VII','VIII','IX','X'];
+
+const gpPrev = { parry: false, beam: false, start: false, y: false };
+
+function pollGamepad() {
+  let pad = null;
+  try {
+    const gps = navigator.getGamepads ? navigator.getGamepads() : [];
+    pad = gps[0] || gps[1] || null;
+  } catch (_) { pad = null; }
+
+  if (!pad) {
+    return { dir: 0, fire: false, parry: false, beam: false, start: false };
+  }
+
+  const held = i => !!(pad.buttons[i] && (pad.buttons[i].pressed || pad.buttons[i].value > 0.25));
+  const edge = (name, val) => {
+    const pressed = val && !gpPrev[name];
+    gpPrev[name] = val;
+    return pressed;
+  };
+
+  let dir = 0;
+  if (pad.axes && Math.abs(pad.axes[0]) > 0.18) dir = pad.axes[0];
+  if (held(14)) dir = -1;
+  if (held(15)) dir = 1;
+
+  const fire = held(0) || held(7) || held(5);
+  const parry = edge('parry', held(2) || held(4) || held(6));
+  const beam = edge('beam', held(3));
+  const start = edge('start', held(9) || held(0));
+
+  if (start && (state === 'menu' || state === 'lost')) {
+    cast();
+  }
+
+  if (state === 'playing') {
+    if (parry) triggerDashParry();
+    if (beam) triggerExcisionBeam();
+  }
+
+  return { dir, fire, parry, beam, start };
+}
+
+const keys=new Set();
+let pointerX=null,pointerFire=false,last=performance.now(),time=0,state='menu';
+let folio=1,annotations=0,chain=0,bestChain=0,integrity=3,shake=0,flash=0,interlude=0;
+let sentinel,bolts,reflectedBolts,redactions,inkDrops,wards,particles,stars,floatingTexts;
+let freezeFrames=0;
+let beamEnergy=30;
+let activeBeam=null;
+let waveWardsLost=false;
+
+const marginDirector={
+  tension: 10,
+  state: 'EXEGESIS_BUILD',
+  stateTimer: 0,
+  decisionLatencyUs: 0.68,
+  surgeTimer: 0
+};
+
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const rand=(a,b)=>a+Math.random()*(b-a);
+const hit=(a,b,r)=>Math.hypot(a.x-b.x,a.y-b.y)<r;
+
+function makeStars(){stars=Array.from({length:90},(_,i)=>({x:Math.random()*W,y:Math.random()*H,z:rand(.25,1),h:(i*43)%360}));}
+function makeWards(){wards=[160,400,640].map((x,i)=>({x,y:545,hp:6,max:6,phase:i*2.1,hit:0,parryFlash:0}));}
+
+function addFloatingText(x,y,text,color='#f0cc75',size=13){
+  floatingTexts.push({x,y,text,color,size,life:1.0,vy:-1.0});
+}
+
+function reset(full=true){
+  sentinel={
+    x:400,y:650,vx:0,cool:0,charge:0,invuln:0,
+    dashTimer:0,dashCool:0,dashDir:0,parryWindow:0,isDashing:false,
+    echoes:[]
+  };
+  bolts=[];reflectedBolts=[];inkDrops=[];particles=[];redactions=[];floatingTexts=[];
+  makeWards();
+  beamEnergy=35;
+  activeBeam=null;
+  waveWardsLost=false;
+  marginDirector.tension=15;
+  marginDirector.state='EXEGESIS_BUILD';
+  marginDirector.stateTimer=0;
+
+  if(full){folio=1;annotations=0;chain=0;bestChain=0;integrity=3;}
+  spawnFolio();state='playing';document.querySelector('#start').classList.add('hidden');syncHud();
+}
+
+function spawnFolio(){
+  redactions=[];inkDrops=[];const count=Math.min(22,9+folio*2),scripts=['pendulum','drift','hook','stutter'];
+  for(let i=0;i<count;i++){
+    const row=Math.floor(i/6),slot=i%6,phi=(i*.61803398875%1)*TAU,type=(i+row+folio)%3;
+    const baseX=80+slot*128+(row%2?42:-18)+(i%3-1)*9;
+    const hp=1+Math.floor(folio/4)+(type===2?1:0);
+    redactions.push({
+      x:baseX,y:88+row*76+Math.sin(phi)*16,baseX,baseY:88+row*76,
+      type,name:FORM_NAMES[type],script:scripts[(i*3+folio+row)%scripts.length],
+      phase:phi,age:rand(0,2),hp,maxHp:hp,amp:22+((i*17)%42),freq:.55+((i*13)%9)*.08,
+      descent:8+folio*1.8+row*.7,shoot:rand(.7,2.8),alive:true,hit:0,diving:false,diveProgress:0
+    });
+  }
+  if(folio%3===0){
+    redactions.push({
+      x:400,y:74,baseX:400,baseY:74,type:3,name:FORM_NAMES[3],
+      script:'edict',phase:0,age:0,hp:14+folio*3,maxHp:14+folio*3,
+      amp:180,freq:.24,descent:3+folio*.45,shoot:.5,alive:true,hit:0,boss:true,diving:false,diveProgress:0
+    });
+    marginDirector.state='TRIBUNAL_CODA';
+    marginDirector.tension=95;
+    addFloatingText(400,180,'TRIBUNAL ERASER MANIFESTS!','#f0cc75',18);
+  }
+  if(folio>=5) unlockAchievement('deep_folio');
+  syncHud();
+}
+
+function syncHud(){
+  document.querySelector('#waveRead').textContent=ROMAN[(folio-1)%ROMAN.length]||String(folio);
+  document.querySelector('#chainRead').textContent=chain;
+  document.querySelector('#scoreRead').textContent=annotations;
+}
+
+function cast(){
+  if(state==='menu'||state==='lost'){reset(true);sfx('gate');return;}
+  if(state!=='playing'||sentinel.cool>0)return;
+  bolts.push({x:sentinel.x,y:sentinel.y-43,vy:-680,life:1.25,damage:1});
+  sentinel.cool=.15;sentinel.charge=.15;sfx('shoot');
+}
+
+function triggerDashParry(){
+  if(sentinel.dashCool>0||sentinel.isDashing)return;
+  sentinel.isDashing=true;
+  sentinel.dashTimer=0.20;
+  sentinel.parryWindow=0.14;
+  sentinel.dashCool=0.60;
+  
+  let dir=0;
+  if(keys.has('ArrowRight')||keys.has('d')||keys.has('KeyD'))dir=1;
+  else if(keys.has('ArrowLeft')||keys.has('a')||keys.has('KeyA'))dir=-1;
+  else dir=sentinel.vx!==0?Math.sign(sentinel.vx):1;
+  sentinel.dashDir=dir;
+  
+  sfx('parry');
+  burst(sentinel.x,sentinel.y,'#f0cc75',12);
+  addFloatingText(sentinel.x,sentinel.y-35,'WARD PARRY ROLL','#64eaff',12);
+}
+
+function triggerExcisionBeam(){
+  if(beamEnergy<50)return;
+  beamEnergy-=50;
+  activeBeam={x:sentinel.x,life:0.35,width:28};
+  freezeFrames=5;
+  shake=12;
+  sfx('beam');
+  unlockAchievement('excision_beam');
+
+  let hitCount=0;
+  for(const e of redactions){
+    if(e.alive&&Math.abs(e.x-sentinel.x)<48){
+      e.hp-=6;
+      e.hit=0.2;
+      hitCount++;
+      burst(e.x,e.y,'#f0cc75',16);
+      if(e.hp<=0)eraseEnemy(e);
+    }
+  }
+  addFloatingText(sentinel.x,sentinel.y-60,`EXCISION BEAM! [${hitCount} STRUCK]`,'#f0cc75',17);
+}
+
+function burst(x,y,color,count=12){
+  for(let i=0;i<count;i++){
+    const a=Math.random()*TAU,sp=rand(60,260);
+    particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:rand(.35,.85),color,size:rand(1,4)});
+  }
+  if(particles.length>280)particles.splice(0,particles.length-280);
+}
+
+function eraseEnemy(e){
+  e.alive=false;
+  const pts=e.boss?950:(e.type+1)*80+chain*6;
+  annotations+=pts;
+  chain++;
+  bestChain=Math.max(bestChain,chain);
+  beamEnergy=Math.min(100,beamEnergy+(e.boss?40:10));
+
+  if (e.boss) unlockAchievement('redaction_breaker');
+  if (chain >= 10) unlockAchievement('chain_master');
+  if (annotations >= 5000) unlockAchievement('grand_jurist');
+
+  burst(e.x,e.y,e.boss?'#ff426f':'#64eaff',e.boss?48:18);
+  sfx('explode');
+  shake=Math.min(14,shake+(e.boss?8:2));
+  addFloatingText(e.x,e.y-10,`+${pts}`,e.boss?'#ff426f':'#f0cc75',e.boss?16:13);
+  syncHud();
+}
+
+function update(dt){
+  time+=dt;
+  const pad=pollGamepad();
+
+  if(freezeFrames>0){freezeFrames--;return;}
+
+  if(sentinel.cool>0)sentinel.cool-=dt;
+  if(sentinel.charge>0)sentinel.charge-=dt;
+  if(sentinel.invuln>0)sentinel.invuln-=dt;
+  if(sentinel.dashCool>0)sentinel.dashCool-=dt;
+
+  if(activeBeam){
+    activeBeam.life-=dt;
+    if(activeBeam.life<=0)activeBeam=null;
+  }
+
+  // Dash & Parry Window
+  if(sentinel.isDashing){
+    sentinel.dashTimer-=dt;
+    sentinel.x+=sentinel.dashDir*780*dt;
+    if(sentinel.parryWindow>0)sentinel.parryWindow-=dt;
+    if(sentinel.dashTimer<=0){
+      sentinel.isDashing=false;
+      sentinel.parryWindow=0;
+    }
+  }
+
+  // Sentinel movement
+  let moveX=0;
+  if(keys.has('ArrowLeft')||keys.has('a')||keys.has('KeyA'))moveX-=1;
+  if(keys.has('ArrowRight')||keys.has('d')||keys.has('KeyD'))moveX+=1;
+  if(pad.dir!==0)moveX=pad.dir;
+  if(pointerX!==null)moveX=clamp((pointerX-sentinel.x)*0.08,-1,1);
+
+  if(!sentinel.isDashing){
+    sentinel.vx=moveX*360;
+    sentinel.x+=sentinel.vx*dt;
+  }
+  sentinel.x=clamp(sentinel.x,50,W-50);
+
+  if((keys.has('Space')||pointerFire||pad.fire)&&sentinel.cool<=0){
+    cast();
+  }
+
+  // Bolts
+  for(let i=bolts.length-1;i>=0;i--){
+    const b=bolts[i];
+    b.y+=b.vy*dt;
+    b.life-=dt;
+    for(const e of redactions){
+      if(e.alive&&hit(b,e,e.boss?42:24)){
+        e.hp-=b.damage;
+        e.hit=0.15;
+        b.life=0;
+        burst(b.x,b.y,'#f0cc75',8);
+        sfx('tick');
+        if(e.hp<=0)eraseEnemy(e);
+        break;
+      }
+    }
+    if(b.y<20||b.life<=0)bolts.splice(i,1);
+  }
+
+  // Reflected Bolts
+  for(let i=reflectedBolts.length-1;i>=0;i--){
+    const b=reflectedBolts[i];
+    b.y+=b.vy*dt;
+    b.life-=dt;
+    for(const e of redactions){
+      if(e.alive&&hit(b,e,e.boss?44:26)){
+        e.hp-=3;
+        e.hit=0.2;
+        b.life=0;
+        burst(b.x,b.y,'#64eaff',14);
+        if(e.hp<=0)eraseEnemy(e);
+        break;
+      }
+    }
+    if(b.y<20||b.life<=0)reflectedBolts.splice(i,1);
+  }
+
+  // Enemy movement & shooting
+  let living=0;
+  for(const e of redactions){
+    if(!e.alive)continue;
+    living++;
+    e.age+=dt;
+    e.hit=Math.max(0,e.hit-dt);
+    e.phase+=dt*e.freq*TAU;
+    e.x=e.baseX+Math.sin(e.phase)*e.amp;
+    e.y+=e.descent*dt*0.4;
+
+    e.shoot-=dt;
+    if(e.shoot<=0){
+      e.shoot=rand(1.5,4.5)-folio*0.1;
+      inkDrops.push({x:e.x,y:e.y+16,vy:rand(180,290)+folio*12,life:3.5});
+      sfx('tick');
+    }
+  }
+
+  // Check wave clear
+  if(living===0){
+    interlude+=dt;
+    if(interlude>1.2){
+      interlude=0;
+      if (!waveWardsLost) unlockAchievement('perfect_wave');
+      unlockAchievement('first_folio');
+      folio++;
+      spawnFolio();
+    }
+  }
+
+  // Ink drops vs Sentinel & Wards
+  for(let i=inkDrops.length-1;i>=0;i--){
+    const d=inkDrops[i];
+    d.y+=d.vy*dt;
+    d.life-=dt;
+
+    // Check Ward deflection
+    for(const w of wards){
+      if(w.hp>0&&hit(d,w,38)){
+        w.hp--;
+        w.hit=0.2;
+        d.life=0;
+        burst(d.x,d.y,'#f0cc75',8);
+        if(w.hp<=0) waveWardsLost=true;
+        break;
+      }
+    }
+
+    // Check Sentinel Parry
+    if(d.life>0&&sentinel.parryWindow>0&&hit(d,sentinel,44)){
+      d.life=0;
+      reflectedBolts.push({x:d.x,y:d.y,vy:-840,life:1.5});
+      burst(d.x,d.y,'#64eaff',20);
+      sfx('parry');
+      addFloatingText(sentinel.x,sentinel.y-45,'PARRY REFLECT! 3X','#64eaff',15);
+      unlockAchievement('ward_parry');
+      continue;
+    }
+
+    // Check Sentinel Hit
+    if(d.life>0&&sentinel.invuln<=0&&!sentinel.isDashing&&hit(d,sentinel,24)){
+      d.life=0;
+      integrity--;
+      sentinel.invuln=1.5;
+      shake=10;
+      flash=0.4;
+      chain=0;
+      waveWardsLost=true;
+      sfx('death');
+      burst(sentinel.x,sentinel.y,'#ff426f',24);
+      addFloatingText(sentinel.x,sentinel.y-30,'INTEGRITY BREACH!','#ff426f',16);
+      syncHud();
+      if(integrity<=0){
+        state='lost';
+        document.querySelector('#start').classList.remove('hidden');
+      }
+    }
+
+    if(d.y>H||d.life<=0)inkDrops.splice(i,1);
+  }
+
+  // Particles
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];
+    p.x+=p.vx*dt;p.y+=p.vy*dt;
+    p.vx*=0.97;p.vy*=0.97;
+    p.life-=dt;
+    if(p.life<=0)particles.splice(i,1);
+  }
+
+  // Floating text
+  for(let i=floatingTexts.length-1;i>=0;i--){
+    const ft=floatingTexts[i];
+    ft.y+=ft.vy;
+    ft.life-=dt*1.2;
+    if(ft.life<=0)floatingTexts.splice(i,1);
+  }
+}
+
+function draw(){
+  ctx.fillStyle='#05030b';
+  ctx.fillRect(0,0,W,H);
+
+  // Stars
+  stars.forEach(s=>{
+    ctx.fillStyle=`hsla(${s.h},80%,85%,${s.z*0.5})`;
+    ctx.fillRect(s.x,s.y,s.z*2,s.z*2);
+  });
+
+  // Wards
+  for(const w of wards){
+    if(w.hp>0){
+      const alpha=w.hp/w.max;
+      ctx.save();
+      ctx.strokeStyle=`rgba(240,204,117,${alpha})`;
+      ctx.lineWidth=3;
+      ctx.shadowColor='#f0cc75';ctx.shadowBlur=12;
+      ctx.beginPath();
+      ctx.arc(w.x,w.y,32,Math.PI*0.8,Math.PI*2.2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  // Excision Beam
+  if(activeBeam){
+    ctx.save();
+    ctx.fillStyle='rgba(240,204,117,0.75)';
+    ctx.shadowColor='#f0cc75';ctx.shadowBlur=28;
+    ctx.fillRect(activeBeam.x-activeBeam.width/2,0,activeBeam.width,H);
+    ctx.fillStyle='#fff';
+    ctx.fillRect(activeBeam.x-6,0,12,H);
+    ctx.restore();
+  }
+
+  // Bolts
+  ctx.save();
+  ctx.fillStyle='#f0cc75';
+  ctx.shadowColor='#f0cc75';ctx.shadowBlur=10;
+  for(const b of bolts){
+    ctx.fillRect(b.x-2,b.y-8,4,16);
+  }
+  ctx.fillStyle='#64eaff';
+  ctx.shadowColor='#64eaff';ctx.shadowBlur=16;
+  for(const b of reflectedBolts){
+    ctx.fillRect(b.x-3,b.y-10,6,20);
+  }
+  ctx.restore();
+
+  // Ink drops
+  ctx.save();
+  ctx.fillStyle='#ff426f';
+  ctx.shadowColor='#ff426f';ctx.shadowBlur=10;
+  for(const d of inkDrops){
+    ctx.beginPath();ctx.arc(d.x,d.y,5,0,TAU);ctx.fill();
+  }
+  ctx.restore();
+
+  // Redactions (Enemies)
+  for(const e of redactions){
+    if(!e.alive)continue;
+    ctx.save();
+    ctx.translate(e.x,e.y);
+    const color=e.boss?'#ff426f':(e.type===2?'#f0cc75':'#64eaff');
+    ctx.strokeStyle=color;
+    ctx.lineWidth=2;
+    ctx.fillStyle=e.hit>0?'#fff':`rgba(${e.boss?'255,66,111':'100,234,255'},0.18)`;
+    ctx.shadowColor=color;ctx.shadowBlur=14;
+    const s=e.boss?32:16;
+    ctx.beginPath();
+    ctx.moveTo(0,-s);ctx.lineTo(s,0);ctx.lineTo(0,s);ctx.lineTo(-s,0);
+    ctx.closePath();
+    ctx.fill();ctx.stroke();
+    ctx.restore();
+  }
+
+  // Sentinel (Player)
+  if(state==='playing'||state==='lost'){
+    ctx.save();
+    ctx.translate(sentinel.x,sentinel.y);
+    if(sentinel.isDashing){
+      ctx.shadowColor='#64eaff';ctx.shadowBlur=24;
+      ctx.strokeStyle='#64eaff';ctx.lineWidth=3;
+      ctx.strokeRect(-28,-28,56,56);
+    }
+    ctx.fillStyle=sentinel.invuln>0&&Math.floor(time*20)%2===0?'rgba(255,255,255,0.2)':'#f0cc75';
+    ctx.shadowColor='#f0cc75';ctx.shadowBlur=16;
+    ctx.beginPath();
+    ctx.moveTo(0,-24);ctx.lineTo(20,16);ctx.lineTo(0,8);ctx.lineTo(-20,16);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Particles
+  for(const p of particles){
+    ctx.fillStyle=p.color;
+    ctx.globalAlpha=Math.max(0,p.life);
+    ctx.fillRect(p.x,p.y,p.size,p.size);
+  }
+  ctx.globalAlpha=1;
+
+  // Floating text
+  for(const ft of floatingTexts){
+    ctx.save();
+    ctx.font=`bold ${ft.size}px ui-monospace, monospace`;
+    ctx.fillStyle=ft.color;
+    ctx.shadowColor=ft.color;ctx.shadowBlur=8;
+    ctx.globalAlpha=Math.max(0,ft.life);
+    ctx.fillText(ft.text,ft.x-40,ft.y);
+    ctx.restore();
+  }
+
+  // Overlay Menu / Game Over
+  if(state==='menu'){
+    ctx.fillStyle='rgba(5,3,11,0.85)';
+    ctx.fillRect(0,0,W,H);
+    ctx.textAlign='center';
+    ctx.font='bold 34px Georgia';
+    ctx.fillStyle='#f0cc75';ctx.shadowColor='#f0cc75';ctx.shadowBlur=20;
+    ctx.fillText('D H A R M A   I N V A D E R S',W/2,H/2-30);
+    ctx.font='14px ui-monospace, monospace';
+    ctx.fillStyle='#64eaff';ctx.shadowBlur=8;
+    ctx.fillText('XBOX 360 TOURNAMENT EDITION 2.0',W/2,H/2+10);
+    ctx.font='12px ui-monospace, monospace';
+    ctx.fillStyle='#d8caaf';
+    ctx.fillText('PRESS [A] / SPACE TO OPEN THE MARGIN',W/2,H/2+50);
+  }else if(state==='lost'){
+    ctx.fillStyle='rgba(5,3,11,0.85)';
+    ctx.fillRect(0,0,W,H);
+    ctx.textAlign='center';
+    ctx.font='bold 32px Georgia';
+    ctx.fillStyle='#ff426f';ctx.shadowColor='#ff426f';ctx.shadowBlur=20;
+    ctx.fillText('SCRIPT ENVIRONMENT COLLAPSED',W/2,H/2-30);
+    ctx.font='16px ui-monospace, monospace';
+    ctx.fillStyle='#f0cc75';ctx.shadowBlur=8;
+    ctx.fillText(`FINAL RESIDUE: ${annotations} POINTS`,W/2,H/2+10);
+    ctx.font='12px ui-monospace, monospace';
+    ctx.fillStyle='#64eaff';
+    ctx.fillText('PRESS [A] / SPACE TO RE-INSCRIBE',W/2,H/2+50);
+  }
+
+  // CRT Scanlines
+  if(crtEnabled){
+    ctx.fillStyle='rgba(0,0,0,0.06)';
+    for(let y=0;y<H;y+=3){
+      ctx.fillRect(0,y,W,1);
+    }
+  }
+}
+
+function loop(now){
+  const dt=clamp((now-last)/1000,0,0.033);
+  last=now;
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+window.addEventListener('keydown',e=>{
+  initAudio();
+  keys.add(e.code);
+  if(e.code==='Space'||e.code==='Enter'){
+    if(state==='menu'||state==='lost')reset(true);
+  }
+  if(e.code==='ShiftLeft'||e.code==='ShiftRight'||e.code==='KeyC')triggerDashParry();
+  if(e.code==='KeyQ')triggerExcisionBeam();
+  if(e.code==='KeyY')toggleCRT();
+});
+window.addEventListener('keyup',e=>keys.delete(e.code));
+document.querySelector('#start').addEventListener('click',()=>{reset(true);});
+
+makeStars();
+makeWards();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

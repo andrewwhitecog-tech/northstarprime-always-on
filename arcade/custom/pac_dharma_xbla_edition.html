@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PAC DHARMA : XBLA TOURNAMENT EDITION 2.0</title>
+<style>
+:root {
+  --x-green: #5dc312;
+  --x-dark-green: #2a6808;
+  --x-silver: #d9dfde;
+  --x-dark: #07090d;
+  --x-cyan: #2fe6ff;
+  --x-gold: #efc76b;
+  --x-crimson: #ff2a5f;
+  --x-text-glow: rgba(93, 195, 18, 0.45);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+body {
+  background: radial-gradient(circle at 50% 10%, #151a24 0%, #07090d 65%, #020305 100%);
+  color: #fff;
+  font-family: "Segoe UI", "Trebuchet MS", Arial, sans-serif;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* CRT Scanline Overlay */
+.crt-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.28) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+  background-size: 100% 3px, 6px 100%;
+  pointer-events: none;
+  z-index: 999;
+  opacity: 0.65;
+  transition: opacity 0.3s;
+}
+.crt-overlay.disabled { opacity: 0; }
+
+/* Top Bar Header */
+header {
+  height: 56px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 24px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 100%);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  z-index: 100;
+  flex-shrink: 0;
+}
+.gamertag-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 5px 16px 5px 8px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+.avatar-orb {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #5dc312, #2a6808);
+  border: 2px solid #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 14px; color: #fff;
+}
+.gamertag-name { font-size: 13px; font-weight: 700; color: #fff; }
+.gamerscore { font-size: 12px; color: #5dc312; font-weight: 800; display: flex; align-items: center; gap: 4px; }
+.g-icon {
+  background: #5dc312; color: #000;
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 900;
+}
+
+.ring-of-light {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: #111;
+  border: 2px solid #333;
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 14px rgba(93, 195, 18, 0.4);
+}
+.ring-quadrant {
+  position: absolute;
+  width: 9px; height: 9px;
+  background: #5dc312;
+  border-radius: 2px;
+  box-shadow: 0 0 8px #5dc312;
+}
+.quadrant-1 { top: 3px; left: 3px; }
+.xbox-nexus-x { font-size: 13px; font-weight: 900; color: #fff; opacity: 0.85; z-index: 2; }
+
+.system-status { display: flex; gap: 12px; align-items: center; font-size: 11px; }
+.status-pill {
+  background: rgba(0, 0, 0, 0.4);
+  padding: 4px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #d9dfde;
+}
+.status-pill.active {
+  background: rgba(93, 195, 18, 0.15);
+  border-color: #5dc312;
+  color: #5dc312;
+  font-weight: 700;
+  box-shadow: 0 0 10px rgba(93, 195, 18, 0.3);
+}
+
+.crypto-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(47, 230, 255, 0.12);
+  border: 1px solid #2fe6ff;
+  color: #2fe6ff;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: all 0.2s;
+}
+.crypto-btn:hover { background: rgba(47, 230, 255, 0.25); box-shadow: 0 0 12px rgba(47, 230, 255, 0.4); }
+
+/* Main Arena Viewport */
+#arena-viewport {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  overflow: hidden;
+}
+canvas#gameCanvas {
+  display: block;
+  width: min(588px, calc(100vw - 16px));
+  height: auto;
+  max-height: calc(100vh - 110px);
+  aspect-ratio: 21/25;
+  object-fit: contain;
+  touch-action: none;
+  border: 2px solid rgba(239, 199, 107, 0.4);
+  border-radius: 8px;
+  box-shadow: 0 0 35px rgba(80, 230, 255, 0.2), 0 20px 60px #000;
+  background: #020108;
+}
+
+/* Controller HUD Footer */
+footer.ctrl-hud {
+  height: 44px;
+  background: rgba(6, 9, 12, 0.9);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid rgba(255,255,255,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 16px;
+  font-size: 11px;
+  color: #a5f3fc;
+  letter-spacing: 1px;
+  z-index: 100;
+  flex-shrink: 0;
+}
+.btn-prompt { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; }
+.btn-icon {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 10px; color: #000;
+  box-shadow: 0 0 6px rgba(0,0,0,0.5);
+}
+.btn-a { background: #5dc312; color: #000; }
+.btn-b { background: #ff2a5f; color: #fff; }
+.btn-x { background: #2fe6ff; color: #000; }
+.btn-y { background: #ffe45c; color: #000; }
+.btn-trig { background: #333; color: #fff; border: 1px solid #777; border-radius: 4px; padding: 1px 4px; font-size: 9px; }
+
+/* Achievement Toast Notification */
+#achievementToast {
+  position: fixed;
+  bottom: -90px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 440px;
+  height: 68px;
+  background: linear-gradient(90deg, #1b2416 0%, #0d120a 100%);
+  border: 2px solid #5dc312;
+  border-radius: 34px;
+  box-shadow: 0 0 25px rgba(93, 195, 18, 0.6), 0 10px 30px rgba(0,0,0,0.8);
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  gap: 14px;
+  z-index: 1000;
+  transition: bottom 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  pointer-events: none;
+}
+#achievementToast.show { bottom: 60px; }
+.achieve-orb {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #88ff3b, #2a6808);
+  border: 2px solid #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 18px; color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 0 10px #5dc312;
+}
+.achieve-text { display: flex; flex-direction: column; overflow: hidden; }
+.achieve-title { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #5dc312; font-weight: 800; }
+.achieve-desc { font-size: 14px; font-weight: 700; color: #fff; white-space: nowrap; text-overflow: ellipsis; }
+.achieve-score { margin-left: auto; font-size: 14px; font-weight: 900; color: #5dc312; display: flex; align-items: center; gap: 4px; }
+</style>
+</head>
+<body>
+
+<div id="crtOverlay" class="crt-overlay"></div>
+
+<header>
+  <div class="gamertag-badge">
+    <div class="avatar-orb">A</div>
+    <div class="gamertag-name">ANDRE COG</div>
+    <div class="gamerscore"><span class="g-icon">G</span> <span id="gsTally">126,500</span></div>
+  </div>
+
+  <div class="ring-of-light">
+    <div class="ring-quadrant quadrant-1"></div>
+    <div class="xbox-nexus-x">X</div>
+  </div>
+
+  <div class="system-status">
+    <span id="ctrlStatusBadge" class="status-pill">[KEYBOARD / MOUSE READY]</span>
+    <button id="crtToggleBtn" class="status-pill" style="cursor:pointer; background:rgba(255,255,255,0.06);">[CRT: ON]</button>
+    <a href="/crypto?game=pac-dharma-xbla&pane=arcade-pane" target="_blank" class="crypto-btn">SpaceCash Attest</a>
+  </div>
+</header>
+
+<div id="arena-viewport">
+  <canvas id="gameCanvas" width="588" height="704"></canvas>
+</div>
+
+<footer class="ctrl-hud">
+  <span class="btn-prompt"><span class="btn-trig">L-STICK / D-PAD</span> STEER PILGRIM</span>
+  <span class="btn-prompt"><span class="btn-icon btn-a">A</span> / <span class="btn-trig">RT</span> PHASE PARRY</span>
+  <span class="btn-prompt"><span class="btn-icon btn-x">X</span> / <span class="btn-trig">LB</span> MANTRA RING</span>
+  <span class="btn-prompt"><span class="btn-icon btn-y">Y</span> / <span class="btn-trig">LT</span> DHARMA PULSE</span>
+  <span class="btn-prompt"><span class="btn-trig">BACK</span> CRT SHADER</span>
+  <span class="btn-prompt"><span class="btn-trig">START</span> PAUSE</span>
+</footer>
+
+<!-- Achievement Toast -->
+<div id="achievementToast">
+  <div class="achieve-orb">X</div>
+  <div class="achieve-text">
+    <span class="achieve-title">Achievement Unlocked</span>
+    <span id="achieveName" class="achieve-desc">First Gate</span>
+  </div>
+  <div class="achieve-score"><span class="g-icon">G</span> <span id="achievePts">10</span></div>
+</div>
+
+<script>
+// ============================================================================
+// PAC DHARMA : XBLA TOURNAMENT EDITION 2.0
+// Labyrinth Predator AI + Gamepad API + Dual-Rumble Haptics
+// 200G Achievement Engine + Web Audio 432Hz Synthesizer + Zero Emojis
+// ============================================================================
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+let baseGamerscore = 126500;
+let earnedGamerscore = 0;
+const gsTallyEl = document.getElementById('gsTally');
+const ctrlStatusBadge = document.getElementById('ctrlStatusBadge');
+const crtOverlay = document.getElementById('crtOverlay');
+const crtToggleBtn = document.getElementById('crtToggleBtn');
+
+let crtEnabled = true;
+crtToggleBtn.addEventListener('click', () => {
+  crtEnabled = !crtEnabled;
+  crtOverlay.classList.toggle('disabled', !crtEnabled);
+  crtToggleBtn.innerText = crtEnabled ? '[CRT: ON]' : '[CRT: OFF]';
+});
+
+// --- 200G Achievement Manifest ---
+const ACHIEVEMENTS = [
+  { id: 'first_gate', name: 'First Gate', desc: 'Consume your first Dharma Power Orb.', points: 10, unlocked: false },
+  { id: 'purification_parry', name: 'Purification Parry', desc: 'Execute a frame-perfect parry against an aggressive phantom predator.', points: 25, unlocked: false },
+  { id: 'mantra_shockwave', name: 'Mantra Shockwave', desc: 'Repel 3 phantoms simultaneously using the Mantra Ring.', points: 30, unlocked: false },
+  { id: 'labyrinth_pilgrim', name: 'Labyrinth Pilgrim', desc: 'Clear 3 complete gate labyrinths without losing a life.', points: 35, unlocked: false },
+  { id: 'phantom_feaster', name: 'Phantom Feaster', desc: 'Consume all 4 vulnerable phantoms in a single power cycle.', points: 40, unlocked: false },
+  { id: 'dharma_sovereign', name: 'Dharma Sovereign', desc: 'Achieve a tournament score of 50,000 karma points.', points: 60, unlocked: false }
+];
+
+function loadAchievements() {
+  try {
+    const saved = localStorage.getItem('xbla_pac_dharma_achievements');
+    if (saved) {
+      const ids = JSON.parse(saved);
+      ACHIEVEMENTS.forEach(a => {
+        if (ids.includes(a.id)) {
+          a.unlocked = true;
+          earnedGamerscore += a.points;
+        }
+      });
+      gsTallyEl.innerText = (baseGamerscore + earnedGamerscore).toLocaleString();
+    }
+  } catch (e) {}
+}
+loadAchievements();
+
+function saveAchievements() {
+  try {
+    const unlockedIds = ACHIEVEMENTS.filter(a => a.unlocked).map(a => a.id);
+    localStorage.setItem('xbla_pac_dharma_achievements', JSON.stringify(unlockedIds));
+  } catch (e) {}
+}
+
+function unlockAchievement(id) {
+  const ach = ACHIEVEMENTS.find(a => a.id === id);
+  if (!ach || ach.unlocked) return;
+  ach.unlocked = true;
+  earnedGamerscore += ach.points;
+  gsTallyEl.innerText = (baseGamerscore + earnedGamerscore).toLocaleString();
+  saveAchievements();
+
+  // Play authentic achievement chimes (587.33 Hz -> 880 Hz sine glissando)
+  playAchievementChime();
+  triggerGamepadRumble(120, 0.35, 0.65);
+  setTimeout(() => triggerGamepadRumble(120, 0.45, 0.75), 180);
+
+  // Show Toast
+  const toast = document.getElementById('achievementToast');
+  document.getElementById('achieveName').innerText = ach.name;
+  document.getElementById('achievePts').innerText = ach.points;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 4500);
+}
+
+// --- Web Audio Synthesizer (Offline-First) ---
+let audioCtx = null;
+function initAudio() {
+  if (!audioCtx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) audioCtx = new AC();
+  }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playAchievementChime() {
+  initAudio();
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  try {
+    const osc1 = audioCtx.createOscillator();
+    const osc2 = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc1.type = 'sine'; osc2.type = 'triangle';
+    osc1.frequency.setValueAtTime(587.33, now); // D5
+    osc1.frequency.exponentialRampToValueAtTime(880.00, now + 0.18); // A5
+    osc2.frequency.setValueAtTime(880.00, now + 0.18);
+    osc2.frequency.exponentialRampToValueAtTime(1174.66, now + 0.45); // D6
+    g.gain.setValueAtTime(0.35, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+    osc1.connect(g); osc2.connect(g); g.connect(audioCtx.destination);
+    osc1.start(now); osc1.stop(now + 0.22);
+    osc2.start(now + 0.18); osc2.stop(now + 0.7);
+  } catch (e) {}
+}
+
+function playTone(freq, dur, type = 'sine', gain = 0.15, slide = null) {
+  initAudio();
+  if (!audioCtx) return;
+  try {
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    if (slide) osc.frequency.exponentialRampToValueAtTime(Math.max(10, slide), audioCtx.currentTime + dur);
+    g.gain.setValueAtTime(gain, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+    osc.connect(g); g.connect(audioCtx.destination);
+    osc.start(); osc.stop(audioCtx.currentTime + dur);
+  } catch (e) {}
+}
+
+// Gamepad API & Dual-Rumble Haptics
+let gamepadConnected = false;
+let prevGpButtons = {};
+
+window.addEventListener('gamepadconnected', () => {
+  gamepadConnected = true;
+  ctrlStatusBadge.innerText = '[XBOX 360 CONTROLLER ACTIVE]';
+  ctrlStatusBadge.classList.add('active');
+  triggerGamepadRumble(150, 0.45, 0.25);
+});
+
+window.addEventListener('gamepaddisconnected', () => {
+  gamepadConnected = false;
+  ctrlStatusBadge.innerText = '[KEYBOARD / MOUSE READY]';
+  ctrlStatusBadge.classList.remove('active');
+});
+
+function triggerGamepadRumble(durationMs, strongMag, weakMag) {
+  try {
+    const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+    for (const gp of gamepads) {
+      if (gp && gp.vibrationActuator && gp.vibrationActuator.playEffect) {
+        gp.vibrationActuator.playEffect('dual-rumble', {
+          startDelay: 0,
+          duration: durationMs,
+          weakMagnitude: weakMag || 0,
+          strongMagnitude: strongMag || 0
+        }).catch(() => {});
+      }
+    }
+  } catch (e) {}
+}
+
+// Visual FX Engine
+const FX = { shake: 0, sx: 0, sy: 0, flash: 0, flashCol: '255,255,255' };
+function fxShake(m) { FX.shake = Math.max(FX.shake, Math.min(18, m)); }
+function fxFlash(a, col) { if (a >= FX.flash) { FX.flash = Math.min(0.6, a); FX.flashCol = col || '255,255,255'; } }
+function fxUpdate() {
+  if (FX.shake > 0.15) {
+    FX.sx = (Math.random() * 2 - 1) * FX.shake;
+    FX.sy = (Math.random() * 2 - 1) * FX.shake;
+    FX.shake *= 0.86;
+  } else {
+    FX.shake = 0; FX.sx = 0; FX.sy = 0;
+  }
+  FX.flash *= 0.85;
+  if (FX.flash < 0.012) FX.flash = 0;
+}
+
+// Game State Constants & Labyrinth Generation
+const TILE = 28, COLS = 21, ROWS = 23;
+const STATE = { MENU: 0, PLAY: 1, DEAD: 2 };
+let state = STATE.MENU;
+let highScore = parseInt(localStorage.getItem('pac_dharma_hi')) || 0;
+
+let maze, player, ghosts, dotsLeft, powerTimer, lives, score, level;
+let parryCooldown = 0, parryActive = 0;
+let mantraEnergy = 35, activeMantra = null;
+let floatingTexts = [];
+let phantomsEatenThisCycle = 0;
+
+const PREDATOR_CAST = [
+  { name: 'Margin Hound', color: '#2fe6ff', mode: 'chase', x: 10, y: 10 },
+  { name: 'Gloss Eater', color: '#ff65d7', mode: 'ambush', x: 9, y: 11 },
+  { name: 'Redaction Bishop', color: '#ff2a5f', mode: 'random', x: 11, y: 11 },
+  { name: 'Mirror Argument', color: '#ffe45c', mode: 'patrol', x: 10, y: 12 }
+];
+
+function generateLabyrinth() {
+  const m = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (r === 0 || r === ROWS - 1 || c === 0 || c === COLS - 1) m[r][c] = 1; // Wall
+      else if (r % 2 === 0 && c % 2 === 0) m[r][c] = 1; // Wall pillars
+      else m[r][c] = 2; // Dot
+    }
+  }
+  // Central Ghost Sanctum
+  for (let r = 9; r <= 13; r++) {
+    for (let c = 8; c <= 12; c++) {
+      m[r][c] = 4; // Sanctum interior
+    }
+  }
+  // Power Orbs at corners
+  m[1][1] = 3; m[1][COLS - 2] = 3;
+  m[ROWS - 2][1] = 3; m[ROWS - 2][COLS - 2] = 3;
+  return m;
+}
+
+function addFloatingText(x, y, text, color = '#efc76b', size = 13) {
+  floatingTexts.push({ x, y, text, color, size, life: 1.0, vy: -1.0 });
+}
+
+function initGame() {
+  maze = generateLabyrinth();
+  dotsLeft = 0;
+  maze.forEach(r => r.forEach(v => { if (v === 2 || v === 3) dotsLeft++; }));
+
+  player = {
+    x: 10 * TILE + TILE / 2, y: 16 * TILE + TILE / 2,
+    dx: 0, dy: 0, nextDx: 0, nextDy: 0,
+    mouth: 0, mouthDir: 1
+  };
+
+  ghosts = PREDATOR_CAST.map(p => ({
+    x: p.x * TILE + TILE / 2, y: p.y * TILE + TILE / 2,
+    color: p.color, mode: p.mode,
+    dx: 0, dy: -1, scared: 0
+  }));
+
+  powerTimer = 0;
+  score = 0;
+  lives = 3;
+  level = 1;
+  parryCooldown = 0;
+  parryActive = 0;
+  mantraEnergy = 40;
+  activeMantra = null;
+  floatingTexts = [];
+  phantomsEatenThisCycle = 0;
+}
+
+// Keyboard Listeners
+const keys = {};
+document.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  initAudio();
+  if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'KeyX', 'KeyY'].includes(e.code)) e.preventDefault();
+
+  if (e.code === 'Space') {
+    if (state === STATE.MENU) { initGame(); state = STATE.PLAY; }
+    else if (state === STATE.DEAD) { state = STATE.MENU; }
+  }
+  if (state === STATE.PLAY) {
+    if (e.code === 'ArrowUp') { player.nextDx = 0; player.nextDy = -2; }
+    if (e.code === 'ArrowDown') { player.nextDx = 0; player.nextDy = 2; }
+    if (e.code === 'ArrowLeft') { player.nextDx = -2; player.nextDy = 0; }
+    if (e.code === 'ArrowRight') { player.nextDx = 2; player.nextDy = 0; }
+    if (e.code === 'ShiftLeft') triggerParry();
+    if (e.code === 'KeyX') triggerMantra();
+    if (e.code === 'KeyY') triggerPulse();
+  }
+});
+document.addEventListener('keyup', e => keys[e.code] = false);
+
+// Gamepad Polling
+function pollGamepad() {
+  const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+  if (!gamepads || !gamepads[0]) return;
+  const gp = gamepads[0];
+
+  const ax0 = gp.axes[0] || 0;
+  const ax1 = gp.axes[1] || 0;
+  const dpadUp = gp.buttons[12] && gp.buttons[12].pressed;
+  const dpadDown = gp.buttons[13] && gp.buttons[13].pressed;
+  const dpadLeft = gp.buttons[14] && gp.buttons[14].pressed;
+  const dpadRight = gp.buttons[15] && gp.buttons[15].pressed;
+
+  if (state === STATE.PLAY) {
+    if (ax1 < -0.4 || dpadUp) { player.nextDx = 0; player.nextDy = -2; }
+    else if (ax1 > 0.4 || dpadDown) { player.nextDx = 0; player.nextDy = 2; }
+    else if (ax0 < -0.4 || dpadLeft) { player.nextDx = -2; player.nextDy = 0; }
+    else if (ax0 > 0.4 || dpadRight) { player.nextDx = 2; player.nextDy = 0; }
+  }
+
+  const btnA = gp.buttons[0] && gp.buttons[0].pressed;
+  const btnB = gp.buttons[1] && gp.buttons[1].pressed;
+  const btnX = gp.buttons[2] && gp.buttons[2].pressed;
+  const btnY = gp.buttons[3] && gp.buttons[3].pressed;
+  const btnLB = gp.buttons[4] && gp.buttons[4].pressed;
+  const btnRB = gp.buttons[5] && gp.buttons[5].pressed;
+  const btnLT = (gp.buttons[6] && gp.buttons[6].pressed) || (gp.buttons[6] && gp.buttons[6].value > 0.3);
+  const btnRT = (gp.buttons[7] && gp.buttons[7].pressed) || (gp.buttons[7] && gp.buttons[7].value > 0.3);
+  const btnStart = gp.buttons[9] && gp.buttons[9].pressed;
+  const btnBack = gp.buttons[8] && gp.buttons[8].pressed;
+
+  if (btnStart && !prevGpButtons.start) {
+    initAudio();
+    if (state === STATE.MENU) { initGame(); state = STATE.PLAY; }
+    else if (state === STATE.DEAD) { state = STATE.MENU; }
+  }
+
+  if (btnBack && !prevGpButtons.back) {
+    crtToggleBtn.click();
+  }
+
+  if (state === STATE.PLAY) {
+    if ((btnA || btnRT) && !prevGpButtons.a && !prevGpButtons.rt) triggerParry();
+    if ((btnX || btnLB) && !prevGpButtons.x && !prevGpButtons.lb) triggerMantra();
+    if ((btnY || btnLT) && !prevGpButtons.y && !prevGpButtons.lt) triggerPulse();
+  }
+
+  prevGpButtons = { a: btnA, b: btnB, x: btnX, y: btnY, lb: btnLB, rb: btnRB, lt: btnLT, rt: btnRT, start: btnStart, back: btnBack };
+}
+
+function triggerParry() {
+  if (parryCooldown > 0) return;
+  parryCooldown = 80;
+  parryActive = 18;
+  playTone(880, 0.2, 'sine', 0.25, 1760);
+  fxFlash(0.3, '47,230,255');
+  fxShake(6);
+  triggerGamepadRumble(100, 0.45, 0.6);
+  addFloatingText(player.x, player.y - 18, "PURIFICATION PARRY", "#2fe6ff", 14);
+}
+
+function triggerMantra() {
+  if (mantraEnergy < 30 || activeMantra) return;
+  mantraEnergy -= 30;
+  activeMantra = { x: player.x, y: player.y, r: 10, maxR: 120, life: 35 };
+  playTone(240, 0.4, 'triangle', 0.35, 55);
+  fxShake(10);
+  triggerGamepadRumble(250, 0.75, 0.6);
+
+  // Check how many repelled
+  let repelled = 0;
+  ghosts.forEach(g => {
+    if (Math.hypot(g.x - player.x, g.y - player.y) < 130) {
+      g.dx = -g.dx; g.dy = -g.dy;
+      repelled++;
+    }
+  });
+  if (repelled >= 3) unlockAchievement('mantra_shockwave');
+}
+
+function triggerPulse() {
+  if (mantraEnergy < 50) return;
+  mantraEnergy -= 50;
+  playTone(987, 0.25, 'sine', 0.25, 1318);
+  powerTimer = 300;
+  phantomsEatenThisCycle = 0;
+  ghosts.forEach(g => g.scared = 300);
+  unlockAchievement('first_gate');
+  addFloatingText(player.x, player.y - 20, "DHARMA AWAKENING", "#ffe45c", 16);
+  triggerGamepadRumble(150, 0.5, 0.7);
+}
+
+// Main Simulation Loop
+function update() {
+  pollGamepad();
+  fxUpdate();
+
+  if (state !== STATE.PLAY) return;
+
+  if (parryCooldown > 0) parryCooldown--;
+  if (parryActive > 0) parryActive--;
+  if (powerTimer > 0) powerTimer--;
+  if (mantraEnergy < 100) mantraEnergy += 0.06;
+
+  // Player Turning & Grid Snapping
+  const c = Math.floor(player.x / TILE);
+  const r = Math.floor(player.y / TILE);
+
+  if (player.nextDx !== 0 || player.nextDy !== 0) {
+    const nextCol = c + Math.sign(player.nextDx);
+    const nextRow = r + Math.sign(player.nextDy);
+    if (maze[nextRow] && maze[nextRow][nextCol] !== 1) {
+      player.dx = player.nextDx;
+      player.dy = player.nextDy;
+      player.nextDx = 0;
+      player.nextDy = 0;
+    }
+  }
+
+  // Move Player
+  const targetCol = c + Math.sign(player.dx);
+  const targetRow = r + Math.sign(player.dy);
+  if (maze[targetRow] && maze[targetRow][targetCol] !== 1) {
+    player.x += player.dx;
+    player.y += player.dy;
+  }
+
+  // Mouth Animation
+  player.mouth += 0.08 * player.mouthDir;
+  if (player.mouth > 0.45) player.mouthDir = -1;
+  if (player.mouth < 0.02) player.mouthDir = 1;
+
+  // Consume Dots
+  if (maze[r] && maze[r][c] === 2) {
+    maze[r][c] = 0;
+    dotsLeft--;
+    score += 10;
+    playTone(520, 0.03, 'sine', 0.06);
+    triggerGamepadRumble(20, 0.02, 0.06);
+  } else if (maze[r] && maze[r][c] === 3) {
+    maze[r][c] = 0;
+    dotsLeft--;
+    score += 100;
+    powerTimer = 350;
+    phantomsEatenThisCycle = 0;
+    ghosts.forEach(g => g.scared = 350);
+    unlockAchievement('first_gate');
+    playTone(320, 0.25, 'sawtooth', 0.18, 880);
+    triggerGamepadRumble(140, 0.4, 0.6);
+  }
+
+  // Move Ghosts
+  ghosts.forEach(g => {
+    if (g.scared > 0) g.scared--;
+    const gc = Math.floor(g.x / TILE);
+    const gr = Math.floor(g.y / TILE);
+
+    // AI Direction Selection at intersections
+    if (Math.random() < 0.1) {
+      const dirs = [{ dx: 0, dy: -1.5 }, { dx: 0, dy: 1.5 }, { dx: -1.5, dy: 0 }, { dx: 1.5, dy: 0 }];
+      const valid = dirs.filter(d => maze[gr + Math.sign(d.dy)] && maze[gr + Math.sign(d.dy)][gc + Math.sign(d.dx)] !== 1);
+      if (valid.length) {
+        const choice = valid[Math.floor(Math.random() * valid.length)];
+        g.dx = choice.dx; g.dy = choice.dy;
+      }
+    }
+    g.x += g.dx; g.y += g.dy;
+
+    // Player Collision
+    if (Math.hypot(g.x - player.x, g.y - player.y) < TILE * 0.75) {
+      if (parryActive > 0) {
+        // Frame-Perfect Parry!
+        g.x = 10 * TILE + TILE / 2; g.y = 11 * TILE + TILE / 2;
+        unlockAchievement('purification_parry');
+        score += 300;
+        addFloatingText(player.x, player.y - 20, "PARRY REFLECT!", "#2fe6ff", 16);
+        playTone(1318, 0.3, 'sine', 0.3, 2637);
+        triggerGamepadRumble(140, 0.5, 0.7);
+      } else if (g.scared > 0) {
+        // Eat Ghost
+        g.x = 10 * TILE + TILE / 2; g.y = 11 * TILE + TILE / 2;
+        g.scared = 0;
+        phantomsEatenThisCycle++;
+        score += 200 * phantomsEatenThisCycle;
+        playTone(987, 0.2, 'sine', 0.2, 1318);
+        triggerGamepadRumble(100, 0.35, 0.5);
+        if (phantomsEatenThisCycle >= 4) unlockAchievement('phantom_feaster');
+      } else {
+        // Player Death
+        killPlayer();
+      }
+    }
+  });
+
+  // Check Wave Clear
+  if (dotsLeft <= 0) {
+    level++;
+    addFloatingText(W / 2, H / 2, `GATE ${level} CLEARED`, "#5dc312", 22);
+    if (level >= 3 && lives === 3) unlockAchievement('labyrinth_pilgrim');
+    initGame();
+  }
+
+  if (score >= 50000) unlockAchievement('dharma_sovereign');
+  if (score > highScore) { highScore = score; localStorage.setItem('pac_dharma_hi', highScore); }
+}
+
+function killPlayer() {
+  lives--;
+  playTone(140, 0.35, 'sawtooth', 0.3, 30);
+  fxShake(14);
+  fxFlash(0.4, '255,42,95');
+  triggerGamepadRumble(400, 0.85, 0.7);
+
+  if (lives <= 0) {
+    state = STATE.DEAD;
+  } else {
+    player.x = 10 * TILE + TILE / 2;
+    player.y = 16 * TILE + TILE / 2;
+    player.dx = 0; player.dy = 0;
+  }
+}
+
+// Render Loop
+function draw() {
+  ctx.save();
+  ctx.translate(FX.sx, FX.sy);
+
+  // Background
+  ctx.fillStyle = '#020108';
+  ctx.fillRect(0, 0, W, H);
+
+  if (state === STATE.MENU) {
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#efc76b';
+    ctx.font = 'bold 36px "Segoe UI", sans-serif';
+    ctx.fillText("PAC DHARMA : XBLA 2.0", W / 2, H / 2 - 50);
+
+    ctx.fillStyle = '#5dc312';
+    ctx.font = '700 16px "Segoe UI", sans-serif';
+    ctx.fillText("XBOX 360 LIVE ARCADE TOURNAMENT EDITION", W / 2, H / 2 - 16);
+
+    ctx.fillStyle = '#d9dfde';
+    ctx.font = '14px monospace';
+    ctx.fillText("PRESS (A) OR [SPACE] TO COMMENCE RUN", W / 2, H / 2 + 35);
+    ctx.fillText("HIGH KARMA: " + highScore.toLocaleString(), W / 2, H / 2 + 75);
+    ctx.restore();
+    return;
+  }
+
+  // Draw Labyrinth
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const v = maze[r][c];
+      const x = c * TILE, y = r * TILE;
+
+      if (v === 1) {
+        ctx.fillStyle = '#1e1b4b';
+        ctx.strokeStyle = '#6366f1';
+        ctx.lineWidth = 1;
+        ctx.fillRect(x, y, TILE, TILE);
+        ctx.strokeRect(x, y, TILE, TILE);
+      } else if (v === 2) {
+        ctx.fillStyle = '#ffe45c';
+        ctx.beginPath();
+        ctx.arc(x + TILE / 2, y + TILE / 2, 3, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (v === 3) {
+        ctx.fillStyle = '#2fe6ff';
+        ctx.beginPath();
+        ctx.arc(x + TILE / 2, y + TILE / 2, 7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  // Draw Player (Pilgrim)
+  ctx.fillStyle = parryActive > 0 ? '#2fe6ff' : '#ffe45c';
+  ctx.beginPath();
+  let baseAngle = player.dx < 0 ? Math.PI : player.dy < 0 ? Math.PI * 1.5 : player.dy > 0 ? Math.PI * 0.5 : 0;
+  ctx.arc(player.x, player.y, TILE * 0.42, baseAngle + player.mouth, baseAngle + Math.PI * 2 - player.mouth);
+  ctx.lineTo(player.x, player.y);
+  ctx.closePath();
+  ctx.fill();
+
+  // Draw Ghosts (Phantoms)
+  for (const g of ghosts) {
+    ctx.fillStyle = g.scared > 0 ? (g.scared < 80 && Math.floor(g.scared / 10) % 2 ? '#fff' : '#3b82f6') : g.color;
+    ctx.beginPath();
+    ctx.arc(g.x, g.y - 2, TILE * 0.38, Math.PI, 0);
+    ctx.lineTo(g.x + TILE * 0.38, g.y + TILE * 0.38);
+    ctx.lineTo(g.x - TILE * 0.38, g.y + TILE * 0.38);
+    ctx.closePath();
+    ctx.fill();
+
+    // Eyes
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(g.x - 6, g.y - 6, 4, 6);
+    ctx.fillRect(g.x + 2, g.y - 6, 4, 6);
+  }
+
+  // Draw HUD Overlay
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 15px "Segoe UI", sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(`KARMA: ${score.toLocaleString()}`, 20, H - 25);
+  ctx.fillText(`LIVES: ${lives}`, 180, H - 25);
+  ctx.fillText(`GATE: ${level}`, 300, H - 25);
+
+  // Floating Texts
+  for (let i = floatingTexts.length - 1; i >= 0; i--) {
+    const ft = floatingTexts[i];
+    ft.y += ft.vy;
+    ft.life -= 0.02;
+    ctx.fillStyle = ft.color;
+    ctx.globalAlpha = Math.max(0, ft.life);
+    ctx.font = `bold ${ft.size}px "Segoe UI", sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(ft.text, ft.x, ft.y);
+    ctx.globalAlpha = 1;
+    if (ft.life <= 0) floatingTexts.splice(i, 1);
+  }
+
+  // Flash Screen
+  if (FX.flash > 0) {
+    ctx.fillStyle = `rgba(${FX.flashCol},${FX.flash})`;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  if (state === STATE.DEAD) {
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ff2a5f';
+    ctx.font = 'bold 38px "Segoe UI", sans-serif';
+    ctx.fillText("PILGRIMAGE HALTED", W / 2, H / 2 - 20);
+    ctx.fillStyle = '#fff';
+    ctx.font = '15px monospace';
+    ctx.fillText("PRESS (A) OR [SPACE] TO RETURN TO DOCK", W / 2, H / 2 + 25);
+  }
+
+  ctx.restore();
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

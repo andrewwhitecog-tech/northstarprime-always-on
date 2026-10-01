@@ -1,5 +1,5 @@
 ---
-version: alpha
+version: obsidian-signal-2026-09-30
 colors:
   primary: "#edca83"
   night: "#080c16"
@@ -15,7 +15,7 @@ typography:
   body:
     fontFamily: '"Segoe UI", system-ui, sans-serif'
 rounded:
-  card: "16px"
+  card: "6px"
 omitted:
   - section: spacing
     reason: "Responsive CSS clamp values are canonical in static/customer-experience.css."
@@ -43,11 +43,11 @@ Maximum 1240px, 32px outer desktop margin and 18px phone margin; natural documen
 
 ## Elevation & Depth
 
-Original art carries depth; panels use restrained borders. Gradients belong to artwork framing or the institutional hero, not every component. No constant background video, parallax, canvas effects or pulsing CTA.
+Original art carries depth; obsidian glass panels use restrained engraved-gold top edges and polished straight borders. Gradients belong to artwork framing or the institutional hero, not every component. No constant background video, parallax, canvas effects or pulsing CTA.
 
 ## Shapes
 
-16px panel radius; pill-shaped action links with a 48px minimum height. Gold primary, outlined secondary. A visible aqua focus ring is shared. Card rows align through grid, without fixed copy heights that clip long titles.
+6px panel radius; 4px action links with a 48px minimum height. Gold primary, outlined secondary. A visible aqua focus ring is shared. Card rows align through grid, without fixed copy heights that clip long titles.
 
 ## Components
 
@@ -62,3 +62,14 @@ Do provide complete free experiences and honest optional paid value. Institution
 IDR owns its native genre select, native audio controls and JavaScript-wired buttons. Mystery School owns native buttons, labeled textareas and details in its controller. The automated literal-markup audit cannot follow their addEventListener bindings; real controller tests and browser Enter-key journeys verify those actions. Mystery textareas intentionally permit vertical resizing for long optional notes, without horizontal resizing. Static brand pages have no authored menu, dialog, data table or custom select. Family readers reuse the established native text controls in little-light-library/library.js, with contained navigation.
 
 The full-repository premium audit includes legacy games and generated libraries outside this changed shell; its findings are triaged in the private release record, not dismissed as a repository-wide pass.
+
+
+## Obsidian Signal material update — 2026-09-30
+
+Owner direction: black glass, crisp white text, high contrast, purposeful color, and a distinct futuristic VORATH identity; never a generic phone interface. The appended Obsidian Signal layer in `static/customer-experience.css` is canonical and overrides older frontmatter color examples. System dark appearance uses near-black #050608, white #f8fafc, gold #e8c77d and restrained aqua #8bd9df. System light appearance switches to a readable pale mineral surface with dark ink, dark gold and teal; original art retains full color. No appearance preference is stored or forced.
+
+Cards have 6px corners and actions 4px corners, with subtle engraved edges, dense smoked surfaces and restrained depth. Gold marks primary actions and the brand; aqua marks focus and secondary emphasis. Status colors must always be paired with explicit labels. Avoid frosted white blobs, giant pills, repeated rainbow gradients, ornamental fake dashboards and obscured text. Display typography remains editorial Palatino, with clear Segoe UI controls, so VORATH retains its story-world character.
+
+The hero now reserves a large independent artwork panel beside copy on desktop and below it on phones. It is never dim wallpaper behind text. The institutional variant retains quieter blue-steel accents and its own navigation. Reduced motion, reduced transparency, forced colors and print are accommodated; browser review remains necessary before release.
+
+Coverage: this shared sheet updates only pages that actually load it. IDR, store, IDC and other independent styles need their own integration and checks; this change alone is not an all-sites rollout. Existing inline legacy card backgrounds are intentionally replaced by the material layer to preserve contrast in both appearances.

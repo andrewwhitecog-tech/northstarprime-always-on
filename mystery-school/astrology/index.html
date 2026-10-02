@@ -119,7 +119,7 @@
         </div>
 
         <!-- Hover Insight Bar -->
-        <div id="hoverInsight" style="margin-top:16px; font-size:0.85rem; color:var(--gold-light); min-height:24px; text-align:center;">
+        <div id="hoverInsight">
           Hover over any celestial glyph or aspect cord for harmonic analysis.
         </div>
       </section>
@@ -372,7 +372,7 @@
       }
     }
 
-    // Render Single Natal Wheel
+    // Render Single Natal Wheel — aesthetic bible: black glass, iridescence, sacred geometry
     function renderNatalWheel(chart) {
       const size = 640;
       const center = size / 2;
@@ -383,25 +383,68 @@
 
       const asc = chart.angles.asc.lon;
 
-      let svg = `<svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" style="background:#080c16; border-radius:16px;">`;
+      let svg = `<svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">`;
 
-      // Glow filters
       svg += `
         <defs>
-          <filter id="goldGlow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="4" result="blur"/>
+          <radialGradient id="voidBg" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#0c1224"/>
+            <stop offset="55%" stop-color="#060912"/>
+            <stop offset="100%" stop-color="#03050a"/>
+          </radialGradient>
+          <linearGradient id="irisStroke" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#fbbf24"/>
+            <stop offset="35%" stop-color="#67e8f9"/>
+            <stop offset="70%" stop-color="#c084fc"/>
+            <stop offset="100%" stop-color="#fb7185"/>
+          </linearGradient>
+          <linearGradient id="goldIris" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#fef08a"/>
+            <stop offset="50%" stop-color="#f5b942"/>
+            <stop offset="100%" stop-color="#c084fc"/>
+          </linearGradient>
+          <filter id="goldGlow" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="3.2" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="1.6" result="blur"/>
             <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
           </filter>
         </defs>
       `;
 
-      // Outer gold boundary rings
-      svg += `<circle cx="${center}" cy="${center}" r="${rOuter}" fill="none" stroke="rgba(245,158,11,0.4)" stroke-width="1.5"/>`;
-      svg += `<circle cx="${center}" cy="${center}" r="${rZodiac}" fill="none" stroke="rgba(245,158,11,0.2)" stroke-width="1"/>`;
-      svg += `<circle cx="${center}" cy="${center}" r="${rHouses}" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>`;
-      svg += `<circle cx="${center}" cy="${center}" r="${rAspects}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>`;
+      // Black-glass disc
+      svg += `<circle cx="${center}" cy="${center}" r="${rOuter + 12}" fill="url(#voidBg)"/>`;
 
-      // 12 Zodiac Segments (Oriented with Ascendant on the left at 180 deg)
+      // Chronometric sacred-geometry underlay (geometry only — no holiday labels)
+      svg += `<g opacity="0.18" fill="none" stroke="url(#irisStroke)" stroke-width="0.7">`;
+      for (let k = 0; k < 12; k++) {
+        const a = (k * 30 - 90) * Math.PI / 180;
+        const x = center + (rAspects - 28) * Math.cos(a);
+        const y = center + (rAspects - 28) * Math.sin(a);
+        svg += `<line x1="${center}" y1="${center}" x2="${x}" y2="${y}"/>`;
+      }
+      // Nested hex + circle (Flower-of-Life hint)
+      const hexR = rAspects - 36;
+      let hex = '';
+      for (let k = 0; k < 6; k++) {
+        const a = (k * 60 - 90) * Math.PI / 180;
+        hex += `${center + hexR * Math.cos(a)},${center + hexR * Math.sin(a)} `;
+      }
+      svg += `<polygon points="${hex.trim()}" stroke-opacity="0.55"/>`;
+      svg += `<circle cx="${center}" cy="${center}" r="${hexR * 0.58}" stroke-opacity="0.4"/>`;
+      svg += `<circle cx="${center}" cy="${center}" r="${hexR * 0.32}" stroke-opacity="0.3"/>`;
+      svg += `</g>`;
+
+      // Outer iridescent boundary rings
+      svg += `<circle cx="${center}" cy="${center}" r="${rOuter}" fill="none" stroke="url(#irisStroke)" stroke-width="2" filter="url(#goldGlow)" stroke-opacity="0.9"/>`;
+      svg += `<circle cx="${center}" cy="${center}" r="${rOuter - 4}" fill="none" stroke="rgba(254,240,138,0.35)" stroke-width="0.8"/>`;
+      svg += `<circle cx="${center}" cy="${center}" r="${rZodiac}" fill="none" stroke="rgba(245,185,66,0.28)" stroke-width="1"/>`;
+      svg += `<circle cx="${center}" cy="${center}" r="${rHouses}" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>`;
+      svg += `<circle cx="${center}" cy="${center}" r="${rAspects}" fill="none" stroke="rgba(103,232,249,0.18)" stroke-width="1"/>`;
+
+      // Zodiac ring
       AetheriaAstro.ZODIAC_SIGNS.forEach((sign, i) => {
         const startAngle = (180 - (sign.startDeg - asc)) * Math.PI / 180;
         const endAngle = (180 - (sign.startDeg + 30 - asc)) * Math.PI / 180;
@@ -412,15 +455,34 @@
         const x2 = center + rZodiac * Math.cos(startAngle);
         const y2 = center + rZodiac * Math.sin(startAngle);
 
-        svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="rgba(245,158,11,0.3)" stroke-width="1"/>`;
+        svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="rgba(245,185,66,0.38)" stroke-width="1"/>`;
+
+        // Subtle element wedge tint (readable, not muddy)
+        const large = endAngle - startAngle > Math.PI ? 1 : 0;
+        const zx1 = center + rZodiac * Math.cos(startAngle);
+        const zy1 = center + rZodiac * Math.sin(startAngle);
+        const zx2 = center + rZodiac * Math.cos(endAngle);
+        const zy2 = center + rZodiac * Math.sin(endAngle);
+        const ox1 = center + (rZodiac + 38) * Math.cos(startAngle);
+        const oy1 = center + (rZodiac + 38) * Math.sin(startAngle);
+        const ox2 = center + (rZodiac + 38) * Math.cos(endAngle);
+        const oy2 = center + (rZodiac + 38) * Math.sin(endAngle);
+        const elemTint = sign.element === 'Fire' ? 'rgba(252,165,165,0.07)'
+          : sign.element === 'Earth' ? 'rgba(134,239,172,0.07)'
+          : sign.element === 'Air' ? 'rgba(125,211,252,0.07)'
+          : 'rgba(199,210,254,0.07)';
+        svg += `<path d="M ${zx1} ${zy1} A ${rZodiac} ${rZodiac} 0 ${large} 1 ${zx2} ${zy2} L ${ox2} ${oy2} A ${rZodiac + 38} ${rZodiac + 38} 0 ${large} 0 ${ox1} ${oy1} Z" fill="${elemTint}"/>`;
 
         const tx = center + (rZodiac + 20) * Math.cos(midAngle);
         const ty = center + (rZodiac + 20) * Math.sin(midAngle);
-
-        svg += `<text x="${tx}" y="${ty + 5}" font-family="'Cinzel', serif" font-size="16" fill="${sign.element === 'Fire' ? '#fca5a5' : sign.element === 'Earth' ? '#86efac' : sign.element === 'Air' ? '#7dd3fc' : '#c7d2fe'}" text-anchor="middle">${sign.symbol}</text>`;
+        const glyphColor = sign.element === 'Fire' ? '#fda4af'
+          : sign.element === 'Earth' ? '#6ee7b7'
+          : sign.element === 'Air' ? '#7dd3fc'
+          : '#c4b5fd';
+        svg += `<text x="${tx}" y="${ty + 5}" font-family="'Cinzel', Georgia, serif" font-size="17" font-weight="700" fill="${glyphColor}" text-anchor="middle" filter="url(#softGlow)">${sign.symbol}</text>`;
       });
 
-      // House Cusps
+      // House cusps
       chart.houses.forEach((h, i) => {
         const cuspAngle = (180 - (h.startLon - asc)) * Math.PI / 180;
         const x1 = center + rHouses * Math.cos(cuspAngle);
@@ -429,17 +491,16 @@
         const y2 = center + (rAspects - 10) * Math.sin(cuspAngle);
 
         const isAngular = (i === 0 || i === 3 || i === 6 || i === 9);
-        svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${isAngular ? '#f59e0b' : 'rgba(255,255,255,0.15)'}" stroke-width="${isAngular ? 2 : 1}"/>`;
+        svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${isAngular ? 'url(#goldIris)' : 'rgba(255,255,255,0.16)'}" stroke-width="${isAngular ? 2.2 : 1}" ${isAngular ? 'filter="url(#softGlow)"' : ''}/>`;
 
-        // House Number
         const nextCusp = chart.houses[(i + 1) % 12].startLon;
         const midCusp = (cuspAngle + (180 - (nextCusp - asc)) * Math.PI / 180) / 2;
         const numX = center + (rHouses - 18) * Math.cos(midCusp);
         const numY = center + (rHouses - 18) * Math.sin(midCusp);
-        svg += `<text x="${numX}" y="${numY + 4}" font-family="'Inter', sans-serif" font-size="10" fill="rgba(255,255,255,0.4)" text-anchor="middle">${h.number}</text>`;
+        svg += `<text x="${numX}" y="${numY + 4}" font-family="'Inter', sans-serif" font-size="10" fill="rgba(248,250,252,0.45)" text-anchor="middle">${h.number}</text>`;
       });
 
-      // Aspect Cords (Inner Web)
+      // Aspect cords
       chart.aspects.forEach(asp => {
         const a1 = (180 - (asp.p1Data.lon - asc)) * Math.PI / 180;
         const a2 = (180 - (asp.p2Data.lon - asc)) * Math.PI / 180;
@@ -450,30 +511,32 @@
         const y2 = center + (rAspects - 15) * Math.sin(a2);
 
         const isExact = asp.exactOrb <= 1.0;
-        svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${asp.color}" stroke-width="${isExact ? 2.5 : 1}" stroke-opacity="${isExact ? 0.9 : 0.4}" data-asp="${asp.type}" class="aspect-line"/>`;
+        svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${asp.color}" stroke-width="${isExact ? 2.6 : 1}" stroke-opacity="${isExact ? 0.92 : 0.38}" data-asp="${asp.type}" class="aspect-line" ${isExact ? 'filter="url(#softGlow)"' : ''}/>`;
       });
 
-      // Planet Glyphs & Placement Pins
+      // Planet glyphs — high-contrast pins on black glass
       Object.values(chart.planets).forEach(p => {
         const pAngle = (180 - (p.lon - asc)) * Math.PI / 180;
         const px = center + (rHouses - 38) * Math.cos(pAngle);
         const py = center + (rHouses - 38) * Math.sin(pAngle);
+        const col = p.meta.color || '#fff';
 
-        svg += `<circle cx="${px}" cy="${py}" r="12" fill="#080c16" stroke="${p.meta.color || '#fff'}" stroke-width="1.5" class="planet-pin" data-planet="${p.name}"/>`;
-        svg += `<text x="${px}" y="${py + 4}" font-family="'Cinzel', serif" font-size="13" fill="${p.meta.color || '#fff'}" text-anchor="middle" pointer-events="none">${p.meta.symbol || '●'}</text>`;
+        svg += `<circle cx="${px}" cy="${py}" r="14" fill="rgba(3,5,10,0.92)" stroke="${col}" stroke-width="0" filter="url(#softGlow)" opacity="0.55"/>`;
+        svg += `<circle cx="${px}" cy="${py}" r="12" fill="#05070d" stroke="${col}" stroke-width="1.8" class="planet-pin" data-planet="${p.name}"/>`;
+        svg += `<text x="${px}" y="${py + 4.5}" font-family="'Cinzel', Georgia, serif" font-size="13" font-weight="700" fill="${col}" text-anchor="middle" pointer-events="none">${p.meta.symbol || '●'}</text>`;
       });
 
-      // Center Rosette & Chart Identity
+      // Center rosette
       svg += `
-        <circle cx="${center}" cy="${center}" r="38" fill="#0c101d" stroke="rgba(245,158,11,0.5)" stroke-width="1.5"/>
-        <text x="${center}" y="${center - 6}" font-family="'Cinzel', serif" font-size="12" font-weight="700" fill="var(--gold-light)" text-anchor="middle">AETHERIA</text>
+        <circle cx="${center}" cy="${center}" r="42" fill="rgba(5,7,13,0.92)" stroke="url(#irisStroke)" stroke-width="1.8" filter="url(#goldGlow)"/>
+        <circle cx="${center}" cy="${center}" r="34" fill="none" stroke="rgba(249,168,212,0.25)" stroke-width="0.8"/>
+        <text x="${center}" y="${center - 6}" font-family="'Cinzel', Georgia, serif" font-size="12" font-weight="700" fill="#fef08a" text-anchor="middle">AETHERIA</text>
         <text x="${center}" y="${center + 12}" font-family="'Courier New', monospace" font-size="9" fill="#94a3b8" text-anchor="middle">432Hz HARMONIC</text>
       `;
 
       svg += '</svg>';
       wheelWrap.innerHTML = svg;
 
-      // Attach hover interactions
       attachWheelInteractions(chart);
     }
 
@@ -495,7 +558,7 @@
       });
     }
 
-    // Render Dual-Wheel Synastry
+    // Render Dual-Wheel Synastry — Venusian twin-axis, iridescent nested rings
     function renderSynastryWheel(chartA, chartB) {
       const size = 680;
       const center = size / 2;
@@ -508,16 +571,62 @@
       const asc = chartA.angles.asc.lon;
       const comp = AetheriaAstro.compareCharts(chartA, chartB);
 
-      let svg = `<svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" style="background:#080c16; border-radius:16px;">`;
+      let svg = `<svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">`;
 
-      // Dual boundary rings
-      svg += `<circle cx="${center}" cy="${center}" r="${rOuter}" fill="none" stroke="rgba(245,158,11,0.5)" stroke-width="1.5"/>`;
-      svg += `<circle cx="${center}" cy="${center}" r="${rOuterZodiac}" fill="none" stroke="rgba(245,158,11,0.3)" stroke-width="1"/>`;
-      svg += `<circle cx="${center}" cy="${center}" r="${rInnerZodiac}" fill="none" stroke="rgba(56,189,248,0.4)" stroke-width="1.5"/>`;
-      svg += `<circle cx="${center}" cy="${center}" r="${rInnerHouses}" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>`;
-      svg += `<circle cx="${center}" cy="${center}" r="${rAspects}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>`;
+      svg += `
+        <defs>
+          <radialGradient id="synVoid" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#14102a"/>
+            <stop offset="45%" stop-color="#0a0c18"/>
+            <stop offset="100%" stop-color="#03050a"/>
+          </radialGradient>
+          <linearGradient id="venusIris" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#fef08a"/>
+            <stop offset="30%" stop-color="#f9a8d4"/>
+            <stop offset="65%" stop-color="#c084fc"/>
+            <stop offset="100%" stop-color="#67e8f9"/>
+          </linearGradient>
+          <linearGradient id="twinAxis" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#fbbf24"/>
+            <stop offset="50%" stop-color="#f9a8d4"/>
+            <stop offset="100%" stop-color="#38bdf8"/>
+          </linearGradient>
+          <filter id="venusGlow" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="3.5" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="lineGlow" x="-25%" y="-25%" width="150%" height="150%">
+            <feGaussianBlur stdDeviation="1.4" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+      `;
 
-      // Cross-Chart Aspect Cords
+      svg += `<circle cx="${center}" cy="${center}" r="${rOuter + 10}" fill="url(#synVoid)"/>`;
+
+      // Twin-axis emphasis (ASC–DSC / MC–IC arms) — sensual without obscuring wheel
+      svg += `<g opacity="0.22" stroke="url(#twinAxis)" stroke-width="1.2" fill="none">`;
+      svg += `<line x1="${center - rAspects}" y1="${center}" x2="${center + rAspects}" y2="${center}"/>`;
+      svg += `<line x1="${center}" y1="${center - rAspects}" x2="${center}" y2="${center + rAspects}"/>`;
+      // Nested multiverse rings
+      svg += `<circle cx="${center}" cy="${center}" r="${rAspects * 0.72}"/>`;
+      svg += `<circle cx="${center}" cy="${center}" r="${rAspects * 0.45}"/>`;
+      let hexPts = '';
+      for (let k = 0; k < 6; k++) {
+        const a = (k * 60 - 90) * Math.PI / 180;
+        hexPts += `${center + rAspects * 0.55 * Math.cos(a)},${center + rAspects * 0.55 * Math.sin(a)} `;
+      }
+      svg += `<polygon points="${hexPts.trim()}"/>`;
+      svg += `</g>`;
+
+      // Dual iridescent boundaries
+      svg += `<circle cx="${center}" cy="${center}" r="${rOuter}" fill="none" stroke="url(#venusIris)" stroke-width="2.2" filter="url(#venusGlow)"/>`;
+      svg += `<circle cx="${center}" cy="${center}" r="${rOuterZodiac}" fill="none" stroke="rgba(249,168,212,0.35)" stroke-width="1.2"/>`;
+      svg += `<circle cx="${center}" cy="${center}" r="${rInnerZodiac}" fill="none" stroke="rgba(56,189,248,0.5)" stroke-width="1.6"/>`;
+      svg += `<circle cx="${center}" cy="${center}" r="${rInnerHouses}" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>`;
+      svg += `<circle cx="${center}" cy="${center}" r="${rAspects}" fill="none" stroke="rgba(192,132,252,0.22)" stroke-width="1"/>`;
+
+      // Cross-chart aspect cords
       comp.crossAspects.forEach(asp => {
         const a1 = (180 - (asp.posA.lon - asc)) * Math.PI / 180;
         const a2 = (180 - (asp.posB.lon - asc)) * Math.PI / 180;
@@ -528,32 +637,34 @@
         const y2 = center + (rAspects - 10) * Math.sin(a2);
 
         const isExact = asp.exactOrb <= 0.8;
-        svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${asp.color}" stroke-width="${isExact ? 3 : 1}" stroke-opacity="${isExact ? 0.95 : 0.35}"/>`;
+        svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${asp.color}" stroke-width="${isExact ? 3 : 1}" stroke-opacity="${isExact ? 0.95 : 0.35}" ${isExact ? 'filter="url(#lineGlow)"' : ''}/>`;
       });
 
-      // Chart A (Inner) Planets
+      // Chart A (inner) planets
       Object.values(chartA.planets).forEach(p => {
         const a = (180 - (p.lon - asc)) * Math.PI / 180;
         const px = center + (rInnerHouses - 20) * Math.cos(a);
         const py = center + (rInnerHouses - 20) * Math.sin(a);
-        svg += `<circle cx="${px}" cy="${py}" r="11" fill="#080c16" stroke="${p.meta.color || '#fff'}" stroke-width="1.5"/>`;
-        svg += `<text x="${px}" y="${py + 4}" font-family="'Cinzel', serif" font-size="12" fill="${p.meta.color || '#fff'}" text-anchor="middle">${p.meta.symbol || '●'}</text>`;
+        const col = p.meta.color || '#fff';
+        svg += `<circle cx="${px}" cy="${py}" r="11" fill="#05070d" stroke="${col}" stroke-width="1.7"/>`;
+        svg += `<text x="${px}" y="${py + 4}" font-family="'Cinzel', Georgia, serif" font-size="12" font-weight="700" fill="${col}" text-anchor="middle">${p.meta.symbol || '●'}</text>`;
       });
 
-      // Chart B (Outer) Planets
+      // Chart B (outer) — gold twin ring
       Object.values(chartB.planets).forEach(p => {
         const a = (180 - (p.lon - asc)) * Math.PI / 180;
         const px = center + (rOuter - 18) * Math.cos(a);
         const py = center + (rOuter - 18) * Math.sin(a);
-        svg += `<circle cx="${px}" cy="${py}" r="11" fill="#0c101d" stroke="#f59e0b" stroke-width="1.5"/>`;
-        svg += `<text x="${px}" y="${py + 4}" font-family="'Cinzel', serif" font-size="12" fill="#fef08a" text-anchor="middle">${p.meta.symbol || '●'}</text>`;
+        svg += `<circle cx="${px}" cy="${py}" r="11" fill="#0c101d" stroke="#f9a8d4" stroke-width="1.8" filter="url(#lineGlow)"/>`;
+        svg += `<text x="${px}" y="${py + 4}" font-family="'Cinzel', Georgia, serif" font-size="12" font-weight="700" fill="#fef08a" text-anchor="middle">${p.meta.symbol || '●'}</text>`;
       });
 
-      // Center Dial
+      // Center dial — Venusian score
       svg += `
-        <circle cx="${center}" cy="${center}" r="45" fill="#0c101d" stroke="#f59e0b" stroke-width="2"/>
-        <text x="${center}" y="${center - 6}" font-family="'Cinzel', serif" font-size="11" fill="#94a3b8" text-anchor="middle">SYNASTRY</text>
-        <text x="${center}" y="${center + 14}" font-family="'Cinzel', serif" font-size="17" font-weight="700" fill="var(--gold-light)" text-anchor="middle">${comp.resonanceScore}%</text>
+        <circle cx="${center}" cy="${center}" r="48" fill="rgba(5,7,13,0.94)" stroke="url(#venusIris)" stroke-width="2.2" filter="url(#venusGlow)"/>
+        <circle cx="${center}" cy="${center}" r="38" fill="none" stroke="rgba(249,168,212,0.3)" stroke-width="0.8"/>
+        <text x="${center}" y="${center - 8}" font-family="'Cinzel', Georgia, serif" font-size="11" fill="#f9a8d4" text-anchor="middle">SYNASTRY</text>
+        <text x="${center}" y="${center + 14}" font-family="'Cinzel', Georgia, serif" font-size="18" font-weight="700" fill="#fef08a" text-anchor="middle">${comp.resonanceScore}%</text>
       `;
 
       svg += '</svg>';
@@ -589,7 +700,7 @@
           heraldicBadges.push('<div style="background:rgba(168,85,247,0.12); border:1px solid #c084fc; border-radius:8px; padding:8px 12px; margin-bottom:10px; font-size:0.82rem; color:#e9d5ff;"><strong>✦ 0.03° MENTAL SUB-BASS OPPOSITION:</strong> 18° Axis Underground Strategic Architecture.</div>');
         }
         if (a.exactOrb < 0.25 && ((a.planetA === 'Moon' && a.planetB === 'Moon') || (a.planetA === 'Mercury' && a.planetB === 'Moon')) && (a.type === 'Trine' || a.type === 'Conjunction')) {
-          heraldicBadges.push('<div style="background:rgba(245,197,66,0.12); border:1px solid var(--gold-primary); border-radius:8px; padding:8px 12px; margin-bottom:10px; font-size:0.82rem; color:var(--gold-light);"><strong>✦ SACRED 18° GRAND AIR TRINE / RESONANCE:</strong> Telepathic Intellect &amp; Ancestral Lineage (Gemini · Libra · Aquarius).</div>');
+          heraldicBadges.push('<div style="background:rgba(245,197,66,0.12); border:1px solid var(--gold-primary); border-radius:8px; padding:8px 12px; margin-bottom:10px; font-size:0.82rem; color:var(--gold-light);"><strong>✦ SACRED 18° GRAND AIR TRINE / RESONANCE:</strong> Telepathic Intellect & Ancestral Lineage (Gemini · Libra · Aquarius).</div>');
         }
       });
       if (heraldicBadges.length > 0) {

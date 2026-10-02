@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Autonomous Watchdog &amp; Self-Healing Daemon Implementation · NorthStar Digital</title>
+  <meta name="description" content="Custom zero-dependency supervisor daemons with synthetic L4/L7 health probes, socket monitoring, and automated crash recovery. 72-hour delivery.">
+  <link rel="canonical" href="https://northstarprime.net/hire/watchdog-engineering/">
+  <link rel="icon" href="/favicon.svg">
+  <meta name="theme-color" content="#152844">
+  <meta property="og:title" content="Never wake up at 3:00 AM to manually reboot a frozen service.">
+  <meta property="og:description" content="Custom automated watchdog daemons with active synthetic socket handshakes, process tree cleanup, and instant webhook alerts.">
+  <meta property="og:url" content="https://northstarprime.net/hire/watchdog-engineering/">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://northstarprime.net/og-image.png">
+  <style>
+    :root {
+      --navy: #152844;
+      --paper: #eff4fa;
+      --gold: #e5c278;
+      --muted: #50627a;
+      --line: #b5c4d5;
+      --white: #fff;
+      --blue: #235589;
+      --green: #10b981;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: var(--navy);
+      background: var(--paper);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    a { color: inherit; }
+    a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid var(--blue); outline-offset: 5px; }
+    .wrap { max-width: 1160px; margin: auto; padding: 0 28px; }
+    header { display: flex; justify-content: space-between; gap: 20px; padding: 27px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+    header a { text-decoration: none; }
+    .brand { font-weight: 750; letter-spacing: .1em; }
+    main { padding-bottom: 60px; }
+    .hero { display: grid; grid-template-columns: 1.08fr 1fr; gap: 64px; align-items: center; padding: 72px 0; }
+    .eyebrow { text-transform: uppercase; letter-spacing: .12em; font-size: 12px; font-weight: 700; color: var(--muted); }
+    h1, h2 { font-family: Bahnschrift, 'Segoe UI', sans-serif; letter-spacing: -.04em; }
+    h1 { font-size: clamp(36px, 4.5vw, 58px); line-height: 1.05; margin: 20px 0; }
+    h2 { font-size: 32px; line-height: 1.15; margin: 12px 0 22px; }
+    p, li { font-size: 17px; line-height: 1.65; }
+    .intro { font-size: 20px; line-height: 1.55; max-width: 580px; }
+    .muted { color: var(--muted); }
+    .button { display: inline-block; background: var(--navy); color: var(--white); border: 1px solid var(--navy); padding: 15px 22px; border-radius: 6px; font: 700 16px 'Segoe UI', sans-serif; text-decoration: none; cursor: pointer; transition: all 0.2s; }
+    .button:hover { background: #0c1a2e; }
+    .button.secondary { background: transparent; color: var(--navy); border-color: var(--navy); }
+    .button.secondary:hover { background: #dde7f2; }
+    .small { font-size: 14px; line-height: 1.65; }
+    .price { font-size: 22px; font-weight: 700; }
+    .demo { background: var(--navy); padding: 28px; border-radius: 14px; color: var(--paper); box-shadow: 0 20px 40px rgba(21,40,68,0.15); transform: rotate(-1deg); }
+    .demo .eyebrow { color: var(--gold); }
+    .demo-title { font-size: 21px; margin: 9px 0 23px; }
+    .example { padding: 18px; background: #243e60; border-left: 3px solid #92a2b8; margin: 14px 0; border-radius: 4px; }
+    .example strong { display: block; font-size: 17px; }
+    .example p { font-size: 14px; margin: 8px 0; }
+    .example.after { background: var(--paper); color: var(--navy); border-color: var(--gold); }
+    .demo-note { color: #c8d5e5; font-size: 12px; line-height: 1.6; margin-bottom: 0; }
+    .columns { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; padding: 48px 0; border-top: 1px solid var(--line); }
+    .offer { border: 2px solid var(--navy); border-radius: 12px; padding: 32px; background: #fff; }
+    .offer .price { font-size: 34px; margin: 0; }
+    .offer ul { padding-left: 20px; }
+    ul li { margin-bottom: 10px; }
+    .contact { background: #e0e9f4; padding: 35px; border-radius: 12px; margin-top: 24px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 12px; }
+    .skip { position: absolute; top: -80px; left: 20px; background: white; padding: 12px; }
+    .skip:focus { top: 10px; }
+    footer { border-top: 1px solid var(--line); padding: 25px 0; display: flex; gap: 25px; flex-wrap: wrap; font-size: 14px; }
+    @media(max-width: 760px) {
+      .wrap { padding: 0 20px; }
+      .hero, .columns { grid-template-columns: 1fr; gap: 32px; padding: 38px 0; }
+      .demo { transform: none; }
+      .contact, .offer { padding: 24px; }
+      h1 { font-size: 32px; }
+      h2 { font-size: 26px; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <div class="wrap">
+    <header>
+      <a class="brand" href="/">NORTHSTAR PRIME</a>
+      <a href="/hire/">All Services ↗</a>
+    </header>
+    <main id="main">
+      <section class="hero">
+        <div>
+          <div class="eyebrow">For SaaS founders, API platforms &amp; background pipeline teams</div>
+          <h1>Never wake up at 3:00 AM to manually reboot a frozen service.</h1>
+          <p class="intro">
+            Process IDs show as running, but HTTP requests hang and ports drop connections. We engineer zero-dependency autonomous watchdog daemons in Python or PowerShell that actively probe synthetic L4/L7 health, isolate failure domains, and recover services in under 30 seconds.
+          </p>
+          <p class="price">$750 Fixed Fee &bull; $375 Deposit to Start</p>
+          <div style="display:flex; gap:12px; flex-wrap:wrap; margin:16px 0 12px;">
+            <a class="button" href="mailto:andrew.white.cog@gmail.com?subject=Watchdog%20Daemon%20Sprint%20Inquiry&amp;body=Platform%20%26%20Services%20to%20Supervise%3A%0AFailure%20Symptoms%20Observed%3A%0ATarget%20Recovery%20SLA%3A">Commission Watchdog Sprint ($375 Deposit) →</a>
+            <a class="button secondary" href="#details">Review Architecture Details</a>
+          </div>
+          <p class="small muted">Guaranteed 72-Hour Delivery. Zero external agent bloat, native systemd / Scheduled Task integration, and 100% money-back guarantee.</p>
+        </div>
+
+        <div class="demo" aria-label="Watchdog architecture demo">
+          <div class="eyebrow">Synthetic Health vs. PID Checks</div>
+          <p class="demo-title">Why Naive Monitoring Fails</p>
+          <div class="example">
+            <strong>Naive Check: "Is PID 4092 Running?"</strong>
+            <p>OS says YES. Meanwhile, the database connection pool is exhausted, the HTTP socket is deadlocked, and customers see 504 Gateway Timeouts.</p>
+          </div>
+          <div class="example after">
+            <strong>NorthStar Synthetic Probe: L4/L7 Verification</strong>
+            <p>Direct socket connection handshakes (TCP/UDP), live API roundtrips, and memory threshold checks. Automatic graceful process teardown and recovery in &lt;30s.</p>
+          </div>
+          <p class="demo-note">Battle-tested architecture supervising 60+ autonomous background daemons with 99.9%+ availability.</p>
+        </div>
+      </section>
+
+      <section class="columns" id="details" aria-labelledby="scope-title">
+        <div>
+          <div class="eyebrow">What is included in the package</div>
+          <h2 id="scope-title">Active probing.<br>Flap-proof recovery.</h2>
+          <p>We build production-grade daemon supervisors tailored to your exact application architecture, runtime dependencies, and alerting preferences.</p>
+          <div style="background:#fff; border:1px solid var(--line); border-radius:8px; padding:20px; margin-top:20px;">
+            <h3 style="margin-top:0; font-size:18px;">Engineering Deliverables:</h3>
+            <ol style="padding-left:20px; line-height:1.7;">
+              <li><strong>Custom Synthetic Health Probes:</strong> Real layer-4 TCP/UDP handshakes and layer-7 API heartbeats that verify your service is truly responsive.</li>
+              <li><strong>Orphan Process Tree Teardown:</strong> Cleanly terminates frozen parent and worker processes, preventing dead socket locks and port-binding collisions.</li>
+              <li><strong>Exponential Backoff &amp; Flap Protection:</strong> Prevents CPU thrashing and cascading restart storms when external dependencies (like databases or third-party APIs) are down.</li>
+              <li><strong>Discord / Slack / Webhook Notifications:</strong> Instant alert dispatches with human-readable logs when automated recovery events occur.</li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="offer">
+          <div class="eyebrow">Fixed-Scope Package</div>
+          <h2>Autonomous Watchdog Daemon</h2>
+          <p class="price">$750 USD <span style="font-size:16px; font-weight:400; color:var(--muted);">(50% to start)</span></p>
+          <ul>
+            <li>Custom standalone Python or PowerShell/Bash supervisor daemon.</li>
+            <li>Zero external agent bloat—runs as a lightweight native systemd service or Windows Task.</li>
+            <li>Synthetic socket &amp; API handshake probing logic.</li>
+            <li>Clean logging with automated log rotation and crash dumps.</li>
+            <li>14-day observation warranty and live stress-test verification.</li>
+          </ul>
+          <p class="small honest"><strong>Target: 72-Hour Turnaround</strong> after scope confirmation. Fully verified against your staging or production testbed before final sign-off.</p>
+          <div style="margin-top:24px;">
+            <a class="button" href="mailto:andrew.white.cog@gmail.com?subject=Commission%20Watchdog%20Daemon%20Sprint&amp;body=Services%20to%20Monitor%3A%0APreferred%20Alert%20Channel%20(Slack%2FDiscord%2FEmail)%3A%0AEstimated%20Start%20Date%3A">Commission Watchdog Sprint ($375 Deposit) →</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="contact" aria-labelledby="contact-heading">
+        <div class="eyebrow">Direct Engineering Contact</div>
+        <h2 id="contact-heading" style="margin-top:4px;">Have critical background services you can't afford to lose?</h2>
+        <p>Talk directly with our lead systems engineer. We will review your architecture and provide a fixed-scope implementation plan within 4 hours.</p>
+        <div class="actions">
+          <a class="button" href="mailto:andrew.white.cog@gmail.com?subject=Watchdog%20Architecture%20Inquiry">Email: andrew.white.cog@gmail.com →</a>
+          <a class="button secondary" href="tel:+15035839175">Call / Text: (503) 583-9175</a>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>&copy; 2026 NorthStar Prime. Scoped engineering deliverables.</span>
+      <a href="/hire/">All Services</a>
+      <a href="/contact/">Contact &amp; Support</a>
+      <a href="/portfolio/">Portfolio</a>
+    </footer>
+  </div>
+</body>
+</html>

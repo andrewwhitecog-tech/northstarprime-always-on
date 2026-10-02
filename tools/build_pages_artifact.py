@@ -181,48 +181,64 @@ def iter_source_files():
 
 
 def materialize_b64_zips(output: Path) -> int:
-    """Decode tip/download zips shipped as *.zip.b64 or *.zip.b64.partNN text.
+    """Decode binaries shipped as *.b64 or *.b64.partNN text (zips, JS, PNG, …).
 
-    GitHub MCP create_or_update_file cannot land raw binaries; Pages still needs
-    real PK zips in the curated artifact for /static/downloads/.
+    GitHub MCP cannot land raw binaries; Pages still needs real bytes in the
+    curated artifact. Incomplete part sets are skipped so in-flight uploads do
+    not fail the whole deploy. PK magic is required only for *.zip stems.
     """
     import base64
     import re
+    import sys
 
     count = 0
-    for b64_path in sorted(output.rglob("*.zip.b64")):
-        if ".zip.b64.part" in b64_path.name:
+    for b64_path in sorted(output.rglob("*.b64")):
+        if ".b64.part" in b64_path.name:
             continue
-        zip_path = Path(str(b64_path)[: -len(".b64")])
+        if not b64_path.name.endswith(".b64"):
+            continue
+        out_name = b64_path.name[: -len(".b64")]
+        out_path = b64_path.parent / out_name
         raw = base64.b64decode("".join(b64_path.read_text(encoding="ascii").split()), validate=False)
-        if len(raw) < 4 or raw[:2] != b"PK":
+        if out_name.endswith(".zip") and (len(raw) < 4 or raw[:2] != b"PK"):
             raise ValueError(f"Decoded zip missing PK magic: {b64_path.relative_to(output).as_posix()}")
-        zip_path.parent.mkdir(parents=True, exist_ok=True)
-        zip_path.write_bytes(raw)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_bytes(raw)
         b64_path.unlink(missing_ok=True)
         count += 1
 
-    part_files = [p for p in output.rglob("*") if p.is_file() and ".zip.b64.part" in p.name]
+    part_files = [p for p in output.rglob("*") if p.is_file() and ".b64.part" in p.name]
     groups: dict[str, list[tuple[int, Path]]] = {}
     for part in part_files:
-        m = re.match(r"^(?P<stem>.+\.zip)\.b64\.part(?P<idx>\d+)$", part.name)
+        m = re.match(r"^(?P<stem>.+)\.b64\.part(?P<idx>\d+)$", part.name)
         if not m:
-            raise ValueError(f"Unexpected b64 part name: {part.relative_to(output).as_posix()}")
+            print(
+                f"skip unexpected b64 part name: {part.relative_to(output).as_posix()}",
+                file=sys.stderr,
+            )
+            continue
         groups.setdefault(m.group("stem"), []).append((int(m.group("idx")), part))
     for stem, parts in sorted(groups.items()):
         parts.sort(key=lambda item: item[0])
         idxs = [idx for idx, _ in parts]
-        if idxs != list(range(len(parts))):
-            raise ValueError(f"Missing/unordered b64 parts for {stem}: {idxs}")
+        expected = list(range(len(parts)))
+        if idxs != expected:
+            print(
+                f"skip incomplete b64 parts for {stem}: have {idxs[:5]}{'...' if len(idxs)>5 else ''} "
+                f"n={len(idxs)} (need contiguous 0..N-1)",
+                file=sys.stderr,
+            )
+            continue
         blob = "".join(path.read_text(encoding="ascii") for _, path in parts)
         raw = base64.b64decode("".join(blob.split()), validate=False)
-        if len(raw) < 4 or raw[:2] != b"PK":
+        if stem.endswith(".zip") and (len(raw) < 4 or raw[:2] != b"PK"):
             raise ValueError(f"Decoded zip missing PK magic: {stem}")
-        zip_path = parts[0][1].parent / stem
-        zip_path.write_bytes(raw)
+        out_path = parts[0][1].parent / stem
+        out_path.write_bytes(raw)
         for _, path in parts:
             path.unlink(missing_ok=True)
         count += 1
+        print(f"materialized {stem} bytes={len(raw)}")
     return count
 
 

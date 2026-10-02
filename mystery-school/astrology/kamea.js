@@ -262,23 +262,24 @@
     };
   }
 
-  // Render Sigil into SVG Markup string
+  // Render Sigil into SVG Markup string — black glass + iridescent sacred geometry
   function renderSigilSVG(sigilData, options = {}) {
     const { showGrid = true, showNumbers = false, glow = true } = options;
     const { size, padding, cellSize, grid, pathD, startCircle, terminalLine, color, symbol, planet, phrase } = sigilData;
     const n = grid.length;
+    const cx = size / 2;
+    const cy = size / 2;
 
     let gridSVG = '';
     if (showGrid) {
-      // Background cell boxes
       for (let r = 0; r < n; r++) {
         for (let c = 0; c < n; c++) {
           const x = padding + c * cellSize;
           const y = padding + r * cellSize;
           const val = grid[r][c];
-          gridSVG += `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>`;
+          gridSVG += `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" fill="rgba(255,255,255,0.015)" stroke="rgba(245,185,66,0.12)" stroke-width="1"/>`;
           if (showNumbers) {
-            gridSVG += `<text x="${x + cellSize / 2}" y="${y + cellSize / 2 + 4}" font-family="'Cinzel', serif" font-size="${Math.max(9, Math.floor(cellSize * 0.28))}" fill="rgba(255,255,255,0.3)" text-anchor="middle">${val}</text>`;
+            gridSVG += `<text x="${x + cellSize / 2}" y="${y + cellSize / 2 + 4}" font-family="'Cinzel', Georgia, serif" font-size="${Math.max(9, Math.floor(cellSize * 0.28))}" fill="rgba(248,250,252,0.32)" text-anchor="middle">${val}</text>`;
           }
         }
       }
@@ -286,40 +287,49 @@
 
     const glowFilter = glow ? `
       <defs>
-        <filter id="sigilGlow" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="3" result="blur" />
+        <radialGradient id="kameaVoid" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#0c1224"/>
+          <stop offset="100%" stop-color="#03050a"/>
+        </radialGradient>
+        <linearGradient id="kameaIris" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#fbbf24"/>
+          <stop offset="50%" stop-color="#67e8f9"/>
+          <stop offset="100%" stop-color="#c084fc"/>
+        </linearGradient>
+        <filter id="sigilGlow" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="3.2" result="blur" />
           <feMerge>
             <feMergeNode in="blur" />
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
-      </defs>` : '';
+      </defs>` : '<defs></defs>';
 
     return `
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="100%" height="100%" style="background:#080c16; border-radius:12px; overflow:hidden;">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="100%" height="100%" style="border-radius:12px; overflow:hidden;">
   ${glowFilter}
-  <!-- Outer Sacred Geometry Ring -->
-  <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 8}" fill="none" stroke="rgba(245,158,11,0.25)" stroke-width="1.5" stroke-dasharray="4, 4"/>
-  <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 14}" fill="none" stroke="rgba(245,158,11,0.4)" stroke-width="1"/>
+  <rect width="${size}" height="${size}" fill="url(#kameaVoid)"/>
+  <!-- Chronometric sacred rings (geometry only) -->
+  <circle cx="${cx}" cy="${cy}" r="${size / 2 - 8}" fill="none" stroke="url(#kameaIris)" stroke-width="1.4" stroke-opacity="0.55" stroke-dasharray="5, 4"/>
+  <circle cx="${cx}" cy="${cy}" r="${size / 2 - 14}" fill="none" stroke="${color}" stroke-width="1" stroke-opacity="0.45"/>
+  <circle cx="${cx}" cy="${cy}" r="${size / 2 - 22}" fill="none" stroke="rgba(192,132,252,0.2)" stroke-width="0.7"/>
 
-  <!-- Kamea Grid -->
   <g class="kamea-grid">
     ${gridSVG}
   </g>
 
-  <!-- Sigil Vector Path -->
   <path d="${pathD}" fill="none" stroke="${color}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" filter="url(#sigilGlow)"/>
 
-  <!-- Start Circle -->
-  ${startCircle ? `<circle cx="${startCircle.x}" cy="${startCircle.y}" r="${startCircle.r}" fill="#080c16" stroke="${color}" stroke-width="2.5"/>` : ''}
+  ${startCircle ? `<circle cx="${startCircle.x}" cy="${startCircle.y}" r="${startCircle.r}" fill="#03050a" stroke="${color}" stroke-width="2.5" filter="url(#sigilGlow)"/>` : ''}
 
-  <!-- Terminal Crossbar -->
-  ${terminalLine ? `<line x1="${terminalLine.x1}" y1="${terminalLine.y1}" x2="${terminalLine.x2}" y2="${terminalLine.y2}" stroke="${color}" stroke-width="3" stroke-linecap="round"/>` : ''}
+  ${terminalLine ? `<line x1="${terminalLine.x1}" y1="${terminalLine.y1}" x2="${terminalLine.x2}" y2="${terminalLine.y2}" stroke="${color}" stroke-width="3" stroke-linecap="round" filter="url(#sigilGlow)"/>` : ''}
 
-  <!-- Header & Footer Metadata -->
-  <text x="${padding}" y="20" font-family="'Cinzel', serif" font-size="11" letter-spacing="2" fill="${color}">${symbol} KAMEA OF ${planet.toUpperCase()}</text>
+  <!-- Glass metadata strips — text clear of art -->
+  <rect x="${padding - 4}" y="6" width="${size - padding * 2 + 8}" height="20" rx="4" fill="rgba(3,5,10,0.72)" stroke="rgba(245,185,66,0.2)" stroke-width="0.6"/>
+  <text x="${padding}" y="20" font-family="'Cinzel', Georgia, serif" font-size="11" letter-spacing="2" fill="${color}">${symbol} KAMEA OF ${planet.toUpperCase()}</text>
   <text x="${size - padding}" y="20" font-family="'Inter', sans-serif" font-size="10" fill="#94a3b8" text-anchor="end">ORDER ${n}x${n}</text>
-  <text x="${size / 2}" y="${size - 10}" font-family="'Courier New', monospace" font-size="10" letter-spacing="1" fill="#cbd5e1" text-anchor="middle">SIGIL: "${phrase.toUpperCase()}"</text>
+  <rect x="${padding - 4}" y="${size - 24}" width="${size - padding * 2 + 8}" height="18" rx="4" fill="rgba(3,5,10,0.72)" stroke="rgba(103,232,249,0.18)" stroke-width="0.6"/>
+  <text x="${size / 2}" y="${size - 10}" font-family="'Courier New', monospace" font-size="10" letter-spacing="1" fill="#e2e8f0" text-anchor="middle">SIGIL: "${phrase.toUpperCase()}"</text>
 </svg>`.trim();
   }
 

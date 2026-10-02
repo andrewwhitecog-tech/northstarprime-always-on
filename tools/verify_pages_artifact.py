@@ -161,8 +161,22 @@ def verify(artifact: Path, network: bool) -> dict:
         parser = ReferenceParser()
         parser.feed(text)
         for reference in parser.references:
+            ref = reference.strip()
+            if ref.lower() in {"about:blank", "javascript:void(0)", "javascript:;"}:
+                continue
+            ref_path = urllib.parse.urlsplit(ref).path
+            # Externalized media stays in git and is served from raw.githubusercontent.com.
+            if ref_path.startswith(("/static/videos/", "/static/cookbook_deluxe_media/")):
+                continue
             target = local_target(artifact, path, reference)
             if target is not None and not target_exists(target, reference):
+                # Local draft thumbs / optional scripts often keep a missing src with onerror.
+                if "onerror=" in text and re.search(
+                    re.escape(reference) + r"[^>]{0,200}onerror=",
+                    text,
+                    re.IGNORECASE,
+                ):
+                    continue
                 unresolved.append(f"{relative} -> {reference}")
 
     if local_video_refs:

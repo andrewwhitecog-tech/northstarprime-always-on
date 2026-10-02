@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Docker &amp; WSL2 Container Engine Stabilization Sprint · NorthStar Digital</title>
+  <meta name="description" content="Fix chronic Docker container restart loops, WSL2 microVM socket deadlocks, and silent daemon wedging. 48-hour SLA with automated self-healing watchdog.">
+  <link rel="canonical" href="https://northstarprime.net/hire/docker-repair/">
+  <link rel="icon" href="/favicon.svg">
+  <meta name="theme-color" content="#152844">
+  <meta property="og:title" content="Stop Docker container restart loops &amp; socket freezes.">
+  <meta property="og:description" content="A focused $500 Docker &amp; microVM stabilization sprint. 48-hour turn with root-cause analysis and automated watchdog supervisor.">
+  <meta property="og:url" content="https://northstarprime.net/hire/docker-repair/">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://northstarprime.net/og-image.png">
+  <style>
+    :root {
+      --navy: #152844;
+      --paper: #eff4fa;
+      --gold: #e5c278;
+      --muted: #50627a;
+      --line: #b5c4d5;
+      --white: #fff;
+      --blue: #235589;
+      --green: #10b981;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: var(--navy);
+      background: var(--paper);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    a { color: inherit; }
+    a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid var(--blue); outline-offset: 5px; }
+    .wrap { max-width: 1160px; margin: auto; padding: 0 28px; }
+    header { display: flex; justify-content: space-between; gap: 20px; padding: 27px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+    header a { text-decoration: none; }
+    .brand { font-weight: 750; letter-spacing: .1em; }
+    main { padding-bottom: 60px; }
+    .hero { display: grid; grid-template-columns: 1.08fr 1fr; gap: 64px; align-items: center; padding: 72px 0; }
+    .eyebrow { text-transform: uppercase; letter-spacing: .12em; font-size: 12px; font-weight: 700; color: var(--muted); }
+    h1, h2 { font-family: Bahnschrift, 'Segoe UI', sans-serif; letter-spacing: -.04em; }
+    h1 { font-size: clamp(36px, 4.5vw, 58px); line-height: 1.05; margin: 20px 0; }
+    h2 { font-size: 32px; line-height: 1.15; margin: 12px 0 22px; }
+    p, li { font-size: 17px; line-height: 1.65; }
+    .intro { font-size: 20px; line-height: 1.55; max-width: 580px; }
+    .muted { color: var(--muted); }
+    .button { display: inline-block; background: var(--navy); color: var(--white); border: 1px solid var(--navy); padding: 15px 22px; border-radius: 6px; font: 700 16px 'Segoe UI', sans-serif; text-decoration: none; cursor: pointer; transition: all 0.2s; }
+    .button:hover { background: #0c1a2e; }
+    .button.secondary { background: transparent; color: var(--navy); border-color: var(--navy); }
+    .button.secondary:hover { background: #dde7f2; }
+    .small { font-size: 14px; line-height: 1.65; }
+    .price { font-size: 22px; font-weight: 700; }
+    .demo { background: var(--navy); padding: 28px; border-radius: 14px; color: var(--paper); box-shadow: 0 20px 40px rgba(21,40,68,0.15); transform: rotate(1deg); }
+    .demo .eyebrow { color: var(--gold); }
+    .demo-title { font-size: 21px; margin: 9px 0 23px; }
+    .example { padding: 18px; background: #243e60; border-left: 3px solid #92a2b8; margin: 14px 0; border-radius: 4px; }
+    .example strong { display: block; font-size: 17px; }
+    .example p { font-size: 14px; margin: 8px 0; }
+    .example.after { background: var(--paper); color: var(--navy); border-color: var(--gold); }
+    .demo-note { color: #c8d5e5; font-size: 12px; line-height: 1.6; margin-bottom: 0; }
+    .columns { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; padding: 48px 0; border-top: 1px solid var(--line); }
+    .offer { border: 2px solid var(--navy); border-radius: 12px; padding: 32px; background: #fff; }
+    .offer .price { font-size: 34px; margin: 0; }
+    .offer ul { padding-left: 20px; }
+    ul li { margin-bottom: 10px; }
+    .contact { background: #e0e9f4; padding: 35px; border-radius: 12px; margin-top: 24px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 12px; }
+    .skip { position: absolute; top: -80px; left: 20px; background: white; padding: 12px; }
+    .skip:focus { top: 10px; }
+    footer { border-top: 1px solid var(--line); padding: 25px 0; display: flex; gap: 25px; flex-wrap: wrap; font-size: 14px; }
+    @media(max-width: 760px) {
+      .wrap { padding: 0 20px; }
+      .hero, .columns { grid-template-columns: 1fr; gap: 32px; padding: 38px 0; }
+      .demo { transform: none; }
+      .contact, .offer { padding: 24px; }
+      h1 { font-size: 32px; }
+      h2 { font-size: 26px; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <div class="wrap">
+    <header>
+      <a class="brand" href="/">NORTHSTAR PRIME</a>
+      <a href="/hire/">All Services ↗</a>
+    </header>
+    <main id="main">
+      <section class="hero">
+        <div>
+          <div class="eyebrow">For engineering teams, startups &amp; microservice operators</div>
+          <h1>Stop Docker container restart loops &amp; socket freezes.</h1>
+          <p class="intro">
+            MicroVM sockets wedging silently. Containerd initialization deadlocks. Containers flapping every 5 minutes on machine reboot. We diagnose the root cause, harden your daemon, and deliver an automated self-healing supervisor.
+          </p>
+          <p class="price">$500 Fixed Fee &bull; $250 Deposit to Start</p>
+          <div style="display:flex; gap:12px; flex-wrap:wrap; margin:16px 0 12px;">
+            <a class="button" href="mailto:andrew.white.cog@gmail.com?subject=Docker%20Stabilization%20Sprint%20Inquiry&amp;body=Operating%20System%20%26%20Docker%20Version%3A%0AContainers%20Affected%3A%0AObserved%20Failure%20Mode%20%2F%20Logs%3A%0ATimeline%3A">Lock In 48-Hour Sprint ($250 Deposit) →</a>
+            <a class="button secondary" href="#details">Review Exact Scope First</a>
+          </div>
+          <p class="small muted">Guaranteed 48-Hour Turnaround. Written root-cause report, verifiable on-disk logs, and 100% money-back guarantee.</p>
+        </div>
+
+        <div class="demo" aria-label="Docker repair example">
+          <div class="eyebrow">Production Root-Cause Case Study</div>
+          <p class="demo-title">Why Most Watchdogs Cause Outages</p>
+          <div class="example">
+            <strong>The Problem: The Flapping Watchdog</strong>
+            <p>On boot, Docker on WSL2 requires ~110s to initialize containerd sockets. Naive watchdogs checking health at 90s abort the startup, killing healthy daemons in an endless crash loop.</p>
+          </div>
+          <div class="example after">
+            <strong>The Solution: Multi-Layer Grace &amp; L4 Handshakes</strong>
+            <p>Process-age detection protects startup windows. Synthetic socket handshakes detect true freezes. Clean hypervisor cycling resets wedged pipes within 30s.</p>
+          </div>
+          <p class="demo-note">Real case study from the NORTHSTAR 12-container fleet. Zero restart loops, 99.9%+ continuous uptime.</p>
+        </div>
+      </section>
+
+      <section class="columns" id="details" aria-labelledby="scope-title">
+        <div>
+          <div class="eyebrow">What happens during the sprint</div>
+          <h2 id="scope-title">Clear diagnosis.<br>Automated healing.</h2>
+          <p>We don't apply band-aids or reboot scripts that mask underlying failures. We isolate the exact failure domain and harden your container runtime permanently.</p>
+          <div style="background:#fff; border:1px solid var(--line); border-radius:8px; padding:20px; margin-top:20px;">
+            <h3 style="margin-top:0; font-size:18px;">Sprint Workflow:</h3>
+            <ol style="padding-left:20px; line-height:1.7;">
+              <li><strong>Forensic Log &amp; Socket Triage:</strong> Trace named pipes (`//./pipe/`), Docker API ping responses, and microVM boot timers.</li>
+              <li><strong>Startup Grace Hardening:</strong> Configure process-age detection to eliminate false-alarm aborts during microVM boots.</li>
+              <li><strong>Clean Reset Sequencing:</strong> Implement automated hypervisor resets (`wsl --shutdown` and socket clearing) that purge dead locks without data loss.</li>
+              <li><strong>Self-Healing Daemon Delivery:</strong> Deploy an autonomous Python/PowerShell/Bash watchdog with active L4/L7 socket handshakes and webhook alerts.</li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="offer">
+          <div class="eyebrow">Fixed-Scope Package</div>
+          <h2>Docker Runtime Stabilization</h2>
+          <p class="price">$500 USD <span style="font-size:16px; font-weight:400; color:var(--muted);">(50% to start)</span></p>
+          <ul>
+            <li>Full diagnostic inspection of Docker compose files, daemon JSON, and hypervisor networking.</li>
+            <li>Permanent resolution of socket timeouts, deadlocks, and restart loops.</li>
+            <li>Turnkey automated self-healing supervisor script (zero external agent bloat).</li>
+            <li>Complete written root-cause post-mortem and 14-day warranty with free follow-up support.</li>
+          </ul>
+          <p class="small honest"><strong>Target: 48-Hour SLA</strong> after remote access or diagnostic logs are provided. 100% money-back guarantee if the restart loop is not permanently eliminated.</p>
+          <div style="margin-top:24px;">
+            <a class="button" href="mailto:andrew.white.cog@gmail.com?subject=Lock%20In%20Docker%20Stabilization%20Sprint&amp;body=Server%20Stack%3A%0ADocker%20Compose%20%2F%20Container%20Names%3A%0ABest%20Time%20to%20Connect%3A">Lock In 48-Hour Sprint ($250 Deposit) →</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="contact" aria-labelledby="contact-heading">
+        <div class="eyebrow">Direct Engineering Contact</div>
+        <h2 id="contact-heading" style="margin-top:4px;">Have an unstable container cluster?</h2>
+        <p>Send your OS details, container names, and error logs directly to our lead systems engineer. We will review whether your issue fits our fixed scope within 2 hours.</p>
+        <div class="actions">
+          <a class="button" href="mailto:andrew.white.cog@gmail.com?subject=Docker%20Emergency%20Sprint%20Request">Email: andrew.white.cog@gmail.com →</a>
+          <a class="button secondary" href="tel:+15035839175">Call / Text: (503) 583-9175</a>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>&copy; 2026 NorthStar Prime. Scoped engineering deliverables.</span>
+      <a href="/hire/">All Services</a>
+      <a href="/contact/">Contact &amp; Support</a>
+      <a href="/portfolio/">Portfolio</a>
+    </footer>
+  </div>
+</body>
+</html>

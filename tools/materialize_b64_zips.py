@@ -33,8 +33,15 @@ def materialize(output: Path) -> int:
     for stem, parts in sorted(groups.items()):
         parts.sort(key=lambda item: item[0])
         idxs = [idx for idx, _ in parts]
-        if idxs != list(range(len(parts))):
-            raise ValueError(f"Missing/unordered b64 parts for {stem}: {idxs}")
+        expected = list(range(len(parts)))
+        if idxs != expected:
+            # Incomplete upload in progress — leave parts in place; do not fail the whole deploy.
+            print(
+                f"skip incomplete b64 parts for {stem}: have {idxs[:5]}{'...' if len(idxs)>5 else ''} "
+                f"n={len(idxs)} (need contiguous 0..N-1)",
+                file=sys.stderr,
+            )
+            continue
         blob = "".join(path.read_text(encoding="ascii") for _, path in parts)
         raw = base64.b64decode("".join(blob.split()), validate=False)
         if len(raw) < 4 or raw[:2] != b"PK":

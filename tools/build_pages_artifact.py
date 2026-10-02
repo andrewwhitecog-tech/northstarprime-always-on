@@ -179,6 +179,53 @@ def iter_source_files():
         yield path, relative
 
 
+
+def materialize_b64_zips(output: Path) -> int:
+    """Decode tip/download zips shipped as *.zip.b64 or *.zip.b64.partNN text.
+
+    GitHub MCP create_or_update_file cannot land raw binaries; Pages still needs
+    real PK zips in the curated artifact for /static/downloads/.
+    """
+    import base64
+    import re
+
+    count = 0
+    for b64_path in sorted(output.rglob("*.zip.b64")):
+        if ".zip.b64.part" in b64_path.name:
+            continue
+        zip_path = Path(str(b64_path)[: -len(".b64")])
+        raw = base64.b64decode("".join(b64_path.read_text(encoding="ascii").split()), validate=False)
+        if len(raw) < 4 or raw[:2] != b"PK":
+            raise ValueError(f"Decoded zip missing PK magic: {b64_path.relative_to(output).as_posix()}")
+        zip_path.parent.mkdir(parents=True, exist_ok=True)
+        zip_path.write_bytes(raw)
+        b64_path.unlink(missing_ok=True)
+        count += 1
+
+    part_files = [p for p in output.rglob("*") if p.is_file() and ".zip.b64.part" in p.name]
+    groups: dict[str, list[tuple[int, Path]]] = {}
+    for part in part_files:
+        m = re.match(r"^(?P<stem>.+\.zip)\.b64\.part(?P<idx>\d+)$", part.name)
+        if not m:
+            raise ValueError(f"Unexpected b64 part name: {part.relative_to(output).as_posix()}")
+        groups.setdefault(m.group("stem"), []).append((int(m.group("idx")), part))
+    for stem, parts in sorted(groups.items()):
+        parts.sort(key=lambda item: item[0])
+        idxs = [idx for idx, _ in parts]
+        if idxs != list(range(len(parts))):
+            raise ValueError(f"Missing/unordered b64 parts for {stem}: {idxs}")
+        blob = "".join(path.read_text(encoding="ascii") for _, path in parts)
+        raw = base64.b64decode("".join(blob.split()), validate=False)
+        if len(raw) < 4 or raw[:2] != b"PK":
+            raise ValueError(f"Decoded zip missing PK magic: {stem}")
+        zip_path = parts[0][1].parent / stem
+        zip_path.write_bytes(raw)
+        for _, path in parts:
+            path.unlink(missing_ok=True)
+        count += 1
+    return count
+
+
 def build(output: Path) -> dict:
     # Immutable media URLs must identify the exact bytes copied and omitted.
     # Reject both staged and unstaged tracked edits; untracked exports are excluded.
@@ -244,6 +291,8 @@ def build(output: Path) -> dict:
                     time.sleep(0.1)
         copied += 1
 
+    materialized_zips = materialize_b64_zips(output)
+
     payload_files = [path for path in output.rglob("*") if path.is_file()]
     payload_bytes = sum(path.stat().st_size for path in payload_files)
     oversized = [
@@ -263,6 +312,7 @@ def build(output: Path) -> dict:
         "generated_utc": datetime.now(timezone.utc).isoformat(),
         "source_commit": media_commit,
         "file_count_excluding_manifest": copied,
+        "materialized_b64_zips": materialized_zips,
         "payload_bytes_excluding_manifest": payload_bytes,
         "release_guard_bytes": RELEASE_GUARD_BYTES,
         "published_limit_bytes": PUBLISHED_LIMIT_BYTES,

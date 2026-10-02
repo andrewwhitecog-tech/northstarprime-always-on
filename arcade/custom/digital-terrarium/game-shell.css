@@ -1,10 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>THESEUS DEEP-FIELD OBSERVATORY // Digital Terrarium v4.1.7</title>
-<style>
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
   --bezel: #1a1a1e;
@@ -150,6 +144,30 @@ body {
   opacity: 0;
 }
 
+/* Screen shake */
+#screen.shake {
+  animation: screenShake 0.15s ease-in-out;
+}
+@keyframes screenShake {
+  0%, 100% { transform: translate(0,0); }
+  20% { transform: translate(-2px, 1px); }
+  40% { transform: translate(2px, -1px); }
+  60% { transform: translate(-1px, 2px); }
+  80% { transform: translate(1px, -2px); }
+}
+
+/* Screen distort for extinction */
+#screen.distort {
+  animation: screenDistort 2s ease-out;
+}
+@keyframes screenDistort {
+  0% { filter: hue-rotate(0deg) saturate(1) brightness(1); }
+  10% { filter: hue-rotate(20deg) saturate(2) brightness(1.3); }
+  30% { filter: hue-rotate(-10deg) saturate(1.5) brightness(0.8); }
+  50% { filter: hue-rotate(5deg) saturate(1.2) brightness(1.1); }
+  100% { filter: hue-rotate(0deg) saturate(1) brightness(1); }
+}
+
 /* ======== SIMULATION UI TOP BAR ======== */
 #top-bar {
   position: absolute;
@@ -186,12 +204,14 @@ body {
   display: flex;
   align-items: center;
   padding: 0 16px;
-  gap: 20px;
+  gap: 16px;
   z-index: 30;
   font-size: 9px;
   color: #336644;
   letter-spacing: 1px;
   user-select: none;
+  flex-wrap: nowrap;
+  overflow: hidden;
 }
 #stats-bar .stat-val { color: #44aa66; }
 #stats-bar .stat-warn { color: var(--warn); }
@@ -214,6 +234,29 @@ body {
   margin: 2px 0;
 }
 .warning-line.active { opacity: 1; }
+
+/* ======== EVENT LOG ======== */
+#event-log {
+  position: absolute;
+  top: 60px; left: 12px;
+  z-index: 30;
+  font-size: 8px;
+  color: var(--accent);
+  user-select: none;
+  max-width: 400px;
+  max-height: 120px;
+  overflow: hidden;
+}
+.event-line {
+  opacity: 1;
+  transition: opacity 2s;
+  margin: 2px 0;
+  text-shadow: 0 0 4px rgba(0, 200, 120, 0.3);
+  white-space: nowrap;
+}
+.event-line.danger { color: var(--danger); text-shadow: 0 0 6px rgba(255, 50, 50, 0.5); }
+.event-line.warn { color: var(--warn); text-shadow: 0 0 6px rgba(255, 170, 30, 0.5); }
+.event-line.critical { color: #ff0044; font-size: 10px; text-shadow: 0 0 10px rgba(255, 0, 60, 0.8); }
 
 /* ======== INFO PANEL (bottom left) ======== */
 #info-panel {
@@ -343,6 +386,31 @@ body {
 }
 #pause-overlay.active { display: flex; }
 
+/* ======== EXTINCTION WARNING OVERLAY ======== */
+#extinction-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 90;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+#extinction-overlay.active {
+  display: flex;
+  animation: extinctionFlash 0.5s ease-out 3;
+}
+#extinction-text {
+  color: #ff0044;
+  font-size: 28px;
+  letter-spacing: 6px;
+  text-shadow: 0 0 20px rgba(255, 0, 60, 0.8), 0 0 40px rgba(255, 0, 60, 0.4);
+}
+@keyframes extinctionFlash {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+
 /* ======== FULLSCREEN ADJUSTMENTS ======== */
 body:fullscreen #monitor,
 body:-webkit-full-screen #monitor {
@@ -357,85 +425,198 @@ canvas#c {
   z-index: 10;
 }
 
+/* ======== POPULATION CHART PANEL ======== */
+#pop-chart-panel {
+  position: absolute;
+  bottom: 8px; right: 12px;
+  z-index: 31;
+  width: 280px;
+  height: 160px;
+  background: rgba(0, 8, 4, 0.75);
+  border: 1px solid rgba(0, 180, 120, 0.15);
+  border-radius: 2px;
+  padding: 4px;
+  user-select: none;
+}
+#pop-chart-panel .chart-title {
+  font-size: 8px;
+  color: #337755;
+  letter-spacing: 2px;
+  text-align: center;
+  margin-bottom: 2px;
+}
+#pop-chart-canvas {
+  width: 100%;
+  height: calc(100% - 14px);
+}
+
+/* ======== INFECTION HP BAR ======== */
+#infection-bar-wrap {
+  position: absolute;
+  top: 57px; left: 12px; right: 12px;
+  height: 6px;
+  z-index: 31;
+  background: rgba(0, 20, 12, 0.6);
+  border: 1px solid rgba(0, 180, 120, 0.1);
+  border-radius: 1px;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+#infection-bar-wrap.visible { opacity: 1; }
+#infection-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #44aa22, #ccaa00, #ff4400, #ff0033);
+  background-size: 400% 100%;
+  transition: width 0.3s ease;
+  box-shadow: 0 0 6px rgba(255, 100, 0, 0.4);
+  border-radius: 1px;
+}
+#infection-bar-label {
+  position: absolute;
+  top: -1px;
+  right: 4px;
+  font-size: 7px;
+  color: #ff8844;
+  letter-spacing: 1px;
+  line-height: 8px;
+}
+
+/* ======== DANGER ALERTS (BIG BOLD + SKULL) ======== */
+#danger-alert {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 80;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+#danger-alert.active { opacity: 1; }
+#danger-alert .alert-icon {
+  font-size: 48px;
+  line-height: 1;
+  filter: drop-shadow(0 0 12px rgba(255, 30, 30, 0.8));
+}
+#danger-alert .alert-text {
+  font-size: 16px;
+  font-weight: bold;
+  color: #ff2233;
+  letter-spacing: 4px;
+  text-shadow: 0 0 10px rgba(255, 30, 30, 0.8), 0 0 30px rgba(255, 0, 30, 0.4);
+  margin-top: 4px;
+}
+#danger-alert .alert-sub {
+  font-size: 10px;
+  color: #ff6644;
+  letter-spacing: 2px;
+  margin-top: 4px;
+  text-shadow: 0 0 6px rgba(255, 80, 40, 0.5);
+}
+
+/* ======== AI INTERPRETATION WINDOW (top right) ======== */
+#ai-window {
+  position: absolute;
+  top: 66px; right: 12px;
+  z-index: 31;
+  width: 220px;
+  max-height: 180px;
+  background: rgba(0, 6, 12, 0.8);
+  border: 1px solid rgba(60, 140, 255, 0.2);
+  border-radius: 2px;
+  padding: 6px 8px;
+  overflow: hidden;
+  user-select: none;
+}
+#ai-window .ai-title {
+  font-size: 8px;
+  color: #3388cc;
+  letter-spacing: 2px;
+  border-bottom: 1px solid rgba(60, 140, 255, 0.1);
+  padding-bottom: 3px;
+  margin-bottom: 4px;
+}
+#ai-window .ai-line {
+  font-size: 8px;
+  color: #5599bb;
+  line-height: 1.5;
+  margin: 2px 0;
+  opacity: 0.9;
+}
+#ai-window .ai-line.action { color: #44ccaa; }
+#ai-window .ai-line.threat { color: #ff6644; }
+#ai-window .ai-line.event { color: #ccaa44; }
+#ai-window .ai-cursor {
+  display: inline-block;
+  width: 5px;
+  height: 8px;
+  background: #3388cc;
+  animation: aiCursorBlink 1s step-end infinite;
+  vertical-align: middle;
+  margin-left: 2px;
+}
+@keyframes aiCursorBlink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+/* ======== NEON NIGHTLIFE OVERRIDE ======== */
+@keyframes rainbowPulse {
+  0% { filter: hue-rotate(0deg) saturate(1.15); }
+  100% { filter: hue-rotate(360deg) saturate(1.15); }
+}
+body {
+  background:
+    repeating-linear-gradient(116deg, rgba(34,211,238,0.10) 0 1px, transparent 1px 46px),
+    repeating-linear-gradient(64deg, rgba(236,72,153,0.10) 0 1px, transparent 1px 54px),
+    linear-gradient(135deg, #02030a, #0b0618 44%, #030d16 72%, #120008);
+}
+#monitor {
+  background:
+    linear-gradient(145deg, rgba(34,211,238,0.28), rgba(25,20,38,0.96), rgba(236,72,153,0.22)) padding-box,
+    conic-gradient(from 120deg, #22d3ee, #a855f7, #ec4899, #f5c542, #10b981, #22d3ee) border-box;
+  border: 2px solid transparent;
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,0.08),
+    inset 0 2px 4px rgba(255,255,255,0.08),
+    0 8px 40px rgba(0,0,0,0.8),
+    0 0 42px rgba(34,211,238,0.32),
+    0 0 72px rgba(236,72,153,0.22);
+  animation: rainbowPulse 12s linear infinite;
+}
+#screen {
+  box-shadow:
+    inset 0 0 95px rgba(34,211,238,0.10),
+    inset 0 0 120px rgba(236,72,153,0.06),
+    0 0 26px rgba(34,211,238,0.24),
+    0 0 44px rgba(236,72,153,0.16);
+}
+#screen-bloom {
+  box-shadow:
+    inset 0 0 110px rgba(34,211,238,0.08),
+    inset 0 0 150px rgba(236,72,153,0.05),
+    0 0 32px rgba(245,197,66,0.10);
+}
+#grid-overlay {
+  background-image:
+    linear-gradient(rgba(34,211,238,0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(236,72,153,0.07) 1px, transparent 1px);
+}
+#monitor-brand {
+  color: rgba(255,255,255,0.72);
+  text-shadow: 0 0 10px rgba(34,211,238,0.7), 0 0 20px rgba(236,72,153,0.45);
+}
+#power-led {
+  background: #f5c542;
+  box-shadow: 0 0 8px #f5c542, 0 0 18px rgba(236,72,153,0.55), 0 0 28px rgba(34,211,238,0.42);
+}
+
 /* NSP IDG return chrome — hub polish A */
 .nsp-return{position:fixed;z-index:10050;top:10px;left:10px;display:flex;gap:8px;flex-wrap:wrap;pointer-events:none}
 .nsp-return a{pointer-events:auto;min-height:40px;padding:0 12px;display:inline-grid;place-items:center;border-radius:5px;text-decoration:none;font:800 10px/1 Inter,Segoe UI,system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;border:1px solid rgba(102,247,237,.45);background:linear-gradient(145deg,rgba(3,7,16,.92),rgba(10,8,24,.8));color:#66f7ed;backdrop-filter:blur(10px);box-shadow:0 8px 24px rgba(0,0,0,.35)}
 .nsp-return a:hover{border-color:#f7ce66;color:#f7ce66}
 .nsp-return a.secondary{border-color:rgba(148,163,184,.35);color:#94a3b8;font-weight:700}
 .nsp-return a.secondary:hover{border-color:#66f7ed;color:#66f7ed}
-</style>
-</head>
-<body>
-<nav class="nsp-return" aria-label="Return navigation"><a href="/digital-terrarium/">&larr; Terrarium hub</a><a class="secondary" href="/arcade/">Arcade</a></nav>
-
-
-<div id="monitor">
-  <div id="monitor-brand">THESEUS DEEP-FIELD OBSERVATORY</div>
-  <div id="power-led"></div>
-  <div id="power-label">PWR</div>
-
-  <div id="screen">
-    <div id="boot"></div>
-    <div id="scanlines"></div>
-    <div id="screen-bloom"></div>
-    <div id="grid-overlay"></div>
-    <div id="glitch"></div>
-
-    <div id="top-bar">
-      <span class="title">DIGITAL TERRARIUM v4.1.7 // XENOBIOLOGICAL CONTAINMENT UNIT</span>
-      <span class="sys-time" id="sys-time">00:00:00.000</span>
-    </div>
-
-    <div id="stats-bar">
-      <span>FPS: <span class="stat-val" id="stat-fps">60</span></span>
-      <span>POP: <span class="stat-val" id="stat-pop">0</span></span>
-      <span>GEN: <span class="stat-val" id="stat-gen">0</span></span>
-      <span>BIOMASS: <span class="stat-val" id="stat-biomass">0.00</span></span>
-      <span>ENTROPY: <span class="stat-val" id="stat-entropy">0.00</span></span>
-      <span>TAGGED: <span class="stat-val" id="stat-tagged">0</span></span>
-      <span>EPOCH: <span class="stat-val" id="stat-epoch">0</span></span>
-    </div>
-
-    <div id="warnings">
-      <div class="warning-line" id="warn1">! ANOMALOUS PATTERN DETECTED</div>
-      <div class="warning-line" id="warn2">! NON-BASELINE INTELLIGENCE</div>
-      <div class="warning-line" id="warn3">! CONTAINMENT FIELD VARIANCE</div>
-    </div>
-
-    <div id="info-panel">
-      <div><span class="label">SYSTEM:</span> <span class="val">THESEUS DEEP-FIELD</span></div>
-      <div><span class="label">BIOME:</span> <span class="val">WATTS-7 XENOBIOLOGICAL</span></div>
-      <div><span class="label">PROTOCOL:</span> <span class="val">SCRAMBLER CONTAINMENT</span></div>
-      <div><span class="label">OBSERVER:</span> <span class="val">PASSIVE / RECORDING</span></div>
-      <div id="info-species" style="margin-top:6px;"></div>
-    </div>
-
-    <div id="controls">
-      <span>F</span> FULLSCREEN | <span>G</span> GRID | <span>S</span> SCANLINES<br>
-      <span>I</span> INFO PANEL | <span>SPACE</span> PAUSE | <span>CLICK</span> TAG
-    </div>
-
-    <div id="depth-gauge"><div id="depth-marker" style="top:50%"></div></div>
-
-    <div id="pause-overlay">PAUSED</div>
-
-    <canvas id="c"></canvas>
-  </div>
-</div>
-
-<div id="reticle"></div>
-<div id="classify"></div>
-
-
-<script src="game.p0.js"></script>
-<script src="game.p1.js"></script>
-<script src="game.p2.js"></script>
-<script src="game.p3.js"></script>
-<script src="game.p4.js"></script>
-<script src="game.p5.js"></script>
-<script src="game.p6.js"></script>
-<script src="game.p7.js"></script>
-<script src="game.boot.js"></script>
-<script src="/static/games/nsp-return.js"></script>
-</body>
-</html>

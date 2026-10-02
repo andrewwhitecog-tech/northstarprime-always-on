@@ -190,7 +190,7 @@
       card.style.transform = `perspective(1000px) rotateX(${rx}deg) rotateY(${ry}deg) scale3d(1.03, 1.03, 1.03)`;
       const sheen = card.querySelector('.tcg-card-foil-sheen');
       if (sheen) {
-        sheen.style.background = `radial-gradient(circle at ${e.clientX - rect.left}px ${e.clientY - rect.top}px, rgba(251,191,36,0.35) 0%, rgba(255,255,255,0.1) 40%, transparent 75%)`;
+        sheen.style.background = `radial-gradient(circle at ${e.clientX - rect.left}px ${e.clientY - rect.top}px, rgba(251,191,36,0.45) 0%, rgba(249,168,212,0.22) 28%, rgba(103,232,249,0.18) 48%, rgba(192,132,252,0.12) 62%, transparent 78%)`;
       }
     });
 

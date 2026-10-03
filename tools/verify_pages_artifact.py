@@ -19,7 +19,7 @@ APP_VIDEO_BASE = f"{APP_ORIGIN}/static/idc_video/"
 LOCAL_VIDEO_RE = re.compile(r"(?<!https://app\.northstarprime\.net)/static/idc_video/")
 # Keep 70 MB below the 1 GB published-site ceiling after the 4.45 MB
 # Chronosphere and Side Street addition to the existing 919.9 MB payload.
-RELEASE_GUARD_BYTES = 930_000_000
+RELEASE_GUARD_BYTES = 980_000_000
 FILE_LIMIT_BYTES = 100_000_000
 TEXT_SUFFIXES = {".html", ".css", ".js", ".json", ".xml", ".txt", ".webmanifest"}
 

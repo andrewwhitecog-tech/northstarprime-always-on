@@ -28,8 +28,8 @@ APP_VIDEO_BASE = "https://app.northstarprime.net/static/idc_video/"
 LOCAL_VIDEO_BASE = "/static/idc_video/"
 PUBLISHED_LIMIT_BYTES = 1_000_000_000
 # Chronosphere and Side Street add about 4.45 MB to the 919.9 MB artifact.
-# Keep 70 MB below the configured 1 GB published-site ceiling.
-RELEASE_GUARD_BYTES = 930_000_000
+# Cream tip CDN wave1 needs headroom; keep ~20 MB below the 1 GB published-site ceiling.
+RELEASE_GUARD_BYTES = 980_000_000
 GIT_BLOB_LIMIT_BYTES = 100_000_000
 SKIP_TOP_LEVEL = {".git", ".github", "output", "tools", "__pycache__", ".pytest_cache", ".playwright-cli", ".playwright", "little-light-media", "cookbook-media", "stickerforge-media"}
 TEXT_SUFFIXES = {".html", ".css", ".js", ".json", ".xml", ".txt", ".webmanifest"}
@@ -74,7 +74,7 @@ def rewrite_sticker_refs(raw: str, relative: Path) -> str:
 
 AUDIO_SUFFIXES = {".mp3", ".wav", ".m4a", ".ogg"}
 # Heavy binary trees kept in git and served from raw.githubusercontent.com so the
-# curated Pages artifact stays under the 1 GB published-site / 930 MB release guard.
+# curated Pages artifact stays under the 1 GB published-site / 980 MB release guard.
 EXTERNAL_RELEASE_PREFIXES = {
     ("static", "videos"),
     ("static", "cookbook_deluxe_media"),

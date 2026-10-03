@@ -109,10 +109,13 @@
     }
 
     #gameCanvas {
+      position: absolute;
+      inset: 0;
       width: 100%;
       height: 100%;
       display: block;
       cursor: crosshair;
+      background: #0c1424;
     }
 
     /* In-Game HUD Overlays */
@@ -2779,8 +2782,13 @@ if (typeof window !== 'undefined') {
 
       // Resize canvas to match display window
       function resizeCanvas() {
-        canvas.width = canvas.parentElement.clientWidth;
-        canvas.height = canvas.parentElement.clientHeight;
+        const parent = canvas.parentElement;
+        const w = Math.max(480, (parent && parent.clientWidth) || window.innerWidth || 960);
+        const h = Math.max(320, (parent && parent.clientHeight) || Math.max(320, (window.innerHeight || 720) - 48));
+        if (canvas.width !== w || canvas.height !== h) {
+          canvas.width = w;
+          canvas.height = h;
+        }
       }
       window.addEventListener('resize', resizeCanvas);
       resizeCanvas();
@@ -2914,9 +2922,19 @@ if (typeof window !== 'undefined') {
       const director = new AIDirector(eventBus, arenaBounds, coverNodes);
       const terminal = new DiegeticTerminal(eventBus, gameState, director, barcodeScanner);
 
-      // Spawn initial 2 System 1 agents
-      director.spawnReinforcement(gameState);
-      director.spawnReinforcement(gameState);
+      // Wave 1 is a visible fight. Do not wait on scanner/terminal/debug toggles.
+      function spawnOpeningSquad() {
+        const p = gameState.player;
+        const archetypes = ['TACTICAL_OPERATOR', 'VOID_PROWLER', 'OBSIDIAN_SENTINEL', 'PRISM_WRAITH'];
+        const offsets = [[-220, -140], [240, -120], [-180, 170], [210, 150]];
+        offsets.forEach((off, i) => {
+          const x = Math.max(arenaBounds.x + 52, Math.min(arenaBounds.x + arenaBounds.width - 52, p.x + off[0]));
+          const y = Math.max(arenaBounds.y + 52, Math.min(arenaBounds.y + arenaBounds.height - 52, p.y + off[1]));
+          const id = `BOT_W1_${i}_${Math.floor(performance.now()).toString(36)}`;
+          gameState.agents.push(new window.System1NeuralAgent(id, x, y, archetypes[i], eventBus));
+        });
+      }
+      spawnOpeningSquad();
 
       // 2. Input Handling
       const keys = {};
@@ -3150,8 +3168,7 @@ if (typeof window !== 'undefined') {
         director.tension = 0.2;
         director.currentWave = 1;
         director.totalKills = 0;
-        director.spawnReinforcement(gameState);
-        director.spawnReinforcement(gameState);
+        spawnOpeningSquad();
       }
 
       function triggerPlayerDash() {
@@ -3225,6 +3242,7 @@ if (typeof window !== 'undefined') {
               lifespan: 16.0,
               age: 0
             });
+          }
         }
       });
 
@@ -3937,8 +3955,16 @@ if (typeof window !== 'undefined') {
         ctx.fillStyle = '#07090e';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+        // Deck plate. The old 3% white grid disappeared into the void.
+        const floor = ctx.createLinearGradient(0, arenaBounds.y, 0, arenaBounds.y + arenaBounds.height);
+        floor.addColorStop(0, '#1a2740');
+        floor.addColorStop(0.45, '#121c30');
+        floor.addColorStop(1, '#24344f');
+        ctx.fillStyle = floor;
+        ctx.fillRect(arenaBounds.x, arenaBounds.y, arenaBounds.width, arenaBounds.height);
+
         // Floor Grid
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+        ctx.strokeStyle = 'rgba(125, 211, 252, 0.22)';
         ctx.lineWidth = 1;
         const gridSize = 40;
         for (let x = arenaBounds.x; x <= arenaBounds.x + arenaBounds.width; x += gridSize) {
@@ -3955,10 +3981,12 @@ if (typeof window !== 'undefined') {
 
         // Obstacles (Crates / Cover Pillars)
         gameState.obstacles.forEach(obs => {
-          ctx.fillStyle = '#1e293b';
+          ctx.fillStyle = '#3b4d68';
           ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
-          ctx.strokeStyle = '#f59e0b';
-          ctx.lineWidth = 1.5;
+          ctx.fillStyle = 'rgba(248, 250, 252, 0.14)';
+          ctx.fillRect(obs.x, obs.y, obs.width, 8);
+          ctx.strokeStyle = '#fbbf24';
+          ctx.lineWidth = 2;
           ctx.strokeRect(obs.x, obs.y, obs.width, obs.height);
 
           // Diagonal hatch pattern
@@ -4251,10 +4279,12 @@ if (typeof window !== 'undefined') {
           ctx.fillRect(10, -4, activeWep && activeWep.type === 'RAILGUN' ? 22 : 16, 8);
 
           // Player avatar
-          ctx.fillStyle = p.isDashing ? '#06b6d4' : (p.overclockTimer > 0 ? '#eab308' : '#f8fafc');
+          ctx.fillStyle = p.isDashing ? '#06b6d4' : (p.overclockTimer > 0 ? '#eab308' : '#e2e8f0');
           ctx.beginPath();
           ctx.arc(0, 0, p.radius, 0, Math.PI * 2);
           ctx.fill();
+          ctx.fillStyle = '#0f172a';
+          ctx.fillRect(-4, -7, 8, 8);
 
           ctx.strokeStyle = p.overclockTimer > 0 ? '#eab308' : '#06b6d4';
           ctx.lineWidth = 2.5;

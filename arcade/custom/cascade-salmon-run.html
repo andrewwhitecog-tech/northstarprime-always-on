@@ -1414,6 +1414,210 @@
       }
 
       // --- Rendering Pipeline ---
+
+      // Visual-only river dressing. Not obstacles, not a new mode.
+      const cascadeScenery = (function () {
+        function mulberry32(seed) {
+          let a = seed >>> 0;
+          return function () {
+            a |= 0; a = (a + 0x6D2B79F5) | 0;
+            let x = Math.imul(a ^ (a >>> 15), 1 | a);
+            x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x;
+            return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+          };
+        }
+        const rnd = mulberry32(0xC5CADE);
+        const trees = [];
+        const ferns = [];
+        const shoreRocks = [];
+        const reeds = [];
+        const cobbles = [];
+        for (let i = 0; i < 28; i++) {
+          trees.push({
+            side: i % 2 === 0 ? -1 : 1,
+            lane: rnd(),
+            h: 86 + rnd() * 130,
+            w: 34 + rnd() * 42,
+            y0: rnd() * 980,
+            z: 0.25 + rnd() * 0.75,
+            tier: rnd()
+          });
+        }
+        for (let i = 0; i < 40; i++) {
+          ferns.push({ side: i % 2 === 0 ? -1 : 1, lane: rnd(), y0: rnd() * 900, s: 10 + rnd() * 16 });
+        }
+        for (let i = 0; i < 24; i++) {
+          shoreRocks.push({ side: i % 2 === 0 ? -1 : 1, lane: 0.05 + rnd() * 0.55, y0: rnd() * 860, rx: 10 + rnd() * 18, ry: 7 + rnd() * 10 });
+        }
+        for (let i = 0; i < 36; i++) {
+          reeds.push({ side: i % 2 === 0 ? -1 : 1, inset: 6 + rnd() * 28, y0: rnd() * 820, h: 18 + rnd() * 28, lean: rnd() * 10 - 5 });
+        }
+        for (let i = 0; i < 34; i++) {
+          cobbles.push({
+            nx: 0.08 + rnd() * 0.84,
+            y0: rnd() * 1100,
+            rx: 7 + rnd() * 16,
+            ry: 4 + rnd() * 8,
+            shade: rnd()
+          });
+        }
+        return { trees, ferns, shoreRocks, reeds, cobbles };
+      })();
+
+      function wrapScroll(y0, speed, span) {
+        const scrolled = (y0 - world.distance * speed) % span;
+        return scrolled < 0 ? scrolled + span : scrolled;
+      }
+
+      function drawCascadeBanks(bankLeft, bankRight) {
+        const leftSoil = ctx.createLinearGradient(0, 0, bankLeft, 0);
+        leftSoil.addColorStop(0, '#02110c');
+        leftSoil.addColorStop(0.45, '#064e3b');
+        leftSoil.addColorStop(0.82, '#166534');
+        leftSoil.addColorStop(1, '#3f6212');
+        ctx.fillStyle = leftSoil;
+        ctx.fillRect(0, 0, bankLeft, V_HEIGHT);
+
+        const rightSoil = ctx.createLinearGradient(bankRight, 0, V_WIDTH, 0);
+        rightSoil.addColorStop(0, '#3f6212');
+        rightSoil.addColorStop(0.18, '#166534');
+        rightSoil.addColorStop(0.55, '#064e3b');
+        rightSoil.addColorStop(1, '#02110c');
+        ctx.fillStyle = rightSoil;
+        ctx.fillRect(bankRight, 0, V_WIDTH - bankRight, V_HEIGHT);
+
+        // Gravel shoreline
+        ctx.fillStyle = '#44403c';
+        ctx.fillRect(bankLeft - 16, 0, 18, V_HEIGHT);
+        ctx.fillRect(bankRight - 2, 0, 18, V_HEIGHT);
+        ctx.fillStyle = '#78716c';
+        for (let y = 0; y < V_HEIGHT; y += 14) {
+          const sy = wrapScroll(y, 12, V_HEIGHT);
+          ctx.fillRect(bankLeft - 14, sy, 5, 3);
+          ctx.fillRect(bankRight + 4, sy + 6, 6, 3);
+        }
+
+        const span = V_HEIGHT + 180;
+        for (const rock of cascadeScenery.shoreRocks) {
+          const y = wrapScroll(rock.y0, 11, span) - 40;
+          const edge = rock.side < 0
+            ? 18 + rock.lane * (bankLeft - 36)
+            : bankRight + 18 + rock.lane * (V_WIDTH - bankRight - 36);
+          ctx.fillStyle = '#1c1917';
+          ctx.beginPath();
+          ctx.ellipse(edge + 3, y + 4, rock.rx, rock.ry, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#57534e';
+          ctx.beginPath();
+          ctx.ellipse(edge, y, rock.rx, rock.ry, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = 'rgba(214, 211, 209, 0.35)';
+          ctx.beginPath();
+          ctx.ellipse(edge - rock.rx * 0.25, y - rock.ry * 0.3, rock.rx * 0.35, rock.ry * 0.28, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        for (const tree of cascadeScenery.trees) {
+          const yBase = wrapScroll(tree.y0, 8 + tree.z * 6, span + tree.h) - 20;
+          const reach = tree.side < 0 ? bankLeft - 12 : V_WIDTH - bankRight - 12;
+          const edge = tree.side < 0
+            ? 16 + tree.lane * Math.max(20, reach)
+            : bankRight + 16 + tree.lane * Math.max(20, V_WIDTH - bankRight - 28);
+          const trunkW = 5 + tree.tier * 3;
+          ctx.fillStyle = '#3f2a1a';
+          ctx.fillRect(edge - trunkW / 2, yBase - tree.h * 0.22, trunkW, tree.h * 0.28);
+          const greens = tree.z > 0.66 ? ['#022c22', '#064e3b', '#14532d'] : ['#052e16', '#166534', '#4d7c0f'];
+          greens.forEach((color, tier) => {
+            const rise = tree.h * (0.22 + tier * 0.26);
+            const half = tree.w * (0.62 - tier * 0.12);
+            const top = yBase - rise - tree.h * 0.28;
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(edge, top);
+            ctx.lineTo(edge - half, yBase - rise * 0.15);
+            ctx.lineTo(edge + half, yBase - rise * 0.15);
+            ctx.closePath();
+            ctx.fill();
+          });
+        }
+
+        for (const fern of cascadeScenery.ferns) {
+          const y = wrapScroll(fern.y0, 12, span) - 20;
+          const edge = fern.side < 0
+            ? bankLeft - 8 - fern.lane * 36
+            : bankRight + 8 + fern.lane * 36;
+          ctx.strokeStyle = fern.side < 0 ? '#4ade80' : '#86efac';
+          ctx.lineWidth = 1.5;
+          for (let k = -2; k <= 2; k++) {
+            ctx.beginPath();
+            ctx.moveTo(edge, y);
+            ctx.quadraticCurveTo(edge + k * fern.s * 0.45, y - fern.s, edge + k * fern.s * 0.7, y - fern.s * 1.4);
+            ctx.stroke();
+          }
+        }
+
+        ctx.strokeStyle = '#65a30d';
+        ctx.lineWidth = 2;
+        for (const reed of cascadeScenery.reeds) {
+          const y = wrapScroll(reed.y0, 13, span) - 10;
+          const x = reed.side < 0 ? bankLeft + reed.inset : bankRight - reed.inset;
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.quadraticCurveTo(x + reed.lean, y - reed.h * 0.6, x + reed.lean * 0.4, y - reed.h);
+          ctx.stroke();
+        }
+      }
+
+      function drawChannelDressing(bankLeft, bankRight, flowTime) {
+        const span = V_HEIGHT + 80;
+        // Shallow edges vs deep channel so the water is not one flat blue.
+        const depth = ctx.createLinearGradient(bankLeft, 0, bankRight, 0);
+        depth.addColorStop(0, 'rgba(186, 230, 253, 0.22)');
+        depth.addColorStop(0.16, 'rgba(14, 165, 233, 0.08)');
+        depth.addColorStop(0.5, 'rgba(2, 6, 23, 0.34)');
+        depth.addColorStop(0.84, 'rgba(14, 165, 233, 0.08)');
+        depth.addColorStop(1, 'rgba(186, 230, 253, 0.22)');
+        ctx.fillStyle = depth;
+        ctx.fillRect(bankLeft, 0, RIVER_WIDTH, V_HEIGHT);
+
+        for (const cob of cascadeScenery.cobbles) {
+          const y = wrapScroll(cob.y0, 12, span) - 30;
+          const x = bankLeft + cob.nx * RIVER_WIDTH;
+          ctx.fillStyle = cob.shade > 0.5 ? 'rgba(15, 23, 42, 0.45)' : 'rgba(71, 85, 105, 0.4)';
+          ctx.beginPath();
+          ctx.ellipse(x, y, cob.rx, cob.ry, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = 'rgba(224, 242, 254, 0.18)';
+          ctx.beginPath();
+          ctx.ellipse(x - cob.rx * 0.2, y - cob.ry * 0.25, cob.rx * 0.28, cob.ry * 0.22, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Foam kissing both banks
+        ctx.fillStyle = 'rgba(240, 249, 255, 0.28)';
+        for (let i = 0; i < 18; i++) {
+          const y = wrapScroll(i * 48, 16, span);
+          const wobble = Math.sin(flowTime * 2 + i) * 6;
+          ctx.beginPath();
+          ctx.ellipse(bankLeft + 18 + wobble, y, 16, 4, 0, 0, Math.PI * 2);
+          ctx.ellipse(bankRight - 18 - wobble, y + 12, 16, 4, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      function drawCascadeRain(flowTime) {
+        ctx.strokeStyle = 'rgba(224, 242, 254, 0.28)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 42; i++) {
+          const x = (i * 67 + flowTime * 40) % (V_WIDTH + 40) - 20;
+          const y = (i * 53 + flowTime * 220) % (V_HEIGHT + 30) - 10;
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x - 7, y + 16);
+          ctx.stroke();
+        }
+      }
+
       function render() {
         ctx.save();
 
@@ -1432,40 +1636,10 @@
         ctx.fillStyle = bgGrad;
         ctx.fillRect(0, 0, V_WIDTH, V_HEIGHT);
 
-        // 2. River Banks (Lush Moss & Forest Margins)
+        // 2. River Banks (cedars, ferns, gravel — visual only)
         const bankLeft = RIVER_CENTER - RIVER_WIDTH / 2;
         const bankRight = RIVER_CENTER + RIVER_WIDTH / 2;
-
-        // Left Bank Forest
-        ctx.fillStyle = '#064e3b'; // deep PNW emerald moss
-        ctx.fillRect(0, 0, bankLeft, V_HEIGHT);
-        ctx.fillStyle = '#022c22';
-        ctx.fillRect(0, 0, bankLeft - 25, V_HEIGHT);
-
-        // Right Bank Forest
-        ctx.fillStyle = '#064e3b';
-        ctx.fillRect(bankRight, 0, V_WIDTH - bankRight, V_HEIGHT);
-        ctx.fillStyle = '#022c22';
-        ctx.fillRect(bankRight + 25, 0, V_WIDTH - bankRight, V_HEIGHT);
-
-        // Forest Trees Silhouette Details
-        ctx.fillStyle = 'rgba(2, 44, 34, 0.65)';
-        for (let y = 0; y < V_HEIGHT; y += 48) {
-          const scrollOff = (world.distance * 12 + y) % V_HEIGHT;
-          // Left pines
-          ctx.beginPath();
-          ctx.moveTo(bankLeft - 10, scrollOff);
-          ctx.lineTo(bankLeft - 45, scrollOff - 24);
-          ctx.lineTo(bankLeft - 45, scrollOff + 24);
-          ctx.fill();
-
-          // Right pines
-          ctx.beginPath();
-          ctx.moveTo(bankRight + 10, scrollOff);
-          ctx.lineTo(bankRight + 45, scrollOff - 24);
-          ctx.lineTo(bankRight + 45, scrollOff + 24);
-          ctx.fill();
-        }
+        drawCascadeBanks(bankLeft, bankRight);
 
         // 3. Dynamic Water Current Lines & Foam
         ctx.lineWidth = 1.5;
@@ -1479,6 +1653,8 @@
           ctx.lineTo(streamX + Math.sin(flowTime + i) * 8, streamY + 36);
           ctx.stroke();
         }
+
+        drawChannelDressing(bankLeft, bankRight, flowTime);
 
         // 4. Waterfalls
         for (const wf of world.waterfalls) {
@@ -1673,62 +1849,109 @@
         // Salmon Body Contour
         const waggleOffset = Math.sin(player.swimWaggle) * 4;
 
-        // Torpedo Fish Body
-        ctx.fillStyle = player.invuln > 0 && Math.floor(performance.now() / 80) % 2 === 0
+        const bodyColor = player.invuln > 0 && Math.floor(performance.now() / 80) % 2 === 0
           ? '#ffffff'
-          : (player.isSprinting ? '#38bdf8' : '#cbd5e1'); // shimmering silver
+          : (player.isSprinting ? '#7dd3fc' : '#e2e8f0');
+
+        // Caudal fin behind the body
+        ctx.fillStyle = '#0c4a6e';
         ctx.beginPath();
-        ctx.moveTo(34, 0); // snout
-        ctx.quadraticCurveTo(12, -14, -18, -10);
-        ctx.lineTo(-32, -4 + waggleOffset); // tail base
-        ctx.lineTo(-32, 4 + waggleOffset);
-        ctx.quadraticCurveTo(12, 14, 34, 0);
+        ctx.moveTo(-28, waggleOffset);
+        ctx.lineTo(-50, -18 + waggleOffset * 1.6);
+        ctx.quadraticCurveTo(-36, waggleOffset, -50, 18 + waggleOffset * 1.6);
         ctx.closePath();
         ctx.fill();
-
-        // Iridescent Dorsal Stripe & Scales
-        ctx.strokeStyle = '#0284c7';
-        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = 'rgba(224, 242, 254, 0.45)';
+        ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(28, 0);
-        ctx.lineTo(-24, waggleOffset * 0.8);
+        ctx.moveTo(-30, waggleOffset);
+        ctx.lineTo(-46, waggleOffset);
         ctx.stroke();
 
-        // Pinkish Lateral Spawning Line (Chinook signature)
-        ctx.strokeStyle = '#f43f5e';
-        ctx.lineWidth = 1.8;
-        ctx.beginPath();
-        ctx.moveTo(22, 2);
-        ctx.lineTo(-20, 2 + waggleOffset * 0.7);
-        ctx.stroke();
-
-        // Tail Fin (Caudal Fin) with flex
+        // Dorsal fin
         ctx.fillStyle = '#0369a1';
         ctx.beginPath();
-        ctx.moveTo(-32, waggleOffset);
-        ctx.lineTo(-46, -16 + waggleOffset * 1.5);
-        ctx.quadraticCurveTo(-40, waggleOffset, -46, 16 + waggleOffset * 1.5);
+        ctx.moveTo(6, -8);
+        ctx.lineTo(-2, -24);
+        ctx.lineTo(-12, -8 + waggleOffset * 0.3);
         ctx.closePath();
         ctx.fill();
 
-        // Pectoral Fins
-        ctx.fillStyle = '#38bdf8';
+        // Torpedo body with belly
+        ctx.fillStyle = bodyColor;
         ctx.beginPath();
-        ctx.ellipse(6, -12, 9, 3, -0.4, 0, Math.PI * 2);
-        ctx.ellipse(6, 12, 9, 3, 0.4, 0, Math.PI * 2);
+        ctx.moveTo(36, 0);
+        ctx.quadraticCurveTo(14, -15, -16, -11);
+        ctx.lineTo(-30, -5 + waggleOffset);
+        ctx.lineTo(-30, 6 + waggleOffset);
+        ctx.quadraticCurveTo(12, 16, 36, 0);
+        ctx.closePath();
         ctx.fill();
 
-        // Eye
+        ctx.fillStyle = player.isSprinting ? '#e0f2fe' : '#fff7ed';
+        ctx.beginPath();
+        ctx.moveTo(28, 2);
+        ctx.quadraticCurveTo(8, 12, -18, 7 + waggleOffset * 0.5);
+        ctx.quadraticCurveTo(8, 6, 28, 2);
+        ctx.fill();
+
+        // Spots
+        ctx.fillStyle = '#0f172a';
+        [[8, -4], [-2, -6], [16, -2], [2, 3], [-10, 1]].forEach((sp) => {
+          ctx.beginPath();
+          ctx.ellipse(sp[0], sp[1] + waggleOffset * 0.15, 1.6, 1.1, 0, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        // Gill plate and lateral spawning line
+        ctx.strokeStyle = '#fb7185';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(20, -6);
+        ctx.quadraticCurveTo(16, 0, 20, 7);
+        ctx.stroke();
+        ctx.strokeStyle = '#e11d48';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(18, 3);
+        ctx.quadraticCurveTo(0, 5 + waggleOffset * 0.4, -22, 3 + waggleOffset * 0.6);
+        ctx.stroke();
+
+        // Adipose + pectoral fins
+        ctx.fillStyle = '#0284c7';
+        ctx.beginPath();
+        ctx.moveTo(-16, -8);
+        ctx.lineTo(-22, -14);
+        ctx.lineTo(-24, -6);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.ellipse(8, -11, 11, 3.2, -0.55, 0, Math.PI * 2);
+        ctx.ellipse(8, 12, 11, 3.2, 0.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Jaw and eye
+        ctx.fillStyle = '#94a3b8';
+        ctx.beginPath();
+        ctx.ellipse(30, 3, 6, 2.4, 0.2, 0, Math.PI * 2);
+        ctx.fill();
         ctx.fillStyle = '#0f172a';
         ctx.beginPath();
-        ctx.arc(22, -4, 2.5, 0, Math.PI * 2);
+        ctx.arc(24, -4, 3.1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.arc(24, -4, 1.5, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.arc(23, -4.8, 1, 0, Math.PI * 2);
+        ctx.arc(25, -5, 0.8, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.restore();
+
+        drawCascadeRain(flowTime);
 
         ctx.restore();
       }

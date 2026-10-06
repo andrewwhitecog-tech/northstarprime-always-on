@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CHRONO BLADE 2049: TIME DEFENDER — Xbox 360 Edition // NorthStar IDG</title>
+  <title>CHRONO BLADE 2049: TIME DEFENDER — NorthStar IDG Arcade</title>
   <style>
     :root {
       --bg: #07090e;
@@ -229,7 +229,7 @@
 <body>
   <header>
     <div class="brand">
-      <span class="xbox-badge">XBOX 360</span>
+      <span class="xbox-badge">IDG ARCADE</span>
       <div class="title-group">
         <h1>CHRONO BLADE 2049</h1>
         <p>TIME DEFENDER // SOVEREIGN ARCADIA SERIES</p>
@@ -274,7 +274,7 @@
         <span>BLADE SLASH: <span class="key-badge">SPACE</span> / <span class="key-badge">Z</span></span>
         <span>TACHYON CANNON: <span class="key-badge">X</span></span>
         <span>SHIELD: <span class="key-badge">C</span></span>
-        <span>GAMEPAD: <span class="key-badge">CONNECTED</span></span>
+        <span>GAMEPAD (A slash / X cannon / B shield): <span class="key-badge" id="pad-status">NOT DETECTED</span></span>
       </div>
       <div>
         <button class="toggle-btn active" id="btn-scanlines">CRT SCANLINES</button>
@@ -287,7 +287,7 @@
     <div class="dossier-card">
       <h3>CHRONO LOG: THE METATRON BREACH</h3>
       <p>In 2049, the temporal gateway above Neo-Kyoto fractured. Chrono Blade is the cyber-tactical defense unit commissioned by NorthStar IDG. Armed with dual tachyon blades vibrating at 528Hz and the Metatron resonant shield, your mission is to intercept the Void Incursion before the timeline decoheres.</p>
-      <p style="margin-top:8px; color:var(--text-dim);">Audio Engine: Procedural 8-bit FM synthesis with harmonic Solfeggio undertones. Supports Gamepad API vibration force-feedback and touch screen virtual inputs.</p>
+      <p style="margin-top:8px; color:var(--text-dim);">Audio: procedural Web Audio synthesis (bass drone, blade, cannon and 528Hz shield tones). Keyboard and standard gamepads supported, with dual-rumble feedback on browsers that expose it.</p>
     </div>
     <div class="dossier-card">
       <h3>ACHIEVEMENTS ARCHIVE</h3>
@@ -422,6 +422,7 @@
         if (d < 85) {
           en.hp -= 4;
           createSparks(en.x, en.y, '#00f0ff');
+          rumble(0.4, 80);
           playSfx('hit');
           unlockAch('ach-first-blood');
         }
@@ -486,8 +487,35 @@
 
     // Main Game Loop
     let frame = 0;
+    const padPrev = {};
+    function rumble(strength, ms) {
+      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      for (const p of pads) {
+        if (p && p.vibrationActuator && p.vibrationActuator.playEffect) {
+          p.vibrationActuator.playEffect('dual-rumble', { duration: ms, strongMagnitude: strength, weakMagnitude: strength * 0.6 }).catch(() => {});
+        }
+      }
+    }
+    function pollGamepad() {
+      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      const p = Array.from(pads).find(x => x && x.connected);
+      const badge = document.getElementById('pad-status');
+      if (badge) badge.innerText = p ? 'CONNECTED' : 'NOT DETECTED';
+      if (!p) return;
+      const dz = 0.2;
+      const ax = Math.abs(p.axes[0]) > dz ? p.axes[0] : 0;
+      const ay = Math.abs(p.axes[1]) > dz ? p.axes[1] : 0;
+      const b = i => !!(p.buttons[i] && p.buttons[i].pressed);
+      player.x += (ax + (b(15) ? 1 : 0) - (b(14) ? 1 : 0)) * player.speed;
+      player.y += (ay + (b(13) ? 1 : 0) - (b(12) ? 1 : 0)) * player.speed;
+      const edge = i => { const now = b(i); const fired = now && !padPrev[i]; padPrev[i] = now; return fired; };
+      if (edge(0)) { initAudio(); playerSlash(); }
+      if (edge(2)) { initAudio(); playerLaser(); }
+      if (edge(1)) { initAudio(); playerShield(); }
+    }
     function update() {
       frame++;
+      pollGamepad();
       
       // Energy regen
       if (energy < 100) energy = Math.min(100, energy + 0.3);
@@ -556,6 +584,7 @@
         // Player collision
         if (!player.shieldActive && Math.hypot(player.x - en.x, player.y - en.y) < player.size + en.size) {
           createSparks(player.x, player.y, '#ff0055');
+          rumble(1.0, 220);
           player.x -= 30;
           score = Math.max(0, score - 500);
           document.getElementById('val-score').innerText = score.toString().padStart(6, '0');

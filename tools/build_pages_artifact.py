@@ -31,7 +31,7 @@ PUBLISHED_LIMIT_BYTES = 1_000_000_000
 # Cream tip CDN wave1 needs headroom; keep ~20 MB below the 1 GB published-site ceiling.
 RELEASE_GUARD_BYTES = 980_000_000
 GIT_BLOB_LIMIT_BYTES = 100_000_000
-SKIP_TOP_LEVEL = {".git", ".github", "output", "tools", "__pycache__", ".pytest_cache", ".playwright-cli", ".playwright", "little-light-media", "cookbook-media", "stickerforge-media"}
+SKIP_TOP_LEVEL = {".git", ".github", "output", "tools", "__pycache__", ".pytest_cache", ".playwright-cli", ".playwright", "little-light-media", "cookbook-media", "stickerforge-media", "PAGES_CAPACITY_BUDGET.json"}
 TEXT_SUFFIXES = {".html", ".css", ".js", ".json", ".xml", ".txt", ".webmanifest"}
 
 RAW_STICKER_BASE = "https://raw.githubusercontent.com/andrewwhitecog-tech/northstarprime-always-on/main/"

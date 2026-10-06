@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VOID SIEGE: METATRON OVERDRIVE — NorthStar IDG Arcade</title>
+  <style>
+    :root {
+      --bg: #07060e;
+      --card-bg: rgba(18, 14, 28, 0.85);
+      --cyan: #00f0ff;
+      --magenta: #ff0077;
+      --gold: #ffd700;
+      --text: #e2e8f0;
+      --text-dim: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    header {
+      width: 100%;
+      max-width: 1000px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 0, 119, 0.3);
+      padding-bottom: 12px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .arcade-badge {
+      background: linear-gradient(135deg, #ff0077, #8000ff);
+      color: #fff;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      letter-spacing: 1px;
+    }
+    .title-group h1 {
+      font-size: 1.4rem;
+      letter-spacing: 2px;
+      color: #fff;
+      text-shadow: 0 0 10px var(--magenta);
+    }
+    .title-group p {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      font-family: monospace;
+    }
+    .game-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 1000px;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      border: 2px solid var(--magenta);
+      box-shadow: 0 0 30px rgba(255, 0, 119, 0.3);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .crt-overlay {
+      pointer-events: none;
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%),
+                  linear-gradient(90deg, rgba(255, 0, 0, 0.04), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.04));
+      background-size: 100% 3px, 6px 100%;
+      opacity: 0.6;
+    }
+    .hud {
+      position: absolute;
+      top: 14px;
+      left: 18px;
+      right: 18px;
+      display: flex;
+      justify-content: space-between;
+      font-family: 'Consolas', monospace;
+      font-size: 0.9rem;
+      font-weight: 700;
+      pointer-events: none;
+      text-shadow: 0 0 8px rgba(0,0,0,0.9);
+    }
+    .hud-left { color: var(--cyan); }
+    .hud-right { color: var(--gold); }
+    .hud-center { color: var(--magenta); }
+    .controls-bar {
+      width: 100%;
+      max-width: 1000px;
+      margin-top: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-bg);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-family: monospace;
+    }
+    .key-badge {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 6px;
+      border-radius: 3px;
+      color: var(--cyan);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+    }
+    .toggle-btn {
+      background: transparent;
+      border: 1px solid var(--cyan);
+      color: var(--cyan);
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: monospace;
+      font-size: 0.75rem;
+    }
+    .toggle-btn.active {
+      background: var(--cyan);
+      color: #000;
+    }
+    .dossier-grid {
+      width: 100%;
+      max-width: 1000px;
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .dossier-card {
+      background: var(--card-bg);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      padding: 16px;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+    .dossier-card h3 {
+      font-size: 0.95rem;
+      color: var(--gold);
+      margin-bottom: 8px;
+      letter-spacing: 1px;
+    }
+    .achievements-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .ach-item {
+      background: rgba(0, 0, 0, 0.4);
+      padding: 6px 10px;
+      border-radius: 4px;
+      border-left: 3px solid #444;
+      font-size: 0.75rem;
+    }
+    .ach-item.unlocked {
+      border-left-color: var(--gold);
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="arcade-badge">IDG ARCADIA 03</span>
+      <div class="title-group">
+        <h1>VOID SIEGE: METATRON OVERDRIVE</h1>
+        <p>360° TACTICAL SHMUP // SOVEREIGN SERIES</p>
+      </div>
+    </div>
+    <div style="font-family:monospace;font-size:0.8rem;color:var(--cyan);">
+      TARGET: SECTOR 09 VOID HARBINGER
+    </div>
+  </header>
+
+  <div class="game-wrapper">
+    <canvas id="gameCanvas" width="960" height="540"></canvas>
+    <div class="crt-overlay" id="crt"></div>
+    <div class="hud">
+      <div class="hud-left">SHIELD: <span id="val-shield">100%</span> | PULSE: <span id="val-pulse">READY</span></div>
+      <div class="hud-center">WAVE: <span id="val-wave">1</span> | DEFENSE MATRIX</div>
+      <div class="hud-right">SCORE: <span id="val-score">000000</span> | METATRON: <span id="val-overdrive">0%</span></div>
+    </div>
+  </div>
+
+  <div class="controls-bar">
+    <div style="display:flex;gap:14px;align-items:center;">
+      <span>MOVE: <span class="key-badge">W/A/S/D</span></span>
+      <span>AIM & FIRE: <span class="key-badge">MOUSE</span> / <span class="key-badge">SPACE</span></span>
+      <span>639Hz SHOCKWAVE: <span class="key-badge">E</span> / <span class="key-badge">R-CLICK</span></span>
+      <span>GAMEPAD (L-stick move, R-stick aim/fire, R-trigger pulse): <span class="key-badge" id="pad-status">NOT DETECTED</span></span>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="toggle-btn active" id="btn-scanlines">CRT SCANLINES</button>
+      <button class="toggle-btn active" id="btn-audio">AUDIO 639Hz</button>
+    </div>
+  </div>
+
+  <div class="dossier-grid">
+    <div class="dossier-card">
+      <h3>TACTICAL DOSSIER: SECTOR 09 BREACH</h3>
+      <p>The Void Harbinger has breached the crystalline perimeter. Pilot the Metatron Overdrive core with 360° omni-directional thrusters. Disintegrate void swarmers with tachyon pulse cannons and trigger the 639Hz harmonic shockwave when surrounded.</p>
+      <p style="margin-top:8px; color:var(--text-dim);">Engine: Procedural Web Audio synth with 639Hz Solfeggio sub-carrier. Full Gamepad API dual-rumble force-feedback actuators.</p>
+    </div>
+    <div class="dossier-card">
+      <h3>ACHIEVEMENTS ARCHIVE</h3>
+      <div class="achievements-list">
+        <div class="ach-item" id="ach-1">FIRST CONTACT (Kill 1)</div>
+        <div class="ach-item" id="ach-2">VOID PURGE (Kill 25)</div>
+        <div class="ach-item" id="ach-3">SHOCKWAVE MASTER (Use 639Hz)</div>
+        <div class="ach-item" id="ach-4">HARBINGER BANE (Wave 3)</div>
+        <div class="ach-item" id="ach-5">METATRON OVERDRIVE (100% Core)</div>
+        <div class="ach-item" id="ach-6">UNTOUCHABLE (Score 5000)</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+
+    // Web Audio Synthesizer (639Hz Solfeggio Bed)
+    let audioCtx = null;
+    let droneOsc = null;
+    function initAudio() {
+      if (audioCtx) return;
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      droneOsc = audioCtx.createOscillator();
+      const droneGain = audioCtx.createGain();
+      droneOsc.type = 'sine';
+      droneOsc.frequency.setValueAtTime(639.0 / 4, audioCtx.currentTime); // 159.75 Hz
+      droneGain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+      droneOsc.connect(droneGain);
+      droneGain.connect(audioCtx.destination);
+      droneOsc.start();
+    }
+
+    function playSfx(type) {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      const now = audioCtx.currentTime;
+      if (type === 'laser') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.exponentialRampToValueAtTime(110, now + 0.1);
+        gain.gain.setValueAtTime(0.06, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.1);
+        osc.start(now);
+        osc.stop(now + 0.1);
+      } else if (type === 'shockwave') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(639, now);
+        osc.frequency.linearRampToValueAtTime(80, now + 0.4);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.4);
+        osc.start(now);
+        osc.stop(now + 0.4);
+      } else if (type === 'hit') {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.15);
+        osc.start(now);
+        osc.stop(now + 0.15);
+      }
+    }
+
+    function rumble(strength, ms) {
+      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      for (const p of pads) {
+        if (p && p.vibrationActuator && p.vibrationActuator.playEffect) {
+          p.vibrationActuator.playEffect('dual-rumble', { duration: ms, strongMagnitude: strength, weakMagnitude: strength * 0.7 }).catch(() => {});
+        }
+      }
+    }
+
+    // Player State
+    const player = {
+      x: W / 2, y: H / 2,
+      vx: 0, vy: 0,
+      angle: 0,
+      speed: 3.5,
+      shield: 100,
+      overdrive: 0,
+      shockwaveCooldown: 0
+    };
+
+    let score = 0;
+    let wave = 1;
+    let enemiesKilled = 0;
+    const bullets = [];
+    const enemies = [];
+    const particles = [];
+    const shockwaves = [];
+
+    // Controls
+    const keys = {};
+    let mouse = { x: W / 2, y: H / 2, down: false };
+    window.addEventListener('keydown', e => { initAudio(); keys[e.key.toLowerCase()] = true; });
+    window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+    canvas.addEventListener('mousemove', e => {
+      const r = canvas.getBoundingClientRect();
+      mouse.x = (e.clientX - r.left) * (W / r.width);
+      mouse.y = (e.clientY - r.top) * (H / r.height);
+    });
+    canvas.addEventListener('mousedown', e => {
+      initAudio();
+      if (e.button === 0) fireBullet();
+      if (e.button === 2) triggerShockwave();
+    });
+    window.addEventListener('contextmenu', e => e.preventDefault());
+
+    function fireBullet() {
+      bullets.push({
+        x: player.x, y: player.y,
+        vx: Math.cos(player.angle) * 9,
+        vy: Math.sin(player.angle) * 9,
+        life: 60
+      });
+      playSfx('laser');
+      rumble(0.2, 50);
+    }
+
+    function triggerShockwave() {
+      if (player.shockwaveCooldown > 0) return;
+      player.shockwaveCooldown = 180; // 3 seconds
+      shockwaves.push({ x: player.x, y: player.y, radius: 10, maxRadius: 220, alpha: 1 });
+      playSfx('shockwave');
+      rumble(0.7, 200);
+      unlockAch('ach-3');
+    }
+
+    function unlockAch(id) {
+      const el = document.getElementById(id);
+      if (el && !el.classList.contains('unlocked')) {
+        el.classList.add('unlocked');
+      }
+    }
+
+    // Spawn Enemy Wave
+    function spawnWave() {
+      const count = 6 + wave * 4;
+      for (let i = 0; i < count; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const dist = Math.max(W, H) / 2 + 50 + Math.random() * 200;
+        enemies.push({
+          x: W / 2 + Math.cos(ang) * dist,
+          y: H / 2 + Math.sin(ang) * dist,
+          hp: 2 + Math.floor(wave / 2),
+          speed: 1.2 + Math.random() * 0.8,
+          radius: 14,
+          type: Math.random() > 0.3 ? 'swarmer' : 'heavy'
+        });
+      }
+    }
+    spawnWave();
+
+    // Gamepad Polling
+    function pollGamepad() {
+      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      const p = Array.from(pads).find(x => x && x.connected);
+      const badge = document.getElementById('pad-status');
+      if (badge) badge.innerText = p ? 'CONNECTED' : 'NOT DETECTED';
+      if (!p) return;
+      const dz = 0.2;
+      const lx = Math.abs(p.axes[0]) > dz ? p.axes[0] : 0;
+      const ly = Math.abs(p.axes[1]) > dz ? p.axes[1] : 0;
+      player.x += lx * player.speed;
+      player.y += ly * player.speed;
+
+      const rx = Math.abs(p.axes[2]) > dz ? p.axes[2] : 0;
+      const ry = Math.abs(p.axes[3]) > dz ? p.axes[3] : 0;
+      if (Math.hypot(rx, ry) > 0.4) {
+        player.angle = Math.atan2(ry, rx);
+        if (Math.random() < 0.25) fireBullet();
+      }
+      if (p.buttons[7] && p.buttons[7].pressed) triggerShockwave();
+    }
+
+    // Main Loop
+    let tick = 0;
+    function update() {
+      tick++;
+      pollGamepad();
+
+      // Keyboard movement
+      if (keys['w'] || keys['arrowup']) player.y -= player.speed;
+      if (keys['s'] || keys['arrowdown']) player.y += player.speed;
+      if (keys['a'] || keys['arrowleft']) player.x -= player.speed;
+      if (keys['d'] || keys['arrowright']) player.x += player.speed;
+      if (keys['e']) triggerShockwave();
+
+      // Clamping
+      player.x = Math.max(20, Math.min(W - 20, player.x));
+      player.y = Math.max(20, Math.min(H - 20, player.y));
+
+      // Aim angle to mouse
+      player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+
+      if (player.shockwaveCooldown > 0) player.shockwaveCooldown--;
+
+      // Update Bullets
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        const b = bullets[i];
+        b.x += b.vx;
+        b.y += b.vy;
+        b.life--;
+        if (b.life <= 0 || b.x < 0 || b.x > W || b.y < 0 || b.y > H) {
+          bullets.splice(i, 1);
+        }
+      }
+
+      // Update Shockwaves
+      for (let i = shockwaves.length - 1; i >= 0; i--) {
+        const sw = shockwaves[i];
+        sw.radius += 8;
+        sw.alpha = Math.max(0, 1 - sw.radius / sw.maxRadius);
+        // Damage enemies in radius
+        for (const en of enemies) {
+          if (Math.hypot(en.x - sw.x, en.y - sw.y) < sw.radius + en.radius) {
+            en.hp -= 2;
+          }
+        }
+        if (sw.radius >= sw.maxRadius) shockwaves.splice(i, 1);
+      }
+
+      // Update Enemies
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        const en = enemies[i];
+        const ang = Math.atan2(player.y - en.y, player.x - en.x);
+        en.x += Math.cos(ang) * en.speed;
+        en.y += Math.sin(ang) * en.speed;
+
+        // Bullet hit
+        for (let j = bullets.length - 1; j >= 0; j--) {
+          const b = bullets[j];
+          if (Math.hypot(en.x - b.x, en.y - b.y) < en.radius + 4) {
+            en.hp--;
+            bullets.splice(j, 1);
+            playSfx('hit');
+            break;
+          }
+        }
+
+        // Enemy death
+        if (en.hp <= 0) {
+          enemies.splice(i, 1);
+          score += 100;
+          enemiesKilled++;
+          player.overdrive = Math.min(100, player.overdrive + 5);
+          unlockAch('ach-1');
+          if (enemiesKilled >= 25) unlockAch('ach-2');
+          if (player.overdrive >= 100) unlockAch('ach-5');
+          if (score >= 5000) unlockAch('ach-6');
+          continue;
+        }
+
+        // Player collision
+        if (Math.hypot(en.x - player.x, en.y - player.y) < en.radius + 16) {
+          player.shield = Math.max(0, player.shield - 8);
+          rumble(0.6, 120);
+          playSfx('hit');
+          en.x -= Math.cos(ang) * 30;
+          en.y -= Math.sin(ang) * 30;
+        }
+      }
+
+      // Wave advancement
+      if (enemies.length === 0) {
+        wave++;
+        if (wave >= 3) unlockAch('ach-4');
+        spawnWave();
+      }
+
+      // HUD update
+      document.getElementById('val-shield').innerText = player.shield + '%';
+      document.getElementById('val-score').innerText = score.toString().padStart(6, '0');
+      document.getElementById('val-wave').innerText = wave;
+      document.getElementById('val-overdrive').innerText = player.overdrive + '%';
+      document.getElementById('val-pulse').innerText = player.shockwaveCooldown === 0 ? 'READY' : Math.ceil(player.shockwaveCooldown / 60) + 's';
+    }
+
+    function draw() {
+      ctx.fillStyle = '#06050b';
+      ctx.fillRect(0, 0, W, H);
+
+      // Radar rings & vector grid
+      ctx.strokeStyle = 'rgba(255, 0, 119, 0.12)';
+      ctx.lineWidth = 1;
+      for (let r = 80; r < W; r += 120) {
+        ctx.beginPath();
+        ctx.arc(W / 2, H / 2, r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Shockwaves
+      for (const sw of shockwaves) {
+        ctx.strokeStyle = `rgba(0, 240, 255, ${sw.alpha})`;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Bullets
+      ctx.fillStyle = '#00f0ff';
+      for (const b of bullets) {
+        ctx.fillRect(b.x - 2, b.y - 2, 4, 4);
+      }
+
+      // Enemies
+      for (const en of enemies) {
+        ctx.strokeStyle = en.type === 'swarmer' ? '#ff0077' : '#ffd700';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(en.x, en.y, en.radius, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Player Ship (Vector Triangle)
+      ctx.save();
+      ctx.translate(player.x, player.y);
+      ctx.rotate(player.angle);
+      ctx.strokeStyle = '#00f0ff';
+      ctx.fillStyle = 'rgba(0, 240, 255, 0.2)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(18, 0);
+      ctx.lineTo(-12, -10);
+      ctx.lineTo(-6, 0);
+      ctx.lineTo(-12, 10);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.fill();
+
+      // Shield ring
+      if (player.shield > 20) {
+        ctx.strokeStyle = 'rgba(0, 240, 255, 0.3)';
+        ctx.beginPath();
+        ctx.arc(0, 0, 20, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+
+    // CRT Toggle
+    const btnScan = document.getElementById('btn-scanlines');
+    btnScan.addEventListener('click', () => {
+      const crt = document.getElementById('crt');
+      crt.style.display = crt.style.display === 'none' ? 'block' : 'none';
+      btnScan.classList.toggle('active');
+    });
+  </script>
+</body>
+</html>

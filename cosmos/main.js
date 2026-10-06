@@ -804,6 +804,7 @@
   if (window.CosmosTrip) window.CosmosTrip.init(CC);
   if (window.CosmosObservers) window.CosmosObservers.init(CC);
   if (window.CosmosDimensions) window.CosmosDimensions.init(CC);
+  if (window.CosmosCreatures) window.CosmosCreatures.init(CC);
 
   console.log('%cCUBIC COSMOS · NorthStar Prime transmission online',
     'color:#d4af37;background:#0a0618;padding:4px 10px;letter-spacing:2px;');
@@ -848,6 +849,7 @@
     if (window.CosmosEvents) window.CosmosEvents.update(dt, day, started && locked);
     if (window.CosmosObservers) window.CosmosObservers.update(dt, started && locked && !CC.modal);
     if (window.CosmosDimensions) window.CosmosDimensions.update(dt, started && locked && !CC.modal);
+    if (window.CosmosCreatures) window.CosmosCreatures.update(dt, started && locked && !CC.modal, day);
 
     // aimed-block highlight
     if (started && locked && !CC.modal) {

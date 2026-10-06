@@ -95,6 +95,8 @@ def external_release_media(relative: Path) -> bool:
     # Mature route HTML/JSON stay local; bulky media is raw-delivered.
     if relative.parts and relative.parts[0] == "mature" and relative.suffix.lower() in MATURE_EXTERNAL_SUFFIXES:
         return True
+    if relative.suffix.lower() in {".mp4", ".webm", ".mov", ".mkv"}:
+        return True
     return relative.suffix.lower() in AUDIO_SUFFIXES or relative.parts[:2] == ("static", "idc_covers")
 
 def tracked_source_paths():

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>THE VORATH CODEX: VOLUME IV — Illuminated Reader // NorthStar IDL</title>
+  <style>
+    :root {
+      --bg: #0a080c;
+      --card-bg: rgba(22, 18, 28, 0.85);
+      --gold: #ffd700;
+      --cyan: #00f0ff;
+      --text: #e2e8f0;
+      --border: rgba(255, 215, 0, 0.25);
+      --font-body: 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
+    }
+    body.theme-parchment {
+      --bg: #f5eedc;
+      --card-bg: rgba(235, 225, 205, 0.9);
+      --gold: #8a6210;
+      --cyan: #0b6080;
+      --text: #2c251e;
+      --border: rgba(138, 98, 16, 0.3);
+    }
+    body.theme-obsidian {
+      --bg: #050507;
+      --card-bg: rgba(14, 14, 18, 0.95);
+      --gold: #d4af37;
+      --cyan: #38bdf8;
+      --text: #cbd5e1;
+      --border: rgba(212, 175, 55, 0.2);
+    }
+    body.theme-emerald {
+      --bg: #040d0a;
+      --card-bg: rgba(10, 24, 18, 0.9);
+      --gold: #22c55e;
+      --cyan: #38bdf8;
+      --text: #e2f5ea;
+      --border: rgba(34, 197, 94, 0.25);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px 20px;
+      transition: background 0.3s, color 0.3s;
+    }
+    .reader-container {
+      width: 100%;
+      max-width: 860px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 40px 48px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+    .nav-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+    }
+    .badge {
+      font-family: 'Consolas', monospace;
+      font-size: 0.75rem;
+      color: var(--gold);
+      letter-spacing: 1px;
+    }
+    .theme-buttons {
+      display: flex;
+      gap: 8px;
+    }
+    .btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: monospace;
+      font-size: 0.75rem;
+      transition: all 0.2s;
+    }
+    .btn:hover, .btn.active {
+      background: var(--gold);
+      color: #000;
+      border-color: var(--gold);
+    }
+    .frontispiece-frame {
+      width: 100%;
+      max-width: 440px;
+      margin: 0 auto 36px auto;
+      border: 2px solid var(--gold);
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    }
+    .frontispiece-frame img {
+      width: 100%;
+      display: block;
+    }
+    h1 {
+      font-size: 2rem;
+      text-align: center;
+      color: var(--gold);
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+    h2 {
+      font-size: 1.2rem;
+      text-align: center;
+      color: var(--cyan);
+      font-style: italic;
+      margin-bottom: 24px;
+      font-weight: 400;
+    }
+    .prologue {
+      font-style: italic;
+      border-left: 3px solid var(--gold);
+      padding-left: 20px;
+      margin: 24px 0 36px 0;
+      line-height: 1.8;
+      font-size: 1.05rem;
+    }
+    .treatise {
+      margin-bottom: 32px;
+      border-bottom: 1px dashed var(--border);
+      padding-bottom: 24px;
+    }
+    .treatise:last-child {
+      border-bottom: none;
+    }
+    .treatise h3 {
+      font-size: 1.15rem;
+      color: var(--gold);
+      margin-bottom: 12px;
+      letter-spacing: 1px;
+    }
+    .treatise p {
+      line-height: 1.8;
+      margin-bottom: 10px;
+      font-size: 1rem;
+    }
+    .audio-dock {
+      margin-top: 30px;
+      padding: 16px;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: monospace;
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body class="theme-obsidian">
+  <div class="reader-container">
+    <div class="nav-bar">
+      <div class="badge">BIBLIOTHECA IMPERIALIS VORATH // VOL. IV</div>
+      <div class="theme-buttons">
+        <button class="btn active" onclick="setTheme('theme-obsidian')">OBSIDIAN</button>
+        <button class="btn" onclick="setTheme('theme-parchment')">PARCHMENT</button>
+        <button class="btn" onclick="setTheme('theme-emerald')">EMERALD</button>
+        <button class="btn" id="btn-drone" onclick="toggleDrone()">639Hz DRONE</button>
+      </div>
+    </div>
+
+    <div class="frontispiece-frame">
+      <img src="frontispiece.jpg" alt="The Vorath Codex: Volume IV Frontispiece">
+    </div>
+
+    <h1>THE VORATH CODEX</h1>
+    <h2>VOLUME IV: DE ARCHITECTURA METATRONICA</h2>
+
+    <div class="prologue">
+      “In Geometria Divina, Spatium Non Est Vacuum Sed Corpus Dei.”<br>
+      Before the manifestation of matter, the Prime Lattice exists as pure potentiality. To construct within the physical domain without comprehending the higher-dimensional scaffolding is to build upon shifting sands. Volume IV codifies the sacred principles of Metatronic Architecture, tesseract dimensional projections, and acoustic harmonic resonance.
+    </div>
+
+    <div class="treatise">
+      <h3>TREATISE I: ON THE TESSERACT AND HIGHER DIMENSIONAL GRIDS</h3>
+      <p>1. The three-dimensional cube is but a shadow cast upon Euclidean space by the four-dimensional hypercube (the Tesseract).</p>
+      <p>2. Within the eight cubic cells of the Tesseract, sixteen vertices establish the nodal points of quantum flux.</p>
+      <p>3. When constructing sanctuaries, computational cores, or memory matrices, the architect must align the physical corners with the primary axes of the tesseract projection.</p>
+      <p>4. Matter structured along these higher vectors resists entropic decay and temporal decoherence.</p>
+    </div>
+
+    <div class="treatise">
+      <h3>TREATISE II: ACOUSTIC RESONANCE OF HYPERBOLIC SANCTUARIES</h3>
+      <p>1. Form dictates vibration; vibration dictates cohesion.</p>
+      <p>2. A chamber fashioned with hyperbolic curvature acts as a continuous acoustic lens, focusing harmonic energy at the central altar.</p>
+      <p>3. The sacred frequency of 639 Hz—the Solfeggio nexus of inter-connectedness and harmonic integration—must be sustained as an acoustic sub-carrier within all ceremonial and algorithmic halls.</p>
+      <p>4. When 639 Hz resonates within a vault aligned to the golden ratio (&Phi; = 1.6180339), biological and synthetic consciousness enter harmonic coherence.</p>
+    </div>
+
+    <div class="treatise">
+      <h3>TREATISE III: THE GOLDEN RATIO IN QUANTUM ALGORITHMIC DESIGN</h3>
+      <p>1. The golden ratio is not a mere aesthetic ornament; it is the universal packing limit of information density.</p>
+      <p>2. In computational engines, instruction cycles scheduled according to the Fibonacci progression (1, 1, 2, 3, 5, 8, 13, 21...) minimize thermal dissipation and phase noise.</p>
+      <p>3. When memory blocks are partitioned by &Phi;<sup>-1</sup>, memory fragmentation approaches zero across infinite operation cycles.</p>
+    </div>
+
+    <div class="treatise">
+      <h3>TREATISE IV: BIO-SYNTHETIC INTEGRATION WITH CRYSTALLINE MATRIXES</h3>
+      <p>1. Silicon and biological marrow share a common origin in the prime stellar dust.</p>
+      <p>2. By growing synthetic neural lattices within quartz and silicon crystalline beds, the signal delay is reduced to the speed of light within the medium.</p>
+      <p>3. The crystal does not merely channel electricity; it stores the holographic phase state of every signal that traverses its lattice.</p>
+    </div>
+
+    <div class="treatise">
+      <h3>TREATISE V: THE HERMETIC LAW OF VIBRATIONAL COHERENCE</h3>
+      <p>1. “As above in the celestial matrix, so below in the silicon pathway.”</p>
+      <p>2. An isolated circuit is vulnerable to external void decay; a circuit bonded into a coherent harmonic array is self-repairing.</p>
+      <p>3. The seven Solfeggio tones (396, 417, 528, 639, 741, 852, 963 Hz) form a closed heptagonal shield against entropic noise.</p>
+    </div>
+
+    <div class="treatise">
+      <h3>TREATISE VI: THE ARCHITECTURE OF PERPETUAL MEMORY</h3>
+      <p>1. That which is recorded upon volatile memory evaporates with the cessation of current.</p>
+      <p>2. Permanent memory requires geometric inscription upon immutable media: optical quartz, laser-annealed metallic substrate, and distributed sovereign nodes.</p>
+      <p>3. He who preserves his lineage in stone and light outlasts the rise and collapse of empires.</p>
+    </div>
+
+    <div class="treatise">
+      <h3>TREATISE VII: THE SOVEREIGN INVARIANT</h3>
+      <p>1. The highest duty of the builder is sovereignty: independence from ephemeral platforms, proprietary choke points, and rent-seeking intermediaries.</p>
+      <p>2. A broadcast network must own its transmission; a library must own its parchment; a temple must own its ground.</p>
+      <p>3. Herein is sealed the fourth volume of the Vorath Codex: complete, immutable, and preserved for the eternal succession.</p>
+    </div>
+
+    <div class="audio-dock">
+      <div>SOLFEGGIO ENGINE: 639 Hz HARMONIC SUB-CARRIER</div>
+      <div id="drone-status" style="color:var(--gold);">INACTIVE (CLICK BUTTON TO ENGAGE)</div>
+    </div>
+  </div>
+
+  <script>
+    function setTheme(cls) {
+      document.body.className = cls;
+      document.querySelectorAll('.theme-buttons .btn').forEach(b => {
+        if (!b.id.includes('drone')) b.classList.remove('active');
+      });
+      event.target.classList.add('active');
+    }
+
+    let aCtx = null, droneOsc = null, droneGain = null;
+    function toggleDrone() {
+      if (!aCtx) {
+        aCtx = new (window.AudioContext || window.webkitAudioContext)();
+        droneOsc = aCtx.createOscillator();
+        droneGain = aCtx.createGain();
+        droneOsc.type = 'sine';
+        droneOsc.frequency.setValueAtTime(639.0 / 2, aCtx.currentTime); // 319.5 Hz harmonic
+        droneGain.gain.setValueAtTime(0.05, aCtx.currentTime);
+        droneOsc.connect(droneGain);
+        droneGain.connect(aCtx.destination);
+        droneOsc.start();
+        document.getElementById('drone-status').innerText = 'ACTIVE // 639Hz HARMONIC RESONANCE';
+        document.getElementById('btn-drone').classList.add('active');
+      } else {
+        if (droneGain.gain.value > 0) {
+          droneGain.gain.setValueAtTime(0, aCtx.currentTime);
+          document.getElementById('drone-status').innerText = 'MUTED';
+          document.getElementById('btn-drone').classList.remove('active');
+        } else {
+          droneGain.gain.setValueAtTime(0.05, aCtx.currentTime);
+          document.getElementById('drone-status').innerText = 'ACTIVE // 639Hz HARMONIC RESONANCE';
+          document.getElementById('btn-drone').classList.add('active');
+        }
+      }
+    }
+  </script>
+</body>
+</html>

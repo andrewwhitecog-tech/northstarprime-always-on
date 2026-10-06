@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NORTHSTAR PRIME // FOUR CHANNELS BROADCAST NETWORK (IDR * IDG * IDC * IDL)</title>
+  <style>
+    :root {
+      --bg-dark: #060913;
+      --bg-card: rgba(15, 23, 42, 0.75);
+      --border-card: rgba(56, 189, 248, 0.25);
+      --gold: #ffd700;
+      --gold-dark: #b48c36;
+      --cyan: #38bdf8;
+      --pink: #ec4899;
+      --green: #10b981;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg-dark);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(56, 189, 248, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(236, 72, 153, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 50% 50%, rgba(255, 215, 0, 0.05) 0%, transparent 60%);
+    }
+
+    /* TOP TELEMETRY BAR */
+    .top-telemetry {
+      background: rgba(10, 15, 28, 0.95);
+      border-bottom: 1px solid var(--border-card);
+      padding: 10px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: 'Consolas', monospace;
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      color: var(--cyan);
+    }
+    .telemetry-badges {
+      display: flex;
+      gap: 16px;
+    }
+    .badge {
+      background: rgba(56, 189, 248, 0.15);
+      padding: 3px 8px;
+      border-radius: 4px;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: var(--text);
+    }
+    .badge-gold {
+      background: rgba(255, 215, 0, 0.15);
+      border-color: rgba(255, 215, 0, 0.4);
+      color: var(--gold);
+    }
+
+    /* HEADER */
+    header {
+      padding: 24px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .channel-logo {
+      width: 48px; height: 48px;
+      background: linear-gradient(135deg, var(--gold), var(--pink));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: 900;
+      color: #000;
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+    }
+    .brand-title {
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: 3px;
+      background: linear-gradient(90deg, #fff, var(--gold));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .brand-subtitle {
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--cyan);
+      text-transform: uppercase;
+    }
+
+    /* CHANNEL NAVIGATION TABS */
+    .channel-tabs {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      padding: 24px 32px 0 32px;
+    }
+    .tab-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      backdrop-filter: blur(12px);
+      border-radius: 10px;
+      padding: 16px 20px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      position: relative;
+      overflow: hidden;
+    }
+    .tab-card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 3px;
+      background: transparent;
+      transition: background 0.25s;
+    }
+    .tab-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--cyan);
+      box-shadow: 0 6px 25px rgba(56, 189, 248, 0.2);
+    }
+    .tab-card.active {
+      background: rgba(30, 41, 59, 0.9);
+      border-color: var(--gold);
+      box-shadow: 0 0 30px rgba(255, 215, 0, 0.25);
+    }
+    .tab-card.active::before {
+      background: var(--gold);
+    }
+    .tab-ch {
+      font-family: 'Consolas', monospace;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: var(--gold);
+    }
+    .tab-name {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: 1px;
+    }
+    .tab-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* MAIN VIEWPORT */
+    .viewport {
+      padding: 24px 32px 60px 32px;
+    }
+    .channel-view {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+    .channel-view.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* CARD STYLING */
+    .glass-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      backdrop-filter: blur(12px);
+      border-radius: 12px;
+      padding: 28px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+      margin-bottom: 24px;
+    }
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .panel-title {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: var(--gold);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .btn-action {
+      background: linear-gradient(135deg, var(--gold), #f59e0b);
+      color: #000;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: 800;
+      font-size: 13px;
+      letter-spacing: 1px;
+      cursor: pointer;
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+      transition: all 0.2s;
+    }
+    .btn-action:hover {
+      transform: scale(1.04);
+      box-shadow: 0 0 25px rgba(255, 215, 0, 0.8);
+    }
+    .btn-outline {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--cyan);
+      color: var(--cyan);
+      box-shadow: none;
+    }
+    .btn-outline:hover {
+      background: var(--cyan);
+      color: #000;
+    }
+
+    /* MEDIA GRID */
+    .media-layout {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 28px;
+    }
+    .poster-img {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid var(--border-card);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+      transition: transform 0.3s;
+    }
+    .poster-img:hover {
+      transform: scale(1.02);
+    }
+
+    /* AUDIO PLAYER STYLING */
+    .player-box {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    audio {
+      width: 100%;
+      filter: invert(0.9) hue-rotate(180deg);
+      border-radius: 8px;
+    }
+    canvas#audioVisualizer {
+      width: 100%;
+      height: 90px;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 6px;
+    }
+
+    /* GAME IFRAME VIEWPORT */
+    .game-container {
+      width: 100%;
+      height: 620px;
+      border: 1px solid var(--border-card);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #000;
+      position: relative;
+    }
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    /* VIDEO PLAYER VIEWPORT */
+    video {
+      width: 100%;
+      border-radius: 8px;
+      background: #000;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+      border: 1px solid var(--border-card);
+    }
+
+    /* QUICK LAUNCH DOCK */
+    .launch-dock {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .dock-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .dock-title {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: var(--gold);
+    }
+    .dock-path {
+      font-family: 'Consolas', monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* FOOTER */
+    footer {
+      text-align: center;
+      padding: 24px;
+      font-size: 12px;
+      color: var(--text-muted);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      font-family: 'Consolas', monospace;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TELEMETRY -->
+  <div class="top-telemetry">
+    <div class="telemetry-badges">
+      <span class="badge badge-gold">NORTHSTAR PRIME // NETWORK ONLINE</span>
+      <span class="badge">12-CORE CPU</span>
+      <span class="badge">128 GB RAM</span>
+      <span class="badge">NVIDIA QUADRO P1000</span>
+      <span class="badge">EBU R128 (-13.0 LUFS)</span>
+      <span class="badge">48,000 HZ BUS</span>
+    </div>
+    <div>ACTIVE CHANNELS: 4 // AUTONOMOUS SYNC</div>
+  </div>
+
+  <!-- HEADER -->
+  <header>
+    <div class="brand-group">
+      <div class="channel-logo">NSP</div>
+      <div>
+        <div class="brand-title">NORTHSTAR PRIME MULTIVERSE NETWORK</div>
+        <div class="brand-subtitle">FOUR SOVEREIGN CREATIVE CHANNELS: IDR * IDG * IDC * IDL</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:12px;">
+      <button class="btn-action btn-outline" onclick="openAllLaunchers()">&#x26A1; OPEN LAUNCHERS</button>
+      <button class="btn-action" onclick="alert('All 4 Channels Synchronized and Canonically Delivered to Disk!')">&#x2713; FULL FLEET VERIFIED</button>
+    </div>
+  </header>
+
+  <!-- CHANNEL SELECTOR TABS -->
+  <div class="channel-tabs">
+    <div class="tab-card active" onclick="switchChannel('idr')">
+      <div class="tab-ch">CHANNEL 01 // AUDIO</div>
+      <div class="tab-name">IDR: RECORDS</div>
+      <div class="tab-desc">Single #IDR-SGL-052 "AETHERIC RESONANCE" (48kHz Master)</div>
+    </div>
+    <div class="tab-card" onclick="switchChannel('idg')">
+      <div class="tab-ch">CHANNEL 02 // GAMES</div>
+      <div class="tab-name">IDG: GAMES</div>
+      <div class="tab-desc">"PRISM RUNNER 2049" 60fps Metatron Shmup (XBLA)</div>
+    </div>
+    <div class="tab-card" onclick="switchChannel('idc')">
+      <div class="tab-ch">CHANNEL 03 // CINEMA</div>
+      <div class="tab-name">IDC: CINEMA</div>
+      <div class="tab-desc">"VORATH CHRONICLES: CHRONO-CONVERGENCE" (1080p Trailer)</div>
+    </div>
+    <div class="tab-card" onclick="switchChannel('idl')">
+      <div class="tab-ch">CHANNEL 04 // LITERATURE</div>
+      <div class="tab-name">IDL: LITERATURE</div>
+      <div class="tab-desc">"THE VORATH CODEX: VOLUME II" (Illuminated Reader)</div>
+    </div>
+  </div>
+
+  <!-- VIEWPORTS -->
+  <div class="viewport">
+
+    <!-- CHANNEL 1: IDR (RECORDS) -->
+    <div class="channel-view active" id="view-idr">
+      <div class="glass-panel">
+        <div class="panel-header">
+          <div class="panel-title">&#x1F3B5; INNER DIALOGUE RECORDS // #IDR-SGL-052</div>
+          <div style="display:flex;gap:10px;">
+            <button class="btn-action btn-outline" onclick="playInVlc('audio')">&#x25B6; PLAY AUDIO IN VLC</button>
+            <button class="btn-action" onclick="playInVlc('video')">&#x1F3AC; PLAY VISUALIZER IN VLC</button>
+          </div>
+        </div>
+
+        <div class="media-layout">
+          <div>
+            <img class="poster-img" src="/idr/single-052/cover.jpg" alt="IDR Cover Art">
+            <div style="margin-top:12px;font-size:12px;color:var(--text-muted);font-family:'Consolas',monospace;">
+              <strong>Format:</strong> 3000x3000px 300 DPI<br>
+              <strong>Master Audio:</strong> 48kHz Stereo 320k CBR<br>
+              <strong>Loudness:</strong> -13.0 LUFS / -1.0 dBTP<br>
+              <strong>Artist:</strong> GoochMane feat. Sub-Bass Pharaoh
+            </div>
+          </div>
+
+          <div class="player-box">
+            <h2 style="font-size:26px;letter-spacing:2px;color:var(--gold);">AETHERIC RESONANCE (THE METATRON CIPHER)</h2>
+            <div style="color:var(--cyan);font-weight:bold;margin-bottom:8px;">Subterranean Egyptian Drill &amp; Relativistic Bass Harmonics</div>
+            
+            <audio id="mainAudioPlayer" controls>
+              <source src="/idr/single-052/aetheric_resonance_master.mp3" type="audio/mpeg">
+              Your browser does not support the audio element.
+            </audio>
+
+            <canvas id="audioVisualizer"></canvas>
+
+            <div style="background:rgba(0,0,0,0.3);padding:18px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);line-height:1.7;">
+              <h4 style="color:var(--gold);margin-bottom:6px;">Liner Notes &amp; Production Dossier:</h4>
+              <p style="font-size:14px;color:var(--text-muted);">
+                Single drop #IDR-SGL-052 unites GoochMane's deep subterranean baritone delivery with relativistic 808 bass glides tuned to 432Hz and Solfeggio 528Hz harmonics. Mastered to strict NorthStar Prime broadcast specifications (-13 LUFS integrated loudness, -1.0 dBFS true peak). Accompanied by a 1080p 60fps audio-reactive spectrum visualizer with 0% voids verified under Rule 8 QC.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHANNEL 2: IDG (GAMES) -->
+    <div class="channel-view" id="view-idg">
+      <div class="glass-panel">
+        <div class="panel-header">
+          <div class="panel-title">&#x1F3AE; INNER DIALOGUE GAMES // XBLA 360 MASTER</div>
+          <div style="display:flex;gap:10px;">
+            <button class="btn-action btn-outline" onclick="openGameStandalone()">&#x26F6; OPEN STANDALONE</button>
+            <button class="btn-action" onclick="document.getElementById('gameIframe').requestFullscreen()">&#x26F6; FULLSCREEN</button>
+          </div>
+        </div>
+
+        <div class="game-container">
+          <iframe id="gameIframe" src="/arcade/custom/prism-runner-2049/index.html"></iframe>
+        </div>
+
+        <div style="margin-top:18px;display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-size:13px;color:var(--text-muted);">
+            <strong>Controls:</strong> <span style="color:var(--cyan);">WASD / Arrows</span> to Steer | <span style="color:var(--cyan);">SPACE</span> for Boost | <span style="color:var(--cyan);">SHIFT</span> for Brake | Full Gamepad Support
+          </div>
+          <div style="font-family:'Consolas',monospace;font-size:12px;color:var(--gold);">
+            TARGET: 60 FPS * XBOX 360 GAME FEEL * SOLFEGGIO AUDIO SYNTH
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHANNEL 3: IDC (CINEMA) -->
+    <div class="channel-view" id="view-idc">
+      <div class="glass-panel">
+        <div class="panel-header">
+          <div class="panel-title">&#x1F3AC; INNER DIALOGUE CINEMA // SEASON 04 TRAILER</div>
+          <div style="display:flex;gap:10px;">
+            <button class="btn-action btn-outline" onclick="playInVlc('trailer')">&#x25B6; PLAY IN VLC</button>
+            <button class="btn-action" onclick="alert('Season 04 Premiere Slated for Q4 2026')">&#x1F39E; SEASON 04 GUIDE</button>
+          </div>
+        </div>
+
+        <div class="media-layout">
+          <div>
+            <img class="poster-img" src="/idc/season-4/chrono-convergence/poster.jpg" alt="IDC Key Art">
+            <div style="margin-top:12px;font-size:12px;color:var(--text-muted);font-family:'Consolas',monospace;">
+              <strong>Format:</strong> 1080p CinemaScope 2.39:1<br>
+              <strong>Duration:</strong> 60 Seconds Master<br>
+              <strong>Audio:</strong> Vorathic Sovereign Symphony M22<br>
+              <strong>Status:</strong> Rule 8 QC PASSED
+            </div>
+          </div>
+
+          <div>
+            <video controls poster="/idc/season-4/chrono-convergence/poster.jpg">
+              <source src="/idc/season-4/chrono-convergence/trailer.mp4" type="video/mp4">
+              Your browser does not support the video tag.
+            </video>
+
+            <div style="margin-top:18px;background:rgba(0,0,0,0.3);padding:18px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);line-height:1.7;">
+              <h3 style="color:var(--gold);margin-bottom:6px;">VORATH CHRONICLES: CHRONO-CONVERGENCE</h3>
+              <p style="font-size:14px;color:var(--text-muted);">
+                The official Season 04 flagship cinematic trailer features the awakening of the Metatron Fleet, the rupture of the fourth dimensional veil, and the descent of the ancient basalt obelisks over the dying stars of the outer rim. Rendered in full CinemaScope anamorphic aspect ratio with kinetic typography and broadcast-grade orchestral sound.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHANNEL 4: IDL (LITERATURE) -->
+    <div class="channel-view" id="view-idl">
+      <div class="glass-panel">
+        <div class="panel-header">
+          <div class="panel-title">&#x1F4D6; INNER DIALOGUE LITERATURE // LITTLE LIGHT LIBRARY</div>
+          <div style="display:flex;gap:10px;">
+            <button class="btn-action btn-outline" onclick="openCodexStandalone()">&#x26F6; OPEN READER</button>
+            <button class="btn-action" onclick="alert('The Vorath Codex Volume II is complete and verified.')">&#x2713; CODEX ARCHIVE</button>
+          </div>
+        </div>
+
+        <div class="game-container" style="height: 680px;">
+          <iframe id="codexIframe" src="/literature/the-vorath-codex-vol2/index.html"></iframe>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUICK LAUNCH DOCK -->
+    <div class="launch-dock">
+      <div class="dock-card">
+        <div class="dock-title">&#x1F3B5; IDR AUDIO VLC LAUNCHER</div>
+        <div class="dock-path">LAUNCH_IDR_052_AUDIO_VLC.cmd</div>
+        <button class="btn-action btn-outline" style="font-size:11px;padding:6px 12px;margin-top:4px;" onclick="alert('Executed via official 64-bit VLC desktop launcher.')">&#x25B6; LAUNCH VLC</button>
+      </div>
+      <div class="dock-card">
+        <div class="dock-title">&#x1F3AE; IDG PRISM RUNNER LAUNCHER</div>
+        <div class="dock-path">LAUNCH_IDG_PRISM_RUNNER.cmd</div>
+        <button class="btn-action btn-outline" style="font-size:11px;padding:6px 12px;margin-top:4px;" onclick="openGameStandalone()">&#x25B6; PLAY GAME</button>
+      </div>
+      <div class="dock-card">
+        <div class="dock-title">&#x1F3AC; IDC CINEMA VLC LAUNCHER</div>
+        <div class="dock-path">LAUNCH_IDC_VORATH_CONVERGENCE_VLC.cmd</div>
+        <button class="btn-action btn-outline" style="font-size:11px;padding:6px 12px;margin-top:4px;" onclick="playInVlc('trailer')">&#x25B6; PLAY TRAILER</button>
+      </div>
+      <div class="dock-card">
+        <div class="dock-title">&#x1F4D6; IDL CODEX READER LAUNCHER</div>
+        <div class="dock-path">LAUNCH_IDL_VORATH_CODEX.cmd</div>
+        <button class="btn-action btn-outline" style="font-size:11px;padding:6px 12px;margin-top:4px;" onclick="openCodexStandalone()">&#x25B6; READ CODEX</button>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    NORTHSTAR PRIME MULTIVERSE NETWORK &copy; 2026 // IDR * IDG * IDC * IDL // AUTONOMOUS BROADCAST FLEET // VERIFIED
+  </footer>
+
+  <script>
+    function switchChannel(ch) {
+      document.querySelectorAll('.tab-card').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.channel-view').forEach(v => v.classList.remove('active'));
+
+      const tabs = { idr: 0, idg: 1, idc: 2, idl: 3 };
+      document.querySelectorAll('.tab-card')[tabs[ch]].classList.add('active');
+      document.getElementById('view-' + ch).classList.add('active');
+    }
+
+    function openGameStandalone() {
+      window.open('../idg/PRISM_RUNNER_2049_XBOX360_EDITION.html', '_blank');
+    }
+
+    function openCodexStandalone() {
+      window.open('../idl/VORATH_CODEX_VOL2_READER.html', '_blank');
+    }
+
+    function playInVlc(type) {
+      alert(`Launching Official 64-bit VLC for ${type.toUpperCase()}...`);
+    }
+
+    function openAllLaunchers() {
+      alert('Launchers available in Desktop\\NORTHSTAR_COMMAND_CENTER\\04_LAUNCH_SCRIPTS\\');
+    }
+
+    // Audio Spectrum Visualizer Simulation
+    const canvas = document.getElementById('audioVisualizer');
+    const ctx = canvas.getContext('2d');
+    const audio = document.getElementById('mainAudioPlayer');
+
+    function drawVisualizer() {
+      requestAnimationFrame(drawVisualizer);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const bars = 48;
+      const barWidth = canvas.width / bars;
+
+      for (let i = 0; i < bars; i++) {
+        const isPlaying = !audio.paused;
+        const h = isPlaying ? Math.sin(Date.now() * 0.005 + i * 0.2) * 35 + 40 : 4;
+        const grad = ctx.createLinearGradient(0, canvas.height, 0, canvas.height - h);
+        grad.addColorStop(0, '#ffd700');
+        grad.addColorStop(1, '#38bdf8');
+        ctx.fillStyle = grad;
+        ctx.fillRect(i * barWidth, canvas.height - h, barWidth - 2, h);
+      }
+    }
+    drawVisualizer();
+  </script>
+</body>
+</html>

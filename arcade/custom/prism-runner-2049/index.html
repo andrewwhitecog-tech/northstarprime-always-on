@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PRISM RUNNER 2049: THE METATRON DRIVE // IDG XBLA EDITION</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body, html {
+      width: 100%; height: 100%;
+      background: #05070d;
+      color: #e2e8f0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      overflow: hidden;
+      user-select: none;
+    }
+    #gameCanvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: block;
+      z-index: 1;
+    }
+    /* XBOX 360 HUD OVERLAY */
+    #hud {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 24px 32px;
+    }
+    .hud-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .brand-tag {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .xbox-badge {
+      background: linear-gradient(135deg, #107c10, #159b15);
+      color: white;
+      padding: 6px 14px;
+      font-weight: 900;
+      font-size: 13px;
+      letter-spacing: 2px;
+      border-radius: 4px;
+      box-shadow: 0 0 15px rgba(16, 124, 16, 0.6);
+      text-transform: uppercase;
+    }
+    .channel-title {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 3px;
+      color: #ffd700;
+      text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+    }
+    .sub-brand {
+      font-size: 11px;
+      color: #7dd3fc;
+      letter-spacing: 1.5px;
+    }
+    .hud-meters {
+      display: flex;
+      gap: 20px;
+    }
+    .meter-card {
+      background: rgba(10, 15, 28, 0.75);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(125, 211, 252, 0.25);
+      border-radius: 8px;
+      padding: 10px 18px;
+      min-width: 140px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+    .meter-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .meter-val {
+      font-size: 24px;
+      font-weight: 900;
+      font-family: 'Consolas', monospace;
+      color: #f8fafc;
+    }
+    .meter-bar {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+      margin-top: 6px;
+      overflow: hidden;
+    }
+    .meter-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #38bdf8, #818cf8);
+      width: 100%;
+      transition: width 0.1s ease;
+      box-shadow: 0 0 8px #38bdf8;
+    }
+    .shield-fill { background: linear-gradient(90deg, #10b981, #34d399); box-shadow: 0 0 8px #10b981; }
+    .warp-fill { background: linear-gradient(90deg, #f59e0b, #ec4899); box-shadow: 0 0 8px #ec4899; }
+
+    /* Center Notifications & Alerts */
+    .hud-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .warp-alert {
+      font-size: 32px;
+      font-weight: 900;
+      letter-spacing: 6px;
+      color: #ffd700;
+      text-shadow: 0 0 25px rgba(255, 215, 0, 0.9), 0 0 50px rgba(236, 72, 153, 0.8);
+      display: none;
+      animation: pulseAlert 0.4s infinite alternate;
+    }
+    @keyframes pulseAlert {
+      from { transform: scale(1); opacity: 0.8; }
+      to { transform: scale(1.08); opacity: 1; }
+    }
+    /* XBOX 360 ACHIEVEMENT TOAST */
+    #achievementToast {
+      position: absolute;
+      top: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      background: rgba(20, 24, 33, 0.95);
+      border: 1px solid #107c10;
+      border-radius: 40px;
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 0 25px rgba(16, 124, 16, 0.7);
+      transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 100;
+    }
+    #achievementToast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+    .ach-icon {
+      width: 36px; height: 36px;
+      background: #107c10;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      color: white;
+      font-size: 18px;
+      box-shadow: 0 0 10px #107c10;
+    }
+    .ach-title {
+      font-size: 11px;
+      color: #a3e635;
+      letter-spacing: 2px;
+      font-weight: 800;
+    }
+    .ach-name {
+      font-size: 16px;
+      font-weight: 900;
+      color: white;
+    }
+
+    /* Bottom Control Bar */
+    .hud-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+    .controls-hint {
+      background: rgba(10, 15, 28, 0.6);
+      backdrop-filter: blur(8px);
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 12px;
+      color: #94a3b8;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .key {
+      color: #38bdf8;
+      font-weight: bold;
+      background: rgba(56, 189, 248, 0.15);
+      padding: 2px 6px;
+      border-radius: 3px;
+      margin: 0 2px;
+    }
+    .multiplier-badge {
+      font-size: 38px;
+      font-weight: 900;
+      font-style: italic;
+      color: #ffd700;
+      text-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+      font-family: 'Consolas', monospace;
+    }
+
+    /* Start / Pause / Game Over Screens */
+    .modal-overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(4, 7, 15, 0.85);
+      backdrop-filter: blur(12px);
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+    }
+    .modal-title {
+      font-size: 52px;
+      font-weight: 900;
+      letter-spacing: 6px;
+      text-align: center;
+      background: linear-gradient(135deg, #ffd700, #38bdf8, #ec4899);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 30px rgba(255, 215, 0, 0.4);
+    }
+    .modal-sub {
+      font-size: 16px;
+      color: #94a3b8;
+      letter-spacing: 2px;
+      max-width: 600px;
+      text-align: center;
+      line-height: 1.6;
+    }
+    .start-btn {
+      margin-top: 15px;
+      padding: 16px 42px;
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: 3px;
+      color: #05070d;
+      background: linear-gradient(135deg, #ffd700, #f59e0b);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 0 30px rgba(245, 158, 11, 0.6);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .start-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 40px rgba(245, 158, 11, 0.9);
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      box-shadow: none;
+      font-size: 14px;
+      padding: 10px 24px;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- ACHIEVEMENT TOAST -->
+  <div id="achievementToast">
+    <div class="ach-icon">&#x2713;</div>
+    <div>
+      <div class="ach-title">ACHIEVEMENT UNLOCKED // 25G</div>
+      <div class="ach-name" id="achName">PRISM PILOT</div>
+    </div>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hud-top">
+      <div class="brand-tag">
+        <div class="xbox-badge">XBLA MASTER</div>
+        <div>
+          <div class="channel-title">IDG // PRISM RUNNER 2049</div>
+          <div class="sub-brand">NORTHSTAR PRIME GAMING FLEET * METATRON DRIVE</div>
+        </div>
+      </div>
+      <div class="hud-meters">
+        <div class="meter-card">
+          <div class="meter-label">SCORE</div>
+          <div class="meter-val" id="scoreVal">0</div>
+        </div>
+        <div class="meter-card">
+          <div class="meter-label">VELOCITY</div>
+          <div class="meter-val" id="speedVal">450 <span style="font-size:12px;color:#38bdf8">KM/H</span></div>
+          <div class="meter-bar"><div class="meter-fill" id="speedBar" style="width: 50%;"></div></div>
+        </div>
+        <div class="meter-card">
+          <div class="meter-label">QUANTUM SHIELD</div>
+          <div class="meter-val" id="shieldVal">100%</div>
+          <div class="meter-bar"><div class="meter-fill shield-fill" id="shieldBar" style="width: 100%;"></div></div>
+        </div>
+        <div class="meter-card">
+          <div class="meter-label">WARP CHARGE</div>
+          <div class="meter-val" id="warpVal">0%</div>
+          <div class="meter-bar"><div class="meter-fill warp-fill" id="warpBar" style="width: 0%;"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hud-center">
+      <div class="warp-alert" id="warpAlert">*** METATRON WARP DRIVE ENGAGED ***</div>
+    </div>
+
+    <div class="hud-bottom">
+      <div class="controls-hint">
+        STEER: <span class="key">W/A/S/D</span> or <span class="key">&larr;&uarr;&darr;&rarr;</span> / GAMEPAD STICK &nbsp;|&nbsp;
+        BOOST: <span class="key">SPACE</span> / <span class="key">RT</span> &nbsp;|&nbsp;
+        BRAKE/DRIFT: <span class="key">SHIFT</span> / <span class="key">LT</span> &nbsp;|&nbsp;
+        MUTE: <span class="key">M</span>
+      </div>
+      <div class="multiplier-badge" id="multVal">1x</div>
+    </div>
+  </div>
+
+  <!-- TITLE MODAL -->
+  <div class="modal-overlay" id="titleModal">
+    <div class="xbox-badge" style="font-size: 16px; padding: 8px 24px;">XBOX 360 / XBLA MASTER SPECIFICATION</div>
+    <div class="modal-title">PRISM RUNNER 2049<br><span style="font-size:28px;letter-spacing:10px;color:#ffd700;">THE METATRON DRIVE</span></div>
+    <div class="modal-sub">
+      Pilot the sovereign quantum interceptor through the 13-node Metatron hyper-corridor.
+      Dodge ancient crystalline obsidian pillars, collect Solfeggio 528Hz prisms, and trigger Warp Velocity.
+      Built for NorthStar Prime IDG Channel.
+    </div>
+    <button class="start-btn" id="startBtn">ENGAGE SYSTEM (START)</button>
+  </div>
+
+  <!-- GAME OVER MODAL -->
+  <div class="modal-overlay" id="gameOverModal" style="display: none;">
+    <div class="modal-title" style="color: #ef4444;">SYSTEM INTEGRITY COLLAPSE</div>
+    <div class="modal-sub">
+      Your interceptor was vaporized in the Metatron corridor.<br>
+      FINAL SCORE: <strong id="finalScore" style="color:#ffd700;font-size:24px;">0</strong><br>
+      HIGH SCORE: <strong id="highScore" style="color:#38bdf8;font-size:20px;">0</strong>
+    </div>
+    <button class="start-btn" id="restartBtn">RE-ENGAGE INTERCEPTOR</button>
+  </div>
+
+  <script>
+    /* ==========================================================================
+       WEB AUDIO PROCEDURAL SFX & SYNTH ENGINE (NO EXTERNAL AUDIO FILES NEEDED)
+       ========================================================================== */
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+        this.jetOsc = null;
+        this.jetGain = null;
+        this.musicStep = 0;
+        this.musicTimer = null;
+      }
+      init() {
+        if (this.ctx) return;
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new AudioContext();
+
+        // Continuous engine jet rumble
+        this.jetOsc = this.ctx.createOscillator();
+        this.jetOsc.type = 'sawtooth';
+        this.jetOsc.frequency.setValueAtTime(55, this.ctx.currentTime); // 55Hz low rumble
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(140, this.ctx.currentTime);
+
+        this.jetGain = this.ctx.createGain();
+        this.jetGain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+
+        this.jetOsc.connect(filter);
+        filter.connect(this.jetGain);
+        this.jetGain.connect(this.ctx.destination);
+        this.jetOsc.start();
+
+        // Start background procedural Solfeggio bassline
+        this.startMusic();
+      }
+
+      setJetThrottle(ratio) {
+        if (!this.ctx || this.muted) return;
+        const targetFreq = 55 + ratio * 85;
+        this.jetOsc.frequency.setTargetAtTime(targetFreq, this.ctx.currentTime, 0.05);
+      }
+
+      playPrismChime(mult) {
+        if (!this.ctx || this.muted) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        // 528 Hz Solfeggio harmonic scale based on multiplier
+        const baseFreq = 528;
+        const noteFactor = [1, 1.125, 1.25, 1.333, 1.5, 1.666, 1.875, 2.0][Math.min(mult-1, 7)];
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(baseFreq * noteFactor, this.ctx.currentTime);
+
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.45);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.46);
+      }
+
+      playBoostSound() {
+        if (!this.ctx || this.muted) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(220, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, this.ctx.currentTime + 0.3);
+
+        gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.35);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.36);
+      }
+
+      playImpactSound() {
+        if (!this.ctx || this.muted) return;
+        const bufferSize = this.ctx.sampleRate * 0.4;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.08));
+        }
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(250, this.ctx.currentTime);
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+        noise.start();
+      }
+
+      playAchievementFanfare() {
+        if (!this.ctx || this.muted) return;
+        const notes = [440, 554.37, 659.25, 880];
+        notes.forEach((freq, idx) => {
+          setTimeout(() => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+            gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.3);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start();
+            osc.stop(this.ctx.currentTime + 0.31);
+          }, idx * 90);
+        });
+      }
+
+      startMusic() {
+        // Procedural 130 BPM Cybernetic Synth Arp
+        const scale = [110, 130.81, 146.83, 164.81, 196, 220, 261.63, 293.66]; // A minor
+        this.musicTimer = setInterval(() => {
+          if (!this.ctx || this.muted || gameState !== 'PLAYING') return;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          const filter = this.ctx.createBiquadFilter();
+
+          const freq = scale[this.musicStep % scale.length];
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(450 + (isWarp ? 600 : 0), this.ctx.currentTime);
+
+          gain.gain.setValueAtTime(0.06, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.18);
+
+          osc.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.19);
+
+          this.musicStep++;
+        }, 130);
+      }
+    }
+
+    /* ==========================================================================
+       GAME ENGINE & STATE
+       ========================================================================== */
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const sounds = new SoundEngine();
+
+    let width = 0, height = 0;
+    function resize() {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    let gameState = 'TITLE'; // TITLE, PLAYING, GAMEOVER
+    let score = 0;
+    let highScore = parseInt(localStorage.getItem('nsp_idg_prism_highscore') || '0', 10);
+    let speed = 450;
+    let targetSpeed = 450;
+    let shield = 100;
+    let warpCharge = 0;
+    let isWarp = false;
+    let warpDuration = 0;
+    let multiplier = 1;
+    let cleanGatesInRow = 0;
+    let cameraShake = 0;
+
+    // Player Interceptor Model
+    const ship = {
+      x: 0, y: 0,
+      vx: 0, vy: 0,
+      roll: 0, pitch: 0,
+      boostEnergy: 100
+    };
+
+    // Corridor Rings & Objects (Metatron 13-node geometry)
+    const rings = [];
+    const NUM_RINGS = 28;
+    const RING_SPACING = 90;
+    const obstacles = [];
+    const prisms = [];
+    const particles = [];
+
+    function initWorld() {
+      rings.length = 0;
+      obstacles.length = 0;
+      prisms.length = 0;
+      particles.length = 0;
+
+      for (let i = 0; i < NUM_RINGS; i++) {
+        rings.push({
+          z: i * RING_SPACING + 100,
+          rot: i * 0.15
+        });
+      }
+
+      // Pre-seed initial track objects
+      for (let z = 600; z < 2500; z += 220) {
+        spawnTrackElement(z);
+      }
+    }
+
+    function spawnTrackElement(z) {
+      if (Math.random() < 0.6) {
+        // Obstacle (Ancient basalt pillar or crystalline beam)
+        const angle = Math.floor(Math.random() * 6) * (Math.PI / 3);
+        const dist = 140 + Math.random() * 60;
+        obstacles.push({
+          x: Math.cos(angle) * dist,
+          y: Math.sin(angle) * dist,
+          z: z,
+          radius: 40 + Math.random() * 20,
+          hit: false
+        });
+      }
+      if (Math.random() < 0.75) {
+        // Solfeggio Prism Pickup
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 50 + Math.random() * 120;
+        prisms.push({
+          x: Math.cos(angle) * dist,
+          y: Math.sin(angle) * dist,
+          z: z + 60,
+          collected: false
+        });
+      }
+    }
+
+    // Input Handling
+    const keys = {};
+    window.addEventListener('keydown', e => {
+      keys[e.code] = true;
+      if (e.code === 'KeyM') sounds.muted = !sounds.muted;
+      if (gameState === 'TITLE' && (e.code === 'Space' || e.code === 'Enter')) startGame();
+      if (gameState === 'GAMEOVER' && (e.code === 'Space' || e.code === 'Enter')) startGame();
+    });
+    window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+    // Gamepad API Poll
+    function pollGamepad() {
+      const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+      const gp = gamepads[0];
+      if (!gp) return;
+
+      const deadzone = 0.15;
+      if (Math.abs(gp.axes[0]) > deadzone) ship.vx += gp.axes[0] * 1.8;
+      if (Math.abs(gp.axes[1]) > deadzone) ship.vy += gp.axes[1] * 1.8;
+
+      // RT (Right Trigger Button 7) -> Boost
+      if (gp.buttons[7] && gp.buttons[7].pressed) keys['Space'] = true;
+      // LT (Left Trigger Button 6) -> Brake
+      if (gp.buttons[6] && gp.buttons[6].pressed) keys['ShiftLeft'] = true;
+      // A Button (Button 0) -> Start
+      if (gp.buttons[0] && gp.buttons[0].pressed) {
+        if (gameState !== 'PLAYING') startGame();
+      }
+    }
+
+    /* Achievements */
+    const unlockedAchievements = new Set();
+    function awardAchievement(id, name) {
+      if (unlockedAchievements.has(id)) return;
+      unlockedAchievements.add(id);
+      document.getElementById('achName').textContent = name;
+      const toast = document.getElementById('achievementToast');
+      toast.classList.add('show');
+      sounds.playAchievementFanfare();
+      setTimeout(() => toast.classList.remove('show'), 3800);
+    }
+
+    function startGame() {
+      sounds.init();
+      score = 0;
+      speed = 450;
+      targetSpeed = 450;
+      shield = 100;
+      warpCharge = 0;
+      isWarp = false;
+      multiplier = 1;
+      cleanGatesInRow = 0;
+      ship.x = 0; ship.y = 0;
+      ship.vx = 0; ship.vy = 0;
+
+      initWorld();
+      gameState = 'PLAYING';
+      document.getElementById('titleModal').style.display = 'none';
+      document.getElementById('gameOverModal').style.display = 'none';
+      awardAchievement('START', 'PILOT OF METATRON');
+    }
+
+    function gameOver() {
+      gameState = 'GAMEOVER';
+      sounds.playImpactSound();
+      cameraShake = 35;
+      if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('nsp_idg_prism_highscore', highScore.toString());
+      }
+      document.getElementById('finalScore').textContent = Math.floor(score).toLocaleString();
+      document.getElementById('highScore').textContent = Math.floor(highScore).toLocaleString();
+      document.getElementById('gameOverModal').style.display = 'flex';
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('restartBtn').addEventListener('click', startGame);
+
+    /* ==========================================================================
+       MAIN RENDER & UPDATE LOOP (60 FPS)
+       ========================================================================== */
+    let lastTime = performance.now();
+
+    function gameLoop(now) {
+      requestAnimationFrame(gameLoop);
+      const dt = Math.min((now - lastTime) / 1000, 0.1);
+      lastTime = now;
+
+      pollGamepad();
+
+      if (gameState === 'PLAYING') {
+        update(dt);
+      }
+      render();
+    }
+
+    function update(dt) {
+      // Steering
+      const accel = 620;
+      if (keys['KeyA'] || keys['ArrowLeft']) ship.vx -= accel * dt;
+      if (keys['KeyD'] || keys['ArrowRight']) ship.vx += accel * dt;
+      if (keys['KeyW'] || keys['ArrowUp']) ship.vy -= accel * dt;
+      if (keys['KeyS'] || keys['ArrowDown']) ship.vy += accel * dt;
+
+      // Friction & Position
+      ship.vx *= 0.91;
+      ship.vy *= 0.91;
+      ship.x += ship.vx * dt;
+      ship.y += ship.vy * dt;
+
+      // Corridor bounds clamp
+      const maxRadius = 240;
+      const curDist = Math.hypot(ship.x, ship.y);
+      if (curDist > maxRadius) {
+        ship.x = (ship.x / curDist) * maxRadius;
+        ship.y = (ship.y / curDist) * maxRadius;
+        ship.vx *= -0.4;
+        ship.vy *= -0.4;
+      }
+
+      // Banking Roll & Pitch
+      ship.roll = (ship.vx / 300) * 0.45;
+      ship.pitch = (ship.vy / 300) * 0.3;
+
+      // Speed control
+      if (keys['Space']) {
+        targetSpeed = isWarp ? 1200 : 750;
+        sounds.playBoostSound();
+        // Spawn thruster particles
+        for (let p = 0; p < 3; p++) {
+          particles.push({
+            x: ship.x + (Math.random() * 20 - 10),
+            y: ship.y + 15,
+            z: 20,
+            vx: (Math.random() - 0.5) * 60,
+            vy: 80 + Math.random() * 50,
+            vz: -300,
+            life: 0.35,
+            color: '#38bdf8'
+          });
+        }
+      } else if (keys['ShiftLeft'] || keys['ShiftRight']) {
+        targetSpeed = 300; // Brake
+      } else {
+        targetSpeed = isWarp ? 950 : 450;
+      }
+      speed += (targetSpeed - speed) * 3.5 * dt;
+      sounds.setJetThrottle(speed / 900);
+
+      // Score accumulation
+      score += (speed * 0.05 * multiplier) * dt;
+
+      // Advance Rings and World
+      const worldDelta = speed * 1.5 * dt;
+      for (let i = 0; i < rings.length; i++) {
+        rings[i].z -= worldDelta;
+        rings[i].rot += 0.35 * dt;
+        if (rings[i].z < 20) {
+          rings[i].z += NUM_RINGS * RING_SPACING;
+          cleanGatesInRow++;
+          if (cleanGatesInRow % 5 === 0) {
+            multiplier = Math.min(multiplier + 1, 8);
+            warpCharge = Math.min(warpCharge + 20, 100);
+            if (warpCharge >= 100 && !isWarp) {
+              isWarp = true;
+              warpDuration = 8.0;
+              document.getElementById('warpAlert').style.display = 'block';
+              awardAchievement('WARP', 'WARP VELOCITY ENGAGED');
+            }
+          }
+        }
+      }
+
+      // Handle Warp Duration
+      if (isWarp) {
+        warpDuration -= dt;
+        warpCharge = (warpDuration / 8.0) * 100;
+        cameraShake = 4.0;
+        if (warpDuration <= 0) {
+          isWarp = false;
+          warpCharge = 0;
+          document.getElementById('warpAlert').style.display = 'none';
+        }
+      }
+
+      // Update Obstacles
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const obs = obstacles[i];
+        obs.z -= worldDelta;
+
+        // Collision Check
+        if (Math.abs(obs.z - 30) < 35 && !obs.hit) {
+          const d = Math.hypot(ship.x - obs.x, ship.y - obs.y);
+          if (d < obs.radius + 24) {
+            obs.hit = true;
+            shield -= 35;
+            cameraShake = 22;
+            multiplier = 1;
+            cleanGatesInRow = 0;
+            sounds.playImpactSound();
+            if (shield <= 0) {
+              gameOver();
+              return;
+            }
+          }
+        }
+
+        if (obs.z < 10) {
+          obstacles.splice(i, 1);
+          spawnTrackElement(rings[rings.length - 1].z + 200);
+        }
+      }
+
+      // Update Solfeggio Prisms
+      for (let i = prisms.length - 1; i >= 0; i--) {
+        const pr = prisms[i];
+        pr.z -= worldDelta;
+
+        if (Math.abs(pr.z - 30) < 35 && !pr.collected) {
+          const d = Math.hypot(ship.x - pr.x, ship.y - pr.y);
+          if (d < 50) {
+            pr.collected = true;
+            score += 500 * multiplier;
+            shield = Math.min(shield + 10, 100);
+            sounds.playPrismChime(multiplier);
+            if (multiplier >= 4) awardAchievement('COMBO', '4X SOLFEGGIO COMBO');
+            if (score > 10000) awardAchievement('SCORE10K', 'APEX RESONANCE (10K)');
+          }
+        }
+
+        if (pr.z < 10) {
+          prisms.splice(i, 1);
+        }
+      }
+
+      // Particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.life -= dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.z += p.vz * dt;
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+
+      if (cameraShake > 0) cameraShake = Math.max(0, cameraShake - dt * 25);
+
+      // Update HUD Elements
+      document.getElementById('scoreVal').textContent = Math.floor(score).toLocaleString();
+      document.getElementById('speedVal').innerHTML = `${Math.floor(speed)} <span style="font-size:12px;color:#38bdf8">KM/H</span>`;
+      document.getElementById('speedBar').style.width = `${Math.min((speed / 1000) * 100, 100)}%`;
+      document.getElementById('shieldVal').textContent = `${Math.max(0, Math.floor(shield))}%`;
+      document.getElementById('shieldBar').style.width = `${Math.max(0, Math.floor(shield))}%`;
+      document.getElementById('warpVal').textContent = `${Math.floor(warpCharge)}%`;
+      document.getElementById('warpBar').style.width = `${Math.floor(warpCharge)}%`;
+      document.getElementById('multVal').textContent = `${multiplier}x`;
+    }
+
+    /* 3D Perspective Projection Matrix */
+    function project3D(x, y, z) {
+      const fov = 340;
+      const scale = fov / (z + fov);
+      const projX = width / 2 + x * scale;
+      const projY = height / 2 + y * scale;
+      return { x: projX, y: projY, scale: scale };
+    }
+
+    function render() {
+      // Clear Screen with Deep Cosmic Void
+      ctx.fillStyle = isWarp ? '#090414' : '#040711';
+      ctx.fillRect(0, 0, width, height);
+
+      // Camera Shake
+      ctx.save();
+      if (cameraShake > 0) {
+        ctx.translate((Math.random() - 0.5) * cameraShake, (Math.random() - 0.5) * cameraShake);
+      }
+
+      // Render 3D Metatron Rings (Hexagonal Crystalline Gates)
+      rings.sort((a, b) => b.z - a.z);
+      for (const r of rings) {
+        const p = project3D(0, 0, r.z);
+        if (p.scale <= 0) continue;
+
+        const ringR = 260 * p.scale;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(r.rot);
+
+        // Draw Metatron Hexagonal Energy Gate
+        ctx.beginPath();
+        for (let side = 0; side < 6; side++) {
+          const ang = side * (Math.PI / 3);
+          const hx = Math.cos(ang) * ringR;
+          const hy = Math.sin(ang) * ringR;
+          if (side === 0) ctx.moveTo(hx, hy);
+          else ctx.lineTo(hx, hy);
+        }
+        ctx.closePath();
+
+        const alpha = Math.min(1.0, (1 - r.z / (NUM_RINGS * RING_SPACING)) * 1.4);
+        ctx.strokeStyle = isWarp ? `rgba(236, 72, 153, ${alpha})` : `rgba(56, 189, 248, ${alpha * 0.7})`;
+        ctx.lineWidth = Math.max(1, 3 * p.scale);
+        ctx.stroke();
+
+        // 6 Nodes on Ring
+        for (let side = 0; side < 6; side++) {
+          const ang = side * (Math.PI / 3);
+          const hx = Math.cos(ang) * ringR;
+          const hy = Math.sin(ang) * ringR;
+          ctx.fillStyle = isWarp ? '#ffd700' : '#38bdf8';
+          ctx.beginPath();
+          ctx.arc(hx, hy, Math.max(2, 6 * p.scale), 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.restore();
+      }
+
+      // Render Solfeggio Prisms
+      for (const pr of prisms) {
+        if (pr.collected) continue;
+        const p = project3D(pr.x, pr.y, pr.z);
+        if (p.scale <= 0) continue;
+
+        const size = 32 * p.scale;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(nowSec() * 2.5);
+
+        // Glowing Diamond
+        ctx.fillStyle = '#ffd700';
+        ctx.shadowColor = '#ffd700';
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.moveTo(0, -size);
+        ctx.lineTo(size * 0.7, 0);
+        ctx.lineTo(0, size);
+        ctx.lineTo(-size * 0.7, 0);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      // Render Obstacles (Basalt Monoliths)
+      for (const obs of obstacles) {
+        const p = project3D(obs.x, obs.y, obs.z);
+        if (p.scale <= 0) continue;
+
+        const r = obs.radius * p.scale;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+
+        ctx.fillStyle = obs.hit ? '#ef4444' : '#0f172a';
+        ctx.strokeStyle = obs.hit ? '#f87171' : '#38bdf8';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Inner glowing core
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      // Render Particles
+      for (const pt of particles) {
+        const p = project3D(pt.x, pt.y, pt.z);
+        if (p.scale <= 0) continue;
+        ctx.fillStyle = pt.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, Math.max(1, 4 * p.scale), 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Render Player Interceptor (Futuristic Sovereign Jet)
+      renderShip();
+
+      ctx.restore();
+    }
+
+    function renderShip() {
+      const p = project3D(ship.x, ship.y, 40);
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(ship.roll);
+
+      // Jet Cockpit & Fuselage
+      ctx.fillStyle = '#0f172a';
+      ctx.strokeStyle = isWarp ? '#ffd700' : '#38bdf8';
+      ctx.lineWidth = 2.5;
+
+      ctx.beginPath();
+      ctx.moveTo(0, -38);         // Nose
+      ctx.lineTo(28, 22);         // Right wing tip
+      ctx.lineTo(12, 16);         // Right shoulder
+      ctx.lineTo(0, 24);          // Thruster center
+      ctx.lineTo(-12, 16);        // Left shoulder
+      ctx.lineTo(-28, 22);        // Left wing tip
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Glowing Cockpit Canopy
+      ctx.fillStyle = isWarp ? '#ffd700' : '#00f0ff';
+      ctx.shadowColor = ctx.fillStyle;
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.ellipse(0, -8, 6, 14, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Wingtip Lasers / Beacons
+      ctx.fillStyle = '#ec4899';
+      ctx.beginPath();
+      ctx.arc(28, 22, 3, 0, Math.PI * 2);
+      ctx.arc(-28, 22, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function nowSec() {
+      return performance.now() / 1000;
+    }
+
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>

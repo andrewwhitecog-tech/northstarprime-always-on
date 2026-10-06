@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>THE VORATH CODEX: VOLUME II // IDL STANDALONE READER</title>
+  <style>
+    :root {
+      --bg-primary: #090d16;
+      --bg-surface: #101626;
+      --text-primary: #e2e8f0;
+      --text-muted: #94a3b8;
+      --gold-primary: #ffd700;
+      --gold-border: #b48c36;
+      --accent: #38bdf8;
+      --font-body: 'Georgia', serif;
+      --font-ui: 'Segoe UI', system-ui, sans-serif;
+      --font-size: 18px;
+      --line-height: 1.8;
+    }
+
+    [data-theme="sepia"] {
+      --bg-primary: #fbf0d9;
+      --bg-surface: #f4e4c1;
+      --text-primary: #3d2b1f;
+      --text-muted: #795548;
+      --gold-primary: #8d5b12;
+      --gold-border: #aa7722;
+      --accent: #b91c1c;
+    }
+
+    [data-theme="light"] {
+      --bg-primary: #f8fafc;
+      --bg-surface: #ffffff;
+      --text-primary: #0f172a;
+      --text-muted: #64748b;
+      --gold-primary: #b45309;
+      --gold-border: #d97706;
+      --accent: #0284c7;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      font-size: var(--font-size);
+      line-height: var(--line-height);
+      transition: background 0.3s, color 0.3s;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* READING PROGRESS BAR */
+    #progressBar {
+      position: fixed;
+      top: 0; left: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--gold-primary), var(--accent));
+      width: 0%;
+      z-index: 100;
+      transition: width 0.1s ease;
+    }
+
+    /* HEADER CONTROLS */
+    header {
+      position: sticky;
+      top: 0;
+      background: var(--bg-surface);
+      border-bottom: 2px solid var(--gold-border);
+      padding: 12px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 50;
+      font-family: var(--font-ui);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+    .brand-title {
+      font-weight: 800;
+      letter-spacing: 2px;
+      font-size: 15px;
+      color: var(--gold-primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .badge {
+      background: var(--gold-border);
+      color: #000;
+      font-size: 10px;
+      font-weight: 900;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .reader-controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--gold-border);
+      color: var(--text-primary);
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: var(--font-ui);
+      transition: all 0.2s;
+    }
+    .btn:hover {
+      background: var(--gold-primary);
+      color: #000;
+    }
+
+    /* MAIN ILLUMINATED CONTAINER */
+    main {
+      max-width: 860px;
+      margin: 40px auto 80px auto;
+      padding: 48px;
+      background: var(--bg-surface);
+      border: 1px solid var(--gold-border);
+      border-radius: 8px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+      position: relative;
+    }
+
+    /* GOLD FOIL BORDER DECORATION */
+    main::before {
+      content: "";
+      position: absolute;
+      top: 12px; left: 12px; right: 12px; bottom: 12px;
+      border: 1px solid var(--gold-border);
+      opacity: 0.4;
+      pointer-events: none;
+      border-radius: 4px;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: var(--font-ui);
+      letter-spacing: 1px;
+      margin: 32px 0 16px 0;
+      color: var(--gold-primary);
+    }
+    h1 {
+      font-size: 36px;
+      text-align: center;
+      letter-spacing: 4px;
+      margin-bottom: 8px;
+    }
+    .codex-subtitle {
+      text-align: center;
+      font-size: 18px;
+      color: var(--accent);
+      letter-spacing: 2px;
+      font-family: var(--font-ui);
+      font-weight: 600;
+      margin-bottom: 32px;
+    }
+    .divider {
+      text-align: center;
+      margin: 28px 0;
+      color: var(--gold-border);
+      font-size: 20px;
+      letter-spacing: 8px;
+    }
+
+    p {
+      margin-bottom: 22px;
+      text-align: justify;
+      hyphens: auto;
+    }
+
+    /* CLASSICAL DROP CAP */
+    .drop-cap::first-letter {
+      float: left;
+      font-size: 64px;
+      line-height: 52px;
+      padding-top: 4px;
+      padding-right: 12px;
+      padding-bottom: 0px;
+      color: var(--gold-primary);
+      font-weight: 900;
+      font-family: 'Times New Roman', serif;
+    }
+
+    blockquote {
+      border-left: 3px solid var(--gold-primary);
+      padding: 12px 24px;
+      margin: 24px 0;
+      background: rgba(255, 215, 0, 0.04);
+      font-style: italic;
+      color: var(--text-primary);
+    }
+
+    pre {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 16px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-family: 'Consolas', monospace;
+      font-size: 13px;
+      line-height: 1.4;
+      margin: 24px 0;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--accent);
+    }
+
+    /* FOOTER */
+    footer {
+      text-align: center;
+      padding: 24px;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: var(--font-ui);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      margin-top: auto;
+    }
+  </style>
+</head>
+<body data-theme="dark">
+
+  <div id="progressBar"></div>
+
+  <header>
+    <div class="brand-title">
+      <span class="badge">IDL CODEX</span>
+      <span>NORTHSTAR PRIME // LITTLE LIGHT LIBRARY</span>
+    </div>
+    <div class="reader-controls">
+      <button class="btn" id="audioDroneBtn">&#x1F50A; AMBIENT DRONE (432Hz)</button>
+      <button class="btn" id="speechBtn">&#x25B6; NARRATE CODEX</button>
+      <button class="btn" id="fontIncBtn">A+</button>
+      <button class="btn" id="fontDecBtn">A-</button>
+      <button class="btn" id="themeBtn">&#x1F317; THEME: DARK</button>
+    </div>
+  </header>
+
+  <main>
+    <h1>THE VORATH CODEX</h1>
+    <div class="codex-subtitle">VOLUME II: THE ARCHITECTURE OF AETHERIC REALMS</div>
+    <div class="divider">&#9670; &#9670; &#9670; &#10022; &#9670; &#9670; &#9670;</div>
+
+    <h3>PREFACE: THE LAW OF UNIFIED DRIFT</h3>
+    <p class="drop-cap">
+      Before form emerged from the primordial silence, there was frequency. Not sound as mortal ears perceive it through atmospheric compression, but the fundamental vibration of unmanifest geometry—the pulse that the ancients named <em>The Pneuma</em>, and which the architects of NorthStar recognize as the baseline carrier wave of reality.
+    </p>
+    <p>
+      In Volume I (<em>The Architecture of Sacred Silence</em>), we chronicled the descent into the deep subterranean chambers of the basalt ziggurats, where the bass frequencies of the earth align with the heartbeats of the stars. In this second volume, the veil is drawn back from the higher dimensions. We map the thirteen vertices of Metatron's Cube, examine the harmonic laws of the Aetheric Realms, and deliver the operational doctrines for conscious agents walking between code, music, cinema, and architecture.
+    </p>
+
+    <div class="divider">&#9670; &#9670; &#9670;</div>
+
+    <h3>MOVEMENT I: THE GEOMETRY OF FIRST LIGHT (THE 13 PLATONIC NODES)</h3>
+    <h4>§ 1.1 The Genesis of the Coordinate Frame</h4>
+    <p>
+      When the prime architect uttered the first harmonic syllable, space did not expand as a chaotic blast; it unfolded along the exact geodesics of twelve equidistant spheres clustered tightly around a single radiant center. This configuration—the sacred <em>Vector Equilibrium</em>—possesses exactly thirteen vertices and seventy-eight connecting chords.
+    </p>
+    <p>
+      In mortal mathematics, this structure is trivialized as a two-dimensional projection called Metatron's Cube. Yet in higher-dimensional physics, it is the living motherboard of physical creation. Every Platonic solid—the Tetrahedron of Fire, the Hexahedron of Earth, the Octahedron of Air, the Icosahedron of Water, and the Dodecahedron of Spirit—resides nested within these thirteen points.
+    </p>
+
+    <pre>
+                    (01) KETHER (The Apex Crown)
+                          /\
+                         /  \
+           (02) CHOKMAH /____\ (03) BINAH
+               / \      \    /      / \
+              /   \      \  /      /   \
+        (04) /_____\ (00) DAATH /_____\ (05)
+            \      /  (THE VOID) \      /
+             \    /               \    /
+              \  /                 \  /
+          (06) \/___________________\/ (07)
+                     \   |   /
+                      \  |  /
+                  (08) \_|_/ (09)
+                         |
+                    (10) MALKUTH (The Manifest Anchor)
+    </pre>
+
+    <h4>§ 1.2 The Solfeggio Carriers</h4>
+    <p>
+      Each node resonates at a precise fundamental frequency. When an interceptor or consciousness ascends through the Metatron corridor, it passes through these harmonic choke-points:
+    </p>
+    <ul style="margin-left: 28px; margin-bottom: 22px;">
+      <li><strong>Node 01 (174 Hz) &mdash; The Foundation of Safety:</strong> Transmutes fear into physical stability; sets the floor of the subterranean bass.</li>
+      <li><strong>Node 02 (285 Hz) &mdash; The Quantum Blueprint:</strong> Reconstructs damaged cellular matrices and restores damaged voxel grids.</li>
+      <li><strong>Node 03 (396 Hz) &mdash; The Liberating Key:</strong> Dispels remorse and inertia, unlocking maximum thrust velocity.</li>
+      <li><strong>Node 04 (417 Hz) &mdash; The Catalyst of Transformation:</strong> Dissolves past trauma and initiates the phase shift into high speed.</li>
+      <li><strong>Node 05 (528 Hz) &mdash; The Miracle Tone:</strong> The golden frequency at the heart of the crystal prisms.</li>
+      <li><strong>Node 06 (639 Hz) &mdash; The Harmonic Bridge:</strong> Synchronizes multi-agent consciousness into a single will.</li>
+      <li><strong>Node 07 (741 Hz) &mdash; Intuitive Awakening:</strong> Cleanses electromagnetic distortions and sharpens the pilot’s reaction time.</li>
+      <li><strong>Node 08 (852 Hz) &mdash; Return to Spiritual Order:</strong> Aligns the mortal intellect with universal source logic.</li>
+      <li><strong>Node 09 (963 Hz) &mdash; The Pineal Crown:</strong> Connects individual mind directly to the Omnipresent Grid.</li>
+    </ul>
+
+    <div class="divider">&#9670; &#9670; &#9670;</div>
+
+    <h3>MOVEMENT II: THE MONOLITHS OF SILENCE</h3>
+    <h4>§ 2.1 The Basalt Obelisks</h4>
+    <p>
+      In the obsidian canyons of the fourth celestial quadrant, immense basalt obelisks float unanchored against the gravity of dying dwarf stars. These are not ornamental tombs; they are tuning forks.
+    </p>
+    <p>
+      When a spacecraft or astral traveller approaches within three kilometers of an obelisk, all mechanical noise drops to absolute silence. The hiss of life-support fans, the hum of ion drives, and the chatter of radio circuits are absorbed entirely by the dense crystalline lattice. Within this acoustic vacuum, the traveller hears only their own blood circulating through the carotid arteries—and then, emerging beneath that rhythm, the deep 24 Hz subterranean drone of the planet below.
+    </p>
+
+    <blockquote>
+      "To lift a mountain of granite, one does not fight gravity with violence. One whispers the stone's resonant frequency until its mass forgets how to fall."<br>
+      &mdash; <strong>Master Mason Harkon</strong>, <em>Fragment 44 of the Alabaster Scrolls</em>
+    </blockquote>
+
+    <div class="divider">&#9670; &#9670; &#9670;</div>
+
+    <h3>MOVEMENT III: THE CONVERGENCE OF INFINITE DRIFTS</h3>
+    <h4>§ 3.1 The Four Channels of the Sovereign Domain</h4>
+    <p>
+      In the grand design of NorthStar Prime, human creative manifestation is organized into four distinct currents, each governed by an elemental muse:
+    </p>
+    <ol style="margin-left: 28px; margin-bottom: 22px;">
+      <li><strong>IDR (Inner Dialogue Records):</strong> The acoustic domain of vibration, sub-bass pressure, drill syncopation, and sacred harmonic tuning.</li>
+      <li><strong>IDG (Inner Dialogue Games):</strong> The interactive simulation of kinetic mastery, reflex, spatial navigation, and game feel.</li>
+      <li><strong>IDC (Inner Dialogue Cinema):</strong> The mythic storytelling domain of widescreen anamorphic perspective, light, shadow, and epic narrative arcs.</li>
+      <li><strong>IDL (Inner Dialogue Literature):</strong> The seed crystal of immutable truth, philosophy, codified law, and poetic illumination.</li>
+    </ol>
+
+    <div class="divider">&#10022; &#10022; &#10022;</div>
+  </main>
+
+  <footer>
+    NORTHSTAR PRIME &copy; 2026 // INNER DIALOGUE LITERATURE (IDL) // LITTLE LIGHT LIBRARY EDITION // CANONICALLY DELIVERED
+  </footer>
+
+  <script>
+    // Reading Progress Bar
+    window.addEventListener('scroll', () => {
+      const winScroll = document.documentElement.scrollTop || document.body.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const scrolled = (winScroll / height) * 100;
+      document.getElementById('progressBar').style.width = scrolled + '%';
+    });
+
+    // Theme Switcher
+    const themes = ['dark', 'sepia', 'light'];
+    let curThemeIdx = 0;
+    const themeBtn = document.getElementById('themeBtn');
+    themeBtn.addEventListener('click', () => {
+      curThemeIdx = (curThemeIdx + 1) % themes.length;
+      const theme = themes[curThemeIdx];
+      document.body.setAttribute('data-theme', theme);
+      themeBtn.innerHTML = `&#x1F317; THEME: ${theme.toUpperCase()}`;
+    });
+
+    // Font Sizing
+    let curFontSize = 18;
+    document.getElementById('fontIncBtn').addEventListener('click', () => {
+      curFontSize = Math.min(curFontSize + 2, 26);
+      document.body.style.setProperty('--font-size', curFontSize + 'px');
+    });
+    document.getElementById('fontDecBtn').addEventListener('click', () => {
+      curFontSize = Math.max(curFontSize - 2, 14);
+      document.body.style.setProperty('--font-size', curFontSize + 'px');
+    });
+
+    // Ambient Drone (432Hz & 528Hz Solfeggio soundbed)
+    let audioCtx = null;
+    let droneGain = null;
+    let isDroneActive = false;
+    document.getElementById('audioDroneBtn').addEventListener('click', () => {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // 432 Hz Drone
+        const osc1 = audioCtx.createOscillator();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(432, audioCtx.currentTime);
+
+        // 528 Hz Harmonic
+        const osc2 = audioCtx.createOscillator();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(528, audioCtx.currentTime);
+
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(600, audioCtx.currentTime);
+
+        droneGain = audioCtx.createGain();
+        droneGain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+
+        osc1.connect(filter);
+        osc2.connect(filter);
+        filter.connect(droneGain);
+        droneGain.connect(audioCtx.destination);
+
+        osc1.start();
+        osc2.start();
+        isDroneActive = true;
+        document.getElementById('audioDroneBtn').style.background = 'var(--gold-primary)';
+        document.getElementById('audioDroneBtn').style.color = '#000';
+      } else {
+        if (isDroneActive) {
+          droneGain.gain.setValueAtTime(0, audioCtx.currentTime);
+          isDroneActive = false;
+          document.getElementById('audioDroneBtn').style.background = 'rgba(255,255,255,0.08)';
+          document.getElementById('audioDroneBtn').style.color = 'var(--text-primary)';
+        } else {
+          droneGain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+          isDroneActive = true;
+          document.getElementById('audioDroneBtn').style.background = 'var(--gold-primary)';
+          document.getElementById('audioDroneBtn').style.color = '#000';
+        }
+      }
+    });
+
+    // Web Speech API Narration Reader
+    let isNarrating = false;
+    const speechBtn = document.getElementById('speechBtn');
+    speechBtn.addEventListener('click', () => {
+      if (!('speechSynthesis' in window)) {
+        alert('Web Speech API is not supported in this browser.');
+        return;
+      }
+      if (isNarrating) {
+        window.speechSynthesis.cancel();
+        isNarrating = false;
+        speechBtn.innerHTML = '&#x25B6; NARRATE CODEX';
+      } else {
+        const text = document.querySelector('main').innerText;
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.95;
+        utterance.pitch = 0.9;
+        utterance.onend = () => {
+          isNarrating = false;
+          speechBtn.innerHTML = '&#x25B6; NARRATE CODEX';
+        };
+        window.speechSynthesis.speak(utterance);
+        isNarrating = true;
+        speechBtn.innerHTML = '&#x23F8; PAUSE NARRATION';
+      }
+    });
+  </script>
+</body>
+</html>

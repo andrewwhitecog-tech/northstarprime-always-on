@@ -30,12 +30,14 @@ window.CosmosDimensions = (function () {
   var elapsed = 0;
 
   var GATES = {
-    over_geode:   { dim: 'over', to: 'geode',   x: 12, z: 0,  corner: 3 },
-    over_vitrine: { dim: 'over', to: 'vitrine', x: 0,  z: 12, corner: 13 },
-    over_crucible:{ dim: 'over', to: 'crucible',x: -12,z: 0,  corner: 16 },
+    over_geode:   { dim: 'over', to: 'geode',   x: 12, z: 0,   corner: 3 },
+    over_vitrine: { dim: 'over', to: 'vitrine', x: 0,  z: 12,  corner: 13 },
+    over_crucible:{ dim: 'over', to: 'crucible',x: -12,z: 0,   corner: 16 },
+    over_abyss:   { dim: 'over', to: 'abyss',   x: 0,  z: -12, corner: 18 },
     geode_back:   { dim: 'geode',   to: 'over', x: 0,  z: 0 },
     vitrine_back: { dim: 'vitrine', to: 'over', x: 0,  z: 0 },
-    crucible_back:{ dim: 'crucible',to: 'over', x: 4,  z: 0 }
+    crucible_back:{ dim: 'crucible',to: 'over', x: 4,  z: 0 },
+    abyss_back:   { dim: 'abyss',   to: 'over', x: 0,  z: -4 }
   };
 
   // ----------------------------------------------------------
@@ -51,11 +53,12 @@ window.CosmosDimensions = (function () {
   }
 
   function buildOverworldGates() {
-    var g1 = GATES.over_geode, g2 = GATES.over_vitrine, g3 = GATES.over_crucible;
-    var y1 = CC.findTop(g1.x, g1.z, 12), y2 = CC.findTop(g2.x, g2.z, 12), y3 = CC.findTop(g3.x, g3.z, 12);
+    var g1 = GATES.over_geode, g2 = GATES.over_vitrine, g3 = GATES.over_crucible, g4 = GATES.over_abyss;
+    var y1 = CC.findTop(g1.x, g1.z, 12), y2 = CC.findTop(g2.x, g2.z, 12), y3 = CC.findTop(g3.x, g3.z, 12), y4 = CC.findTop(g4.x, g4.z, 12);
     if (y1 > -20) { GATES.over_geode.y = y1 + 1; buildGatePad(g1.x, y1 + 1, g1.z, g1.corner); CC.rebuildAround(g1.x, y1 + 1, g1.z); }
     if (y2 > -20) { GATES.over_vitrine.y = y2 + 1; buildGatePad(g2.x, y2 + 1, g2.z, g2.corner); CC.rebuildAround(g2.x, y2 + 1, g2.z); }
     if (y3 > -20) { GATES.over_crucible.y = y3 + 1; buildGatePad(g3.x, y3 + 1, g3.z, g3.corner); CC.rebuildAround(g3.x, y3 + 1, g3.z); }
+    if (y4 > -20) { GATES.over_abyss.y = y4 + 1; buildGatePad(g4.x, y4 + 1, g4.z, g4.corner); CC.rebuildAround(g4.x, y4 + 1, g4.z); }
   }
 
   // ----------------------------------------------------------
@@ -508,6 +511,208 @@ window.CosmosDimensions = (function () {
   }
 
   // ----------------------------------------------------------
+  // THE ABYSS — Phase 7: Hadal Ocean Trench & Leviathan Siren
+  // ----------------------------------------------------------
+  var ABYSS = { FLOOR: -26, CEIL: 10, R: 20 };
+  var siren = null, sirenVortexTimer = 8, sirenVortices = [];
+  var hydroSpires = [], syphonTimer = 0;
+
+  function generateAbyss() {
+    var F = ABYSS.FLOOR, R = ABYSS.R;
+    // 1. Oceanic Hadal Silt Seabed (Block 19)
+    for (var x = -R; x <= R; x++) {
+      for (var z = -R; z <= R; z++) {
+        var d = Math.sqrt(x * x + z * z);
+        if (d > R) continue;
+        set(x, F, z, 19); // Hadal Silt Floor
+        set(x, F - 1, z, 15); // Basalt Sub-Bed
+        
+        // Deep Oceanic Trench Rim Walls
+        if (d > R - 3) {
+          var wallH = Math.floor((d - (R - 3)) * 6);
+          for (var wy = 1; wy <= wallH; wy++) {
+            set(x, F + wy, z, (wy % 3 === 0) ? 18 : 15);
+          }
+        }
+      }
+    }
+
+    // 2. Bioluminescent Abyssal Prism Clusters (Block 18)
+    var prismCoords = [
+      { x: -8, z: -8 }, { x: 8, z: 8 }, { x: -12, z: 6 }, { x: 12, z: -6 },
+      { x: 0, z: 10 }, { x: -6, z: -14 }, { x: 14, z: 12 }
+    ];
+    for (var i = 0; i < prismCoords.length; i++) {
+      var pc = prismCoords[i];
+      for (var py = 1; py <= 3; py++) {
+        set(pc.x, F + py, pc.z, 18);
+        if (py === 2) {
+          set(pc.x + 1, F + py, pc.z, 18);
+          set(pc.x - 1, F + py, pc.z, 18);
+        }
+      }
+    }
+
+    // 3. Towering Hydrothermal Chimney Spires (Block 20)
+    hydroSpires = [
+      { x: -10, z: 6 }, { x: 10, z: -6 }, { x: 6, z: 10 }, { x: -6, z: -10 }
+    ];
+    for (var h = 0; h < hydroSpires.length; h++) {
+      var sp = hydroSpires[h];
+      for (var sy = 1; sy <= 8; sy++) {
+        set(sp.x, F + sy, sp.z, 20); // Hydrothermal Spire
+      }
+      set(sp.x, F + 9, sp.z, 18); // Prism Cap
+    }
+
+    // 4. Return Pad
+    var bg = GATES.abyss_back;
+    GATES.abyss_back.y = F + 1;
+    buildGatePad(bg.x, F + 1, bg.z, 18);
+    CC.world.spawn = { x: 0.5, y: F + 2, z: -2.5 };
+
+    // 5. Spawn Leviathan Siren
+    spawnSiren();
+  }
+
+  function spawnSiren() {
+    clearSiren();
+    var group = new THREE.Group();
+    // 8-segment serpentine spine
+    var segments = [];
+    var headGeo = new THREE.DodecahedronGeometry(1.6, 1);
+    var headMat = new THREE.MeshStandardMaterial({ color: 0x00e5ff, emissive: 0x005577, roughness: 0.2, metalness: 0.8 });
+    var headMesh = new THREE.Mesh(headGeo, headMat);
+    group.add(headMesh);
+
+    // Bioluminescent Lure (Angler Bulb)
+    var lureGeo = new THREE.SphereGeometry(0.5, 16, 16);
+    var lureMat = new THREE.MeshBasicMaterial({ color: 0x50c878 });
+    var lureMesh = new THREE.Mesh(lureGeo, lureMat);
+    lureMesh.position.set(0, 2.2, 1.8);
+    headMesh.add(lureMesh);
+
+    // Body segments
+    for (var i = 0; i < 7; i++) {
+      var segRadius = 1.4 - i * 0.12;
+      var segGeo = new THREE.SphereGeometry(segRadius, 16, 16);
+      var segMat = new THREE.MeshStandardMaterial({
+        color: (i % 2 === 0) ? 0x00aacc : 0x50c878,
+        roughness: 0.3, metalness: 0.6
+      });
+      var segMesh = new THREE.Mesh(segGeo, segMat);
+      group.add(segMesh);
+      segments.push(segMesh);
+    }
+
+    group.position.set(0, ABYSS.FLOOR + 10, 0);
+    CC.scene.add(group);
+    siren = { group: group, head: headMesh, segments: segments, blessed: false, time: 0 };
+  }
+
+  function updateSiren(dt) {
+    if (!siren) return;
+    siren.time += dt;
+    var t = siren.time;
+
+    // Serpentine swimming path
+    var pathR = 12.0;
+    var cx = Math.cos(t * 0.5) * pathR;
+    var cz = Math.sin(t * 0.5) * pathR;
+    var cy = ABYSS.FLOOR + 9.0 + Math.sin(t * 1.2) * 3.5;
+    siren.group.position.set(cx, cy, cz);
+    siren.head.rotation.y = -(t * 0.5) + Math.PI / 2;
+    siren.head.rotation.z = Math.sin(t * 2.0) * 0.25;
+
+    // Undulating spinal kinematics
+    for (var i = 0; i < siren.segments.length; i++) {
+      var seg = siren.segments[i];
+      var lag = (i + 1) * 0.35;
+      var sx = Math.sin(t * 2.2 - lag) * (1.2 + i * 0.3);
+      var sy = Math.cos(t * 1.8 - lag) * 0.8;
+      var sz = -(i + 1) * 1.6;
+      seg.position.set(sx, sy, sz);
+    }
+
+    // Ultrasonic Vortex Ring Burst
+    sirenVortexTimer -= dt;
+    if (sirenVortexTimer <= 0) {
+      sirenVortexTimer = 7.5 + Math.random() * 4;
+      fireSirenVortex();
+    }
+
+    for (var v = sirenVortices.length - 1; v >= 0; v--) {
+      var vox = sirenVortices[v];
+      vox.radius += dt * 8.5;
+      vox.life -= dt;
+      vox.mesh.scale.set(vox.radius, vox.radius, vox.radius);
+      vox.mesh.material.opacity = Math.max(0, vox.life / 2.0);
+      if (vox.life <= 0) {
+        CC.scene.remove(vox.mesh);
+        sirenVortices.splice(v, 1);
+      }
+    }
+
+    // Blessing interaction
+    var p = CC.player.pos;
+    var dist = Math.hypot(p.x - cx, p.z - cz);
+    if (dist < 4.0 && !siren.blessed && Math.abs(p.y - cy) < 4.0) {
+      siren.blessed = true;
+      CC.toast('THE ABYSSAL SIREN sings — "The deep water remembers." Received +12 Creation Gems.');
+      if (CC.player && CC.player.addGems) CC.player.addGems(12);
+      else if (CC.addGems) CC.addGems(12);
+    }
+  }
+
+  function fireSirenVortex() {
+    var pos = siren.group.position;
+    var geo = new THREE.TorusGeometry(1.2, 0.25, 16, 32);
+    var mat = new THREE.MeshBasicMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.85 });
+    var torus = new THREE.Mesh(geo, mat);
+    torus.position.set(pos.x, pos.y, pos.z);
+    torus.rotation.x = Math.PI / 2;
+    CC.scene.add(torus);
+    sirenVortices.push({ mesh: torus, radius: 1.0, life: 2.0 });
+    CC.toast('The Leviathan Siren emits an ultrasonic pressure vortex!');
+  }
+
+  function clearSiren() {
+    if (siren) {
+      CC.scene.remove(siren.group);
+      siren = null;
+    }
+    for (var i = 0; i < sirenVortices.length; i++) {
+      CC.scene.remove(sirenVortices[i].mesh);
+    }
+    sirenVortices = [];
+  }
+
+  function checkAbyssMechanics(dt) {
+    var p = CC.player.pos;
+    // Hydrothermal Spire Updrafts & Energy Syphon
+    for (var s = 0; s < hydroSpires.length; s++) {
+      var sp = hydroSpires[s];
+      if (Math.abs(p.x - sp.x) < 1.8 && Math.abs(p.z - sp.z) < 1.8 && p.y < ABYSS.FLOOR + 12) {
+        if (CC.player.vel) CC.player.vel.y = 16.0;
+        CC.toast('Hydrothermal Spire thermal plume propels you upward!');
+        break;
+      }
+    }
+    // Energy Syphon near center reef
+    if (Math.abs(p.x) < 3.0 && Math.abs(p.z) < 3.0 && Math.abs(p.y - (ABYSS.FLOOR + 2)) < 3.0) {
+      syphonTimer += dt;
+      if (syphonTimer > 3.0) {
+        syphonTimer = 0;
+        CC.toast('Abyssal Prism resonance tapped — +6 Abyssal Gems harnessed!');
+        if (CC.player && CC.player.addGems) CC.player.addGems(6);
+        else if (CC.addGems) CC.addGems(6);
+      }
+    } else {
+      syphonTimer = 0;
+    }
+  }
+
+  // ----------------------------------------------------------
   // dimension switching
   // ----------------------------------------------------------
   function switchTo(dim) {
@@ -516,7 +721,7 @@ window.CosmosDimensions = (function () {
       blocks: CC.world.blocks, edits: CC.world.edits,
       locations: CC.world.locations, spawn: CC.world.spawn
     };
-    clearPups(); clearDragon(); clearGolem();
+    clearPups(); clearDragon(); clearGolem(); clearSiren();
     current = dim;
     if (stash[dim]) {
       CC.world.blocks = stash[dim].blocks;
@@ -526,6 +731,7 @@ window.CosmosDimensions = (function () {
       if (dim === 'geode') spawnPups(-14);
       if (dim === 'vitrine') spawnDragon();
       if (dim === 'crucible') spawnGolem();
+      if (dim === 'abyss') spawnSiren();
     } else {
       CC.world.blocks = new Map();
       CC.world.edits = {};
@@ -533,6 +739,7 @@ window.CosmosDimensions = (function () {
       if (dim === 'geode') generateGeode();
       else if (dim === 'vitrine') generateVitrine();
       else if (dim === 'crucible') generateCrucible();
+      else if (dim === 'abyss') generateAbyss();
     }
     CC.buildAllChunks();
     CC.respawn();
@@ -542,6 +749,7 @@ window.CosmosDimensions = (function () {
     CC.toast(dim === 'geode' ? 'THE GEODE — a prison of comfort. the pups are pleased.'
       : dim === 'vitrine' ? 'THE VITRINE — glass, vacuum, treasure. mind the dragon’s aim.'
       : dim === 'crucible' ? 'THE CRUCIBLE — the mantle core roars. Vulcanor watches the molten ley.'
+      : dim === 'abyss' ? 'THE ABYSS — hadal crystal reef and deep smokers. The Leviathan Siren circles.'
       : 'the overworld resumes. the aurora missed you.');
   }
 
@@ -579,6 +787,14 @@ window.CosmosDimensions = (function () {
       checkCrucibleMechanics(dt);
       if (CC.player.pos.y < CRU.FLOOR - 24) {
         CC.toast('the mantle core claims what falls. you return to the surface.');
+        switchTo('over');
+      }
+    }
+    if (current === 'abyss') {
+      updateSiren(dt);
+      checkAbyssMechanics(dt);
+      if (CC.player.pos.y < ABYSS.FLOOR - 22) {
+        CC.toast('the hadal trench releases you. you surface back to the light.');
         switchTo('over');
       }
     }

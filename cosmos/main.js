@@ -34,7 +34,10 @@
     11:{ name: 'CIVIC LUMEN',    color: 0xfff3c8, glow: true,  jitter: 0.02 }, // street/working lights
     12:{ name: 'MACHINE CORE',   color: 0xff3fd6, glow: true,  jitter: 0.30 }, // factory machinery (shimmers)
     13:{ name: 'VOID GLASS',     color: 0xbfe8f2, glow: true,  jitter: 0.02 }, // the Vitrine's shell
-    14:{ name: 'TREASURE CHEST', color: 0xc98a2e, glow: true,  jitter: 0.18 }  // wreck loot (break to claim)
+    14:{ name: 'TREASURE CHEST', color: 0xc98a2e, glow: true,  jitter: 0.18 }, // wreck loot (break to claim)
+    15:{ name: 'BASALT CORE',    color: 0x241818, glow: false, jitter: 0.12 }, // the Crucible's volcanic columns
+    16:{ name: 'MANTLE MAGMA',   color: 0xff3e00, glow: true,  jitter: 0.28 }, // geothermal magma rivers (glows)
+    17:{ name: 'SOLAR FORGE',    color: 0xffaa11, glow: true,  jitter: 0.15 }  // ancient transmutation forge altar
   };
   var SELECTABLE = [1, 2, 3, 4, 5, 6, 7];
 

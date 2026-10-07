@@ -35,11 +35,13 @@ window.CosmosDimensions = (function () {
     over_crucible:{ dim: 'over', to: 'crucible',x: -12,z: 0,   corner: 16 },
     over_abyss:   { dim: 'over', to: 'abyss',   x: 0,  z: -12, corner: 18 },
     over_singularity:{ dim: 'over', to: 'singularity', x: 12, z: 12, corner: 21 },
+    over_frost:   { dim: 'over', to: 'frost',   x: -12,z: -12, corner: 24 },
     geode_back:   { dim: 'geode',   to: 'over', x: 0,  z: 0 },
     vitrine_back: { dim: 'vitrine', to: 'over', x: 0,  z: 0 },
     crucible_back:{ dim: 'crucible',to: 'over', x: 4,  z: 0 },
     abyss_back:   { dim: 'abyss',   to: 'over', x: 0,  z: -4 },
-    singularity_back:{ dim: 'singularity', to: 'over', x: 0, z: -6 }
+    singularity_back:{ dim: 'singularity', to: 'over', x: 0, z: -6 },
+    frost_back:   { dim: 'frost',   to: 'over', x: 0,  z: -6 }
   };
 
   // ----------------------------------------------------------
@@ -55,13 +57,14 @@ window.CosmosDimensions = (function () {
   }
 
   function buildOverworldGates() {
-    var g1 = GATES.over_geode, g2 = GATES.over_vitrine, g3 = GATES.over_crucible, g4 = GATES.over_abyss, g5 = GATES.over_singularity;
-    var y1 = CC.findTop(g1.x, g1.z, 12), y2 = CC.findTop(g2.x, g2.z, 12), y3 = CC.findTop(g3.x, g3.z, 12), y4 = CC.findTop(g4.x, g4.z, 12), y5 = CC.findTop(g5.x, g5.z, 12);
+    var g1 = GATES.over_geode, g2 = GATES.over_vitrine, g3 = GATES.over_crucible, g4 = GATES.over_abyss, g5 = GATES.over_singularity, g6 = GATES.over_frost;
+    var y1 = CC.findTop(g1.x, g1.z, 12), y2 = CC.findTop(g2.x, g2.z, 12), y3 = CC.findTop(g3.x, g3.z, 12), y4 = CC.findTop(g4.x, g4.z, 12), y5 = CC.findTop(g5.x, g5.z, 12), y6 = CC.findTop(g6.x, g6.z, 12);
     if (y1 > -20) { GATES.over_geode.y = y1 + 1; buildGatePad(g1.x, y1 + 1, g1.z, g1.corner); CC.rebuildAround(g1.x, y1 + 1, g1.z); }
     if (y2 > -20) { GATES.over_vitrine.y = y2 + 1; buildGatePad(g2.x, y2 + 1, g2.z, g2.corner); CC.rebuildAround(g2.x, y2 + 1, g2.z); }
     if (y3 > -20) { GATES.over_crucible.y = y3 + 1; buildGatePad(g3.x, y3 + 1, g3.z, g3.corner); CC.rebuildAround(g3.x, y3 + 1, g3.z); }
     if (y4 > -20) { GATES.over_abyss.y = y4 + 1; buildGatePad(g4.x, y4 + 1, g4.z, g4.corner); CC.rebuildAround(g4.x, y4 + 1, g4.z); }
     if (y5 > -20) { GATES.over_singularity.y = y5 + 1; buildGatePad(g5.x, y5 + 1, g5.z, g5.corner); CC.rebuildAround(g5.x, y5 + 1, g5.z); }
+    if (y6 > -20) { GATES.over_frost.y = y6 + 1; buildGatePad(g6.x, y6 + 1, g6.z, g6.corner); CC.rebuildAround(g6.x, y6 + 1, g6.z); }
   }
 
   // ----------------------------------------------------------
@@ -960,6 +963,243 @@ window.CosmosDimensions = (function () {
   }
 
   // ----------------------------------------------------------
+  // THE HYPERBOREAN FROST EXPANSE (Phase 9)
+  // ----------------------------------------------------------
+  var FROST = {
+    FLOOR: -18,
+    CEIL: 24,
+    RADIUS: 26
+  };
+  var colossus = null, blizzardTimer = 8.5, frostRings = [];
+  var cryoTimer = 0, vaultCooldown = 0;
+
+  function generateFrost() {
+    var F = FROST.FLOOR, R = FROST.RADIUS;
+    CC.world.spawn = [0, F + 2, -6];
+
+    // 1. Central Glacial Shelf (Frost Obsidian + Glacial Core)
+    for (var x = -R; x <= R; x++) {
+      for (var z = -R; z <= R; z++) {
+        var d = Math.sqrt(x * x + z * z);
+        if (d <= R) {
+          // Tiered concentric ice terraces
+          var h = Math.floor(Math.cos(d * 0.18) * 3) + (d < 10 ? 2 : (d < 18 ? 1 : 0));
+          for (var y = F - 4; y <= F + h; y++) {
+            if (y === F + h) {
+              // Surface layer: Frost Obsidian with Glacial Core veins
+              set(x, y, z, (x * x + z * z) % 7 === 0 ? 25 : 24);
+            } else {
+              set(x, y, z, 24); // Solid Frost Obsidian
+            }
+          }
+        }
+      }
+    }
+
+    // 2. Glacial Crevasse Chasm ring between R=12 and R=15
+    for (var a = 0; a < Math.PI * 2; a += 0.05) {
+      var rx = Math.round(Math.cos(a) * 13.5);
+      var rz = Math.round(Math.sin(a) * 13.5);
+      // Carve chasm air pockets except at 4 crystalline bridge points (cardinal directions)
+      if (Math.abs(rx) > 2 && Math.abs(rz) > 2) {
+        for (var cy = F - 4; cy <= F + 5; cy++) {
+          set(rx, cy, rz, 0);
+          set(rx + 1, cy, rz, 0);
+        }
+      } else {
+        // Crystalline ice bridge across chasm
+        for (var by = F; by <= F + 1; by++) {
+          set(rx, by, rz, 25);
+        }
+      }
+    }
+
+    // 3. Four Cryo-Shard Clusters on the perimeter
+    var spireOffsets = [[18, 0], [-18, 0], [0, 18], [0, -18]];
+    for (var s = 0; s < spireOffsets.length; s++) {
+      var sx = spireOffsets[s][0], sz = spireOffsets[s][1];
+      for (var sy = 1; sy <= 6; sy++) {
+        set(sx, F + sy, sz, 26); // Cryo Shard pillar
+      }
+      set(sx + 1, F + 1, sz, 26);
+      set(sx - 1, F + 1, sz, 26);
+      set(sx, F + 1, sz + 1, 26);
+      set(sx, F + 1, sz - 1, 26);
+    }
+
+    // 4. Return Gate Pad at (0, -6)
+    buildGatePad(0, F + 1, -6, 25);
+    GATES.frost_back.y = F + 1;
+
+    // 5. Central Dais Altar with Glacial Core Leap Pad at (0, 0)
+    for (var dx = -2; dx <= 2; dx++) {
+      for (var dz = -2; dz <= 2; dz++) {
+        set(dx, F + 1, dz, 24);
+      }
+    }
+    set(0, F + 1, 0, 25); // Central Glacial Core
+
+    // Spawn Boss
+    spawnColossus();
+  }
+
+  function spawnColossus() {
+    clearColossus();
+    var F = FROST.FLOOR;
+    var THREE = window.THREE;
+    if (!THREE || !CC.scene) return;
+
+    var group = new THREE.Group();
+    group.position.set(0, F + 11, 14);
+
+    // Colossus Torso: Frost Obsidian monolith with glowing core
+    var bodyGeo = new THREE.BoxGeometry(4.0, 5.0, 3.5);
+    var bodyMat = new THREE.MeshStandardMaterial({
+      color: 0x152238,
+      metalness: 0.8,
+      roughness: 0.2,
+      emissive: 0x00e5ff,
+      emissiveIntensity: 0.35
+    });
+    var body = new THREE.Mesh(bodyGeo, bodyMat);
+    group.add(body);
+
+    // Glowing Glacial Heart
+    var heartGeo = new THREE.BoxGeometry(2.0, 2.0, 3.7);
+    var heartMat = new THREE.MeshBasicMaterial({ color: 0x7df9ff });
+    var heart = new THREE.Mesh(heartGeo, heartMat);
+    heart.position.set(0, 0.2, 0);
+    group.add(heart);
+
+    // Colossus Crystalline Crown & Head
+    var headGeo = new THREE.BoxGeometry(2.6, 2.6, 2.6);
+    var headMat = new THREE.MeshStandardMaterial({
+      color: 0x2a3d54,
+      metalness: 0.9,
+      roughness: 0.15,
+      emissive: 0x7df9ff,
+      emissiveIntensity: 0.25
+    });
+    var head = new THREE.Mesh(headGeo, headMat);
+    head.position.set(0, 3.8, 0);
+    group.add(head);
+
+    // Blizzard Eye Slit
+    var eyeGeo = new THREE.BoxGeometry(2.2, 0.5, 0.4);
+    var eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    var eye = new THREE.Mesh(eyeGeo, eyeMat);
+    eye.position.set(0, 3.9, 1.4);
+    group.add(eye);
+
+    // Left and Right Cryo-Shard Arm Spikes
+    var armGeo = new THREE.BoxGeometry(1.5, 6.0, 1.5);
+    var armMat = new THREE.MeshStandardMaterial({
+      color: 0x7df9ff,
+      metalness: 0.7,
+      roughness: 0.1,
+      emissive: 0x00ffff,
+      emissiveIntensity: 0.4
+    });
+    var leftArm = new THREE.Mesh(armGeo, armMat);
+    leftArm.position.set(-3.2, -0.5, 0);
+    group.add(leftArm);
+
+    var rightArm = new THREE.Mesh(armGeo, armMat);
+    rightArm.position.set(3.2, -0.5, 0);
+    group.add(rightArm);
+
+    // Blizzard Frost Rings (3 orbiting cryogenic gyroscopes)
+    frostRings = [];
+    var ringMats = [
+      new THREE.MeshBasicMaterial({ color: 0x7df9ff, wireframe: true }),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true }),
+      new THREE.MeshBasicMaterial({ color: 0x00e5ff, wireframe: true })
+    ];
+    for (var r = 0; r < 3; r++) {
+      var rGeo = new THREE.TorusGeometry(4.2 + r * 1.6, 0.12, 8, 32);
+      var ring = new THREE.Mesh(rGeo, ringMats[r]);
+      ring.rotation.x = Math.PI / 3 * r;
+      ring.rotation.z = Math.PI / 4 * r;
+      group.add(ring);
+      frostRings.push(ring);
+    }
+
+    CC.scene.add(group);
+    colossus = group;
+  }
+
+  function clearColossus() {
+    if (colossus && CC && CC.scene) {
+      CC.scene.remove(colossus);
+      colossus = null;
+      frostRings = [];
+    }
+  }
+
+  function updateColossus(dt) {
+    if (!colossus) return;
+    var F = FROST.FLOOR;
+
+    // Levitation kinematics
+    colossus.position.y = F + 11 + Math.sin(elapsed * 1.2) * 1.5;
+    colossus.position.x = Math.sin(elapsed * 0.4) * 3.5;
+
+    // Rotate Blizzard Rings
+    for (var r = 0; r < frostRings.length; r++) {
+      var speed = (r + 1) * 0.75;
+      frostRings[r].rotation.x += dt * speed;
+      frostRings[r].rotation.y += dt * (speed * 0.6);
+      frostRings[r].rotation.z += dt * (speed * 0.4);
+    }
+
+    // Blizzard pulse timer
+    blizzardTimer -= dt;
+    if (blizzardTimer <= 0) {
+      blizzardTimer = 8.0 + Math.random() * 4.0;
+      fireBlizzardPulse();
+    }
+  }
+
+  function fireBlizzardPulse() {
+    if (!colossus || !CC) return;
+    CC.toast('THE CRYO-COLOSSUS unleashes an arctic flash freeze — absolute zero!');
+    if (CC.playAudioChime) CC.playAudioChime(432); // 432Hz crystal resonance tone
+  }
+
+  function checkFrostMechanics(dt) {
+    if (!CC || !CC.player) return;
+    var p = CC.player.pos;
+    var F = FROST.FLOOR;
+
+    // 1. Glacial Core Leap Pad (Block 25)
+    var bx = Math.floor(p.x), by = Math.floor(p.y - 0.5), bz = Math.floor(p.z);
+    var bType = CC.world.get(bx, by, bz);
+    vaultCooldown = Math.max(0, vaultCooldown - dt);
+    if (bType === 25 && vaultCooldown <= 0) {
+      vaultCooldown = 1.5;
+      if (CC.player.vel) {
+        CC.player.vel.y = 8.5; // High cryogenic vertical leap
+      }
+      CC.toast('Glacial Core kinetic launch — cryogenic vault leap!');
+      if (CC.playAudioChime) CC.playAudioChime(648);
+    }
+
+    // 2. Cryo-Shard Harvesting (Block 26)
+    var distToCenter = Math.sqrt(p.x * p.x + p.z * p.z);
+    if (distToCenter > 16 && distToCenter < 24 && Math.abs(p.y - F) < 8.0) {
+      cryoTimer += dt;
+      if (cryoTimer > 3.0) {
+        cryoTimer = 0;
+        CC.toast('Cryo-Shard resonance harvested — +10 SpaceCash Hyperborean Gems!');
+        if (CC.player && CC.player.addGems) CC.player.addGems(10);
+        else if (CC.addGems) CC.addGems(10);
+      }
+    } else {
+      cryoTimer = 0;
+    }
+  }
+
+  // ----------------------------------------------------------
   // dimension switching
   // ----------------------------------------------------------
   function switchTo(dim) {
@@ -968,7 +1208,7 @@ window.CosmosDimensions = (function () {
       blocks: CC.world.blocks, edits: CC.world.edits,
       locations: CC.world.locations, spawn: CC.world.spawn
     };
-    clearPups(); clearDragon(); clearGolem(); clearSiren(); clearSphinx();
+    clearPups(); clearDragon(); clearGolem(); clearSiren(); clearSphinx(); clearColossus();
     current = dim;
     if (stash[dim]) {
       CC.world.blocks = stash[dim].blocks;
@@ -980,6 +1220,7 @@ window.CosmosDimensions = (function () {
       if (dim === 'crucible') spawnGolem();
       if (dim === 'abyss') spawnSiren();
       if (dim === 'singularity') spawnSphinx();
+      if (dim === 'frost') spawnColossus();
     } else {
       CC.world.blocks = new Map();
       CC.world.edits = {};
@@ -989,6 +1230,7 @@ window.CosmosDimensions = (function () {
       else if (dim === 'crucible') generateCrucible();
       else if (dim === 'abyss') generateAbyss();
       else if (dim === 'singularity') generateSingularity();
+      else if (dim === 'frost') generateFrost();
     }
     CC.buildAllChunks();
     CC.respawn();
@@ -1000,6 +1242,7 @@ window.CosmosDimensions = (function () {
       : dim === 'crucible' ? 'THE CRUCIBLE — the mantle core roars. Vulcanor watches the molten ley.'
       : dim === 'abyss' ? 'THE ABYSS — hadal crystal reef and deep smokers. The Leviathan Siren circles.'
       : dim === 'singularity' ? 'THE CHRONO-SINGULARITY — fractured tesseract suspended in void. The Chrono-Sphinx commands the flow.'
+      : dim === 'frost' ? 'THE HYPERBOREAN FROST EXPANSE — glacial obsidian shelves and absolute zero. The Cryo-Colossus awakens.'
       : 'the overworld resumes. the aurora missed you.');
   }
 
@@ -1053,6 +1296,14 @@ window.CosmosDimensions = (function () {
       checkSingularityMechanics(dt);
       if (CC.player.pos.y < SINGULARITY.FLOOR - 24) {
         CC.toast('the temporal fracture collapses. the timeline restores you to the surface.');
+        switchTo('over');
+      }
+    }
+    if (current === 'frost') {
+      updateColossus(dt);
+      checkFrostMechanics(dt);
+      if (CC.player.pos.y < FROST.FLOOR - 24) {
+        CC.toast('the hyperborean winds lift you. you return thawed to the surface.');
         switchTo('over');
       }
     }

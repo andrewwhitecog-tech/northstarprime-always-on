@@ -43,9 +43,12 @@
     20:{ name: 'HYDROTHERMAL SPIRE', color: 0x50c878, glow: true, jitter: 0.25 }, // sulfur vent with bubble updrafts (Phase 7)
     21:{ name: 'VOID TESSERACT', color: 0x3d007a, glow: true,  jitter: 0.26 }, // hyper-dimensional obsidian matrix anchor (Phase 8)
     22:{ name: 'CHRONO QUARTZ',  color: 0xffd700, glow: true,  jitter: 0.18 }, // temporal resonance crystal (+8 gems on harvest) (Phase 8)
-    23:{ name: 'SINGULARITY EYE', color: 0x00ffff, glow: true, jitter: 0.35 } // gravitational wormhole vortex core (Phase 8)
+    23:{ name: 'SINGULARITY EYE', color: 0x00ffff, glow: true, jitter: 0.35 }, // gravitational wormhole vortex core (Phase 8)
+    24:{ name: 'FROST OBSIDIAN', color: 0x152238, glow: false, jitter: 0.12 }, // hyperborean glacial stone foundation (Phase 9)
+    25:{ name: 'GLACIAL CORE',   color: 0x7df9ff, glow: true,  jitter: 0.24 }, // cryo-kinetic core with leap vault (+8.5m/s jump) (Phase 9)
+    26:{ name: 'CRYO SHARD',     color: 0xe0ffff, glow: true,  jitter: 0.32 }  // absolute-zero ice crystal (+10 gems on harvest) (Phase 9)
   };
-  var SELECTABLE = [1, 2, 3, 4, 5, 6, 7, 21, 22, 23];
+  var SELECTABLE = [1, 2, 3, 4, 5, 6, 7, 21, 22, 23, 24, 25, 26];
 
   // ------------------------------------------------------------
   // Seeded RNG + value noise

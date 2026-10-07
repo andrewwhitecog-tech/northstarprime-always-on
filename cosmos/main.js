@@ -40,9 +40,12 @@
     17:{ name: 'SOLAR FORGE',    color: 0xffaa11, glow: true,  jitter: 0.15 }, // ancient transmutation forge altar
     18:{ name: 'ABYSSAL PRISM',  color: 0x00e5ff, glow: true,  jitter: 0.22 }, // bioluminescent reef crystal (Phase 7)
     19:{ name: 'HADAL SILT',     color: 0x081824, glow: false, jitter: 0.08 }, // deep oceanic silt floor (Phase 7)
-    20:{ name: 'HYDROTHERMAL SPIRE', color: 0x50c878, glow: true, jitter: 0.25 } // sulfur vent with bubble updrafts (Phase 7)
+    20:{ name: 'HYDROTHERMAL SPIRE', color: 0x50c878, glow: true, jitter: 0.25 }, // sulfur vent with bubble updrafts (Phase 7)
+    21:{ name: 'VOID TESSERACT', color: 0x3d007a, glow: true,  jitter: 0.26 }, // hyper-dimensional obsidian matrix anchor (Phase 8)
+    22:{ name: 'CHRONO QUARTZ',  color: 0xffd700, glow: true,  jitter: 0.18 }, // temporal resonance crystal (+8 gems on harvest) (Phase 8)
+    23:{ name: 'SINGULARITY EYE', color: 0x00ffff, glow: true, jitter: 0.35 } // gravitational wormhole vortex core (Phase 8)
   };
-  var SELECTABLE = [1, 2, 3, 4, 5, 6, 7];
+  var SELECTABLE = [1, 2, 3, 4, 5, 6, 7, 21, 22, 23];
 
   // ------------------------------------------------------------
   // Seeded RNG + value noise

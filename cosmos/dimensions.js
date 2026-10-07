@@ -34,10 +34,12 @@ window.CosmosDimensions = (function () {
     over_vitrine: { dim: 'over', to: 'vitrine', x: 0,  z: 12,  corner: 13 },
     over_crucible:{ dim: 'over', to: 'crucible',x: -12,z: 0,   corner: 16 },
     over_abyss:   { dim: 'over', to: 'abyss',   x: 0,  z: -12, corner: 18 },
+    over_singularity:{ dim: 'over', to: 'singularity', x: 12, z: 12, corner: 21 },
     geode_back:   { dim: 'geode',   to: 'over', x: 0,  z: 0 },
     vitrine_back: { dim: 'vitrine', to: 'over', x: 0,  z: 0 },
     crucible_back:{ dim: 'crucible',to: 'over', x: 4,  z: 0 },
-    abyss_back:   { dim: 'abyss',   to: 'over', x: 0,  z: -4 }
+    abyss_back:   { dim: 'abyss',   to: 'over', x: 0,  z: -4 },
+    singularity_back:{ dim: 'singularity', to: 'over', x: 0, z: -6 }
   };
 
   // ----------------------------------------------------------
@@ -53,12 +55,13 @@ window.CosmosDimensions = (function () {
   }
 
   function buildOverworldGates() {
-    var g1 = GATES.over_geode, g2 = GATES.over_vitrine, g3 = GATES.over_crucible, g4 = GATES.over_abyss;
-    var y1 = CC.findTop(g1.x, g1.z, 12), y2 = CC.findTop(g2.x, g2.z, 12), y3 = CC.findTop(g3.x, g3.z, 12), y4 = CC.findTop(g4.x, g4.z, 12);
+    var g1 = GATES.over_geode, g2 = GATES.over_vitrine, g3 = GATES.over_crucible, g4 = GATES.over_abyss, g5 = GATES.over_singularity;
+    var y1 = CC.findTop(g1.x, g1.z, 12), y2 = CC.findTop(g2.x, g2.z, 12), y3 = CC.findTop(g3.x, g3.z, 12), y4 = CC.findTop(g4.x, g4.z, 12), y5 = CC.findTop(g5.x, g5.z, 12);
     if (y1 > -20) { GATES.over_geode.y = y1 + 1; buildGatePad(g1.x, y1 + 1, g1.z, g1.corner); CC.rebuildAround(g1.x, y1 + 1, g1.z); }
     if (y2 > -20) { GATES.over_vitrine.y = y2 + 1; buildGatePad(g2.x, y2 + 1, g2.z, g2.corner); CC.rebuildAround(g2.x, y2 + 1, g2.z); }
     if (y3 > -20) { GATES.over_crucible.y = y3 + 1; buildGatePad(g3.x, y3 + 1, g3.z, g3.corner); CC.rebuildAround(g3.x, y3 + 1, g3.z); }
     if (y4 > -20) { GATES.over_abyss.y = y4 + 1; buildGatePad(g4.x, y4 + 1, g4.z, g4.corner); CC.rebuildAround(g4.x, y4 + 1, g4.z); }
+    if (y5 > -20) { GATES.over_singularity.y = y5 + 1; buildGatePad(g5.x, y5 + 1, g5.z, g5.corner); CC.rebuildAround(g5.x, y5 + 1, g5.z); }
   }
 
   // ----------------------------------------------------------
@@ -712,6 +715,250 @@ window.CosmosDimensions = (function () {
     }
   }
 
+  // ==========================================================
+  // THE CHRONO-SINGULARITY — Phase 8 Alternate Realm
+  // A fractured hyper-dimensional tesseract suspended in void.
+  // Floating void tesseract citadel, chrono quartz time towers,
+  // singularity eye wormholes, guarded by THE CHRONO-SPHINX.
+  // ==========================================================
+  var SINGULARITY = {
+    FLOOR: -25,
+    CEIL: 35,
+    RADIUS: 32
+  };
+  var sphinx = null, sphinxRoarTimer = 8, chronoRings = [];
+  var chronoTimer = 0, wormholeCooldown = 0;
+
+  function generateSingularity() {
+    CC.world.spawn = { x: 0.5, y: SINGULARITY.FLOOR + 2.5, z: -5.5 };
+    var F = SINGULARITY.FLOOR;
+
+    // 1. Hyper-dimensional central platform (Void Tesseract & Liminal Stone)
+    for (var x = -10; x <= 10; x++) {
+      for (var z = -10; z <= 10; z++) {
+        var d2 = x * x + z * z;
+        if (d2 <= 90) {
+          set(x, F, z, 21); // VOID TESSERACT floor
+          if (d2 <= 20) set(x, F + 1, z, 9); // Liminal Stone inner dais
+          if (d2 === 0) set(x, F + 2, z, 23); // Central Singularity Eye
+        }
+      }
+    }
+
+    // 2. Return Gate Pad at (0, F+1, -6)
+    buildGatePad(0, F + 1, -6, 21);
+    GATES.singularity_back.y = F + 1;
+
+    // 3. Four Chrono-Quartz Temporal Towers at cardinal extremes
+    var towers = [
+      { x: 18, z: 0 }, { x: -18, z: 0 },
+      { x: 0, z: 18 }, { x: 0, z: -18 }
+    ];
+    for (var t = 0; t < towers.length; t++) {
+      var tx = towers[t].x, tz = towers[t].z;
+      // Floating tower base
+      for (var dx = -2; dx <= 2; dx++) {
+        for (var dz = -2; dz <= 2; dz++) {
+          if (Math.abs(dx) + Math.abs(dz) <= 3) {
+            set(tx + dx, F, tz + dz, 21);
+          }
+        }
+      }
+      // Vertical Chrono-Spire
+      for (var h = 1; h <= 12; h++) {
+        set(tx, F + h, tz, (h % 3 === 0) ? 22 : 21); // Chrono Quartz alternating with Void Tesseract
+      }
+      // Spire beacon top
+      set(tx, F + 13, tz, 22); // CHRONO QUARTZ apex
+      set(tx, F + 14, tz, 3);  // AURORA CRYSTAL crown
+
+      // Bridge arches connecting towers to central dais
+      var steps = 8;
+      for (var s = 1; s <= steps; s++) {
+        var bx = Math.round(tx * (1 - s / (steps + 2)));
+        var bz = Math.round(tz * (1 - s / (steps + 2)));
+        var by = F + Math.round(Math.sin((s / steps) * Math.PI) * 3);
+        set(bx, by, bz, 13); // VOID GLASS luminous bridge
+      }
+    }
+
+    // 4. Floating Tesseract Satellites & Singularity Eyes
+    var satellites = [
+      { x: 12, y: F + 8, z: 12 },
+      { x: -12, y: F + 8, z: 12 },
+      { x: 12, y: F + 8, z: -12 },
+      { x: -12, y: F + 8, z: -12 }
+    ];
+    for (var s = 0; s < satellites.length; s++) {
+      var sat = satellites[s];
+      set(sat.x, sat.y, sat.z, 23); // SINGULARITY EYE
+      set(sat.x + 1, sat.y, sat.z, 21);
+      set(sat.x - 1, sat.y, sat.z, 21);
+      set(sat.x, sat.y, sat.z + 1, 21);
+      set(sat.x, sat.y, sat.z - 1, 21);
+      set(sat.x, sat.y + 1, sat.z, 22); // Chrono Quartz cap
+    }
+
+    // Spawn Boss
+    spawnSphinx();
+  }
+
+  function spawnSphinx() {
+    clearSphinx();
+    var F = SINGULARITY.FLOOR;
+    var THREE = window.THREE;
+    if (!THREE || !CC.scene) return;
+
+    var group = new THREE.Group();
+    group.position.set(0, F + 10, 14);
+
+    // Sphinx Body: Gold / Obsidian hybrid
+    var bodyGeo = new THREE.BoxGeometry(4.5, 3.0, 7.0);
+    var bodyMat = new THREE.MeshStandardMaterial({
+      color: 0x1a0f26,
+      metalness: 0.85,
+      roughness: 0.25,
+      emissive: 0x3d007a,
+      emissiveIntensity: 0.35
+    });
+    var body = new THREE.Mesh(bodyGeo, bodyMat);
+    group.add(body);
+
+    // Golden Sphinx Chest Plate
+    var chestGeo = new THREE.BoxGeometry(4.2, 3.2, 2.5);
+    var chestMat = new THREE.MeshStandardMaterial({
+      color: 0xd4af37,
+      metalness: 0.95,
+      roughness: 0.15,
+      emissive: 0xffaa00,
+      emissiveIntensity: 0.3
+    });
+    var chest = new THREE.Mesh(chestGeo, chestMat);
+    chest.position.set(0, 0.4, 2.2);
+    group.add(chest);
+
+    // Sphinx Head with Pharaoh Nemes Crown
+    var headGeo = new THREE.BoxGeometry(2.8, 3.2, 2.8);
+    var headMat = new THREE.MeshStandardMaterial({
+      color: 0xd4af37,
+      metalness: 0.9,
+      roughness: 0.2
+    });
+    var head = new THREE.Mesh(headGeo, headMat);
+    head.position.set(0, 2.8, 2.6);
+    group.add(head);
+
+    // Glowing Cyan Visor / Singularity Eye
+    var visorGeo = new THREE.BoxGeometry(2.4, 0.6, 0.4);
+    var visorMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+    var visor = new THREE.Mesh(visorGeo, visorMat);
+    visor.position.set(0, 2.9, 4.05);
+    group.add(visor);
+
+    // Chrono Tesseract Rings (orbital concentric rings)
+    chronoRings = [];
+    var ringMats = [
+      new THREE.MeshBasicMaterial({ color: 0x00e5ff, wireframe: true }),
+      new THREE.MeshBasicMaterial({ color: 0xffd700, wireframe: true }),
+      new THREE.MeshBasicMaterial({ color: 0x9a5fe0, wireframe: true })
+    ];
+    for (var r = 0; r < 3; r++) {
+      var rGeo = new THREE.TorusGeometry(3.5 + r * 1.5, 0.12, 8, 32);
+      var ring = new THREE.Mesh(rGeo, ringMats[r]);
+      ring.rotation.x = Math.PI / 4 * r;
+      ring.rotation.y = Math.PI / 3 * r;
+      group.add(ring);
+      chronoRings.push(ring);
+    }
+
+    CC.scene.add(group);
+    sphinx = group;
+  }
+
+  function clearSphinx() {
+    if (sphinx && CC && CC.scene) {
+      CC.scene.remove(sphinx);
+      sphinx = null;
+      chronoRings = [];
+    }
+  }
+
+  function updateSphinx(dt) {
+    if (!sphinx) return;
+    var F = SINGULARITY.FLOOR;
+
+    // Hover kinematics
+    sphinx.position.y = F + 10 + Math.sin(elapsed * 1.4) * 1.8;
+    sphinx.position.x = Math.sin(elapsed * 0.5) * 4.0;
+
+    // Rotate Chrono Tesseract Rings
+    for (var r = 0; r < chronoRings.length; r++) {
+      var speed = (r + 1) * 0.8;
+      chronoRings[r].rotation.x += dt * speed;
+      chronoRings[r].rotation.y += dt * (speed * 0.7);
+      chronoRings[r].rotation.z += dt * (speed * 0.5);
+    }
+
+    // Sphinx Chrono Roar
+    sphinxRoarTimer -= dt;
+    if (sphinxRoarTimer <= 0) {
+      sphinxRoarTimer = 9.0 + Math.random() * 4.0;
+      fireChronoPulse();
+    }
+  }
+
+  function fireChronoPulse() {
+    if (!sphinx || !CC) return;
+    CC.toast('THE CHRONO-SPHINX dilates the temporal flow — time accelerates!');
+    if (CC.playAudioChime) CC.playAudioChime(528); // Solfeggio 528Hz frequency
+  }
+
+  function checkSingularityMechanics(dt) {
+    if (!CC || !CC.player) return;
+    var p = CC.player.pos;
+    var F = SINGULARITY.FLOOR;
+
+    // 1. Temporal Dilation Field: Near center dais (|x| < 12, |z| < 12)
+    var distToCenter = Math.sqrt(p.x * p.x + p.z * p.z);
+    if (distToCenter < 14) {
+      // Temporal glide: reduced fall rate, fast drift
+      if (CC.player.vel && CC.player.vel.y < -3.0) {
+        CC.player.vel.y = -2.5; // low gravity cushion
+      }
+    }
+
+    // 2. Chrono Quartz Energy Harvest
+    if (distToCenter < 22 && distToCenter > 14 && Math.abs(p.y - F) < 4.0) {
+      chronoTimer += dt;
+      if (chronoTimer > 3.0) {
+        chronoTimer = 0;
+        CC.toast('Chrono Quartz temporal resonance harvested — +8 SpaceCash Chrono Gems!');
+        if (CC.player && CC.player.addGems) CC.player.addGems(8);
+        else if (CC.addGems) CC.addGems(8);
+      }
+    } else {
+      chronoTimer = 0;
+    }
+
+    // 3. Singularity Eye Wormhole Warp
+    wormholeCooldown = Math.max(0, wormholeCooldown - dt);
+    if (wormholeCooldown <= 0) {
+      // Check if player stands on Block 23 (Singularity Eye)
+      var bx = Math.floor(p.x), by = Math.floor(p.y - 0.5), bz = Math.floor(p.z);
+      var bType = CC.world.get(bx, by, bz);
+      if (bType === 23) {
+        wormholeCooldown = 4.0;
+        // Warp to opposite satellite platform
+        var targetX = -bx, targetZ = -bz;
+        CC.player.pos.x = targetX + 0.5;
+        CC.player.pos.z = targetZ + 0.5;
+        CC.player.pos.y = F + 9.5;
+        if (CC.player.vel) { CC.player.vel.x = 0; CC.player.vel.y = 4.0; CC.player.vel.z = 0; }
+        CC.toast('Singularity Eye wormhole traversed — quantum fold displacement!');
+      }
+    }
+  }
+
   // ----------------------------------------------------------
   // dimension switching
   // ----------------------------------------------------------
@@ -721,7 +968,7 @@ window.CosmosDimensions = (function () {
       blocks: CC.world.blocks, edits: CC.world.edits,
       locations: CC.world.locations, spawn: CC.world.spawn
     };
-    clearPups(); clearDragon(); clearGolem(); clearSiren();
+    clearPups(); clearDragon(); clearGolem(); clearSiren(); clearSphinx();
     current = dim;
     if (stash[dim]) {
       CC.world.blocks = stash[dim].blocks;
@@ -732,6 +979,7 @@ window.CosmosDimensions = (function () {
       if (dim === 'vitrine') spawnDragon();
       if (dim === 'crucible') spawnGolem();
       if (dim === 'abyss') spawnSiren();
+      if (dim === 'singularity') spawnSphinx();
     } else {
       CC.world.blocks = new Map();
       CC.world.edits = {};
@@ -740,6 +988,7 @@ window.CosmosDimensions = (function () {
       else if (dim === 'vitrine') generateVitrine();
       else if (dim === 'crucible') generateCrucible();
       else if (dim === 'abyss') generateAbyss();
+      else if (dim === 'singularity') generateSingularity();
     }
     CC.buildAllChunks();
     CC.respawn();
@@ -750,6 +999,7 @@ window.CosmosDimensions = (function () {
       : dim === 'vitrine' ? 'THE VITRINE — glass, vacuum, treasure. mind the dragon’s aim.'
       : dim === 'crucible' ? 'THE CRUCIBLE — the mantle core roars. Vulcanor watches the molten ley.'
       : dim === 'abyss' ? 'THE ABYSS — hadal crystal reef and deep smokers. The Leviathan Siren circles.'
+      : dim === 'singularity' ? 'THE CHRONO-SINGULARITY — fractured tesseract suspended in void. The Chrono-Sphinx commands the flow.'
       : 'the overworld resumes. the aurora missed you.');
   }
 
@@ -795,6 +1045,14 @@ window.CosmosDimensions = (function () {
       checkAbyssMechanics(dt);
       if (CC.player.pos.y < ABYSS.FLOOR - 22) {
         CC.toast('the hadal trench releases you. you surface back to the light.');
+        switchTo('over');
+      }
+    }
+    if (current === 'singularity') {
+      updateSphinx(dt);
+      checkSingularityMechanics(dt);
+      if (CC.player.pos.y < SINGULARITY.FLOOR - 24) {
+        CC.toast('the temporal fracture collapses. the timeline restores you to the surface.');
         switchTo('over');
       }
     }

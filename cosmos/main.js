@@ -37,7 +37,10 @@
     14:{ name: 'TREASURE CHEST', color: 0xc98a2e, glow: true,  jitter: 0.18 }, // wreck loot (break to claim)
     15:{ name: 'BASALT CORE',    color: 0x241818, glow: false, jitter: 0.12 }, // the Crucible's volcanic columns
     16:{ name: 'MANTLE MAGMA',   color: 0xff3e00, glow: true,  jitter: 0.28 }, // geothermal magma rivers (glows)
-    17:{ name: 'SOLAR FORGE',    color: 0xffaa11, glow: true,  jitter: 0.15 }  // ancient transmutation forge altar
+    17:{ name: 'SOLAR FORGE',    color: 0xffaa11, glow: true,  jitter: 0.15 }, // ancient transmutation forge altar
+    18:{ name: 'ABYSSAL PRISM',  color: 0x00e5ff, glow: true,  jitter: 0.22 }, // bioluminescent reef crystal (Phase 7)
+    19:{ name: 'HADAL SILT',     color: 0x081824, glow: false, jitter: 0.08 }, // deep oceanic silt floor (Phase 7)
+    20:{ name: 'HYDROTHERMAL SPIRE', color: 0x50c878, glow: true, jitter: 0.25 } // sulfur vent with bubble updrafts (Phase 7)
   };
   var SELECTABLE = [1, 2, 3, 4, 5, 6, 7];
 

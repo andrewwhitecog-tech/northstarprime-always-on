@@ -32,8 +32,10 @@ window.CosmosDimensions = (function () {
   var GATES = {
     over_geode:   { dim: 'over', to: 'geode',   x: 12, z: 0,  corner: 3 },
     over_vitrine: { dim: 'over', to: 'vitrine', x: 0,  z: 12, corner: 13 },
+    over_crucible:{ dim: 'over', to: 'crucible',x: -12,z: 0,  corner: 16 },
     geode_back:   { dim: 'geode',   to: 'over', x: 0,  z: 0 },
-    vitrine_back: { dim: 'vitrine', to: 'over', x: 0,  z: 0 }
+    vitrine_back: { dim: 'vitrine', to: 'over', x: 0,  z: 0 },
+    crucible_back:{ dim: 'crucible',to: 'over', x: 4,  z: 0 }
   };
 
   // ----------------------------------------------------------
@@ -49,10 +51,11 @@ window.CosmosDimensions = (function () {
   }
 
   function buildOverworldGates() {
-    var g1 = GATES.over_geode, g2 = GATES.over_vitrine;
-    var y1 = CC.findTop(g1.x, g1.z, 12), y2 = CC.findTop(g2.x, g2.z, 12);
+    var g1 = GATES.over_geode, g2 = GATES.over_vitrine, g3 = GATES.over_crucible;
+    var y1 = CC.findTop(g1.x, g1.z, 12), y2 = CC.findTop(g2.x, g2.z, 12), y3 = CC.findTop(g3.x, g3.z, 12);
     if (y1 > -20) { GATES.over_geode.y = y1 + 1; buildGatePad(g1.x, y1 + 1, g1.z, g1.corner); CC.rebuildAround(g1.x, y1 + 1, g1.z); }
     if (y2 > -20) { GATES.over_vitrine.y = y2 + 1; buildGatePad(g2.x, y2 + 1, g2.z, g2.corner); CC.rebuildAround(g2.x, y2 + 1, g2.z); }
+    if (y3 > -20) { GATES.over_crucible.y = y3 + 1; buildGatePad(g3.x, y3 + 1, g3.z, g3.corner); CC.rebuildAround(g3.x, y3 + 1, g3.z); }
   }
 
   // ----------------------------------------------------------
@@ -299,6 +302,212 @@ window.CosmosDimensions = (function () {
   }
 
   // ----------------------------------------------------------
+  // THE CRUCIBLE (MANTLE CORE & OBSIDIAN FORGE)
+  // ----------------------------------------------------------
+  var CRU = { R: 26, FLOOR: -18, CEIL: 16 };
+  var golem = null, shockwaves = [], forgeTimer = 0, stompTimer = 8;
+  var steamVents = [
+    { x: -10, z: -10 }, { x: 10, z: -10 },
+    { x: -10, z: 10 },  { x: 10, z: 10 }
+  ];
+
+  function generateCrucible() {
+    var R = CRU.R, FLOOR = CRU.FLOOR, CEIL = CRU.CEIL;
+    for (var x = -R; x <= R; x++) {
+      for (var z = -R; z <= R; z++) {
+        var d2 = x * x + z * z;
+        if (d2 <= R * R) {
+          set(x, FLOOR, z, (x * z) % 3 === 0 ? 1 : 15);
+          var dist = Math.sqrt(d2);
+          if (Math.abs(x) <= 1 || Math.abs(z) <= 1 || (dist > 14 && dist < 17)) {
+            set(x, FLOOR, z, 16);
+          }
+          var domeH = Math.floor(CEIL - (d2 / (R * R)) * 12);
+          set(x, domeH, z, 1);
+        }
+      }
+    }
+    var pillars = [
+      { x: -16, z: -8 }, { x: -16, z: 8 },
+      { x: 16, z: -8 },  { x: 16, z: 8 },
+      { x: -8, z: -16 }, { x: 8, z: -16 },
+      { x: -8, z: 16 },  { x: 8, z: 16 }
+    ];
+    for (var p = 0; p < pillars.length; p++) {
+      var px = pillars[p].x, pz = pillars[p].z;
+      for (var y = FLOOR + 1; y <= CEIL - 4; y++) {
+        set(px, y, pz, 15);
+        set(px + 1, y, pz, 15);
+        set(px, y, pz + 1, 15);
+        if (y % 4 === 0) set(px + 1, y, pz + 1, 2);
+      }
+    }
+    for (var v = 0; v < steamVents.length; v++) {
+      var vx = steamVents[v].x, vz = steamVents[v].z;
+      set(vx, FLOOR + 1, vz, 10);
+      set(vx, FLOOR, vz, 16);
+    }
+    for (var fx = -2; fx <= 2; fx++) {
+      for (var fz = -2; fz <= 2; fz++) {
+        set(fx, FLOOR + 1, fz, 17);
+      }
+    }
+    set(0, FLOOR + 2, 0, 7);
+    buildGatePad(4, FLOOR + 2, 0, 16);
+    GATES.crucible_back.x = 4;
+    GATES.crucible_back.y = FLOOR + 2;
+    GATES.crucible_back.z = 0;
+
+    CC.world.spawn = { x: 4.5, y: FLOOR + 3, z: 2.5 };
+    spawnGolem();
+  }
+
+  function spawnGolem() {
+    var group = new THREE.Group();
+    var basaltMat = new THREE.MeshStandardMaterial({ color: 0x1c1414, roughness: 0.85, metalness: 0.2 });
+    var magmaMat = new THREE.MeshStandardMaterial({ color: 0xff3e00, emissive: 0xff4500, emissiveIntensity: 2.2 });
+    var eyeMat = new THREE.MeshStandardMaterial({ color: 0xff0022, emissive: 0xff0033, emissiveIntensity: 3.0 });
+
+    var torso = new THREE.Mesh(new THREE.BoxGeometry(2.0, 2.2, 1.4), basaltMat);
+    torso.position.y = 2.4;
+    group.add(torso);
+
+    var core = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.2, 1.45), magmaMat);
+    core.position.y = 2.4;
+    group.add(core);
+
+    var head = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.9, 1.1), basaltMat);
+    head.position.set(0, 3.8, 0.1);
+    var e1 = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.12, 0.1), eyeMat);
+    e1.position.set(-0.3, 0.1, 0.56);
+    head.add(e1);
+    var e2 = e1.clone();
+    e2.position.x = 0.3;
+    head.add(e2);
+    group.add(head);
+
+    var leftArm = new THREE.Mesh(new THREE.BoxGeometry(0.7, 2.4, 0.7), basaltMat);
+    leftArm.position.set(-1.6, 2.2, 0);
+    group.add(leftArm);
+    var rightArm = new THREE.Mesh(new THREE.BoxGeometry(0.7, 2.4, 0.7), basaltMat);
+    rightArm.position.set(1.6, 2.2, 0);
+    group.add(rightArm);
+
+    var leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.6, 0.8), basaltMat);
+    leftLeg.position.set(-0.6, 0.8, 0);
+    group.add(leftLeg);
+    var rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.6, 0.8), basaltMat);
+    rightLeg.position.set(0.6, 0.8, 0);
+    group.add(rightLeg);
+
+    group.position.set(0, CRU.FLOOR + 1, -8);
+    CC.scene.add(group);
+
+    golem = {
+      group: group,
+      torso: torso,
+      core: core,
+      head: head,
+      leftArm: leftArm,
+      rightArm: rightArm,
+      leftLeg: leftLeg,
+      rightLeg: rightLeg,
+      t: 0,
+      blessed: false
+    };
+  }
+
+  function updateGolem(dt) {
+    if (!golem) return;
+    golem.t += dt;
+    var pulse = 0.5 + 0.5 * Math.sin(golem.t * 3.5);
+    golem.core.material.emissiveIntensity = 1.8 + pulse * 1.5;
+
+    var p = CC.player.pos;
+    var dx = p.x - golem.group.position.x;
+    var dz = p.z - golem.group.position.z;
+    var dist = Math.sqrt(dx * dx + dz * dz);
+    if (dist > 1.5) {
+      var angle = Math.atan2(dx, dz);
+      golem.group.rotation.y = angle;
+    }
+
+    golem.leftArm.rotation.x = Math.sin(golem.t * 2.0) * 0.35;
+    golem.rightArm.rotation.x = -Math.sin(golem.t * 2.0) * 0.35;
+
+    stompTimer -= dt;
+    if (stompTimer <= 0) {
+      stompTimer = 9 + Math.random() * 6;
+      fireGolemStomp();
+    }
+
+    for (var s = shockwaves.length - 1; s >= 0; s--) {
+      var sw = shockwaves[s];
+      sw.radius += dt * 9.0;
+      sw.life -= dt;
+      sw.mesh.scale.set(sw.radius, 1, sw.radius);
+      sw.mesh.material.opacity = Math.max(0, sw.life / 1.5);
+      if (sw.life <= 0) {
+        CC.scene.remove(sw.mesh);
+        shockwaves.splice(s, 1);
+      }
+    }
+
+    if (dist < 3.2 && !golem.blessed) {
+      golem.blessed = true;
+      CC.toast('VULCANOR awakens — "The mantle burns true." Received +10 Creation Gems.');
+      if (CC.player && CC.player.addGems) CC.player.addGems(10);
+      else if (CC.addGems) CC.addGems(10);
+    }
+  }
+
+  function fireGolemStomp() {
+    var pos = golem.group.position;
+    var geo = new THREE.RingGeometry(0.8, 1.4, 32);
+    var mat = new THREE.MeshBasicMaterial({ color: 0xff4500, side: THREE.DoubleSide, transparent: true, opacity: 0.9 });
+    var ring = new THREE.Mesh(geo, mat);
+    ring.rotation.x = Math.PI / 2;
+    ring.position.set(pos.x, CRU.FLOOR + 1.05, pos.z);
+    CC.scene.add(ring);
+    shockwaves.push({ mesh: ring, radius: 1.0, life: 1.5 });
+    CC.toast('Vulcanor strikes the anvil — shockwave surges through the mantle!');
+  }
+
+  function clearGolem() {
+    if (golem) {
+      CC.scene.remove(golem.group);
+      golem = null;
+    }
+    for (var i = 0; i < shockwaves.length; i++) {
+      CC.scene.remove(shockwaves[i].mesh);
+    }
+    shockwaves = [];
+  }
+
+  function checkCrucibleMechanics(dt) {
+    var p = CC.player.pos;
+    for (var v = 0; v < steamVents.length; v++) {
+      var vx = steamVents[v].x, vz = steamVents[v].z;
+      if (Math.abs(p.x - vx) < 1.4 && Math.abs(p.z - vz) < 1.4 && p.y < CRU.FLOOR + 5) {
+        if (CC.player.vel) CC.player.vel.y = 14.5;
+        CC.toast('Geothermal Steam Vent launches you skyward!');
+        break;
+      }
+    }
+    if (Math.abs(p.x) < 2.5 && Math.abs(p.z) < 2.5 && Math.abs(p.y - (CRU.FLOOR + 2)) < 2.5) {
+      forgeTimer += dt;
+      if (forgeTimer > 2.5) {
+        forgeTimer = 0;
+        CC.toast('Solar Forge transmutes raw matter — +5 Forged Gems harnessed!');
+        if (CC.player && CC.player.addGems) CC.player.addGems(5);
+        else if (CC.addGems) CC.addGems(5);
+      }
+    } else {
+      forgeTimer = 0;
+    }
+  }
+
+  // ----------------------------------------------------------
   // dimension switching
   // ----------------------------------------------------------
   function switchTo(dim) {
@@ -307,7 +516,7 @@ window.CosmosDimensions = (function () {
       blocks: CC.world.blocks, edits: CC.world.edits,
       locations: CC.world.locations, spawn: CC.world.spawn
     };
-    clearPups(); clearDragon();
+    clearPups(); clearDragon(); clearGolem();
     current = dim;
     if (stash[dim]) {
       CC.world.blocks = stash[dim].blocks;
@@ -316,12 +525,14 @@ window.CosmosDimensions = (function () {
       CC.world.spawn = stash[dim].spawn;
       if (dim === 'geode') spawnPups(-14);
       if (dim === 'vitrine') spawnDragon();
+      if (dim === 'crucible') spawnGolem();
     } else {
       CC.world.blocks = new Map();
       CC.world.edits = {};
       CC.world.locations = [];
       if (dim === 'geode') generateGeode();
       else if (dim === 'vitrine') generateVitrine();
+      else if (dim === 'crucible') generateCrucible();
     }
     CC.buildAllChunks();
     CC.respawn();
@@ -330,6 +541,7 @@ window.CosmosDimensions = (function () {
       window.CosmosSaucer.setVisible(dim === 'over');
     CC.toast(dim === 'geode' ? 'THE GEODE — a prison of comfort. the pups are pleased.'
       : dim === 'vitrine' ? 'THE VITRINE — glass, vacuum, treasure. mind the dragon’s aim.'
+      : dim === 'crucible' ? 'THE CRUCIBLE — the mantle core roars. Vulcanor watches the molten ley.'
       : 'the overworld resumes. the aurora missed you.');
   }
 
@@ -359,6 +571,14 @@ window.CosmosDimensions = (function () {
       updateDragon(dt);
       if (CC.player.pos.y < VIT.YLO - 22) {
         CC.toast('the vacuum feeds the dragon. you are elsewhere now.');
+        switchTo('over');
+      }
+    }
+    if (current === 'crucible') {
+      updateGolem(dt);
+      checkCrucibleMechanics(dt);
+      if (CC.player.pos.y < CRU.FLOOR - 24) {
+        CC.toast('the mantle core claims what falls. you return to the surface.');
         switchTo('over');
       }
     }

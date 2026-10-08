@@ -141,4 +141,32 @@ def test_all_16_mystery_school_rooms_exist_and_zero_emoji():
                 )
 
 
+def test_all_22_static_vault_transmissions_exist_and_render():
+    """Verify that all 22 static vault transmission pages exist, have valid markup, and zero emoji."""
+    expected_slugs = [
+        "threshold", "will", "veil", "garden", "throne",
+        "teacher", "mirror", "drive", "beast", "lantern",
+        "turning", "scales", "suspension", "compost", "alchemy",
+        "chain", "lightning", "well", "tide", "dawn",
+        "call", "return"
+    ]
+    vault_dir = MS_ROOT / "vault"
+    for deg_idx, slug in enumerate(expected_slugs):
+        trans_page = vault_dir / slug / "index.html"
+        assert trans_page.exists(), f"Transmission static page missing at {trans_page}"
+        html_content = trans_page.read_text(encoding="utf-8")
+        assert len(html_content) > 12000, f"Transmission {slug} content unexpectedly short ({len(html_content)} bytes)"
+        assert f"Degree {deg_idx}" in html_content
+        assert "Subterranean Ground Resonance" in html_content
+        assert "144 Hz Sine Drone" in html_content
+        assert "Download Markdown" in html_content
+        for line_num, line in enumerate(html_content.splitlines(), start=1):
+            for char in line:
+                code = ord(char)
+                assert not (0x1F300 <= code <= 0x1FAFF or 0x1F600 <= code <= 0x1F64F), (
+                    f"Forbidden emoji '{char}' (U+{code:04X}) detected in vault/{slug}/index.html on line {line_num}"
+                )
+
+
+
 

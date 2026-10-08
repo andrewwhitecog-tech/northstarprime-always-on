@@ -623,12 +623,22 @@
             console.warn('Web Audio error', e);
           }
         } else {
-          if (gainNode && audioCtx) {
-            gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1);
+          const retiringContext = audioCtx;
+          const retiringNodes = [oscSub, oscOvertone];
+          const retiringGain = gainNode;
+          audioCtx = null;
+          oscSub = null;
+          oscOvertone = null;
+          gainNode = null;
+          if (retiringContext && retiringGain) {
+            const now = retiringContext.currentTime;
+            retiringGain.gain.cancelScheduledValues(now);
+            retiringGain.gain.setValueAtTime(Math.max(retiringGain.gain.value, 0.0001), now);
+            retiringGain.gain.exponentialRampToValueAtTime(0.0001, now + 1);
             setTimeout(() => {
-              if (oscSub) oscSub.stop();
-              if (oscOvertone) oscOvertone.stop();
-              if (audioCtx) audioCtx.close();
+              retiringNodes.forEach(node => { if (node) { node.stop(); node.disconnect(); } });
+              retiringGain.disconnect();
+              retiringContext.close();
             }, 1000);
           }
           isDroneOn = false;
@@ -669,7 +679,7 @@
 
           <div class="action-box">
             <h4>${s.promptTitle}</h4>
-            <textarea id="stratum-input" placeholder="${s.placeholder}">${savedNote}</textarea>
+            <textarea id="stratum-input" placeholder="${s.placeholder}"></textarea>
             <div class="btn-row">
               <button class="primary-btn" id="save-stratum-btn">${s.buttonText}</button>
               ${idx === 3 ? '<button class="secondary-btn" id="download-journal-btn">Export Subterranean Journal</button>' : ''}
@@ -685,6 +695,7 @@
         `;
 
         const inputEl = document.getElementById('stratum-input');
+        inputEl.value = savedNote;
         const saveBtn = document.getElementById('save-stratum-btn');
         const statusEl = document.getElementById('save-status');
 

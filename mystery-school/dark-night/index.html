@@ -470,6 +470,22 @@
         </article>
       </section>
 
+      <!-- Night Desk Contemplation Ledger -->
+      <section class="artifact wide" style="margin-bottom: 40px; border-color: rgba(167, 139, 250, 0.35);">
+        <span class="artifact-label" style="color: var(--cyan); border-color: var(--cyan);">Night Desk Record</span>
+        <h3 style="font-size: 1.5rem; margin: 8px 0 12px; font-family: 'Cormorant Garamond', serif; font-style: italic; color: #faf6ee;">The 3 a.m. Sovereign Release</h3>
+        <p style="color: var(--text-dim); font-size: 0.9rem; margin-bottom: 16px;">
+          Write what you are consciously releasing tonight. Saved privately in your browser for inclusion in your Master Initiate Field Dossier.
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <textarea id="dark-night-input" placeholder="Name the unchosen expectation, unpaid emotional debt, or heavy defense you are setting down tonight..." style="width: 100%; background: rgba(8, 5, 14, 0.85); border: 1px solid var(--border); color: var(--text); padding: 14px; border-radius: 8px; font-family: 'Space Grotesk', sans-serif; font-size: 0.88rem; outline: none; min-height: 90px;"></textarea>
+          <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+            <button class="quiet-toggle-btn active" id="save-dark-night-btn" style="padding: 8px 24px; font-size: 0.78rem;">Record in Night Ledger</button>
+            <span id="dark-night-status" style="font-size: 0.78rem; color: var(--cyan);"></span>
+          </div>
+        </div>
+      </section>
+
       <nav class="passages-nav">
         <a class="passage-card" href="/mystery-school/garden/">
           <span>Passage 01</span>
@@ -521,6 +537,37 @@
           }
         });
       });
+
+      // Night Desk Contemplation persistence
+      const darkNightInput = document.getElementById('dark-night-input');
+      const saveDarkNightBtn = document.getElementById('save-dark-night-btn');
+      const darkNightStatus = document.getElementById('dark-night-status');
+
+      if (darkNightInput && saveDarkNightBtn) {
+        try {
+          const savedNotes = JSON.parse(localStorage.getItem('northstar_dark_night_notes') || '[]');
+          if (savedNotes.length > 0) {
+            darkNightInput.value = savedNotes[savedNotes.length - 1].release || '';
+          }
+        } catch(e) {}
+
+        saveDarkNightBtn.addEventListener('click', () => {
+          const release = darkNightInput.value.trim();
+          if (!release) return;
+          try {
+            const notes = JSON.parse(localStorage.getItem('northstar_dark_night_notes') || '[]');
+            notes.push({
+              timestamp: new Date().toISOString(),
+              release
+            });
+            localStorage.setItem('northstar_dark_night_notes', JSON.stringify(notes));
+            darkNightStatus.textContent = 'Release recorded into Night Ledger.';
+            setTimeout(() => { darkNightStatus.textContent = ''; }, 2500);
+          } catch(e) {
+            console.warn('Could not save dark night note:', e);
+          }
+        });
+      }
     })();
   </script>
 </body>

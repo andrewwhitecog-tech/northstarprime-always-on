@@ -279,6 +279,15 @@
       </div>
     </section>
 
+    <!-- Master Concept Art Sanctuary -->
+    <figure class="sanctuary-artwork" style="margin: 2rem auto 1rem; max-width: 100%; border-radius: 4px; overflow: hidden; border: 1px solid var(--gold); box-shadow: 0 16px 45px rgba(3, 6, 17, 0.7);">
+      <img src="/static/mystery_school/images/01_MYSTERY_SCHOOL_GRAND_PORTAL.jpg" alt="NorthStar Mystery School Grand Portal — Carved Basalt Pillars and Cyan Atmospheric Resonance" style="width: 100%; height: auto; display: block; aspect-ratio: 16/9; object-fit: cover;">
+      <figcaption style="padding: 10px 16px; background: #0c1222; font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); flex-wrap: wrap; gap: 8px;">
+        <span>Master Visual 01 · Grand Portal of the Twelve Chambers</span>
+        <span style="color: var(--muted);">Degrees 2 Through 17 · Sovereign Architecture · Non-Clinical</span>
+      </figcaption>
+    </figure>
+
     <!-- Chamber Selection Cards -->
     <section class="chambers-grid" id="cards-container">
       <!-- Injected via JavaScript -->
@@ -291,9 +300,10 @@
 
     <!-- Chamber Journal -->
     <section class="journal-drawer">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:10px">
         <h3 style="font-size:1.4rem;margin:0">Chamber Initiation Journal</h3>
-        <div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="button" style="min-height:36px;padding:0.4rem 0.9rem;font-size:0.75rem;background:var(--gold);color:var(--night);font-weight:600;border:1px solid var(--gold)" onclick="exportMarkdownDossier()">Export Field Dossier (.md)</button>
           <button class="button secondary" style="min-height:36px;padding:0.4rem 0.8rem;font-size:0.75rem" onclick="exportJournal()">Export JSON</button>
           <button class="button secondary" style="min-height:36px;padding:0.4rem 0.8rem;font-size:0.75rem" onclick="clearJournal()">Reset Ledger</button>
         </div>
@@ -898,6 +908,91 @@ DISCREPANCY: No tribunal ruling has ever produced lasting peace; only mutual wit
         renderDeck();
         renderJournal();
       }
+    }
+
+    function exportMarkdownDossier() {
+      const history = getJournal();
+      let caveNotes = {};
+      let voidNotes = [];
+      let gardenNotes = [];
+      try { caveNotes = JSON.parse(localStorage.getItem('northstar_cave_notes') || '{}'); } catch(e) {}
+      try { voidNotes = JSON.parse(localStorage.getItem('northstar_void_notes') || '[]'); } catch(e) {}
+      try { gardenNotes = JSON.parse(localStorage.getItem('northstar_garden_notes') || '[]'); } catch(e) {}
+
+      const dateStr = new Date().toISOString().substring(0, 10);
+      const timeStr = new Date().toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
+
+      let md = `# NORTHSTAR MYSTERY SCHOOL · INITIATE FIELD DOSSIER\n`;
+      md += `**Document Designation**: Sovereign Field Record · Degrees 2 through 17\n`;
+      md += `**Compiled**: ${timeStr}\n`;
+      md += `**Vow**: All is remembering. The ceremony is the making. What stares back from the abyss is love.\n`;
+      md += `**Continuity**: 100% Original VORATH Speculative Fiction & Symbolic Shadow Work\n\n`;
+      md += `---\n\n`;
+
+      md += `## Section I: Twelve Initiatory Chamber Resolutions\n\n`;
+      if (!history.length) {
+        md += `*No chamber resolutions recorded in this session.* Select chambers to resolve their costly choices.\n\n`;
+      } else {
+        history.forEach((h, idx) => {
+          md += `### ${idx + 1}. ${h.chamberName} (${h.station})\n`;
+          md += `- **Linked Key**: ${h.key}\n`;
+          md += `- **Elected Option**: Option ${h.choice} — **${h.title}**\n`;
+          md += `- **Timestamp**: ${h.timestamp}\n`;
+          md += `- **Verification Hash / Entry ID**: \`${h.entryId || h.hash || 'N/A'}\`\n\n`;
+        });
+      }
+
+      md += `## Section II: Subterranean Strata Reflections (Pitch-Black Caves)\n\n`;
+      const caveStrataNames = [
+        "Stratum I: The Basalt Sump (-120m)",
+        "Stratum II: The Filament Chasm (-450m)",
+        "Stratum III: The Obsidian Cradle (-1,200m)",
+        "Stratum IV: The Covenant Alcove (-1,440m)"
+      ];
+      let hasCave = false;
+      caveStrataNames.forEach((sName, idx) => {
+        if (caveNotes[idx]) {
+          hasCave = true;
+          md += `### ${sName}\n`;
+          md += `> ${caveNotes[idx]}\n\n`;
+        }
+      });
+      if (!hasCave) {
+        md += `*No subterranean reflections recorded.* Visit the Pitch-Black Caves to record strata field notes.\n\n`;
+      }
+
+      md += `## Section III: Void Ritual Contemplations (Stare Into The Void)\n\n`;
+      if (!voidNotes.length) {
+        md += `*No void ritual notes recorded.* Visit the Void Ritual chamber to engage in timed stillness.\n\n`;
+      } else {
+        voidNotes.forEach((vn, idx) => {
+          md += `### Void Focus Session ${idx + 1} (${vn.durationMins || '?'} min · ${vn.timestamp})\n`;
+          md += `> ${vn.reflection}\n\n`;
+        });
+      }
+
+      md += `## Section IV: Living Contemplations (The Garden)\n\n`;
+      if (!gardenNotes.length) {
+        md += `*No garden observations recorded.* Visit The Garden for sensory calming and quiet attention.\n\n`;
+      } else {
+        gardenNotes.forEach((gn, idx) => {
+          md += `### Garden Observation ${idx + 1} (${gn.timestamp})\n`;
+          md += `- **Physical Observation**: ${gn.physical}\n`;
+          md += `- **Poetic Metaphor**: ${gn.metaphor}\n\n`;
+        });
+      }
+
+      md += `---\n\n`;
+      md += `### Archival Attestation & Governance\n`;
+      md += `All materials are original philosophical fiction and symbolic contemplation within the VORATH mythos. Strictly not medical, psychiatric, or legal advice. Free, client-side, zero-telemetry sovereign software.\n`;
+
+      const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `NORTHSTAR_MYSTERY_SCHOOL_INITIATE_DOSSIER_${dateStr}.md`;
+      a.click();
+      URL.revokeObjectURL(url);
     }
 
     // Web Audio Chamber Resonator

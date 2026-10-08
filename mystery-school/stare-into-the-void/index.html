@@ -416,6 +416,9 @@
   <!-- Completion Reflection Modal -->
   <div class="completion-panel" id="completion-modal">
     <div class="completion-box">
+      <div style="border-radius: 10px; overflow: hidden; margin-bottom: 20px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);">
+        <img src="/static/mystery_school/images/02_STARE_INTO_THE_VOID_CHAMBER.jpg" alt="Master Visual 02 · Stare Into The Void Chamber" style="width: 100%; height: auto; display: block; aspect-ratio: 16/9; object-fit: cover;">
+      </div>
       <h2>The Return</h2>
       <p>The timed silence has concluded. Before returning to ordinary tasks, what did the stillness reveal before you named it?</p>
       <textarea id="reflection-input" placeholder="Record one observation from the silence (stays in your browser)..."></textarea>
@@ -630,9 +633,21 @@
       // Download field note
       saveNoteBtn.addEventListener('click', () => {
         const text = reflectionInput.value.trim();
+        const durationMins = Math.round(targetSeconds / 60);
+        const timestamp = new Date().toISOString();
+        try {
+          const voidNotes = JSON.parse(localStorage.getItem('northstar_void_notes') || '[]');
+          voidNotes.push({
+            timestamp,
+            durationMins,
+            reflection: text || "(Silent contemplation with no verbalized note.)"
+          });
+          localStorage.setItem('northstar_void_notes', JSON.stringify(voidNotes));
+        } catch(e) {}
+
         const note = `# NorthStar Mystery School: Void Ritual Field Note\n` +
-          `Date: ${new Date().toISOString()}\n` +
-          `Duration: ${Math.round(targetSeconds / 60)} minutes\n` +
+          `Date: ${timestamp}\n` +
+          `Duration: ${durationMins} minutes\n` +
           `Vow: All is remembering. The ceremony is the making. What stares back from the abyss is love.\n\n` +
           `### Reflection from the Silence:\n` +
           (text || "(Silent contemplation with no verbalized note.)") + `\n`;

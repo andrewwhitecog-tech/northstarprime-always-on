@@ -348,6 +348,15 @@
         </div>
       </section>
 
+      <!-- Master Concept Art Sanctuary -->
+      <figure class="sanctuary-artwork" style="margin: 0 auto 40px; max-width: 900px; border-radius: 16px; overflow: hidden; border: 1px solid var(--border); box-shadow: 0 20px 50px rgba(0,0,0,0.6), 0 0 30px rgba(82, 255, 155, 0.15);">
+        <img src="/static/mystery_school/images/04_THE_GARDEN_OF_STILLNESS.jpg" alt="The Garden of Stillness — Bioluminescent Subterranean Flora and Crystalline Sanctuary" style="width: 100%; height: auto; display: block; aspect-ratio: 16/9; object-fit: cover;">
+        <figcaption style="padding: 12px 20px; background: rgba(7, 21, 16, 0.9); font-size: 0.72rem; letter-spacing: 1.5px; text-transform: uppercase; color: var(--emerald); display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(82, 255, 155, 0.15); flex-wrap: wrap; gap: 8px;">
+          <span>Master Visual 04 · The Garden of Stillness</span>
+          <span style="color: var(--text-dim);">Bioluminescent Flora · 528 Hz Resonant Sanctuary</span>
+        </figcaption>
+      </figure>
+
       <!-- Tending Card -->
       <article class="tending-card">
         <span class="label">Tending Card 03 · Safe Seated Practice</span>
@@ -382,6 +391,28 @@
         </div>
         <audio id="garden-audio" loop preload="none"></audio>
         <p class="timer-guide" id="audio-status">Soundscape idle. Select a harmonic frequency.</p>
+      </section>
+
+      <!-- Living Contemplation Log -->
+      <section class="timer-section" style="margin-top: -24px; border-color: rgba(82, 255, 155, 0.25); text-align: left;">
+        <h3 style="color: var(--emerald); text-align: center; margin-bottom: 8px;">Living Contemplation Log</h3>
+        <p style="font-size: 0.82rem; color: var(--text-dim); text-align: center; margin-bottom: 18px;">
+          Record two lines from your quiet attention: one direct physical observation and one poetic metaphor. Saved privately in this browser.
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 12px; max-width: 680px; margin: 0 auto;">
+          <div>
+            <label for="garden-physical-input" style="font-size: 0.7rem; letter-spacing: 1.5px; text-transform: uppercase; color: var(--emerald); display: block; margin-bottom: 4px;">Line 1 · Direct Physical Observation</label>
+            <input type="text" id="garden-physical-input" placeholder="e.g., The edge has a dry yellow fringe and three pale veins..." style="width: 100%; background: rgba(3, 10, 8, 0.8); border: 1px solid var(--border); color: var(--text); padding: 10px 14px; border-radius: 8px; font-family: 'Space Grotesk', sans-serif; font-size: 0.85rem; outline: none;">
+          </div>
+          <div>
+            <label for="garden-metaphor-input" style="font-size: 0.7rem; letter-spacing: 1.5px; text-transform: uppercase; color: var(--emerald); display: block; margin-bottom: 4px;">Line 2 · Poetic Metaphor</label>
+            <input type="text" id="garden-metaphor-input" placeholder="e.g., A coastline waiting for high tide..." style="width: 100%; background: rgba(3, 10, 8, 0.8); border: 1px solid var(--border); color: var(--text); padding: 10px 14px; border-radius: 8px; font-family: 'Space Grotesk', sans-serif; font-size: 0.85rem; outline: none;">
+          </div>
+          <div style="display: flex; justify-content: center; gap: 12px; margin-top: 6px;">
+            <button class="timer-btn" id="save-garden-note-btn" style="font-size: 0.75rem; padding: 8px 20px;">Record in Field Journal</button>
+            <span id="garden-save-status" style="font-size: 0.75rem; color: var(--emerald); align-self: center;"></span>
+          </div>
+        </div>
       </section>
 
       <!-- Info Cards -->
@@ -542,6 +573,42 @@
       if (btn40) btn40.addEventListener('click', () => playTrack('40'));
       if (btnComm) btnComm.addEventListener('click', () => playTrack('comm'));
       if (btnStop) btnStop.addEventListener('click', stopAudio);
+
+      // Living Contemplation Log persistence
+      const physInput = document.getElementById('garden-physical-input');
+      const metaInput = document.getElementById('garden-metaphor-input');
+      const saveGardenBtn = document.getElementById('save-garden-note-btn');
+      const gardenStatus = document.getElementById('garden-save-status');
+
+      if (physInput && metaInput && saveGardenBtn) {
+        try {
+          const savedNotes = JSON.parse(localStorage.getItem('northstar_garden_notes') || '[]');
+          if (savedNotes.length > 0) {
+            const lastNote = savedNotes[savedNotes.length - 1];
+            physInput.value = lastNote.physical || '';
+            metaInput.value = lastNote.metaphor || '';
+          }
+        } catch(e) {}
+
+        saveGardenBtn.addEventListener('click', () => {
+          const physical = physInput.value.trim();
+          const metaphor = metaInput.value.trim();
+          if (!physical && !metaphor) return;
+          try {
+            const notes = JSON.parse(localStorage.getItem('northstar_garden_notes') || '[]');
+            notes.push({
+              timestamp: new Date().toISOString(),
+              physical,
+              metaphor
+            });
+            localStorage.setItem('northstar_garden_notes', JSON.stringify(notes));
+            gardenStatus.textContent = 'Observation recorded.';
+            setTimeout(() => { gardenStatus.textContent = ''; }, 2500);
+          } catch(e) {
+            console.warn('Could not save garden note:', e);
+          }
+        });
+      }
 
     })();
   </script>

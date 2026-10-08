@@ -46,9 +46,12 @@
     23:{ name: 'SINGULARITY EYE', color: 0x00ffff, glow: true, jitter: 0.35 }, // gravitational wormhole vortex core (Phase 8)
     24:{ name: 'FROST OBSIDIAN', color: 0x152238, glow: false, jitter: 0.12 }, // hyperborean glacial stone foundation (Phase 9)
     25:{ name: 'GLACIAL CORE',   color: 0x7df9ff, glow: true,  jitter: 0.24 }, // cryo-kinetic core with leap vault (+8.5m/s jump) (Phase 9)
-    26:{ name: 'CRYO SHARD',     color: 0xe0ffff, glow: true,  jitter: 0.32 }  // absolute-zero ice crystal (+10 gems on harvest) (Phase 9)
+    26:{ name: 'CRYO SHARD',     color: 0xe0ffff, glow: true,  jitter: 0.32 }, // absolute-zero ice crystal (+10 gems on harvest) (Phase 9)
+    27:{ name: 'SOLAR PRISM',    color: 0xffb703, glow: true,  jitter: 0.15 }, // solar refraction crystalline prism (Phase 10)
+    28:{ name: 'SOLAR CORE',     color: 0xff5400, glow: true,  jitter: 0.28 }, // radiant thermal core leap pad (+9.2m/s jump) (Phase 10)
+    29:{ name: 'HELIOS SHARD',   color: 0xffe600, glow: true,  jitter: 0.35 }  // coronal solar plasma crystal (+12 gems on harvest) (Phase 10)
   };
-  var SELECTABLE = [1, 2, 3, 4, 5, 6, 7, 21, 22, 23, 24, 25, 26];
+  var SELECTABLE = [1, 2, 3, 4, 5, 6, 7, 21, 22, 23, 24, 25, 26, 27, 28, 29];
 
   // ------------------------------------------------------------
   // Seeded RNG + value noise

@@ -19,8 +19,12 @@ def test_mystery_school_portal_exists_and_links():
     assert "/mystery-school/vault/" in html
     assert "/mystery-school/curriculum/" in html
     assert "/mystery-school/chambers/" in html
+    assert "/mystery-school/caves/" in html
+    assert "/mystery-school/stare-into-the-void/" in html
+    assert "/mystery-school/unquiet-archive/" in html
     assert "The Path of Initiation" in html
     assert "The Twelve Chambers" in html
+    assert "The Pitch-Black Caves" in html
 
 
 def test_mystery_school_curriculum_reader():
@@ -114,5 +118,27 @@ def test_mystery_school_reading_room_static():
     html = page.read_text(encoding="utf-8")
     assert "THE READING" in html
     assert "Inclusion is not endorsement" in html
+
+
+def test_all_16_mystery_school_rooms_exist_and_zero_emoji():
+    """Verify that all 16 rooms exist, are non-empty, and comply with strict zero-emoji standard."""
+    expected_rooms = [
+        "astrology", "caves", "chambers", "circle", "curriculum",
+        "dark-night", "epstein-files", "garden", "high-thoughts",
+        "iching", "library", "reading-room", "stare-into-the-void",
+        "unquiet-archive", "vault", "workshop"
+    ]
+    for room in expected_rooms:
+        room_index = MS_ROOT / room / "index.html"
+        assert room_index.exists(), f"Room '{room}' is missing index.html"
+        text = room_index.read_text(encoding="utf-8")
+        assert len(text) > 1000, f"Room '{room}' index.html is suspiciously short ({len(text)} chars)"
+        for line_num, line in enumerate(text.splitlines(), start=1):
+            for char in line:
+                code = ord(char)
+                assert not (0x1F300 <= code <= 0x1FAFF or 0x1F600 <= code <= 0x1F64F), (
+                    f"Forbidden emoji '{char}' (U+{code:04X}) detected in {room}/index.html on line {line_num}"
+                )
+
 
 

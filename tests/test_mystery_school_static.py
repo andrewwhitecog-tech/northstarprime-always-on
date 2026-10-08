@@ -88,3 +88,31 @@ def test_mystery_school_void_ritual():
     assert "1 Min (Reset)" in html
     assert "9 Min (Threads)" in html
 
+
+def test_mystery_school_unquiet_archive_static():
+    page = MS_ROOT / "unquiet-archive" / "index.html"
+    assert page.exists(), "unquiet-archive index.html is missing"
+    html = page.read_text(encoding="utf-8")
+    assert "THE UNQUIET" in html
+    assert "999 is the symbol" in html
+    assert "988 is the action" in html
+    assert "All cases" in html
+
+
+def test_mystery_school_epstein_files_static():
+    page = MS_ROOT / "epstein-files" / "index.html"
+    assert page.exists(), "epstein-files index.html is missing"
+    html = page.read_text(encoding="utf-8")
+    assert "THE EPSTEIN" in html
+    assert "Victim-first rule" in html
+    assert "How to read a million-page room" in html
+
+
+def test_mystery_school_reading_room_static():
+    page = MS_ROOT / "reading-room" / "index.html"
+    assert page.exists(), "reading-room index.html is missing"
+    html = page.read_text(encoding="utf-8")
+    assert "THE READING" in html
+    assert "Inclusion is not endorsement" in html
+
+

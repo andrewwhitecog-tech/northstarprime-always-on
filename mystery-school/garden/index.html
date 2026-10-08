@@ -368,6 +368,22 @@
         <p class="timer-guide" id="timer-guide">Rest your attention on one living detail. Breathe naturally.</p>
       </section>
 
+      <!-- Ambient Harmonic Soundscape Player -->
+      <section class="timer-section" style="margin-top: -24px; border-color: rgba(82, 255, 155, 0.25);">
+        <h3 style="color: var(--emerald);">Ambient Harmonic Soundscape</h3>
+        <p style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 16px;">
+          Calibrated subterranean meditation harmonics and miracle tone frequencies.
+        </p>
+        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 16px;">
+          <button class="timer-btn" id="audio-track-528" style="font-size: 0.75rem; padding: 8px 16px;">528 Hz Miracle Drone</button>
+          <button class="timer-btn" id="audio-track-40" style="font-size: 0.75rem; padding: 8px 16px;">40 Hz Gamma Meditation</button>
+          <button class="timer-btn" id="audio-track-comm" style="font-size: 0.75rem; padding: 8px 16px;">Mystery School Broadcast</button>
+          <button class="timer-btn" id="audio-stop" style="font-size: 0.75rem; padding: 8px 16px; background: rgba(244, 63, 94, 0.15); border-color: rgba(244, 63, 94, 0.4); color: #f43f5e; display: none;">Mute Soundscape</button>
+        </div>
+        <audio id="garden-audio" loop preload="none"></audio>
+        <p class="timer-guide" id="audio-status">Soundscape idle. Select a harmonic frequency.</p>
+      </section>
+
       <!-- Info Cards -->
       <section class="info-grid">
         <div class="info-card">
@@ -484,6 +500,49 @@
           }, 1000);
         }
       });
+
+      // Ambient Soundscape Audio Controller
+      const gardenAudio = document.getElementById('garden-audio');
+      const btn528 = document.getElementById('audio-track-528');
+      const btn40 = document.getElementById('audio-track-40');
+      const btnComm = document.getElementById('audio-track-comm');
+      const btnStop = document.getElementById('audio-stop');
+      const audioStatus = document.getElementById('audio-status');
+
+      const tracks = {
+        '528': { url: '/static/mystery_school/audio/cellular_repair_528hz_miracle_drone.mp3', label: 'Playing: 528 Hz Miracle Tone Drone' },
+        '40': { url: '/static/mystery_school/audio/forty_hertz_meditation.mp3', label: 'Playing: 40 Hz Gamma Wave Meditation' },
+        'comm': { url: '/static/mystery_school/audio/COMM_05_MYSTERY_SCHOOL.mp3', label: 'Playing: Mystery School Broadcast Transmission' }
+      };
+
+      function playTrack(key) {
+        if (!gardenAudio) return;
+        const track = tracks[key];
+        if (!track) return;
+        gardenAudio.src = track.url;
+        gardenAudio.volume = 0.65;
+        gardenAudio.play().then(() => {
+          audioStatus.textContent = track.label;
+          btnStop.style.display = 'inline-block';
+        }).catch(err => {
+          console.warn('Audio playback error:', err);
+          audioStatus.textContent = 'Audio playback requires user interaction.';
+        });
+      }
+
+      function stopAudio() {
+        if (!gardenAudio) return;
+        gardenAudio.pause();
+        gardenAudio.currentTime = 0;
+        audioStatus.textContent = 'Soundscape muted.';
+        btnStop.style.display = 'none';
+      }
+
+      if (btn528) btn528.addEventListener('click', () => playTrack('528'));
+      if (btn40) btn40.addEventListener('click', () => playTrack('40'));
+      if (btnComm) btnComm.addEventListener('click', () => playTrack('comm'));
+      if (btnStop) btnStop.addEventListener('click', stopAudio);
+
     })();
   </script>
 </body>

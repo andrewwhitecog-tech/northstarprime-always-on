@@ -13,6 +13,7 @@
   <meta property="og:image" content="https://northstarprime.net/static/brand/vorathic_clock.png">
   <meta name="theme-color" content="#020306">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/mystery_school/mote-channel-bridge.css">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&display=swap');
 
@@ -453,7 +454,7 @@
       let osc = null, gain = null;
 
       function startAudio() {
-        if (!isSoundOn) return;
+        if (!isSoundOn || audioCtx) return;
         try {
           audioCtx = new (window.AudioContext || window.webkitAudioContext)();
           osc = audioCtx.createOscillator();
@@ -474,14 +475,21 @@
       }
 
       function stopAudio() {
-        if (gain && audioCtx) {
-          gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1);
+        const retiringContext = audioCtx;
+        const retiringNodes = [osc];
+        const retiringGain = gain;
+        audioCtx = null;
+        osc = null;
+        gain = null;
+        if (retiringContext && retiringGain) {
+          const now = retiringContext.currentTime;
+          retiringGain.gain.cancelScheduledValues(now);
+          retiringGain.gain.setValueAtTime(Math.max(retiringGain.gain.value, 0.0001), now);
+          retiringGain.gain.exponentialRampToValueAtTime(0.0001, now + 1);
           setTimeout(() => {
-            if (osc) osc.stop();
-            if (audioCtx) audioCtx.close();
-            osc = null;
-            gain = null;
-            audioCtx = null;
+            retiringNodes.forEach(node => { if (node) { node.stop(); node.disconnect(); } });
+            retiringGain.disconnect();
+            retiringContext.close();
           }, 1000);
         }
       }

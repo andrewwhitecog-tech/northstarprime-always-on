@@ -261,7 +261,7 @@
       <p class="eyebrow">The Mall-Mind Architecture · Degrees 2 through 17</p>
       <h2>The Twelve Initiatory Chambers</h2>
       <p class="hero-copy" style="max-width:65ch">
-        Twelve interactive stations grounded in the canonical VORATH stitch sheet. Each chamber presents an active player verb, genuine evidentiary discrepancy, a costly non-trivial choice, and an unforgeable ledger state. Fictional and symbolic; strictly not medical, psychiatric, or legal advice.
+        Twelve interactive stations grounded in the canonical VORATH stitch sheet. Each chamber presents an active player verb, genuine evidentiary discrepancy, a costly non-trivial choice, and a choice saved locally in this browser. Fictional and symbolic; strictly not medical, psychiatric, or legal advice.
       </p>
 
       <div class="octave-nav" role="tablist" aria-label="Octave filters">
@@ -273,7 +273,7 @@
 
       <div class="sound-bar">
         <button id="drone-btn" class="audio-toggle-btn" onclick="toggleDrone()">Enable Chamber Drone</button>
-        <span id="drone-status" style="color:var(--muted)">Ambient Web Audio: 144 Hz Subterranean Resonance (Binaural Drone)</span>
+        <span id="drone-status" style="color:var(--muted)">Paired-tone drone: Off</span>
       </div>
     </section>
 
@@ -903,15 +903,26 @@ DISCREPANCY: No tribunal ruling has ever produced lasting peace; only mutual wit
       const btn = document.getElementById('drone-btn');
       const status = document.getElementById('drone-status');
       if (isPlaying) {
-        if (gainNode) {
-          gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1.2);
+        isPlaying = false;
+        btn.classList.remove('playing');
+        btn.textContent = "Enable Chamber Drone";
+        status.textContent = "Chamber Drone Muted";
+        const retiringContext = audioCtx;
+        const retiringNodes = [osc1, osc2];
+        const retiringGain = gainNode;
+        audioCtx = null;
+        osc1 = null;
+        osc2 = null;
+        gainNode = null;
+        if (retiringContext && retiringGain) {
+          const now = retiringContext.currentTime;
+          retiringGain.gain.cancelScheduledValues(now);
+          retiringGain.gain.setValueAtTime(Math.max(retiringGain.gain.value, 0.0001), now);
+          retiringGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
           setTimeout(() => {
-            if (osc1) osc1.stop();
-            if (osc2) osc2.stop();
-            isPlaying = false;
-            btn.classList.remove('playing');
-            btn.textContent = "Enable Chamber Drone";
-            status.textContent = "Chamber Drone Muted";
+            retiringNodes.forEach(node => { if (node) { node.stop(); node.disconnect(); } });
+            retiringGain.disconnect();
+            retiringContext.close();
           }, 1200);
         }
       } else {
@@ -942,12 +953,12 @@ DISCREPANCY: No tribunal ruling has ever produced lasting peace; only mutual wit
       if (!audioCtx || !osc1 || !osc2) return;
       const num = parseInt(currentChamber.num, 10);
       const baseFreq = 108 + (num * 6); // Ranging from 114 Hz to 180 Hz harmonic steps
-      const binauralBeat = 3.5; // Theta brainwave cadence
+      const toneDifference = 3.5; // Frequency difference between the mixed sine tones
       osc1.frequency.setTargetAtTime(baseFreq, audioCtx.currentTime, 0.5);
-      osc2.frequency.setTargetAtTime(baseFreq + binauralBeat, audioCtx.currentTime, 0.5);
+      osc2.frequency.setTargetAtTime(baseFreq + toneDifference, audioCtx.currentTime, 0.5);
       const status = document.getElementById('drone-status');
       if (status) {
-        status.textContent = `Active Resonance: ${baseFreq} Hz / ${baseFreq + binauralBeat} Hz (Theta Harmonic)`;
+        status.textContent = `Active Resonance: ${baseFreq} Hz / ${baseFreq + toneDifference} Hz (dual sine tones)`;
       }
     }
 

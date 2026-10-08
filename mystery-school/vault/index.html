@@ -565,6 +565,7 @@
 
           const card = document.createElement('div');
           card.className = 't-card' + (idx === currentIndex ? ' active' : '');
+          card.dataset.transmissionIndex = String(idx);
           card.innerHTML = `
             <span class="t-degree">Degree ${t.degree} · ${t.key}</span>
             <div class="t-title">${t.title}</div>
@@ -588,8 +589,8 @@
         bodyEl.innerHTML = parseMarkdown(t.content);
 
         // Update active class in list
-        document.querySelectorAll('.t-card').forEach((c, i) => {
-          c.classList.toggle('active', i === idx);
+        document.querySelectorAll('.t-card').forEach((c) => {
+          c.classList.toggle('active', Number(c.dataset.transmissionIndex) === idx);
         });
 
         // Scroll reader to top smoothly
@@ -654,12 +655,22 @@
             console.warn('Web Audio not available', e);
           }
         } else {
-          if (gainNode && audioCtx) {
-            gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1);
+          const retiringContext = audioCtx;
+          const retiringNodes = [osc1, osc2];
+          const retiringGain = gainNode;
+          audioCtx = null;
+          osc1 = null;
+          osc2 = null;
+          gainNode = null;
+          if (retiringContext && retiringGain) {
+            const now = retiringContext.currentTime;
+            retiringGain.gain.cancelScheduledValues(now);
+            retiringGain.gain.setValueAtTime(Math.max(retiringGain.gain.value, 0.0001), now);
+            retiringGain.gain.exponentialRampToValueAtTime(0.0001, now + 1);
             setTimeout(() => {
-              if (osc1) osc1.stop();
-              if (osc2) osc2.stop();
-              if (audioCtx) audioCtx.close();
+              retiringNodes.forEach(node => { if (node) { node.stop(); node.disconnect(); } });
+              retiringGain.disconnect();
+              retiringContext.close();
             }, 1000);
           }
           isPlaying = false;

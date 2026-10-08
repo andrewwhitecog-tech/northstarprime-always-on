@@ -1,0 +1,965 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Twelve Initiatory Chambers — NorthStar Mystery School</title>
+  <meta name="description" content="Interactive exploratory walkthrough of the twelve degree chambers, player verbs, evidence objects, and costly choices of the NorthStar Mystery School.">
+  <link rel="stylesheet" href="../school.css">
+  <style>
+    .chamber-header {
+      padding-block: 4rem 2rem;
+      border-bottom: 1px solid var(--line);
+    }
+    .octave-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 1.5rem;
+    }
+    .octave-btn {
+      background: #111729;
+      color: var(--muted);
+      border: 1px solid var(--line);
+      padding: 0.5rem 1rem;
+      border-radius: 3px;
+      font-size: 0.78rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      transition: all 0.2s ease;
+    }
+    .octave-btn:hover, .octave-btn.active {
+      background: var(--gold);
+      color: var(--night);
+      border-color: var(--gold);
+    }
+    .chambers-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.2rem;
+      margin-block: 2.5rem;
+    }
+    .chamber-card {
+      background: #10172b;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 1.4rem;
+      cursor: pointer;
+      transition: transform 0.15s ease, border-color 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .chamber-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--gold);
+    }
+    .chamber-card.selected {
+      border: 1px solid var(--gold);
+      background: #141e38;
+      box-shadow: 0 0 20px rgba(232, 201, 130, 0.15);
+    }
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.8rem;
+    }
+    .badge {
+      font-size: 0.65rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 600;
+    }
+    .badge-idr { background: #1a2a44; color: var(--aurora); border: 1px solid var(--aurora); }
+    .badge-idg { background: #252438; color: var(--violet); border: 1px solid var(--violet); }
+    .badge-idc { background: #3b2a22; color: #f3a87c; border: 1px solid #f3a87c; }
+    .badge-idl { background: #2f2a1b; color: var(--gold); border: 1px solid var(--gold); }
+    .chamber-card h4 {
+      font-family: var(--display);
+      font-size: 1.25rem;
+      color: var(--ink);
+      margin: 0.2rem 0 0.4rem;
+      font-weight: 400;
+    }
+    .chamber-card .station-meta {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-bottom: 0.8rem;
+    }
+    .chamber-card p {
+      font-size: 0.82rem;
+      color: #c4c1d4;
+      line-height: 1.5;
+      margin-bottom: 1rem;
+    }
+    .deck-container {
+      background: #0f1629;
+      border: 1px solid var(--gold);
+      border-top: 3px solid var(--gold);
+      border-radius: 4px;
+      padding: clamp(1.5rem, 4vw, 3rem);
+      margin-block: 2rem 4rem;
+      box-shadow: 0 20px 60px rgba(3, 6, 17, 0.6);
+    }
+    .deck-head {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 1rem;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .deck-title {
+      font-family: var(--display);
+      font-size: clamp(2rem, 3.5vw, 2.8rem);
+      color: var(--ink);
+      margin: 0.4rem 0 0.2rem;
+    }
+    .deck-meta {
+      font-size: 0.82rem;
+      color: var(--gold);
+      letter-spacing: 0.05em;
+    }
+    .deck-section {
+      margin-bottom: 2rem;
+    }
+    .deck-section h5 {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--gold);
+      margin: 0 0 0.6rem;
+      font-weight: 600;
+    }
+    .evidence-box {
+      background: #080d1c;
+      border: 1px solid #4a475d;
+      border-radius: 3px;
+      padding: 1.2rem;
+      font-family: monospace;
+      font-size: 0.84rem;
+      color: var(--aurora);
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+    .choice-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-top: 1rem;
+    }
+    @media (max-width: 768px) {
+      .choice-container { grid-template-columns: 1fr; }
+    }
+    .choice-card {
+      background: #141c30;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 1.4rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .choice-card.resolved {
+      border-color: var(--aurora);
+      background: #112338;
+    }
+    .choice-card h6 {
+      font-family: var(--display);
+      font-size: 1.05rem;
+      color: var(--ink);
+      margin: 0 0 0.5rem;
+      font-weight: 400;
+    }
+    .choice-card p {
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-bottom: 1.2rem;
+    }
+    .ledger-banner {
+      background: #080d1c;
+      border-left: 3px solid var(--aurora);
+      padding: 1rem 1.4rem;
+      margin-top: 1.5rem;
+      font-size: 0.82rem;
+      color: var(--ink);
+    }
+    .sound-bar {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-top: 1.5rem;
+      padding: 0.8rem 1.2rem;
+      background: #111729;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+    .audio-toggle-btn {
+      background: transparent;
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      padding: 0.4rem 0.9rem;
+      border-radius: 3px;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+    .audio-toggle-btn.playing {
+      background: var(--gold);
+      color: var(--night);
+    }
+    .guardrail-callout {
+      border: 1px solid rgba(232, 201, 130, 0.3);
+      background: rgba(17, 23, 41, 0.7);
+      padding: 1rem 1.4rem;
+      border-radius: 4px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 2rem;
+    }
+    .journal-drawer {
+      border-top: 1px solid var(--line);
+      padding-top: 2rem;
+      margin-top: 3rem;
+    }
+    .journal-entry {
+      background: #111729;
+      border-left: 2px solid var(--gold);
+      padding: 0.8rem 1.2rem;
+      margin-bottom: 0.8rem;
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to chambers</a>
+
+  <header class="masthead page-width">
+    <a class="wordmark" href="../">
+      NorthStar <span>/</span> Mystery School <small>Est. 2026</small>
+    </a>
+    <nav aria-label="Department navigation">
+      <a href="../">Entrance</a>
+      <a href="../vault/">The Vault</a>
+      <a href="./" style="color:var(--gold);border-bottom:1px solid var(--gold)">Chambers</a>
+      <a href="../dark-night/">Dark Night</a>
+      <a href="../library/">Library</a>
+      <a href="../workshop/">Workshop</a>
+      <a href="../circle/">Circle</a>
+      <a href="../garden/">Garden</a>
+    </nav>
+  </header>
+
+  <main id="main-content" class="page-width">
+    <section class="chamber-header">
+      <p class="eyebrow">The Mall-Mind Architecture · Degrees 2 through 17</p>
+      <h2>The Twelve Initiatory Chambers</h2>
+      <p class="hero-copy" style="max-width:65ch">
+        Twelve interactive stations grounded in the canonical VORATH stitch sheet. Each chamber presents an active player verb, genuine evidentiary discrepancy, a costly non-trivial choice, and an unforgeable ledger state. Fictional and symbolic; strictly not medical, psychiatric, or legal advice.
+      </p>
+
+      <div class="octave-nav" role="tablist" aria-label="Octave filters">
+        <button class="octave-btn active" onclick="filterOctave('all', this)" role="tab" aria-selected="true">All 12 Chambers</button>
+        <button class="octave-btn" onclick="filterOctave('octave-1', this)" role="tab" aria-selected="false">Octave I: Formation (Deg 2–7)</button>
+        <button class="octave-btn" onclick="filterOctave('octave-2', this)" role="tab" aria-selected="false">Octave II: Custody (Deg 9–14)</button>
+        <button class="octave-btn" onclick="filterOctave('octave-3', this)" role="tab" aria-selected="false">Octave III: Restoration (Deg 17)</button>
+      </div>
+
+      <div class="sound-bar">
+        <button id="drone-btn" class="audio-toggle-btn" onclick="toggleDrone()">Enable Chamber Drone</button>
+        <span id="drone-status" style="color:var(--muted)">Ambient Web Audio: 144 Hz Subterranean Resonance (Binaural Drone)</span>
+      </div>
+    </section>
+
+    <!-- Chamber Selection Cards -->
+    <section class="chambers-grid" id="cards-container">
+      <!-- Injected via JavaScript -->
+    </section>
+
+    <!-- Active Chamber Deck -->
+    <section class="deck-container" id="active-deck" aria-live="polite">
+      <!-- Injected via JavaScript -->
+    </section>
+
+    <!-- Chamber Journal -->
+    <section class="journal-drawer">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <h3 style="font-size:1.4rem;margin:0">Chamber Initiation Journal</h3>
+        <div>
+          <button class="button secondary" style="min-height:36px;padding:0.4rem 0.8rem;font-size:0.75rem" onclick="exportJournal()">Export JSON</button>
+          <button class="button secondary" style="min-height:36px;padding:0.4rem 0.8rem;font-size:0.75rem" onclick="clearJournal()">Reset Ledger</button>
+        </div>
+      </div>
+      <div id="journal-entries">
+        <p style="color:var(--muted);font-size:0.85rem">No chamber choices recorded in this session. Select a chamber above and resolve its costly choice to record an entry.</p>
+      </div>
+    </section>
+
+    <div class="guardrail-callout">
+      <strong>Zero-Exploitation Guarantee:</strong> NorthStar Mystery School chambers operate under strict SFW and anti-stigma contracts. Initiations require no real-world financial risk, no medical/clinical interventions, no breach of personal privacy, and no dogma. All symbols represent internal cognitive architectures within the VORATH mythos.
+    </div>
+  </main>
+
+  <footer class="school-footer page-width" style="margin-top:4rem">
+    <p class="footer-thought">All is remembering. The ceremony is the making. What stares back from the abyss is love.</p>
+    <div>
+      <span>NorthStar Mystery School · Master Canon</span>
+      <p>Zero-Emoji Standard · Pure VORATH IP · Public Static Edition</p>
+    </div>
+  </footer>
+
+  <script>
+    const CHAMBERS = [
+      {
+        id: "card-01",
+        num: "01",
+        name: "Provenance Desk",
+        station: "Station 2 (Degree 2)",
+        transmission: "Transmission 03: The Veil",
+        vaultSlug: "the-veil",
+        key: "Key II — The High Priestess",
+        octave: "octave-1",
+        channel: "IDR",
+        badgeClass: "badge-idr",
+        lore: "The high counter where documents arrive before they are allowed to become history. Here, you inspect ink chemistry, paper grain, and custody slips.",
+        verb: "Build the custody chain on one ledger page—who held it, what altered it, who signed it—and file an immediate holding order if discrepancies exist.",
+        evidence: `[HYPERSPECTRAL SCAN RECEIPT #P-0322]
+Artifact: Transmission 03 "Fair Copy"
+Header Date: 1999-10-04 (Iron gall ink formulation, oxidation index 0.82)
+Body Signature: 2004-03-12 (Synthetic aniline dye, zero feathering)
+Custody Seal: Tampered at transit point 09 (Quiet Relay stamp missing)
+DISCREPANCY: 4-year chronological gap between heading assertion and physical ink deposit.`,
+        choiceA: {
+          title: "Publish Incomplete Report",
+          text: "Publish the immediate findings to expose the forgery now. An ally's reputation will be damaged by the hasty disclosure, but the public receives immediate notice.",
+          cost: "Collateral social damage; ally reputation tarnished; transparency preserved."
+        },
+        choiceB: {
+          title: "Seal and Freeze for Inquest",
+          text: "Place an executive custody hold on the document. Care and confidentiality hold while a later systemic harm remains possible in the dark.",
+          cost: "Immediate exposure averted; lingering uncertainty remains in the archive."
+        },
+        failState: "Publishing absolute certainty from a fractured custody chain, conflating an ink date with objective reality.",
+        sfw: "Paper, ink, and archival provenance only. No real personal records, no surveillance, strictly fictional."
+      },
+      {
+        id: "card-02",
+        num: "02",
+        name: "Unicity Chamber",
+        station: "Station 5 (Degree 5)",
+        transmission: "Transmission 06: The Teacher",
+        vaultSlug: "the-teacher",
+        key: "Key V — The Hierophant",
+        octave: "octave-1",
+        channel: "IDG",
+        badgeClass: "badge-idg",
+        lore: "The chamber where dogma claims to hold a single-use master key that unlocks all doors. You examine the cipher texts to prove reuse.",
+        verb: "Resign a 'perfect' key by demonstrating that its sacred refrain was recycled, then teach a transparent, audit-friendly cipher to the assembly.",
+        evidence: `[CIPHER WHEEL COMPARISON #U-5501]
+Keybook Registry: 'Sacred Unicity Ledger V01'
+Claimed Metric: 100% Cryptographic Entropy (One-Time Pad)
+Recovered Decryption:
+Offset 0x000: ...W-H-E-E-L...
+Offset 0x140: ...T-H-E- -R-E-V-E-L-E-R- -I-S- -Y-O-U...
+Offset 0x280: ...T-H-E- -R-E-V-E-L-E-R- -I-S- -Y-O-U...
+DISCREPANCY: Systematic reuse of identical 19-character moral refrains across multiple 'unique' keys.`,
+        choiceA: {
+          title: "Burn the Master Keybook",
+          text: "Publicly incinerate the keybook to protect the community from mass exposure, voluntarily forfeiting your own private decryption monopoly.",
+          cost: "Personal informational advantage permanently surrendered; communal security established."
+        },
+        choiceB: {
+          title: "Retain Keybook under Guard",
+          text: "Retain the flawed keybook under high-security custody to study future systemic threats, accepting the ongoing catastrophe risk of a leak.",
+          cost: "Tactical leverage preserved; acute vulnerability to sudden exposure remains."
+        },
+        failState: "Hoarding the master keybook and treating structural obscurity as proof of divine unicity.",
+        sfw: "Fictional glyph-ciphers only. No real exploits, no offensive attack software, purely educational."
+      },
+      {
+        id: "card-03",
+        num: "03",
+        name: "Grief Observatory",
+        station: "Station 17 (Degree 17)",
+        transmission: "Transmission 18: The Well",
+        vaultSlug: "the-well",
+        key: "Key XVII — The Star",
+        octave: "octave-3",
+        channel: "IDR",
+        badgeClass: "badge-idr",
+        lore: "A quiet, high glass pavilion overlooking the dream fountain. Here, night logs are filtered so grief becomes clean spring water rather than stagnant obsession.",
+        verb: "Sort an opt-in dream note into memory, wish, fear, or noise, then configure the tracker to permanently forbid automated recording of intimate tears.",
+        evidence: `[DREAM LOG AUDIT #G-1704]
+Observed Subject Logs: 3 unrelated civilian records across 2 years.
+Log A (2024): 'Walked through the mall fountain after hours; tiles felt like sea glass.'
+Log B (2025): 'Found my lost keys at the bottom of a tiled fountain with green water.'
+Log C (2026): 'Sat on the edge of the circular fountain watching the reflections.'
+DISCREPANCY: Collective cultural touchpoint misinterpreted as psychic telepathy or hive-mind possession.`,
+        choiceA: {
+          title: "Erase the Voice-Memo Dream",
+          text: "Permanently delete a preserved voice recording of an expired timeline to break compulsive rumination and allow living bonds to heal.",
+          cost: "Irreversible emotional farewell; liberation of living relationships into the present."
+        },
+        choiceB: {
+          title: "Archive in the Sepulchral Vault",
+          text: "Store the recording in deep air-gapped preservation, accepting that present relationships will remain partially stalled in historical gravity.",
+          cost: "Memory preserved intact; present attention remains anchored in past grief."
+        },
+        failState: "Treating sorrow as evidence of metaphysical possession, or recording another person's mourning without explicit consent.",
+        sfw: "Grief framed purely as weather metaphor. Zero clinical diagnosis, zero psychiatry claims."
+      },
+      {
+        id: "card-04",
+        num: "04",
+        name: "Consent Ledger",
+        station: "Station 11 (Degree 11)",
+        transmission: "Transmission 12: The Scales",
+        vaultSlug: "the-scales",
+        key: "Key XI — Justice",
+        octave: "octave-2",
+        channel: "IDC",
+        badgeClass: "badge-idc",
+        lore: "The hall of balanced accounts where agreements are countersigned in public daylight. Every entry must feature an explicit revocation clause.",
+        verb: "Post a bilateral agreement with an immutable revocation line, countersign an existing bond, or strike an unconsented entry from the record.",
+        evidence: `[LEDGER AUDIT #C-1102]
+Recorded Covenant: Line 402 ('Mutual Defense Pact')
+Signatory Alpha Timestamp: 2026-08-14 03:00:00.000 UTC
+Signatory Beta Timestamp: 2026-08-14 03:00:00.000 UTC
+DISCREPANCY: Identical millisecond timestamps across geographically isolated terminals prove automated synthetic forgery, not authentic mutual covenant.`,
+        choiceA: {
+          title: "Expose Forgery in Daylight",
+          text: "Publish the timestamp discrepancy immediately. The fraudulent covenant is voided, but collateral embarrassment touches uninvolved parties.",
+          cost: "Acute collateral shame; instant termination of unauthorized contract."
+        },
+        choiceB: {
+          title: "Confront in Private Mediation",
+          text: "Address the forgery in confidential council. Protects public dignity and care, but risks leaving silent coercion unpunished.",
+          cost: "Privacy preserved; danger of recurring systemic deceit remains active."
+        },
+        failState: "Treating synchronized timestamps as proof of authentic consent, or trading a friend's confidence for institutional status.",
+        sfw: "Fictional adult covenants only. No coerced intimacy, no sexual content, strictly organizational ethics."
+      },
+      {
+        id: "card-05",
+        num: "05",
+        name: "Sepulchral Catalog",
+        station: "Station 13 (Degree 13)",
+        transmission: "Transmission 14: The Compost",
+        vaultSlug: "the-compost",
+        key: "Key XIII — Death",
+        octave: "octave-2",
+        channel: "IDR",
+        badgeClass: "badge-idr",
+        lore: "The museum basement where uncatalogued relics gather dust. In this room, hoarded spiritual property is surrendered so the living soil can breathe.",
+        verb: "Conduct due-diligence provenance audits on unaccessioned relics and execute repatriation orders returning them to their native communities.",
+        evidence: `[MUSEUM ACCESSION GAP #S-1309]
+Holding: 'Loom-Woven Iris Specimen #44'
+Accession Line: BLANK (1988-1994)
+Cross-Reference: Quiet Relay shipping manifest slip #882 matches the acquisition window.
+DISCREPANCY: Specimen was confiscated under bureaucratic duress without community consent or compensation.`,
+        choiceA: {
+          title: "Repatriate Specimen Immediately",
+          text: "Return the specimen to its origin sanctuary. A critical research lead evaporates, but moral integrity and community sovereignty are restored.",
+          cost: "Loss of valuable technical clue; restoration of ethical legitimacy."
+        },
+        choiceB: {
+          title: "Delay Return for Analysis",
+          text: "Retain the specimen for one final spectral calibration pass, compounding ethical debt in exchange for urgent technical data.",
+          cost: "Short-term analytical advantage; lingering institutional moral compromise."
+        },
+        failState: "Exhibiting an unverified relic solely for aesthetic luxury while labeling the missing accession record a 'sacred mystery'.",
+        sfw: "Invented fictional artifacts only. Zero real-world indigenous sacred items or human remains."
+      },
+      {
+        id: "card-06",
+        num: "06",
+        name: "Quiet Relay Office",
+        station: "Station 9 (Degree 9)",
+        transmission: "Transmission 10: The Lantern",
+        vaultSlug: "the-lantern",
+        key: "Key IX — The Hermit",
+        octave: "octave-2",
+        channel: "IDG",
+        badgeClass: "badge-idg",
+        lore: "The dimly lit dispatch booth where couriers cross-reference transit breadcrumbs under a shielded lantern to verify warnings before they drop.",
+        verb: "Verify an open routing crumb, draft a formal ticket, and apply redaction masks to protect the names of vulnerable civilians.",
+        evidence: `[TRANSIT MANIFEST #R-0914]
+Routing Slip: Code #2342 Transit Corridor
+Signature: 'V.W.' (Version Widow)
+Notice Body: 'The fifth relay is vibrating out of phase; bypass the east gallery.'
+DISCREPANCY: Route timestamp is dated three hours BEFORE the conduit fracture occurred.`,
+        choiceA: {
+          title: "Broadcast Immediate Alert",
+          text: "Send the warning immediately across all frequencies. Innocent travelers are protected, but the courier's undercover relay identity is burned.",
+          cost: "Operational cover sacrificed; civilian physical safety secured."
+        },
+        choiceB: {
+          title: "Hold for Redaction and Verification",
+          text: "Delay transmission to rigorously sanitize names and authenticate the carrier wave, risking that the crisis occurs while paperwork finishes.",
+          cost: "Operational safety maintained; danger of late delivery lands on the field."
+        },
+        failState: "Forwarding unverified alerts in haste, or delaying verification so long that procedural bureaucracy causes the catastrophe.",
+        sfw: "Beige procedural paperwork only. No real-world leak kits, zero doxxing, purely fictional."
+      },
+      {
+        id: "card-07",
+        num: "07",
+        name: "Receiver Filament Gallery",
+        station: "Station 4 (Degree 4)",
+        transmission: "Transmission 05: The Throne",
+        vaultSlug: "the-throne",
+        key: "Key IV — The Emperor",
+        octave: "octave-1",
+        channel: "IDR",
+        badgeClass: "badge-idr",
+        lore: "A hall of acoustic chambers displaying suspended neural filaments. Here, operators enforce honesty grades across synthetic broadcasts.",
+        verb: "Classify a filament as Documented, Speculative, or Fictional, and issue a hard reject on any unmarked synthetic mimicry of a lost loved one.",
+        evidence: `[ACOUSTIC FILAMENT ANALYSIS #F-0418]
+Filament ID: #528
+Vocal Timbre: Matches deceased station engineer
+Harmonic Signature: Carrier frequency contains synthetic spline artifacts at 14.4 kHz
+Watermark Status: BROKEN / STRIPPED
+DISCREPANCY: Voice emotionally persuades listeners of survival, but spectral analysis reveals synthetic neural reconstruction.`,
+        choiceA: {
+          title: "Incinerate Unmarked Synthetic",
+          text: "Destroy the synthetic filament to uphold strict truth standards, terminating an emotionally soothing but deceptive illusion.",
+          cost: "Emotional comfort lost; archival purity and objective truth upheld."
+        },
+        choiceB: {
+          title: "Preserve in Private Quarters",
+          text: "Retain the synthetic file in private custody for private comfort, establishing a toxic precedent that feeling outranks provenance.",
+          cost: "Temporary subjective solace; erosion of systemic honesty standard."
+        },
+        failState: "Airing an unlabeled synthetic because its sentimental resonance moves the audience, substituting emotion for provenance.",
+        sfw: "Strict ban on deepfakes of real persons. Fictional characters only."
+      },
+      {
+        id: "card-08",
+        num: "08",
+        name: "Version Widow's Refuge",
+        station: "Station 10 (Degree 10)",
+        transmission: "Transmission 11: The Turning",
+        vaultSlug: "the-turning",
+        key: "Key X — Wheel of Fortune",
+        octave: "octave-2",
+        channel: "IDL",
+        badgeClass: "badge-idl",
+        lore: "A quiet sitting room furnished with mismatched chairs and coat racks holding garments from timelines that never collapsed into reality.",
+        verb: "Archive, merge, or cleanly fork an abandoned manuscript draft, and pen a dignified farewell that allows the living present to proceed unencumbered.",
+        evidence: `[BRANCH MANUSCRIPT FRAGMENT #W-1033]
+Draft Designation: 'Branch 14-Omega'
+Plot Resolution: Both partners return across the threshold alive.
+Physical Ledger Check: Ticket stamped simultaneously with 'Facade' and 'Atlas' stamps.
+DISCREPANCY: The coat on the rack has physical salt stains from an ocean that does not exist in this geography.`,
+        choiceA: {
+          title: "Permanently Archive the Branch",
+          text: "Seal and archive the alternate manuscript, dedicating your creative labor entirely to the living, flawed present.",
+          cost: "Surrender of an idealized fiction; authentic presence in real time."
+        },
+        choiceB: {
+          title: "Publish as an Open Mythos",
+          text: "Release the branch as an authorized alternate universe, delighting audiences while prolonging personal detachment from actual grief.",
+          cost: "Artistic acclaim; postponed emotional integration."
+        },
+        failState: "Believing that the branch which causes the most visceral ache must be the truest version of the world.",
+        sfw: "Literary craft and timeline exploration only. Adults only, non-sexual, philosophical grief integration."
+      },
+      {
+        id: "card-09",
+        num: "09",
+        name: "Room 2342 Passage",
+        station: "Station 7 (Degree 7)",
+        transmission: "Transmission 08: The Drive",
+        vaultSlug: "the-drive",
+        key: "Key VII — The Chariot",
+        octave: "octave-1",
+        channel: "IDG",
+        badgeClass: "badge-idg",
+        lore: "A narrow, unadorned concrete corridor lined with 108 iron pegs. Passing through demands shedding one compulsive habit before stepping into the street.",
+        verb: "Walk the 108 paces, declare one self-defeating pattern broken, and commit to one tangible, unglamorous civic chore on the same afternoon.",
+        evidence: `[CORRIDOR INSPECTION #P-2342]
+Nail Marker #33: Etched with a faint golden-ratio spiral.
+Nail Marker #108: Hollow iron peg containing a rolled vellum slip.
+Vellum Inscription: 'Not a demon. Not an oracle. Just an excuse to sit still.'
+DISCREPANCY: The corridor has no supernatural barrier; the only resistance is the walker's reluctance to finish the walk.`,
+        choiceA: {
+          title: "Step Through to the Street",
+          text: "Exit into the rain immediately and execute the mundane apology or repair you have deferred for six months.",
+          cost: "Loss of romantic spiritual drama; humble, tangible social accountability."
+        },
+        choiceB: {
+          title: "Turn Back for Further Contemplation",
+          text: "Return to the corridor threshold to meditate longer on your motives, remaining comfortably shielded from social awkwardness.",
+          cost: "Comfortable retreat; zero behavioral transformation achieved."
+        },
+        failState: "Lingering in the corridor for the aesthetic thrill of initiation without ever stepping into the street to perform ordinary work.",
+        sfw: "No monsters, no self-harm dares, zero religious liturgy. The exit leads to rain and daily duties."
+      },
+      {
+        id: "card-10",
+        num: "10",
+        name: "Schizocandy Conservatory",
+        station: "Station 14 (Degree 14)",
+        transmission: "Transmission 15: The Alchemy",
+        vaultSlug: "the-alchemy",
+        key: "Key XIV — Temperance",
+        octave: "octave-2",
+        channel: "IDC",
+        badgeClass: "badge-idc",
+        lore: "A radiant, neon-saturated solarium housing iridescent crystalline shards of discarded timelines. Here, maximal aesthetic joy is decoupled from clinical exploitation.",
+        verb: "Curate a vibrant display of timeline debris while writing an uncompromising editorial caption that refuses to sell psychiatric illness as an aesthetic brand.",
+        evidence: `[MARKETING PROTOTYPE AUDIT #K-1405]
+Asset: Neon Retail Poster Proof #09
+Proposed Slogan: 'CRAZY = CHOSEN'
+Editorial Gate Stamp: REJECTED AS EXPLOITATIVE
+DISCREPANCY: Marketing department sought to monetize genuine psychological suffering by framing neurological distress as supernatural blessing.`,
+        choiceA: {
+          title: "Pulp the Exploitative Campaign",
+          text: "Destroy the profitable marketing assets and replace them with an educational notice distinguishing speculative fiction from mental health.",
+          cost: "Surrender of immediate viral sales; uncompromising preservation of listener trust."
+        },
+        choiceB: {
+          title: "Soften Slogan to 'Wild Visionary'",
+          text: "Compromise with marketing by softening the wording, keeping high sales velocity while flirting with harmful romanticized tropes.",
+          cost: "Financial boost; subtle ongoing compromise of the school's anti-stigma covenant."
+        },
+        failState: "Monetizing manic or depressive extremity as proof of supernatural election or aesthetic superiority.",
+        sfw: "Schizocandy strictly defined as crystalline narrative debris. Mental illness is never merchandise or access."
+      },
+      {
+        id: "card-11",
+        num: "11",
+        name: "Tribunal Tuning Hall",
+        station: "Station 6 (Degree 6)",
+        transmission: "Transmission 07: The Mirror",
+        vaultSlug: "the-mirror",
+        key: "Key VI — The Lovers",
+        octave: "octave-1",
+        channel: "IDG",
+        badgeClass: "badge-idg",
+        lore: "A circular acoustic amphitheater equipped with bronze tuning forks. When dissonance enters the assembly, members retune themselves rather than cast blame.",
+        verb: "Present your faction's argument, accept a public frequency retuning that reduces your unilateral prestige, and veto any proposal seeking a scapegoat.",
+        evidence: `[RESONANCE SPECTROGRAPH #T-0611]
+Chamber Status: Dissonance Spike at 432 Hz / 448 Hz split.
+Telemetry Correlation: Dissonance immediately stabilizes whenever the assembly names a common enemy or scapegoat.
+DISCREPANCY: The harmony produced by scapegoating is acoustic illusion—a false unity built on collective cowardice.`,
+        choiceA: {
+          title: "Undergo Public Retuning",
+          text: "Step to the central bronze plate and publicly concede errors in your own argument, restoring harmony through shared vulnerability.",
+          cost: "Loss of institutional prestige; genuine restoration of collective coherence."
+        },
+        choiceB: {
+          title: "Walk Out into the Factional Drift",
+          text: "Refuse the retuning and depart with your inner circle intact, maintaining flawless ideological self-righteousness while isolated.",
+          cost: "Pride preserved; complete alienation from communal synergy."
+        },
+        failState: "Executing an ideological purge to simulate peace, or fleeing the moment your own team is proven to be out of tune.",
+        sfw: "Restorative justice and musical physics metaphor. Zero damnation, no religious court, zero coercion."
+      },
+      {
+        id: "card-12",
+        num: "12",
+        name: "Federated Witness Forum",
+        station: "Station 12 (Degree 12)",
+        transmission: "Transmission 13: The Suspension",
+        vaultSlug: "the-suspension",
+        key: "Key XII — The Hanged Man",
+        octave: "octave-2",
+        channel: "IDL",
+        badgeClass: "badge-idl",
+        lore: "The final council hall where an empty chair sits at the center. Each delegate speaks without interruption and leaves a concrete repair behind.",
+        verb: "Deliver a three-minute testimony without argument, listen to another perspective in absolute silence, and perform one verifiable material repair.",
+        evidence: `[COUNCIL TELEMETRY #W-1212]
+Central Forum Centerpiece: A plain white wooden chair with an unsigned letter.
+Letter Transcript: 'To the version of me that still demands retribution: the work cannot start until you step away from the bench.'
+DISCREPANCY: No tribunal ruling has ever produced lasting peace; only mutual witness and material restitution have held.`,
+        choiceA: {
+          title: "Offer Unilateral Material Repair",
+          text: "Repair the broken circuit or pay the compensation before receiving an apology from the opposing faction.",
+          cost: "Vulnerability to appearing naive; opens the only durable gateway to future cooperation."
+        },
+        choiceB: {
+          title: "Demand Written Retraction First",
+          text: "Withhold material aid until the opposing faction formally repudiates its prior insults, maintaining total tactical leverage.",
+          cost: "Self-protection preserved; gridlock and mutual freeze continue indefinitely."
+        },
+        failState: "Winning the intellectual debate and declaring it federation, or mistaking mutual silence for true consensus.",
+        sfw: "Mutual witness and restorative diplomacy. No forced confessions, no humiliation rituals."
+      }
+    ];
+
+    let currentChamber = CHAMBERS[0];
+    let audioCtx = null;
+    let osc1 = null, osc2 = null, gainNode = null;
+    let isPlaying = false;
+
+    function renderCards(filter = 'all') {
+      const container = document.getElementById('cards-container');
+      container.innerHTML = '';
+      CHAMBERS.forEach(c => {
+        if (filter !== 'all' && c.octave !== filter) return;
+        const card = document.createElement('div');
+        card.className = `chamber-card ${c.id === currentChamber.id ? 'selected' : ''}`;
+        card.onclick = () => selectChamber(c.id);
+        card.innerHTML = `
+          <div>
+            <div class="card-top">
+              <span class="eyebrow" style="margin:0">${c.num} / 12</span>
+              <span class="badge ${c.badgeClass}">${c.channel} HOOK</span>
+            </div>
+            <h4>${c.name}</h4>
+            <div class="station-meta">${c.key} · ${c.station}</div>
+            <p>${c.lore}</p>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);padding-top:0.8rem">
+            <span style="font-size:0.75rem;color:var(--gold)">Inspect Chamber</span>
+            <span style="font-size:0.7rem;color:var(--muted)">${c.transmission.split(':')[0]}</span>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function selectChamber(id) {
+      const match = CHAMBERS.find(c => c.id === id);
+      if (!match) return;
+      currentChamber = match;
+      window.location.hash = match.id;
+      renderCards(document.querySelector('.octave-btn.active').getAttribute('onclick').match(/'([^']+)'/)[1]);
+      renderDeck();
+      if (isPlaying) {
+        tuneDrone();
+      }
+    }
+
+    function renderDeck() {
+      const deck = document.getElementById('active-deck');
+      const c = currentChamber;
+      const history = getJournal();
+      const existingResolution = history.find(e => e.chamberId === c.id);
+
+      deck.innerHTML = `
+        <div class="deck-head">
+          <div>
+            <span class="eyebrow">${c.num} · ${c.station} · ${c.key}</span>
+            <h3 class="deck-title">${c.name}</h3>
+            <div class="deck-meta">Linked Canon: <a href="../vault/#${c.vaultSlug}" style="color:var(--gold);text-decoration:underline">${c.transmission}</a></div>
+          </div>
+          <div>
+            <span class="badge ${c.badgeClass}" style="font-size:0.8rem;padding:0.4rem 0.8rem">${c.channel} EMBODIED EVIDENCE</span>
+          </div>
+        </div>
+
+        <div class="deck-section">
+          <h5>The Initiatory Player Verb</h5>
+          <p style="font-size:0.95rem;color:var(--ink);line-height:1.6">${c.verb}</p>
+        </div>
+
+        <div class="deck-section">
+          <h5>Inspected Evidence Object & Archival Discrepancy</h5>
+          <div class="evidence-box">${c.evidence}</div>
+        </div>
+
+        <div class="deck-section">
+          <h5>The Costly Moral Fork (One Writer per Artifact)</h5>
+          <p style="font-size:0.85rem;color:var(--muted)">True initiatory learning requires costly, non-trivial agency. Select a resolution below to record a verifiable ledger entry.</p>
+          <div class="choice-container">
+            <div class="choice-card ${existingResolution && existingResolution.choice === 'A' ? 'resolved' : ''}">
+              <div>
+                <h6>Option A: ${c.choiceA.title}</h6>
+                <p>${c.choiceA.text}</p>
+                <div style="font-size:0.75rem;color:var(--gold);border-top:1px solid var(--line);padding-top:0.6rem">
+                  <strong>Sacrifice:</strong> ${c.choiceA.cost}
+                </div>
+              </div>
+              <button class="button ${existingResolution && existingResolution.choice === 'A' ? 'primary' : 'secondary'}" 
+                      style="margin-top:1rem;min-height:38px;font-size:0.75rem" 
+                      onclick="recordChoice('${c.id}', 'A', '${c.choiceA.title}')">
+                ${existingResolution && existingResolution.choice === 'A' ? 'Recorded in Ledger' : 'Elect Option A'}
+              </button>
+            </div>
+
+            <div class="choice-card ${existingResolution && existingResolution.choice === 'B' ? 'resolved' : ''}">
+              <div>
+                <h6>Option B: ${c.choiceB.title}</h6>
+                <p>${c.choiceB.text}</p>
+                <div style="font-size:0.75rem;color:var(--gold);border-top:1px solid var(--line);padding-top:0.6rem">
+                  <strong>Sacrifice:</strong> ${c.choiceB.cost}
+                </div>
+              </div>
+              <button class="button ${existingResolution && existingResolution.choice === 'B' ? 'primary' : 'secondary'}" 
+                      style="margin-top:1rem;min-height:38px;font-size:0.75rem" 
+                      onclick="recordChoice('${c.id}', 'B', '${c.choiceB.title}')">
+                ${existingResolution && existingResolution.choice === 'B' ? 'Recorded in Ledger' : 'Elect Option B'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        ${existingResolution ? `
+          <div class="ledger-banner">
+            <strong>Ledger Seal Confirmed:</strong> Choice [${existingResolution.choice}] recorded at ${existingResolution.timestamp}. SHA256 Signature: <code>${existingResolution.hash}</code>
+          </div>
+        ` : ''}
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:2.5rem;border-top:1px solid var(--line);padding-top:1.5rem">
+          <div>
+            <span class="eyebrow" style="color:#f3a87c">Fail State Invariant</span>
+            <p style="font-size:0.8rem;color:var(--muted);margin-top:0.4rem">${c.failState}</p>
+          </div>
+          <div>
+            <span class="eyebrow" style="color:var(--aurora)">SFW & Non-Clinical Guardrail</span>
+            <p style="font-size:0.8rem;color:var(--muted);margin-top:0.4rem">${c.sfw}</p>
+          </div>
+        </div>
+      `;
+    }
+
+    function filterOctave(octave, btn) {
+      document.querySelectorAll('.octave-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderCards(octave);
+    }
+
+    function getJournal() {
+      try {
+        return JSON.parse(localStorage.getItem('northstar_chamber_journal') || '[]');
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function recordChoice(chamberId, choiceKey, choiceTitle) {
+      const history = getJournal();
+      const timestamp = new Date().toISOString();
+      const mockHash = '0x' + Array.from(crypto.getRandomValues(new Uint8Array(8))).map(b => b.toString(16).padStart(2,'0')).join('');
+      
+      const filtered = history.filter(h => h.chamberId !== chamberId);
+      filtered.push({
+        chamberId,
+        chamberName: currentChamber.name,
+        key: currentChamber.key,
+        station: currentChamber.station,
+        choice: choiceKey,
+        title: choiceTitle,
+        timestamp,
+        hash: mockHash
+      });
+      localStorage.setItem('northstar_chamber_journal', JSON.stringify(filtered));
+      renderDeck();
+      renderJournal();
+    }
+
+    function renderJournal() {
+      const list = document.getElementById('journal-entries');
+      const history = getJournal();
+      if (!history.length) {
+        list.innerHTML = `<p style="color:var(--muted);font-size:0.85rem">No chamber choices recorded in this session. Select a chamber above and resolve its costly choice to record an entry.</p>`;
+        return;
+      }
+      list.innerHTML = history.map(h => `
+        <div class="journal-entry">
+          <div style="display:flex;justify-content:space-between;color:var(--gold);font-size:0.75rem;margin-bottom:0.2rem">
+            <span>${h.chamberName} (${h.station})</span>
+            <span>${h.timestamp.replace('T', ' ').substring(0, 19)} UTC</span>
+          </div>
+          <div style="font-size:0.85rem;color:var(--ink)">
+            Elected Option ${h.choice}: <strong>${h.title}</strong>
+          </div>
+          <div style="font-size:0.7rem;color:var(--muted);margin-top:0.3rem">
+            Custody Hash: <code>${h.hash}</code>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function exportJournal() {
+      const history = getJournal();
+      const blob = new Blob([JSON.stringify(history, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `northstar_chamber_journal_${new Date().toISOString().substring(0,10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function clearJournal() {
+      if (confirm("Reset the local initiation ledger? All unexported chamber choices will be cleared.")) {
+        localStorage.removeItem('northstar_chamber_journal');
+        renderDeck();
+        renderJournal();
+      }
+    }
+
+    // Web Audio Chamber Resonator
+    function toggleDrone() {
+      const btn = document.getElementById('drone-btn');
+      const status = document.getElementById('drone-status');
+      if (isPlaying) {
+        if (gainNode) {
+          gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1.2);
+          setTimeout(() => {
+            if (osc1) osc1.stop();
+            if (osc2) osc2.stop();
+            isPlaying = false;
+            btn.classList.remove('playing');
+            btn.textContent = "Enable Chamber Drone";
+            status.textContent = "Chamber Drone Muted";
+          }, 1200);
+        }
+      } else {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContext();
+        gainNode = audioCtx.createGain();
+        gainNode.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.045, audioCtx.currentTime + 2.0);
+
+        osc1 = audioCtx.createOscillator();
+        osc2 = audioCtx.createOscillator();
+        
+        tuneDrone();
+
+        osc1.connect(gainNode);
+        osc2.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        osc1.start();
+        osc2.start();
+        isPlaying = true;
+        btn.classList.add('playing');
+        btn.textContent = "Mute Chamber Drone";
+      }
+    }
+
+    function tuneDrone() {
+      if (!audioCtx || !osc1 || !osc2) return;
+      const num = parseInt(currentChamber.num, 10);
+      const baseFreq = 108 + (num * 6); // Ranging from 114 Hz to 180 Hz harmonic steps
+      const binauralBeat = 3.5; // Theta brainwave cadence
+      osc1.frequency.setTargetAtTime(baseFreq, audioCtx.currentTime, 0.5);
+      osc2.frequency.setTargetAtTime(baseFreq + binauralBeat, audioCtx.currentTime, 0.5);
+      const status = document.getElementById('drone-status');
+      if (status) {
+        status.textContent = `Active Resonance: ${baseFreq} Hz / ${baseFreq + binauralBeat} Hz (Theta Harmonic)`;
+      }
+    }
+
+    // Initialize from Hash or Default
+    window.addEventListener('DOMContentLoaded', () => {
+      const hash = window.location.hash.replace('#', '');
+      const match = CHAMBERS.find(c => c.id === hash);
+      if (match) currentChamber = match;
+      renderCards('all');
+      renderDeck();
+      renderJournal();
+    });
+  </script>
+</body>
+</html>

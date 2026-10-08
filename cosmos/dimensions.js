@@ -36,12 +36,14 @@ window.CosmosDimensions = (function () {
     over_abyss:   { dim: 'over', to: 'abyss',   x: 0,  z: -12, corner: 18 },
     over_singularity:{ dim: 'over', to: 'singularity', x: 12, z: 12, corner: 21 },
     over_frost:   { dim: 'over', to: 'frost',   x: -12,z: -12, corner: 24 },
+    over_solaris: { dim: 'over', to: 'solaris', x: -12,z: 12,  corner: 27 },
     geode_back:   { dim: 'geode',   to: 'over', x: 0,  z: 0 },
     vitrine_back: { dim: 'vitrine', to: 'over', x: 0,  z: 0 },
     crucible_back:{ dim: 'crucible',to: 'over', x: 4,  z: 0 },
     abyss_back:   { dim: 'abyss',   to: 'over', x: 0,  z: -4 },
     singularity_back:{ dim: 'singularity', to: 'over', x: 0, z: -6 },
-    frost_back:   { dim: 'frost',   to: 'over', x: 0,  z: -6 }
+    frost_back:   { dim: 'frost',   to: 'over', x: 0,  z: -6 },
+    solaris_back: { dim: 'solaris', to: 'over', x: 0,  z: -6 }
   };
 
   // ----------------------------------------------------------
@@ -57,14 +59,15 @@ window.CosmosDimensions = (function () {
   }
 
   function buildOverworldGates() {
-    var g1 = GATES.over_geode, g2 = GATES.over_vitrine, g3 = GATES.over_crucible, g4 = GATES.over_abyss, g5 = GATES.over_singularity, g6 = GATES.over_frost;
-    var y1 = CC.findTop(g1.x, g1.z, 12), y2 = CC.findTop(g2.x, g2.z, 12), y3 = CC.findTop(g3.x, g3.z, 12), y4 = CC.findTop(g4.x, g4.z, 12), y5 = CC.findTop(g5.x, g5.z, 12), y6 = CC.findTop(g6.x, g6.z, 12);
+    var g1 = GATES.over_geode, g2 = GATES.over_vitrine, g3 = GATES.over_crucible, g4 = GATES.over_abyss, g5 = GATES.over_singularity, g6 = GATES.over_frost, g7 = GATES.over_solaris;
+    var y1 = CC.findTop(g1.x, g1.z, 12), y2 = CC.findTop(g2.x, g2.z, 12), y3 = CC.findTop(g3.x, g3.z, 12), y4 = CC.findTop(g4.x, g4.z, 12), y5 = CC.findTop(g5.x, g5.z, 12), y6 = CC.findTop(g6.x, g6.z, 12), y7 = CC.findTop(g7.x, g7.z, 12);
     if (y1 > -20) { GATES.over_geode.y = y1 + 1; buildGatePad(g1.x, y1 + 1, g1.z, g1.corner); CC.rebuildAround(g1.x, y1 + 1, g1.z); }
     if (y2 > -20) { GATES.over_vitrine.y = y2 + 1; buildGatePad(g2.x, y2 + 1, g2.z, g2.corner); CC.rebuildAround(g2.x, y2 + 1, g2.z); }
     if (y3 > -20) { GATES.over_crucible.y = y3 + 1; buildGatePad(g3.x, y3 + 1, g3.z, g3.corner); CC.rebuildAround(g3.x, y3 + 1, g3.z); }
     if (y4 > -20) { GATES.over_abyss.y = y4 + 1; buildGatePad(g4.x, y4 + 1, g4.z, g4.corner); CC.rebuildAround(g4.x, y4 + 1, g4.z); }
     if (y5 > -20) { GATES.over_singularity.y = y5 + 1; buildGatePad(g5.x, y5 + 1, g5.z, g5.corner); CC.rebuildAround(g5.x, y5 + 1, g5.z); }
     if (y6 > -20) { GATES.over_frost.y = y6 + 1; buildGatePad(g6.x, y6 + 1, g6.z, g6.corner); CC.rebuildAround(g6.x, y6 + 1, g6.z); }
+    if (y7 > -20) { GATES.over_solaris.y = y7 + 1; buildGatePad(g7.x, y7 + 1, g7.z, g7.corner); CC.rebuildAround(g7.x, y7 + 1, g7.z); }
   }
 
   // ----------------------------------------------------------
@@ -1200,6 +1203,268 @@ window.CosmosDimensions = (function () {
   }
 
   // ----------------------------------------------------------
+  // THE SOLARIS AETHERIUM (Phase 10)
+  // ----------------------------------------------------------
+  var SOLARIS = {
+    FLOOR: -18,
+    CEIL: 26,
+    RADIUS: 28
+  };
+  var phoenix = null, flareTimer = 7.0, solarRings = [], solarWings = [];
+  var solarHarvestTimer = 0, thermalVaultCooldown = 0;
+
+  function generateSolaris() {
+    var F = SOLARIS.FLOOR, R = SOLARIS.RADIUS;
+    CC.world.spawn = [0, F + 2, -6];
+
+    // 1. Central Solar Citadel Disc (Solar Prism + Solar Core + Gold Veins)
+    for (var x = -R; x <= R; x++) {
+      for (var z = -R; z <= R; z++) {
+        var d = Math.sqrt(x * x + z * z);
+        if (d <= R) {
+          // Tiered concentric solar terraces
+          var terrace = Math.floor((R - d) / 6);
+          var topY = F + terrace;
+          for (var y = F - 5; y <= topY; y++) {
+            if (y === topY) {
+              // Surface layer: Solar Prism with radiant Solar Core & Gold veins
+              var r = Math.random();
+              if (r < 0.18) set(x, y, z, 28);       // Solar Core leap emitter
+              else if (r < 0.40) set(x, y, z, 2);   // Gold Vein
+              else if (r < 0.50) set(x, y, z, 17);  // Solar Forge
+              else set(x, y, z, 27);                // Solar Prism crystalline foundation
+            } else {
+              set(x, y, z, 27); // Solid Solar Prism
+            }
+          }
+        }
+      }
+    }
+
+    // 2. Circumferential Radiant Chasm with 4 Cardinal Sun-Light Bridges
+    for (var a = 0; a < Math.PI * 2; a += 0.05) {
+      var rx = Math.round(Math.cos(a) * 14.5);
+      var rz = Math.round(Math.sin(a) * 14.5);
+      // Carve chasm air pockets except at 4 cardinal radiant bridge points
+      if (Math.abs(rx) > 2 && Math.abs(rz) > 2) {
+        for (var cy = F - 4; cy <= F + 6; cy++) {
+          set(rx, cy, rz, 0);
+          set(rx + 1, cy, rz, 0);
+        }
+      } else {
+        // Crystalline golden sun-bridge across radiant chasm
+        for (var by = F; by <= F + 1; by++) {
+          set(rx, by, rz, 28); // Solar Core bridge
+        }
+      }
+    }
+
+    // 3. Four Helios Shard Solar Obelisks on perimeter
+    var obeliskOffsets = [[18, 0], [-18, 0], [0, 18], [0, -18]];
+    for (var s = 0; s < obeliskOffsets.length; s++) {
+      var sx = obeliskOffsets[s][0], sz = obeliskOffsets[s][1];
+      for (var sy = 1; sy <= 7; sy++) {
+        set(sx, F + sy, sz, 29); // Helios Shard spire
+      }
+      set(sx + 1, F + 1, sz, 29);
+      set(sx - 1, F + 1, sz, 29);
+      set(sx, F + 1, sz + 1, 29);
+      set(sx, F + 1, sz - 1, 29);
+    }
+
+    // 4. Return Gate Pad at (0, -6)
+    buildGatePad(0, F + 1, -6, 28);
+    GATES.solaris_back.y = F + 1;
+
+    // 5. Central High Solar Dais with Core Leap Pad at (0, 0)
+    for (var dx = -2; dx <= 2; dx++) {
+      for (var dz = -2; dz <= 2; dz++) {
+        set(dx, F + 1, dz, 27);
+      }
+    }
+    set(0, F + 1, 0, 28); // Central Solar Core Kinetic Emitter
+
+    // Spawn Boss
+    spawnPhoenix();
+  }
+
+  function spawnPhoenix() {
+    clearPhoenix();
+    var F = SOLARIS.FLOOR;
+    var THREE = window.THREE;
+    if (!THREE || !CC.scene) return;
+
+    var group = new THREE.Group();
+    group.position.set(0, F + 12, 14);
+
+    // Phoenix Body: Faceted gold/sunfire core
+    var bodyGeo = new THREE.BoxGeometry(3.5, 4.5, 4.0);
+    var bodyMat = new THREE.MeshStandardMaterial({
+      color: 0xff5400,
+      metalness: 0.85,
+      roughness: 0.15,
+      emissive: 0xffaa00,
+      emissiveIntensity: 0.5
+    });
+    var body = new THREE.Mesh(bodyGeo, bodyMat);
+    group.add(body);
+
+    // Glowing Coronal Heart
+    var heartGeo = new THREE.BoxGeometry(1.8, 2.2, 4.2);
+    var heartMat = new THREE.MeshBasicMaterial({ color: 0xffe600 });
+    var heart = new THREE.Mesh(heartGeo, heartMat);
+    heart.position.set(0, 0.2, 0);
+    group.add(heart);
+
+    // Phoenix Head & Solar Crest
+    var headGeo = new THREE.BoxGeometry(2.2, 2.4, 2.8);
+    var headMat = new THREE.MeshStandardMaterial({
+      color: 0xff9900,
+      metalness: 0.9,
+      roughness: 0.1,
+      emissive: 0xffcc00,
+      emissiveIntensity: 0.4
+    });
+    var head = new THREE.Mesh(headGeo, headMat);
+    head.position.set(0, 3.6, 1.2);
+    group.add(head);
+
+    // Sharp Solar Beak
+    var beakGeo = new THREE.ConeGeometry(0.7, 2.0, 4);
+    var beakMat = new THREE.MeshBasicMaterial({ color: 0xffe600 });
+    var beak = new THREE.Mesh(beakGeo, beakMat);
+    beak.rotation.x = Math.PI / 2;
+    beak.position.set(0, 3.2, 3.2);
+    group.add(beak);
+
+    // Radiant Solar Eyes
+    var eyeGeo = new THREE.BoxGeometry(2.4, 0.4, 0.4);
+    var eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    var eye = new THREE.Mesh(eyeGeo, eyeMat);
+    eye.position.set(0, 3.8, 2.2);
+    group.add(eye);
+
+    // Left and Right Solar Flapping Wings
+    solarWings = [];
+    var wingGeo = new THREE.BoxGeometry(6.5, 0.8, 3.0);
+    var wingMat = new THREE.MeshStandardMaterial({
+      color: 0xffaa00,
+      metalness: 0.75,
+      roughness: 0.2,
+      emissive: 0xff7700,
+      emissiveIntensity: 0.45
+    });
+
+    var leftWing = new THREE.Mesh(wingGeo, wingMat);
+    leftWing.position.set(-4.5, 0.8, 0);
+    group.add(leftWing);
+    solarWings.push(leftWing);
+
+    var rightWing = new THREE.Mesh(wingGeo, wingMat);
+    rightWing.position.set(4.5, 0.8, 0);
+    group.add(rightWing);
+    solarWings.push(rightWing);
+
+    // Coronal Solar Flare Rings (3 concentric solar corona gyroscopes)
+    solarRings = [];
+    var ringMats = [
+      new THREE.MeshBasicMaterial({ color: 0xffe600, wireframe: true }),
+      new THREE.MeshBasicMaterial({ color: 0xff5400, wireframe: true }),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true })
+    ];
+    for (var r = 0; r < 3; r++) {
+      var rGeo = new THREE.TorusGeometry(4.8 + r * 1.5, 0.14, 8, 32);
+      var ring = new THREE.Mesh(rGeo, ringMats[r]);
+      ring.rotation.x = Math.PI / 3 * r;
+      ring.rotation.y = Math.PI / 4 * r;
+      group.add(ring);
+      solarRings.push(ring);
+    }
+
+    CC.scene.add(group);
+    phoenix = group;
+  }
+
+  function clearPhoenix() {
+    if (phoenix && CC && CC.scene) {
+      CC.scene.remove(phoenix);
+      phoenix = null;
+      solarWings = [];
+      solarRings = [];
+    }
+  }
+
+  function updatePhoenix(dt) {
+    if (!phoenix) return;
+    var F = SOLARIS.FLOOR;
+
+    // Levitation kinematics & soaring
+    phoenix.position.y = F + 12 + Math.sin(elapsed * 1.6) * 1.8;
+    phoenix.position.x = Math.sin(elapsed * 0.5) * 4.2;
+
+    // Wing flapping kinematics
+    if (solarWings.length === 2) {
+      var flap = Math.sin(elapsed * 4.0) * 0.45;
+      solarWings[0].rotation.z = flap;
+      solarWings[1].rotation.z = -flap;
+    }
+
+    // Rotate Coronal Flare Rings
+    for (var r = 0; r < solarRings.length; r++) {
+      var speed = (r + 1) * 0.85;
+      solarRings[r].rotation.x += dt * speed;
+      solarRings[r].rotation.y += dt * (speed * 0.7);
+      solarRings[r].rotation.z += dt * (speed * 0.5);
+    }
+
+    // Flare pulse timer
+    flareTimer -= dt;
+    if (flareTimer <= 0) {
+      flareTimer = 7.5 + Math.random() * 3.5;
+      fireSolarFlarePulse();
+    }
+  }
+
+  function fireSolarFlarePulse() {
+    if (!phoenix || !CC) return;
+    CC.toast('THE HELIOS PHOENIX radiates a coronal solar flare — 528Hz harmonic resonance!');
+    if (CC.playAudioChime) CC.playAudioChime(528); // 528Hz DNA/solar harmonic resonance tone
+  }
+
+  function checkSolarisMechanics(dt) {
+    if (!CC || !CC.player) return;
+    var p = CC.player.pos;
+    var F = SOLARIS.FLOOR;
+
+    // 1. Solar Core Kinetic Thermal Leap Pad (Block 28)
+    var bx = Math.floor(p.x), by = Math.floor(p.y - 0.5), bz = Math.floor(p.z);
+    var bType = CC.world.get(bx, by, bz);
+    thermalVaultCooldown = Math.max(0, thermalVaultCooldown - dt);
+    if (bType === 28 && thermalVaultCooldown <= 0) {
+      thermalVaultCooldown = 1.5;
+      if (CC.player.vel) {
+        CC.player.vel.y = 9.2; // Radiant thermal updraft vault leap
+      }
+      CC.toast('Solar Core thermal convection — radiant aether leap!');
+      if (CC.playAudioChime) CC.playAudioChime(792);
+    }
+
+    // 2. Helios Shard Harvesting (Block 29)
+    var distToCenter = Math.sqrt(p.x * p.x + p.z * p.z);
+    if (distToCenter > 15 && distToCenter < 24 && Math.abs(p.y - F) < 8.0) {
+      solarHarvestTimer += dt;
+      if (solarHarvestTimer > 3.0) {
+        solarHarvestTimer = 0;
+        CC.toast('Helios Shard resonance harvested — +12 SpaceCash Helios Sun-Gems!');
+        if (CC.player && CC.player.addGems) CC.player.addGems(12);
+        else if (CC.addGems) CC.addGems(12);
+      }
+    } else {
+      solarHarvestTimer = 0;
+    }
+  }
+
+  // ----------------------------------------------------------
   // dimension switching
   // ----------------------------------------------------------
   function switchTo(dim) {
@@ -1208,7 +1473,7 @@ window.CosmosDimensions = (function () {
       blocks: CC.world.blocks, edits: CC.world.edits,
       locations: CC.world.locations, spawn: CC.world.spawn
     };
-    clearPups(); clearDragon(); clearGolem(); clearSiren(); clearSphinx(); clearColossus();
+    clearPups(); clearDragon(); clearGolem(); clearSiren(); clearSphinx(); clearColossus(); clearPhoenix();
     current = dim;
     if (stash[dim]) {
       CC.world.blocks = stash[dim].blocks;
@@ -1221,6 +1486,7 @@ window.CosmosDimensions = (function () {
       if (dim === 'abyss') spawnSiren();
       if (dim === 'singularity') spawnSphinx();
       if (dim === 'frost') spawnColossus();
+      if (dim === 'solaris') spawnPhoenix();
     } else {
       CC.world.blocks = new Map();
       CC.world.edits = {};
@@ -1231,6 +1497,7 @@ window.CosmosDimensions = (function () {
       else if (dim === 'abyss') generateAbyss();
       else if (dim === 'singularity') generateSingularity();
       else if (dim === 'frost') generateFrost();
+      else if (dim === 'solaris') generateSolaris();
     }
     CC.buildAllChunks();
     CC.respawn();
@@ -1243,6 +1510,7 @@ window.CosmosDimensions = (function () {
       : dim === 'abyss' ? 'THE ABYSS — hadal crystal reef and deep smokers. The Leviathan Siren circles.'
       : dim === 'singularity' ? 'THE CHRONO-SINGULARITY — fractured tesseract suspended in void. The Chrono-Sphinx commands the flow.'
       : dim === 'frost' ? 'THE HYPERBOREAN FROST EXPANSE — glacial obsidian shelves and absolute zero. The Cryo-Colossus awakens.'
+      : dim === 'solaris' ? 'THE SOLARIS AETHERIUM — radiant golden citadels and perpetual sunfire. The Helios Phoenix blazes.'
       : 'the overworld resumes. the aurora missed you.');
   }
 
@@ -1304,6 +1572,14 @@ window.CosmosDimensions = (function () {
       checkFrostMechanics(dt);
       if (CC.player.pos.y < FROST.FLOOR - 24) {
         CC.toast('the hyperborean winds lift you. you return thawed to the surface.');
+        switchTo('over');
+      }
+    }
+    if (current === 'solaris') {
+      updatePhoenix(dt);
+      checkSolarisMechanics(dt);
+      if (CC.player.pos.y < SOLARIS.FLOOR - 24) {
+        CC.toast('the solar winds elevate you. you return bathed in light to the surface.');
         switchTo('over');
       }
     }

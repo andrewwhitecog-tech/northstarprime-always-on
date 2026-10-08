@@ -65,3 +65,26 @@ def test_mystery_school_canonical_documents():
     charter_text = charter_doc.read_text(encoding="utf-8")
     assert "Cultural Governance & Original IP Charter" in charter_text
     assert "100% Original VORATH Speculative IP" in charter_text
+
+
+def test_mystery_school_caves_encounter():
+    caves = MS_ROOT / "caves" / "index.html"
+    assert caves.exists(), "Caves index.html is missing"
+    html = caves.read_text(encoding="utf-8")
+    assert "The Pitch-Black Caves" in html
+    assert "Stratum I: The Basalt Sump" in html
+    assert "Stratum II: The Filament Chasm" in html
+    assert "Stratum III: The Obsidian Cradle" in html
+    assert "Stratum IV: The Covenant Alcove" in html
+    assert "Surface Exit" in html
+
+
+def test_mystery_school_void_ritual():
+    void_page = MS_ROOT / "stare-into-the-void" / "index.html"
+    assert void_page.exists(), "stare-into-the-void index.html is missing"
+    html = void_page.read_text(encoding="utf-8")
+    assert "Stare Into The Void" in html
+    assert "What stares back from the abyss is love" in html
+    assert "1 Min (Reset)" in html
+    assert "9 Min (Threads)" in html
+

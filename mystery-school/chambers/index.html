@@ -768,7 +768,7 @@ DISCREPANCY: No tribunal ruling has ever produced lasting peace; only mutual wit
 
         <div class="deck-section">
           <h5>The Costly Moral Fork (One Writer per Artifact)</h5>
-          <p style="font-size:0.85rem;color:var(--muted)">True initiatory learning requires costly, non-trivial agency. Select a resolution below to record a verifiable ledger entry.</p>
+          <p style="font-size:0.85rem;color:var(--muted)">True initiatory learning requires costly, non-trivial agency. Select a resolution below to save a journal entry in this browser.</p>
           <div class="choice-container">
             <div class="choice-card ${existingResolution && existingResolution.choice === 'A' ? 'resolved' : ''}">
               <div>
@@ -781,7 +781,7 @@ DISCREPANCY: No tribunal ruling has ever produced lasting peace; only mutual wit
               <button class="button ${existingResolution && existingResolution.choice === 'A' ? 'primary' : 'secondary'}" 
                       style="margin-top:1rem;min-height:38px;font-size:0.75rem" 
                       onclick="recordChoice('${c.id}', 'A', '${c.choiceA.title}')">
-                ${existingResolution && existingResolution.choice === 'A' ? 'Recorded in Ledger' : 'Elect Option A'}
+                ${existingResolution && existingResolution.choice === 'A' ? 'Saved in Local Journal' : 'Elect Option A'}
               </button>
             </div>
 
@@ -796,7 +796,7 @@ DISCREPANCY: No tribunal ruling has ever produced lasting peace; only mutual wit
               <button class="button ${existingResolution && existingResolution.choice === 'B' ? 'primary' : 'secondary'}" 
                       style="margin-top:1rem;min-height:38px;font-size:0.75rem" 
                       onclick="recordChoice('${c.id}', 'B', '${c.choiceB.title}')">
-                ${existingResolution && existingResolution.choice === 'B' ? 'Recorded in Ledger' : 'Elect Option B'}
+                ${existingResolution && existingResolution.choice === 'B' ? 'Saved in Local Journal' : 'Elect Option B'}
               </button>
             </div>
           </div>
@@ -804,7 +804,7 @@ DISCREPANCY: No tribunal ruling has ever produced lasting peace; only mutual wit
 
         ${existingResolution ? `
           <div class="ledger-banner">
-            <strong>Ledger Seal Confirmed:</strong> Choice [${existingResolution.choice}] recorded at ${existingResolution.timestamp}. SHA256 Signature: <code>${existingResolution.hash}</code>
+            <strong>Local Journal Entry Saved:</strong> Choice [${existingResolution.choice}] recorded at ${existingResolution.timestamp}. Local entry ID: <code>${existingResolution.entryId || existingResolution.hash}</code>
           </div>
         ` : ''}
 
@@ -838,7 +838,7 @@ DISCREPANCY: No tribunal ruling has ever produced lasting peace; only mutual wit
     function recordChoice(chamberId, choiceKey, choiceTitle) {
       const history = getJournal();
       const timestamp = new Date().toISOString();
-      const mockHash = '0x' + Array.from(crypto.getRandomValues(new Uint8Array(8))).map(b => b.toString(16).padStart(2,'0')).join('');
+      const entryId = '0x' + Array.from(crypto.getRandomValues(new Uint8Array(8))).map(b => b.toString(16).padStart(2,'0')).join('');
       
       const filtered = history.filter(h => h.chamberId !== chamberId);
       filtered.push({
@@ -849,7 +849,7 @@ DISCREPANCY: No tribunal ruling has ever produced lasting peace; only mutual wit
         choice: choiceKey,
         title: choiceTitle,
         timestamp,
-        hash: mockHash
+        entryId
       });
       localStorage.setItem('northstar_chamber_journal', JSON.stringify(filtered));
       renderDeck();
@@ -873,7 +873,7 @@ DISCREPANCY: No tribunal ruling has ever produced lasting peace; only mutual wit
             Elected Option ${h.choice}: <strong>${h.title}</strong>
           </div>
           <div style="font-size:0.7rem;color:var(--muted);margin-top:0.3rem">
-            Custody Hash: <code>${h.hash}</code>
+            Local entry ID: <code>${h.entryId || h.hash}</code>
           </div>
         </div>
       `).join('');

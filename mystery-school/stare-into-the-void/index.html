@@ -396,6 +396,17 @@
       <button class="duration-btn active" data-minutes="3">3 Min (Clear)</button>
       <button class="duration-btn" data-minutes="5">5 Min (Still)</button>
       <button class="duration-btn" data-minutes="9">9 Min (Threads)</button>
+      <button class="duration-btn" data-minutes="15">15 Min (Flow)</button>
+      <button class="duration-btn" data-minutes="25">25 Min (Deep Work)</button>
+    </div>
+
+    <!-- Isochronic Resonance Presets (Beta, Alpha, Theta, Gamma) -->
+    <div class="resonance-selector" id="resonance-selector" style="display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; justify-content: center; align-items: center;">
+      <span style="font-size: 0.7rem; color: var(--gold); letter-spacing: 1.5px; text-transform: uppercase;">Tone:</span>
+      <button class="duration-btn active tone-btn" data-preset="focus" data-pulse="16" data-carrier="136.1" title="Beta 16 Hz · Cognitive Focus &amp; Concentration">Focus (Beta 16Hz)</button>
+      <button class="duration-btn tone-btn" data-preset="flow" data-pulse="10" data-carrier="216" title="Alpha 10 Hz · Unhurried Flow State">Flow (Alpha 10Hz)</button>
+      <button class="duration-btn tone-btn" data-preset="calm" data-pulse="6" data-carrier="108" title="Theta 6 Hz · Deep Subterranean Stillness">Calm (Theta 6Hz)</button>
+      <button class="duration-btn tone-btn" data-preset="deep" data-pulse="40" data-carrier="432" title="Gamma 40 Hz · High Clarity Synchrony">Deep (Gamma 40Hz)</button>
     </div>
 
     <div class="control-row">
@@ -442,7 +453,8 @@
       const timerDisplay = document.getElementById('timer-display');
       const startBtn = document.getElementById('start-btn');
       const startCore = document.getElementById('start-core');
-      const durationBtns = document.querySelectorAll('.duration-btn');
+      const durationBtns = document.querySelectorAll('#duration-selector .duration-btn');
+      const toneBtns = document.querySelectorAll('.tone-btn');
       const breathToggle = document.getElementById('breath-toggle');
       const soundToggle = document.getElementById('sound-toggle');
       const breathCue = document.getElementById('breath-cue');
@@ -452,26 +464,57 @@
       const saveNoteBtn = document.getElementById('save-note-btn');
       const reflectionInput = document.getElementById('reflection-input');
 
-      // Web Audio Subterranean 108Hz Pure Sine Generator
+      // Web Audio Isochronic & Subterranean Resonator
       let audioCtx = null;
-      let osc = null, gain = null;
+      let carrierOsc = null, subBedOsc = null, lfoOsc = null;
+      let pulseGain = null, lfoGain = null, masterGain = null;
+      let currentPulseHz = 16.0;
+      let currentCarrierHz = 136.1;
+      let currentToneLabel = 'Beta 16Hz';
 
       function startAudio() {
         if (!isSoundOn || audioCtx) return;
         try {
           audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-          osc = audioCtx.createOscillator();
-          gain = audioCtx.createGain();
+          const now = audioCtx.currentTime;
 
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(108, audioCtx.currentTime);
+          carrierOsc = audioCtx.createOscillator();
+          carrierOsc.type = 'sine';
+          carrierOsc.frequency.setValueAtTime(currentCarrierHz, now);
 
-          gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.025, audioCtx.currentTime + 3);
+          subBedOsc = audioCtx.createOscillator();
+          subBedOsc.type = 'sine';
+          subBedOsc.frequency.setValueAtTime(currentCarrierHz * 0.5, now);
 
-          osc.connect(gain);
-          gain.connect(audioCtx.destination);
-          osc.start();
+          pulseGain = audioCtx.createGain();
+          pulseGain.gain.setValueAtTime(0.5, now);
+
+          lfoOsc = audioCtx.createOscillator();
+          lfoOsc.type = 'sine';
+          lfoOsc.frequency.setValueAtTime(currentPulseHz, now);
+
+          lfoGain = audioCtx.createGain();
+          lfoGain.gain.setValueAtTime(0.48, now);
+
+          lfoOsc.connect(lfoGain);
+          lfoGain.connect(pulseGain.gain);
+
+          const subGain = audioCtx.createGain();
+          subGain.gain.setValueAtTime(0.015, now);
+          subBedOsc.connect(subGain);
+
+          masterGain = audioCtx.createGain();
+          masterGain.gain.setValueAtTime(0.0001, now);
+          masterGain.gain.exponentialRampToValueAtTime(0.035, now + 2.0);
+
+          carrierOsc.connect(pulseGain);
+          pulseGain.connect(masterGain);
+          subGain.connect(masterGain);
+          masterGain.connect(audioCtx.destination);
+
+          carrierOsc.start();
+          subBedOsc.start();
+          lfoOsc.start();
         } catch(e) {
           console.warn('Audio not available', e);
         }
@@ -479,21 +522,25 @@
 
       function stopAudio() {
         const retiringContext = audioCtx;
-        const retiringNodes = [osc];
-        const retiringGain = gain;
+        const retiringNodes = [carrierOsc, subBedOsc, lfoOsc];
+        const retiringGain = masterGain;
         audioCtx = null;
-        osc = null;
-        gain = null;
+        carrierOsc = null;
+        subBedOsc = null;
+        lfoOsc = null;
+        pulseGain = null;
+        lfoGain = null;
+        masterGain = null;
         if (retiringContext && retiringGain) {
           const now = retiringContext.currentTime;
           retiringGain.gain.cancelScheduledValues(now);
           retiringGain.gain.setValueAtTime(Math.max(retiringGain.gain.value, 0.0001), now);
-          retiringGain.gain.exponentialRampToValueAtTime(0.0001, now + 1);
+          retiringGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.8);
           setTimeout(() => {
-            retiringNodes.forEach(node => { if (node) { node.stop(); node.disconnect(); } });
+            retiringNodes.forEach(node => { if (node) { try { node.stop(); node.disconnect(); } catch(err){} } });
             retiringGain.disconnect();
             retiringContext.close();
-          }, 1000);
+          }, 900);
         }
       }
 
@@ -603,11 +650,43 @@
         }
       });
 
+      // Tone / Isochronic preset selector
+      toneBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          toneBtns.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentPulseHz = parseFloat(btn.dataset.pulse) || 16.0;
+          currentCarrierHz = parseFloat(btn.dataset.carrier) || 136.1;
+          currentToneLabel = btn.textContent.trim();
+          if (isSoundOn) {
+            soundToggle.querySelector('strong').textContent = currentToneLabel;
+          }
+          if (audioCtx) {
+            const now = audioCtx.currentTime;
+            if (carrierOsc) {
+              carrierOsc.frequency.cancelScheduledValues(now);
+              carrierOsc.frequency.setValueAtTime(carrierOsc.frequency.value, now);
+              carrierOsc.frequency.exponentialRampToValueAtTime(currentCarrierHz, now + 0.2);
+            }
+            if (subBedOsc) {
+              subBedOsc.frequency.cancelScheduledValues(now);
+              subBedOsc.frequency.setValueAtTime(subBedOsc.frequency.value, now);
+              subBedOsc.frequency.exponentialRampToValueAtTime(currentCarrierHz * 0.5, now + 0.2);
+            }
+            if (lfoOsc) {
+              lfoOsc.frequency.cancelScheduledValues(now);
+              lfoOsc.frequency.setValueAtTime(lfoOsc.frequency.value, now);
+              lfoOsc.frequency.exponentialRampToValueAtTime(Math.max(currentPulseHz, 0.1), now + 0.2);
+            }
+          }
+        });
+      });
+
       // Sound toggle
       soundToggle.addEventListener('click', () => {
         isSoundOn = !isSoundOn;
         soundToggle.classList.toggle('active', isSoundOn);
-        soundToggle.querySelector('strong').textContent = isSoundOn ? '108 Hz Sine' : 'Off';
+        soundToggle.querySelector('strong').textContent = isSoundOn ? currentToneLabel : 'Off';
         if (isRunning) {
           if (isSoundOn) startAudio();
           else stopAudio();

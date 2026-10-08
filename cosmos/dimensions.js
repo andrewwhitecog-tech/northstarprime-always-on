@@ -978,7 +978,7 @@ window.CosmosDimensions = (function () {
 
   function generateFrost() {
     var F = FROST.FLOOR, R = FROST.RADIUS;
-    CC.world.spawn = [0, F + 2, -6];
+    CC.world.spawn = { x: 0, y: F + 2, z: -6 };
 
     // 1. Central Glacial Shelf (Frost Obsidian + Glacial Core)
     for (var x = -R; x <= R; x++) {
@@ -1215,7 +1215,7 @@ window.CosmosDimensions = (function () {
 
   function generateSolaris() {
     var F = SOLARIS.FLOOR, R = SOLARIS.RADIUS;
-    CC.world.spawn = [0, F + 2, -6];
+    CC.world.spawn = { x: 0, y: F + 2, z: -6 };
 
     // 1. Central Solar Citadel Disc (Solar Prism + Solar Core + Gold Veins)
     for (var x = -R; x <= R; x++) {

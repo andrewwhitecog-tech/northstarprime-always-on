@@ -163,7 +163,9 @@ def main() -> None:
     path = ROOT / "index.html"
     page = read_page(path)
     check_identity(page, "NorthStar Prime — Music, Games & Films", ORIGIN + "/")
-    required = {"/idr/", "/arcade/", "/idc-programming/", "/access/", "/mystery-school/", "/hire/", "/contact/", "/literature/", "/stickerforge/", "/store/", "/links/", "/renalshield/"}
+    app = "https://app.northstarprime.net"
+    required = {app + "/idc-programming", app + "/idr", app + "/arcade", app + "/chromatic", app + "/mystery-school", app + "/services", app + "/ckd-kitchen",
+                "/ckd-kitchen/", "/renalshield/", "/software/", "/sitemap.xml", "mailto:contact@northstarprime.net"}
     if not required.issubset(page.links):
         raise SystemExit(f"Missing customer destination: {sorted(required-set(page.links))}")
     check_local_links(ROOT, path, page)

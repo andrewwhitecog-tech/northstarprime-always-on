@@ -138,7 +138,6 @@ EXPLICIT_ALIASES = [
     (r"butterfinger", "ckd-butterfinger-dupe.webp"),
     (r"kit kat|crisp wafer bar", "ckd-kit-kat-dupe.webp"),
     (r"snickers", "ckd-snickers-dupe.webp"),
-    (r"twix", "ckd-twix-dupe.webp"),
     (r"cinnabon delights", "ckd-cinnabon-delights-dessert.webp"),
     (r"cloud biscuits|fluffy biscuits", "ckd-biscuits-fluffy-phosphorus-free.webp"),
     (r"carne asada fries", "ckd-carne-asada-fries.webp"),

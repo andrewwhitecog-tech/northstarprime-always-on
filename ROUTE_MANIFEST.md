@@ -12,15 +12,25 @@ Verified 2026-08-27.
 - The apex uses all four official GitHub Pages IPv4 targets. Web routing is DNS
   only; mail and domain-authentication records are independent and unchanged.
 
-## Full homepage
+## Front page
 
-- Source: index.html
-- The page is a frozen copy of the full public NSP homepage, not the original
-  minimal resilience shell.
-- All 22 referenced image/video assets are direct-hosted in this repository.
-- Thirty-six links for non-mirrored server routes are sent to app.northstarprime.net.
-- The home-freeze manifest records source, timestamp, byte sizes, and SHA-256
-  hashes for the page and every referenced asset.
+- Source: index.html, styled by static/front-door.css (look C, Space Grotesk
+  hosted in static/fonts/ with its OFL.txt).
+- One front page into the app (Andrew, 2026-10-13). Its doors follow the app's
+  top menu (Watch, Listen, Play, Shop, Learn) plus Creative services and the
+  Kitchen, and every door opens a page on app.northstarprime.net. During an app
+  outage this page still loads but its doors do not.
+- The footer keeps the local cookbook reader, RenalShield, harm reduction,
+  software, Continuity Atlas and links routes, the sitemap and the contact email.
+- All referenced pictures, fonts and the stylesheet are direct-hosted in this
+  repository. The home-freeze manifest records byte sizes and SHA-256 hashes for
+  the page and every referenced asset.
+
+## Moved pages
+
+- `/store/`, `/gallery/` and `/solarium/` are small pages that say where the
+  thing lives now and forward after 0 seconds to
+  https://app.northstarprime.net/chromatic. The files they used stay in place.
 
 ## Static recovery route
 
@@ -81,7 +91,7 @@ destination, and the security policy canonically identifies its always-on URL.
 - Canonical public path: /links/
 - Provides one tracker-free, always-on directory for NSP experiences and the
   verified TikTok, YouTube, Instagram, Reddit, and Moltbook profiles.
-- The homepage navigation and social footer both expose this route.
+- The homepage footer exposes this route.
 
 ## Creator route
 
@@ -207,8 +217,9 @@ published-size calculation.
     python tools/verify_http_mirror.py
     python tools/verify_idc_static.py --network
 
-The home verifier checks the full-page guard, manifest hashes, all 22 media
-assets, local filesystem leakage, and dangling local routes. The IDC verifier
+The home verifier checks the page identity, its required app doors and local
+routes, manifest hashes for every referenced asset, local filesystem leakage,
+and dangling local routes. The IDC verifier
 checks the HTML/manifest mapping, tracked MP4 inventory and sizes, broken local
 Windows paths, embed code, and optionally all nine YouTube oEmbed endpoints.
 The creator-route verifier checks the app target, canonical/refresh/fallback

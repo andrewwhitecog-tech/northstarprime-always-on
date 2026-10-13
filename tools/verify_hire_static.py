@@ -39,10 +39,10 @@ def main() -> None:
     page = read_page(HIRE)
     check_identity(page, "Software Assessments & Institutional Projects | NorthStar Digital", ORIGIN + "/hire/")
     check_local_links(ROOT, HIRE, page)
-    # Shared resources use the home's hashes; this does not exercise remote checkout.
+    # The hire page keeps its own resource hashes; this does not exercise remote checkout.
     resources = collect_local_assets(ROOT, HIRE, page)
-    home = json.loads((ROOT / "HOME_FREEZE_MANIFEST.json").read_text(encoding="utf-8"))
-    rows = [row for row in home["assets"] if row["relative_path"] in resources]
+    hire = json.loads((ROOT / "HIRE_FREEZE_MANIFEST.json").read_text(encoding="utf-8"))
+    rows = [row for row in hire["assets"] if row["relative_path"] in resources]
     check_asset_manifest(ROOT, rows, resources)
     required = ("Failure Map", "Release Confidence", "Commerce Activation", "$2,500", "$5,000", "$15,000",
                 "Proposal-first / 50% to schedule", "mailto:contact@northstarprime.net", "Procurement%20requirements")

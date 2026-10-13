@@ -3,6 +3,8 @@ name: Deploy curated NorthStar Pages
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -11,8 +13,10 @@ permissions:
   id-token: write
   actions: read
 
+# A pull request runs every check below and stops before publishing.
+# It gets its own group so it can never cancel a deploy of main.
 concurrency:
-  group: pages
+  group: ${{ github.event_name == 'pull_request' && format('pages-pr-{0}', github.event.pull_request.number) || 'pages' }}
   cancel-in-progress: true
 
 jobs:
@@ -24,6 +28,7 @@ jobs:
         with:
           show-progress: false
       - name: Configure Pages
+        if: github.event_name != 'pull_request'
         uses: actions/configure-pages@v6
       - name: Verify homepage continuity and monitor failure handling
         run: |
@@ -78,12 +83,14 @@ jobs:
       - name: Verify MIDNIGHT LOOM mature bumper
         run: python tools/verify_midnight_loom_static.py
       - name: Upload Pages artifact
+        if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v5
         with:
           path: output/pages-artifact
           include-hidden-files: true
 
   deploy:
+    if: github.event_name != 'pull_request'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

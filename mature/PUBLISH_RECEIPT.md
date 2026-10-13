@@ -4,7 +4,7 @@
 - Assets: 10 keeper PNGs + contact sheet + 8 recipe Markdown files
 - Gate: anonymous 18+ confirmation required before image `src` assignment
 - Rating: R / audience 18+
-- Corrective commit: `840aceef73ebf8b2f1465872a950635eb8943dc6`
+- Corrective commit: `03c6ead50189432a681c93c68a74de7727e923ea`
 - GitHub Pages deployment: https://github.com/andrewwhitecog-tech/northstarprime-always-on/actions/runs/33923847591 (`success`)
 - Verified live: 2026-09-04T22:06:32Z
 - Anonymous production QA: zero mature PNG requests before confirmation; 10/10 images returned 200 and decoded at 1536×1024 after confirmation; console errors/warnings 0

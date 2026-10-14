@@ -5,7 +5,7 @@ Verified 2026-08-27.
 ## Canonical service
 
 - https://northstarprime.net is served by GitHub Pages and does not depend on
-  Andre's computer.
+  Andrew's computer.
 - https://www.northstarprime.net points to GitHub Pages and redirects to the
   canonical apex.
 - https://app.northstarprime.net is the verified Render-backed dynamic service.

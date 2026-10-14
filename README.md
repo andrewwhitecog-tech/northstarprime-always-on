@@ -2,7 +2,7 @@
 Always-on NorthStar Prime mirror for northstarprime.net.
 
 The apex and www hostnames are served by GitHub Pages and do not depend on
-Andre's computer. The homepage is a lightweight guest entrance with original still art,
+Andrew's computer. The homepage is a lightweight guest entrance with original still art,
 clear listening, viewing and workshop routes. Links that still need server-side
 behavior go to app.northstarprime.net, the verified Render service.
 
@@ -16,7 +16,7 @@ withheld from the public tree until it receives a separate release decision.
 The `/continuity-atlas/` route is a self-contained, source-linked film,
 television, and Jeopardy evidence graph. Its HTML, CSS, graph snapshot, and
 JavaScript viewer are stored in this repository, so the atlas remains usable
-when the dynamic service or Andre's computer is offline.
+when the dynamic service or Andrew's computer is offline.
 
 The `/contact/` route and `/.well-known/security.txt` provide an always-on
 branded mail fallback and security contact policy without exposing the private

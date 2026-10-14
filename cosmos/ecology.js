@@ -1,6 +1,6 @@
 /* ============================================================
    CUBIC COSMOS · ecology.js — THE DRIFT ECOLOGY (data + laws)
-   Andre's twin invariants, enforced by validate():
+   Andrew's twin invariants, enforced by validate():
      1. Every species has at least one natural predator.
      2. Every species has exactly one equal-opposite moral
         mirror (benevolent ↔ malevolent), and mirrors are

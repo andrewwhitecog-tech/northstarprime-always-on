@@ -52,4 +52,4 @@ Contains **milk** (butter, cream). Broth may contain **soy** or **wheat**—chec
 
 ## Editorial / renal note
 
-Ordinary legal food ingredients only. No cannabis/controlled substances; no aphrodisiac, libido, or sexual-performance claims; no “renal-safe” claim; no invented K/P/Na/fluid or nutrition figures. Andre (and any reader with CKD/hemodialysis): individual renal limits require clinician/dietitian review.
+Ordinary legal food ingredients only. No cannabis/controlled substances; no aphrodisiac, libido, or sexual-performance claims; no “renal-safe” claim; no invented K/P/Na/fluid or nutrition figures. Andrew (and any reader with CKD/hemodialysis): individual renal limits require clinician/dietitian review.

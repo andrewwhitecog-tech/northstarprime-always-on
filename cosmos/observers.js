@@ -8,7 +8,7 @@
    into thin air. You only ever catch a glimpse.
    They never touch the player, dialogue, lasers, or blocks.
    Kinds: MOLE FOLK · CRAB FOLK · LITTLE GREEN MEN · TALL GREYS.
-   (Design brief update 2026-07-19: Andre requested eyed
+   (Design brief update 2026-07-19: Andrew requested eyed
    creature-observers; kept original geometric-cryptid style.)
    Console: CosmosObservers.debugSpawn('grey') to force one.
    ============================================================ */

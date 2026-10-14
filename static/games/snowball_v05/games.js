@@ -130,7 +130,7 @@ if(kind==='shell') {
     if(ids.length>8)return {error:'This cabinet supports up to eight stages.',trace};
     for(const id of ids){
       let error='';if(!commands[id])error='Unknown command.';
-      else if(['cat','ls','curl'].includes(id)){if(value!==null)error='Place a source at the beginning of this teaching pipeline.';else value=id==='cat'?line(log.slice()):id==='ls'?line(files.slice()):json({name:'Andre',role:'founder'});}
+      else if(['cat','ls','curl'].includes(id)){if(value!==null)error='Place a source at the beginning of this teaching pipeline.';else value=id==='cat'?line(log.slice()):id==='ls'?line(files.slice()):json({name:'Andrew',role:'founder'});}
       else if(['jqn','jqr'].includes(id)){if(value?.type!=='json')error='jq expects the JSON fixture from curl.';else value=line([String(value.value[id==='jqn'?'name':'role'])]);}
       else if(value?.type!=='text')error='This stage expects text lines. Add a text source or extract a JSON field first.';
       else {const v=value.lines;switch(id){case'gerr':value=line(v.filter(l=>l.includes('error')));break;case'ginfo':value=line(v.filter(l=>l.includes('info')));break;case'gtxt':value=line(v.filter(l=>l.endsWith('.txt')));break;case'wc':value=line([String(v.length)]);break;case'sort':value=line(v.slice().sort());break;case'head':value=line(v.slice(0,3));break;case'summary':value=line([summary(v)]);break;}}
@@ -143,7 +143,7 @@ if(kind==='shell') {
     {name:'Wake the console',goal:'Print all five lines of log.txt.',cmds:['cat','ls','gerr'],expected:log,hint:'Begin with a source. cat log.txt reads the fixture file.'},
     {name:'Isolate the fault',goal:'Return only the two log lines that contain error.',cmds:['cat','gerr','ginfo','wc'],expected:log.filter(l=>l.includes('error')),hint:'Read the log, then pipe its text into grep error.'},
     {name:'Count the damage',goal:'Return the number of error lines as one value: 2.',cmds:['cat','gerr','wc','sort'],expected:['2'],hint:'Read → filter → count. Counting before filtering changes the data.'},
-    {name:'Bind the API',goal:'Return the name Andre from the fictional API response.',cmds:['curl','jqn','jqr','cat'],expected:['Andre'],hint:'The simulated curl returns a JSON object. jq -r .name extracts raw text.'},
+    {name:'Bind the API',goal:'Return the name Andrew from the fictional API response.',cmds:['curl','jqn','jqr','cat'],expected:['Andrew'],hint:'The simulated curl returns a JSON object. jq -r .name extracts raw text.'},
     {name:'Check the summary',goal:'Summarize all five log lines: 2 errors, 1 warning, 5 lines reviewed.',cmds:['cat','summary','gerr','wc'],expected:[summary(log)],hint:'Feed the complete log to summary. This teaching stage counts its actual input; it is not a live AI model.'},
     {name:'Seal the pipeline',goal:'Return only the .txt filenames, ordered A–Z: notes.txt, then readme.txt.',cmds:['ls','gtxt','sort','head'],expected:['notes.txt','readme.txt'],hint:'List files → filter the .txt suffix → sort. Inspect each stage below.'}
   ];

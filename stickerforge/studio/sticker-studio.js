@@ -155,6 +155,7 @@
       div.className = 'tray-sticker-item';
       div.title = `${item.name} (${item.collection})`;
       const img = document.createElement('img');
+      img.crossOrigin = 'anonymous';
       img.src = item.file;
       img.alt = item.name;
       img.loading = 'lazy';
@@ -200,6 +201,7 @@
     };
 
     const img = document.createElement('img');
+    img.crossOrigin = 'anonymous';
     img.src = item.file;
     img.alt = item.name;
     img.draggable = false;

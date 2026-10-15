@@ -191,9 +191,10 @@ def build_page(item: dict, prev_item: dict | None, next_item: dict | None) -> st
       top: 0;
       z-index: 20;
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
-      gap: 14px;
+      gap: 6px 14px;
       min-height: 52px;
       margin: 0 -20px 30px;
       padding: 8px max(20px, calc((100vw - 1040px) / 2));
@@ -215,6 +216,7 @@ def build_page(item: dict, prev_item: dict | None, next_item: dict | None) -> st
     }}
     .breadcrumbs {{
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       gap: 8px;
     }}
@@ -489,6 +491,7 @@ def build_page(item: dict, prev_item: dict | None, next_item: dict | None) -> st
     }}
     @media (max-width: 640px) {{
       body {{ padding: 0 12px 40px; }}
+      .masthead {{ margin: 0 -12px 24px; padding: 8px 12px; }}
       .header-card, .reader-card {{ padding: 22px 18px; }}
       .pagination-bar {{ flex-direction: column; align-items: stretch; }}
       .nav-btn {{ text-align: center; }}

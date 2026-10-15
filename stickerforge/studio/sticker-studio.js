@@ -107,7 +107,7 @@
         const items = data.items.map(i => ({
           id: i.id,
           name: i.name,
-          file: '../' + i.preview_file,
+          file: i.preview || '/' + i.preview_file,
           original: i.image,
           collection: i.collection,
           collection_id: i.collection_id

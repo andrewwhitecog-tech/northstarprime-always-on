@@ -32,7 +32,7 @@ def verify():
     for view in ['shop','compact','gallery']:
         assert f'data-view-choice="{view}"' in html
     assert 'scroll-snap-type:y mandatory' not in html
-    assert 'no membership required' in html and 'confirmed before payment' in html
+    assert 'no membership required' in html.lower() and 'Printed to order; price and delivery confirmed before payment.' in html
     return {'status':'PASS','items':len(items),'collections':len({i['collection_id'] for i in items}),'preview_hashes':len(items),'static_fallback_cards':len(parser.ids)}
 
 if __name__ == '__main__':

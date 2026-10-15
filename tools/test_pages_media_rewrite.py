@@ -6,10 +6,9 @@ m=importlib.util.module_from_spec(s);s.loader.exec_module(m)
 commit="a"*40
 base="https://raw.githubusercontent.com/andrewwhitecog-tech/northstarprime-always-on/"+commit+"/"
 selected={"idc/season-4/audio/a.mp3","idc/season-3/audio/excerpts/a.mp3","static/games/sfx/dharma_jump.mp3","static/idc_covers/x.png"}
-dirs={"idc/season-4/audio/","static/idc_covers/"}
 class MediaRewrite(unittest.TestCase):
  def rewrite(self,text,page="idc/season-4/index.html"):
-  return m.rewrite_release_media_refs(text,Path(page),selected,dirs,commit)
+  return m.rewrite_release_media_refs(text,Path(page),selected,commit)
  def test_literal(self):
   self.assertEqual(self.rewrite("'audio/a.mp3'"),"'"+base+"idc/season-4/audio/a.mp3'")
  def test_prefix(self):
@@ -24,9 +23,9 @@ class MediaRewrite(unittest.TestCase):
   for value in ['"https://example.org/a.mp3"','"F:/private/a.mp3"','"/static/missing.mp3"',"'jump'",'"../secret.mp3"']:
    self.assertEqual(self.rewrite(value),value)
  def test_encoded_filename(self):
-  result=m.rewrite_release_media_refs("'audio/a%23b.mp3'",Path("index.html"),{"audio/a#b.mp3"},set(),commit)
+  result=m.rewrite_release_media_refs("'audio/a%23b.mp3'",Path("index.html"),{"audio/a#b.mp3"},commit)
   self.assertEqual(result,"'"+base+"audio/a%23b.mp3'")
-  result=m.rewrite_release_media_refs("'audio/a%20b.mp3?download=1#seek'",Path("index.html"),{"audio/a b.mp3"},set(),commit)
+  result=m.rewrite_release_media_refs("'audio/a%20b.mp3?download=1#seek'",Path("index.html"),{"audio/a b.mp3"},commit)
   self.assertEqual(result,"'"+base+"audio/a%20b.mp3?download=1#seek'")
  def test_actual_sfx_gallery_script(self):
   canonical=ROOT.parent
@@ -38,7 +37,7 @@ class MediaRewrite(unittest.TestCase):
    self.assertFalse(m.external_release_media(file.relative_to(canonical)))
   for file in (source.parent).glob("*.wav"):
    self.assertFalse(m.external_release_media(file.relative_to(canonical)))
-  rewritten=m.rewrite_release_media_refs(html,Path("static/games/sfx/index.html"),selected,dirs,commit)
+  rewritten=m.rewrite_release_media_refs(html,Path("static/games/sfx/index.html"),selected,commit)
   script=re.search(r"<script>(.*?)</script>",rewritten,re.S).group(1)
   harness="const box={};const document={getElementById:()=>box};"+script+"\nprocess.stdout.write(box.innerHTML);"
   rendered=subprocess.check_output(["node","-e",harness],text=True,encoding="utf-8")
@@ -48,6 +47,10 @@ class MediaRewrite(unittest.TestCase):
   for path in links+audio:
    self.assertTrue((source.parent/path).is_file(),path)
    self.assertFalse(m.external_release_media((source.parent/path).relative_to(canonical)))
+ def test_page_links_to_media_folders(self):
+  pages={"idr/single-052/a.mp3","idc/season-4/chrono-convergence/b.mp4"}
+  for value in ['href="/idr/single-052/"',"href='/idc/season-4/chrono-convergence/'",'href="../single-052/"']:
+   self.assertEqual(m.rewrite_release_media_refs(value,Path("idr/single-053/index.html"),pages,commit),value)
  def test_idempotent(self):
   out=self.rewrite("'audio/a.mp3'");self.assertEqual(self.rewrite(out),out)
 if __name__=="__main__":unittest.main()

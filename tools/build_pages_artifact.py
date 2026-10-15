@@ -105,16 +105,15 @@ def tracked_source_paths():
     return [Path(p.decode("utf-8")) for p in raw.split(b"\0") if p]
 
 def release_media_index():
-    selected = {p.as_posix() for p in tracked_source_paths() if external_release_media(p)}
-    directories = {str(Path(p).parent).replace("\\", "/") + "/" for p in selected}
-    directories.add("static/idc_covers/")
-    return selected, directories
+    return {p.as_posix() for p in tracked_source_paths() if external_release_media(p)}
 
-def rewrite_release_media_refs(raw: str, relative: Path, selected: set[str], directories: set[str], commit: str) -> str:
+def rewrite_release_media_refs(raw: str, relative: Path, selected: set[str], commit: str) -> str:
     import re, posixpath
     from urllib.parse import urlsplit, unquote, quote
     # Literal HTML attributes, CSS url(), JSON/JS values, and JS directory prefixes.
     # Do not rewrite prose, already-external URLs, or filesystem source provenance.
+    # A bare folder link such as "/idr/single-052/" is a page link, never media,
+    # even when that folder also holds audio or video.
     # This manifest is consumed by season-3/app.js; audio resolves against its page,
     # not the data/ JSON URL. Keep this explicit instead of guessing arbitrary bases.
     if relative.as_posix() == "idc/season-3/data/listening_manifest.json":
@@ -133,7 +132,7 @@ def rewrite_release_media_refs(raw: str, relative: Path, selected: set[str], dir
             and raw[match.end() + 1:].lstrip().startswith("+")
             and any(item.startswith(resolved) for item in selected)
         )
-        if resolved in selected or dynamic_prefix or (path.endswith("/") and resolved.rstrip("/") + "/" in directories):
+        if resolved in selected or dynamic_prefix:
             suffix = ("/" if path.endswith("/") else "") + ("?" + parsed.query if parsed.query else "") + ("#" + parsed.fragment if parsed.fragment else "")
             return match.group("lead") + base + quote(resolved, safe="/") + suffix
         return match.group(0)
@@ -279,7 +278,7 @@ def build(output: Path) -> dict:
                     pass
     output.mkdir(parents=True, exist_ok=True)
 
-    selected_media, media_directories = release_media_index()
+    selected_media = release_media_index()
     if len(media_commit) != 40:
         raise ValueError("Immutable media delivery requires an exact source commit")
     rewrites = 0
@@ -294,7 +293,7 @@ def build(output: Path) -> dict:
                 raw = raw.replace(LOCAL_VIDEO_BASE, APP_VIDEO_BASE)
                 rewrites += count
             raw = rewrite_sticker_refs(raw, relative)
-            raw = rewrite_release_media_refs(raw, relative, selected_media, media_directories, media_commit)
+            raw = rewrite_release_media_refs(raw, relative, selected_media, media_commit)
             destination.write_text(raw, encoding="utf-8", newline="\n")
             shutil.copymode(source, destination)
         else:

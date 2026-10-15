@@ -60,10 +60,10 @@
     dialog.querySelector('#detail-next').disabled = active >= matches.length - 1;
     if (!dialog.open) dialog.showModal();
   }
-  cards.forEach(card => card.querySelector('.preview').addEventListener('click', event => {
+  cards.forEach(card => card.querySelectorAll('.preview, .zoom').forEach(link => link.addEventListener('click', event => {
     if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || !dialog.showModal) return;
-    event.preventDefault(); opener = event.currentTarget; show(card);
-  }));
+    event.preventDefault(); opener = card.querySelector('.preview'); show(card);
+  })));
   dialog.querySelector('.close').addEventListener('click', () => dialog.close());
   dialog.addEventListener('close', () => { dialog.querySelector('img').removeAttribute('src'); opener?.focus({preventScroll:true}); });
   dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });

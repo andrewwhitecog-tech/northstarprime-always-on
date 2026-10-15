@@ -107,7 +107,7 @@
         const items = data.items.map(i => ({
           id: i.id,
           name: i.name,
-          file: '../' + i.preview_file,
+          file: i.preview || '/' + i.preview_file,
           original: i.image,
           collection: i.collection,
           collection_id: i.collection_id
@@ -155,6 +155,7 @@
       div.className = 'tray-sticker-item';
       div.title = `${item.name} (${item.collection})`;
       const img = document.createElement('img');
+      img.crossOrigin = 'anonymous';
       img.src = item.file;
       img.alt = item.name;
       img.loading = 'lazy';
@@ -200,6 +201,7 @@
     };
 
     const img = document.createElement('img');
+    img.crossOrigin = 'anonymous';
     img.src = item.file;
     img.alt = item.name;
     img.draggable = false;

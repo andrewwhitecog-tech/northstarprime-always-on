@@ -29,8 +29,6 @@ class MediaRewrite(unittest.TestCase):
   self.assertEqual(result,"'"+base+"audio/a%20b.mp3?download=1#seek'")
  def test_actual_sfx_gallery_script(self):
   canonical=ROOT.parent
-  if not (canonical/"static/games/sfx/index.html").is_file():
-   canonical=Path(r"C:\Users\andre\scripts\the_workshop\projects\northstarprime-always-on")
   source=canonical/"static/games/sfx/index.html"
   html=source.read_text(encoding="utf-8")
   for file in (source.parent).glob("*.mp3"):
@@ -51,6 +49,30 @@ class MediaRewrite(unittest.TestCase):
   pages={"idr/single-052/a.mp3","idc/season-4/chrono-convergence/b.mp4"}
   for value in ['href="/idr/single-052/"',"href='/idc/season-4/chrono-convergence/'",'href="../single-052/"']:
    self.assertEqual(m.rewrite_release_media_refs(value,Path("idr/single-053/index.html"),pages,commit),value)
+ def test_paint_originals_use_versioned_raw_delivery(self):
+  original=Path("coloring-studio/assets/reviewed/deep_reef__09_octopus.png")
+  self.assertTrue(m.external_release_media(original))
+  self.assertFalse(m.external_release_media(Path("coloring-studio/reviewed-inventory.json")))
+  manifest={"pages":[{"kind":"kids","title":"Deep Reef: Octopus","src":"assets/reviewed/deep_reef__09_octopus.png","sha256":"b"*64,"bytes":2506442}]}
+  encoded=json.dumps(manifest)
+  rewritten=m.rewrite_release_media_refs(encoded,Path("coloring-studio/reviewed-inventory.json"),{original.as_posix()},commit)
+  actual=json.loads(rewritten)
+  self.assertEqual(actual["pages"][0],{**manifest["pages"][0],"src":base+original.as_posix()})
+  self.assertEqual(m.rewrite_release_media_refs(rewritten,Path("coloring-studio/reviewed-inventory.json"),{original.as_posix()},commit),rewritten)
+ def test_actual_reviewed_paint_inventory_stays_hash_bound(self):
+  manifest_path=ROOT.parent/"coloring-studio/reviewed-inventory.json"
+  manifest=json.loads(manifest_path.read_text(encoding="utf-8"))
+  pages=manifest["pages"]
+  self.assertEqual(len(pages),20)
+  self.assertEqual(sum(p["kind"]=="kids" for p in pages),10)
+  originals={(Path("coloring-studio")/p["src"]).as_posix() for p in pages}
+  rewritten=json.loads(m.rewrite_release_media_refs(json.dumps(manifest),Path("coloring-studio/reviewed-inventory.json"),originals,commit))
+  for original,delivered in zip(pages,rewritten["pages"]):
+   actual_path=manifest_path.parent/original["src"]
+   self.assertEqual(actual_path.stat().st_size,original["bytes"])
+   self.assertEqual(m.sha256(actual_path).lower(),original["sha256"])
+   self.assertTrue(m.external_release_media(actual_path.relative_to(ROOT.parent)))
+   self.assertEqual(delivered,{**original,"src":base+actual_path.relative_to(ROOT.parent).as_posix()})
  def test_idempotent(self):
   out=self.rewrite("'audio/a.mp3'");self.assertEqual(self.rewrite(out),out)
 if __name__=="__main__":unittest.main()

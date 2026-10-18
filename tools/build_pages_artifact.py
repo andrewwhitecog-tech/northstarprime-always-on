@@ -78,6 +78,7 @@ AUDIO_SUFFIXES = {".mp3", ".wav", ".m4a", ".ogg"}
 EXTERNAL_RELEASE_PREFIXES = {
     ("static", "videos"),
     ("static", "cookbook_deluxe_media"),
+    ("coloring-studio", "assets"),
 }
 MATURE_EXTERNAL_SUFFIXES = AUDIO_SUFFIXES | {
     ".png", ".webp", ".jpg", ".jpeg", ".gif", ".avif",

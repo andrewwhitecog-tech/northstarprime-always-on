@@ -25,12 +25,10 @@ LOCAL_ROUTES = (
     "/idc-programming/",
     "/arcade/",
     "/idr/",
-    "/portfolio/",
-    "/hire/",
     "/contact/",
     "/software/",
 )
-CANONICAL_SERVICE_LINK = "https://app.northstarprime.net/services?utm_source=northstarprime.net&amp;utm_medium=owned_directory&amp;utm_campaign=services_visibility"
+CANONICAL_SERVICE_LINK = "https://app.northstarprime.net/services"
 
 
 def main() -> None:
@@ -63,7 +61,7 @@ def main() -> None:
     if missing:
         raise SystemExit(f"Missing expected link targets: {missing}")
     if f'href="{CANONICAL_SERVICE_LINK}"' not in html:
-        raise SystemExit("Links page does not expose the campaign-tagged canonical service studio")
+        raise SystemExit("Links page does not expose the canonical service studio in the footer")
 
     match = re.search(
         r'<script type="application/ld\+json">\s*(.*?)\s*</script>',

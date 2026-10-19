@@ -307,4 +307,18 @@ class ComicNarrativeRelease(unittest.TestCase):
    self.assertTrue(edition['pages'][8]['blocks'][-1]['title'].startswith('NEXT '))
    self.assertGreater(len(edition['pages'][8]['blocks'][-1]['text']),100)
 
+class SigilForwardingRelease(unittest.TestCase):
+ def test_existing_sigil_routes_forward_without_old_generators(self):
+  for name in ['index.html','cover.html','visualizer.html']:
+   text=(ROOT.parent/'sigil-forge'/name).read_text(encoding='utf-8')
+   self.assertIn('href="https://app.northstarprime.net/sigil-forge"',text)
+   self.assertIn("location.replace('https://app.northstarprime.net/sigil-forge'+location.search+location.hash)",text)
+   self.assertIn('name="robots" content="noindex,follow"',text)
+   self.assertNotIn('<canvas',text)
+   self.assertNotIn('getContext(',text)
+  sitemap=(ROOT.parent/'sitemap.xml').read_text(encoding='utf-8')
+  self.assertNotIn('<loc>https://northstarprime.net/sigil-forge/</loc>',sitemap)
+  self.assertTrue((ROOT.parent/'forge/index.html').is_file())
+  self.assertTrue((ROOT.parent/'sigil-forge/tarot.html').is_file())
+
 if __name__=="__main__":unittest.main()

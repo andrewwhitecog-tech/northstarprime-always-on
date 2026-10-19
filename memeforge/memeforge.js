@@ -72,6 +72,7 @@
 
   // State
   let currentTemplate = TEMPLATES[0];
+  let hasValidArtwork = false;
   let loadedImage = new Image();
   let activeFilter = 'none';
   let activeAspect = 'native';
@@ -158,6 +159,9 @@
     candidate.onload = () => {
       clearError();
       loadedImage = candidate;
+      hasValidArtwork = true;
+      downloadBtn.disabled = false;
+      copyBtn.disabled = false;
       currentTemplate = tpl;
       if (templateSelect) templateSelect.value = tpl.id;
 
@@ -169,7 +173,9 @@
       render();
     };
     candidate.onerror = () => {
-      showError(`Unable to load artwork "${tpl.title}". The previous valid artwork has been preserved.`);
+      showError(hasValidArtwork
+        ? `Unable to load artwork "${tpl.title}". Your previous artwork is still available to download.`
+        : `Unable to load artwork "${tpl.title}". Choose another artwork to try again.`);
       if (currentTemplate && templateSelect) {
         templateSelect.value = currentTemplate.id;
       }
@@ -452,6 +458,7 @@
   // Event Listeners: Reset Composition
   if (resetBtn) {
     resetBtn.addEventListener('click', () => {
+      clearError();
       activeAspect = 'native';
       aspectBtns.forEach(b => b.classList.toggle('active', b.dataset.aspect === 'native'));
       zoomLevel = 1.0;
@@ -499,6 +506,9 @@
           }
           clearError();
           loadedImage = candidate;
+          hasValidArtwork = true;
+          downloadBtn.disabled = false;
+          copyBtn.disabled = false;
           currentTemplate = {
             id: 'custom_upload',
             title: file.name.replace(/\.[^/.]+$/, ''),
@@ -523,7 +533,7 @@
   // Download Decoded PNG
   if (downloadBtn) {
     downloadBtn.addEventListener('click', () => {
-      if (!canvas) return;
+      if (!canvas || !hasValidArtwork) return;
       if (canvas.toBlob) {
         canvas.toBlob((blob) => {
           if (!blob) return;
@@ -548,23 +558,24 @@
     });
   }
 
-  // Copy Image to Clipboard
+  // Copy the decoded PNG; permission failures keep the download path available.
   if (copyBtn) {
     copyBtn.addEventListener('click', async () => {
+      if (!hasValidArtwork) return;
+      clearError();
       try {
-        canvas.toBlob(async (blob) => {
-          if (blob && navigator.clipboard && navigator.clipboard.write) {
-            await navigator.clipboard.write([
-              new ClipboardItem({ 'image/png': blob })
-            ]);
-            copyBtn.textContent = '✓ Copied to Clipboard!';
-            setTimeout(() => { copyBtn.textContent = 'Copy Image'; }, 2000);
-          } else {
-            alert('Clipboard image copying is not supported in this browser. Please use Download PNG.');
-          }
-        }, 'image/png');
+        if (!navigator.clipboard?.write || typeof ClipboardItem !== 'function') {
+          throw new Error('clipboard_unavailable');
+        }
+        const blob = await new Promise((resolve, reject) => {
+          canvas.toBlob(value => value ? resolve(value) : reject(new Error('image_unavailable')), 'image/png');
+        });
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => { copyBtn.textContent = 'Copy Image'; }, 2000);
       } catch (_) {
-        alert('Unable to copy image directly. Please use Download PNG.');
+        copyBtn.textContent = 'Copy Image';
+        showError('Your browser could not copy the image. Use Download PNG to save your artwork.');
       }
     });
   }

@@ -3,15 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MemeForge • High-Culture Psychonaut Meme Studio | NorthStar Prime</title>
-  <meta name="description" content="Generate and remix high-culture psychonaut memes, Simpsons Frinkiac dispensary lore, medieval spagyric woodcuts, and Cascadia satire with precision typography and official badge overlays.">
+  <title>MemeForge • Sovereign Vorath Culture &amp; Satire Studio | NorthStar Prime</title>
+  <meta name="description" content="Remix sovereign Vorath masterworks, high mountain vault mysteries, and esoteric cultural satire with real-time framing, color grading, and clean PNG export.">
   <meta name="theme-color" content="#06080e">
   <link rel="canonical" href="https://northstarprime.net/memeforge/">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="memeforge.css?v=20260922">
-  <script src="memeforge.js?v=20260922" defer></script>
+  <link rel="stylesheet" href="/static/front-door.css">
+  <link rel="stylesheet" href="memeforge.css?v=20261019">
+  <script src="memeforge.js?v=20261019" defer></script>
 </head>
 <body data-guest-view="true" data-guest-purchase="true" data-membership-required="false">
 
@@ -24,15 +22,15 @@
       <a href="/stickerforge/studio/" class="nav-link">Sticker Studio ✦</a>
       <a href="/stickerforge/" class="nav-link">Stickers (425)</a>
       <a href="/coloring-studio/" class="nav-link">PaintForge</a>
-      <a href="/arcade/" class="nav-link">Arcade (51)</a>
-      <a href="/contact/" class="nav-link">Contact</a>
+      <a href="/arcade/" class="nav-link">Arcade</a>
+      <a href="/forge/" class="nav-link">All studios</a>
     </nav>
   </header>
 
   <main>
     <section class="hero">
       <h1>High-Culture Esoteric Memes</h1>
-      <p>Bridging 1542 spagyric woodcuts, classified SCIF dossiers, Renaissance frescoes, and authentic Springfield Frinkiac lore. Create, caption, slap official stamps, and remix without friction.</p>
+      <p>Explore strange VORATH worlds. Choose an artwork, shape the frame and color, then download your own version.</p>
     </section>
 
     <!-- Interactive Studio Workspace -->
@@ -40,20 +38,35 @@
       
       <!-- Canvas Viewport -->
       <div class="canvas-card">
+        <!-- In-Page Status & Error Banner (DOM only) -->
+        <div id="memeErrorMessage" class="meme-error-banner" role="alert" style="display: none;"></div>
+
         <div class="canvas-viewport">
-          <canvas id="memeCanvas" width="800" height="800" aria-label="Meme Preview"></canvas>
+          <canvas id="memeCanvas" width="960" height="720" aria-label="Meme Preview"></canvas>
           <div class="crt-overlay"></div>
         </div>
+
+        <!-- Authored Scene Commentary (DOM only, outside exported image bytes) -->
+        <div id="sceneNotesDisplay" class="scene-notes-display">
+          <div class="notes-header">
+            <span class="notes-badge">Scene Context</span>
+            <span class="notes-title" id="sceneNotesTitle">Obsidian Docket Chamber</span>
+          </div>
+          <p id="sceneNotesText" class="notes-body">The inner sanctum assembly around the suspended resonance coil in the subterranean docket.</p>
+          <div class="notes-disclaimer">Your notes stay beside the artwork and are not included in the download.</div>
+        </div>
+
         <div class="canvas-actions">
-          <button type="button" id="downloadMemeBtn" class="btn btn-gold">Download PNG</button>
-          <button type="button" id="copyMemeBtn" class="btn btn-glass">Copy Image</button>
+          <button type="button" id="downloadMemeBtn" class="btn btn-gold" disabled>Download PNG</button>
+          <button type="button" id="copyMemeBtn" class="btn btn-glass" disabled>Copy Image</button>
+          <button type="button" id="resetCompBtn" class="btn btn-ghost">Reset</button>
         </div>
       </div>
 
       <!-- Controls Panel -->
       <div class="controls-card">
         <div>
-          <label for="templateSelect" class="control-label">Meme Template</label>
+          <label for="templateSelect" class="control-label">Artwork Template</label>
           <select id="templateSelect" class="text-field"></select>
         </div>
 
@@ -63,68 +76,79 @@
         </div>
 
         <div>
-          <label for="topTextInput" class="control-label">Top Caption</label>
-          <input type="text" id="topTextInput" class="text-field" placeholder="Top caption text...">
-        </div>
-
-        <div>
-          <label for="bottomTextInput" class="control-label">Bottom Caption</label>
-          <input type="text" id="bottomTextInput" class="text-field" placeholder="Bottom punchline...">
-        </div>
-
-        <div>
-          <label for="footnoteInput" class="control-label">Esoteric Footnote / Fine-Print</label>
-          <input type="text" id="footnoteInput" class="text-field" placeholder="e.g. Cascadia Solarium Corridor // APOTHECARY">
-        </div>
-
-        <div>
-          <span class="control-label">Typography Style</span>
-          <div class="font-toggles">
-            <button type="button" class="font-btn active" data-font="impact">Impact</button>
-            <button type="button" class="font-btn" data-font="cinzel">Cinzel</button>
-            <button type="button" class="font-btn" data-font="mono">CRT Pixel</button>
-            <button type="button" class="font-btn" data-font="georgia">Woodcut</button>
+          <span class="control-label">Framing &amp; Aspect Ratio</span>
+          <div class="aspect-btns">
+            <button type="button" class="aspect-btn active" data-aspect="native">Native</button>
+            <button type="button" class="aspect-btn" data-aspect="1:1">1:1 Square</button>
+            <button type="button" class="aspect-btn" data-aspect="16:9">16:9 Cinema</button>
+            <button type="button" class="aspect-btn" data-aspect="4:3">4:3 Classic</button>
+            <button type="button" class="aspect-btn" data-aspect="9:16">9:16 Story</button>
           </div>
         </div>
 
         <div>
-          <div style="display:flex;justify-content:space-between;margin-bottom:0.35rem;">
-            <label for="fontSizeSlider" class="control-label">Font Size</label>
-            <span id="fontSizeVal" style="font-size:0.8rem;color:var(--cyan);font-weight:700;">44</span>
+          <span class="control-label">Proportion Fit Mode</span>
+          <div class="fit-btns">
+            <button type="button" class="fit-btn active" data-fit="cover">Cover (Crop)</button>
+            <button type="button" class="fit-btn" data-fit="contain">Contain (Fit Full)</button>
           </div>
-          <input type="range" id="fontSizeSlider" min="24" max="76" value="44" style="width:100%;accent-color:var(--gold);">
         </div>
 
-        <div style="display:grid;grid-template-columns:1.2fr 0.8fr;gap:0.75rem;">
-          <div>
-            <label for="badgeSelect" class="control-label">Official Stamp Overlay</label>
-            <select id="badgeSelect" class="text-field">
-              <option value="declassified">DECLASSIFIED Stamp</option>
-              <option value="nsp">NSP APOTHECARY Seal</option>
-              <option value="void">Void Kush 90u Pill</option>
-              <option value="oregon">Oregon Grown Seal</option>
-              <option value="singularity">420°F Trichome Prism</option>
-              <option value="none">No Stamp</option>
-            </select>
+        <div class="transform-row">
+          <div class="slider-block">
+            <div style="display:flex;justify-content:space-between;margin-bottom:0.35rem;">
+              <label for="zoomSlider" class="control-label">Zoom / Scale</label>
+              <span id="zoomVal" style="font-size:0.8rem;color:var(--cyan);font-weight:700;">100%</span>
+            </div>
+            <input type="range" id="zoomSlider" min="80" max="150" value="100" class="range-slider">
           </div>
-          <div>
-            <label for="badgePosSelect" class="control-label">Stamp Position</label>
-            <select id="badgePosSelect" class="text-field">
-              <option value="top-right">Top Right</option>
-              <option value="bottom-left">Bottom Left</option>
-              <option value="top-left">Top Left</option>
-              <option value="bottom-right">Bottom Right</option>
-            </select>
+          <div class="orientation-btns">
+            <button type="button" id="rotateBtn" class="btn-ctrl">Rotate 0°</button>
+            <button type="button" id="flipBtn" class="btn-ctrl">Flip H</button>
           </div>
         </div>
 
         <div>
-          <span class="control-label">Aesthetic Filter</span>
+          <span class="control-label">Color Tone &amp; Grading</span>
+          <div class="tone-controls">
+            <div class="slider-group">
+              <div style="display:flex;justify-content:space-between;">
+                <label for="brightnessSlider" class="control-label">Brightness</label>
+                <span id="brightnessVal" class="slider-val">0</span>
+              </div>
+              <input type="range" id="brightnessSlider" min="-50" max="50" value="0" class="range-slider">
+            </div>
+            <div class="slider-group">
+              <div style="display:flex;justify-content:space-between;">
+                <label for="contrastSlider" class="control-label">Contrast</label>
+                <span id="contrastVal" class="slider-val">0</span>
+              </div>
+              <input type="range" id="contrastSlider" min="-50" max="50" value="0" class="range-slider">
+            </div>
+            <div class="slider-group">
+              <div style="display:flex;justify-content:space-between;">
+                <label for="saturationSlider" class="control-label">Saturation</label>
+                <span id="saturationVal" class="slider-val">0</span>
+              </div>
+              <input type="range" id="saturationSlider" min="-50" max="50" value="0" class="range-slider">
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <span class="control-label">Aesthetic Filter Grade</span>
           <div class="filter-grid">
             <button type="button" class="filter-btn active" data-filter="none">Clean Digital</button>
             <button type="button" class="filter-btn" data-filter="crt">90s CRT Tube</button>
             <button type="button" class="filter-btn" data-filter="woodcut">Woodcut Sepia</button>
+            <button type="button" class="filter-btn" data-filter="cyber">Cyberpunk Neon</button>
+            <button type="button" class="filter-btn" data-filter="monochrome">B&amp;W Monolith</button>
           </div>
+        </div>
+
+        <div>
+          <label for="sceneNotesInput" class="control-label">Your scene notes</label>
+          <textarea id="sceneNotesInput" class="text-field" rows="2" placeholder="Add a note about your scene..."></textarea>
         </div>
       </div>
     </section>
@@ -133,7 +157,7 @@
     <section class="gallery-section">
       <div class="section-header">
         <h2>Curated Masterworks &amp; Legendary Archives</h2>
-        <p>Click any artwork to remix its template, captions, and stamps in the studio.</p>
+        <p>Click any artwork to load and remix in the studio workspace.</p>
       </div>
       <div id="memeGalleryGrid" class="meme-grid">
         <!-- Injected dynamically -->

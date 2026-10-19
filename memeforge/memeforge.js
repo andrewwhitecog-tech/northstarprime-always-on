@@ -185,11 +185,12 @@
 
   // Render Canvas Composition (Zero text painted into image bytes)
   function render() {
-    if (!loadedImage || !loadedImage.complete) return;
+    if (!hasValidArtwork || !loadedImage || !loadedImage.complete ||
+        !loadedImage.naturalWidth || !loadedImage.naturalHeight) return;
 
-    // Source native dimensions with safe high-resolution fallbacks
-    const srcW = loadedImage.naturalWidth || 1024;
-    const srcH = loadedImage.naturalHeight || 1536;
+    // Render only the dimensions of successfully decoded artwork.
+    const srcW = loadedImage.naturalWidth;
+    const srcH = loadedImage.naturalHeight;
 
     // Compute target dimensions based on selected aspect ratio
     let targetW = srcW;
@@ -458,7 +459,7 @@
   // Event Listeners: Reset Composition
   if (resetBtn) {
     resetBtn.addEventListener('click', () => {
-      clearError();
+      if (hasValidArtwork) clearError();
       activeAspect = 'native';
       aspectBtns.forEach(b => b.classList.toggle('active', b.dataset.aspect === 'native'));
       zoomLevel = 1.0;

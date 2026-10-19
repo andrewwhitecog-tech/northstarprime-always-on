@@ -516,7 +516,7 @@
   </footer>
 
   <script>
-(function(){
+window.addEventListener('DOMContentLoaded', function(){
   'use strict';
   const MANIFEST_URL = '/comics/reader/editions-447bf3493fc5c3e1.json';
   const SERIES_DATA = {
@@ -530,6 +530,7 @@
   const mainImg=byId('mainPageImg'),secondImg=byId('secondPageImg'),viewer=byId('viewerStage'),stage=byId('readerStage'),tray=byId('thumbTray'),story=byId('storyPages');
   const prev=byId('btnPrev'),next=byId('btnNext'),storyPrev=byId('storyPrev'),storyNext=byId('storyNext'),status=byId('editionStatus'),error=byId('artError');
   let currentKey='vorath_s2',index=0,spread=false,direction='LTR',sound=false,audioCtx=null,touchX=0,touchY=0,manifestLoaded=false;
+  const pendingPages=Object.create(null);
   const stored=function(key){try{return localStorage.getItem(key);}catch(e){return null;}};
   const save=function(key,value){try{localStorage.setItem(key,value);}catch(e){}};
   const node=function(tag,cls,text){const el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=text;return el;};
@@ -540,7 +541,7 @@
   }
   function toggleButton(id,active){byId(id).classList.toggle('active',active);byId(id).setAttribute('aria-pressed',String(active));}
   function setDirection(value){direction=value;toggleButton('dirLtr',value==='LTR');toggleButton('dirRtl',value==='RTL');}
-  function updateUrl(){const url=new URL(location.href);url.searchParams.delete('comic');url.searchParams.set('series',currentKey);url.searchParams.set('page',String(index+1));history.replaceState({},'',url);save('nsp_reader_last_series',currentKey);save('nsp_reader_page_'+currentKey,String(index));}
+  function updateUrl(){if(['loading','unavailable'].includes(SERIES_DATA[currentKey].availability))return;const url=new URL(location.href);url.searchParams.delete('comic');url.searchParams.set('series',currentKey);url.searchParams.set('page',String(index+1));history.replaceState({},'',url);save('nsp_reader_last_series',currentKey);save('nsp_reader_page_'+currentKey,String(index));}
   function visibleIndices(){return spread&&index>0&&index+1<SERIES_DATA[currentKey].pages.length?[index,index+1]:[index];}
   function showStatus(message,retry){status.replaceChildren(node('span','',message));status.hidden=!message;if(retry){const b=node('button','btn','Retry edition');b.type='button';b.addEventListener('click',loadManifest);status.appendChild(b);}}
   function setImage(img,page){img.src=page.url;img.alt=page.alt||page.title||page.label;if(page.width&&page.height){img.width=page.width;img.height=page.height;}else{img.removeAttribute('width');img.removeAttribute('height');}}
@@ -575,7 +576,7 @@
     document.querySelector('.nav-bar').style.display=s.availability==='available'?'flex':s.readChapterUrl?'flex':'none';
     if(s.availability==='loading')showStatus('Loading the illustrated edition…',false);else if(s.availability==='unavailable')showStatus('The illustrated edition did not load. Your place is preserved.',true);else showStatus('',false);
     pageSelect.replaceChildren();tray.replaceChildren();s.pages.forEach(function(p,i){const opt=node('option','',p.kind==='cover'?'Cover':p.label+' / 8');opt.value=String(i);pageSelect.appendChild(opt);const b=node('button','thumb-item');b.type='button';b.title=p.kind==='cover'?'Cover':p.title;b.setAttribute('aria-label',p.kind==='cover'?'Open cover':'Open '+p.label+': '+p.title);const im=node('img');im.src=p.url;im.alt='';im.loading='lazy';b.appendChild(im);b.appendChild(node('span','',p.label));b.addEventListener('click',function(){go(i);});tray.appendChild(b);});
-    if(!preserve)index=finiteIndex(Number(stored('nsp_reader_page_'+key)),s.pages.length);render();
+    if(!preserve){index=Number(stored('nsp_reader_page_'+key)||0);if(['loading','unavailable'].includes(s.availability))pendingPages[key]=index;}render();
   }
   function go(i){const s=SERIES_DATA[currentKey];if(!Number.isSafeInteger(i)||i<0||i>=s.pages.length||i===index)return;index=i;soundTurn();render();}
   function advance(){go(Math.min(SERIES_DATA[currentKey].pages.length-1,index+(spread&&index>0?2:1)));}
@@ -587,9 +588,9 @@
     ['vorath_s2','blazin_beaver_s4'].forEach(function(key){const e=value.editions[key];if(!e||e.availability!=='available'||typeof e.title!=='string'||e.pages.length!==9)throw Error('Incomplete edition');e.pages.forEach(function(p,i){if(typeof p.url!=='string'||!/^\/static\/art\/reviewed\/[a-z0-9_\/-]+\.webp$/.test(p.url))throw Error('Unsafe artwork address');if(i===0){if(p.kind!=='cover')throw Error('Missing cover');}else if(p.kind!=='narrative'||p.number!==i||typeof p.title!=='string'||!Array.isArray(p.captions)||!Array.isArray(p.dialogue)||!p.captions.every(function(c){return typeof c==='string';})||!p.dialogue.every(function(d){return typeof d.speaker==='string'&&typeof d.text==='string';}))throw Error('Invalid story binding');});});return value;
   }
   async function loadManifest(){
-    const requestedIndex=index;
-    try{const response=await fetch(MANIFEST_URL);if(!response.ok)throw Error('HTTP '+response.status);const data=validateEdition(await response.json());['vorath_s2','blazin_beaver_s4'].forEach(function(key){SERIES_DATA[key]=data.editions[key];});manifestLoaded=true;index=requestedIndex;loadSeries(currentKey,true);}
-    catch(e){manifestLoaded=true;['vorath_s2','blazin_beaver_s4'].forEach(function(key){if(SERIES_DATA[key].availability==='loading')SERIES_DATA[key].availability='unavailable';});loadSeries(currentKey,true);}
+    const requestedIndex=pendingPages[currentKey]??index;
+    try{const response=await fetch(MANIFEST_URL);if(!response.ok)throw Error('HTTP '+response.status);const data=validateEdition(await response.json());['vorath_s2','blazin_beaver_s4'].forEach(function(key){SERIES_DATA[key]=data.editions[key];});manifestLoaded=true;delete pendingPages[currentKey];index=requestedIndex;loadSeries(currentKey,true);}
+    catch(e){manifestLoaded=true;pendingPages[currentKey]=requestedIndex;['vorath_s2','blazin_beaver_s4'].forEach(function(key){if(SERIES_DATA[key].availability==='loading')SERIES_DATA[key].availability='unavailable';});loadSeries(currentKey,true);}
   }
   seriesSelect.addEventListener('change',function(){loadSeries(seriesSelect.value,false);});pageSelect.addEventListener('change',function(){go(Number(pageSelect.value));});prev.addEventListener('click',retreat);next.addEventListener('click',advance);
   storyPrev.addEventListener('click',function(){retreat();stage.scrollIntoView({block:'start',behavior:'auto'});});storyNext.addEventListener('click',function(){advance();stage.scrollIntoView({block:'start',behavior:'auto'});});
@@ -610,8 +611,8 @@
   viewer.addEventListener('touchstart',function(e){touchX=e.changedTouches[0].clientX;touchY=e.changedTouches[0].clientY;},{passive:true});viewer.addEventListener('touchend',function(e){const dx=e.changedTouches[0].clientX-touchX,dy=e.changedTouches[0].clientY-touchY;if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)*1.3){if(dx<0)forward();else backward();}},{passive:true});
   const query=new URLSearchParams(location.search);if([query.get('series'),query.get('comic')].includes('duel_zexal')){location.replace('/manga/');return;}
   const wanted=query.get('series')||query.get('comic'),last=stored('nsp_reader_last_series');currentKey=hasSeries(wanted)?wanted:hasSeries(last)?last:'vorath_s2';const q=query.get('page');index=q!==null&&/^\d+$/.test(q)&&Number.isSafeInteger(Number(q))&&Number(q)>=1?Number(q)-1:Number(stored('nsp_reader_page_'+currentKey)||0);
-  const startupIndex=index;loadSeries(currentKey,true);index=startupIndex;loadManifest();
-})();
+  const startupIndex=index;pendingPages[currentKey]=startupIndex;loadSeries(currentKey,true);index=startupIndex;loadManifest();
+});
   </script>
 
   <!-- SHORTCUTS MODAL -->

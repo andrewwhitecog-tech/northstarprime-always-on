@@ -4,14 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>StickerForge Studio • Interactive Sticker Slap &amp; Customizer | NorthStar Prime</title>
-  <meta name="description" content="Design and slap your own custom sticker layouts on laptops, hydroflasks, skateboards, and bumpers with real-time holographic foil lighting and precision vector die-cut borders.">
+  <meta name="description" content="Arrange sticker artwork, add your own image, edit size, rotation, opacity and layers, then export a transparent PNG.">
   <meta name="theme-color" content="#07090e">
   <link rel="canonical" href="https://northstarprime.net/stickerforge/studio/">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="sticker-studio.css?v=20261015a">
-  <script src="sticker-studio.js?v=20261015a" defer></script>
+  <link rel="stylesheet" href="sticker-studio.css?v=20261018-editors1">
+  <script src="sticker-studio.js?v=20261018-editors1" defer></script>
 </head>
 <body data-guest-view="true" data-guest-purchase="true" data-membership-required="false">
 
@@ -21,10 +21,10 @@
       <span class="brand-badge">StickerForge Studio</span>
     </div>
     <nav class="header-nav" aria-label="Creative Forge Navigation">
-      <a href="/stickerforge/" class="nav-link">Catalog (425)</a>
+      <a href="/stickerforge/" class="nav-link">Sticker catalog</a>
       <a href="/tarot/oracle/" class="nav-link">Vorath Oracle</a>
       <a href="/coloring-studio/" class="nav-link">PaintForge</a>
-      <a href="/arcade/" class="nav-link">Arcade (51)</a>
+      <a href="/arcade/" class="nav-link">Arcade</a>
       <a href="/contact/" class="nav-link">Contact</a>
     </nav>
   </header>
@@ -44,17 +44,22 @@
         <button type="button" class="surface-btn" data-surface="artboard">Artboard</button>
       </div>
 
+      <p id="studioStatus" class="studio-status" role="status" aria-live="polite">Loading the artwork catalog…</p>
+      <button id="retryCatalogBtn" class="action-pill-btn" type="button" hidden>Retry catalog</button>
       <!-- Main Slap Surface -->
       <div id="slapStage" class="slap-stage" data-surface="laptop-dark">
         <!-- Placed stickers injected here dynamically -->
       </div>
 
+      <p class="export-note">Export keeps artwork, placement, rotation and opacity on a transparent background. Device surfaces are previews.</p>
       <!-- Action Bar -->
       <div class="canvas-bottom-bar">
         <button type="button" id="autoBombBtn" class="action-pill-btn" style="background: linear-gradient(135deg, var(--gold), var(--pink)); color:#07090e; font-weight:800;" title="Procedurally sticker-bomb the surface">✦ Auto-Slap Bomb</button>
+        <button type="button" id="undoBtn" class="action-pill-btn" disabled>Undo</button>
+        <button type="button" id="redoBtn" class="action-pill-btn" disabled>Redo</button>
         <button type="button" id="clearSurfaceBtn" class="action-pill-btn" title="Remove all stickers">Clear Surface</button>
-        <button type="button" id="downloadPngBtn" class="action-pill-btn" title="Download high-resolution image">Save Setup PNG</button>
-        <button type="button" id="orderPackBtn" class="action-pill-btn primary" title="Request this sticker pack">Order My Slap Pack &rarr;</button>
+        <button type="button" id="downloadPngBtn" class="action-pill-btn" title="Export your artwork on a transparent background">Export artwork PNG</button>
+        <button type="button" id="orderPackBtn" class="action-pill-btn primary" title="Request pricing for the selected artwork">Request a print quote</button>
       </div>
     </section>
 
@@ -63,12 +68,12 @@
       <div class="sidebar-tabs" role="tablist">
         <button type="button" class="sidebar-tab active" data-tab="tabTray" role="tab">Sticker Tray</button>
         <button type="button" class="sidebar-tab" data-tab="tabEdit" role="tab">Edit Selected</button>
-        <button type="button" class="sidebar-tab" data-tab="tabBadges" role="tab">Custom Badges</button>
+        <button type="button" class="sidebar-tab" data-tab="tabUpload" role="tab">Your Artwork</button>
       </div>
 
       <!-- Tab 1: Sticker Tray -->
       <div id="tabTray" class="sidebar-content tab-pane" role="tabpanel">
-        <input type="search" id="traySearch" class="search-box" placeholder="Search 450+ stickers..." autocomplete="off">
+        <input type="search" id="traySearch" class="search-box" placeholder="Search available artwork..." autocomplete="off">
         <div id="filterPills" class="filter-pills" aria-label="Collections filter"></div>
         <div id="stickerTray" class="sticker-tray-grid"></div>
       </div>
@@ -96,23 +101,6 @@
           </div>
         </div>
 
-        <div class="control-group">
-          <span class="control-label">Die-Cut Border Style</span>
-          <div class="style-buttons">
-            <button type="button" class="style-btn active" data-style="die-cut-white">White Vinyl</button>
-            <button type="button" class="style-btn" data-style="die-cut-gold">Gold Foil</button>
-            <button type="button" class="style-btn" data-style="die-cut-holographic">Prism Holo</button>
-            <button type="button" class="style-btn" data-style="die-cut-none">Clean Cut</button>
-          </div>
-        </div>
-
-        <div class="control-group">
-          <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:0.85rem;color:var(--text-main);font-weight:600;">
-            <input type="checkbox" id="holoToggle" checked style="accent-color:var(--cyan);width:18px;height:18px;">
-            Holographic Foil Shimmer Layer
-          </label>
-        </div>
-
         <div class="control-group" style="margin-top:0.5rem;">
           <span class="control-label">Layering &amp; Actions</span>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
@@ -124,39 +112,10 @@
         </div>
       </div>
 
-      <!-- Tab 3: Custom Text Badges -->
-      <div id="tabBadges" class="sidebar-content tab-pane" role="tabpanel" hidden>
-        <p style="font-size:0.85rem;color:var(--text-muted);line-height:1.5;">Create personalized die-cut text stickers and slap them directly on your canvas.</p>
-        <div class="badge-creator-form">
-          <div class="control-group">
-            <label for="badgeTextInput" class="control-label">Badge Text</label>
-            <input type="text" id="badgeTextInput" class="badge-input" placeholder="e.g. OREGON GROWN" maxlength="24">
-          </div>
-
-          <div class="control-group">
-            <label for="badgeShapeSelect" class="control-label">Badge Shape</label>
-            <select id="badgeShapeSelect" class="search-box">
-              <option value="pill">Rounded Pill</option>
-              <option value="banner">Ribbon Banner</option>
-              <option value="hex">Cyber Hexagon</option>
-            </select>
-          </div>
-
-          <div class="control-group">
-            <label for="badgeColorSelect" class="control-label">Badge Background Color</label>
-            <select id="badgeColorSelect" class="search-box">
-              <option value="#0f172a">Dark Slate (#0F172A)</option>
-              <option value="#1e1b4b">Deep Indigo (#1E1B4B)</option>
-              <option value="#78350f">Rich Amber (#78350F)</option>
-              <option value="#064e3b">Cascadia Forest (#064E3B)</option>
-              <option value="#831843">Magenta Twilight (#831843)</option>
-            </select>
-          </div>
-
-          <button type="button" id="addTextBadgeBtn" class="action-pill-btn primary" style="justify-content:center;margin-top:0.5rem;">
-            + Slap Custom Badge on Canvas
-          </button>
-        </div>
+      <div id="tabUpload" class="sidebar-content tab-pane" role="tabpanel" hidden>
+        <p>Bring your own artwork into the composition. The image stays in this browser.</p>
+        <label for="artworkUpload" class="control-label">Choose PNG, JPEG or WebP artwork (up to 20 MB)</label>
+        <input id="artworkUpload" type="file" accept="image/png,image/jpeg,image/webp">
       </div>
     </aside>
   </main>

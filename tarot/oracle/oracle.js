@@ -57,7 +57,7 @@
       deck = cards;
       renderLibrary();
       ui.drawBtn.disabled = false;
-      ui.readingStatus.textContent = 'All 78 cards are ready. Choose a spread and draw.';
+      ui.readingStatus.textContent = '78 cards in the deck. Choose a spread and draw.';
     } catch (_error) {
       if (sequence !== loadSequence) return;
       deck = [];
@@ -91,16 +91,36 @@
     return image;
   }
 
-  async function loadImage(card, retry = false) {
+  function loadImage(card, retry = false) {
     const image = makeImage(card);
-    await new Promise((resolve, reject) => {
-      image.onload = resolve;
-      image.onerror = () => reject(new Error('image_unavailable'));
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const finish = error => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timer);
+        image.onload = null;
+        image.onerror = null;
+        if (error) {
+          image.removeAttribute('src');
+          reject(error);
+        } else {
+          resolve(image);
+        }
+      };
+      const timer = window.setTimeout(() => finish(new Error('image_timeout')), 8000);
+      image.onerror = () => finish(new Error('image_unavailable'));
+      image.onload = async () => {
+        try {
+          if (image.decode) await image.decode();
+          if (!image.naturalWidth || !image.naturalHeight) throw new Error('image_not_decoded');
+          finish();
+        } catch (error) {
+          finish(error);
+        }
+      };
       image.src = card.image + (retry ? '?retry=' + Date.now() : '');
     });
-    if (image.decode) await image.decode();
-    if (!image.naturalWidth) throw new Error('image_not_decoded');
-    return image;
   }
 
   function addMeaning(container, title, text) {
@@ -145,7 +165,7 @@
       entry.frame.replaceChildren(image);
       entry.revealed = true;
       entry.button.setAttribute('aria-label', entry.card.name + ', revealed');
-      entry.caption.textContent = entry.card.name;
+      entry.caption.hidden = true;
       const content = detailsFor(entry.card, entry.reversed);
       entry.article.append(content);
       if (focusTitle) content.querySelector('h3').focus({preventScroll: true});

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Graphic Novel Reader // NorthStar Sovereign Comix</title>
-  <meta name="description" content="In-browser reader for available Blazin' Beaver and Uncle Vorath illustrated chapters.">
+  <meta name="description" content="Cover artwork previews and the available Uncle Vorath illustrated chapter.">
   <link rel="canonical" href="https://northstarprime.net/comics/reader/">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <style>
@@ -416,8 +416,8 @@
     </div>
     <div class="toolbar-actions">
       <select id="seriesSelect" class="series-select" aria-label="Select Comic Series">
-        <option value="blazin_beaver_s4">Blazin' Beaver S4: The Mycelial Gateway (Issue 1)</option>
-        <option value="vorath_s2">Uncle Vorath Mysteries S2: Starmap Deposition (Issue 1)</option>
+        <option value="blazin_beaver_s4">Blazin' Beaver S4: The Mycelial Gateway (Cover · Edition rebuilding)</option>
+        <option value="vorath_s2">Uncle Vorath Mysteries S2 (Cover · Edition rebuilding)</option>
         <option value="vorath_s3">Uncle Vorath S3: The Obsidian Docket (Chapter 1)</option>
       </select>
       <button id="btnFullscreen" type="button" class="btn" aria-label="Toggle Fullscreen">
@@ -430,6 +430,7 @@
         <span>?</span> Shortcuts
       </button>
       <a href="/tcg/" class="btn btn-gold">3D TCG Binder &rarr;</a>
+      <a id="readChapterLink" href="/comics/vorath-obsidian-docket/" class="btn" style="display:none">Read illustrated chapter &rarr;</a>
       <a href="/comics/" class="btn">&larr; Vault</a>
     </div>
   </header>
@@ -459,6 +460,8 @@
     </div>
   </div>
 
+  <p id="editionStatus" role="status" style="display:none;margin:0;padding:16px 24px;color:var(--text-muted);line-height:1.6"></p>
+
   <!-- MAIN READER STAGE -->
   <main id="readerStage">
     <div class="nav-zone left" id="zoneLeft" title="Previous page" aria-label="Previous page"></div>
@@ -482,36 +485,22 @@
       const SERIES_DATA = {
         blazin_beaver_s4: {
           title: "Blazin' Beaver S4: The Mycelial Gateway",
-          subtitle: "ISSUE 01: SUB-BASS RESONANCE // 9 PAGES // CMYK MASTER",
+          subtitle: "COVER ARTWORK // ILLUSTRATED EDITION BEING REBUILT",
+          availability: "rebuilding",
           defaultDir: "LTR",
           basePath: "/comics/assets/blazin_beaver_s4/",
           pages: [
-            { file: "Cover.webp", label: "Cover", url: "/static/art/reviewed/apex_20261019/apex_extra_ex11-5fc6e11ecf982ae2.webp?v=5fc6e11ecf982ae2" },
-            { file: "Page_01.webp", label: "Page 1" },
-            { file: "Page_02.webp", label: "Page 2" },
-            { file: "Page_03.webp", label: "Page 3" },
-            { file: "Page_04.webp", label: "Page 4" },
-            { file: "Page_05.webp", label: "Page 5" },
-            { file: "Page_06.webp", label: "Page 6" },
-            { file: "Page_07.webp", label: "Page 7" },
-            { file: "Page_08.webp", label: "Page 8" }
+            { file: "Cover.webp", label: "Cover", url: "/static/art/reviewed/apex_20261019/apex_extra_ex11-5fc6e11ecf982ae2.webp?v=5fc6e11ecf982ae2" }
           ]
         },
         vorath_s2: {
-          title: "Uncle Vorath Mysteries S2: Starmap Deposition",
-          subtitle: "ISSUE 01: THE CELESTIAL AFFIDAVIT // 9 PAGES // NOIR MASTER",
+          title: "Uncle Vorath Mysteries: Season 2",
+          subtitle: "COVER ARTWORK // ILLUSTRATED EDITION BEING REBUILT",
+          availability: "rebuilding",
           defaultDir: "LTR",
           basePath: "/comics/assets/vorath_s2/",
           pages: [
-            { file: "Cover.webp", label: "Cover", url: "/static/art/reviewed/apex_20261019/apex_extra_ex10-231caf01ca06e89e.webp?v=231caf01ca06e89e" },
-            { file: "Page_01.webp", label: "Page 1" },
-            { file: "Page_02.webp", label: "Page 2" },
-            { file: "Page_03.webp", label: "Page 3" },
-            { file: "Page_04.webp", label: "Page 4" },
-            { file: "Page_05.webp", label: "Page 5" },
-            { file: "Page_06.webp", label: "Page 6" },
-            { file: "Page_07.webp", label: "Page 7" },
-            { file: "Page_08.webp", label: "Page 8" }
+            { file: "Cover.webp", label: "Cover", url: "/static/art/reviewed/apex_20261019/apex_extra_ex10-231caf01ca06e89e.webp?v=231caf01ca06e89e" }
           ]
         },
         vorath_s3: {
@@ -531,7 +520,7 @@
       }
 
       // State
-      let currentSeriesKey = "blazin_beaver_s4";
+      let currentSeriesKey = "vorath_s3";
       let currentIndex = 0;
       let isSpread = false;
       let flowDirection = "LTR"; // 'LTR' or 'RTL'
@@ -630,6 +619,14 @@
         currentSeriesKey = key;
         seriesSelect.value = key;
         const series = SERIES_DATA[key];
+        const rebuilding = series.availability === "rebuilding";
+        const editionStatus = document.getElementById("editionStatus");
+        editionStatus.textContent = rebuilding ? "Cover artwork preview. The illustrated edition is being rebuilt; interior reading is currently unavailable." : "";
+        editionStatus.style.display = rebuilding ? "block" : "none";
+        document.querySelector(".nav-bar").style.display = rebuilding ? "none" : "flex";
+        const chapterLink = document.getElementById("readChapterLink");
+        chapterLink.style.display = series.readChapterUrl ? "inline-flex" : "none";
+        if (series.readChapterUrl) chapterLink.href = series.readChapterUrl;
 
         headerTitle.textContent = series.title;
         headerSubtitle.textContent = series.subtitle;

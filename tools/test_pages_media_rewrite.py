@@ -166,7 +166,7 @@ class ReviewedArtRelease(unittest.TestCase):
 
  def test_held_public_media_are_omitted_but_originals_preserved(self):
   art=m.pages_art_quality
-  self.assertEqual(len(art.WITHHELD_MEDIA),26)
+  self.assertEqual(len(art.WITHHELD_MEDIA),42)
   selected={relative.as_posix() for _,relative in m.iter_source_files()}
   external=m.release_media_index()
   for row in art.WITHHELD_MEDIA:
@@ -190,7 +190,8 @@ class ReviewedArtRelease(unittest.TestCase):
   self.assertNotIn('href="/manga/"',shelf)
   self.assertNotIn("The Silent Partner",shelf)
   self.assertNotIn("Sub-Bass Wardens",shelf)
-  self.assertIn("Starmap Deposition",shelf)
+  self.assertIn("Uncle Vorath Mysteries: Season 2",shelf)
+  self.assertIn("interior reading is currently unavailable",shelf)
   self.assertIn('href="/little-light-library/42-a-name-for-the-new-blue/"',shelf)
   for name in ["literature/a-map-of-erased-places/index.html","dream-court/index.html",
                "dream-court/case-002/index.html","dream-court/case-003/index.html","dream-court/case-004/index.html"]:
@@ -206,5 +207,19 @@ class ReviewedArtRelease(unittest.TestCase):
   self.assertIn("pageSource(series, curPage)",reader)
   self.assertIn("pageSource(series, nextP)",reader)
   self.assertNotIn('<span class="thumb-badge">',reader)
+
+ def test_creative_held_editions_are_cover_previews_only(self):
+  art=m.pages_art_quality
+  held={row["path"] for row in art.WITHHELD_MEDIA if row.get("reason")=="creative_not_accepted_root_personally_verified"}
+  self.assertEqual(len(held),16)
+  reader=(ROOT.parent/"comics/reader/index.html").read_text(encoding="utf-8")
+  self.assertEqual(reader.count('availability: "rebuilding"'),2)
+  self.assertNotIn('file: "Page_01.webp"',reader)
+  self.assertIn("interior reading is currently unavailable",reader)
+  self.assertIn('id="readChapterLink"',reader)
+  self.assertNotIn("scrollIntoView",reader)
+  catalog=(ROOT.parent/"comics/index.html").read_text(encoding="utf-8")
+  self.assertNotIn("9 Pages • Web Reader Active",catalog)
+  self.assertEqual(catalog.count("Illustrated edition being rebuilt"),2)
 
 if __name__=="__main__":unittest.main()

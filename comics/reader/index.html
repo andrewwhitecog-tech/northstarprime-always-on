@@ -446,6 +446,8 @@
     .toast{max-width:calc(100vw - 32px);overflow-wrap:anywhere}
     #readerStage.landscape-layout{grid-template-columns:minmax(0,1fr);gap:28px}.landscape-layout .comic-page-img{max-height:84svh;width:100%;max-width:1200px;height:auto}.landscape-layout .narrative-story{width:100%;max-width:780px;margin:0 auto}
     @media(max-width:780px){.toolbar-actions>a[href='/tcg/']{display:none}.reading-options{width:100%}.reading-options summary{width:max-content}.landscape-layout .comic-page-img{width:100%;max-height:none}}
+
+    .dialogue-list{margin-bottom:22px}.story-teaser{border-top:1px solid #caac6444;padding-top:22px;margin-top:28px;font-family:Georgia,'Times New Roman',serif;line-height:1.75;color:#c3c5c3}.story-teaser h3{font-family:NorthStarUtility,Consolas,monospace;font-size:.8rem;letter-spacing:.07em;font-weight:500;color:#d0ad61;margin-bottom:12px}.story-teaser p{font-size:1.02rem}
   </style>
 </head>
 <body>
@@ -529,7 +531,7 @@
   <script>
 window.addEventListener('DOMContentLoaded', function(){
   'use strict';
-  const MANIFEST_URL = '/comics/reader/editions-447bf3493fc5c3e1.json';
+  const MANIFEST_URL = '/comics/reader/editions-97bf80bc1a74d401.json';
   const SERIES_DATA = {
     blazin_beaver_s4: {title:"Blazin’ Beaver: The Sub-Bass Resonance",subtitle:'SERIES 4 · THE MYCELIAL GATEWAY · ISSUE 1',availability:'loading',defaultDir:'LTR',pages:[{kind:'cover',label:'Cover',url:'/static/art/reviewed/apex_20261019/apex_extra_ex11-5fc6e11ecf982ae2.webp',alt:'Blaze, Vorath and Professor Myrcene in the mycelial cavern.'}]},
     vorath_s2: {title:'Uncle Vorath Mysteries: The Null-Time Discrepancy',subtitle:'SEASON 2 · ISSUE 1',availability:'loading',defaultDir:'LTR',pages:[{kind:'cover',label:'Cover',url:'/static/art/reviewed/apex_20261019/apex_extra_ex10-231caf01ca06e89e.webp',alt:'Uncle Vorath and the amber chronometer.'}]},
@@ -563,8 +565,14 @@ window.addEventListener('DOMContentLoaded', function(){
         article.appendChild(node('p','story-cover-note',series.availability==='available'?'Issue 1 · Cover and eight illustrated narrative plates. The original story appears beside each illustration.':series.readChapterUrl?'Read the illustrated opening chapter.':manifestLoaded?'The narrative edition could not load. Use Retry edition above.':'Loading the illustrated edition…'));
         if(series.availability==='available'){const b=node('button','btn btn-gold','Begin the story');b.type='button';b.id='beginStory';b.addEventListener('click',function(){go(1);});article.appendChild(b);}else if(series.readChapterUrl){const a=node('a','btn btn-gold','Read illustrated chapter');a.href=series.readChapterUrl;article.appendChild(a);}
       }else{
-        p.captions.forEach(function(c){article.appendChild(node('p','story-caption',c));});
-        const dl=node('dl','dialogue-list');p.dialogue.forEach(function(d){const line=node('div','dialogue-line');line.appendChild(node('dt','',d.speaker));line.appendChild(node('dd','',d.text));dl.appendChild(line);});article.appendChild(dl);
+        let dl=null;
+        p.blocks.forEach(function(block,position){
+          let part;
+          if(block.type==='caption'){part=node('p','story-caption',block.text);dl=null;article.appendChild(part);}
+          else if(block.type==='teaser'){part=node('aside','story-teaser');part.appendChild(node('h3','',block.title));part.appendChild(node('p','',block.text));dl=null;article.appendChild(part);}
+          else{if(!dl){dl=node('dl','dialogue-list');article.appendChild(dl);}part=node('div','dialogue-line');part.appendChild(node('dt','',block.speaker));part.appendChild(node('dd','',block.text));dl.appendChild(part);}
+          part.dataset.storyBlock=String(position);part.dataset.storyType=block.type;
+        });
       }
       story.appendChild(article);
     });
@@ -596,12 +604,18 @@ window.addEventListener('DOMContentLoaded', function(){
   function backward(){if(direction==='RTL')advance();else retreat();}
   function validateEdition(value){
     if(!value||value.schema!=='northstar.comic-narrative.v1'||!value.editions)throw Error('Edition manifest unavailable');
-    ['vorath_s2','blazin_beaver_s4'].forEach(function(key){const e=value.editions[key];if(!e||e.availability!=='available'||typeof e.title!=='string'||e.pages.length!==9)throw Error('Incomplete edition');e.pages.forEach(function(p,i){if(typeof p.url!=='string'||!/^\/static\/art\/reviewed\/[a-z0-9_\/-]+\.webp$/.test(p.url))throw Error('Unsafe artwork address');if(i===0){if(p.kind!=='cover')throw Error('Missing cover');}else if(p.kind!=='narrative'||p.number!==i||typeof p.title!=='string'||!Array.isArray(p.captions)||!Array.isArray(p.dialogue)||!p.captions.every(function(c){return typeof c==='string';})||!p.dialogue.every(function(d){return typeof d.speaker==='string'&&typeof d.text==='string';}))throw Error('Invalid story binding');});});return value;
+    ['vorath_s2','blazin_beaver_s4'].forEach(function(key){const e=value.editions[key];if(!e||e.availability!=='available'||typeof e.title!=='string'||e.pages.length!==9)throw Error('Incomplete edition');e.pages.forEach(function(p,i){if(typeof p.url!=='string'||!/^\/static\/art\/reviewed\/[a-z0-9_\/-]+\.webp$/.test(p.url))throw Error('Unsafe artwork address');if(i===0){if(p.kind!=='cover')throw Error('Missing cover');}else if(p.kind!=='narrative'||p.number!==i||typeof p.title!=='string'||!Array.isArray(p.captions)||!Array.isArray(p.dialogue)||!p.captions.every(function(c){return typeof c==='string';})||!p.dialogue.every(function(d){return typeof d.speaker==='string'&&typeof d.text==='string';}))throw Error('Invalid story binding');
+      if(i>0){
+        if(!Array.isArray(p.blocks)||!p.blocks.every(function(b){return b&&['caption','dialogue','teaser'].includes(b.type)&&typeof b.text==='string'&&(b.type!=='dialogue'||typeof b.speaker==='string')&&(b.type!=='teaser'||typeof b.title==='string');}))throw Error('Invalid ordered story');
+        if(JSON.stringify(p.blocks.filter(function(b){return b.type==='caption';}).map(function(b){return b.text;}))!==JSON.stringify(p.captions)||JSON.stringify(p.blocks.filter(function(b){return b.type==='dialogue';}).map(function(b){return {speaker:b.speaker,text:b.text};}))!==JSON.stringify(p.dialogue))throw Error('Story block mismatch');
+        if(p.blocks.filter(function(b){return b.type==='teaser';}).length!==(i===8?1:0))throw Error('Missing original issue teaser');
+      }
+    });});return value;
   }
   async function loadManifest(){
-    const requestedIndex=pendingPages[currentKey]??index;
-    try{const response=await fetch(MANIFEST_URL);if(!response.ok)throw Error('HTTP '+response.status);const data=validateEdition(await response.json());['vorath_s2','blazin_beaver_s4'].forEach(function(key){SERIES_DATA[key]=data.editions[key];});manifestLoaded=true;delete pendingPages[currentKey];index=requestedIndex;loadSeries(currentKey,true);}
-    catch(e){manifestLoaded=true;pendingPages[currentKey]=requestedIndex;['vorath_s2','blazin_beaver_s4'].forEach(function(key){if(SERIES_DATA[key].availability==='loading')SERIES_DATA[key].availability='unavailable';});loadSeries(currentKey,true);}
+    const requestedKey=currentKey,requestedIndex=pendingPages[currentKey]??index;
+    try{const response=await fetch(MANIFEST_URL);if(!response.ok)throw Error('HTTP '+response.status);const data=validateEdition(await response.json());['vorath_s2','blazin_beaver_s4'].forEach(function(key){SERIES_DATA[key]=data.editions[key];});manifestLoaded=true;const resolvedIndex=pendingPages[currentKey]??(currentKey===requestedKey?requestedIndex:index);delete pendingPages[currentKey];index=resolvedIndex;loadSeries(currentKey,true);}
+    catch(e){manifestLoaded=true;pendingPages[currentKey]=pendingPages[currentKey]??(currentKey===requestedKey?requestedIndex:index);['vorath_s2','blazin_beaver_s4'].forEach(function(key){if(SERIES_DATA[key].availability==='loading')SERIES_DATA[key].availability='unavailable';});loadSeries(currentKey,true);}
   }
   seriesSelect.addEventListener('change',function(){loadSeries(seriesSelect.value,false);});pageSelect.addEventListener('change',function(){go(Number(pageSelect.value));});prev.addEventListener('click',retreat);next.addEventListener('click',advance);
   storyPrev.addEventListener('click',function(){retreat();stage.scrollIntoView({block:'start',behavior:'auto'});});storyNext.addEventListener('click',function(){advance();stage.scrollIntoView({block:'start',behavior:'auto'});});

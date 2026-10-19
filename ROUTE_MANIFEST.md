@@ -265,5 +265,5 @@ The combined addition is approximately 4.45 MB. The prior curated payload was al
 
 - `/comics/reader/?series=vorath_s2`: Issue 1, The Null-Time Discrepancy; cover plus eight narrative plates, original captions and dialogue beside the images.
 - `/comics/reader/?series=blazin_beaver_s4`: Issue 1, The Sub-Bass Resonance; cover plus eight narrative plates. The two landscape splashes remain uncropped.
-- Immutable story manifest: `/comics/reader/editions-447bf3493fc5c3e1.json`; sixteen full-native-dimension reviewed WebP illustrations are hash-bound in `tools/public_art_quality_20261019.json`.
+- Immutable story manifest: `/comics/reader/editions-97bf80bc1a74d401.json`; sixteen full-native-dimension reviewed WebP illustrations are hash-bound in `tools/public_art_quality_20261019.json`.
 - The sixteen rejected `/comics/assets/{vorath_s2,blazin_beaver_s4}/Page_*.webp` routes remain withheld from the public artifact. No original source or private production material is republished.

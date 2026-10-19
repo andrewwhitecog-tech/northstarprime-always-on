@@ -292,4 +292,19 @@ class ComicNarrativeRelease(unittest.TestCase):
   self.assertIn('/comics/vorath-obsidian-docket/',self.reader)
   self.assertNotIn('div.innerHTML',self.reader)
 
+ def test_original_document_order_and_authored_issue_teasers(self):
+  import hashlib
+  expected={"vorath_s2":"fd30d22e19d0d4dec1a231c8ae655c04f83f6b1c34ec7ea9c6526ad7f4941f82","blazin_beaver_s4":"73aaee61c203a1a88c5eb99ed27a9ae2a57d5c5eccd359c48aeeabe5b1a5fecb"}
+  for key,edition in self.manifest['editions'].items():
+   ordered=[{'page':p['number'],'blocks':p['blocks']} for p in edition['pages'][1:]]
+   digest=hashlib.sha256(json.dumps(ordered,ensure_ascii=False,separators=(',',':')).encode()).hexdigest()
+   self.assertEqual(digest,expected[key])
+   self.assertEqual(edition['authored_order_sha256'],digest)
+   for page in edition['pages'][1:]:
+    self.assertEqual([b['text'] for b in page['blocks'] if b['type']=='caption'],page['captions'])
+    self.assertEqual([{'speaker':b['speaker'],'text':b['text']} for b in page['blocks'] if b['type']=='dialogue'],page['dialogue'])
+   self.assertEqual(edition['pages'][8]['blocks'][-1]['type'],'teaser')
+   self.assertTrue(edition['pages'][8]['blocks'][-1]['title'].startswith('NEXT '))
+   self.assertGreater(len(edition['pages'][8]['blocks'][-1]['text']),100)
+
 if __name__=="__main__":unittest.main()

@@ -1,322 +1,143 @@
-/* MemeForge Engine • High-Culture Psychonaut Canvas Renderer */
+/* MemeForge Engine • High-Culture Psychonaut Image & Satire Studio */
 (() => {
   'use strict';
 
-  // Master Template Registry
+  // Master Template Registry: 100% Genuine Canonical Vorath & NorthStar Reviewed Originals
   const TEMPLATES = [
     {
-      id: 'm01',
-      title: 'Botanical Woodcut Alien Disclosure',
-      category: 'high-culture',
-      file: 'templates/meme_01_botanical_woodcut_alien_disclosure.svg',
-      defaultTop: 'HISTORIANS CALL THEM ALLIES',
-      defaultBottom: 'WE CALL THEM PLUG',
-      footnote: '1542 Spagyric Woodcut // The NSP APOTHECARY',
-      font: 'impact',
-      badge: 'declassified'
+      id: 'v01',
+      title: 'Obsidian Docket Chamber',
+      category: 'Canonical Vorath Masterworks',
+      file: '/static/art/reviewed/apex_20261019/apex_obsidian-be6223aae9c2aec6.webp',
+      aspect: '2:3',
+      description: 'The inner sanctum assembly around the suspended resonance coil in the subterranean docket.'
     },
     {
-      id: 'm02',
-      title: 'Pepe Silvia Explaining Vorath',
-      category: 'high-culture',
-      file: 'templates/meme_02_me_explaining_vorath_50mg.svg',
-      defaultTop: 'THERE IS NO CAROL IN HR!',
-      defaultBottom: 'THERE IS ONLY BLAZIN\' BEAVER!',
-      footnote: 'Department of Terpene Logistics // Evidence Board #420',
-      font: 'impact',
-      badge: 'declassified'
+      id: 'v02',
+      title: 'Dream Court: Cold Breath',
+      category: 'Canonical Vorath Masterworks',
+      file: '/static/art/reviewed/apex_20261019/dream-court-cold-breath-c3655d30f6d31cd0.webp',
+      aspect: '16:9',
+      description: 'The Great Wheel and prismatic crystals in the high mountain vault.'
     },
     {
-      id: 'm03',
-      title: 'Creation of Adam Passing Blunt',
-      category: 'high-culture',
-      file: 'templates/meme_03_creation_of_adam_passing_blunt.svg',
-      defaultTop: 'ON THE SEVENTH DAY',
-      defaultBottom: 'HE SAID: PUFF PUFF PASS, ADAM',
-      footnote: 'Sistine Chapel Fresco // Cascadia Solarium Corridor',
-      font: 'cinzel',
-      badge: 'nsp'
+      id: 'v03',
+      title: 'The Fifth Circuit Sequence',
+      category: 'Canonical Vorath Masterworks',
+      file: '/static/art/reviewed/apex_20261019/apex_fifth_circuit-06ed28437ba0739b.webp',
+      aspect: '2:3',
+      description: 'Sovereign esoteric geometry and electromagnetic continuum.'
     },
     {
-      id: 'm04',
-      title: '90s CRT Consciousness Loading',
-      category: 'high-culture',
-      file: 'templates/meme_04_90s_game_loading_consciousness.svg',
-      defaultTop: 'CONSCIOUSNESS LOADING: 77%',
-      defaultBottom: 'β-MYRCENE ENHANCES BLOOD-BRAIN BARRIER',
-      footnote: '16-BIT CARTRIDGE BOOT // PRESS START',
-      font: 'mono',
-      badge: 'singularity'
+      id: 'v04',
+      title: 'Map of Erased Places',
+      category: 'Canonical Vorath Masterworks',
+      file: '/static/art/reviewed/apex_20261019/apex_map_banner-47186f25a1de466b.webp',
+      aspect: '2:1',
+      description: 'The forgotten topography and cartographic anomalies of the outer perimeter.'
     },
     {
-      id: 'm05',
-      title: 'Declassified FBI Dossier',
-      category: 'high-culture',
-      file: 'templates/meme_05_declassified_fbi_dossier_cascadia.svg',
-      defaultTop: 'TOP SECRET FBI REPORT',
-      defaultBottom: 'UNDERCOVER AGENTS REFUSE TO LEAVE SOLARIUM',
-      footnote: 'CLASSIFIED // LEVEL 4 SCIF CASCADIA 432HZ',
-      font: 'mono',
-      badge: 'declassified'
+      id: 'v05',
+      title: 'The Null Calendar',
+      category: 'Canonical Vorath Masterworks',
+      file: '/static/art/reviewed/apex_20261019/l02-06b71ef8334bbff4.webp',
+      aspect: '2:3',
+      description: 'Temporal coordination across non-standard celestial cycles.'
     },
     {
-      id: 'm06',
-      title: 'Terpene Boiling Point Singularity',
-      category: 'high-culture',
-      file: 'templates/meme_06_terpene_boiling_point_conspiracy.svg',
-      defaultTop: 'YOU THINK IT\'S JUST WEED?',
-      defaultBottom: '420°F SOLVENTLESS SINGULARITY',
-      footnote: 'Molecular Fractionation Index // ISO 9001',
-      font: 'cinzel',
-      badge: 'void'
+      id: 'v06',
+      title: 'A Map of Erased Places (Alt)',
+      category: 'Canonical Vorath Masterworks',
+      file: '/static/art/reviewed/apex_20261019/l11-bca7c14473eeae9e.webp',
+      aspect: '2:3',
+      description: 'Detailed survey atlas of erased subterranean corridors.'
     },
     {
-      id: 'm07',
-      title: 'Portland Rain vs Solarium',
-      category: 'cascadia',
-      file: 'templates/meme_07_portland_rain_vs_twilight_solarium.svg',
-      defaultTop: 'SEASONAL AFFECTIVE DISORDER',
-      defaultBottom: 'MET ITS MATCH AT Cascadia Solarium Corridor',
-      footnote: 'Pacific Northwest Winter Antidote',
-      font: 'impact',
-      badge: 'oregon'
+      id: 'v07',
+      title: 'The Obituary Engine',
+      category: 'Canonical Vorath Masterworks',
+      file: '/static/art/reviewed/apex_20261019/apex_obituary-1e0ab4e9a8881291.webp',
+      aspect: '2:3',
+      description: 'The mechanical loom and sovereign archival memorial apparatus.'
     },
     {
-      id: 'm08',
-      title: 'Beaver Dam Hydraulic Dab Rig',
-      category: 'cascadia',
-      file: 'templates/meme_08_beaver_dam_hydraulic_dab_rig.svg',
-      defaultTop: 'US PATENT BLUEPRINT #1888',
-      defaultBottom: 'COLD WILLAMETTE SNOWMELT PERCOLATION',
-      footnote: 'Castor Canadensis Fluid Dynamics',
-      font: 'mono',
-      badge: 'oregon'
-    },
-    {
-      id: 'm09',
-      title: 'Medieval Spagyric Alchemist',
-      category: 'high-culture',
-      file: 'templates/meme_09_medieval_alchemist_terpene_fractionation.svg',
-      defaultTop: 'WHEN THE SPAGYRIC FRACTION HITS 315°F',
-      defaultBottom: 'AND THE LIVE ROSIN TRANSMUTES',
-      footnote: 'Philosophers Stone // Opus Magnum',
-      font: 'cinzel',
-      badge: 'void'
-    },
-    {
-      id: 'm10',
-      title: 'TriMet MAX Hyperspace Wormhole',
-      category: 'cascadia',
-      file: 'templates/meme_10_portland_transit_triqmet_wormhole.svg',
-      defaultTop: 'BEAVERTON TRANSIT CENTER',
-      defaultBottom: 'THE MOMENT THE RED LINE ENTERS HYPERSPACE',
-      footnote: 'Interdimensional Transit District',
-      font: 'impact',
-      badge: 'oregon'
-    },
-    {
-      id: 'm11',
-      title: 'Homer Space Coyote Desert',
-      category: 'simpsons',
-      file: 'templates/meme_11_homer_space_coyote_desert_transcendence.svg',
-      defaultTop: 'FIND YOUR SOUL MATE',
-      defaultBottom: 'IN THE VORATH SOLARIUM',
-      footnote: 'S08E09 // The Mysterious Voyage of Homer',
-      font: 'impact',
-      badge: 'singularity'
-    },
-    {
-      id: 'm12',
-      title: 'Rodin\'s Thinker Dab Contemplation',
-      category: 'high-culture',
-      file: 'templates/meme_12_the_thinker_rodin_dab_contemplation.svg',
-      defaultTop: 'HE HAS BEEN SITTING LIKE THIS FOR 45 MINS',
-      defaultBottom: 'WAITING FOR THE BANGER TO HIT 480°F',
-      footnote: 'Musée Rodin Bronze // Paris 1904',
-      font: 'cinzel',
-      badge: 'nsp'
-    },
-    {
-      id: 'm13',
-      title: 'Ethnobotany Glandular Stalks',
-      category: 'high-culture',
-      file: 'templates/meme_13_ethnobotany_trichome_morphology.svg',
-      defaultTop: 'WHEN YOUR BUDTENDER HAS AN MS IN ETHNOBOTANY',
-      defaultBottom: 'AND TALKS 40 MINS ON CAPITATE-STALKED HEADS',
-      footnote: 'Royal Botanical Society // Vol 14',
-      font: 'cinzel',
-      badge: 'nsp'
-    },
-    {
-      id: 'm14',
-      title: 'Pour-Over Coffee vs Terpene Dab',
-      category: 'cascadia',
-      file: 'templates/meme_14_pourover_coffee_vs_terpene_dab_ritual.svg',
-      defaultTop: 'BOTH TAKE 20 MINUTES & $800 OF GLASS',
-      defaultBottom: 'BOTH COMPLAIN ABOUT CITRUS TASTING NOTES',
-      footnote: 'Pacific Northwest Dual Ritual Synthesis',
-      font: 'impact',
-      badge: 'oregon'
-    },
-    {
-      id: 'm15',
-      title: 'Flemish Audit 0.04g Rosin',
-      category: 'high-culture',
-      file: 'templates/meme_15_metaphysical_inventory_audit_hash_rosin.svg',
-      defaultTop: 'ME AND SHIFT LEAD AT 2:14 AM',
-      defaultBottom: 'RECONCILING 0.04g UNACCOUNTED VOID KUSH',
-      footnote: 'Flemish Guild of Extractors // Antwerp 1622',
-      font: 'cinzel',
-      badge: 'void'
-    },
-    {
-      id: 'm16',
-      title: 'Victorian Medicinal Live Rosin',
-      category: 'high-culture',
-      file: 'templates/meme_16_victorian_patent_medicine_tonic.svg',
-      defaultTop: 'YOUR GRANDFATHER\'S COUGH TONIC',
-      defaultBottom: 'WAS JUST UNREGULATED 90u SOLVENTLESS LIVE ROSIN',
-      footnote: 'Pure & Unadulterated // NSP Apothecary',
-      font: 'cinzel',
-      badge: 'nsp'
-    },
-    {
-      id: 'm17',
-      title: 'Oregon Trail Solventless Ego Death',
-      category: 'cascadia',
-      file: 'templates/meme_17_oregon_trail_solventless_terpenes.svg',
-      defaultTop: 'YOU HAVE CHOSEN TO DAB VOID KUSH',
-      defaultBottom: 'YOUR OXEN HAVE EXPERIENCED EGO DEATH',
-      footnote: 'MEPC 1985 // Phosphor Green CRT',
-      font: 'mono',
-      badge: 'oregon'
-    },
-    {
-      id: 'm18',
-      title: 'Ancient Cuneiform Live Rosin',
-      category: 'high-culture',
-      file: 'templates/meme_18_ancient_cuneiform_tablet_live_rosin.svg',
-      defaultTop: 'COMPLAINT OF NANNI TO EA-NASIR',
-      defaultBottom: 'BRING SINGLE-SOURCE COLD CURE OR DEPART',
-      footnote: 'Ur III Dynasty // 1750 BCE Live Rosin Invoice',
-      font: 'cinzel',
-      badge: 'nsp'
-    },
-    {
-      id: 's01',
-      title: 'Otto Mann Fingers',
-      category: 'simpsons',
-      file: 'templates/01_otto_fingers_raw.jpg',
-      defaultTop: 'THEY CALL \'EM FINGERS...',
-      defaultBottom: 'BUT I NEVER SEE \'EM FING. OH WAIT.',
-      footnote: 'S13E16 // Weekend at Burnsie\'s',
-      font: 'impact',
-      badge: 'nsp'
-    },
-    {
-      id: 's05',
-      title: 'Hank Scorpio Live Rosin',
-      category: 'simpsons',
-      file: 'templates/05_scorpio_rosin_pockets_raw.jpg',
-      defaultTop: 'WANT SOME FIRST-PRESS LIVE ROSIN?',
-      defaultBottom: 'SORRY IT\'S NOT IN PACKETS',
-      footnote: 'S08E02 // You Only Move Twice',
-      font: 'impact',
-      badge: 'void'
-    },
-    {
-      id: 's06',
-      title: 'Steamed Hams Rosin Vapor',
-      category: 'simpsons',
-      file: 'templates/06_steamed_hams_craft_rosin_raw.jpg',
-      defaultTop: 'NO SUPERINTENDENT, IT\'S NOT SMOKE',
-      defaultBottom: 'IT\'S VAPOR! FROM THE SOLVENTLESS ROSIN WE\'RE DABBING!',
-      footnote: 'S07E21 // 22 Short Films About Springfield',
-      font: 'impact',
-      badge: 'void'
-    },
-    {
-      id: 's08',
-      title: 'Comic Book Guy Terpenes',
-      category: 'simpsons',
-      file: 'templates/08_comic_book_guy_terpenes_raw.jpg',
-      defaultTop: 'WORST. TERPENE. PROFILE. EVER.',
-      defaultBottom: 'I DEMAND SINGLE-SOURCE 90u COLD CURE!',
-      footnote: 'S12E11 // Worst Episode Ever',
-      font: 'impact',
-      badge: 'nsp'
-    },
-    {
-      id: 's11',
-      title: 'Disco Stu Solventless',
-      category: 'simpsons',
-      file: 'templates/11_disco_stu_cold_cure_raw.jpg',
-      defaultTop: 'DISCO STU DOESN\'T DAB DISTILLATE',
-      defaultBottom: 'DISCO STU LIKES 73u SINGLE-SOURCE COLD CURE!',
-      footnote: 'S07E13 // Two Bad Neighbors',
-      font: 'impact',
-      badge: 'void'
-    },
-    {
-      id: 's12',
-      title: 'Lionel Hutz Beaver Blunts',
-      category: 'simpsons',
-      file: 'templates/12_lionel_hutz_contingency_raw.jpg',
-      defaultTop: 'WORKS ON CONTINGENCY? NO, MONEY DOWN!',
-      defaultBottom: 'DO YOU TAKE DEBIT CARDS FOR BEAVER BLUNTS?',
-      footnote: 'S07E18 // The Day the Violence Died',
-      font: 'impact',
-      badge: 'nsp'
+      id: 'v08',
+      title: 'School of Weather Observatory',
+      category: 'Canonical Vorath Masterworks',
+      file: '/static/art/reviewed/apex_20261019/apex_school_weather-2c996db30aa7b4ee.webp',
+      aspect: '2:3',
+      description: 'Atmospheric distillation and meteorological observatory.'
     }
   ];
-
-  // Badge SVGs map
-  const BADGES = {
-    declassified: 'badges/declassified.svg',
-    nsp: 'badges/nsp_apothecary.svg',
-    void: 'badges/void_kush.svg',
-    oregon: 'badges/oregon_grown.svg',
-    singularity: '../stickerforge/studio/vectors/sf_23_sphene_trichome_prism.svg',
-    none: null
-  };
 
   // State
   let currentTemplate = TEMPLATES[0];
   let loadedImage = new Image();
-  let loadedBadgeImage = null;
   let activeFilter = 'none';
+  let activeAspect = 'native';
+  let activeFit = 'cover';
+  let zoomLevel = 1.0;
+  let rotationDeg = 0;
+  let isFlippedH = false;
+  let brightnessVal = 0;
+  let contrastVal = 0;
+  let saturationVal = 0;
 
   // DOM Elements
   const canvas = document.getElementById('memeCanvas');
   const ctx = canvas.getContext('2d');
+  const crtContainer = document.querySelector('.canvas-viewport');
   const templateSelect = document.getElementById('templateSelect');
-  const topTextInput = document.getElementById('topTextInput');
-  const bottomTextInput = document.getElementById('bottomTextInput');
-  const footnoteInput = document.getElementById('footnoteInput');
-  const fontSizeSlider = document.getElementById('fontSizeSlider');
-  const fontSizeVal = document.getElementById('fontSizeVal');
-  const badgeSelect = document.getElementById('badgeSelect');
-  const badgePosSelect = document.getElementById('badgePosSelect');
-  const fontBtns = document.querySelectorAll('.font-btn');
-  const filterBtns = document.querySelectorAll('.filter-btn');
+  const customUploadInput = document.getElementById('customUploadInput');
   const downloadBtn = document.getElementById('downloadMemeBtn');
   const copyBtn = document.getElementById('copyMemeBtn');
-  const customUploadInput = document.getElementById('customUploadInput');
+  const resetBtn = document.getElementById('resetCompBtn');
   const galleryGrid = document.getElementById('memeGalleryGrid');
-  const crtContainer = document.querySelector('.canvas-viewport');
+  const sceneNotesInput = document.getElementById('sceneNotesInput');
+  const sceneNotesText = document.getElementById('sceneNotesText');
+  const sceneNotesTitle = document.getElementById('sceneNotesTitle');
+  const memeErrorMessage = document.getElementById('memeErrorMessage');
+  const zoomSlider = document.getElementById('zoomSlider');
+  const zoomVal = document.getElementById('zoomVal');
+  const brightnessSlider = document.getElementById('brightnessSlider');
+  const brightnessValDisplay = document.getElementById('brightnessVal');
+  const contrastSlider = document.getElementById('contrastSlider');
+  const contrastValDisplay = document.getElementById('contrastVal');
+  const saturationSlider = document.getElementById('saturationSlider');
+  const saturationValDisplay = document.getElementById('saturationVal');
+  const aspectBtns = document.querySelectorAll('.aspect-btn');
+  const fitBtns = document.querySelectorAll('.fit-btn');
+  const filterBtns = document.querySelectorAll('.filter-btn');
+  const rotateBtn = document.getElementById('rotateBtn');
+  const flipBtn = document.getElementById('flipBtn');
+
+  // In-Page Status & Error Feedback
+  function showError(msg) {
+    if (memeErrorMessage) {
+      memeErrorMessage.textContent = msg;
+      memeErrorMessage.style.display = 'block';
+    }
+  }
+
+  function clearError() {
+    if (memeErrorMessage) {
+      memeErrorMessage.textContent = '';
+      memeErrorMessage.style.display = 'none';
+    }
+  }
 
   // Populate Template Dropdown
   function initTemplateSelect() {
     templateSelect.innerHTML = '';
-    const groups = {
-      'High-Culture Psychonaut Suite': TEMPLATES.filter(t => t.category === 'high-culture'),
-      'Simpsons Frinkiac Dispensary Lane': TEMPLATES.filter(t => t.category === 'simpsons'),
-      'Cascadia & Oregon Satire': TEMPLATES.filter(t => t.category === 'cascadia')
-    };
+    const categories = {};
+    TEMPLATES.forEach(t => {
+      if (!categories[t.category]) categories[t.category] = [];
+      categories[t.category].push(t);
+    });
 
-    for (const [groupName, list] of Object.entries(groups)) {
+    for (const [catName, list] of Object.entries(categories)) {
       const optgroup = document.createElement('optgroup');
-      optgroup.label = groupName;
+      optgroup.label = catName;
       list.forEach(t => {
         const opt = document.createElement('option');
         opt.value = t.id;
@@ -327,192 +148,166 @@
     }
   }
 
-  // Load Template Image
+  // Load Template Image (Preserves last valid decoded image on error)
   function loadTemplate(tpl) {
-    currentTemplate = tpl;
-    templateSelect.value = tpl.id;
-    topTextInput.value = tpl.defaultTop;
-    bottomTextInput.value = tpl.defaultBottom;
-    footnoteInput.value = tpl.footnote || '';
-    badgeSelect.value = tpl.badge || 'none';
+    if (!tpl) return;
+    clearError();
 
-    // Set font button
-    fontBtns.forEach(b => {
-      b.classList.toggle('active', b.dataset.font === (tpl.font || 'impact'));
-    });
+    const candidate = new Image();
+    candidate.crossOrigin = 'anonymous';
+    candidate.onload = () => {
+      clearError();
+      loadedImage = candidate;
+      currentTemplate = tpl;
+      if (templateSelect) templateSelect.value = tpl.id;
 
-    loadedImage = new Image();
-    loadedImage.crossOrigin = 'anonymous';
-    loadedImage.onload = () => {
-      canvas.width = loadedImage.naturalWidth || 800;
-      canvas.height = loadedImage.naturalHeight || 800;
-      loadBadgeAndRender();
-    };
-    loadedImage.src = tpl.file;
-  }
+      // Update DOM scene notes outside image
+      if (sceneNotesInput) sceneNotesInput.value = tpl.description || '';
+      if (sceneNotesTitle) sceneNotesTitle.textContent = tpl.title;
+      if (sceneNotesText) sceneNotesText.textContent = tpl.description || '';
 
-  // Load Badge Image & Render
-  function loadBadgeAndRender() {
-    const badgeKey = badgeSelect.value;
-    const badgeSrc = BADGES[badgeKey];
-    if (badgeSrc) {
-      loadedBadgeImage = new Image();
-      loadedBadgeImage.crossOrigin = 'anonymous';
-      loadedBadgeImage.onload = render;
-      loadedBadgeImage.src = badgeSrc;
-    } else {
-      loadedBadgeImage = null;
       render();
-    }
-  }
-
-  // Canvas Text Drawing with Auto-Wrap & Stroke
-  function drawText(text, y, fontName, fontSize, isTop) {
-    if (!text) return;
-    text = text.trim();
-    ctx.save();
-    ctx.textAlign = 'center';
-
-    let fontStr = '';
-    if (fontName === 'impact') {
-      fontStr = `900 ${fontSize}px Impact, -apple-system, sans-serif`;
-      ctx.fillStyle = '#ffffff';
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = Math.max(4, fontSize * 0.12);
-      ctx.lineJoin = 'miter';
-      ctx.miterLimit = 2;
-    } else if (fontName === 'cinzel') {
-      fontStr = `900 ${fontSize * 0.85}px 'Cinzel', serif`;
-      ctx.fillStyle = '#fbbf24';
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = Math.max(3, fontSize * 0.08);
-      ctx.shadowColor = 'rgba(0,0,0,0.9)';
-      ctx.shadowBlur = 12;
-    } else if (fontName === 'mono') {
-      fontStr = `700 ${fontSize * 0.75}px 'JetBrains Mono', monospace`;
-      ctx.fillStyle = '#00f0ff';
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = Math.max(3, fontSize * 0.08);
-    } else {
-      fontStr = `bold ${fontSize * 0.8}px Georgia, serif`;
-      ctx.fillStyle = '#f8fafc';
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = Math.max(3, fontSize * 0.08);
-    }
-
-    ctx.font = fontStr;
-
-    // Word Wrap
-    const maxWidth = canvas.width * 0.92;
-    const words = text.split(' ');
-    let lines = [];
-    let currentLine = words[0] || '';
-
-    for (let i = 1; i < words.length; i++) {
-      const testLine = currentLine + ' ' + words[i];
-      if (ctx.measureText(testLine).width < maxWidth) {
-        currentLine = testLine;
-      } else {
-        lines.push(currentLine);
-        currentLine = words[i];
+    };
+    candidate.onerror = () => {
+      showError(`Unable to load artwork "${tpl.title}". The previous valid artwork has been preserved.`);
+      if (currentTemplate && templateSelect) {
+        templateSelect.value = currentTemplate.id;
       }
-    }
-    lines.push(currentLine);
-
-    const lineHeight = fontSize * 1.08;
-    let startY = y;
-    if (!isTop) {
-      startY = y - (lines.length - 1) * lineHeight;
-    }
-
-    lines.forEach((line, idx) => {
-      const lineY = startY + idx * lineHeight;
-      if (ctx.lineWidth > 0) ctx.strokeText(line, canvas.width / 2, lineY);
-      ctx.fillText(line, canvas.width / 2, lineY);
-    });
-
-    ctx.restore();
+    };
+    candidate.src = tpl.file;
   }
 
-  // Main Render Loop
+  // Render Canvas Composition (Zero text painted into image bytes)
   function render() {
-    if (!loadedImage.complete) return;
+    if (!loadedImage || !loadedImage.complete) return;
 
-    // 1. Draw Base Image
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(loadedImage, 0, 0, canvas.width, canvas.height);
+    // Source native dimensions with safe high-resolution fallbacks
+    const srcW = loadedImage.naturalWidth || 1024;
+    const srcH = loadedImage.naturalHeight || 1536;
 
-    // 2. Draw Active Font
-    const activeFontBtn = document.querySelector('.font-btn.active');
-    const fontName = activeFontBtn ? activeFontBtn.dataset.font : 'impact';
-    const baseFontSize = parseInt(fontSizeSlider.value, 10) * (canvas.width / 800);
+    // Compute target dimensions based on selected aspect ratio
+    let targetW = srcW;
+    let targetH = srcH;
 
-    // 3. Draw Top Text
-    drawText(topTextInput.value, baseFontSize * 1.15, fontName, baseFontSize, true);
-
-    // 4. Draw Bottom Text
-    drawText(bottomTextInput.value, canvas.height - (baseFontSize * 0.6), fontName, baseFontSize, false);
-
-    // 5. Draw Footnote / Fine-print
-    if (footnoteInput.value.trim()) {
-      ctx.save();
-      ctx.textAlign = 'center';
-      ctx.font = `700 ${canvas.width * 0.019}px 'JetBrains Mono', monospace`;
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
-      ctx.shadowColor = '#000000';
-      ctx.shadowBlur = 6;
-      ctx.fillText(footnoteInput.value.trim().toUpperCase(), canvas.width / 2, canvas.height - (canvas.width * 0.015));
-      ctx.restore();
+    if (activeAspect === '1:1') {
+      const side = Math.min(srcW, srcH);
+      targetW = side;
+      targetH = side;
+    } else if (activeAspect === '16:9') {
+      targetW = srcW;
+      targetH = Math.round(srcW * (9 / 16));
+    } else if (activeAspect === '4:3') {
+      targetW = srcW;
+      targetH = Math.round(srcW * (3 / 4));
+    } else if (activeAspect === '9:16') {
+      targetH = srcH;
+      targetW = Math.round(srcH * (9 / 16));
     }
 
-    // 6. Draw Badge Overlay
-    if (loadedBadgeImage && loadedBadgeImage.complete) {
-      ctx.save();
-      const badgeW = canvas.width * 0.28;
-      const aspect = loadedBadgeImage.naturalHeight / (loadedBadgeImage.naturalWidth || 1);
-      const badgeH = badgeW * aspect;
-      const pos = badgePosSelect.value;
-      let bx = 20, by = 20;
+    // Account for 90/270 rotation in canvas dimensions
+    const isRotatedQuarter = (rotationDeg === 90 || rotationDeg === 270);
+    canvas.width = isRotatedQuarter ? targetH : targetW;
+    canvas.height = isRotatedQuarter ? targetW : targetH;
 
-      if (pos === 'top-right') {
-        bx = canvas.width - badgeW - 20;
-        by = 20;
-      } else if (pos === 'bottom-left') {
-        bx = 20;
-        by = canvas.height - badgeH - 35;
-      } else if (pos === 'bottom-right') {
-        bx = canvas.width - badgeW - 20;
-        by = canvas.height - badgeH - 35;
+    // Calculate un-stretched draw dimensions preserving authentic source aspect ratio
+    let drawW = targetW;
+    let drawH = targetH;
+
+    if (activeAspect !== 'native') {
+      const targetRatio = targetW / targetH;
+      const srcRatio = srcW / srcH;
+
+      if (activeFit === 'contain') {
+        // Fit entire image inside target canvas (letterbox/pillarbox)
+        if (srcRatio > targetRatio) {
+          drawW = targetW;
+          drawH = targetW / srcRatio;
+        } else {
+          drawH = targetH;
+          drawW = targetH * srcRatio;
+        }
+      } else {
+        // Default 'cover': crop to fill target canvas symmetrically preserving true geometry
+        if (srcRatio > targetRatio) {
+          // Source is wider than target: match height, crop width symmetrically
+          drawH = targetH;
+          drawW = targetH * srcRatio;
+        } else {
+          // Source is taller than target: match width, crop height symmetrically
+          drawW = targetW;
+          drawH = targetW / srcRatio;
+        }
       }
-
-      ctx.shadowColor = 'rgba(0,0,0,0.7)';
-      ctx.shadowBlur = 15;
-      ctx.drawImage(loadedBadgeImage, bx, by, badgeW, badgeH);
-      ctx.restore();
+    } else {
+      drawW = srcW;
+      drawH = srcH;
     }
 
-    // 7. Apply Canvas Filters if selected
+    // Reset transform & clear (clean black void background for contain mode letterboxing)
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = '#06080e';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Set up canvas color tone filter
+    const bFilter = 100 + brightnessVal;
+    const cFilter = 100 + contrastVal;
+    const sFilter = 100 + saturationVal;
+    ctx.filter = `brightness(${bFilter}%) contrast(${cFilter}%) saturate(${sFilter}%)`;
+
+    // Center origin and apply transformation pipeline
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    if (rotationDeg !== 0) ctx.rotate((rotationDeg * Math.PI) / 180);
+    if (isFlippedH) ctx.scale(-1, 1);
+    if (zoomLevel !== 1.0) ctx.scale(zoomLevel, zoomLevel);
+
+    // Draw source image centered with true un-distorted proportions
+    ctx.drawImage(loadedImage, -drawW / 2, -drawH / 2, drawW, drawH);
+    ctx.restore();
+
+    // Reset filter for post-processing overlay passes
+    ctx.filter = 'none';
+
+    // Apply Aesthetic Creative Filters
     if (activeFilter === 'woodcut') {
       ctx.save();
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.fillStyle = '#f3e8d2';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.globalCompositeOperation = 'color';
       ctx.fillStyle = '#78350f';
-      ctx.globalAlpha = 0.25;
+      ctx.globalAlpha = 0.35;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.restore();
     } else if (activeFilter === 'cyber') {
       ctx.save();
       ctx.globalCompositeOperation = 'overlay';
       const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-      grad.addColorStop(0, 'rgba(0, 240, 255, 0.2)');
-      grad.addColorStop(1, 'rgba(255, 0, 128, 0.2)');
+      grad.addColorStop(0, 'rgba(0, 240, 255, 0.28)');
+      grad.addColorStop(1, 'rgba(255, 0, 128, 0.28)');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
+    } else if (activeFilter === 'monochrome') {
+      ctx.save();
+      ctx.globalCompositeOperation = 'color';
+      ctx.fillStyle = '#808080';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
+    } else if (activeFilter === 'crt') {
+      // Subtle diegetic phosphor raster lines on canvas
+      ctx.save();
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
+      for (let y = 0; y < canvas.height; y += 4) {
+        ctx.fillRect(0, y, canvas.width, 2);
+      }
       ctx.restore();
     }
   }
 
-  // Render Curated Gallery
+  // Render Curated Gallery Grid
   function renderGallery() {
+    if (!galleryGrid) return;
     galleryGrid.innerHTML = '';
     TEMPLATES.forEach(t => {
       const card = document.createElement('div');
@@ -529,16 +324,21 @@
       const info = document.createElement('div');
       info.className = 'meme-card-info';
       info.innerHTML = `
+        <span class="card-category-tag">${t.category}</span>
         <h3>${t.title}</h3>
-        <p>"${t.defaultTop} — ${t.defaultBottom}"</p>
+        <p>${t.description}</p>
       `;
 
       const remixBtn = document.createElement('button');
+      remixBtn.type = 'button';
       remixBtn.className = 'remix-btn';
-      remixBtn.innerHTML = '⚡ Remix in Studio';
+      remixBtn.innerHTML = '✦ Load in Studio';
       remixBtn.addEventListener('click', () => {
         loadTemplate(t);
-        window.scrollTo({ top: document.querySelector('.meme-studio').offsetTop - 80, behavior: 'smooth' });
+        const studioEl = document.querySelector('.meme-studio');
+        if (studioEl) {
+          window.scrollTo({ top: studioEl.offsetTop - 80, behavior: 'smooth' });
+        }
       });
 
       card.appendChild(thumb);
@@ -548,89 +348,228 @@
     });
   }
 
-  // Event Listeners
-  templateSelect.addEventListener('change', () => {
-    const tpl = TEMPLATES.find(t => t.id === templateSelect.value);
-    if (tpl) loadTemplate(tpl);
-  });
-
-  topTextInput.addEventListener('input', render);
-  bottomTextInput.addEventListener('input', render);
-  footnoteInput.addEventListener('input', render);
-  badgePosSelect.addEventListener('change', render);
-  badgeSelect.addEventListener('change', loadBadgeAndRender);
-
-  fontSizeSlider.addEventListener('input', () => {
-    fontSizeVal.textContent = fontSizeSlider.value;
-    render();
-  });
-
-  fontBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      fontBtns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      render();
+  // Event Listeners: Template Selector
+  if (templateSelect) {
+    templateSelect.addEventListener('change', () => {
+      const tpl = TEMPLATES.find(t => t.id === templateSelect.value);
+      if (tpl) loadTemplate(tpl);
     });
-  });
+  }
 
-  filterBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      filterBtns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      activeFilter = btn.dataset.filter;
-      crtContainer.classList.toggle('crt-active', activeFilter === 'crt');
-      render();
-    });
-  });
-
-  // Custom File Upload
-  if (customUploadInput) {
-    customUploadInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          loadedImage = new Image();
-          loadedImage.onload = () => {
-            canvas.width = loadedImage.naturalWidth || 800;
-            canvas.height = loadedImage.naturalHeight || 800;
-            loadBadgeAndRender();
-          };
-          loadedImage.src = event.target.result;
-        };
-        reader.readAsDataURL(file);
+  // Event Listeners: Authored Scene Notes (DOM only, outside image)
+  if (sceneNotesInput) {
+    sceneNotesInput.addEventListener('input', () => {
+      const val = sceneNotesInput.value.trim();
+      if (sceneNotesText) {
+        sceneNotesText.textContent = val || 'No additional scene notes authored.';
       }
     });
   }
 
-  // Download PNG
-  downloadBtn.addEventListener('click', () => {
-    const link = document.createElement('a');
-    link.download = `memeforge_${Date.now()}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
+  // Event Listeners: Aspect Ratio Framing
+  aspectBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      aspectBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeAspect = btn.dataset.aspect || 'native';
+      render();
+    });
   });
 
-  // Copy to Clipboard
-  copyBtn.addEventListener('click', async () => {
-    try {
-      canvas.toBlob(async (blob) => {
-        if (blob && navigator.clipboard && navigator.clipboard.write) {
-          await navigator.clipboard.write([
-            new ClipboardItem({ 'image/png': blob })
-          ]);
-          copyBtn.textContent = '✓ Copied to Clipboard!';
-          setTimeout(() => { copyBtn.textContent = 'Copy Image'; }, 2000);
-        } else {
-          alert('Clipboard copy is not supported in this browser. Please use Download PNG.');
-        }
-      });
-    } catch (_) {
-      alert('Unable to copy image directly. Please use Download PNG.');
-    }
+  // Event Listeners: Proportion Fit Mode (Cover vs Contain)
+  fitBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      fitBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeFit = btn.dataset.fit || 'cover';
+      render();
+    });
   });
 
-  // Initialize
+  // Event Listeners: Zoom Slider
+  if (zoomSlider) {
+    zoomSlider.addEventListener('input', () => {
+      zoomLevel = parseFloat(zoomSlider.value) / 100;
+      if (zoomVal) zoomVal.textContent = `${zoomSlider.value}%`;
+      render();
+    });
+  }
+
+  // Event Listeners: Rotation
+  if (rotateBtn) {
+    rotateBtn.addEventListener('click', () => {
+      rotationDeg = (rotationDeg + 90) % 360;
+      rotateBtn.textContent = `Rotate ${rotationDeg}°`;
+      render();
+    });
+  }
+
+  // Event Listeners: Horizontal Flip
+  if (flipBtn) {
+    flipBtn.addEventListener('click', () => {
+      isFlippedH = !isFlippedH;
+      flipBtn.classList.toggle('active', isFlippedH);
+      render();
+    });
+  }
+
+  // Event Listeners: Color Adjustments
+  if (brightnessSlider) {
+    brightnessSlider.addEventListener('input', () => {
+      brightnessVal = parseInt(brightnessSlider.value, 10);
+      if (brightnessValDisplay) brightnessValDisplay.textContent = brightnessVal > 0 ? `+${brightnessVal}` : brightnessVal;
+      render();
+    });
+  }
+  if (contrastSlider) {
+    contrastSlider.addEventListener('input', () => {
+      contrastVal = parseInt(contrastSlider.value, 10);
+      if (contrastValDisplay) contrastValDisplay.textContent = contrastVal > 0 ? `+${contrastVal}` : contrastVal;
+      render();
+    });
+  }
+  if (saturationSlider) {
+    saturationSlider.addEventListener('input', () => {
+      saturationVal = parseInt(saturationSlider.value, 10);
+      if (saturationValDisplay) saturationValDisplay.textContent = saturationVal > 0 ? `+${saturationVal}` : saturationVal;
+      render();
+    });
+  }
+
+  // Event Listeners: Aesthetic Filters
+  filterBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      filterBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeFilter = btn.dataset.filter || 'none';
+      if (crtContainer) {
+        crtContainer.classList.toggle('crt-active', activeFilter === 'crt');
+      }
+      render();
+    });
+  });
+
+  // Event Listeners: Reset Composition
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      activeAspect = 'native';
+      aspectBtns.forEach(b => b.classList.toggle('active', b.dataset.aspect === 'native'));
+      zoomLevel = 1.0;
+      if (zoomSlider) zoomSlider.value = '100';
+      if (zoomVal) zoomVal.textContent = '100%';
+      rotationDeg = 0;
+      if (rotateBtn) rotateBtn.textContent = 'Rotate 0°';
+      isFlippedH = false;
+      if (flipBtn) flipBtn.classList.remove('active');
+      brightnessVal = 0;
+      if (brightnessSlider) brightnessSlider.value = '0';
+      if (brightnessValDisplay) brightnessValDisplay.textContent = '0';
+      contrastVal = 0;
+      if (contrastSlider) contrastSlider.value = '0';
+      if (contrastValDisplay) contrastValDisplay.textContent = '0';
+      saturationVal = 0;
+      if (saturationSlider) saturationSlider.value = '0';
+      if (saturationValDisplay) saturationValDisplay.textContent = '0';
+      activeFilter = 'none';
+      filterBtns.forEach(b => b.classList.toggle('active', b.dataset.filter === 'none'));
+      activeFit = 'cover';
+      fitBtns.forEach(b => b.classList.toggle('active', b.dataset.fit === 'cover'));
+      if (crtContainer) crtContainer.classList.remove('crt-active');
+      render();
+    });
+  }
+
+  // Custom Local File Upload (Preserves last valid decoded image on error)
+  if (customUploadInput) {
+    customUploadInput.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+
+      clearError();
+      const reader = new FileReader();
+      reader.onerror = () => {
+        showError(`Failed to read file "${file.name}". The previous valid artwork has been preserved.`);
+      };
+      reader.onload = (event) => {
+        const candidate = new Image();
+        candidate.onload = () => {
+          if (!candidate.naturalWidth || !candidate.naturalHeight) {
+            showError(`Image "${file.name}" has zero dimensions or corrupt data. The previous valid artwork has been preserved.`);
+            return;
+          }
+          clearError();
+          loadedImage = candidate;
+          currentTemplate = {
+            id: 'custom_upload',
+            title: file.name.replace(/\.[^/.]+$/, ''),
+            category: 'Local Upload',
+            file: event.target.result,
+            description: `Locally uploaded image: ${file.name} (${candidate.naturalWidth}x${candidate.naturalHeight})`
+          };
+          if (sceneNotesTitle) sceneNotesTitle.textContent = currentTemplate.title;
+          if (sceneNotesInput) sceneNotesInput.value = currentTemplate.description;
+          if (sceneNotesText) sceneNotesText.textContent = currentTemplate.description;
+          render();
+        };
+        candidate.onerror = () => {
+          showError(`Failed to decode image "${file.name}". The previous valid artwork has been preserved.`);
+        };
+        candidate.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Download Decoded PNG
+  if (downloadBtn) {
+    downloadBtn.addEventListener('click', () => {
+      if (!canvas) return;
+      if (canvas.toBlob) {
+        canvas.toBlob((blob) => {
+          if (!blob) return;
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          const cleanName = (currentTemplate.title || 'memeforge').toLowerCase().replace(/[^a-z0-9]+/g, '_');
+          link.download = `memeforge_${cleanName}_${Date.now()}.png`;
+          link.href = url;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }, 'image/png');
+      } else {
+        const link = document.createElement('a');
+        link.download = `memeforge_${Date.now()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    });
+  }
+
+  // Copy Image to Clipboard
+  if (copyBtn) {
+    copyBtn.addEventListener('click', async () => {
+      try {
+        canvas.toBlob(async (blob) => {
+          if (blob && navigator.clipboard && navigator.clipboard.write) {
+            await navigator.clipboard.write([
+              new ClipboardItem({ 'image/png': blob })
+            ]);
+            copyBtn.textContent = '✓ Copied to Clipboard!';
+            setTimeout(() => { copyBtn.textContent = 'Copy Image'; }, 2000);
+          } else {
+            alert('Clipboard image copying is not supported in this browser. Please use Download PNG.');
+          }
+        }, 'image/png');
+      } catch (_) {
+        alert('Unable to copy image directly. Please use Download PNG.');
+      }
+    });
+  }
+
+  // Initialization
   initTemplateSelect();
   renderGallery();
   loadTemplate(TEMPLATES[0]);

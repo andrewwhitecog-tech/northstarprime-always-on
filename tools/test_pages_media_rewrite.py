@@ -166,7 +166,7 @@ class ReviewedArtRelease(unittest.TestCase):
 
  def test_held_public_media_are_omitted_but_originals_preserved(self):
   art=m.pages_art_quality
-  self.assertEqual(len(art.WITHHELD_MEDIA),42)
+  self.assertEqual(len(art.WITHHELD_MEDIA),68)
   selected={relative.as_posix() for _,relative in m.iter_source_files()}
   external=m.release_media_index()
   for row in art.WITHHELD_MEDIA:

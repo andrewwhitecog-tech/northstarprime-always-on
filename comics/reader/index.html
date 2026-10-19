@@ -438,6 +438,14 @@
     @media(max-width:1050px){.toolbar-actions{justify-content:flex-start}.series-select{flex-basis:100%}#readerStage{grid-template-columns:minmax(0,1.05fr) minmax(280px,.9fr);gap:25px}}
     @media(max-width:780px){header{padding:16px;gap:14px}.brand-block,.toolbar-actions{flex-basis:100%}.toolbar-actions{gap:8px}.brand-titles h1{font-size:1.16rem}.nav-bar{padding:10px 14px;gap:12px}.page-indicator-wrap{width:100%;justify-content:space-between}.page-select{max-width:48%;flex:1}#readerStage,#readerStage.spread-layout{grid-template-columns:minmax(0,1fr);gap:26px;padding:20px 16px}.comic-page-img{max-height:78svh}.narrative-story{max-width:620px;width:100%;margin:auto}.spread-layout .story-pages{grid-template-columns:1fr}.story-page h2{font-size:1.65rem}.dialogue-line dd{font-size:1.1rem}.story-caption{font-size:.93rem}.viewer-stage.spread{gap:8px}.mode-group{gap:7px}.thumb-item{min-width:56px}footer{padding:12px 16px}}
     @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+
+    .reading-options{min-width:0;max-width:100%;color:var(--text-muted);font-family:NorthStarUtility,Consolas,monospace;font-size:.8rem}
+    .reading-options summary{min-height:44px;display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px 12px;list-style:none;border-bottom:1px solid #b99a5444;color:#dbc68e}
+    .reading-options summary::-webkit-details-marker{display:none}.reading-options summary::after{content:'+';font-size:1.1rem}.reading-options[open] summary::after{content:'−'}
+    .reading-options summary:focus-visible{outline:2px solid var(--gold);outline-offset:2px}.reading-options[open] .mode-group{padding:12px 0 2px}
+    .toast{max-width:calc(100vw - 32px);overflow-wrap:anywhere}
+    #readerStage.landscape-layout{grid-template-columns:minmax(0,1fr);gap:28px}.landscape-layout .comic-page-img{max-height:84svh;width:100%;max-width:1200px;height:auto}.landscape-layout .narrative-story{width:100%;max-width:780px;margin:0 auto}
+    @media(max-width:780px){.toolbar-actions>a[href='/tcg/']{display:none}.reading-options{width:100%}.reading-options summary{width:max-content}.landscape-layout .comic-page-img{width:100%;max-height:none}}
   </style>
 </head>
 <body>
@@ -463,9 +471,6 @@
       <button id="btnShare" type="button" class="btn" aria-label="Copy Direct Link">
         <span>✦</span> Share
       </button>
-      <button id="btnHelp" type="button" class="btn" aria-label="Keyboard Shortcuts">
-        <span>?</span> Shortcuts
-      </button>
       <a href="/tcg/" class="btn btn-gold">3D TCG Binder &rarr;</a>
       <a id="readChapterLink" href="/comics/vorath-obsidian-docket/" class="btn" style="display:none">Read illustrated chapter &rarr;</a>
       <a href="/comics/" class="btn">&larr; Vault</a>
@@ -480,7 +485,9 @@
       <button id="btnNext" type="button" class="btn" style="padding:4px 10px;">Next ▶</button>
     </div>
 
-    <div class="mode-group">
+    <details class="reading-options" id="readingOptions">
+      <summary>Reading options</summary>
+      <div class="mode-group">
       <span style="font-size:0.75rem; color:var(--text-muted); font-family:var(--font-mono);">Flow:</span>
       <button id="dirLtr" type="button" class="mode-btn active" title="Left to Right (Western Comic)">LTR</button>
       <button id="dirRtl" type="button" class="mode-btn" title="Right to Left (Japanese Manga)">RTL</button>
@@ -494,7 +501,11 @@
       <button id="fitWidth" type="button" class="mode-btn" title="Fit width to screen">Width</button>
 
       <button id="btnSound" type="button" class="mode-btn active" style="margin-left:8px;" title="Toggle page-turn audio">Sound: ON</button>
-    </div>
+      <button id="btnHelp" type="button" class="btn" aria-label="Keyboard Shortcuts">
+        <span>?</span> Shortcuts
+      </button>
+      </div>
+    </details>
   </div>
 
   <div id="editionStatus" class="edition-message" role="status" hidden></div>
@@ -562,7 +573,7 @@ window.addEventListener('DOMContentLoaded', function(){
     const series=SERIES_DATA[currentKey];index=finiteIndex(index,series.pages.length);pageSelect.value=String(index);updateUrl();error.hidden=true;error.replaceChildren();
     const indices=visibleIndices();const ordered=direction==='RTL'?indices.slice().reverse():indices;
     setImage(mainImg,series.pages[ordered[0]]);secondImg.style.display=ordered.length===2?'block':'none';if(ordered.length===2)setImage(secondImg,series.pages[ordered[1]]);else{secondImg.removeAttribute('src');secondImg.alt='';}
-    viewer.classList.toggle('spread',ordered.length===2);stage.classList.toggle('spread-layout',ordered.length===2);renderStory(ordered);
+    viewer.classList.toggle('spread',ordered.length===2);stage.classList.toggle('spread-layout',ordered.length===2);stage.classList.toggle('landscape-layout',ordered.length===1&&series.pages[ordered[0]].width>series.pages[ordered[0]].height);renderStory(ordered);
     prev.disabled=storyPrev.disabled=index===0;next.disabled=storyNext.disabled=index===series.pages.length-1;
     byId('viewSpread').disabled=series.pages.length<2;
     tray.querySelectorAll('.thumb-item').forEach(function(t,i){const active=indices.includes(i);t.classList.toggle('active',active);if(active)t.setAttribute('aria-current','page');else t.removeAttribute('aria-current');});
@@ -601,10 +612,10 @@ window.addEventListener('DOMContentLoaded', function(){
   byId('fitWidth').addEventListener('click',function(){viewer.classList.add('fit-width');toggleButton('fitWidth',true);toggleButton('fitHeight',false);});byId('fitHeight').addEventListener('click',function(){viewer.classList.remove('fit-width');toggleButton('fitHeight',true);toggleButton('fitWidth',false);});
   byId('btnSound').textContent='Sound: OFF';byId('btnSound').classList.remove('active');byId('btnSound').addEventListener('click',function(){sound=!sound;this.textContent=sound?'Sound: ON':'Sound: OFF';toggleButton('btnSound',sound);});
   byId('btnFullscreen').addEventListener('click',function(){if(!document.fullscreenElement)document.documentElement.requestFullscreen().catch(function(){});else document.exitFullscreen().catch(function(){});});
-  const modal=byId('shortcutsModal');window.closeShortcutsModal=function(){modal.classList.remove('active');byId('btnHelp').focus();};byId('btnHelp').addEventListener('click',function(){modal.classList.add('active');modal.querySelector('button').focus();});
+  const modal=byId('shortcutsModal');window.closeShortcutsModal=function(){modal.classList.remove('active');(byId('readingOptions').open?byId('btnHelp'):byId('readingOptions').querySelector('summary')).focus();};byId('btnHelp').addEventListener('click',function(){modal.classList.add('active');modal.querySelector('button').focus();});
   function toast(text){const t=byId('readerToast');t.textContent=text;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2400);}
   byId('btnShare').addEventListener('click',function(){const url=new URL('/comics/reader/',location.origin);url.searchParams.set('series',currentKey);url.searchParams.set('page',String(index+1));if(navigator.clipboard)navigator.clipboard.writeText(url.href).then(function(){toast('Page link copied.');}).catch(function(){toast(url.href);});else toast(url.href);});
-  window.addEventListener('keydown',function(e){if(modal.classList.contains('active')){if(e.key==='Escape')window.closeShortcutsModal();return;}if(e.target.closest('select,input,textarea,[contenteditable=true]'))return;if(e.target.tagName==='BUTTON'&&(e.key===' '||e.key==='Enter'))return;
+  window.addEventListener('keydown',function(e){if(modal.classList.contains('active')){if(e.key==='Escape')window.closeShortcutsModal();if(e.key==='Tab'){e.preventDefault();modal.querySelector('button').focus();}return;}if(e.target.closest('select,input,textarea,[contenteditable=true]'))return;if(e.target.tagName==='BUTTON'&&(e.key===' '||e.key==='Enter'))return;
     if(['ArrowRight','ArrowLeft','PageDown','PageUp','Home','End',' '].includes(e.key))e.preventDefault();
     if(e.key==='ArrowRight')forward();else if(e.key==='ArrowLeft')backward();else if(e.key==='PageDown'||e.key===' ')advance();else if(e.key==='PageUp')retreat();else if(e.key==='Home')go(0);else if(e.key==='End')go(SERIES_DATA[currentKey].pages.length-1);else if(e.key.toLowerCase()==='f')byId('btnFullscreen').click();else if(e.key.toLowerCase()==='s')(spread?byId('viewSingle'):byId('viewSpread')).click();else if(e.key.toLowerCase()==='d')(direction==='LTR'?byId('dirRtl'):byId('dirLtr')).click();else if(e.key.toLowerCase()==='m')byId('btnSound').click();else if(e.key==='?'||e.key==='/')byId('btnHelp').click();
   });

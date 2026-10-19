@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Graphic Novel Reader // NorthStar Sovereign Comix</title>
-  <meta name="description" content="Universal high-resolution in-browser reader for NorthStar graphic novels, underground comics, and manga. Featuring Blazin' Beaver, Uncle Vorath Mysteries, and Duel Zexal.">
+  <meta name="description" content="Cover artwork previews and the available Uncle Vorath illustrated chapter.">
   <link rel="canonical" href="https://northstarprime.net/comics/reader/">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <style>
@@ -248,8 +248,7 @@
       z-index: 20;
     }
     .nav-zone:hover {
-      background: rgba(0, 0, 0, 0.35);
-      color: var(--cyan);
+      background: transparent;
     }
     .nav-zone.left { left: 0; }
     .nav-zone.right { right: 0; }
@@ -384,6 +383,24 @@
       font-size: 0.75rem;
       color: var(--cyan);
     }
+
+    /* Keep reader controls reachable on narrow screens. */
+    .brand-block,.brand-titles,.toolbar-actions{min-width:0}
+    @media(max-width:720px){
+      header{position:static;flex-direction:column;align-items:stretch;padding:14px;gap:12px}
+      .brand-titles h1{font-size:1.05rem;line-height:1.35}
+      .brand-titles .subtitle{overflow-wrap:anywhere;line-height:1.5}
+      .toolbar-actions{width:100%;gap:8px}
+      .series-select{flex:1 0 100%;width:100%;min-width:0;max-width:100%;min-height:44px}
+      .toolbar-actions .btn,.mode-btn{min-height:44px}
+      .nav-bar{padding:10px 14px;gap:10px;min-width:0}
+      .nav-bar>div{min-width:0;flex-wrap:wrap}
+      .page-indicator-wrap{width:100%;justify-content:space-between}
+      .page-select{min-width:0;max-width:40%;min-height:44px}
+      .viewer-stage{min-width:0;gap:8px}
+      main{min-width:0;min-height:0;padding:14px 10px}
+      footer{width:100%;min-width:0;padding:0 10px}
+    }
   </style>
 </head>
 <body>
@@ -399,10 +416,9 @@
     </div>
     <div class="toolbar-actions">
       <select id="seriesSelect" class="series-select" aria-label="Select Comic Series">
-        <option value="blazin_beaver_s4">Blazin' Beaver S4: The Mycelial Gateway (Issue 1)</option>
-        <option value="vorath_s2">Uncle Vorath Mysteries S2: Starmap Deposition (Issue 1)</option>
+        <option value="blazin_beaver_s4">Blazin' Beaver S4: The Mycelial Gateway (Cover · Edition rebuilding)</option>
+        <option value="vorath_s2">Uncle Vorath Mysteries S2 (Cover · Edition rebuilding)</option>
         <option value="vorath_s3">Uncle Vorath S3: The Obsidian Docket (Chapter 1)</option>
-        <option value="duel_zexal">Duel Zexal: Iconic Spirits (Tankobon Vol. 1)</option>
       </select>
       <button id="btnFullscreen" type="button" class="btn" aria-label="Toggle Fullscreen">
         <span>⛶</span> Fullscreen
@@ -414,6 +430,7 @@
         <span>?</span> Shortcuts
       </button>
       <a href="/tcg/" class="btn btn-gold">3D TCG Binder &rarr;</a>
+      <a id="readChapterLink" href="/comics/vorath-obsidian-docket/" class="btn" style="display:none">Read illustrated chapter &rarr;</a>
       <a href="/comics/" class="btn">&larr; Vault</a>
     </div>
   </header>
@@ -443,14 +460,16 @@
     </div>
   </div>
 
+  <p id="editionStatus" role="status" style="display:none;margin:0;padding:16px 24px;color:var(--text-muted);line-height:1.6"></p>
+
   <!-- MAIN READER STAGE -->
   <main id="readerStage">
-    <div class="nav-zone left" id="zoneLeft" title="Previous page">◀</div>
+    <div class="nav-zone left" id="zoneLeft" title="Previous page" aria-label="Previous page"></div>
     <div class="viewer-stage" id="viewerStage">
       <img id="mainPageImg" class="comic-page-img" src="" alt="Comic Page">
       <img id="secondPageImg" class="comic-page-img" src="" alt="Facing Page" style="display:none;">
     </div>
-    <div class="nav-zone right" id="zoneRight" title="Next page">▶</div>
+    <div class="nav-zone right" id="zoneRight" title="Next page" aria-label="Next page"></div>
   </main>
 
   <!-- BOTTOM THUMBNAIL TRAY -->
@@ -466,36 +485,22 @@
       const SERIES_DATA = {
         blazin_beaver_s4: {
           title: "Blazin' Beaver S4: The Mycelial Gateway",
-          subtitle: "ISSUE 01: SUB-BASS RESONANCE // 9 PAGES // CMYK MASTER",
+          subtitle: "COVER ARTWORK // ILLUSTRATED EDITION BEING REBUILT",
+          availability: "rebuilding",
           defaultDir: "LTR",
           basePath: "/comics/assets/blazin_beaver_s4/",
           pages: [
-            { file: "Cover.webp", label: "Cover" },
-            { file: "Page_01.webp", label: "Page 1" },
-            { file: "Page_02.webp", label: "Page 2" },
-            { file: "Page_03.webp", label: "Page 3" },
-            { file: "Page_04.webp", label: "Page 4" },
-            { file: "Page_05.webp", label: "Page 5" },
-            { file: "Page_06.webp", label: "Page 6" },
-            { file: "Page_07.webp", label: "Page 7" },
-            { file: "Page_08.webp", label: "Page 8" }
+            { file: "Cover.webp", label: "Cover", url: "/static/art/reviewed/apex_20261019/apex_extra_ex11-5fc6e11ecf982ae2.webp?v=5fc6e11ecf982ae2" }
           ]
         },
         vorath_s2: {
-          title: "Uncle Vorath Mysteries S2: Starmap Deposition",
-          subtitle: "ISSUE 01: THE CELESTIAL AFFIDAVIT // 9 PAGES // NOIR MASTER",
+          title: "Uncle Vorath Mysteries: Season 2",
+          subtitle: "COVER ARTWORK // ILLUSTRATED EDITION BEING REBUILT",
+          availability: "rebuilding",
           defaultDir: "LTR",
           basePath: "/comics/assets/vorath_s2/",
           pages: [
-            { file: "Cover.webp", label: "Cover" },
-            { file: "Page_01.webp", label: "Page 1" },
-            { file: "Page_02.webp", label: "Page 2" },
-            { file: "Page_03.webp", label: "Page 3" },
-            { file: "Page_04.webp", label: "Page 4" },
-            { file: "Page_05.webp", label: "Page 5" },
-            { file: "Page_06.webp", label: "Page 6" },
-            { file: "Page_07.webp", label: "Page 7" },
-            { file: "Page_08.webp", label: "Page 8" }
+            { file: "Cover.webp", label: "Cover", url: "/static/art/reviewed/apex_20261019/apex_extra_ex10-231caf01ca06e89e.webp?v=231caf01ca06e89e" }
           ]
         },
         vorath_s3: {
@@ -505,26 +510,17 @@
           basePath: "/comics/assets/covers/",
           readChapterUrl: "/comics/vorath-obsidian-docket/",
           pages: [
-            { file: "vorath_mysteries_s3.webp", label: "Cover" }
-          ]
-        },
-        duel_zexal: {
-          title: "Duel Zexal: Iconic Spirits Vol. 1",
-          subtitle: "JUMP COMICS TANKOBON // CHAPTER 01: ASTRAL DUELIST // 24 SHEETS",
-          defaultDir: "RTL",
-          basePath: "/manga/assets/tankobon_vol_01/",
-          pages: [
-            { file: "Cover.webp", label: "Cover" },
-            ...Array.from({ length: 23 }, (_, i) => ({
-              file: `Page_${String(i + 1).padStart(2, '0')}.webp`,
-              label: `Page ${i + 1}`
-            }))
+            { file: "vorath_mysteries_s3.webp", label: "Cover", url: "/static/art/reviewed/apex_20261019/apex_obsidian-be6223aae9c2aec6.webp?v=be6223aae9c2aec6" }
           ]
         }
       };
 
+      function pageSource(series, page) {
+        return page.url || series.basePath + page.file;
+      }
+
       // State
-      let currentSeriesKey = "blazin_beaver_s4";
+      let currentSeriesKey = "vorath_s3";
       let currentIndex = 0;
       let isSpread = false;
       let flowDirection = "LTR"; // 'LTR' or 'RTL'
@@ -623,6 +619,14 @@
         currentSeriesKey = key;
         seriesSelect.value = key;
         const series = SERIES_DATA[key];
+        const rebuilding = series.availability === "rebuilding";
+        const editionStatus = document.getElementById("editionStatus");
+        editionStatus.textContent = rebuilding ? "Cover artwork preview. The illustrated edition is being rebuilt; interior reading is currently unavailable." : "";
+        editionStatus.style.display = rebuilding ? "block" : "none";
+        document.querySelector(".nav-bar").style.display = rebuilding ? "none" : "flex";
+        const chapterLink = document.getElementById("readChapterLink");
+        chapterLink.style.display = series.readChapterUrl ? "inline-flex" : "none";
+        if (series.readChapterUrl) chapterLink.href = series.readChapterUrl;
 
         headerTitle.textContent = series.title;
         headerSubtitle.textContent = series.subtitle;
@@ -639,9 +643,6 @@
         } else if (key === 'vorath_s3') {
           document.body.style.setProperty('--ambient-glow', 'rgba(0, 229, 153, 0.08)');
           document.body.style.setProperty('--border', 'rgba(0, 229, 153, 0.25)');
-        } else if (key === 'duel_zexal') {
-          document.body.style.setProperty('--ambient-glow', 'rgba(245, 158, 11, 0.08)');
-          document.body.style.setProperty('--border', 'rgba(245, 158, 11, 0.25)');
         }
 
         // Populate page select
@@ -658,9 +659,10 @@
         series.pages.forEach((p, idx) => {
           const div = document.createElement('div');
           div.className = 'thumb-item';
+          div.title = p.label;
+          div.setAttribute('aria-label', p.label);
           div.innerHTML = `
-            <img src="${series.basePath}${p.file}" alt="${p.label}" loading="lazy">
-            <span class="thumb-badge">${idx === 0 ? 'CVR' : idx}</span>
+            <img src="${pageSource(series, p)}" alt="${p.label}" loading="lazy">
           `;
           div.addEventListener('click', () => goToPage(idx));
           thumbTray.appendChild(div);
@@ -721,7 +723,7 @@
 
         // Render Page 1
         const curPage = series.pages[currentIndex];
-        mainPageImg.src = series.basePath + curPage.file;
+        mainPageImg.src = pageSource(series, curPage);
         mainPageImg.alt = `${series.title} - ${curPage.label}`;
 
         // Spread handling
@@ -731,11 +733,11 @@
           const nextP = series.pages[currentIndex + 1];
 
           if (flowDirection === 'RTL') {
-            mainPageImg.src = series.basePath + nextP.file;
-            secondPageImg.src = series.basePath + curPage.file;
+            mainPageImg.src = pageSource(series, nextP);
+            secondPageImg.src = pageSource(series, curPage);
           } else {
-            mainPageImg.src = series.basePath + curPage.file;
-            secondPageImg.src = series.basePath + nextP.file;
+            mainPageImg.src = pageSource(series, curPage);
+            secondPageImg.src = pageSource(series, nextP);
           }
         } else {
           viewerStage.classList.remove('spread');
@@ -749,7 +751,12 @@
         });
         const activeThumb = thumbs[currentIndex];
         if (activeThumb) {
-          activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+          const item = activeThumb.getBoundingClientRect();
+          const tray = thumbTray.getBoundingClientRect();
+          thumbTray.scrollTo({
+            left: thumbTray.scrollLeft + item.left - tray.left - (tray.width - item.width) / 2,
+            behavior: 'smooth'
+          });
         }
 
         // Preload adjacent images
@@ -762,11 +769,11 @@
         const prevIdx = currentIndex - (isSpread ? 2 : 1);
         if (series.pages[nextIdx]) {
           const imgNext = new Image();
-          imgNext.src = series.basePath + series.pages[nextIdx].file;
+          imgNext.src = pageSource(series, series.pages[nextIdx]);
         }
         if (series.pages[prevIdx]) {
           const imgPrev = new Image();
-          imgPrev.src = series.basePath + series.pages[prevIdx].file;
+          imgPrev.src = pageSource(series, series.pages[prevIdx]);
         }
       }
 
@@ -987,6 +994,13 @@
       const btnHelp = document.getElementById('btnHelp');
       if (btnHelp) {
         btnHelp.addEventListener('click', toggleShortcutsModal);
+      }
+
+      // Preserve the explicit unavailable state for archived reader links.
+      const requested = new URLSearchParams(window.location.search);
+      if ([requested.get("series"), requested.get("comic")].includes("duel_zexal")) {
+        window.location.replace("/manga/");
+        return;
       }
 
       // Init

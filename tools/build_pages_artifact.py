@@ -21,6 +21,8 @@ import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
+import pages_art_quality
+
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = ROOT / "output" / "pages-artifact"
@@ -106,7 +108,8 @@ def tracked_source_paths():
     return [Path(p.decode("utf-8")) for p in raw.split(b"\0") if p]
 
 def release_media_index():
-    return {p.as_posix() for p in tracked_source_paths() if external_release_media(p)}
+    return {p.as_posix() for p in tracked_source_paths()
+            if external_release_media(p) and not pages_art_quality.is_retired_art(p)}
 
 def rewrite_release_media_refs(raw: str, relative: Path, selected: set[str], commit: str) -> str:
     import re, posixpath
@@ -175,6 +178,8 @@ def iter_source_files():
         if not path.is_file():
             continue
         if relative.parts[:2] == ("static", "idc_video"):
+            continue
+        if pages_art_quality.is_retired_art(relative):
             continue
         if external_sticker_master(relative) or external_release_media(relative):
             continue
@@ -249,6 +254,7 @@ def build(output: Path) -> dict:
     # Reject both staged and unstaged tracked edits; untracked exports are excluded.
     subprocess.run(["git", "diff", "--quiet", "HEAD", "--"], cwd=ROOT, check=True)
     media_commit = source_commit()
+    pages_art_quality.validate_source(ROOT)
     video_root = ROOT / "static" / "idc_video"
     video_files = sorted(path for path in video_root.rglob("*") if path.is_file())
     omitted_video_bytes = sum(path.stat().st_size for path in video_files)
@@ -288,11 +294,13 @@ def build(output: Path) -> dict:
         destination = output / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         if source.suffix.lower() in TEXT_SUFFIXES:
-            raw = source.read_text(encoding="utf-8")
+            raw = pages_art_quality.artifact_page_text(
+                ROOT, relative, source.read_text(encoding="utf-8"))
             count = raw.count(LOCAL_VIDEO_BASE)
             if count:
                 raw = raw.replace(LOCAL_VIDEO_BASE, APP_VIDEO_BASE)
                 rewrites += count
+            raw = pages_art_quality.rewrite_reviewed_art_urls(raw, relative)
             raw = rewrite_sticker_refs(raw, relative)
             raw = rewrite_release_media_refs(raw, relative, selected_media, media_commit)
             destination.write_text(raw, encoding="utf-8", newline="\n")
@@ -327,6 +335,7 @@ def build(output: Path) -> dict:
 
     manifest = {
         "schema": "northstar.pages-curated-artifact.v1",
+        "public_art_quality": pages_art_quality.release_record(),
         "generated_utc": datetime.now(timezone.utc).isoformat(),
         "source_commit": media_commit,
         "file_count_excluding_manifest": copied,

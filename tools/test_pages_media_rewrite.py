@@ -205,5 +205,6 @@ class ReviewedArtRelease(unittest.TestCase):
    self.assertIn(row["delivery_path"],reader)
   self.assertIn("pageSource(series, curPage)",reader)
   self.assertIn("pageSource(series, nextP)",reader)
+  self.assertNotIn('<span class="thumb-badge">',reader)
 
 if __name__=="__main__":unittest.main()

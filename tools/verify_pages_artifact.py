@@ -142,7 +142,7 @@ def verify(artifact: Path, network: bool) -> dict:
     art_failures = pages_art_quality.verify_artifact(artifact)
     failures.extend(art_failures)
     if not art_failures:
-        checks.append("six reviewed artwork variants: exact bytes, retired originals absent, references corrected")
+        checks.append("reviewed artwork and publication holds: exact bytes, originals absent, references corrected")
 
     if (artifact / "CNAME").is_file() and (artifact / "CNAME").read_text(encoding="utf-8").strip() != "northstarprime.net":
         failures.append("CNAME does not preserve northstarprime.net")

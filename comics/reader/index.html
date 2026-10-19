@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Graphic Novel Reader // NorthStar Sovereign Comix</title>
-  <meta name="description" content="Universal high-resolution in-browser reader for NorthStar graphic novels, underground comics, and manga. Featuring Blazin' Beaver, Uncle Vorath Mysteries, and Duel Zexal.">
+  <meta name="description" content="In-browser reader for available Blazin' Beaver and Uncle Vorath illustrated chapters.">
   <link rel="canonical" href="https://northstarprime.net/comics/reader/">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <style>
@@ -402,7 +402,6 @@
         <option value="blazin_beaver_s4">Blazin' Beaver S4: The Mycelial Gateway (Issue 1)</option>
         <option value="vorath_s2">Uncle Vorath Mysteries S2: Starmap Deposition (Issue 1)</option>
         <option value="vorath_s3">Uncle Vorath S3: The Obsidian Docket (Chapter 1)</option>
-        <option value="duel_zexal">Duel Zexal: Iconic Spirits (Tankobon Vol. 1)</option>
       </select>
       <button id="btnFullscreen" type="button" class="btn" aria-label="Toggle Fullscreen">
         <span>⛶</span> Fullscreen
@@ -470,7 +469,7 @@
           defaultDir: "LTR",
           basePath: "/comics/assets/blazin_beaver_s4/",
           pages: [
-            { file: "Cover.webp", label: "Cover" },
+            { file: "Cover.webp", label: "Cover", url: "/static/art/reviewed/apex_20261019/apex_extra_ex11-5fc6e11ecf982ae2.webp?v=5fc6e11ecf982ae2" },
             { file: "Page_01.webp", label: "Page 1" },
             { file: "Page_02.webp", label: "Page 2" },
             { file: "Page_03.webp", label: "Page 3" },
@@ -487,7 +486,7 @@
           defaultDir: "LTR",
           basePath: "/comics/assets/vorath_s2/",
           pages: [
-            { file: "Cover.webp", label: "Cover" },
+            { file: "Cover.webp", label: "Cover", url: "/static/art/reviewed/apex_20261019/apex_extra_ex10-231caf01ca06e89e.webp?v=231caf01ca06e89e" },
             { file: "Page_01.webp", label: "Page 1" },
             { file: "Page_02.webp", label: "Page 2" },
             { file: "Page_03.webp", label: "Page 3" },
@@ -505,23 +504,14 @@
           basePath: "/comics/assets/covers/",
           readChapterUrl: "/comics/vorath-obsidian-docket/",
           pages: [
-            { file: "vorath_mysteries_s3.webp", label: "Cover" }
-          ]
-        },
-        duel_zexal: {
-          title: "Duel Zexal: Iconic Spirits Vol. 1",
-          subtitle: "JUMP COMICS TANKOBON // CHAPTER 01: ASTRAL DUELIST // 24 SHEETS",
-          defaultDir: "RTL",
-          basePath: "/manga/assets/tankobon_vol_01/",
-          pages: [
-            { file: "Cover.webp", label: "Cover" },
-            ...Array.from({ length: 23 }, (_, i) => ({
-              file: `Page_${String(i + 1).padStart(2, '0')}.webp`,
-              label: `Page ${i + 1}`
-            }))
+            { file: "vorath_mysteries_s3.webp", label: "Cover", url: "/static/art/reviewed/apex_20261019/apex_obsidian-be6223aae9c2aec6.webp?v=be6223aae9c2aec6" }
           ]
         }
       };
+
+      function pageSource(series, page) {
+        return page.url || series.basePath + page.file;
+      }
 
       // State
       let currentSeriesKey = "blazin_beaver_s4";
@@ -639,9 +629,6 @@
         } else if (key === 'vorath_s3') {
           document.body.style.setProperty('--ambient-glow', 'rgba(0, 229, 153, 0.08)');
           document.body.style.setProperty('--border', 'rgba(0, 229, 153, 0.25)');
-        } else if (key === 'duel_zexal') {
-          document.body.style.setProperty('--ambient-glow', 'rgba(245, 158, 11, 0.08)');
-          document.body.style.setProperty('--border', 'rgba(245, 158, 11, 0.25)');
         }
 
         // Populate page select
@@ -659,7 +646,7 @@
           const div = document.createElement('div');
           div.className = 'thumb-item';
           div.innerHTML = `
-            <img src="${series.basePath}${p.file}" alt="${p.label}" loading="lazy">
+            <img src="${pageSource(series, p)}" alt="${p.label}" loading="lazy">
             <span class="thumb-badge">${idx === 0 ? 'CVR' : idx}</span>
           `;
           div.addEventListener('click', () => goToPage(idx));
@@ -721,7 +708,7 @@
 
         // Render Page 1
         const curPage = series.pages[currentIndex];
-        mainPageImg.src = series.basePath + curPage.file;
+        mainPageImg.src = pageSource(series, curPage);
         mainPageImg.alt = `${series.title} - ${curPage.label}`;
 
         // Spread handling
@@ -731,11 +718,11 @@
           const nextP = series.pages[currentIndex + 1];
 
           if (flowDirection === 'RTL') {
-            mainPageImg.src = series.basePath + nextP.file;
-            secondPageImg.src = series.basePath + curPage.file;
+            mainPageImg.src = pageSource(series, nextP);
+            secondPageImg.src = pageSource(series, curPage);
           } else {
-            mainPageImg.src = series.basePath + curPage.file;
-            secondPageImg.src = series.basePath + nextP.file;
+            mainPageImg.src = pageSource(series, curPage);
+            secondPageImg.src = pageSource(series, nextP);
           }
         } else {
           viewerStage.classList.remove('spread');
@@ -762,11 +749,11 @@
         const prevIdx = currentIndex - (isSpread ? 2 : 1);
         if (series.pages[nextIdx]) {
           const imgNext = new Image();
-          imgNext.src = series.basePath + series.pages[nextIdx].file;
+          imgNext.src = pageSource(series, series.pages[nextIdx]);
         }
         if (series.pages[prevIdx]) {
           const imgPrev = new Image();
-          imgPrev.src = series.basePath + series.pages[prevIdx].file;
+          imgPrev.src = pageSource(series, series.pages[prevIdx]);
         }
       }
 
@@ -987,6 +974,13 @@
       const btnHelp = document.getElementById('btnHelp');
       if (btnHelp) {
         btnHelp.addEventListener('click', toggleShortcutsModal);
+      }
+
+      // Preserve the explicit unavailable state for archived reader links.
+      const requested = new URLSearchParams(window.location.search);
+      if ([requested.get("series"), requested.get("comic")].includes("duel_zexal")) {
+        window.location.replace("/manga/");
+        return;
       }
 
       // Init

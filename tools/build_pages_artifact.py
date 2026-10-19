@@ -108,7 +108,8 @@ def tracked_source_paths():
     return [Path(p.decode("utf-8")) for p in raw.split(b"\0") if p]
 
 def release_media_index():
-    return {p.as_posix() for p in tracked_source_paths() if external_release_media(p)}
+    return {p.as_posix() for p in tracked_source_paths()
+            if external_release_media(p) and not pages_art_quality.is_retired_art(p)}
 
 def rewrite_release_media_refs(raw: str, relative: Path, selected: set[str], commit: str) -> str:
     import re, posixpath
@@ -293,7 +294,8 @@ def build(output: Path) -> dict:
         destination = output / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         if source.suffix.lower() in TEXT_SUFFIXES:
-            raw = source.read_text(encoding="utf-8")
+            raw = pages_art_quality.artifact_page_text(
+                ROOT, relative, source.read_text(encoding="utf-8"))
             count = raw.count(LOCAL_VIDEO_BASE)
             if count:
                 raw = raw.replace(LOCAL_VIDEO_BASE, APP_VIDEO_BASE)

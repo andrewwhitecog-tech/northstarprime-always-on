@@ -11,6 +11,8 @@ import urllib.request
 from html.parser import HTMLParser
 from pathlib import Path
 
+import pages_art_quality
+
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_ARTIFACT = ROOT / "output" / "pages-artifact"
@@ -136,6 +138,11 @@ def verify(artifact: Path, network: bool) -> dict:
         checks.append(f"artifact capacity {total_bytes}/{RELEASE_GUARD_BYTES} bytes")
     if oversized:
         failures.append(f"Files above 100 MB: {oversized}")
+
+    art_failures = pages_art_quality.verify_artifact(artifact)
+    failures.extend(art_failures)
+    if not art_failures:
+        checks.append("six reviewed artwork variants: exact bytes, retired originals absent, references corrected")
 
     if (artifact / "CNAME").is_file() and (artifact / "CNAME").read_text(encoding="utf-8").strip() != "northstarprime.net":
         failures.append("CNAME does not preserve northstarprime.net")

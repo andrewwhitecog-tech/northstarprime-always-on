@@ -190,8 +190,8 @@ class ReviewedArtRelease(unittest.TestCase):
   self.assertNotIn('href="/manga/"',shelf)
   self.assertNotIn("The Silent Partner",shelf)
   self.assertNotIn("Sub-Bass Wardens",shelf)
-  self.assertIn("Uncle Vorath Mysteries: Season 2",shelf)
-  self.assertIn("interior reading is currently unavailable",shelf)
+  self.assertIn("Uncle Vorath: The Null-Time Discrepancy",shelf)
+  self.assertNotIn("interior reading is currently unavailable",shelf)
   self.assertIn('href="/little-light-library/42-a-name-for-the-new-blue/"',shelf)
   for name in ["literature/a-map-of-erased-places/index.html","dream-court/index.html",
                "dream-court/case-002/index.html","dream-court/case-003/index.html","dream-court/case-004/index.html"]:
@@ -200,26 +200,125 @@ class ReviewedArtRelease(unittest.TestCase):
   reader=(root/"comics/reader/index.html").read_text(encoding="utf-8")
   self.assertNotIn('value="duel_zexal"',reader)
   self.assertNotIn("duel_zexal: {",reader)
-  self.assertIn('window.location.replace("/manga/")',reader)
+  self.assertRegex(reader, r"location\.replace\([\"']/manga/[\"']\)")
   for name in ["APEX_EXTRA_EX10","APEX_EXTRA_EX11","APEX_OBSIDIAN"]:
    row=next(row for row in m.pages_art_quality.REPLACEMENTS if row["id"]==name)
    self.assertIn(row["delivery_path"],reader)
-  self.assertIn("pageSource(series, curPage)",reader)
-  self.assertIn("pageSource(series, nextP)",reader)
+  self.assertIn('id="storyPages"',reader)
   self.assertNotIn('<span class="thumb-badge">',reader)
 
- def test_creative_held_editions_are_cover_previews_only(self):
+
+ def test_rejected_raw_pages_stay_held_after_narrative_rebuild(self):
   art=m.pages_art_quality
-  held={row["path"] for row in art.WITHHELD_MEDIA if row.get("reason")=="creative_not_accepted_root_personally_verified"}
+  held={row['path'] for row in art.WITHHELD_MEDIA if row.get('reason')=='creative_not_accepted_root_personally_verified'}
   self.assertEqual(len(held),16)
-  reader=(ROOT.parent/"comics/reader/index.html").read_text(encoding="utf-8")
-  self.assertEqual(reader.count('availability: "rebuilding"'),2)
+  selected={relative.as_posix() for _,relative in m.iter_source_files()}
+  for path in held:
+   self.assertNotIn(path.lstrip('/'),selected)
+  reader=(ROOT.parent/'comics/reader/index.html').read_text(encoding='utf-8')
   self.assertNotIn('file: "Page_01.webp"',reader)
-  self.assertIn("interior reading is currently unavailable",reader)
   self.assertIn('id="readChapterLink"',reader)
-  self.assertNotIn("scrollIntoView",reader)
-  catalog=(ROOT.parent/"comics/index.html").read_text(encoding="utf-8")
-  self.assertNotIn("9 Pages • Web Reader Active",catalog)
-  self.assertEqual(catalog.count("Illustrated edition being rebuilt"),2)
+  catalog=(ROOT.parent/'comics/index.html').read_text(encoding='utf-8')
+  self.assertNotIn('Illustrated edition being rebuilt',catalog)
+  self.assertEqual(catalog.count('Cover + 8 illustrated narrative plates'),2)
+
+class ComicNarrativeRelease(unittest.TestCase):
+ @classmethod
+ def setUpClass(cls):
+  cls.reader=(ROOT.parent/'comics/reader/index.html').read_text(encoding='utf-8')
+  cls.path=ROOT.parent/re.search(r"const MANIFEST_URL = '([^']+)'",cls.reader).group(1).lstrip('/')
+  cls.manifest=json.loads(cls.path.read_text(encoding='utf-8'))
+ def test_two_actual_complete_editions(self):
+  self.assertEqual(self.manifest['schema'],'northstar.comic-narrative.v1')
+  self.assertEqual(set(self.manifest['editions']),{'vorath_s2','blazin_beaver_s4'})
+  for key,edition in self.manifest['editions'].items():
+   with self.subTest(series=key):
+    self.assertEqual(edition['availability'],'available')
+    self.assertEqual(len(edition['pages']),9)
+    self.assertEqual(edition['pages'][0]['kind'],'cover')
+    self.assertEqual([p['number'] for p in edition['pages'][1:]],list(range(1,9)))
+    for page in edition['pages'][1:]:
+     self.assertTrue(page['title'])
+     self.assertTrue(page['captions'])
+     self.assertTrue(page['dialogue'])
+     self.assertTrue(all(d['speaker'] and d['text'] for d in page['dialogue']))
+ def test_authored_story_digests_and_actual_titles(self):
+  import hashlib
+  # Digests bind the verbatim scene/caption/speaker/dialogue values recovered
+  # from the authentic authoring scripts, independently of reader presentation.
+  expected={"vorath_s2":"ddc35ee40a9b403cc91e2a0c4ebca52db46745c3746f7574b6745b310346c166","blazin_beaver_s4":"c6e5ee14b364194d5eefd2e0a75448316c97cee737fd2f835e65e61f3e215321"}
+  for key,edition in self.manifest['editions'].items():
+   authentic=[{'title':p['title'],'captions':p['captions'],'dialogue':[{'speaker':d['speaker'],'verbatim':d['text']} for d in p['dialogue']]} for p in edition['pages'][1:]]
+   digest=hashlib.sha256(json.dumps(authentic,ensure_ascii=False,separators=(',',':')).encode()).hexdigest()
+   self.assertEqual(digest,expected[key])
+   self.assertEqual(edition['authored_text_sha256'],digest)
+  self.assertEqual(self.manifest['editions']['vorath_s2']['title'],'Uncle Vorath Mysteries: The Null-Time Discrepancy')
+  self.assertEqual(self.manifest['editions']['blazin_beaver_s4']['title'],'Blazin’ Beaver: The Sub-Bass Resonance')
+ def test_full_resolution_assets_are_bound_in_release_metadata(self):
+  import hashlib
+  rows={r['delivery_path']:r for r in m.pages_art_quality.ADDITIONAL_ASSETS if r['id'].startswith('COMIC_')}
+  pages=[p for e in self.manifest['editions'].values() for p in e['pages'][1:]]
+  self.assertEqual(len(rows),16)
+  self.assertEqual(len({p['url'] for p in pages}),16)
+  for page in pages:
+   row=rows[page['url']]
+   asset=ROOT.parent/page['url'].lstrip('/')
+   actual=asset.read_bytes()
+   self.assertEqual(len(actual),row['bytes'])
+   self.assertEqual(hashlib.sha256(actual).hexdigest(),row['sha256'])
+   self.assertIn(row['sha256'][:16],asset.name)
+   self.assertEqual((page['width'],page['height']),(row['width'],row['height']))
+   self.assertTrue(row['native_sha256'])
+   self.assertFalse(m.external_release_media(asset.relative_to(ROOT.parent)))
+   self.assertFalse(m.pages_art_quality.is_retired_art(asset.relative_to(ROOT.parent)))
+ def test_landscape_splashes_preserve_full_aspect_and_hold_privacy(self):
+  import hashlib
+  pages=self.manifest['editions']['blazin_beaver_s4']['pages']
+  for index in [4,5]:
+   self.assertGreater(pages[index]['width'],pages[index]['height'])
+  text=self.path.read_text(encoding='utf-8')
+  for forbidden in ['SW HALL','10015','F:/','C:/','file://','Page_01.webp','Page_08.webp']:
+   self.assertNotIn(forbidden,text)
+  self.assertIn('object-fit:contain',self.reader)
+  content_digest=hashlib.sha256(self.path.read_bytes()).hexdigest()
+  self.assertIn(content_digest[:16],self.path.name)
+ def test_actual_issue_discovery_and_s3_chapter_retained(self):
+  for name in ['comics/index.html','literature/index.html']:
+   text=(ROOT.parent/name).read_text(encoding='utf-8')
+   for key in self.manifest['editions']:
+    self.assertIn('/comics/reader/?series='+key,text)
+   self.assertIn('Read Issue 01',text)
+   self.assertNotIn('Edition rebuilding',text)
+  self.assertIn('/comics/vorath-obsidian-docket/',self.reader)
+  self.assertNotIn('div.innerHTML',self.reader)
+
+ def test_original_document_order_and_authored_issue_teasers(self):
+  import hashlib
+  expected={"vorath_s2":"fd30d22e19d0d4dec1a231c8ae655c04f83f6b1c34ec7ea9c6526ad7f4941f82","blazin_beaver_s4":"73aaee61c203a1a88c5eb99ed27a9ae2a57d5c5eccd359c48aeeabe5b1a5fecb"}
+  for key,edition in self.manifest['editions'].items():
+   ordered=[{'page':p['number'],'blocks':p['blocks']} for p in edition['pages'][1:]]
+   digest=hashlib.sha256(json.dumps(ordered,ensure_ascii=False,separators=(',',':')).encode()).hexdigest()
+   self.assertEqual(digest,expected[key])
+   self.assertEqual(edition['authored_order_sha256'],digest)
+   for page in edition['pages'][1:]:
+    self.assertEqual([b['text'] for b in page['blocks'] if b['type']=='caption'],page['captions'])
+    self.assertEqual([{'speaker':b['speaker'],'text':b['text']} for b in page['blocks'] if b['type']=='dialogue'],page['dialogue'])
+   self.assertEqual(edition['pages'][8]['blocks'][-1]['type'],'teaser')
+   self.assertTrue(edition['pages'][8]['blocks'][-1]['title'].startswith('NEXT '))
+   self.assertGreater(len(edition['pages'][8]['blocks'][-1]['text']),100)
+
+class SigilForwardingRelease(unittest.TestCase):
+ def test_existing_sigil_routes_forward_without_old_generators(self):
+  for name in ['index.html','cover.html','visualizer.html']:
+   text=(ROOT.parent/'sigil-forge'/name).read_text(encoding='utf-8')
+   self.assertIn('href="https://app.northstarprime.net/sigil-forge"',text)
+   self.assertIn("location.replace('https://app.northstarprime.net/sigil-forge'+location.search+location.hash)",text)
+   self.assertIn('name="robots" content="noindex,follow"',text)
+   self.assertNotIn('<canvas',text)
+   self.assertNotIn('getContext(',text)
+  sitemap=(ROOT.parent/'sitemap.xml').read_text(encoding='utf-8')
+  self.assertNotIn('<loc>https://northstarprime.net/sigil-forge/</loc>',sitemap)
+  self.assertTrue((ROOT.parent/'forge/index.html').is_file())
+  self.assertTrue((ROOT.parent/'sigil-forge/tarot.html').is_file())
 
 if __name__=="__main__":unittest.main()

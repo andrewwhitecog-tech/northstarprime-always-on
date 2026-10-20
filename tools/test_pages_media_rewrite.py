@@ -79,7 +79,8 @@ class MediaRewrite(unittest.TestCase):
 class ReviewedArtRelease(unittest.TestCase):
  def test_actual_eighteen_source_bindings(self):
   art = m.pages_art_quality
-  self.assertEqual(len(art.REPLACEMENTS), 18)
+  # 2026-10-20: the four Little Light Library cover swaps (01, 21, 25, 42) were retired; the covers now carry titles painted in.
+  self.assertEqual(len(art.REPLACEMENTS), 14)
   art.validate_source(ROOT.parent)
   self.assertNotEqual(
    art.BY_OLD_PATH["/static/literature_covers/loomwheel/map_of_erased_places_v01/cover.webp"]["old_sha256"],

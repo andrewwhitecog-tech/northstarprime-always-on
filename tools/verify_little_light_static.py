@@ -5,7 +5,7 @@ from html.parser import HTMLParser
 import argparse,hashlib,json,re
 ROOT=Path(__file__).resolve().parents[1]
 RAW='https://raw.githubusercontent.com/andrewwhitecog-tech/northstarprime-always-on/main/little-light-media/'
-DOWNLOAD='https://github.com/andrewwhitecog-tech/northstarprime-always-on/releases/download/little-light-library-50-v1/'
+DOWNLOAD='https://github.com/andrewwhitecog-tech/northstarprime-always-on/releases/download/little-light-library-50-v2/'
 class Page(HTMLParser):
  def __init__(self,text):
   super().__init__();self.tags=[];self.feed(text)

@@ -22,11 +22,27 @@ EXPECTED = (
 )
 LOCAL_ROUTES = (
     "/",
+    "/store/",
+    "/hire/",
+    "/hire/local-business-website/",
+    "/hire/website-repair/",
+    "/hire/docker-repair/",
+    "/hire/watchdog-engineering/",
+    "/brick-alchemy/",
+    "/acid-voxel-halloween/",
+    "/holidays/",
     "/idc-programming/",
     "/arcade/",
     "/idr/",
     "/contact/",
     "/software/",
+)
+STOREFRONT_LINKS = (
+    "https://app.northstarprime.net/chromatic",
+    "https://andrewcog.gumroad.com/",
+    "https://www.etsy.com/shop/UncleVorath420",
+    "https://www.zazzle.com/store/unclevorath420",
+    "https://www.redbubble.com/people/UncleVorath420/shop",
 )
 CANONICAL_SERVICE_LINK = "https://app.northstarprime.net/services"
 
@@ -57,7 +73,7 @@ def main() -> None:
     if 'href="/links/"' not in home:
         raise SystemExit("Homepage does not expose /links/")
 
-    missing = [value for value in (*EXPECTED, *LOCAL_ROUTES) if f'href="{value}"' not in html]
+    missing = [value for value in (*EXPECTED, *LOCAL_ROUTES, *STOREFRONT_LINKS) if f'href="{value}"' not in html]
     if missing:
         raise SystemExit(f"Missing expected link targets: {missing}")
     if f'href="{CANONICAL_SERVICE_LINK}"' not in html:

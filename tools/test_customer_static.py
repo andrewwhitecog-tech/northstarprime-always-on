@@ -129,6 +129,40 @@ class CustomerStaticTests(unittest.TestCase):
             with self.subTest(mutation=mutation), self.assertRaises(SystemExit):
                 hire.check_offer_links(mutation)
 
+    def test_vorath_interactive_oracle_route_and_storefront_funnel(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        oracle_path = repo_root / "oracle" / "index.html"
+        self.assertTrue(oracle_path.is_file(), "oracle/index.html must exist")
+        page = home.read_page(oracle_path)
+        home.check_identity(
+            page,
+            "VORATH Interactive Oracle — Free 3-Card Tarot Reading & Custom Relic Generator — NorthStar Prime",
+            "https://northstarprime.net/oracle/",
+        )
+        home.check_local_links(repo_root, oracle_path, page)
+        assets = home.collect_local_assets(repo_root, oracle_path, page)
+        self.assertIn("static/front-door.css", assets)
+        self.assertIn("tarot/oracle/cards/card-back-eye.webp", assets)
+
+        html = oracle_path.read_text(encoding="utf-8")
+        for lens in ("Creative Forge &amp; Mastery", "Shadow &amp; Transmutation", "Horizon &amp; Sovereign Path", "Dark Carnival &amp; Voxel Alchemy"):
+            self.assertIn(lens, html)
+        for cta in (
+            "https://app.northstarprime.net/chromatic/products/vorath-tarot-78-card-deck",
+            "https://app.northstarprime.net/chromatic/products/acid-voxel-halloween-45-pack",
+            "https://app.northstarprime.net/chromatic/products/night-of-the-open-eye-kit",
+            "/store/",
+            "/tarot/oracle/",
+        ):
+            self.assertIn(cta, html)
+
+        store_html = (repo_root / "store" / "index.html").read_text(encoding="utf-8")
+        links_html = (repo_root / "links" / "index.html").read_text(encoding="utf-8")
+        sitemap_xml = (repo_root / "sitemap.xml").read_text(encoding="utf-8")
+        self.assertIn('href="/oracle/"', store_html)
+        self.assertIn('href="/oracle/"', links_html)
+        self.assertIn("<loc>https://northstarprime.net/oracle/</loc>", sitemap_xml)
+
 
 if __name__ == "__main__":
     unittest.main()

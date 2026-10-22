@@ -81,6 +81,14 @@ EXTERNAL_RELEASE_PREFIXES = {
     ("static", "videos"),
     ("static", "cookbook_deluxe_media"),
     ("coloring-studio", "assets"),
+    ("pnw-lost-tables-2020", "assets"),
+    ("pnw-lost-tables-2020", "downloads"),
+    ("raven-and-rose-1883", "downloads"),
+    ("vorath-x-icp-dark-carnival", "assets"),
+    ("vorath-x-icp-dark-carnival", "downloads"),
+    ("acid-voxel-halloween", "assets"),
+    ("acid-voxel-halloween", "downloads"),
+    ("brick-alchemy", "assets"),
 }
 MATURE_EXTERNAL_SUFFIXES = AUDIO_SUFFIXES | {
     ".png", ".webp", ".jpg", ".jpeg", ".gif", ".avif",

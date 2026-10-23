@@ -15,23 +15,21 @@ APP_LINK = (
     "https://www.renalshield.com/?utm_source=northstarprime.net"
     "&amp;utm_medium=owned_site&amp;utm_campaign=renalshield_discovery"
 )
-SUPPORT_LINK = (
-    "https://www.renalshield.com/pricing?utm_source=northstarprime.net"
-    "&amp;utm_medium=owned_site&amp;utm_campaign=renalshield_support"
-)
 
 
 def main() -> None:
     html = PAGE.read_text(encoding="utf-8")
     home = HOME.read_text(encoding="utf-8")
     required = (
-        "RenalShield — Free Kidney-Aware Food Screener | NorthStar Prime",
-        '<meta name="robots" content="index,follow">',
+        "RenalShield: Reading Food Labels With Kidney Disease | NorthStar Prime",
+        '<meta name="robots" content="noindex,follow">',  # draft pending clinical review
         '<link rel="canonical" href="https://northstarprime.net/renalshield/">',
         f'href="{APP_LINK}"',
-        f'href="{SUPPORT_LINK}"',
-        "Open RenalShield — free",
-        "Plans &amp; support",
+        "Open the RenalShield label tool (free)",
+        "Draft, pending clinical review",
+        "The label tool can miss ingredients",
+        "Medical reviewer wanted",
+        "https://doi.org/10.1053/j.ajkd.2020.05.006",
         "html{overflow-x:hidden",
         "body{margin:0;min-height:100vh;overflow-x:hidden",
         "not medical advice, diagnosis, treatment",
@@ -48,6 +46,11 @@ def main() -> None:
         "file://",
         "127.0.0.1",
         "localhost",
+        "Andre White",
+        "3 seconds",
+        "zero added",
+        "\u2014",
+        "\u2013",
     )
     found = [marker for marker in forbidden if marker.lower() in html.lower()]
     if found:
@@ -78,8 +81,8 @@ def main() -> None:
     if 'href="https://www.renalshield.com"' not in home:
         raise SystemExit("Homepage no longer preserves a direct free-app route")
 
-    print("OK: indexable NorthStar-to-RenalShield discovery bridge")
-    print("OK: tagged free-app and pricing/support routes")
+    print("OK: NorthStar-to-RenalShield discovery bridge (noindex while draft)")
+    print("OK: tagged free-app route, draft banner, label-tool warning, reviewer call, references")
     print("OK: homepage authority path and direct free-app route")
     print("OK: medical boundary, tracker-free page, and free-offer structured data")
 

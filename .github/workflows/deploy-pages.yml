@@ -45,7 +45,10 @@ jobs:
       - name: Build curated artifact
         run: |
           python -m unittest discover -s tools -p test_pages_media_rewrite.py
+          python tools/test_pages_analytics.py -v
           python tools/build_pages_artifact.py --output "$GITHUB_WORKSPACE/output/pages-artifact"
+      - name: Verify analytics privacy in transformed artifact
+        run: python tools/test_pages_analytics.py -v --artifact "$GITHUB_WORKSPACE/output/pages-artifact"
       - name: Materialize tip/download zips from b64 payloads
         run: python tools/materialize_b64_zips.py --artifact "$GITHUB_WORKSPACE/output/pages-artifact"
       - name: Verify complete StickerForge catalog and previews

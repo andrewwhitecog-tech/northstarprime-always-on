@@ -163,6 +163,41 @@ class CustomerStaticTests(unittest.TestCase):
         self.assertIn('href="/oracle/"', links_html)
         self.assertIn("<loc>https://northstarprime.net/oracle/</loc>", sitemap_xml)
 
+    def test_og_product_covers_store_and_holidays_routes(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        store_path = repo_root / "store" / "index.html"
+        holidays_path = repo_root / "holidays" / "index.html"
+        store_page = home.read_page(store_path)
+        home.check_identity(store_page, "Store — NorthStar Prime", "https://northstarprime.net/store/")
+        home.check_local_links(repo_root, store_path, store_page)
+        store_assets = home.collect_local_assets(repo_root, store_path, store_page)
+        expected_store_covers = {
+            "static/front/store/sacred-calendar-2027-cover.webp",
+            "static/front/store/vorath-tarot-78-card-deck-cover.webp",
+            "static/front/store/vorathic-coloring-book-cover.webp",
+            "static/front/store/night-of-the-open-eye-cover.webp",
+            "static/front/store/acid-voxel-halloween-titled-cover.webp",
+            "static/front/store/sigil-wallpapers-vol1-cover.webp",
+            "static/front/store/sacred-geometry-vault-cover.webp",
+            "static/front/store/vorath-pumpkin-carving-plans-cover.webp",
+            "static/front/store/vorath-reveler-stl-miniature-cover.webp",
+            "static/front/store/lineage-of-light-advent-cover.webp",
+            "static/front/store/lineage-of-light-ornaments-cover.webp",
+            "static/front/store/season-of-lights-cover.webp",
+        }
+        self.assertTrue(expected_store_covers.issubset(store_assets))
+
+        holidays_html = holidays_path.read_text(encoding="utf-8")
+        for cover in (
+            "/static/front/store/vorath-pumpkin-carving-plans-cover.webp",
+            "/static/front/store/night-of-the-open-eye-cover.webp",
+            "/static/front/store/acid-voxel-halloween-titled-cover.webp",
+            "/static/front/store/lineage-of-light-advent-cover.webp",
+            "/static/front/store/lineage-of-light-ornaments-cover.webp",
+            "/static/front/store/season-of-lights-cover.webp",
+        ):
+            self.assertIn(cover, holidays_html)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -102,6 +102,8 @@ def external_release_media(relative: Path) -> bool:
     # Keep this small directory local so its native template and downloads work.
     if relative.parts[:3] == ("static", "games", "sfx"):
         return False
+    if relative.parts[:3] == ("static", "front", "store") and relative.suffix.lower() == ".png":
+        return True
     if len(relative.parts) >= 2 and tuple(relative.parts[:2]) in EXTERNAL_RELEASE_PREFIXES:
         return True
     # Mature route HTML/JSON stay local; bulky media is raw-delivered.

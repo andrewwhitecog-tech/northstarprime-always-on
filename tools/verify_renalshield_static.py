@@ -22,7 +22,13 @@ def main() -> None:
     home = HOME.read_text(encoding="utf-8")
     required = (
         "RenalShield: Reading Food Labels With Kidney Disease | NorthStar Prime",
-        '<meta name="robots" content="noindex,follow">',  # draft pending clinical review
+        '<meta name="robots" content="index,follow,max-image-preview:large">',
+        '<meta property="og:image" content="https://northstarprime.net/renalshield/og-renalshield-1200x630.jpg">',
+        '<meta name="twitter:card" content="summary_large_image">',
+        '<link rel="apple-touch-icon" href="/renalshield/icons/apple-touch-icon.png" sizes="180x180">',
+        '<link rel="manifest" href="/renalshield/icons/site.webmanifest">',
+        'aria-label="Breadcrumb"',
+        'href="/press/renalshield-mastercook/"',
         '<link rel="canonical" href="https://northstarprime.net/renalshield/">',
         f'href="{APP_LINK}"',
         "Open the RenalShield label tool (free)",
@@ -67,8 +73,20 @@ def main() -> None:
     if not match:
         raise SystemExit("RenalShield bridge JSON-LD is missing")
     payload = json.loads(match.group(1))
-    application = payload.get("mainEntity", {})
-    if payload.get("@type") != "WebPage" or application.get("@type") != "SoftwareApplication":
+    graph = {}
+    for node in payload.get("@graph", []):
+        types = node.get("@type")
+        for t in types if isinstance(types, list) else [types]:
+            graph[t] = node
+    page = graph.get("MedicalWebPage")
+    if not page or "Article" not in page.get("@type", []) or "Organization" not in graph or "BreadcrumbList" not in graph:
+        raise SystemExit("RenalShield structured data must include MedicalWebPage+Article, Organization and BreadcrumbList")
+    if graph["Organization"].get("name") != "NorthStar Prime":
+        raise SystemExit("RenalShield publisher organization changed")
+    if "lastReviewed" in page or ("reviewedBy" in page and "pending" not in json.dumps(page["reviewedBy"]).lower()):
+        raise SystemExit("RenalShield must not claim a completed clinical review yet")
+    application = page.get("mainEntity", {})
+    if application.get("@type") != "SoftwareApplication":
         raise SystemExit("RenalShield bridge structured data types changed")
     if application.get("url") != "https://www.renalshield.com/":
         raise SystemExit("RenalShield canonical application URL changed")
@@ -76,15 +94,34 @@ def main() -> None:
         raise SystemExit("RenalShield free-access promise changed")
     if application.get("offers", {}).get("price") != "0":
         raise SystemExit("RenalShield free offer structured data changed")
+    press = (ROOT / "press" / "renalshield-mastercook" / "index.html").read_text(encoding="utf-8")
+    for marker in ('<meta name="robots" content="index,follow', "Draft, pending clinical review", '"MedicalWebPage"', 'href="/renalshield/"'):
+        if marker not in press:
+            raise SystemExit(f"RenalShield press page missing marker: {marker}")
+    for marker in ("Andre White", "3 seconds", "\u2014", "\u2013"):
+        if marker in press:
+            raise SystemExit(f"RenalShield press page contains forbidden marker: {marker!r}")
+    if not ((ROOT / "renalshield" / "og-renalshield-1200x630.jpg").is_file() or (ROOT / "renalshield" / "og-renalshield-1200x630.jpg.b64").is_file()):
+        raise SystemExit("RenalShield share image missing")
+    sitemap = (ROOT / "sitemap.xml").read_text(encoding="utf-8")
+    for loc in ("https://northstarprime.net/renalshield/", "https://northstarprime.net/press/renalshield-mastercook/"):
+        if f"<loc>{loc}</loc>" not in sitemap:
+            raise SystemExit(f"Sitemap missing {loc}")
+    for icon in ("favicon.ico", "favicon.svg", "apple-touch-icon.png", "android-chrome-192x192.png", "android-chrome-512x512.png", "mstile-150x150.png", "safari-pinned-tab.svg", "site.webmanifest", "browserconfig.xml"):
+        path = ROOT / "renalshield" / "icons" / icon
+        # Binary icons ship as *.b64 text and are decoded by materialize_b64_zips.py at deploy.
+        if not (path.is_file() or path.with_name(icon + ".b64").is_file()):
+            raise SystemExit(f"RenalShield icon missing: {icon}")
     if 'href="/renalshield/"' not in home:
         raise SystemExit("Homepage does not pass internal authority to the RenalShield project page")
     if 'href="https://www.renalshield.com"' not in home:
         raise SystemExit("Homepage no longer preserves a direct free-app route")
 
-    print("OK: NorthStar-to-RenalShield discovery bridge (noindex while draft)")
+    print("OK: NorthStar-to-RenalShield discovery bridge (indexable, draft pending clinical review)")
     print("OK: tagged free-app route, draft banner, label-tool warning, reviewer call, references")
     print("OK: homepage authority path and direct free-app route")
     print("OK: medical boundary, tracker-free page, and free-offer structured data")
+    print("OK: MedicalWebPage/Article/Organization/BreadcrumbList, press page, sitemap and icon set")
 
 
 if __name__ == "__main__":

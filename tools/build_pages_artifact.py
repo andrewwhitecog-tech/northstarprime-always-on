@@ -12,6 +12,7 @@ consume the 1 GB Pages ceiling.
 
 from __future__ import annotations
 
+import re
 import argparse
 import hashlib
 import json
@@ -149,6 +150,34 @@ def rewrite_release_media_refs(raw: str, relative: Path, selected: set[str], com
             return match.group("lead") + base + quote(resolved, safe="/") + suffix
         return match.group(0)
     return token.sub(replace, raw)
+
+
+# Cloudflare Web Analytics: added to every published HTML page head at build
+# time, so frozen source pages and their manifests stay byte-identical.
+CF_WEB_ANALYTICS_BEACON = """<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "edd65cd0f53e49dba694dfdcc6c30fc4"}'></script>"""
+# Pages that must stay free of remote scripts: strict-CSP or offline releases
+# and the held reader placeholder.
+CF_WEB_ANALYTICS_EXCLUDED = frozenset({
+    "chronosphere/index.html",
+    "idc/season-3/index.html",
+    "arcade/custom/side-street/index.html",
+    "arcade/custom/logic-foundry/index.html",
+    "arcade/custom/ladder/index.html",
+    "manga/index.html",
+})
+_HEAD_CLOSE = re.compile(r"</head\s*>", re.IGNORECASE)
+
+
+def inject_cf_web_analytics(raw: str, relative: Path) -> str:
+    rel = relative.as_posix()
+    if relative.suffix.lower() != ".html" or rel in CF_WEB_ANALYTICS_EXCLUDED or rel.startswith("tools/"):
+        return raw
+    if "static.cloudflareinsights.com/beacon.min.js" in raw:
+        return raw
+    match = _HEAD_CLOSE.search(raw)
+    if not match:
+        return raw
+    return raw[:match.start()] + CF_WEB_ANALYTICS_BEACON + "\n" + raw[match.start():]
 
 
 def sha256(path: Path) -> str:
@@ -311,6 +340,7 @@ def build(output: Path) -> dict:
             raw = pages_art_quality.rewrite_reviewed_art_urls(raw, relative)
             raw = rewrite_sticker_refs(raw, relative)
             raw = rewrite_release_media_refs(raw, relative, selected_media, media_commit)
+            raw = inject_cf_web_analytics(raw, relative)
             destination.write_text(raw, encoding="utf-8", newline="\n")
             shutil.copymode(source, destination)
         else:

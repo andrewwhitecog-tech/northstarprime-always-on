@@ -155,8 +155,8 @@ def rewrite_release_media_refs(raw: str, relative: Path, selected: set[str], com
 # Cloudflare Web Analytics: added to every published HTML page head at build
 # time, so frozen source pages and their manifests stay byte-identical.
 CF_WEB_ANALYTICS_BEACON = """<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "edd65cd0f53e49dba694dfdcc6c30fc4"}'></script>"""
-# Pages that must stay free of remote scripts: strict-CSP or offline releases
-# and the held reader placeholder.
+# Pages that must stay free of remote scripts: strict-CSP or offline releases,
+# explicit no-analytics promises, and the held reader placeholder.
 CF_WEB_ANALYTICS_EXCLUDED = frozenset({
     "chronosphere/index.html",
     "idc/season-3/index.html",
@@ -164,13 +164,26 @@ CF_WEB_ANALYTICS_EXCLUDED = frozenset({
     "arcade/custom/logic-foundry/index.html",
     "arcade/custom/ladder/index.html",
     "manga/index.html",
+    "mature/games/strip-signal/index.html",
+    "mature/games/afterglow-poker-lite/index.html",
+    "idr/signal-refrains/volume-01/index.html",
+    "idr/signal-refrains/the-distance-learns-my-name/index.html",
 })
 _HEAD_CLOSE = re.compile(r"</head\s*>", re.IGNORECASE)
+_NO_ANALYTICS_OPT_OUT = re.compile(
+    r"""(?:<meta\b[^>]*\bname\s*=\s*['"]nsp-analytics['"][^>]*\bcontent\s*=\s*['"](?:off|none|no|false|0)['"]"""
+    r"""|<meta\b[^>]*\bcontent\s*=\s*['"](?:off|none|no|false|0)['"][^>]*\bname\s*=\s*['"]nsp-analytics['"]"""
+    r"""|\bdata-no-analytics\b"""
+    r"""|\bno\s+analytics\b)""",
+    re.IGNORECASE,
+)
 
 
 def inject_cf_web_analytics(raw: str, relative: Path) -> str:
     rel = relative.as_posix()
     if relative.suffix.lower() != ".html" or rel in CF_WEB_ANALYTICS_EXCLUDED or rel.startswith("tools/"):
+        return raw
+    if _NO_ANALYTICS_OPT_OUT.search(raw):
         return raw
     if "static.cloudflareinsights.com/beacon.min.js" in raw:
         return raw

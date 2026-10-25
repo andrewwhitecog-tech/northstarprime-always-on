@@ -18,7 +18,7 @@ Method: live sitemap https://northstarprime.net/sitemap.xml had 225 `<loc>` entr
 | Target | Source pages | Outcome |
 |---|---|---|
 | https://app.northstarprime.net/chromatic/products/night-of-the-open-eye-kit | /oracle/ | Already fixed in main by PR #108 (now the Gumroad vdquzp link). It was still live during the crawl because that deploy was cancelled; it went out with the later main deploy (see live check) |
-| https://app.northstarprime.net/chromatic/products/vorath-reveler-stl-miniature | /store/ | NOT FIXED: no matching live listing in the Chromatic catalog (33 products) or on Gumroad. Needs the product published or the card repointed |
+| https://app.northstarprime.net/chromatic/products/vorath-reveler-stl-miniature | /store/ | No live listing in the Chromatic catalog (33 products, re-checked 2026-10-25) or on Gumroad. Card is now a non-link "Coming soon" card with no Offer in JSON-LD. Repoint it when the product is published |
 | https://app.northstarprime.net/chromatic/products/vorath-tarot-78-card-deck | /oracle/, /store/ | FIXED in PR #112: now points to app.northstarprime.net/chromatic/products/vorath-tarot-v2-pdf-deck (200, "VORATH Tarot: 78-Card Digital Deck", $12.00) |
 | https://fonts.googleapis.com | /contact/, /cs/contact/, /es/contact/, /fictional-brands/, /ja/contact/, /ko/contact/, /ru/contact/, /stickerforge/studio/, /warband/, /zh/contact/ | FALSE POSITIVE: bare-origin <link rel=preconnect>, not a navigable link |
 | https://fonts.gstatic.com | /contact/, /cs/contact/, /es/contact/, /fictional-brands/, /ja/contact/, /ko/contact/, /ru/contact/, /stickerforge/studio/, /warband/, /zh/contact/ | FALSE POSITIVE: bare-origin <link rel=preconnect>, not a navigable link |

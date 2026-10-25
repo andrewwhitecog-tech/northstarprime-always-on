@@ -148,7 +148,7 @@ class CustomerStaticTests(unittest.TestCase):
         for lens in ("Creative Forge &amp; Mastery", "Shadow &amp; Transmutation", "Horizon &amp; Sovereign Path", "Dark Carnival &amp; Voxel Alchemy"):
             self.assertIn(lens, html)
         for cta in (
-            "https://app.northstarprime.net/chromatic/products/vorath-tarot-78-card-deck",
+            "https://app.northstarprime.net/chromatic/products/vorath-tarot-v2-pdf-deck",
             "https://app.northstarprime.net/chromatic/products/acid-voxel-halloween-45-pack",
             "https://andrewcog.gumroad.com/l/vdquzp",
             "/store/",

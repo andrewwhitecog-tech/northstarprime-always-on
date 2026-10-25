@@ -219,6 +219,22 @@ def safe_output(value: str | Path) -> Path:
         raise ValueError(f"Output must be a child of {allowed_root}")
     return output
 
+# Originals replaced on their only pages by same-size WebP copies (Oct 24 2026).
+# Kept in git (nothing deleted) but left out of the Pages artifact so the
+# smaller copies fit under the release guard.
+SUPERSEDED_BY_WEBP = frozenset({
+    "static/ckd_kitchen/chairside_care_kit.jpg",
+    "static/ckd_kitchen/crisping_plate_hero.jpg",
+    "static/ckd_kitchen/mastercook_kitchen_hero.jpg",
+    "static/ckd_kitchen/world_table_spread.jpg",
+    "static/action_captures/bank_northstar_vault.jpg",
+    "static/action_captures/crafter_assembly_line.jpg",
+    "static/action_captures/crystal_ziggurat_apex.jpg",
+    "static/action_captures/deep_dark_warden_ancient_city.jpg",
+    "static/drops/mystery_school_lab.jpg",
+    "static/mystery_school/images/03_AETHERIA_CELESTIAL_OBSERVATORY.jpg",
+})
+
 
 def iter_source_files():
     for relative in tracked_source_paths():
@@ -232,6 +248,8 @@ def iter_source_files():
         if relative.parts[:2] == ("static", "idc_video"):
             continue
         if pages_art_quality.is_retired_art(relative):
+            continue
+        if relative.as_posix() in SUPERSEDED_BY_WEBP:
             continue
         if external_sticker_master(relative) or external_release_media(relative):
             continue

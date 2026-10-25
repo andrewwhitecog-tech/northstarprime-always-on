@@ -150,7 +150,7 @@ class CustomerStaticTests(unittest.TestCase):
         for cta in (
             "https://app.northstarprime.net/chromatic/products/vorath-tarot-78-card-deck",
             "https://app.northstarprime.net/chromatic/products/acid-voxel-halloween-45-pack",
-            "https://app.northstarprime.net/chromatic/products/night-of-the-open-eye-kit",
+            "https://andrewcog.gumroad.com/l/vdquzp",
             "/store/",
             "/tarot/oracle/",
         ):

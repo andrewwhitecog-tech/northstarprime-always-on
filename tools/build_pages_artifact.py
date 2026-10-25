@@ -233,6 +233,13 @@ SUPERSEDED_BY_WEBP = frozenset({
     "static/action_captures/deep_dark_warden_ancient_city.jpg",
     "static/drops/mystery_school_lab.jpg",
     "static/mystery_school/images/03_AETHERIA_CELESTIAL_OBSERVATORY.jpg",
+    # Oct 25 2026: /channels/ and /press/ now use WebP copies; these originals
+    # had no other page references.
+    "arcade/custom/void-siege/box_art.jpg",
+    "arcade/custom/prism-runner-2049/box_art.jpg",
+    "arcade/custom/chrono-blade-2049/box_art.jpg",
+    "literature/the-vorath-codex-vol2/frontispiece.jpg",
+    "static/drops/ouroboros_titan_reveal.jpg",
 })
 
 

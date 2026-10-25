@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Automated verification suite for The Silver Standard bullion show and calculator."""
 import re
+import os
 import sys
 from pathlib import Path
 
@@ -67,8 +68,11 @@ def verify_bullion():
             print("[PASS] Video Theater link to /bullion/ verified")
 
     # 6. Desktop Launchers
+    # Machine-local check: only meaningful on the WhiteHouse Windows desktop.
     desktop_cmd = Path(r"C:\Users\andre\Desktop\NorthStar_Media_Studio\LAUNCH_THE_SILVER_STANDARD.cmd")
-    if not desktop_cmd.is_file():
+    if os.name != "nt":
+        print("[SKIP] Desktop launcher check (not on Windows)")
+    elif not desktop_cmd.is_file():
         errors.append(f"Missing desktop launcher: {desktop_cmd}")
     else:
         print("[PASS] Desktop 1-click launcher verified")

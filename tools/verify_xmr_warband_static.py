@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -22,7 +23,7 @@ def verify(network: bool = False) -> dict:
         "xmr_addresses_present": DONATIONS in xmr and PAYMENTS in xmr,
         "spacecash_boundary_present": "no XMR-to-SPACE exchange" in xmr,
         "warband_uses_durable_app": "https://app.northstarprime.net/api/warband/notify" in warband,
-        "warband_waits_for_response": "await fetch" in warband and "if(!response.ok||!body.ok)" in warband,
+        "warband_waits_for_response": "await fetch" in warband and re.search(r"if\(!response\.ok\|\|!(?:body|data)\.ok\)", warband) is not None,
         "warband_no_false_local_fallback": "localStorage.setItem" not in warband,
     }
     for lane in ("donations", "payments"):

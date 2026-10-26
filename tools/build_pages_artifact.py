@@ -240,6 +240,11 @@ SUPERSEDED_BY_WEBP = frozenset({
     "arcade/custom/chrono-blade-2049/box_art.jpg",
     "literature/the-vorath-codex-vol2/frontispiece.jpg",
     "static/drops/ouroboros_titan_reveal.jpg",
+    # Oct 25 2026 (pass 2): Mystery School chambers/caves/stare-into-the-void/
+    # garden now use the existing WebP copies; no other page references.
+    "static/mystery_school/images/01_MYSTERY_SCHOOL_GRAND_PORTAL.jpg",
+    "static/mystery_school/images/02_STARE_INTO_THE_VOID_CHAMBER.jpg",
+    "static/mystery_school/images/04_THE_GARDEN_OF_STILLNESS.jpg",
 })
 
 

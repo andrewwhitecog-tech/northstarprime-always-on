@@ -18,6 +18,9 @@ EXPECTED = (
     "https://www.tiktok.com/@northstarprimenet",
     "https://www.youtube.com/@northstarprimenet",
     "https://www.instagram.com/northstarprimenet/",
+    "https://www.pinterest.com/swagblackandrew/",
+    "https://x.com/xNorthstarprime",
+    "https://www.facebook.com/61593232914654",
     "https://www.moltbook.com/u/GoochMane",
 )
 LOCAL_ROUTES = (

@@ -157,5 +157,23 @@
       </div>
     </div>
   </div>
+<script>
+(() => {
+  const match = /^\/([a-z]{3,12})\/?$/i.exec(location.pathname);
+  if (!match) return;
+  const word = match[1].toLowerCase();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+  fetch('https://app.northstarprime.net/api/eye/door', {
+    method: 'POST', mode: 'cors', credentials: 'omit', cache: 'no-store',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({word}), signal: controller.signal
+  }).then(response => response.ok ? response.json() : null)
+    .then(result => {
+      if (result && result.open === true)
+        location.replace('https://app.northstarprime.net/eye/' + encodeURIComponent(word));
+    }).catch(() => {}).finally(() => clearTimeout(timeout));
+})();
+</script>
 </body>
 </html>

@@ -29,18 +29,18 @@ Total bytes: 20,956,594
 | demoscene | An Untitled Story | `FreeToDistribute` | <https://www.pouet.net/prod.php?which=76532> | 6,940 |
 | demoscene | fr-019 Poemtoawhale | `FreeToDistribute` | <https://www.pouet.net/prod.php?which=5599> | 10,196,031 |
 | demoscene | fr-030 Candytron | `FreeToDistribute` | <https://www.pouet.net/prod.php?which=9720> | 3,963 |
-| homebrew | New Year 2024 | `Freeware` | <https://shiru.untergrund.net/software.shtml> | 37,454 |
-| homebrew | Corobars 256B | `Freeware` | <https://shiru.untergrund.net/software.shtml> | 2,697 |
-| homebrew | Starjump4K | `Freeware` | <https://shiru.untergrund.net/software.shtml> | 9,340 |
-| homebrew | Kaleidoscope1K | `Freeware` | <https://shiru.untergrund.net/software.shtml> | 2,896 |
-| homebrew | Uwol Quest For Money | `Freeware` | <https://shiru.untergrund.net/software.shtml> | 154,664 |
-| homebrew | Ny2011 | `Freeware` | <https://shiru.untergrund.net/software.shtml> | 23,419 |
-| homebrew | Lan Master | `Freeware` | <https://shiru.untergrund.net/software.shtml> | 1,126,553 |
-| homebrew | Lawn Mower | `Freeware` | <https://shiru.untergrund.net/software.shtml> | 751,619 |
-| homebrew | Alter Ego | `Freeware` | <https://shiru.untergrund.net/software.shtml> | 792,136 |
-| homebrew | Zooming Secretary | `Freeware` | <https://shiru.untergrund.net/software.shtml> | 801,853 |
-| homebrew | Chase | `Freeware` | <https://shiru.untergrund.net/software.shtml> | 70,177 |
-| homebrew | Heohdemo Final Version | `Freeware` | <https://shiru.untergrund.net/software.shtml> | 440,733 |
+| homebrew | New Year 2024 | `Freeware` | <https://web.archive.org/web/2025/https://shiru.untergrund.net/software.shtml> | 37,454 |
+| homebrew | Corobars 256B | `Freeware` | <https://web.archive.org/web/2025/https://shiru.untergrund.net/software.shtml> | 2,697 |
+| homebrew | Starjump4K | `Freeware` | <https://web.archive.org/web/2025/https://shiru.untergrund.net/software.shtml> | 9,340 |
+| homebrew | Kaleidoscope1K | `Freeware` | <https://web.archive.org/web/2025/https://shiru.untergrund.net/software.shtml> | 2,896 |
+| homebrew | Uwol Quest For Money | `Freeware` | <https://web.archive.org/web/2025/https://shiru.untergrund.net/software.shtml> | 154,664 |
+| homebrew | Ny2011 | `Freeware` | <https://web.archive.org/web/2025/https://shiru.untergrund.net/software.shtml> | 23,419 |
+| homebrew | Lan Master | `Freeware` | <https://web.archive.org/web/2025/https://shiru.untergrund.net/software.shtml> | 1,126,553 |
+| homebrew | Lawn Mower | `Freeware` | <https://web.archive.org/web/2025/https://shiru.untergrund.net/software.shtml> | 751,619 |
+| homebrew | Alter Ego | `Freeware` | <https://web.archive.org/web/2025/https://shiru.untergrund.net/software.shtml> | 792,136 |
+| homebrew | Zooming Secretary | `Freeware` | <https://web.archive.org/web/2025/https://shiru.untergrund.net/software.shtml> | 801,853 |
+| homebrew | Chase | `Freeware` | <https://web.archive.org/web/2025/https://shiru.untergrund.net/software.shtml> | 70,177 |
+| homebrew | Heohdemo Final Version | `Freeware` | <https://web.archive.org/web/2025/https://shiru.untergrund.net/software.shtml> | 440,733 |
 | itch | rock-n-roll-diogenes | `PublicDomain` | <https://ludonaut.itch.io/rock-n-roll-diogenes> | 42,054 |
 | itch | wbwwb | `CC0` | <https://ncase.itch.io/wbwwb> | 27,374 |
 | itch | game-music-1 | `CC0` | <https://duckhive.itch.io/game-music-1> | 23,961 |
@@ -95,3 +95,6 @@ Total bytes: 20,956,594
 | pico8 | 512px Under | `CC-BY-NC-SA` | <https://www.lexaloffle.com/bbs/?tid=45674> | 43,681 |
 | pico8 | Zip Zapper B | `CC-BY-NC-SA` | <https://www.lexaloffle.com/bbs/?tid=53344> | 41,551 |
 | pico8 | Low Mem Sky | `CC-BY-NC-SA` | <https://www.lexaloffle.com/bbs/?tid=37321> | 51,090 |
+## Source link notes
+
+- 2026-10-26: Shiru's site on untergrund.net is offline (the free host closed), so the 12 homebrew rows above now point to the Internet Archive copy of the same Shiru software page.

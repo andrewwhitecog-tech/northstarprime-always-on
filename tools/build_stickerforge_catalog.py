@@ -11,6 +11,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG_URL = '/stickerforge/'
 ORDER_NOTE = 'Printed to order; price and delivery confirmed before payment.'
+# Share-card art: a StickerForge original served from northstarprime.net (JPEG, 1024x1024).
+SHARE_IMAGE = 'https://northstarprime.net/stickerforge/packs/cascadia-sovereign/07_cascadia_great_blue_heron_sentinel.jpg'
 
 def collection_href(item):
     if item['collection_url'] == CATALOG_URL:
@@ -40,7 +42,9 @@ def build():
     page = f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>StickerForge — {len(items)} original stickers | NorthStar Prime</title><meta name="description" content="Explore {len(items)} NorthStar stickers across {len(groups)} collections. Search, switch between three gallery views, and inspect every original at full size.">
-<meta name="theme-color" content="#0b0d18"><link rel="canonical" href="https://northstarprime.net/stickerforge/"><link rel="stylesheet" href="catalog.css?v=20261014a"><script src="catalog.js?v=20261014a" defer></script></head>
+<meta name="theme-color" content="#0b0d18"><link rel="canonical" href="https://northstarprime.net/stickerforge/">
+<meta property="og:type" content="website"><meta property="og:title" content="StickerForge — {len(items)} original stickers | NorthStar Prime"><meta property="og:description" content="Explore {len(items)} NorthStar stickers across {len(groups)} collections. Search, switch between three gallery views, and inspect every original at full size."><meta property="og:url" content="https://northstarprime.net/stickerforge/"><meta property="og:image" content="{SHARE_IMAGE}"><meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="/stickerforge/catalog.css?v=20261014a"><script src="/stickerforge/catalog.js?v=20261014a" defer></script></head>
 <body data-view="shop" data-public-sticker-count="{len(items)}" data-guest-view="true" data-guest-purchase="true" data-membership-required="false">
 <a class="skip" href="#catalog">Skip to stickers</a><header class="topbar"><a class="brand" href="/">NORTHSTAR PRIME</a><nav aria-label="Primary"><a href="/stickerforge/studio/">Sticker Studio ✦</a><a href="/stickerforge/packs/cosmic-cabinet-20261008/">New: Cosmic Cabinet · 24 PNGs</a><a href="/tarot/oracle/">Vorath Oracle</a><a href="/stickerforge/bumper-stickers/">Bumper stickers</a><a href="/coloring-studio/">PaintForge</a><a href="/contact/">Contact</a></nav></header>
 <main><header class="intro"><div><p class="eyebrow">NorthStar original art / StickerForge</p><h1>A little <em>otherworldly.</em></h1><p>Celestial creatures, strange treasures, glass worlds. Find your next sticker.</p><div style="margin-top:1.25rem;"><a class="button" href="/stickerforge/studio/" style="background:linear-gradient(135deg,#fbbf24,#00f0ff);color:#07090e;font-weight:900;padding:0.65rem 1.3rem;border-radius:999px;text-decoration:none;display:inline-flex;align-items:center;gap:0.4rem;">Open Interactive Studio ✦</a></div></div><div class="inventory"><strong>{len(items)} originals</strong>{len(groups)} collections · No membership required</div></header>

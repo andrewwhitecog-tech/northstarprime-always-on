@@ -2,8 +2,8 @@
 """Build the curated NorthStar Prime GitHub Pages artifact.
 
 The branch remains the complete source archive. The Pages artifact omits the
-large IDC video copies and rewrites their public URLs to the identical files on
-the canonical NorthStar application host. Little Light, cookbook, and StickerForge
+large IDC video copies and rewrites their public URLs to the independent media bucket so an
+application deploy does not interrupt playback. Little Light, cookbook, and StickerForge
 preview exports stay in the public source repository and out of this artifact.
 Full-resolution StickerForge masters stay in the repository too, and the artifact
 rewrites their URLs to raw.githubusercontent.com so new sticker packs do not
@@ -27,7 +27,8 @@ import pages_art_quality
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = ROOT / "output" / "pages-artifact"
-APP_VIDEO_BASE = "https://app.northstarprime.net/static/idc_video/"
+LEGACY_APP_VIDEO_BASE = "https://app.northstarprime.net/static/idc_video/"
+MEDIA_VIDEO_BASE = "https://assets.northstarprime.net/idc-continuity-v1-20260906/"
 LOCAL_VIDEO_BASE = "/static/idc_video/"
 PUBLISHED_LIMIT_BYTES = 1_000_000_000
 # Chronosphere and Side Street add about 4.45 MB to the 919.9 MB artifact.
@@ -380,7 +381,8 @@ def build(output: Path) -> dict:
                 ROOT, relative, source.read_text(encoding="utf-8"))
             count = raw.count(LOCAL_VIDEO_BASE)
             if count:
-                raw = raw.replace(LOCAL_VIDEO_BASE, APP_VIDEO_BASE)
+                raw = raw.replace(LEGACY_APP_VIDEO_BASE, MEDIA_VIDEO_BASE)
+                raw = raw.replace(LOCAL_VIDEO_BASE, MEDIA_VIDEO_BASE)
                 rewrites += count
             raw = pages_art_quality.rewrite_reviewed_art_urls(raw, relative)
             raw = rewrite_sticker_refs(raw, relative)
@@ -431,7 +433,7 @@ def build(output: Path) -> dict:
             "path": "static/idc_video",
             "file_count": len(video_files),
             "bytes": omitted_video_bytes,
-            "replacement_base_url": APP_VIDEO_BASE,
+            "replacement_base_url": MEDIA_VIDEO_BASE,
             "rewritten_references": rewrites,
         },
         "external_release_media": {

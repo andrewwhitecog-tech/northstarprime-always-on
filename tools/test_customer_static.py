@@ -184,8 +184,21 @@ class CustomerStaticTests(unittest.TestCase):
             "static/front/store/lineage-of-light-advent-cover.webp",
             "static/front/store/lineage-of-light-ornaments-cover.webp",
             "static/front/store/season-of-lights-cover.webp",
+            "static/front/store/vorath-stream-overlay-pack-cover.webp",
+            "static/front/store/little-light-library-50-books-cover.webp",
         }
         self.assertTrue(expected_store_covers.issubset(store_assets))
+
+        store_html = store_path.read_text(encoding="utf-8")
+        links_html = (repo_root / "links" / "index.html").read_text(encoding="utf-8")
+        for url in (
+            "https://andrewcog.gumroad.com/l/ispvpe",
+            "https://andrewcog.gumroad.com/l/ehzznt",
+            "/little-light-library/",
+        ):
+            self.assertIn(url, store_html)
+            self.assertIn(url, links_html)
+        self.assertIn("https://andrewcog.gumroad.com/l/hfpzxt", links_html)
 
         holidays_html = holidays_path.read_text(encoding="utf-8")
         for cover in (

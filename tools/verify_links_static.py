@@ -45,7 +45,10 @@ STOREFRONT_LINKS = (
     "https://andrewcog.gumroad.com/",
     "https://www.etsy.com/shop/UncleVorath420",
     "https://www.zazzle.com/store/unclevorath420",
+)
+RETIRED_LINKS = (
     "https://www.redbubble.com/people/UncleVorath420/shop",
+    "https://www.patreon.com/cw/northstarprimenet",
 )
 CANONICAL_SERVICE_LINK = "https://app.northstarprime.net/services"
 
@@ -79,6 +82,9 @@ def main() -> None:
     missing = [value for value in (*EXPECTED, *LOCAL_ROUTES, *STOREFRONT_LINKS) if f'href="{value}"' not in html]
     if missing:
         raise SystemExit(f"Missing expected link targets: {missing}")
+    present_retired = [value for value in RETIRED_LINKS if value in html]
+    if present_retired:
+        raise SystemExit(f"Retired/restricted link targets must not appear on /links/: {present_retired}")
     if f'href="{CANONICAL_SERVICE_LINK}"' not in html:
         raise SystemExit("Links page does not expose the canonical service studio in the footer")
 

@@ -49,8 +49,33 @@ STOREFRONT_LINKS = (
 RETIRED_LINKS = (
     "https://www.redbubble.com/people/UncleVorath420/shop",
     "https://www.patreon.com/cw/northstarprimenet",
+    "https://www.patreon.com/northstarprimenet",
 )
 CANONICAL_SERVICE_LINK = "https://app.northstarprime.net/services"
+
+
+def check_retired_links_sitewide(root: Path) -> int:
+    skip_dirs = {".git", "output", "__pycache__", "node_modules"}
+    targets: list[Path] = []
+    for path in sorted(root.rglob("*.html")):
+        if skip_dirs & set(path.relative_to(root).parts):
+            continue
+        targets.append(path)
+    llms = root / "llms.txt"
+    if llms.is_file():
+        targets.append(llms)
+    offenders: list[str] = []
+    for path in targets:
+        text = path.read_text(encoding="utf-8")
+        hits = [url for url in RETIRED_LINKS if url in text]
+        if hits:
+            offenders.append(f"{path.relative_to(root).as_posix()}: {hits}")
+    if offenders:
+        raise SystemExit(
+            "Retired/restricted link targets must not appear on any public HTML page or llms.txt: "
+            + "; ".join(offenders)
+        )
+    return len(targets)
 
 
 def main() -> None:
@@ -85,6 +110,7 @@ def main() -> None:
     present_retired = [value for value in RETIRED_LINKS if value in html]
     if present_retired:
         raise SystemExit(f"Retired/restricted link targets must not appear on /links/: {present_retired}")
+    swept_count = check_retired_links_sitewide(ROOT)
     if f'href="{CANONICAL_SERVICE_LINK}"' not in html:
         raise SystemExit("Links page does not expose the canonical service studio in the footer")
 
@@ -113,6 +139,7 @@ def main() -> None:
 
     print("OK: links directory is self-contained and tracker-free")
     print(f"OK: {len(EXPECTED)} verified profile targets, {len(LOCAL_ROUTES)} local routes, and canonical services")
+    print(f"OK: 0 retired Redbubble/Patreon targets across {swept_count} public HTML pages + llms.txt")
     print("OK: homepage discoverability and Organization JSON-LD")
 
 

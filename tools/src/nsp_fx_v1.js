@@ -363,27 +363,48 @@
     }
   }
 
-  /* God-rays from a light source (additive wedges). */
+  /* God-rays from a light source. The wedges are painted once into a cached
+     sprite; each frame draws it twice (slow counter-rotation, breathing alpha):
+     two image draws instead of a dozen full-screen gradient fills. */
+  const rayCache = new Map();
+  function raySprite(color, count) {
+    const key = color + "|" + count;
+    let c = rayCache.get(key);
+    if (c) return c;
+    const S = 512, R = S / 2;
+    c = document.createElement("canvas");
+    c.width = c.height = S;
+    const g = c.getContext("2d");
+    const [r, gg, b] = parseColor(color);
+    g.translate(R, R);
+    for (let i = 0; i < count; i++) {
+      const a = (i / count) * TAU + Math.sin(i * 2.3) * 0.12;
+      const w = 0.035 + 0.03 * ((i * 7) % 5) / 4;
+      const grad = g.createLinearGradient(0, 0, Math.cos(a) * R, Math.sin(a) * R);
+      grad.addColorStop(0, `rgba(${r},${gg},${b},1)`);
+      grad.addColorStop(1, `rgba(${r},${gg},${b},0)`);
+      g.fillStyle = grad;
+      g.beginPath();
+      g.moveTo(0, 0);
+      g.lineTo(Math.cos(a - w) * R, Math.sin(a - w) * R);
+      g.lineTo(Math.cos(a + w) * R, Math.sin(a + w) * R);
+      g.closePath();
+      g.fill();
+    }
+    rayCache.set(key, c);
+    return c;
+  }
   function rays(ctx, x, y, len, t, color = "#ffe4a0", count = 9, alpha = 0.16) {
+    const spr = raySprite(color, count);
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
     ctx.translate(x, y);
-    const [r, g, b] = parseColor(color);
-    for (let i = 0; i < count; i++) {
-      const a = (i / count) * TAU + t * 0.07 + Math.sin(t * 0.3 + i) * 0.05;
-      const wdt = 0.05 + 0.04 * Math.sin(t * 0.9 + i * 1.7);
-      const grad = ctx.createLinearGradient(0, 0, Math.cos(a) * len, Math.sin(a) * len);
-      const k = alpha * (0.6 + 0.4 * Math.sin(t * 1.3 + i * 2.1));
-      grad.addColorStop(0, `rgba(${r},${g},${b},${k})`);
-      grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(Math.cos(a - wdt) * len, Math.sin(a - wdt) * len);
-      ctx.lineTo(Math.cos(a + wdt) * len, Math.sin(a + wdt) * len);
-      ctx.closePath();
-      ctx.fill();
-    }
+    ctx.rotate(t * 0.05);
+    ctx.globalAlpha = Math.min(1, alpha * 0.8 * (0.8 + 0.2 * Math.sin(t * 1.3)));
+    ctx.drawImage(spr, -len, -len, len * 2, len * 2);
+    ctx.rotate(-t * 0.11 + 0.4);
+    ctx.globalAlpha = Math.min(1, alpha * 0.5 * (0.8 + 0.2 * Math.sin(t * 0.9 + 1)));
+    ctx.drawImage(spr, -len * 0.8, -len * 0.8, len * 1.6, len * 1.6);
     ctx.restore();
   }
 

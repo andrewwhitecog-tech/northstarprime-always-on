@@ -563,6 +563,7 @@
       conic-gradient(from 120deg, #22d3ee, #a855f7, #ec4899, #f5c542, #22d3ee) border-box !important; }
   @keyframes p404shake { 0%,100% { transform: translate(0,0); } 20% { transform: translate(-7px,3px); } 40% { transform: translate(6px,-4px); } 60% { transform: translate(-4px,2px); } 80% { transform: translate(3px,-1px); } }
   .app.shake { animation: p404shake 0.32s ease-out; }
+  body::before { mix-blend-mode: normal !important; opacity: 0.22 !important; }
   @keyframes p404pulse { 0% { box-shadow: 0 0 0 rgba(0,0,0,0); } 30% { box-shadow: 0 0 34px var(--pulse), inset 0 0 22px var(--pulse); } 100% { box-shadow: 0 0 0 rgba(0,0,0,0); } }
   .pulse { animation: p404pulse 0.7s ease-out; }
 </style>
@@ -690,10 +691,12 @@ const P404FX = (() => {
   const fxP = new NSPFX.Particles(700), fxR = new NSPFX.Rings(), fxF = new NSPFX.Floaters(), fxI = new NSPFX.Impact();
   const motes = new NSPFX.Motes(46, innerWidth, innerHeight, ["#7fe9ff", "#ff7ad9", "#ffd98a"]);
   const cars = Array.from({ length: 26 }, (_, i) => ({ lane: i % 13, x: Math.random(), v: 0.03 + Math.random() * 0.06, c: i % 3 === 0 ? "#ff4466" : (i % 3 === 1 ? "#7fe9ff" : "#ffd98a"), dir: i % 2 ? 1 : -1 }));
-  let W = 0, H = 0, last = performance.now(), titleUp = true, pressure = 0.2;
+  let W = 0, H = 0, last = performance.now(), titleUp = true, pressure = 0.2, frameNo = 0, fxDirty = false;
   function size() {
     W = innerWidth; H = innerHeight;
-    for (const c of [bg, fx, ts]) { c.width = W; c.height = H; }
+    for (const c of [fx, ts]) { c.width = W; c.height = H; }
+    bg.width = Math.ceil(W / 2); bg.height = Math.ceil(H / 2);
+    bctx.setTransform(0.5, 0, 0, 0.5, 0, 0);
     motes.resize(W, H);
   }
   addEventListener("resize", size);
@@ -761,10 +764,15 @@ const P404FX = (() => {
     fxP.update(dt); fxR.update(dt); fxF.update(dt); fxI.update(dt); motes.update(dt);
     if (titleUp) { drawTitle(t); }
     else {
-      drawBackdrop(t);
-      fctx.clearRect(0, 0, W, H);
-      fxI.drawFlash(fctx, W, H);
-      fxR.draw(fctx); fxP.draw(fctx); fxF.draw(fctx);
+      if ((frameNo = (frameNo + 1) % 2) === 0) drawBackdrop(t);
+      const live = fxP.count || fxR.list.length || fxF.list.length || fxI.flash > 0.01;
+      if (live || fxDirty) {
+        fctx.clearRect(0, 0, W, H);
+        fxI.drawFlash(fctx, W, H);
+        fxR.draw(fctx); fxP.draw(fctx); fxF.draw(fctx);
+        fxDirty = !!live;
+      }
+      fx.style.visibility = live ? 'visible' : 'hidden';
     }
     requestAnimationFrame(frame);
   }

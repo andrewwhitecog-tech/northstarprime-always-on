@@ -4,9 +4,9 @@
    Glow is drawn from cached radial sprites with additive ('lighter') blending,
    never per-particle shadowBlur, so it stays fast on software rasterisers.
    This is the readable source; tools/ is left out of the Pages artifact. The
-   served copy, static/games/nsp_fx_v1.js, is whitespace-minified to keep the
-   artifact under its 980 MB guard. After editing, rebuild it from the repo root:
-   esbuild tools/src/nsp_fx_v1.js --minify-whitespace --charset=utf8 --banner:js="// NSPFX v1. Generated from tools/src/nsp_fx_v1.js: edit that file, then rebuild with the command at its top." --outfile=static/games/nsp_fx_v1.js */
+   served copy, static/games/nsp_fx_v1.js, is minified to keep the artifact
+   under its 980 MB guard. After editing, rebuild it from the repo root:
+   esbuild tools/src/nsp_fx_v1.js --minify --target=es2020 --legal-comments=none --charset=utf8 --banner:js="// NSPFX v1. Generated from tools/src/nsp_fx_v1.js: edit that file, then rebuild with the command at its top." --outfile=static/games/nsp_fx_v1.js */
 (function (global) {
   "use strict";
   const TAU = Math.PI * 2;

@@ -552,15 +552,29 @@
   .crt-scanlines.hidden {
     display: none;
   }
+  /* living backdrop + effects layers (NorthStar arcade FX kit) */
+  #bgfx, #fxfx, #titleScreen { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+  #bgfx { z-index: 0; pointer-events: none; }
+  #fxfx { z-index: 9000; pointer-events: none; }
+  #titleScreen { z-index: 9500; cursor: pointer; }
+  #titleScreen.gone { display: none; }
+  .app { position: relative; z-index: 1; background: transparent !important; }
+  .panel { background: linear-gradient(180deg, rgba(14,18,30,0.84), rgba(6,9,16,0.88)) padding-box,
+      conic-gradient(from 120deg, #22d3ee, #a855f7, #ec4899, #f5c542, #22d3ee) border-box !important; }
+  @keyframes p404shake { 0%,100% { transform: translate(0,0); } 20% { transform: translate(-7px,3px); } 40% { transform: translate(6px,-4px); } 60% { transform: translate(-4px,2px); } 80% { transform: translate(3px,-1px); } }
+  .app.shake { animation: p404shake 0.32s ease-out; }
+  @keyframes p404pulse { 0% { box-shadow: 0 0 0 rgba(0,0,0,0); } 30% { box-shadow: 0 0 34px var(--pulse), inset 0 0 22px var(--pulse); } 100% { box-shadow: 0 0 0 rgba(0,0,0,0); } }
+  .pulse { animation: p404pulse 0.7s ease-out; }
 </style>
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "VideoGame", "name": "Precinct 404", "url": "https://northstarprime.net/arcade/custom/precinct-404/", "gamePlatform": "Web browser", "applicationCategory": "Game", "operatingSystem": "Any", "isAccessibleForFree": true, "publisher": {"@type": "Organization", "name": "NorthStar Prime", "url": "https://northstarprime.net/"}, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "description": "Play Precinct 404 - Dispatch Queue free in your browser in the NorthStar Prime IDG Arcade, an original game from the Vorath universe.", "image": "https://northstarprime.net/static/games/og/precinct-404_og_1200x630.jpg"}</script>
 </head>
 <body>
+<canvas id="bgfx" aria-hidden="true"></canvas>
 <div class="app">
   <header>
     <div>
       <h1>Precinct 404: Dispatch Queue</h1>
-      <div class="subline">Shift triage prototype // Buckman pilot program</div>
+      <div class="subline">Shift triage // Buckman pilot program</div>
     </div>
     <div class="header-actions">
       <span id="xbox-pad-badge" class="chip" style="display: none; border-color: #10b981; color: #10b981; font-weight: 700; background: rgba(16, 185, 129, 0.12);">[PAD: XBOX 360 CONNECTED]</span>
@@ -651,7 +665,6 @@
   <footer>
     <span id="footerState">Pilot active</span>
     <span id="padGuide" style="color: var(--gold); font-size: 0.74rem; font-weight: 600;">[PAD] Left Stick / D-Pad: Select Unit | [A/RT] Dispatch | [X/LT] Hold Call | [Y/RB] Ask Mags | [B/LB] Override | [BACK] CRT | [START] Reset</span>
-    <span>Prototype state: playable_prototype</span>
   </footer>
 </div>
 
@@ -664,7 +677,150 @@
 </div>
 
 <div class="crt-scanlines" id="crtOverlay"></div>
+<canvas id="fxfx" aria-hidden="true"></canvas>
+<canvas id="titleScreen" aria-label="Precinct 404 title screen: press Enter or click to start the shift"></canvas>
+<script src="/static/games/nsp_fx_v1.js"></script>
 
+<script>
+const P404FX = (() => {
+  "use strict";
+  const bg = document.getElementById("bgfx"), fx = document.getElementById("fxfx"), ts = document.getElementById("titleScreen");
+  const bctx = bg.getContext("2d"), fctx = fx.getContext("2d"), tctx = ts.getContext("2d");
+  const HERO = NSPFX.loadImage("/static/games/og/precinct-404_og_1200x630.jpg");
+  const fxP = new NSPFX.Particles(700), fxR = new NSPFX.Rings(), fxF = new NSPFX.Floaters(), fxI = new NSPFX.Impact();
+  const motes = new NSPFX.Motes(46, innerWidth, innerHeight, ["#7fe9ff", "#ff7ad9", "#ffd98a"]);
+  const cars = Array.from({ length: 26 }, (_, i) => ({ lane: i % 13, x: Math.random(), v: 0.03 + Math.random() * 0.06, c: i % 3 === 0 ? "#ff4466" : (i % 3 === 1 ? "#7fe9ff" : "#ffd98a"), dir: i % 2 ? 1 : -1 }));
+  let W = 0, H = 0, last = performance.now(), titleUp = true, pressure = 0.2;
+  function size() {
+    W = innerWidth; H = innerHeight;
+    for (const c of [bg, fx, ts]) { c.width = W; c.height = H; }
+    motes.resize(W, H);
+  }
+  addEventListener("resize", size);
+  size();
+  function center(el) {
+    const r = el.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }
+  function drawBackdrop(t) {
+    const g = bctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#03050c"); g.addColorStop(0.6, "#0b0820"); g.addColorStop(1, "#140818");
+    bctx.fillStyle = g; bctx.fillRect(0, 0, W, H);
+    // Buckman district grid seen from the dispatch tower, lit by traffic
+    bctx.save(); bctx.globalCompositeOperation = "lighter";
+    const hz = H * 0.18;
+    for (let i = 0; i < 13; i++) {
+      const y = hz + Math.pow((i + 1) / 13, 1.8) * (H - hz);
+      bctx.strokeStyle = `rgba(34,211,238,${0.04 + i * 0.008})`; bctx.lineWidth = 1;
+      bctx.beginPath(); bctx.moveTo(0, y); bctx.lineTo(W, y); bctx.stroke();
+    }
+    for (let x = -W; x < 2 * W; x += 70) {
+      bctx.strokeStyle = "rgba(236,72,153,0.06)";
+      bctx.beginPath(); bctx.moveTo(W / 2 + (x - W / 2) * 0.12, hz); bctx.lineTo(x, H); bctx.stroke();
+    }
+    for (const c of cars) {
+      c.x += c.v * c.dir * 0.016 * (1 + pressure);
+      if (c.x > 1.1) c.x = -0.1; if (c.x < -0.1) c.x = 1.1;
+      const y = hz + Math.pow((c.lane + 1) / 13, 1.8) * (H - hz);
+      NSPFX.light(bctx, c.x * W, y, 10 + c.lane * 2, c.c, 0.55, 0.3);
+    }
+    bctx.restore();
+    // the precinct's eye sweeps the city; it reddens as chaos climbs
+    const ex = W / 2, ey = hz;
+    const col = pressure > 0.6 ? "#ff2a55" : (pressure > 0.35 ? "#f5c542" : "#22d3ee");
+    NSPFX.light(bctx, ex, ey, H * 0.5, col, 0.18 + pressure * 0.12, 0);
+    bctx.save(); bctx.globalCompositeOperation = "lighter";
+    const a = t * 0.6;
+    const sw = bctx.createRadialGradient(ex, ey, 0, ex, ey, H);
+    sw.addColorStop(0, "rgba(34,211,238,0.10)"); sw.addColorStop(1, "rgba(34,211,238,0)");
+    bctx.fillStyle = sw;
+    bctx.beginPath(); bctx.moveTo(ex, ey); bctx.arc(ex, ey, H, a, a + 0.35); bctx.closePath(); bctx.fill();
+    bctx.restore();
+    NSPFX.eye(bctx, ex, ey, Math.min(W, H) * 0.05, t, { hue: pressure > 0.6 ? 345 : 190, open: 0.6 + 0.3 * Math.sin(t * 0.7), look: { x: Math.cos(a), y: Math.sin(a) } });
+    motes.draw(bctx);
+  }
+  function drawTitle(t) {
+    tctx.fillStyle = "#04030b"; tctx.fillRect(0, 0, W, H);
+    const m = HERO.ready ? NSPFX.cover(tctx, HERO.img, W, H, 0.5, 0.35) : null;
+    const sig = m ? m.map(0.5, 0.2) : { x: W / 2, y: H * 0.2 };
+    NSPFX.vignette(tctx, W, H, 0.62, "3,2,12");
+    NSPFX.light(tctx, sig.x, sig.y, H * 0.3, "#ffd27a", 0.3 + 0.1 * Math.sin(t * 2), 0);
+    NSPFX.rays(tctx, sig.x, sig.y, H * 1.1, t, "#ffe2a8", 12, 0.07);
+    NSPFX.eye(tctx, sig.x, sig.y, Math.min(W, H) * 0.045, t, { hue: 45, open: 0.6 + 0.3 * Math.sin(t * 0.8), look: { x: Math.sin(t * 0.6), y: 0.6 } });
+    motes.draw(tctx);
+    const k = Math.min(1, W / 1280);
+    NSPFX.drawCachedText(tctx, "PRECINCT 404", W / 2, H * 0.76, { font: `900 ${Math.round(76 * k)}px 'Segoe UI', Arial, sans-serif`, size: 76 * k, fill: ["#ffffff", "#bff6ff", "#22d3ee"], glow: "#ec4899", blur: 22, blur2: 48, spacing: 8 * k, stroke: "rgba(6,4,20,.92)", strokeWidth: 3 });
+    NSPFX.drawCachedText(tctx, "DISPATCH QUEUE", W / 2, H * 0.76 + 62 * k, { font: `700 ${Math.round(22 * k)}px 'Segoe UI', Arial, sans-serif`, size: 22 * k, fill: "#ffe7a6", glow: "#f59e0b", blur: 14, spacing: 12 * k });
+    NSPFX.prompt(tctx, "PRESS ENTER OR CLICK  ·  START THE SHIFT", W / 2, H * 0.93, t, { glow: "#f5c542", spacing: 5 });
+    NSPFX.bloom(tctx, ts, W, H, 0.22);
+  }
+  function frame(now) {
+    NSPFX.probe(now);
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    const t = now / 1000;
+    fxP.update(dt); fxR.update(dt); fxF.update(dt); fxI.update(dt); motes.update(dt);
+    if (titleUp) { drawTitle(t); }
+    else {
+      drawBackdrop(t);
+      fctx.clearRect(0, 0, W, H);
+      fxI.drawFlash(fctx, W, H);
+      fxR.draw(fctx); fxP.draw(fctx); fxF.draw(fctx);
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  function dismissTitle() {
+    if (!titleUp) return false;
+    titleUp = false;
+    ts.classList.add("gone");
+    const c = { x: W / 2, y: H / 2 };
+    fxR.add(c.x, c.y, { radius: Math.max(W, H) * 0.5, color: "#7fe9ff", width: 8, life: 0.8 });
+    fxI.hit(0.2, 0.35, "#7fe9ff");
+    return true;
+  }
+  ts.addEventListener("pointerdown", dismissTitle);
+  const PAL = { great: ["#ffd700", "#9dff9d", "#ffffff"], good: ["#7fe9ff", "#ffffff"], poor: ["#f5c542", "#ff9a3c"], bad: ["#ff2a55", "#ff9a9a", "#ffffff"] };
+  function shake() {
+    const app = document.querySelector(".app");
+    app.classList.remove("shake"); void app.offsetWidth; app.classList.add("shake");
+  }
+  function pulse(el, color) {
+    if (!el) return;
+    el.style.setProperty("--pulse", color);
+    el.classList.remove("pulse"); void el.offsetWidth; el.classList.add("pulse");
+  }
+  return {
+    dismissTitle, get titleUp() { return titleUp; },
+    setPressure(v) { pressure = Math.max(0, Math.min(1, v)); },
+    outcome(kind, anchor, deltas, metricEls) {
+      const c = center(anchor), col = PAL[kind];
+      fxP.burst(c.x, c.y, { count: kind === "great" ? 70 : kind === "bad" ? 60 : 34, color: col, speed: kind === "great" ? 620 : 420, life: 0.9, size: 3, gravity: 240 });
+      fxR.add(c.x, c.y, { radius: kind === "great" ? 320 : 200, color: col[0], width: kind === "great" ? 7 : 5, life: 0.6 });
+      fxI.hit(kind === "bad" ? 0.6 : kind === "great" ? 0.3 : 0.1, kind === "bad" ? 0.38 : kind === "great" ? 0.28 : 0.1, col[0]);
+      if (kind === "bad" || kind === "great") shake();
+      pulse(anchor.closest(".panel"), col[0]);
+      for (const [label, val, el] of deltas) {
+        if (!val || !el) continue;
+        const q = center(el);
+        const good = label === "Chaos" ? val < 0 : val > 0;
+        fxF.add(q.x, q.y - 12, `${label} ${val > 0 ? "+" : ""}${val}`, good ? "#9dff9d" : "#ff6f8f", 20, 1.4);
+        pulse(el.closest("div"), good ? "#22c55e" : "#ef4444");
+      }
+    },
+    spark(anchor, color) {
+      const c = center(anchor);
+      fxP.burst(c.x, c.y, { count: 18, color: [color, "#ffffff"], speed: 300, life: 0.6, size: 2.4 });
+      fxR.add(c.x, c.y, { radius: 90, color, width: 3, life: 0.35 });
+    },
+    finale(won) {
+      fxP.burst(W / 2, H / 2, { count: 160, color: won ? ["#ffd700", "#7fe9ff", "#ffffff", "#ff7ad9"] : ["#ff2a55", "#ffffff", "#f5c542"], speed: 800, life: 1.4, size: 3.4, gravity: 200 });
+      fxR.add(W / 2, H / 2, { radius: Math.max(W, H) * 0.6, color: won ? "#ffd700" : "#ff2a55", width: 10, life: 1 });
+      fxI.hit(0.7, 0.5, won ? "#ffd700" : "#ff2a55");
+      shake();
+    },
+  };
+})();
+</script>
 <script>
 (() => {
   "use strict";
@@ -1271,6 +1427,7 @@
 
   function render() {
     const call = currentCase();
+    P404FX.setPressure((state.chaos + (100 - state.trust)) / 200);
     state.trust = clamp(state.trust);
     state.chaos = clamp(state.chaos);
     state.budget = clamp(state.budget);
@@ -1422,6 +1579,8 @@
     state.trust += trust;
     state.chaos += chaos;
     state.budget += budget;
+    P404FX.outcome(officer.id === call.best ? "great" : (officer.id === call.secondary || score >= 68) ? "good" : score >= 48 ? "poor" : "bad",
+      els.dispatchBtn, [["Trust", trust, els.trustVal], ["Chaos", chaos, els.chaosVal], ["Budget", budget, els.budgetVal]]);
     const memoryScore = officer.id === call.best ? Math.max(score, 82) : officer.id === call.secondary ? Math.max(score, 68) : score;
     const cityNote = resolveCityMemory(call, officer, memoryScore);
     officer.xp = (officer.xp || 0) + (score >= 68 ? 1 : 0);
@@ -1452,6 +1611,7 @@
     state.trust -= 2;
     SoundFX.hold();
     rumble(0.2, 0.4, 100);
+    P404FX.spark(els.holdBtn, "#f5c542");
     addLog(`Dispatch held for more context. ${deltaText("Trust", -2)} ${deltaText("Chaos", -5)}`);
     render();
   }
@@ -1463,6 +1623,7 @@
     state.selected = call.best;
     SoundFX.mags();
     rumble(0.3, 0.5, 140);
+    P404FX.spark(els.adviceBtn, "#7fe9ff");
     addLog(`Mags points at ${bestOfficerName(call)} and says the obvious thing nobody automated.`);
     render();
   }
@@ -1474,6 +1635,7 @@
     state.budget -= 4;
     SoundFX.override();
     rumble(0.35, 0.55, 150);
+    P404FX.spark(els.overrideBtn, "#ff7ad9");
     addLog(`Derek translates robot logic into human terms. ${deltaText("Chaos", 10)} ${deltaText("Budget", -4)}`);
     render();
   }
@@ -1507,6 +1669,7 @@
     const score = Math.max(0, state.trust + state.budget - state.chaos);
     const best = Number(localStorage.getItem("precinct404Best") || 0);
     if (score > best) localStorage.setItem("precinct404Best", String(score));
+    P404FX.finale(won);
     const title = won ? "Pilot Survived" : "Pilot Suspended";
     const body = won
       ? `Final score ${score}. Trust ${clamp(state.trust)}, chaos ${clamp(state.chaos)}, budget ${clamp(state.budget)}. The mayor calls this a success because no one corrected her.`
@@ -1763,6 +1926,7 @@
   if (els.crtToggleBtn) els.crtToggleBtn.addEventListener("click", toggleCrt);
   els.modalBtn.addEventListener("click", () => state.canContinue ? startNightShift() : reset());
   addEventListener("keydown", event => {
+    if (P404FX.titleUp) { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); P404FX.dismissTitle(); } return; }
     if (event.key === "Enter" && !els.dispatchBtn.disabled) dispatch();
     if (event.key === "r" || event.key === "R") reset();
     if (event.key === "c" || event.key === "C") toggleCrt();

@@ -81,9 +81,11 @@ AUDIO_SUFFIXES = {".mp3", ".wav", ".m4a", ".ogg"}
 EXTERNAL_RELEASE_PREFIXES = {
     ("static", "videos"),
     ("static", "cookbook_deluxe_media"),
-    ("static", "downloads"),  # tip zips + MasterCook PDFs + handoff kits → raw
+    # NOT static/downloads: MasterCook *.html readers must stay on Pages (raw.githubusercontent.com
+    # serves HTML as text/plain). Tip *.zip.b64 omitted via omit_unlinked_pages_payload; PDFs/zips
+    # still leave via HEAVY_EXTERNAL_SUFFIXES.
     ("static", "art"),
-    ("static", "idg"),
+    # NOT static/idg: future-teller loads /static/idg/*.json locally; ROM zips omitted explicitly.
     ("static", "literature"),
     ("static", "drops"),
     ("static", "idr_covers"),
@@ -151,6 +153,10 @@ def external_release_media(relative: Path) -> bool:
     if len(relative.parts) >= 3 and tuple(relative.parts[:3]) in EXTERNAL_RELEASE_PREFIXES_3:
         return True
     if len(relative.parts) >= 2 and tuple(relative.parts[:2]) in EXTERNAL_RELEASE_PREFIXES:
+        # Keep page/shell documents local so Pages does not rewrite them onto
+        # raw.githubusercontent.com (HTML there is often text/plain).
+        if relative.suffix.lower() in TEXT_SUFFIXES or relative.suffix.lower() == ".md":
+            return False
         return True
     # Mature route HTML/JSON stay local; bulky media is raw-delivered.
     if relative.parts and relative.parts[0] == "mature" and relative.suffix.lower() in MATURE_EXTERNAL_SUFFIXES:

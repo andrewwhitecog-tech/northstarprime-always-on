@@ -3,20 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>COMMENTARY SIEGE : APEX AI EDITION</title>
-<meta name="description" content="Play COMMENTARY SIEGE : APEX AI EDITION free in your browser in the NorthStar Prime IDG Arcade, an original game from the Vorath universe.">
+<title>Commentary Siege</title>
+<meta name="description" content="Play Commentary Siege free in your browser in the NorthStar Prime IDG Arcade, an original game from the Vorath universe.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="NorthStar Prime">
-<meta property="og:title" content="COMMENTARY SIEGE : APEX AI EDITION">
-<meta property="og:description" content="Play COMMENTARY SIEGE : APEX AI EDITION free in your browser in the NorthStar Prime IDG Arcade, an original game from the Vorath universe.">
+<meta property="og:title" content="Commentary Siege">
+<meta property="og:description" content="Play Commentary Siege free in your browser in the NorthStar Prime IDG Arcade, an original game from the Vorath universe.">
 <meta property="og:url" content="https://northstarprime.net/arcade/custom/dharma-invaders/">
 <meta property="og:image" content="https://northstarprime.net/static/games/og/dharma-invaders_og_1200x630.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Cover art for COMMENTARY SIEGE : APEX AI EDITION, a free browser game in the NorthStar Prime IDG Arcade">
+<meta property="og:image:alt" content="Cover art for Commentary Siege, a free browser game in the NorthStar Prime IDG Arcade">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://northstarprime.net/static/games/og/dharma-invaders_og_1200x630.jpg">
-<meta name="twitter:image:alt" content="Cover art for COMMENTARY SIEGE : APEX AI EDITION, a free browser game in the NorthStar Prime IDG Arcade">
+<meta name="twitter:image:alt" content="Cover art for Commentary Siege, a free browser game in the NorthStar Prime IDG Arcade">
 <link rel="canonical" href="https://northstarprime.net/arcade/custom/dharma-invaders/">
 <style>
 :root{color-scheme:dark;--gold:#f0cc75;--ivory:#fff5da;--cyan:#64eaff;--red:#ff426f;--ink:#05030b}
@@ -56,7 +56,7 @@ body{display:grid;place-items:center;font-family:Georgia,"Times New Roman",serif
 #start.hidden{display:none}
 @media(max-width:600px){#shell{padding:6px;gap:5px}#controls{gap:4px}.key{padding:6px 8px;font-size:9px}#brand{letter-spacing:.2em}}
 </style>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "VideoGame", "name": "SPACE INVADERS: DHARMA PROTOCOL", "url": "https://northstarprime.net/arcade/custom/dharma-invaders/", "gamePlatform": "Web browser", "applicationCategory": "Game", "operatingSystem": "Any", "isAccessibleForFree": true, "publisher": {"@type": "Organization", "name": "NorthStar Prime", "url": "https://northstarprime.net/"}, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "description": "Play COMMENTARY SIEGE : APEX AI EDITION free in your browser in the NorthStar Prime IDG Arcade, an original game from the Vorath universe.", "image": "https://northstarprime.net/static/games/og/dharma-invaders_og_1200x630.jpg"}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "VideoGame", "name": "Commentary Siege", "url": "https://northstarprime.net/arcade/custom/dharma-invaders/", "gamePlatform": "Web browser", "applicationCategory": "Game", "operatingSystem": "Any", "isAccessibleForFree": true, "publisher": {"@type": "Organization", "name": "NorthStar Prime", "url": "https://northstarprime.net/"}, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "description": "Play Commentary Siege free in your browser in the NorthStar Prime IDG Arcade, an original game from the Vorath universe.", "image": "https://northstarprime.net/static/games/og/dharma-invaders_og_1200x630.jpg"}</script>
 </head>
 <body>
 <main id="shell" aria-label="Commentary Siege game cabinet">
@@ -75,6 +75,7 @@ body{display:grid;place-items:center;font-family:Georgia,"Times New Roman",serif
   <button id="start" aria-label="Open the margin and begin"></button>
 </main>
 <script src="/static/games/chiptune.js"></script>
+<script src="/static/games/nsp_fx_v1.js"></script>
 <script>
 "use strict";
 // ============================================================================
@@ -91,6 +92,24 @@ let atlasReady=false,atlasError=false;
 atlas.onload=()=>atlasReady=true;
 atlas.onerror=()=>{if(atlas.src.endsWith('.webp'))atlas.src=COMMENTARY_ATLAS_FALLBACK;else atlasError=true;};
 atlas.src=COMMENTARY_ATLAS;
+
+// --- Lighting, particles and hero art (NorthStar arcade FX kit) ---
+const HERO=NSPFX.loadImage('/static/games/og/dharma-invaders_og_1200x630.jpg');
+const fxP=new NSPFX.Particles(700),fxR=new NSPFX.Rings(),fxF=new NSPFX.Floaters(),fxI=new NSPFX.Impact();
+const motes=new NSPFX.Motes(42,W,H,['#ffd98a','#7fe9ff','#ff7ad9']);
+const EYE={u:.5,v:.33};            // the mandala eye in the cover art
+const TYPE_LIGHT=['#ff4baf','#45f4c6','#ff5d69','#f0cc75'];
+let artBack=null;
+window.__nspGameState=()=>state;                   // cached, darkened playfield painting
+function buildArtBack(){
+  if(!HERO.ready||artBack)return;
+  artBack=document.createElement('canvas');artBack.width=W+40;artBack.height=H;
+  const b=artBack.getContext('2d');
+  NSPFX.cover(b,HERO.img,W+40,H,.5,.4);
+  b.fillStyle='rgba(6,3,14,.72)';b.fillRect(0,0,W+40,H);
+  const g=b.createLinearGradient(0,0,0,H);g.addColorStop(0,'rgba(10,4,26,.2)');g.addColorStop(.75,'rgba(4,2,9,.35)');g.addColorStop(1,'rgba(2,1,6,.9)');
+  b.fillStyle=g;b.fillRect(0,0,W+40,H);
+}
 
 // --- Procedural Web Audio Engine ---
 let audioCtx=null;
@@ -248,7 +267,7 @@ function makeStars(){stars=Array.from({length:90},(_,i)=>({x:Math.random()*W,y:M
 function makeWards(){wards=[160,400,640].map((x,i)=>({x,y:545,hp:6,max:6,phase:i*2.1,hit:0,parryFlash:0}));}
 
 function addFloatingText(x,y,text,color='#f0cc75',size=13){
-  floatingTexts.push({x,y,text,color,size,life:1.0,vy:-1.0});
+  fxF.add(x,y,text,color,Math.round(size*1.15),1.1);
 }
 
 function reset(full=true){
@@ -332,6 +351,8 @@ function triggerExcisionBeam(){
   activeBeam={x:sentinel.x,life:0.35,width:28};
   freezeFrames=5;
   shake=12;
+  fxI.hit(.55,.4,'#fff1aa');fxR.add(sentinel.x,sentinel.y-30,{radius:220,color:'#f0cc75',width:6,life:.5,squash:.5});
+  for(let y=80;y<620;y+=60)fxP.burst(sentinel.x,y,{count:4,color:['#fff4cf','#f0cc75'],speed:260,life:.5,size:2});
   sfx('beam');
 
   // Obliterate all redactions in this vertical column
@@ -349,11 +370,7 @@ function triggerExcisionBeam(){
 }
 
 function burst(x,y,color,count=12){
-  for(let i=0;i<count;i++){
-    const a=Math.random()*TAU,sp=rand(60,260);
-    particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:rand(.35,.85),color,size:rand(1,4)});
-  }
-  if(particles.length>280)particles.splice(0,particles.length-280);
+  fxP.burst(x,y,{count:Math.round(count*1.4),color:[color,'#fff4cf',color],speed:300,life:.75,size:2.6,gravity:160,drag:2.2});
 }
 
 function eraseEnemy(e){
@@ -365,6 +382,9 @@ function eraseEnemy(e){
   beamEnergy=Math.min(100,beamEnergy+(e.boss?40:10));
   
   burst(e.x,e.y,e.boss?'#fff1aa':['#ff4baf','#45f4c6','#ff5d69'][e.type],e.boss?36:14);
+  fxR.add(e.x,e.y,{radius:e.boss?170:74,color:e.boss?'#fff1aa':TYPE_LIGHT[e.type],width:e.boss?7:4,life:e.boss?.7:.42});
+  fxP.burst(e.x,e.y,{count:e.boss?40:12,color:['#fff6dd',TYPE_LIGHT[e.type]],speed:e.boss?520:340,life:.5,size:1.6,streak:true,glow:2.4});
+  fxI.hit(e.boss?.75:.22,e.boss?.5:.12,e.boss?'#fff1aa':TYPE_LIGHT[e.type],e.boss?.08:0);
   shake=Math.max(shake,e.boss?16:6);
   sfx(e.boss?'explode':'explode');
   addFloatingText(e.x,e.y,`+${pts}`,e.boss?'#fff1aa':'#64eaff',13);
@@ -374,6 +394,7 @@ function eraseEnemy(e){
 function damageWard(w){
   w.hp--;w.hit=.2;chain=0;
   burst(w.x,w.y-10,'#f0cc75',8);
+  fxR.add(w.x,w.y-6,{radius:96,color:'#ff6f8f',width:3,squash:.42,life:.4});fxI.hit(.18,.1,'#ff426f');
   shake=Math.max(shake,3);sfx('hurt');syncHud();
 }
 
@@ -388,6 +409,7 @@ function restoreWard(w){
 
 function breach(){
   integrity--;chain=0;shake=15;flash=.35;sfx(integrity<=0?'death':'hurt');syncHud();
+  fxR.add(sentinel.x,sentinel.y,{radius:150,color:'#ff426f',width:6,life:.55});fxI.hit(.6,0,'#ff426f',.06);
   if(integrity<=0){state='lost';document.querySelector('#start').classList.remove('hidden');}
 }
 
@@ -582,6 +604,7 @@ function update(dt){
 
       addFloatingText(sentinel.x,sentinel.y-40,'★ SEAL REFLECT PARRY! +250','#64eaff',15);
       burst(sentinel.x,sentinel.y,'#64eaff',16);
+      fxR.add(sentinel.x,sentinel.y-10,{radius:120,color:'#9ff4ff',width:5,life:.45});fxI.hit(.3,.28,'#64eaff',.05);
     }
 
     // Ward collision
@@ -606,50 +629,51 @@ function update(dt){
     state='interlude';interlude=1.8;annotations+=300*folio;sfx('gate');
   }
 
-  // Particles
-  for(const p of particles){
-    p.x+=p.vx*dt;p.y+=p.vy*dt;
-    p.vx*=Math.pow(.08,dt);
-    p.vy=p.vy*Math.pow(.12,dt)+70*dt;
-    p.life-=dt;
-  }
-  particles=particles.filter(p=>p.life>0);
+}
 
-  // Floating text
-  for(const ft of floatingTexts){
-    ft.y+=ft.vy;
-    ft.life-=dt*1.2;
-  }
-  floatingTexts=floatingTexts.filter(ft=>ft.life>0);
+function fxUpdate(dt){
+  fxP.update(dt);fxR.update(dt);fxF.update(dt);fxI.update(dt);motes.update(dt);
+  if(state==='playing'&&Math.random()<dt*14)fxP.emit(sentinel.x+rand(-10,10),sentinel.y+30,{color:'#ffd98a',speed:40,angle:Math.PI/2,spread:.8,life:.6,size:1.6,gravity:60});
 }
 
 // ----------------- RENDERING -----------------
+// Lit with the shared arcade FX kit: the painted cover is the playfield's sky,
+// the mandala eye watches the sentinel, every light is additive, and no words
+// sit on a box.
+const EYE_X=400,EYE_Y=320;
 function backdrop(){
-  const sky=ctx.createLinearGradient(0,0,0,H);sky.addColorStop(0,'#080516');sky.addColorStop(.58,'#110721');sky.addColorStop(1,'#030208');ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
-  const aura=ctx.createRadialGradient(400,240,20,400,240,470);aura.addColorStop(0,'rgba(111,63,178,.23)');aura.addColorStop(.45,'rgba(17,218,229,.06)');aura.addColorStop(1,'transparent');ctx.fillStyle=aura;ctx.fillRect(0,0,W,H);
-  for(const s of stars){s.y+=s.z*.18;if(s.y>H){s.y=0;s.x=Math.random()*W;}ctx.fillStyle=`hsla(${s.h},90%,76%,${.12+s.z*.35})`;ctx.fillRect(s.x,s.y,s.z*1.5,s.z*1.5);}
-  ctx.save();ctx.globalAlpha=.13;ctx.strokeStyle='#e9c66d';ctx.lineWidth=1;
-  for(let r=90;r<530;r+=42){ctx.beginPath();ctx.ellipse(400,285,r,r*.34,Math.sin(time*.08)*.05,0,TAU);ctx.stroke();}
-  for(let i=0;i<24;i++){const a=i/24*TAU+time*.015;ctx.beginPath();ctx.moveTo(400+Math.cos(a)*50,285+Math.sin(a)*18);ctx.lineTo(400+Math.cos(a)*360,285+Math.sin(a)*122);ctx.stroke();}
-  ctx.restore();ctx.fillStyle='rgba(4,2,8,.76)';ctx.fillRect(0,598,W,122);ctx.strokeStyle='rgba(240,204,117,.28)';ctx.beginPath();ctx.moveTo(0,598);ctx.lineTo(W,598);ctx.stroke();
-  for(let x=24;x<W;x+=48){ctx.fillStyle=`rgba(240,204,117,${.025+((x/48)%2)*.02})`;ctx.beginPath();ctx.moveTo(x,598);ctx.lineTo(x+22,720);ctx.lineTo(x-22,720);ctx.closePath();ctx.fill();}
+  buildArtBack();
+  const par=((sentinel.x-400)/400)*-14;           // the camera leans with the sentinel
+  if(artBack)ctx.drawImage(artBack,-20+par,0);
+  else{const sky=ctx.createLinearGradient(0,0,0,H);sky.addColorStop(0,'#080516');sky.addColorStop(.58,'#110721');sky.addColorStop(1,'#030208');ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);}
+  const tension=marginDirector.tension/100,ex=EYE_X+par*.6;
+  NSPFX.light(ctx,ex,EYE_Y,260,tension>.7?'#ff3d7a':'#8a4dff',.16+tension*.14,0);
+  NSPFX.rays(ctx,ex,EYE_Y,560,time,'#f0cc75',10,.035+tension*.05);
+  NSPFX.eye(ctx,ex,EYE_Y,60,time,{hue:tension>.7?330:190,open:.45+.15*Math.sin(time*.7),look:{x:(sentinel.x-400)/300,y:1}});
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  for(const s of stars){s.y+=s.z*.18;if(s.y>H){s.y=0;s.x=Math.random()*W;}ctx.fillStyle=`hsla(${s.h},90%,76%,${.08+s.z*.26})`;ctx.fillRect(s.x,s.y,s.z*1.5,s.z*1.5);}
+  ctx.restore();
+  motes.draw(ctx);
+  const fl=ctx.createLinearGradient(0,598,0,H);fl.addColorStop(0,'rgba(20,10,34,.86)');fl.addColorStop(1,'rgba(3,2,8,.97)');
+  ctx.fillStyle=fl;ctx.fillRect(0,598,W,122);
+  for(let x=24;x<W;x+=48){ctx.fillStyle=`rgba(240,204,117,${.03+((x/48)%2)*.025})`;ctx.beginPath();ctx.moveTo(x,598);ctx.lineTo(x+22,720);ctx.lineTo(x-22,720);ctx.closePath();ctx.fill();}
+  ctx.strokeStyle='rgba(240,204,117,.5)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(0,598.5);ctx.lineTo(W,598.5);ctx.stroke();
+  NSPFX.light(ctx,sentinel.x,628,170,'#f0cc75',.3,0);
 }
 
 function drawWard(w){
   if(w.hp<=0)return;
   const ratio=w.hp/w.max,pulse=Math.sin(time*2+w.phase)*.5+.5;
+  const tint=w.parryFlash?'#64eaff':(w.hit?'#ff426f':'#e7c66e');
+  NSPFX.light(ctx,w.x,w.y,90+30*pulse,tint,.22+.25*ratio+(w.hit?.4:0)+(w.parryFlash?.4:0),0);
   ctx.save();ctx.translate(w.x,w.y);ctx.globalCompositeOperation='lighter';
-  ctx.shadowColor=w.parryFlash?'#64eaff':(w.hit?'#ff426f':'#e7c66e');
-  ctx.shadowBlur=14+12*pulse;
-  
   const g=ctx.createLinearGradient(-70,-30,70,34);
-  g.addColorStop(0,`rgba(255,245,218,${.06+.13*ratio})`);
-  g.addColorStop(.5,`rgba(240,204,117,${.22*ratio})`);
-  g.addColorStop(1,`rgba(100,234,255,${.08*ratio})`);
+  g.addColorStop(0,`rgba(255,245,218,${.08+.15*ratio})`);
+  g.addColorStop(.5,`rgba(240,204,117,${.26*ratio})`);
+  g.addColorStop(1,`rgba(100,234,255,${.1*ratio})`);
   ctx.fillStyle=g;
-  ctx.strokeStyle=w.parryFlash?'#64eaff':(w.hit?'#ff577b':`rgba(255,239,184,${.35+.45*ratio})`);
-  ctx.lineWidth=w.parryFlash?2.5:1.5;
-  
+  ctx.strokeStyle=w.parryFlash?'#9ff4ff':(w.hit?'#ff577b':`rgba(255,239,184,${.45+.45*ratio})`);
+  ctx.lineWidth=w.parryFlash?3:1.8;
   ctx.beginPath();ctx.moveTo(-72,20);ctx.quadraticCurveTo(-54,-28,0,-34);ctx.quadraticCurveTo(54,-28,72,20);ctx.quadraticCurveTo(28,4,0,23);ctx.quadraticCurveTo(-28,4,-72,20);
   ctx.fill();ctx.stroke();
   for(let i=0;i<w.hp;i++){ctx.fillStyle=i%2?'#64eaff':'#f0cc75';ctx.fillRect(-32+i*12,31,7,2);}
@@ -658,7 +682,7 @@ function drawWard(w){
 
 function fallbackForm(e){
   ctx.save();ctx.translate(e.x,e.y);ctx.rotate(Math.sin(e.age*2)*.08);
-  ctx.strokeStyle=['#ff4baf','#45f4c6','#ff5d69','#f0cc75'][e.type];
+  ctx.strokeStyle=TYPE_LIGHT[e.type];
   ctx.fillStyle='rgba(8,4,18,.9)';ctx.lineWidth=2;
   ctx.beginPath();
   for(let i=0;i<10;i++){const a=i/10*TAU,r=i%2?18:32;ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);}
@@ -667,31 +691,34 @@ function fallbackForm(e){
 
 function drawEnemy(e){
   const size=e.boss?116:[72,79,83][e.type];
+  const pulse=.5+.5*Math.sin(e.age*3+e.phase);
+  NSPFX.light(ctx,e.x,e.y,size*(.95+.2*pulse),TYPE_LIGHT[e.type],.32+.18*pulse+(e.diving?.25:0),0);
   ctx.save();ctx.translate(e.x,e.y);
   ctx.rotate(Math.sin(e.age*1.7+e.phase)*.035);
   ctx.translate(-e.x,-e.y);
-  if(e.hit){ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.72;}
   if(!atlasSprite(e.type+2,e.x,e.y,size,size))fallbackForm(e);
+  if(e.hit){ctx.globalCompositeOperation='lighter';ctx.globalAlpha=Math.min(1,e.hit*6);atlasSprite(e.type+2,e.x,e.y,size,size);}
   ctx.restore();
-  
+  if(e.hit)NSPFX.light(ctx,e.x,e.y,size*.8,'#ffffff',e.hit*4,.3);
   if(e.hp<e.maxHp){
-    ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(e.x-26,e.y+size*.43,52,3);
-    ctx.fillStyle=e.boss?'#f0cc75':'#ff426f';
-    ctx.fillRect(e.x-26,e.y+size*.43,52*e.hp/e.maxHp,3);
+    const y=e.y+size*.45,w=56;
+    ctx.fillStyle='rgba(255,255,255,.12)';ctx.fillRect(e.x-w/2,y,w,2);
+    ctx.fillStyle=e.boss?'#f0cc75':'#ff426f';ctx.fillRect(e.x-w/2,y,w*e.hp/e.maxHp,2);
+    NSPFX.light(ctx,e.x-w/2+w*e.hp/e.maxHp,y+1,8,e.boss?'#f0cc75':'#ff426f',.8,.3);
   }
 }
 
 function drawSentinel(){
-  // Draw Dash Echoes
   sentinel.echoes.forEach(ec=>{
-    ctx.save();ctx.globalAlpha=ec.alpha*0.5;
-    ctx.translate(ec.x,ec.y);
-    ctx.strokeStyle='#f0cc75';ctx.lineWidth=2;
-    ctx.beginPath();ctx.moveTo(0,-38);ctx.lineTo(26,24);ctx.lineTo(0,36);ctx.lineTo(-26,24);ctx.closePath();ctx.stroke();
+    ctx.save();ctx.globalAlpha=ec.alpha*0.5;ctx.globalCompositeOperation='lighter';
+    if(!atlasSprite(0,ec.x,ec.y,112,112,ec.alpha*.45)){
+      ctx.translate(ec.x,ec.y);ctx.strokeStyle='#f0cc75';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(0,-38);ctx.lineTo(26,24);ctx.lineTo(0,36);ctx.lineTo(-26,24);ctx.closePath();ctx.stroke();
+    }
     ctx.restore();
   });
-
   const firing=sentinel.charge>0,alpha=sentinel.invuln>0&&Math.floor(time*15)%2?.32:1;
+  NSPFX.light(ctx,sentinel.x,sentinel.y-6,firing?120:84,sentinel.parryWindow>0?'#64eaff':'#f0cc75',firing?.55:.32,0);
   if(!atlasSprite(firing?1:0,sentinel.x,sentinel.y,112,112,alpha)){
     ctx.save();ctx.translate(sentinel.x,sentinel.y);
     ctx.strokeStyle=sentinel.parryWindow>0?'#64eaff':'#f0cc75';
@@ -699,156 +726,108 @@ function drawSentinel(){
     ctx.beginPath();ctx.moveTo(0,-38);ctx.lineTo(26,24);ctx.lineTo(0,36);ctx.lineTo(-26,24);ctx.closePath();ctx.fill();ctx.stroke();
     ctx.restore();
   }
+  if(firing)NSPFX.light(ctx,sentinel.x,sentinel.y-46,36,'#fff4aa',.9,.35);
+}
+
+function hudText(text,x,y,fill,size=13,align='left',weight=700){
+  NSPFX.glowText(ctx,text,x,y,{font:`${weight} ${size}px ui-monospace, Consolas, monospace`,fill,glow:'rgba(0,0,0,.95)',blur:7,align,spacing:1.5});
 }
 
 function drawHUD(){
-  ctx.save();ctx.font='600 12px ui-monospace,monospace';ctx.textBaseline='middle';
-  ctx.fillStyle='rgba(4,2,9,.86)';ctx.fillRect(18,16,764,48);
-  ctx.strokeStyle='rgba(240,204,117,.28)';ctx.strokeRect(18.5,16.5,763,47);
-  
-  ctx.fillStyle='#f0cc75';ctx.textAlign='left';
-  ctx.fillText(`ANNOTATIONS  ${String(annotations).padStart(6,'0')}`,32,32);
-  
-  // AI Director Telemetry Chip
-  const dirColor=marginDirector.tension>70?'#ff426f':(marginDirector.tension>40?'#f0cc75':'#64eaff');
-  ctx.font='10px ui-monospace,monospace';ctx.fillStyle=dirColor;
-  ctx.fillText(`DIRECTOR [${marginDirector.state}] ${Math.round(marginDirector.tension)}% · ${marginDirector.decisionLatencyUs.toFixed(3)}µs`,32,50);
-
-  ctx.textAlign='center';ctx.font='600 12px ui-monospace,monospace';ctx.fillStyle='#64eaff';
-  ctx.fillText(`THREAD  ${chain}  ·  BEST  ${bestChain}`,400,32);
-
-  // Excision Beam Meter
-  ctx.textAlign='center';ctx.font='10px ui-monospace,monospace';
-  ctx.fillStyle=beamEnergy>=50?'#f0cc75':'#888';
-  ctx.fillText(`EXCISION BEAM [Q]: ${Math.round(beamEnergy)}%`,400,50);
-
-  ctx.textAlign='right';ctx.font='600 12px ui-monospace,monospace';ctx.fillStyle='#fff5da';
-  ctx.fillText(`BALCONY  ${'◆'.repeat(integrity)}${'◇'.repeat(3-integrity)}`,766,32);
-  
-  ctx.font='10px ui-monospace,monospace';
-  ctx.fillStyle=sentinel.dashCool<=0?'#64eaff':'#777';
-  ctx.fillText(sentinel.dashCool<=0?'PARRY READY [SHIFT]':`PARRY CD: ${sentinel.dashCool.toFixed(1)}s`,766,50);
-
-  ctx.restore();
+  const dirColor=marginDirector.tension>70?'#ff6f8f':(marginDirector.tension>40?'#f0cc75':'#7fefff');
+  hudText(`ANNOTATIONS ${String(annotations).padStart(6,'0')}`,22,26,'#f6d98a');
+  hudText(`DIRECTOR · ${marginDirector.state.replace('_',' ')} · ${Math.round(marginDirector.tension)}%`,22,46,dirColor,10,'left',600);
+  hudText(`THREAD ${chain}  ·  BEST ${bestChain}`,400,26,'#9ff4ff',13,'center');
+  const bx=320,by=44,bw=160,f=beamEnergy/100,ready=beamEnergy>=50;
+  ctx.fillStyle='rgba(255,255,255,.14)';ctx.fillRect(bx,by,bw,2);
+  ctx.fillStyle=ready?'#f6d98a':'#8d7a55';ctx.fillRect(bx,by,bw*f,2);
+  NSPFX.light(ctx,bx+bw*f,by+1,ready?18:10,ready?'#fff1aa':'#8d7a55',ready?.9:.5,.3);
+  hudText(ready?'EXCISION READY · Q':'EXCISION',400,57,ready?'#f6d98a':'#a39272',9,'center',600);
+  hudText(`BALCONY ${'◆'.repeat(Math.max(0,integrity))}${'◇'.repeat(Math.max(0,3-integrity))}`,778,26,'#fff5da',13,'right');
+  hudText(sentinel.dashCool<=0?'PARRY READY · SHIFT':`PARRY ${sentinel.dashCool.toFixed(1)}s`,778,46,sentinel.dashCool<=0?'#7fefff':'#8a8a99',10,'right',600);
 }
 
 function centerPanel(kicker,title,copy,action){
-  ctx.fillStyle='rgba(2,1,7,.82)';ctx.fillRect(0,0,W,H);
-  ctx.fillStyle='rgba(13,8,24,.92)';ctx.fillRect(104,180,592,342);
-  ctx.strokeStyle='rgba(240,204,117,.48)';ctx.strokeRect(104.5,180.5,591,341);
-  ctx.textAlign='center';
-  ctx.fillStyle='#64eaff';ctx.font='600 13px ui-monospace,monospace';ctx.fillText(kicker,400,230);
-  ctx.fillStyle='#f0cc75';ctx.font='700 38px Georgia,serif';ctx.shadowColor='#f0cc75';ctx.shadowBlur=20;
-  ctx.fillText(title,400,295);ctx.shadowBlur=0;
-  ctx.fillStyle='#e9ddc2';ctx.font='16px Georgia,serif';
-  for(const [i,line] of copy.entries())ctx.fillText(line,400,348+i*26);
-  ctx.fillStyle=`rgba(255,245,218,${.55+Math.sin(time*4)*.4})`;ctx.font='700 14px ui-monospace,monospace';
-  ctx.fillText(action,400,470);
+  NSPFX.vignette(ctx,W,H,.94,'3,1,8');
+  NSPFX.light(ctx,400,320,300,'#7a3cff',.22,0);
+  NSPFX.glowText(ctx,kicker,400,236,{font:"600 13px ui-monospace, Consolas, monospace",fill:'#c9f8ff',glow:'#1f8fb0',blur:12,spacing:4});
+  NSPFX.glowText(ctx,title,400,292,{font:"700 44px Georgia, 'Times New Roman', serif",size:44,fill:['#fff8e1','#f0cc75','#b27a2a'],glow:'#ff7ad9',blur:22,stroke:'rgba(30,8,30,.85)',strokeWidth:2,spacing:3});
+  for(const [i,line] of copy.entries())NSPFX.glowText(ctx,line,400,348+i*28,{font:"17px Georgia, serif",fill:'#f3e9d2',glow:'rgba(0,0,0,.95)',blur:9});
+  if(action)NSPFX.prompt(ctx,action,400,470,time,{glow:'#f0cc75',font:"700 15px ui-monospace, Consolas, monospace",spacing:3});
+}
+
+function drawTitle(){
+  if(HERO.ready)NSPFX.cover(ctx,HERO.img,W,H,.5,0);else{ctx.fillStyle='#0b0418';ctx.fillRect(0,0,W,H);}
+  NSPFX.vignette(ctx,W,H,.62,'6,2,14');
+  NSPFX.light(ctx,EYE_X,EYE_Y,230,'#ff7ad9',.3+.14*Math.sin(time*1.7),0);
+  NSPFX.rays(ctx,EYE_X,EYE_Y,640,time,'#ffd98a',12,.08);
+  NSPFX.eye(ctx,EYE_X,EYE_Y,64,time,{hue:300,open:.65+.2*Math.sin(time*.9),look:{x:Math.sin(time*.6),y:Math.cos(time*.4)*.6}});
+  motes.draw(ctx);
+  fxP.draw(ctx);
+  NSPFX.drawCachedText(ctx,'COMMENTARY SIEGE',400,54,{font:"700 50px Georgia, 'Times New Roman', serif",size:50,fill:['#ffffff','#ffe7a6','#d79a3a'],glow:'#ff6fd8',blur:20,blur2:42,spacing:7,stroke:'rgba(46,8,52,.9)',strokeWidth:3});
+  NSPFX.prompt(ctx,'PRESS SPACE  ·  OPEN THE MARGIN',400,694,time,{glow:'#f0cc75',font:"700 16px Georgia, serif",spacing:5});
 }
 
 function draw(){
+  if(state==='menu'){drawTitle();fxF.draw(ctx);return;}
   ctx.save();
-  if(shake)ctx.translate(rand(-shake,shake),rand(-shake,shake));
+  const off=fxI.offset(16);
+  ctx.translate(off.x+(shake?rand(-shake,shake):0),off.y+(shake?rand(-shake,shake):0));
   backdrop();
   for(const w of wards)drawWard(w);
   for(const e of redactions)if(e.alive)drawEnemy(e);
-  
-  // Standard Player Bolts
-  ctx.globalCompositeOperation='lighter';
+
+  // annotation bolts: hot white core in a cyan bloom
+  ctx.save();ctx.globalCompositeOperation='lighter';
   for(const b of bolts){
-    ctx.strokeStyle='#fff4aa';ctx.shadowColor='#64eaff';ctx.shadowBlur=12;ctx.lineWidth=3;
-    ctx.beginPath();ctx.moveTo(b.x,b.y+18);ctx.lineTo(b.x,b.y-18);ctx.stroke();
+    NSPFX.light(ctx,b.x,b.y,22,'#64eaff',.75,.25);
+    ctx.strokeStyle='#fff8d0';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(b.x,b.y+18);ctx.lineTo(b.x,b.y-18);ctx.stroke();
   }
-
-  // Reflected Parried Bolts
   for(const b of reflectedBolts){
-    ctx.strokeStyle='#64eaff';ctx.shadowColor='#f0cc75';ctx.shadowBlur=16;ctx.lineWidth=4;
-    ctx.beginPath();ctx.moveTo(b.x,b.y+22);ctx.lineTo(b.x,b.y-22);ctx.stroke();
+    NSPFX.light(ctx,b.x,b.y,30,'#f0cc75',.85,.25);
+    ctx.strokeStyle='#bff9ff';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(b.x,b.y+22);ctx.lineTo(b.x,b.y-22);ctx.stroke();
   }
-
-  // Active Excision Beam
   if(activeBeam){
-    ctx.save();
-    ctx.shadowColor='#f0cc75';ctx.shadowBlur=24;
-    const bg=ctx.createLinearGradient(activeBeam.x-14,0,activeBeam.x+14,0);
-    bg.addColorStop(0,'rgba(240,204,117,0)');
-    bg.addColorStop(0.5,'rgba(255,255,255,0.95)');
-    bg.addColorStop(1,'rgba(240,204,117,0)');
-    ctx.fillStyle=bg;
-    ctx.fillRect(activeBeam.x-14,0,28,H);
-    ctx.restore();
+    const k=activeBeam.life/.35;
+    const bg=ctx.createLinearGradient(activeBeam.x-30,0,activeBeam.x+30,0);
+    bg.addColorStop(0,'rgba(240,204,117,0)');bg.addColorStop(.5,`rgba(255,255,255,${.95*k})`);bg.addColorStop(1,'rgba(240,204,117,0)');
+    ctx.fillStyle=bg;ctx.fillRect(activeBeam.x-30,0,60,H);
+    for(let y=40;y<640;y+=80)NSPFX.light(ctx,activeBeam.x,y,70,'#f0cc75',.5*k,.1);
   }
-
-  // Ink drops
   for(const d of inkDrops){
-    ctx.fillStyle=['#ff4baf','#45f4c6','#ff5d69','#f0cc75'][d.type];
-    ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=12;
-    ctx.beginPath();ctx.moveTo(d.x,d.y+11);ctx.quadraticCurveTo(d.x-10,d.y,d.x,d.y-13);ctx.quadraticCurveTo(d.x+10,d.y,d.x,d.y+11);ctx.fill();
+    const c=TYPE_LIGHT[d.type];
+    NSPFX.light(ctx,d.x,d.y,24,c,.8,.2);
+    ctx.fillStyle=c;ctx.beginPath();ctx.moveTo(d.x,d.y+11);ctx.quadraticCurveTo(d.x-10,d.y,d.x,d.y-13);ctx.quadraticCurveTo(d.x+10,d.y,d.x,d.y+11);ctx.fill();
   }
-  
-  ctx.globalCompositeOperation='source-over';
+  ctx.restore();
+
   drawSentinel();
-
-  // Particles
-  for(const p of particles){
-    ctx.globalAlpha=clamp(p.life/.65,0,1);ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,p.size,p.size);
-  }
-  ctx.globalAlpha=1;
-
-  // Floating text
-  for(const ft of floatingTexts){
-    ctx.save();ctx.globalAlpha=ft.life;
-    ctx.font=`bold ${ft.size}px ui-monospace,monospace`;
-    ctx.fillStyle=ft.color;ctx.textAlign='center';
-    ctx.shadowColor=ft.color;ctx.shadowBlur=8;
-    ctx.fillText(ft.text,ft.x,ft.y);
-    ctx.restore();
-  }
-
+  fxR.draw(ctx);
+  fxP.draw(ctx);
+  fxF.draw(ctx,"800 {s}px ui-monospace, Consolas, monospace");
   drawHUD();
   ctx.restore();
 
-  if(flash){ctx.fillStyle=`rgba(255,45,88,${flash})`;ctx.fillRect(0,0,W,H);}
-  
-  if(state==='menu'){
-    centerPanel(
-      'THE TRIBUNAL BALCONY REMAINS UNANNOTATED',
-      'COMMENTARY SIEGE : APEX',
-      [
-        'Hold the living margin against descending redactions.',
-        'SHIFT / C: Roll and reflect hostile ink seals to restore wards.',
-        'Q: Marginal Excision Beam clears vertical columns.'
-      ],
-      'PRESS SPACE · OPEN THE MARGIN'
-    );
-  }else if(state==='lost'){
-    centerPanel(
-      'THE BALCONY HAS FALLEN',
-      'TEXT-REALITY ERASED',
-      [
-        `Annotations preserved: ${annotations}`,
-        `Longest surviving thread: ${bestChain}`,
-        `Director Peak: ${Math.round(marginDirector.tension)}%`
-      ],
-      'PRESS SPACE · REENTER THE COMMENTARY'
-    );
+  if(flash){ctx.save();ctx.globalCompositeOperation='lighter';ctx.fillStyle=`rgba(255,45,88,${flash*.8})`;ctx.fillRect(0,0,W,H);ctx.restore();}
+  fxI.drawFlash(ctx,W,H);
+  NSPFX.vignette(ctx,W,H,.45,'2,1,8');
+
+  if(state==='lost'){
+    centerPanel('THE BALCONY HAS FALLEN','TEXT-REALITY ERASED',
+      [`Annotations preserved: ${annotations}`,`Longest surviving thread: ${bestChain}`,`Director peak: ${Math.round(marginDirector.tension)}%`],
+      'PRESS SPACE  ·  REENTER THE COMMENTARY');
   }else if(state==='interlude'){
-    centerPanel(
-      `FOLIO ${ROMAN[(folio-1)%ROMAN.length]||folio}`,
-      'FOLIO SEALED',
-      [
-        'The argument survives this descent.',
-        'Sanctuary restores degraded vellum wards.',
-        'The next redaction script is already moving.'
-      ],
-      'PREPARE THE NEXT MARGIN'
-    );
+    centerPanel(`FOLIO ${ROMAN[(folio-1)%ROMAN.length]||folio}`,'FOLIO SEALED',
+      ['The argument survives this descent.','Sanctuary restores degraded vellum wards.','The next redaction script is already moving.'],
+      'PREPARE THE NEXT MARGIN');
   }
 }
 
 function frame(now){
+  NSPFX.probe(now);
   const dt=Math.min(.033,(now-last)/1000);
   last=now;
+  fxUpdate(dt);
   update(dt);
   draw();
   requestAnimationFrame(frame);
@@ -857,7 +836,7 @@ function frame(now){
 document.addEventListener('keydown',e=>{
   if([' ','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Shift','KeyQ','KeyC','KeyX'].includes(e.code))e.preventDefault();
   keys.add(e.key);
-  if(e.key===' '&&(state==='menu'||state==='lost'))cast();
+  if((e.key===' '||e.key==='Enter')&&(state==='menu'||state==='lost'))cast();
   if(state==='playing'){
     if(e.code==='ShiftLeft'||e.code==='ShiftRight'||e.code==='KeyC'||e.code==='KeyX')triggerDashParry();
     if(e.code==='KeyQ')triggerExcisionBeam();

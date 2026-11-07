@@ -53,7 +53,7 @@
       repeating-linear-gradient(64deg, rgba(236,72,153,0.1) 0 1px, transparent 1px 54px),
       linear-gradient(180deg, transparent 0%, rgba(245,197,66,0.05) 52%, transparent 100%);
     mix-blend-mode: screen;
-    opacity: 0.78;
+    opacity: 0.22;
     z-index: 5;
   }
   canvas {
@@ -64,6 +64,7 @@
       linear-gradient(135deg, rgba(34,211,238,0.08), transparent 32%, rgba(236,72,153,0.08) 66%, transparent),
       radial-gradient(circle at 50% 42%, #18212a 0%, #06070a 66%, #020304 100%);
   }
+  .hud, .center, .footer { display: none !important; }
   .hud {
     position: fixed;
     inset: 0;
@@ -197,7 +198,7 @@
 <div class="hud">
   <div class="topbar">
     <div class="panel">
-      <div class="title">Vorath Souls // Prototype</div>
+      <div class="title">Vorath Souls</div>
       <div class="bar"><div id="hp" class="fill hp"></div></div>
       <div class="bar"><div id="stamina" class="fill stamina"></div></div>
       <div class="bar"><div id="rage" class="fill rage"></div></div>
@@ -214,21 +215,21 @@
 <div class="center" id="overlay">
   <div class="modal">
     <h1>Vorath Souls</h1>
-    <p>The Bone Gate is a first vertical-slice prototype: one arena, one elite enemy, and the combat verbs needed before a larger game exists.</p>
-    <p>No copied God of War assets, characters, story, UI, or audio are used.</p>
+    <p>The Bone Gate. Break the Maw Guard and carve the sigil.</p>
     <div class="prompt">Press Enter or click to begin</div>
   </div>
 </div>
 <div class="footer">
-  <span id="status">Concept prototype</span>
+  <span id="status">The Bone Gate</span>
   <span id="debug">0 enemies</span>
 </div>
+<script src="/static/games/nsp_fx_v1.js"></script>
 <script>
 (() => {
   "use strict";
 
   const canvas = document.getElementById("game");
-  const ctx = canvas.getContext("2d");
+  let ctx = canvas.getContext("2d");
   const overlay = document.getElementById("overlay");
   const hpFill = document.getElementById("hp");
   const staminaFill = document.getElementById("stamina");
@@ -236,6 +237,16 @@
   const objectiveEl = document.getElementById("objective");
   const statusEl = document.getElementById("status");
   const debugEl = document.getElementById("debug");
+
+  // --- NorthStar arcade FX kit: lights, sparks, rings, numbers, hero art ---
+  const HERO = NSPFX.loadImage("/static/games/og/vorath-souls_og_1200x630.jpg");
+  const PORTAL = { u: 0.504, v: 0.57 };
+  const fxP = new NSPFX.Particles(900), fxR = new NSPFX.Rings(), fxF = new NSPFX.Floaters(), fxI = new NSPFX.Impact();
+  const motes = new NSPFX.Motes(56, innerWidth, innerHeight, ["#ffd98a", "#b98cff", "#7fe9ff", "#ffb36b"]);
+  const ui = { overlay: null, objective: "Break the Bone Gate. Defeat the Maw Guard, carve the sigil, and survive.", objectiveT: 7, hintT: 12, clock: 0 };
+  let floorLayer = null;
+  window.__nspGameState = () => game.mode;
+  function setObjective(text) { objectiveEl.textContent = text; ui.objective = text; ui.objectiveT = 6; }
 
   const keys = new Set();
   const pressed = new Set();
@@ -282,8 +293,7 @@
     ctx.translate(x, y);
     ctx.rotate(rot);
     ctx.globalAlpha *= alpha;
-    ctx.shadowColor = `hsla(${hue},100%,70%,${alpha})`;
-    ctx.shadowBlur = 22 * r / 10;
+    NSPFX.light(ctx, 0, 0, r * 3.4, `hsl(${hue},100%,62%)`, 0.5 * ctx.globalAlpha, 0.08);
     const g = ctx.createRadialGradient(-r * 0.28, -r * 0.34, r * 0.1, 0, 0, r * 1.18);
     g.addColorStop(0, "rgba(255,255,255,0.94)");
     g.addColorStop(0.22, `hsla(${hue + 62},100%,76%,0.92)`);
@@ -467,12 +477,14 @@
     game.player = newPlayer();
     game.enemies = spawnEnemies();
     overlay.style.display = "none";
-    objectiveEl.textContent = "Break the Bone Gate. Defeat the Maw Guard, carve the sigil, and survive.";
+    setObjective("Break the Bone Gate. Defeat the Maw Guard, carve the sigil, and survive.");
+    ui.overlay = null;
+    ui.hintT = 12;
   }
 
   function setOverlay(title, text, prompt) {
-    overlay.style.display = "grid";
-    overlay.innerHTML = `<div class="modal"><h1>${title}</h1><p>${text}</p><div class="prompt">${prompt}</div></div>`;
+    overlay.style.display = "none";
+    ui.overlay = { title, text, prompt, t: 0 };
   }
 
   function pauseGame() {
@@ -483,6 +495,7 @@
   function resumeGame() {
     game.mode = "playing";
     overlay.style.display = "none";
+    ui.overlay = null;
   }
 
   function flashMessage(text, seconds = 1.5) {
@@ -491,6 +504,8 @@
   }
 
   function addParticle(x, y, color, count = 10, speed = 180) {
+    fxP.burst(x, y, { count: Math.round(count * 1.2), color: [color, "#fff3d6", color], speed: speed * 1.25, life: 0.62, size: 2.4, drag: 3 });
+    return;
     for (let i = 0; i < count; i++) {
       const a = Math.random() * Math.PI * 2;
       const s = speed * (0.2 + Math.random());
@@ -568,13 +583,17 @@
     game.shake = 0.28;
     game.hitStop = 0.08;
     addParticle(target.x, target.y, "#22d3ee", 46, 340);
+    fxR.add(target.x, target.y, { radius: 220, color: "#9ff4ff", width: 8, life: 0.7 });
+    fxR.add(target.x, target.y, { radius: 120, color: "#ffe6a8", width: 4, life: 0.45 });
+    fxI.hit(0.8, 0.55, "#bff9ff", 0.06);
+    fxF.add(target.x, target.y - 50, "FINISHER", "#7fe9ff", 30, 1.3);
     flashMessage("Finisher: gate-blood claimed", 1.3);
     return true;
   }
 
   function update(dt) {
     if (game.mode === "title") {
-      if (pressed.has("Enter") || mouse.down) reset();
+      if (pressed.has("Enter") || pressed.has("Space") || mouse.down) reset();
       pressed.clear();
       return;
     }
@@ -733,6 +752,9 @@
       game.hitStop = 0.06;
       game.shake = 0.18;
       addParticle(p.x, p.y, "#22d3ee", 24, 280);
+      fxR.add(p.x, p.y, { radius: 110, color: "#9ff4ff", width: 5, life: 0.4 });
+      fxI.hit(0.35, 0.32, "#7fe9ff");
+      fxF.add(p.x, p.y - 40, "PARRY", "#7fe9ff", 24);
       flashMessage("Parry");
       return;
     }
@@ -740,6 +762,9 @@
     p.hp -= e.type === "guard" ? 22 : 11;
     p.invuln = 0.36;
     game.shake = 0.2;
+    fxI.hit(0.5, 0.3, "#ff3355");
+    fxR.add(p.x, p.y, { radius: 90, color: "#ff5a6e", width: 4, life: 0.35 });
+    fxF.add(p.x, p.y - 36, "-" + (e.type === "guard" ? 22 : 11), "#ff4466", 20);
     addParticle(p.x, p.y, "#ef4444", 18, 220);
     if (p.hp <= 0) death();
   }
@@ -758,10 +783,14 @@
           game.hitStop = a.kind === "heavy" ? 0.045 : 0.025;
           game.shake = a.kind === "heavy" ? 0.14 : 0.08;
           addParticle(e.x, e.y, a.kind === "heavy" ? "#f59e0b" : "#d9caa3", a.kind === "heavy" ? 24 : 12, 230);
+          fxR.add(e.x, e.y, { radius: a.kind === "heavy" ? 96 : 60, color: a.kind === "heavy" ? "#ffb347" : "#fff1c9", width: a.kind === "heavy" ? 5 : 3, life: 0.3 });
+          fxF.add(e.x + (Math.random() - 0.5) * 24, e.y - e.r - 14, String(a.damage), a.kind === "heavy" ? "#ffb347" : "#fff1c9", a.kind === "heavy" ? 26 : 19);
+          fxI.hit(a.kind === "heavy" ? 0.32 : 0.16, a.kind === "heavy" ? 0.12 : 0, "#ffe2a8");
           if (e.hp <= 0 && e.type !== "guard") {
             e.dead = true;
             e.hitFlash = 0.4;
             addParticle(e.x, e.y, "#ef4444", 18, 260);
+            fxR.add(e.x, e.y, { radius: 120, color: "#ff5a6e", width: 5, life: 0.45 });
           }
           if (e.hp <= 0 && e.type === "guard") {
             e.hp = 1;
@@ -775,6 +804,7 @@
   }
 
   function updateParticles(dt) {
+    fxP.update(dt); fxR.update(dt); fxF.update(dt);
     for (const p of game.particles) {
       p.life -= dt;
       p.x += p.vx * dt;
@@ -791,7 +821,9 @@
     const living = game.enemies.filter(e => !e.dead);
     if (!game.gateOpen && living.length === 0) {
       game.gateOpen = true;
-      objectiveEl.textContent = "The Bone Gate is exposed. Stand near it and press E to carve the sigil.";
+      setObjective("The Bone Gate is exposed. Stand near it and press E to carve the sigil.");
+      fxR.add(1080, 360, { radius: 260, color: "#7fe9ff", width: 6, life: 0.9 });
+      fxI.hit(0.35, 0.35, "#7fe9ff");
       flashMessage("Gate exposed");
     }
   }
@@ -816,12 +848,72 @@
     statusEl.textContent = game.gateOpen ? "Bone Gate exposed" : "Prototype encounter";
   }
 
+  function drawTitle() {
+    const W = innerWidth, H = innerHeight, t = performance.now() / 1000;
+    ctx.fillStyle = "#03020a"; ctx.fillRect(0, 0, W, H);
+    const m = HERO.ready ? NSPFX.cover(ctx, HERO.img, W, H, 0.5, 0.5) : null;
+    const portal = m ? m.map(PORTAL.u, PORTAL.v) : { x: W * 0.5, y: H * 0.57 };
+    NSPFX.vignette(ctx, W, H, 0.6, "3,1,10");
+    NSPFX.light(ctx, portal.x, portal.y, H * 0.42, "#a46bff", 0.32 + 0.12 * Math.sin(t * 1.6), 0);
+    NSPFX.rays(ctx, portal.x, portal.y, H * 0.95, t, "#c9a6ff", 11, 0.07);
+    NSPFX.eye(ctx, portal.x, portal.y - H * 0.04, Math.min(W, H) * 0.045, t, { hue: 275, open: 0.55 + 0.25 * Math.sin(t * 0.8), look: { x: Math.sin(t * 0.5), y: 0.4 } });
+    motes.resize(W, H); motes.draw(ctx);
+    const k = Math.min(1, W / 1280), col = Math.max(Math.round(250 * k), m ? m.map(0.2, 0).x : W * 0.2);
+    NSPFX.drawCachedText(ctx, "VORATH", col, H * 0.17, { font: `700 ${Math.round(78 * k)}px Georgia, 'Times New Roman', serif`, size: 78 * k, fill: ["#fffaf0", "#e9d6a0", "#a2783a"], glow: "#b06bff", blur: 22, blur2: 46, spacing: 10 * k, stroke: "rgba(20,8,30,.9)", strokeWidth: 3 });
+    NSPFX.drawCachedText(ctx, "SOULS", col, H * 0.17 + 78 * k, { font: `700 ${Math.round(78 * k)}px Georgia, 'Times New Roman', serif`, size: 78 * k, fill: ["#fffaf0", "#e9d6a0", "#a2783a"], glow: "#b06bff", blur: 22, blur2: 46, spacing: 22 * k, stroke: "rgba(20,8,30,.9)", strokeWidth: 3 });
+    NSPFX.drawCachedText(ctx, "THE BONE GATE", col, H * 0.17 + 138 * k, { font: `600 ${Math.round(20 * k)}px Georgia, serif`, size: 20 * k, fill: "#d9f6ff", glow: "#46c8ff", blur: 12, spacing: 9 * k });
+    NSPFX.prompt(ctx, "PRESS ENTER OR CLICK TO BEGIN", col, H * 0.17 + 186 * k, t, { glow: "#f5c542", font: `700 ${Math.round(16 * k)}px 'Segoe UI', Arial, sans-serif`, spacing: 4, stroke: "rgba(0,0,0,.85)", strokeWidth: 4 });
+    NSPFX.bloom(ctx, canvas, W, H, 0.28);
+  }
+
+  function hudText(text, x, y, fill, size = 13, align = "left", weight = 700, alpha = 1) {
+    NSPFX.glowText(ctx, text, x, y, { font: `${weight} ${size}px 'Segoe UI', Arial, sans-serif`, fill, glow: "rgba(0,0,0,.95)", blur: 7, align, spacing: 1.5, alpha });
+  }
+
+  function hudBar(x, y, w, f, c1, c2, label) {
+    const g = ctx.createLinearGradient(x, 0, x + w, 0);
+    g.addColorStop(0, c1); g.addColorStop(1, c2);
+    ctx.fillStyle = "rgba(255,255,255,0.14)"; ctx.fillRect(x, y, w, 6);
+    ctx.fillStyle = g; ctx.fillRect(x, y, w * clamp(f, 0, 1), 6);
+    NSPFX.light(ctx, x + w * clamp(f, 0, 1), y + 3, 22, c2, 0.9, 0.3);
+    hudText(label, x, y - 10, "#f6ecd0", 12, "left", 700);
+  }
+
+  function drawHud() {
+    const p = game.player, W = innerWidth, H = innerHeight;
+    if (!p || game.mode === "title") return;
+    hudBar(28, 38, 260, p.hp / 100, "#7f1d1d", "#ff4d8d", "VITALITY");
+    hudBar(28, 70, 260, p.stamina / 100, "#14532d", "#22e5d0", "STAMINA");
+    hudBar(28, 102, 260, p.rage / 100, "#854d0e", "#ffcf4a", p.rage >= 70 ? "RAGE · AWAKENED" : "RAGE");
+    if (ui.objectiveT > 0) hudText(ui.objective, W / 2, 30, "#f6e7c1", 15, "center", 600, Math.min(1, ui.objectiveT));
+    const living = game.enemies.filter(e => !e.dead).length;
+    hudText(game.gateOpen ? "THE BONE GATE IS OPEN" : `${living} REMAIN AT THE GATE`, W - 28, 36, game.gateOpen ? "#9ff4ff" : "#f6d98a", 15, "right");
+    if (ui.hintT > 0) hudText("WASD move · J/LMB light · K/RMB heavy · Space dodge · Shift parry · E finisher", W / 2, H - 26, "#d9cfb4", 12, "center", 600, Math.min(1, ui.hintT));
+  }
+
+  function drawOverlay() {
+    const o = ui.overlay;
+    if (!o) return;
+    const W = innerWidth, H = innerHeight, t = performance.now() / 1000;
+    NSPFX.vignette(ctx, W, H, 0.95, "2,1,8");
+    NSPFX.light(ctx, W / 2, H * 0.45, H * 0.5, o.title === "You Fell" ? "#ff2a4a" : "#7fe9ff", 0.22, 0);
+    NSPFX.glowText(ctx, o.title.toUpperCase(), W / 2, H * 0.4, { font: "700 64px Georgia, 'Times New Roman', serif", size: 64, fill: ["#fffaf0", "#e9d6a0", "#a2783a"], glow: o.title === "You Fell" ? "#ff3a5c" : "#7fe9ff", blur: 26, spacing: 8, stroke: "rgba(10,4,14,.9)", strokeWidth: 3 });
+    const words = o.text.split(" "), lines = [];
+    let line = "";
+    for (const w of words) { if ((line + " " + w).length > 64) { lines.push(line); line = w; } else line = line ? line + " " + w : w; }
+    if (line) lines.push(line);
+    lines.forEach((l, i) => NSPFX.glowText(ctx, l, W / 2, H * 0.4 + 62 + i * 26, { font: "18px Georgia, serif", fill: "#efe3c2", glow: "rgba(0,0,0,.95)", blur: 8 }));
+    NSPFX.prompt(ctx, o.prompt.toUpperCase(), W / 2, H * 0.4 + 82 + lines.length * 26, t, { glow: "#f5c542", spacing: 3 });
+  }
+
   function draw() {
+    if (game.mode === "title") { drawTitle(); return; }
     ctx.save();
     ctx.clearRect(0, 0, innerWidth, innerHeight);
     const sx = game.shake > 0 ? (Math.random() - 0.5) * game.shake * 22 : 0;
     const sy = game.shake > 0 ? (Math.random() - 0.5) * game.shake * 22 : 0;
-    ctx.translate(world.ox + sx, world.oy + sy);
+    const kick = fxI.offset(14);
+    ctx.translate(world.ox + sx + kick.x, world.oy + sy + kick.y);
     ctx.scale(world.scale, world.scale);
     drawArena();
     if (game.player) {
@@ -833,9 +925,63 @@
       drawMessage();
     }
     ctx.restore();
+    fxI.drawFlash(ctx, innerWidth, innerHeight);
+    NSPFX.vignette(ctx, innerWidth, innerHeight, 0.5, "2,1,8");
+    drawHud();
+    drawOverlay();
+  }
+
+  function buildFloor() {
+    floorLayer = document.createElement("canvas");
+    floorLayer.width = 1280; floorLayer.height = 720;
+    const keep = ctx, keepTime = game.time;
+    ctx = floorLayer.getContext("2d");
+    game.time = 0;
+    drawArenaStatic();
+    ctx = keep; game.time = keepTime;
   }
 
   function drawArena() {
+    if (!floorLayer) buildFloor();
+    ctx.drawImage(floorLayer, 0, 0, 1280, 720);
+    const cx = 640, cy = 360, t = game.time;
+    for (let i = 0; i < 15; i++) {
+      const a = i * Math.PI * 2 / 15 + 0.22;
+      drawRunedChip(cx + Math.cos(a) * 368, cy + Math.sin(a) * 192, 20 + (i % 3) * 7, 14 + (i % 4) * 5, a + t * 0.04, 36 + i * 19, 0.4);
+    }
+    for (let i = 0; i < 9; i++) {
+      const hue = (t * 54 + i * 40) % 360;
+      const x = cx + Math.cos(i * 2.399 + t * 0.35) * (120 + (i % 5) * 70);
+      const y = cy + Math.sin(i * 1.733 + t * 0.42) * (70 + (i % 4) * 36);
+      NSPFX.light(ctx, x, y, 120, `hsl(${hue},100%,58%)`, 0.12, 0);
+    }
+    const pulse = 0.35 + Math.sin(t * 4) * 0.18;
+    for (const lane of [
+      { color: "rgba(34,211,238,", y: -190 }, { color: "rgba(236,72,153,", y: -128 },
+      { color: "rgba(245,197,66,", y: 128 }, { color: "rgba(16,185,129,", y: 190 }
+    ]) {
+      ctx.strokeStyle = lane.color + pulse + ")";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(cx - 470, cy + lane.y);
+      ctx.quadraticCurveTo(cx, cy + lane.y * 0.42 + Math.sin(t * 2 + lane.y) * 18, cx + 470, cy + lane.y);
+      ctx.stroke();
+    }
+    for (let i = 0; i < 18; i++) {
+      const a = i * Math.PI * 2 / 18 + t * 0.15;
+      drawFacetGem(cx + Math.cos(a) * 430, cy + Math.sin(a) * 226, 7 + (i % 3) * 2, (i * 28 + t * 50) % 360, t + i, 0.56);
+    }
+    // light pools: the gate's glow, the exile's lantern, each enemy's aura
+    NSPFX.light(ctx, 1080, 360, game.gateOpen ? 300 : 210, game.gateOpen ? "#7fe9ff" : "#f5c542", game.gateOpen ? 0.42 : 0.24, 0);
+    if (game.player) NSPFX.light(ctx, game.player.x, game.player.y, 230, game.player.rage > 70 ? "#ff5ab8" : "#ffd28a", 0.26, 0);
+    for (const e of game.enemies) {
+      if (e.dead) continue;
+      const tell = e.state === "windup";
+      NSPFX.light(ctx, e.x, e.y, e.type === "guard" ? 170 : 90, tell ? "#ff9a2e" : (e.type === "guard" ? "#ff3048" : "#ec4899"), tell ? 0.5 : 0.24, 0);
+    }
+  }
+
+  function drawArenaStatic() {
     ctx.fillStyle = "#05070a";
     ctx.fillRect(0, 0, world.w, world.h);
     const cx = 640;
@@ -882,10 +1028,6 @@
       ctx.lineTo(x + Math.cos(a + 1.9) * (42 + (i % 3) * 14), y + Math.sin(a + 1.6) * (18 + (i % 4) * 9));
       ctx.stroke();
     }
-    for (let i = 0; i < 15; i++) {
-      const a = i * Math.PI * 2 / 15 + 0.22;
-      drawRunedChip(cx + Math.cos(a) * 368, cy + Math.sin(a) * 192, 20 + (i % 3) * 7, 14 + (i % 4) * 5, a + game.time * 0.04, 36 + i * 19, 0.4);
-    }
     ctx.restore();
     ctx.save();
     ctx.globalAlpha = 0.34;
@@ -894,22 +1036,6 @@
       const x = cx + side * (365 + (i % 3) * 36);
       const y = cy - 215 + i * 46;
       drawBoneShard(x, y, 16 + (i % 4) * 5, 76 + (i % 3) * 20, side * (0.44 + i * 0.05), 0.72);
-    }
-    ctx.restore();
-    ctx.save();
-    ctx.globalCompositeOperation = "screen";
-    for (let i = 0; i < 20; i++) {
-      const hue = (game.time * 54 + i * 31) % 360;
-      const x = cx + Math.cos(i * 2.399 + game.time * 0.35) * (120 + (i % 5) * 70);
-      const y = cy + Math.sin(i * 1.733 + game.time * 0.42) * (70 + (i % 4) * 36);
-      const rg = ctx.createRadialGradient(x, y, 0, x, y, 105);
-      rg.addColorStop(0, `hsla(${hue},100%,58%,0.14)`);
-      rg.addColorStop(0.45, `hsla(${hue + 80},100%,58%,0.045)`);
-      rg.addColorStop(1, "rgba(0,0,0,0)");
-      ctx.fillStyle = rg;
-      ctx.beginPath();
-      ctx.arc(x, y, 105, 0, Math.PI * 2);
-      ctx.fill();
     }
     ctx.restore();
     ctx.strokeStyle = "rgba(217,202,163,0.28)";
@@ -924,29 +1050,11 @@
       ctx.lineTo(cx + Math.cos(a) * 470, cy + Math.sin(a) * 245);
       ctx.stroke();
     }
-    const pulse = 0.35 + Math.sin(game.time * 4) * 0.18;
-    for (const lane of [
-      { color: "rgba(34,211,238,", y: -190 },
-      { color: "rgba(236,72,153,", y: -128 },
-      { color: "rgba(245,197,66,", y: 128 },
-      { color: "rgba(16,185,129,", y: 190 }
-    ]) {
-      ctx.strokeStyle = lane.color + pulse + ")";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(cx - 470, cy + lane.y);
-      ctx.quadraticCurveTo(cx, cy + lane.y * 0.42 + Math.sin(game.time * 2 + lane.y) * 18, cx + 470, cy + lane.y);
-      ctx.stroke();
-    }
     ctx.strokeStyle = "rgba(201,168,76,0.18)";
     for (let r = 90; r <= 420; r += 82) {
       ctx.beginPath();
       ctx.ellipse(cx, cy, r, r * 0.54, 0, 0, Math.PI * 2);
       ctx.stroke();
-    }
-    for (let i = 0; i < 18; i++) {
-      const a = i * Math.PI * 2 / 18 + game.time * 0.15;
-      drawFacetGem(cx + Math.cos(a) * 430, cy + Math.sin(a) * 226, 7 + (i % 3) * 2, (i * 28 + game.time * 50) % 360, game.time + i, 0.56);
     }
   }
 
@@ -956,7 +1064,7 @@
     ctx.save();
     ctx.translate(x, y);
     ctx.shadowColor = game.gateOpen ? "#22d3ee" : "#f5c542";
-    ctx.shadowBlur = game.gateOpen ? 34 : 18;
+    ctx.shadowBlur = 0;
     for (const side of [-1, 1]) {
       ctx.save();
       ctx.scale(side, 1);
@@ -1014,6 +1122,10 @@
       const a = i * Math.PI * 2 / 10 + game.time * 0.24;
       drawFacetGem(Math.cos(a) * 48, Math.sin(a) * 96, 5, game.gateOpen ? 188 : 42, game.time + i, 0.68);
     }
+    if (game.gateOpen) {
+      NSPFX.rays(ctx, 0, 0, 380, game.time, "#9ff4ff", 9, 0.12);
+      NSPFX.eye(ctx, 0, -6, 30, game.time, { hue: 188, open: 0.7 + 0.3 * Math.sin(game.time * 2), look: { x: (game.player.x - 1080) / 400, y: (game.player.y - 360) / 300 } });
+    }
     drawFacetGem(0, -16, 8, game.gateOpen ? 188 : 4, -game.time, 0.95);
     drawFacetGem(0, 54, 6, 42, game.time * 1.3, 0.76);
     ctx.shadowBlur = 0;
@@ -1028,7 +1140,7 @@
     ctx.scale(1.18, 1.18);
     const hue = p.invuln > 0 ? 188 : 46;
     ctx.shadowColor = p.parry > 0 ? "#22d3ee" : "#f5c542";
-    ctx.shadowBlur = p.parry > 0 ? 26 : 18;
+    ctx.shadowBlur = 0;
     ctx.fillStyle = "rgba(0,0,0,0.36)";
     ctx.beginPath();
     ctx.ellipse(-4, 24, 38, 11, 0, 0, Math.PI * 2);
@@ -1107,7 +1219,7 @@
     ctx.strokeStyle = p.rage > 70 ? "#ec4899" : "#22d3ee";
     ctx.lineWidth = 4;
     ctx.shadowColor = ctx.strokeStyle;
-    ctx.shadowBlur = 22;
+    ctx.shadowBlur = 0;
     ctx.beginPath();
     ctx.moveTo(20, -5);
     ctx.lineTo(78, -8 + Math.sin(game.time * 8) * 3);
@@ -1147,7 +1259,7 @@
     const stunned = e.stun >= e.maxStun;
     const hue = stunned ? 188 : e.type === "guard" ? 4 : 335;
     ctx.shadowColor = stunned ? "#22d3ee" : e.state === "windup" ? "#f59e0b" : "#ec4899";
-    ctx.shadowBlur = e.type === "guard" ? 24 : 15;
+    ctx.shadowBlur = 0;
     const body = ctx.createLinearGradient(-42, -42, 42, 42);
     body.addColorStop(0, e.hitFlash > 0 ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.42)");
     body.addColorStop(0.28, stunned ? "rgba(34,211,238,0.85)" : e.type === "guard" ? "rgba(127,29,29,0.88)" : "rgba(236,72,153,0.65)");
@@ -1207,7 +1319,7 @@
       ctx.strokeStyle = e.state === "windup" ? "#f59e0b" : "rgba(245,197,66,0.62)";
       ctx.lineWidth = 5;
       ctx.shadowColor = ctx.strokeStyle;
-      ctx.shadowBlur = 18;
+      ctx.shadowBlur = 0;
       ctx.beginPath();
       ctx.moveTo(31, 1);
       ctx.quadraticCurveTo(66, -24 + Math.sin(game.time * 5) * 5, 87, -6);
@@ -1305,7 +1417,7 @@
     ctx.strokeStyle = a.kind === "heavy" ? `rgba(245,158,11,${0.8 * pct})` : `rgba(217,202,163,${0.7 * pct})`;
     ctx.lineWidth = a.kind === "heavy" ? 5 : 3;
     ctx.shadowColor = a.kind === "heavy" ? "#f59e0b" : "#d9caa3";
-    ctx.shadowBlur = a.kind === "heavy" ? 20 : 12;
+    ctx.shadowBlur = 0;
     ctx.beginPath();
     ctx.arc(a.x, a.y, a.r, 0, Math.PI * 2);
     ctx.fill();
@@ -1318,6 +1430,9 @@
   }
 
   function drawParticles() {
+    fxR.draw(ctx);
+    fxP.draw(ctx);
+    fxF.draw(ctx, "800 {s}px Georgia, 'Times New Roman', serif");
     for (const p of game.particles) {
       ctx.globalAlpha = clamp(p.life / p.max, 0, 1);
       drawFacetGem(p.x, p.y, 3.8, colorHue(p.color), game.time * 3 + p.x, 1);
@@ -1328,18 +1443,18 @@
   function drawMessage() {
     if (game.messageT <= 0) return;
     ctx.save();
-    ctx.globalAlpha = clamp(game.messageT, 0, 1);
-    ctx.fillStyle = "#f3e8c7";
-    ctx.font = "700 28px Segoe UI, sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText(game.message, 640, 118);
+    NSPFX.glowText(ctx, game.message.toUpperCase(), 640, 128, { font: "700 30px Georgia, 'Times New Roman', serif", fill: ["#fffaf0", "#f0d38a"], size: 30, glow: "#ff9a3c", blur: 18, spacing: 4, alpha: clamp(game.messageT, 0, 1), stroke: "rgba(0,0,0,.6)", strokeWidth: 3 });
     ctx.restore();
   }
 
   let last = performance.now();
   function frame(now) {
+    NSPFX.probe(now);
     const dt = Math.min(0.033, (now - last) / 1000);
     last = now;
+    motes.update(dt); fxI.update(dt);
+    if (game.mode === "title") { fxP.update(dt); }
+    if (game.mode === "playing") { ui.objectiveT = Math.max(0, ui.objectiveT - dt); ui.hintT = Math.max(0, ui.hintT - dt); }
     update(dt);
     mouse.down = false;
     mouse.right = false;

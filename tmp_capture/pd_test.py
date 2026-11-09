@@ -53,6 +53,11 @@ async def main():
         await page.screenshot(path=str(out / "01_cover.png"))
         await page.click("#overlayBtn")
         await page.wait_for_timeout(500)
+        # The countdown runs in game time; on a software-GL runner it can take 20 s of wall time.
+        for _ in range(60):
+            if float((await page.evaluate(HUD))["timeHud"] or 0) > 0:
+                break
+            await page.wait_for_timeout(500)
         await drive(page, 12)
         h1 = await page.evaluate(HUD)
         await page.screenshot(path=str(out / "02_race_12s.png"))
@@ -64,7 +69,7 @@ async def main():
         au = await page.evaluate("() => window.__au")
         check("no typed text on the stage canvas", not au["typed"], au["typed"])
         check("recorded audio only (no oscillators)", au["osc"] == 0 and (au["decode"] + au["media"]) > 0, {k: au[k] for k in ("osc", "decode", "media")})
-        box = await page.evaluate("""() => [...document.querySelectorAll('.metric')].slice(0, 3).map(e => { const c = getComputedStyle(e); return [c.backgroundColor, c.borderTopStyle, c.borderTopWidth]; })""")
+        box = await page.evaluate("""() => [...document.querySelectorAll('.metric')].slice(0, 3).concat([document.querySelector('.game-panel')]).map(e => { const c = getComputedStyle(e); return [c.backgroundColor, c.borderTopStyle, c.borderTopWidth]; })""")
         check("no card behind HUD words (rule 30(a))", all(r[0] == "rgba(0, 0, 0, 0)" and (r[1] == "none" or r[2] == "0px") for r in box), box)
         await ctx.close()
 

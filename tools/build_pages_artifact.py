@@ -57,7 +57,9 @@ def rewrite_sticker_refs(raw: str, relative: Path) -> str:
         re.IGNORECASE,
     )
     raw = abs_re.sub(lambda match: RAW_STICKER_BASE + match.group(1).lstrip("/"), raw)
-    if relative.suffix.lower() not in {".html", ".css"}:
+    # Relative assets belong to their page; only StickerForge masters are offloaded.
+    if (relative.suffix.lower() not in {".html", ".css"}
+            or not relative.parts or relative.parts[0] != "stickerforge"):
         return raw
     rel_re = re.compile(
         r"(?<![A-Za-z0-9_./-])(?:\./)?(assets/[^\s\"\'<>]+?\.(?:png|webp|jpg|jpeg|gif|avif))",

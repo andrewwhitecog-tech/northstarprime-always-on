@@ -373,4 +373,27 @@ class ImmutableBrowserRelease(unittest.TestCase):
    row["path"]="../escape.html";save()
    with self.assertRaisesRegex(ValueError,"Invalid immutable release path"):m.immutable_release_files(root)
 
+
+class IncludedGameAssetRewrite(unittest.TestCase):
+ def test_actual_souls_actor_images_remain_same_origin(self):
+  page=Path("arcade/custom/vorath-souls/index.html")
+  original=(ROOT.parent/page).read_text(encoding="utf-8")
+  urls=re.findall(r'art\.(?:exile|maw)\.src = "([^"]+)"',original)
+  self.assertEqual(len(urls),2)
+  result=m.rewrite_sticker_refs(original,page)
+  self.assertEqual(result,original)
+  for url in urls:
+   asset=page.parent/url
+   self.assertTrue((ROOT.parent/asset).is_file())
+   self.assertFalse(m.external_sticker_master(asset))
+   self.assertFalse(m.external_release_media(asset))
+ def test_game_css_relative_assets_remain_local(self):
+  original="a{background:url('./assets/actor.png')}"
+  self.assertEqual(m.rewrite_sticker_refs(original,Path("arcade/custom/example/style.css")),original)
+ def test_stickerforge_relative_and_cross_page_absolute_masters_still_offload(self):
+  raw='<img src="./assets/pack.webp">'
+  self.assertEqual(m.rewrite_sticker_refs(raw,Path("stickerforge/index.html")),'<img src="'+m.RAW_STICKER_BASE+'stickerforge/assets/pack.webp">')
+  raw='<img src="/stickerforge/assets/pack.webp">'
+  self.assertEqual(m.rewrite_sticker_refs(raw,Path("arcade/index.html")),'<img src="'+m.RAW_STICKER_BASE+'stickerforge/assets/pack.webp">')
+
 if __name__=="__main__":unittest.main()

@@ -239,6 +239,9 @@ let chronoTimer = 0;
 let shakeTime = 0;
 let shakeMag = 0;
 
+// Shared contact damage uses the existing 60 Hz simulation ticks (~0.5 seconds).
+const CONTACT_HIT_COOLDOWN = 30;
+
 // Player
 const player = {
   x: W / 2, y: H / 2,
@@ -250,7 +253,7 @@ const player = {
   bombs: 3,
   weapon: 0, // 0: Twin Plasma, 1: Tachyon Beam, 2: Missiles
   dodgeCd: 0, isInvulnerable: false,
-  fireCd: 0, damageFlash: 0
+  fireCd: 0, damageFlash: 0, contactCd: 0
 };
 
 // Distant VORATH environment: visual scenery only, with a separate parallax plane.
@@ -686,6 +689,7 @@ function gameLoop(now) {
     if (player.shield < player.maxShield) player.shield += 0.06 * dt;
 
     // Player Cooldowns
+    player.contactCd = Math.max(0, player.contactCd - dt);
     if(player.damageFlash>0)player.damageFlash=Math.max(0,player.damageFlash-dt);
     if (player.fireCd > 0) player.fireCd -= dt;
     if (player.dodgeCd > 0) player.dodgeCd -= dt;
@@ -791,17 +795,22 @@ function gameLoop(now) {
       e.damageFlash=Math.max(0,(e.damageFlash||0)-dt);
 
       // Enemy collision with player
-      if (!player.isInvulnerable && Math.hypot(player.x - e.x, player.y - e.y) < 26) {
-        if (player.shield > 0) {
-          player.shield -= 25;
-        } else {
-          player.hull -= 30;
+      if (e.hp > 0 && !player.isInvulnerable && Math.hypot(player.x - e.x, player.y - e.y) < 26) {
+        if (player.contactCd <= 0) {
+          if (player.shield > 0) {
+            player.shield -= 25;
+          } else {
+            player.hull -= 30;
+          }
+          player.contactCd = CONTACT_HIT_COOLDOWN;
+          player.damageFlash=18;
+          shakeScreen(15, 12);
+          audio.explosion(false);
+          vibrate(200, 0.8, 0.8);
         }
-        player.damageFlash=18; // Visual feedback only; collision damage and timing stay unchanged.
+        // Every live collision still destroys/removes/scores the enemy, even
+        // when a simultaneous contact shares the player's damage cooldown.
         e.hp = 0;
-        shakeScreen(15, 12);
-        audio.explosion(false);
-        vibrate(200, 0.8, 0.8);
       }
 
       // Enemy Death
@@ -872,7 +881,7 @@ function startGame() {
   clearHeldInput();
   player.shield=100;player.hull=100;player.chrono=100;player.bombs=3;
   player.angle=-Math.PI/2;aimSource='default';
-  player.fireCd=0;player.dodgeCd=0;player.isInvulnerable=false;player.damageFlash=0;
+  player.fireCd=0;player.dodgeCd=0;player.isInvulnerable=false;player.damageFlash=0;player.contactCd=0;
   chronoTimer=0;timeDilation=1;score=0;enemies=[];bullets=[];particles=[];shakeTime=0;enemyHitEchoes=[];enemyVisualClock=0;
   weaponArt?.clear?.();
   document.getElementById('scoreVal').textContent='000,000';document.getElementById('bombVal').textContent='3';

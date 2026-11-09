@@ -826,9 +826,9 @@
       const dist = Math.abs(enemy.x - player.x);
       const toward = enemy.x > player.x ? -1 : 1;
       enemy.guard = false;
-      reads.frames += dt;
-      if (player.guard) reads.guardFrames += dt;
-      const playerTurtles = reads.frames > 120 && reads.guardFrames / reads.frames > 0.35;
+      // How much the player has been guarding lately (about the last 1.5 s).
+      reads.guardAvg = (reads.guardAvg || 0) + ((player.guard ? 1 : 0) - (reads.guardAvg || 0)) * Math.min(1, dt / 90);
+      const playerTurtles = reads.guardAvg > 0.45;
       // A queued follow-up (riposte after a parry, the next hit of a chain).
       if (state.aiQueue) {
         state.aiQueue.wait -= dt;
@@ -879,7 +879,7 @@
         const r = Math.random();
         if (dist > ai.range + 70) state.aiIntent = "approach";
         else if (dist < ai.range * 0.55 && Math.random() < 0.35) state.aiIntent = "space";
-        else if (playerTurtles && r < 0.45) state.aiIntent = Math.random() < ai.feint + 0.25 ? "feint" : "heavy";
+        else if (playerTurtles && r < 0.6) { state.aiIntent = Math.random() < ai.feint + 0.25 ? "feint" : "heavy"; enemy.turtleBreaks = (enemy.turtleBreaks || 0) + 1; }
         else if (r < ai.feint) state.aiIntent = "feint";
         else if (r < ai.feint + ai.aggression) state.aiIntent = Math.random() < ai.heavyBias ? "heavy" : "slash";
         else if (enemy.hp < (enemy.maxHp || 100) * 0.3 && Math.random() < 0.4) state.aiIntent = "guard";
@@ -2203,7 +2203,7 @@
       ladder: () => ({ active: ladder.active, bout: ladder.bout, between: Math.round(ladder.between), result: ladder.result,
         open: openBouts().map(d => d.key), enemy: enemy.name, enemyAtlas: enemy.atlas, enemyHp: enemy.hp, enemyMax: enemy.maxHp || 100,
         running: state.running, round: state.round, save: JSON.parse(JSON.stringify(ladder.save)), reads: reads.hist.slice(),
-        ai: { parries: enemy.parries || 0, punishes: enemy.punishes || 0, feints: enemy.feints || 0 }, blade: ladder.save.blade }),
+        ai: { parries: enemy.parries || 0, punishes: enemy.punishes || 0, feints: enemy.feints || 0, turtleBreaks: enemy.turtleBreaks || 0 }, blade: ladder.save.blade }),
       koEnemy: () => { if (state.running && state.roundDelay <= 0) { enemy.hp = 0; checkRoundEnd(); } return enemy.hp; },
       cycleBlade
     };

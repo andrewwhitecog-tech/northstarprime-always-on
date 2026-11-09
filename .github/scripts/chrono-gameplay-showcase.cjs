@@ -221,12 +221,18 @@ async function main() {
   }
   assert.equal(await page.locator('body').getAttribute('data-mode'), 'PLAYING');
   receipt.requestedRecorderStop = 'Completed 20-second native PLAYING target';
-  recorder.kill('SIGINT');
+  receipt.recorderStop = {pid:recorder.pid,exitCodeBeforeSignal:recorder.exitCode,
+    signalCodeBeforeSignal:recorder.signalCode,stillRunning:recorder.exitCode===null && recorder.signalCode===null,
+    signal:'SIGINT',signalSent:false};
+  assert.equal(receipt.recorderStop.stillRunning,true,'Recorder exited before our requested stop; preserve the actual early exit');
+  receipt.recorderStop.signalSent = recorder.kill('SIGINT');
+  assert.equal(receipt.recorderStop.signalSent,true,'Requested recorder stop signal was not sent');
   await page.mouse.up();
   await page.screenshot({path: path.join(out, 'after-native-input.png')});
   receipt.actualInputDurationSeconds = (performance.now() - started) / 1000;
   const rec = await recorderDone;
-  assert.ok([0,255].includes(rec.code), 'Actual capture failed; inspect capture.ffmpeg.log');
+  assert.ok(rec.code===0 || (rec.code===255 && receipt.recorderStop.stillRunning && receipt.recorderStop.signalSent),
+    'Actual capture failed or exited before our requested SIGINT; inspect capture.ffmpeg.log');
   receipt.recorderExit = rec;
   recorder = null;
   assert.ok(receipt.actualInputDurationSeconds >= 20, 'Sortie ended before the 20-second PLAYING target');

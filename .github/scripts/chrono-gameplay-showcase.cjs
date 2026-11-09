@@ -98,7 +98,7 @@ async function main() {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const url = 'http://127.0.0.1:' + server.address().port + pin.gameRoute;
   browser = await chromium.launch({headless: false, args: [
-    '--kiosk', '--window-position=0,0', '--window-size=1600,1000', '--disable-dev-shm-usage'
+    '--kiosk', '--window-position=0,0', '--window-size=1324,900', '--disable-dev-shm-usage'
   ]});
   const context = await browser.newContext({viewport: null, deviceScaleFactor: 1});
   const page = await context.newPage();
@@ -116,13 +116,14 @@ async function main() {
     images: [...document.images].map(image => ({src: image.getAttribute('src'), width: image.naturalWidth, height: image.naturalHeight}))}));
   receipt.window = windowFacts;
   assert.deepEqual([windowFacts.screenX, windowFacts.screenY, windowFacts.innerWidth, windowFacts.innerHeight],
-    [0, 0, 1600, 1000], 'Kiosk geometry differs; do not guess screen-to-canvas alignment');
+    [0, 0, 1324, 900], 'Kiosk geometry differs; do not guess screen-to-canvas alignment');
   assert.equal(windowFacts.focused, true);
   assert.equal(windowFacts.visibility, 'visible');
   const bounds = await page.locator('#gameCanvas').boundingBox();
   assert.ok(bounds && bounds.width > 800 && bounds.height > 400);
   const crop = {x: Math.floor(bounds.x), y: Math.floor(bounds.y),
     width: Math.floor(bounds.width / 2) * 2, height: Math.floor(bounds.height / 2) * 2};
+  assert.deepEqual([crop.width, crop.height], [1024, 576], 'Preserve the reviewed native 16:9 canvas geometry; never scale a different layout');
   receipt.captureGeometry = crop;
   await page.screenshot({path: path.join(out, 'before-native-input.png')});
   const raw = path.join(out, 'chrono-gameplay-native.mp4');

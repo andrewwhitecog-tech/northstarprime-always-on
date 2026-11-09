@@ -2,200 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-select=no">
-<title>NorthStar Chrono Defender: 360 Edition</title>
-<meta name="description" content="Play NorthStar Chrono Defender: 360 Edition free in your browser in the NorthStar Prime IDG Arcade, an original game from the Vorath universe.">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NorthStar Chrono Defender</title>
+<meta name="description" content="Play NorthStar Chrono Defender free in your browser in the NorthStar Prime IDG Arcade, an original game from the Vorath universe.">
 <link rel="canonical" href="https://northstarprime.net/arcade/custom/northstar-chrono-defender/">
 <style>
-:root {
-  --bg-deep: #030409;
-  --gold: #f5c542;
-  --cyan: #00e5ff;
-  --magenta: #ff007f;
-  --purple: #9d4edd;
-  --green: #10b981;
-  --red: #ef4444;
-  --xbox-green: #107c10;
-  --hud-bg: rgba(6, 9, 20, 0.85);
-  --border-glow: rgba(0, 229, 255, 0.35);
-}
-* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
-html, body {
-  width: 100%; height: 100%; overflow: hidden;
-  background: var(--bg-deep); color: #f0f6fc;
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-}
-#game-container {
-  position: relative; width: 100vw; height: 100vh;
-  display: flex; align-items: center; justify-content: center;
-  background: #000;
-}
-canvas {
-  display: block; width: 100%; height: 100%;
-}
-/* CRT Scanline Overlay */
-#crt-overlay {
-  position: absolute; inset: 0; pointer-events: none; z-index: 10;
-  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
-  background-size: 100% 3px, 6px 100%;
-  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.7);
-  transition: opacity 0.3s ease;
-}
-/* HUD Elements */
-#hud {
-  position: absolute; inset: 0; pointer-events: none; z-index: 5;
-  display: flex; flex-direction: column; justify-content: space-between;
-  padding: 16px 24px;
-}
-.hud-top {
-  display: flex; justify-content: space-between; align-items: flex-start;
-}
-.hud-card {
-  background: var(--hud-bg); border: 1px solid var(--border-glow);
-  border-radius: 12px; padding: 10px 18px; backdrop-filter: blur(10px);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.6), 0 0 15px rgba(0,229,255,0.15);
-}
-.score-display {
-  font-size: 26px; font-weight: 800; letter-spacing: 2px;
-  color: var(--cyan); text-shadow: 0 0 12px rgba(0,229,255,0.6);
-}
-.score-label {
-  font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px;
-  color: #94a3b8; margin-bottom: 2px;
-}
-.wave-badge {
-  font-size: 16px; font-weight: 700; letter-spacing: 2px;
-  color: var(--gold); text-align: center;
-}
-.hud-bars {
-  display: flex; flex-direction: column; gap: 6px; width: 220px;
-}
-.bar-wrap {
-  display: flex; align-items: center; justify-content: space-between;
-  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
-}
-.bar-track {
-  width: 130px; height: 8px; background: rgba(255,255,255,0.12);
-  border-radius: 4px; overflow: hidden; position: relative;
-}
-.bar-fill {
-  height: 100%; width: 100%; transition: width 0.15s ease-out;
-}
-.shield-fill { background: linear-gradient(90deg, #0077b6, #00e5ff); box-shadow: 0 0 8px #00e5ff; }
-.hull-fill { background: linear-gradient(90deg, #ef4444, #10b981); }
-.chrono-fill { background: linear-gradient(90deg, #7b2cbf, #ff007f); box-shadow: 0 0 8px #ff007f; }
-
-/* Controller Status Badge */
-.controller-badge {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 6px 14px; border-radius: 20px; font-size: 11px;
-  font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
-  background: rgba(16, 124, 16, 0.2); border: 1px solid rgba(16, 124, 16, 0.6);
-  color: #4ade80; box-shadow: 0 0 12px rgba(16, 124, 16, 0.3);
-}
-.controller-dot {
-  width: 8px; height: 8px; border-radius: 50%; background: #4ade80;
-  box-shadow: 0 0 8px #4ade80; animation: pulse 2s infinite;
-}
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.85); }
-}
-
-.hud-bottom {
-  display: flex; justify-content: space-between; align-items: flex-end;
-}
-.weapon-dock {
-  display: flex; gap: 8px;
-}
-.weapon-card {
-  padding: 8px 14px; border-radius: 8px; background: rgba(15,23,42,0.7);
-  border: 1px solid rgba(255,255,255,0.1); font-size: 11px; font-weight: 700;
-  letter-spacing: 1px; text-transform: uppercase; color: #94a3b8;
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
-}
-.weapon-card.active {
-  border-color: var(--cyan); background: rgba(0, 229, 255, 0.15);
-  color: #fff; box-shadow: 0 0 12px rgba(0, 229, 255, 0.3);
-}
-.btn-prompt {
-  font-size: 9px; padding: 2px 6px; border-radius: 4px;
-  background: rgba(255,255,255,0.15); color: #fff; font-weight: 800;
-}
-.xbox-a { background: #107c10; color: #fff; }
-.xbox-b { background: #d83b01; color: #fff; }
-.xbox-x { background: #0078d7; color: #fff; }
-.xbox-y { background: #ffb900; color: #000; }
-
-/* Xbox 360 Achievement Unlocked Banner */
-#achievement-toast {
-  position: absolute; bottom: -120px; left: 50%; transform: translateX(-50%);
-  width: 440px; background: linear-gradient(180deg, #1b2838, #0e1622);
-  border: 2px solid #107c10; border-radius: 36px; padding: 10px 20px;
-  display: flex; align-items: center; gap: 16px; z-index: 100;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.8), 0 0 25px rgba(16,124,16,0.6);
-  transition: bottom 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-#achievement-toast.show {
-  bottom: 40px;
-}
-.ach-ring {
-  width: 42px; height: 42px; border-radius: 50%; border: 3px solid #107c10;
-  display: flex; align-items: center; justify-content: center;
-  background: radial-gradient(circle, #107c10 0%, #063a06 100%);
-  color: #fff; font-weight: 900; font-size: 20px; box-shadow: 0 0 15px #107c10;
-  flex-shrink: 0;
-}
-.ach-info { display: flex; flex-direction: column; gap: 2px; }
-.ach-title { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #a1a1aa; font-weight: 700; }
-.ach-name { font-size: 15px; font-weight: 800; color: #f4f4f5; letter-spacing: 1px; }
-.ach-score { font-size: 13px; font-weight: 800; color: #4ade80; margin-left: 6px; }
-
-/* Title & Overlay Screens */
-.modal-screen {
-  position: absolute; inset: 0; background: rgba(3, 4, 9, 0.85);
-  backdrop-filter: blur(8px); display: flex; flex-direction: column;
-  align-items: center; justify-content: center; z-index: 30;
-  transition: opacity 0.4s ease;
-}
-.modal-screen.hidden { opacity: 0; pointer-events: none; }
-.hero-art-bg {
-  position: absolute; inset: 0; z-index: -1; opacity: 0.35;
-  background: url('hero.jpg') center/cover no-repeat;
-}
-.logo-title {
-  font-size: 48px; font-weight: 900; letter-spacing: 4px; text-transform: uppercase;
-  background: linear-gradient(90deg, #ff007f, #00e5ff, #f5c542);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-  text-shadow: 0 0 30px rgba(0,229,255,0.4); text-align: center; margin-bottom: 8px;
-}
-.logo-sub {
-  font-size: 16px; letter-spacing: 6px; text-transform: uppercase;
-  color: #cbd5e1; font-weight: 700; margin-bottom: 36px;
-}
-.play-btn {
-  padding: 14px 42px; border-radius: 30px; font-size: 18px; font-weight: 800;
-  letter-spacing: 2px; text-transform: uppercase; cursor: pointer;
-  background: linear-gradient(90deg, #00e5ff, #9d4edd); border: none;
-  color: #fff; box-shadow: 0 0 25px rgba(0,229,255,0.5);
-  transition: transform 0.15s, box-shadow 0.15s; pointer-events: auto;
-}
-.play-btn:hover {
-  transform: scale(1.06); box-shadow: 0 0 35px rgba(0,229,255,0.8);
-}
-.controls-guide {
-  margin-top: 36px; display: grid; grid-template-columns: repeat(3, 1fr);
-  gap: 16px; max-width: 720px;
-}
-.control-item {
-  background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 10px; padding: 12px; text-align: center; font-size: 12px;
-}
-.control-key {
-  display: inline-block; font-weight: 800; color: var(--cyan); margin-bottom: 4px;
-}
+:root{color-scheme:dark;--bg:#070a10;--ink:#e8e1cd;--gold:#d1ac58;--cyan:#6fdbdf;--muted:#b5bfbe;--magenta:#d28cb9}*{box-sizing:border-box}html,body{margin:0;min-width:0;background:var(--bg);color:var(--ink);font:16px/1.4 Georgia,"Palatino Linotype",serif}body{overflow-x:hidden}button,a,summary{font:inherit;-webkit-tap-highlight-color:transparent}button{min-height:40px;padding:7px 12px;color:var(--ink);background:transparent;border:1px solid #d1ac5860;border-radius:20px;cursor:pointer;touch-action:manipulation}button:hover,button:focus-visible,a:focus-visible{color:#fff;border-color:var(--cyan);outline:2px solid var(--cyan);outline-offset:3px}button:disabled{opacity:.5;cursor:default}a{color:var(--cyan)}#game-container{max-width:1440px;margin:auto;padding:12px;display:grid;gap:10px;min-width:0}.identity{display:flex;align-items:center;justify-content:space-between;gap:12px}.identity h1{margin:0;font-size:24px;font-weight:400;letter-spacing:.05em}.device{color:var(--muted);font-size:14px;white-space:nowrap}.hud-top{display:grid;grid-template-columns:110px 110px minmax(0,1fr);gap:16px;align-items:end;margin-top:8px}.score-label,.bar-wrap label{font-size:14px;color:var(--muted)}.score-display,.wave-badge{font-size:20px;color:var(--gold)}.hud-bars{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;min-width:0}.bar-track{height:6px;background:#ffffff12;border-radius:3px;overflow:hidden;margin-top:4px}.bar-fill{height:100%;width:100%}.shield-fill{background:var(--cyan)}.hull-fill{background:#8dcc9a}.chrono-fill{background:var(--magenta)}#game-layout{display:grid;grid-template-columns:minmax(0,1fr) 264px;gap:12px;min-width:0;align-items:start}#playfield{position:relative;min-width:0;height:min(64dvh,640px);overflow:hidden}canvas{display:block;width:100%;height:100%;touch-action:none;background:#030409}canvas:focus{outline:2px solid #6fdbdf70;outline-offset:-2px}#crt-overlay{position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(transparent 0 3px,#00000015 3px 4px)}#controlPanel{min-width:0;display:grid;gap:10px}.menu-screen h2{font-weight:400;font-size:20px;margin:0 0 8px}.menu-screen p{font-size:14px;color:var(--muted);margin:0 0 12px}.menu-screen.hidden{display:none}.play-btn{color:var(--gold);width:100%;font-size:16px}.system-controls{display:flex;gap:8px;align-items:center}.system-controls button{flex:1;font-size:14px}.system-controls a{font-size:14px}.touch-controls{display:none}.touch-enabled .touch-controls{display:grid;gap:10px}.sticks{display:grid;grid-template-columns:1fr 1fr;gap:12px;justify-items:center}.stick-unit{display:grid;justify-items:center;gap:5px;font-size:14px;color:var(--muted)}.touch-stick{position:relative;width:92px;height:92px;border:1px solid #d1ac5880;border-radius:50%;touch-action:none;box-shadow:inset 0 0 0 10px #d1ac5806}.touch-nub{position:absolute;width:28px;height:28px;left:31px;top:31px;border:1px solid var(--cyan);border-radius:50%;background:#6fdbdf0c;pointer-events:none}.touch-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.touch-actions button{min-width:0;padding:7px 4px;font-size:14px;touch-action:none}.touch-actions button:active{border-color:var(--cyan);color:var(--cyan)}.help{font-size:14px;color:var(--muted)}.help p{margin:6px 0}.help summary{cursor:pointer}.weapon-dock{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.weapon-card{font-size:14px;min-width:0;padding:6px}.weapon-card.active{color:var(--cyan);border-color:var(--cyan)}.page-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:14px;min-width:0}.page-footer p{margin:0;color:var(--muted)}.story-disclosure{font-size:14px;color:var(--muted)}#milestone:empty{display:none}#nsp-related{font-size:14px;white-space:nowrap}body:not([data-mode=PLAYING]) .touch-controls{display:none}@media(max-width:620px){#game-container{padding:10px;gap:8px}.identity h1{font-size:20px}.identity{align-items:start}.device{max-width:105px;white-space:normal;text-align:right}.hud-top{grid-template-columns:1fr 1fr;gap:6px}.hud-bars{grid-column:1/-1;gap:10px}#game-layout{grid-template-columns:minmax(0,1fr);gap:8px}#playfield{height:auto;aspect-ratio:16/9;min-height:190px}.touch-stick{width:88px;height:88px}.touch-nub{left:29px;top:29px}.sticks{gap:10px}.system-controls{order:2}.help{order:3}.page-footer{flex-wrap:wrap;gap:6px}.weapon-card{font-size:14px;line-height:1.3}}@media(max-width:950px) and (max-height:520px){#game-container{padding:8px 12px;gap:7px}.identity h1{font-size:18px}.device{max-width:none;white-space:nowrap}.hud-top{grid-template-columns:86px 86px minmax(0,1fr);gap:12px;margin-top:2px}.hud-bars{grid-column:auto}.score-display,.wave-badge{font-size:16px}.bar-wrap label,.score-label{font-size:14px}#game-layout{grid-template-columns:minmax(0,1fr) 254px;gap:12px}#playfield{height:calc(100dvh - 174px);min-height:180px;aspect-ratio:auto}#controlPanel{gap:6px}.touch-enabled .touch-controls{gap:7px}.touch-stick{width:64px;height:64px}.touch-nub{width:24px;height:24px;left:19px;top:19px}.stick-unit{gap:2px}.touch-actions{gap:5px}.touch-actions button,.system-controls button{min-height:36px;padding:5px 3px}.system-controls{order:2;gap:6px}.help{display:none}.weapon-card{min-height:34px;padding:4px}.page-footer{flex-wrap:nowrap}.menu-screen h2{font-size:18px;margin-bottom:4px}.menu-screen p{margin-bottom:6px}.play-btn{min-height:36px;padding:5px}.page-footer p{max-width:65%}}@media(max-width:620px) and (min-height:621px){#game-container{height:100dvh;grid-template-rows:auto minmax(0,1fr) auto auto;gap:6px}#game-layout{grid-template-rows:minmax(220px,1fr) auto;min-height:0;gap:8px}#playfield{height:100%;min-height:0;aspect-ratio:auto}.touch-actions{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}.weapon-key{display:none}.hud-top{margin-top:6px}body[data-mode=PAUSED] .touch-controls{display:grid;opacity:.5;pointer-events:none}}@media(max-width:380px) and (min-height:621px){.identity h1{font-size:18px}}@media(prefers-reduced-motion:reduce){#crt-overlay{display:none}}
 </style>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "VideoGame", "name": "NorthStar Chrono Defender: 360 Edition", "url": "https://northstarprime.net/arcade/custom/northstar-chrono-defender/", "gamePlatform": "Web browser", "applicationCategory": "Game", "operatingSystem": "Any", "isAccessibleForFree": true, "publisher": {"@type": "Organization", "name": "NorthStar Prime", "url": "https://northstarprime.net/"}, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "description": "Play NorthStar Chrono Defender: 360 Edition free in your browser in the NorthStar Prime IDG Arcade, an original game from the Vorath universe.", "image": "https://northstarprime.net/static/games/og/northstar-chrono-defender_og_1200x630.jpg"}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "VideoGame", "name": "NorthStar Chrono Defender", "url": "https://northstarprime.net/arcade/custom/northstar-chrono-defender/", "gamePlatform": "Web browser", "applicationCategory": "Game", "operatingSystem": "Any", "isAccessibleForFree": true, "publisher": {"@type": "Organization", "name": "NorthStar Prime", "url": "https://northstarprime.net/"}, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "description": "Play NorthStar Chrono Defender free in your browser in the NorthStar Prime IDG Arcade, an original game from the Vorath universe.", "image": "https://northstarprime.net/static/games/og/northstar-chrono-defender_og_1200x630.jpg"}</script>
 <meta property="og:image" content="https://northstarprime.net/static/games/og/northstar-chrono-defender_og_1200x630.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -204,128 +18,45 @@ canvas {
 <meta name="twitter:image" content="https://northstarprime.net/static/games/og/northstar-chrono-defender_og_1200x630.jpg">
 <meta name="twitter:image:alt" content="Cover art for northstar-chrono-defender, a free browser game in the NorthStar Prime IDG Arcade">
 </head>
-<body>
+<body data-mode="TITLE">
 <div id="game-container">
-  <canvas id="gameCanvas"></canvas>
-  <div id="crt-overlay"></div>
-
-  <!-- HUD -->
-  <div id="hud">
-    <div class="hud-top">
-      <div class="hud-card">
-        <div class="score-label">Score</div>
-        <div class="score-display" id="scoreVal">000,000</div>
-      </div>
-      <div class="hud-card">
-        <div class="wave-badge" id="waveVal">WAVE 01</div>
-        <div style="font-size: 11px; color:#94a3b8; text-align:center; margin-top:2px;" id="enemyCount">ENEMIES: 0</div>
-      </div>
-      <div class="hud-card hud-bars">
-        <div class="bar-wrap">
-          <span>Shield</span>
-          <div class="bar-track"><div class="bar-fill shield-fill" id="shieldBar"></div></div>
-        </div>
-        <div class="bar-wrap">
-          <span>Hull</span>
-          <div class="bar-track"><div class="bar-fill hull-fill" id="hullBar"></div></div>
-        </div>
-        <div class="bar-wrap">
-          <span>Chrono</span>
-          <div class="bar-track"><div class="bar-fill chrono-fill" id="chronoBar"></div></div>
-        </div>
-      </div>
-      <div class="hud-card">
-        <div class="controller-badge" id="gpBadge">
-          <div class="controller-dot" id="gpDot"></div>
-          <span id="gpText">KEYBOARD / MOUSE</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="hud-bottom">
-      <div class="weapon-dock">
-        <div class="weapon-card active" id="wCard0">
-          <span>Twin Plasma</span>
-          <span class="btn-prompt xbox-x">X / 1</span>
-        </div>
-        <div class="weapon-card" id="wCard1">
-          <span>Tachyon Beam</span>
-          <span class="btn-prompt xbox-x">X / 2</span>
-        </div>
-        <div class="weapon-card" id="wCard2">
-          <span>Micro-Missiles</span>
-          <span class="btn-prompt xbox-x">X / 3</span>
-        </div>
-      </div>
-      <div style="display:flex; gap:10px;">
-        <div class="hud-card" style="padding: 8px 16px; display:flex; align-items:center; gap:8px;">
-          <span class="btn-prompt xbox-a">A / SPACE</span>
-          <span style="font-size:12px; font-weight:700; color:var(--gold);">SINGULARITY BOMB: <b id="bombVal" style="color:#fff;">3</b></span>
-        </div>
-        <div class="hud-card" style="padding: 8px 16px; display:flex; align-items:center; gap:8px;">
-          <span class="btn-prompt xbox-b">LT / C</span>
-          <span style="font-size:12px; font-weight:700; color:var(--magenta);">CHRONO RIFT SLOW-MO</span>
-        </div>
-      </div>
-    </div>
+<header id="hud" aria-label="Flight status">
+ <div class="identity"><h1>NorthStar Chrono Defender</h1><span class="device" id="gpText">Keyboard / mouse</span></div>
+ <div class="hud-top">
+  <div><div class="score-label">Score</div><div class="score-display" id="scoreVal">000,000</div></div>
+  <div><div class="wave-badge" id="waveVal">Wave 01</div><div class="score-label" id="enemyCount">Enemies: 0</div></div>
+  <div class="hud-bars">
+   <div class="bar-wrap"><label>Shield</label><div class="bar-track"><div class="bar-fill shield-fill" id="shieldBar"></div></div></div>
+   <div class="bar-wrap"><label>Hull</label><div class="bar-track"><div class="bar-fill hull-fill" id="hullBar"></div></div></div>
+   <div class="bar-wrap"><label>Chrono</label><div class="bar-track"><div class="bar-fill chrono-fill" id="chronoBar"></div></div></div>
   </div>
-
-  <!-- Xbox 360 Achievement Unlocked Banner -->
-  <div id="achievement-toast">
-    <div class="ach-ring">&#10003;</div>
-    <div class="ach-info">
-      <div class="ach-title">Achievement Unlocked</div>
-      <div class="ach-name"><span id="achTitle">First Contact</span><span class="ach-score" id="achG">20G</span></div>
-    </div>
-  </div>
-
-  <!-- Title Screen -->
-  <div class="modal-screen" id="titleScreen">
-    <div class="hero-art-bg"></div>
-    <div class="logo-title">NorthStar Chrono Defender</div>
-    <div class="logo-sub">Xbox 360 Edition // Interdimensional Games</div>
-    <button class="play-btn" id="startBtn">Engage Combat</button>
-    <div class="controls-guide">
-      <div class="control-item">
-        <div class="control-key">Left Stick / WASD</div>
-        <div>Omnidirectional Propulsion & Banking</div>
-      </div>
-      <div class="control-item">
-        <div class="control-key">Right Stick / Mouse</div>
-        <div>Twin-Stick 360° Rotational Aiming</div>
-      </div>
-      <div class="control-item">
-        <div class="control-key">RT / Left Click</div>
-        <div>Primary Autocannon Barrage</div>
-      </div>
-      <div class="control-item">
-        <div class="control-key">LT / C / Right Click</div>
-        <div>Chrono Rift 4s Time Dilation</div>
-      </div>
-      <div class="control-item">
-        <div class="control-key">A Button / Space</div>
-        <div>Smart Singularity Bomb Detonation</div>
-      </div>
-      <div class="control-item">
-        <div class="control-key">B Button / Shift</div>
-        <div>Afterburner Dodge (Invulnerable)</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Game Over Screen -->
-  <div class="modal-screen hidden" id="gameOverScreen">
-    <div class="logo-title" style="color:var(--red);">Starfighter Destroyed</div>
-    <div class="logo-sub" id="finalStats">FINAL SCORE: 0 // REACHED WAVE 1</div>
-    <button class="play-btn" id="retryBtn">Re-Deploy</button>
-  </div>
+ </div>
+</header>
+<div id="game-layout">
+ <main id="playfield"><canvas id="gameCanvas" tabindex="0" aria-label="Chrono Defender space combat arena"></canvas><div id="crt-overlay" aria-hidden="true"></div></main>
+ <aside id="controlPanel" aria-label="Flight controls">
+  <section class="menu-screen" id="titleScreen"><h2>Defend the chrono core</h2><p>Clear the wave. See what looks back. Left stick moves; right stick aims and fires. The fiction trail is optional.</p><button type="button" class="play-btn" id="startBtn">Engage combat</button></section>
+  <section class="menu-screen hidden" id="gameOverScreen"><h2>Starfighter lost</h2><p id="finalStats"></p><button type="button" class="play-btn" id="retryBtn">Re-deploy</button></section>
+  <section class="touch-controls" id="touchControls" aria-label="Touch flight controls">
+   <div class="sticks">
+    <div class="stick-unit"><div class="touch-stick" id="moveStick" role="group" aria-label="Drag to move"><span class="touch-nub" id="moveNub"></span></div><span>Move</span></div>
+    <div class="stick-unit"><div class="touch-stick" id="aimStick" role="group" aria-label="Drag to aim and fire"><span class="touch-nub" id="aimNub"></span></div><span>Aim / fire</span></div>
+   </div>
+   <div class="touch-actions"><button type="button" id="touchFire">Fire</button><button type="button" data-action="bomb">Bomb</button><button type="button" data-action="chrono">Chrono</button><button type="button" data-action="dodge">Dodge</button><button type="button" data-action="weapon">Weapon</button></div>
+  </section>
+  <div class="system-controls"><button type="button" id="pauseBtn" disabled>Pause</button><button type="button" id="soundBtn">Sound on</button><button type="button" id="restartBtn">Restart</button><a href="/arcade/">Arcade</a></div>
+  <details class="help"><summary>Keyboard / controller</summary><p>WASD or arrows move. Mouse aims; click fires; right-click or C slows time. Space drops a bomb; Shift dodges; 1–3 select weapons. Escape pauses.</p><p>Controller: left stick move, right stick aim, RT fire, LT chrono, A bomb, B dodge, X weapon, Menu start / pause.</p></details>
+ </aside>
 </div>
-
+<div class="weapon-dock" aria-label="Weapon selection"><button class="weapon-card active" id="wCard0" data-weapon="0">Twin plasma<span class="weapon-key"> · 1</span></button><button class="weapon-card" id="wCard1" data-weapon="1">Tachyon beam<span class="weapon-key"> · 2</span></button><button class="weapon-card" id="wCard2" data-weapon="2">Micro-missiles<span class="weapon-key"> · 3</span></button></div>
+<footer class="page-footer"><p>Bombs: <b id="bombVal">3</b> <span id="milestone" role="status"></span> <a id="chronoThread" href="https://northstarprime.net/404.html" target="_blank" rel="noopener" title="Optional VORATH fiction trail; opens in a new tab without ending this sortie" hidden>Signal found →</a></p><nav id="nsp-related" aria-label="More games"><a href="/arcade/">Arcade</a> · <a href="/store/">Store</a></nav><small class="story-disclosure">An NSP story game; fiction; no purchase needed.</small></footer>
+</div>
+<script src="/arcade/custom/northstar-chrono-defender/weapon_atlas.js"></script>
 <script>
 'use strict';
 /**
- * NorthStar Chrono Defender - Xbox 360 Arcade Edition
- * Canvas 60 FPS WebGL-grade 2D engine with Gamepad API & procedural Web Audio.
+ * NorthStar Chrono Defender
+ * Canvas 2D wave combat with Gamepad API and Web Audio.
  */
 
 // --- Audio Synthesizer Engine ---
@@ -421,7 +152,7 @@ class ChronoAudio {
   achievement() {
     if (!this.ctx) return;
     const now = this.ctx.currentTime;
-    // Classic Xbox 360 two-tone rising chime (F#5 -> B5)
+    // Existing ascending two-tone cue
     [740, 988].forEach((freq, idx) => {
       const osc = this.ctx.createOscillator();
       const g = this.ctx.createGain();
@@ -482,20 +213,34 @@ const audio = new ChronoAudio();
 
 let W = canvas.width = window.innerWidth;
 let H = canvas.height = window.innerHeight;
-window.addEventListener('resize', () => {
-  W = canvas.width = window.innerWidth;
-  H = canvas.height = window.innerHeight;
-});
+function resizeArena() {
+  const rect=canvas.getBoundingClientRect();
+  const width=Math.max(160,Math.floor(rect.width)),height=Math.max(160,Math.floor(rect.height));
+  if(canvas.width===width&&canvas.height===height)return;
+  const previousWidth=W,previousHeight=H;
+  const frame=document.createElement('canvas');frame.width=canvas.width;frame.height=canvas.height;
+  frame.getContext('2d').drawImage(canvas,0,0);
+  W=canvas.width=width;H=canvas.height=height;
+  for(const star of stars){star.x*=W/Math.max(1,previousWidth);star.y*=H/Math.max(1,previousHeight);}
+  ctx.drawImage(frame,0,0,W,H);
+}
+window.addEventListener('resize',resizeArena);
+new ResizeObserver(resizeArena).observe(canvas);
 
 // State
 let gameState = 'TITLE';
 let score = 0;
 let wave = 1;
 let enemiesRemaining = 0;
+let portalDiscovered = false;
+function updatePortalThread(){document.getElementById('chronoThread').hidden=!portalDiscovered;}
 let timeDilation = 1.0;
 let chronoTimer = 0;
 let shakeTime = 0;
 let shakeMag = 0;
+
+// Shared contact damage uses the existing 60 Hz simulation ticks (~0.5 seconds).
+const CONTACT_HIT_COOLDOWN = 30;
 
 // Player
 const player = {
@@ -508,8 +253,106 @@ const player = {
   bombs: 3,
   weapon: 0, // 0: Twin Plasma, 1: Tachyon Beam, 2: Missiles
   dodgeCd: 0, isInvulnerable: false,
-  fireCd: 0
+  fireCd: 0, damageFlash: 0, contactCd: 0
 };
+
+// Distant VORATH environment: visual scenery only, with a separate parallax plane.
+const farEnvironment = new Image();
+let farEnvironmentState = 'loading';
+farEnvironment.onload=()=>{farEnvironmentState=farEnvironment.naturalWidth===1774&&farEnvironment.naturalHeight===887?'ready':'invalid';};
+farEnvironment.onerror=()=>{farEnvironmentState='error';};
+farEnvironment.src='/arcade/custom/northstar-chrono-defender/assets/far-environment-v01.png';
+function farFrame(width,height,shipX,shipY) {
+  const scale=Math.max(width/1774,height/887)*1.04;
+  const drawWidth=1774*scale,drawHeight=887*scale;
+  const cameraX=Math.max(-.5,Math.min(.5,shipX/width-.5));
+  const cameraY=Math.max(-.5,Math.min(.5,shipY/height-.5));
+  // Taller portrait arenas retain the existing right-hand eye gate in view.
+  const originX=width/height<1.35?width-drawWidth+Math.min(12,drawWidth-width)/2:(width-drawWidth)/2;
+  return{x:originX-cameraX*Math.min(12,drawWidth-width),
+    y:(height-drawHeight)/2-cameraY*Math.min(8,drawHeight-height),width:drawWidth,height:drawHeight};
+}
+function drawFarEnvironment() {
+  if(farEnvironmentState!=='ready')return;
+  const frame=farFrame(W,H,player.x,player.y);
+  ctx.save();ctx.globalAlpha=.8;
+  ctx.drawImage(farEnvironment,frame.x,frame.y,frame.width,frame.height);
+  ctx.restore();
+}
+
+// Accepted six-state atlas: 3 columns × 2 rows, each cell 512 square, nose right.
+const shipAtlas = new Image();
+let shipAtlasState = 'loading';
+shipAtlas.onload = () => { shipAtlasState = shipAtlas.naturalWidth===1536&&shipAtlas.naturalHeight===1024?'ready':'invalid'; };
+shipAtlas.onerror = () => { shipAtlasState = 'error'; };
+shipAtlas.src = '/arcade/custom/northstar-chrono-defender/assets/interceptor-v02.png';
+function chooseShipPose(ship=player) {
+  if(ship.damageFlash>0)return 4;
+  if(ship.isInvulnerable)return 5;
+  if(ship.fireCd>0)return 3;
+  const lateral=-Math.sin(ship.angle)*ship.vx+Math.cos(ship.angle)*ship.vy;
+  return lateral<-.35?1:lateral>.35?2:0;
+}
+function drawPlayerShip() {
+  ctx.save();ctx.translate(player.x,player.y);ctx.rotate(player.angle);
+  if(shipAtlasState==='ready') {
+    const pose=chooseShipPose();
+    ctx.drawImage(shipAtlas,(pose%3)*512,Math.floor(pose/3)*512,512,512,-32,-32,64,64);
+  } else {
+      ctx.shadowColor = '#00e5ff'; ctx.shadowBlur = 15;
+      // Wing thrusters
+      ctx.fillStyle = '#00e5ff';
+      ctx.fillRect(-18, -12, 10, 4);
+      ctx.fillRect(-18, 8, 10, 4);
+      // Ship fuselage
+      ctx.fillStyle = player.isInvulnerable ? '#ffffff' : '#0f172a';
+      ctx.strokeStyle = '#00e5ff'; ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(22, 0); ctx.lineTo(-16, -14); ctx.lineTo(-10, 0); ctx.lineTo(-16, 14);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      // Cockpit canopy
+      ctx.fillStyle = '#f5c542';
+      ctx.beginPath(); ctx.ellipse(4, 0, 7, 3, 0, 0, Math.PI * 2); ctx.fill();
+    }
+  ctx.restore();
+}
+
+// Accepted hostile atlas: exact 512px cells, center anchor, nose right.
+const enemyAtlas = new Image();
+let enemyAtlasState = 'loading';
+enemyAtlas.onload = () => { enemyAtlasState = enemyAtlas.naturalWidth===1536&&enemyAtlas.naturalHeight===1024?'ready':'invalid'; };
+enemyAtlas.onerror = () => { enemyAtlasState = 'error'; };
+enemyAtlas.src = '/arcade/custom/northstar-chrono-defender/assets/hostiles-v02.png';
+
+// Optional visual layer; loading/invalid/error falls back to existing primitives.
+const weaponAtlasImage = new Image();
+const weaponArt = window.ChronoWeaponAtlas?.create?.(weaponAtlasImage) || null;
+if(weaponArt)weaponAtlasImage.src=window.ChronoWeaponAtlas.SOURCE;
+let enemyVisualClock = 0;
+let enemyHitEchoes = []; // Visual only: never queried by targeting, collisions, score or waves.
+function chooseEnemyPose(enemy,clock=enemyVisualClock) {
+  const row=enemy.type==='gunship'?3:0;
+  if(enemy.damageFlash>0)return row+2;
+  const moving=Math.hypot(enemy.vx,enemy.vy)>.01;
+  return row+(moving&&Math.floor((clock+enemy.x*.05+enemy.y*.05)/12)%2?1:0);
+}
+function drawEnemyShip(enemy,angle,opacity=1) {
+  ctx.save();ctx.translate(enemy.x,enemy.y);ctx.rotate(angle);ctx.globalAlpha=opacity;
+  if(enemyAtlasState==='ready') {
+    const pose=chooseEnemyPose(enemy);
+    ctx.drawImage(enemyAtlas,(pose%3)*512,Math.floor(pose/3)*512,512,512,-32,-32,64,64);
+  } else {
+    // Retain the original readable silhouettes when the image is unavailable.
+    ctx.shadowColor='#ef4444';ctx.shadowBlur=12;
+    ctx.fillStyle='#1e1b4b';ctx.strokeStyle='#ef4444';ctx.lineWidth=2;
+    ctx.beginPath();
+    if(enemy.type==='gunship')ctx.rect(-14,-14,28,28);
+    else {ctx.moveTo(14,0);ctx.lineTo(-12,-10);ctx.lineTo(-6,0);ctx.lineTo(-12,10);}
+    ctx.closePath();ctx.fill();ctx.stroke();
+  }
+  ctx.restore();
+}
 
 // Entities
 let bullets = [];
@@ -528,103 +371,151 @@ for (let i = 0; i < 180; i++) {
   });
 }
 
-// Controls
+// Device status follows observed input, including touch when capability flags change.
+let inputDevice=(navigator.maxTouchPoints>0||!!window.matchMedia?.('(any-pointer: coarse)').matches)?'Touch controls':'Keyboard / mouse';
+let nonPadDevice=inputDevice;
+function setInputDevice(label){inputDevice=label;if(label!=='Controller')nonPadDevice=label;document.getElementById('gpText').textContent=label;}
+setInputDevice(inputDevice);
+for(const event of ['pointerdown','pointermove'])document.addEventListener(event,e=>{
+  if(e.pointerType==='touch')setInputDevice('Touch controls');
+  else if(e.pointerType==='mouse'||e.pointerType==='pen')setInputDevice('Keyboard / mouse');
+},true);
+document.addEventListener('keydown',()=>setInputDevice('Keyboard / mouse'),true);
+
+// Controls: explicit aim ownership survives neutral sticks and changes only on new intent.
 const keys = {};
 const mouse = { x: W / 2, y: H / 2, down: false };
-// Preserve the last controller bearing until the player deliberately moves the mouse.
 let aimSource = 'mouse';
+let muted = false;
+const touch = { move:{x:0,y:0}, aim:{x:0,y:0}, aimFire:false, fire:new Set() };
+const stickOwners = { move:null, aim:null };
+const captures = new Map();
+const pauseButton = document.getElementById('pauseBtn');
+const soundButton = document.getElementById('soundBtn');
+const stickElements = {move:document.getElementById('moveStick'),aim:document.getElementById('aimStick')};
+const nubs = {move:document.getElementById('moveNub'),aim:document.getElementById('aimNub')};
+document.documentElement.classList.toggle('touch-enabled', navigator.maxTouchPoints > 0 || !!window.matchMedia?.('(any-pointer: coarse)').matches);
+function releaseCaptures() {
+  for (const [id,element] of captures) { try { if(element.hasPointerCapture(id)) element.releasePointerCapture(id); } catch (_) {} }
+  captures.clear();
+}
+function clearHeldInput() {
+  for (const key of Object.keys(keys)) delete keys[key];
+  mouse.down = false;
+  touch.move={x:0,y:0}; touch.aim={x:0,y:0}; touch.aimFire=false; touch.fire.clear();
+  stickOwners.move=null; stickOwners.aim=null;
+  nubs.move.style.transform=''; nubs.aim.style.transform='';
+  releaseCaptures();
+  player.vx=0; player.vy=0;
+}
+function updateModeUi() {
+  document.body.dataset.mode=gameState;
+  pauseButton.disabled=gameState==='TITLE'||gameState==='GAMEOVER';
+  pauseButton.textContent=gameState==='PAUSED'?'Resume':'Pause';
+}
+function pauseGame() {
+  clearHeldInput();
+  if(gameState==='PLAYING') { gameState='PAUSED'; updateModeUi(); audio.ctx?.suspend().catch(()=>{}); }
+}
+function resumeGame() {
+  if(gameState!=='PAUSED') return;
+  clearHeldInput(); gameState='PLAYING'; updateModeUi();
+  if(!muted) audio.ctx?.resume().catch(()=>{});
+  canvas.focus({preventScroll:true});
+}
+function togglePause() { if(gameState==='PLAYING') pauseGame(); else if(gameState==='PAUSED') resumeGame(); }
+function isKeyboardActivation(e) { return e.detail===0 && !e.pointerType && !e.sourceCapabilities?.firesTouchEvents; }
+function bindPress(button,action) {
+  button.addEventListener('pointerdown',e=>{e.preventDefault();action();});
+  button.addEventListener('click',e=>{if(isKeyboardActivation(e))action();});
+}
+function performAction(action) {
+  if(gameState!=='PLAYING') return;
+  if(action==='bomb') fireBomb();
+  else if(action==='chrono') activateChrono();
+  else if(action==='dodge') dodgeRoll();
+  else if(action==='weapon') selectWeapon((player.weapon+1)%3);
+}
 window.addEventListener('keydown', e => {
-  keys[e.key.toLowerCase()] = true;
-  if (e.key === ' ' && gameState === 'PLAYING') fireBomb();
-  if (e.key.toLowerCase() === 'c' && gameState === 'PLAYING') activateChrono();
-  if (e.key === '1') selectWeapon(0);
-  if (e.key === '2') selectWeapon(1);
-  if (e.key === '3') selectWeapon(2);
+  const key=e.key.toLowerCase();
+  if(e.target?.closest?.('button,a,summary,input,textarea') && key!=='escape') return;
+  if(e.repeat && !keys[key]) return;
+  keys[key]=true;
+  if([' ','arrowup','arrowdown','arrowleft','arrowright'].includes(key)) e.preventDefault();
+  if(e.repeat) return;
+  if(key==='escape') { togglePause(); return; }
+  if(key==='enter' && gameState==='TITLE') { startGame(); return; }
+  if(key==='r' && gameState==='GAMEOVER') { startGame(); return; }
+  if(gameState!=='PLAYING') return;
+  if(key===' ') performAction('bomb');
+  else if(key==='c') performAction('chrono');
+  else if(key==='shift') performAction('dodge');
+  else if(['1','2','3'].includes(key)) selectWeapon(Number(key)-1);
 });
-window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
-window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; aimSource = 'mouse'; });
-window.addEventListener('mousedown', () => { mouse.down = true; aimSource = 'mouse'; });
-window.addEventListener('mouseup', () => { mouse.down = false; });
+window.addEventListener('keyup', e => { delete keys[e.key.toLowerCase()]; });
+function pointMouse(e) { const rect=canvas.getBoundingClientRect(); mouse.x=(e.clientX-rect.left)*W/rect.width; mouse.y=(e.clientY-rect.top)*H/rect.height; aimSource='mouse'; }
+canvas.addEventListener('mousemove', pointMouse);
+canvas.addEventListener('mousedown', e => { if(gameState!=='PLAYING') return; pointMouse(e); if(e.button===0) mouse.down=true; if(e.button===2) {e.preventDefault();performAction('chrono');} });
+window.addEventListener('mouseup', () => { mouse.down=false; });
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+window.addEventListener('blur', pauseGame);
+document.addEventListener('visibilitychange', () => { if(document.hidden) pauseGame(); });
+bindPress(pauseButton,togglePause);
+bindPress(soundButton, () => { muted=!muted; soundButton.textContent=muted?'Sound off':'Sound on'; if(audio.ctx)(muted?audio.ctx.suspend():audio.ctx.resume()).catch(()=>{}); });
+function capture(element,id) { try { element.setPointerCapture(id); captures.set(id,element); } catch (_) {} }
+for (const kind of ['move','aim']) {
+  const element=stickElements[kind];
+  const update=e=>{if(gameState!=='PLAYING') return;const rect=element.getBoundingClientRect(),radius=rect.width*.4;let x=(e.clientX-rect.left-rect.width/2)/radius,y=(e.clientY-rect.top-rect.height/2)/radius;const size=Math.hypot(x,y);if(size>1){x/=size;y/=size;}touch[kind]={x,y};nubs[kind].style.transform='translate('+x*radius*.65+'px,'+y*radius*.65+'px)';if(kind==='aim'&&size>.12){aimSource='touch';player.angle=Math.atan2(y,x);touch.aimFire=true;}else if(kind==='aim')touch.aimFire=false;};
+  element.addEventListener('pointerdown',e=>{if(gameState!=='PLAYING'||stickOwners[kind]!==null)return;e.preventDefault();stickOwners[kind]=e.pointerId;capture(element,e.pointerId);update(e);});
+  element.addEventListener('pointermove',e=>{if(e.pointerId===stickOwners[kind])update(e);});
+  const release=e=>{if(e.pointerId!==stickOwners[kind])return;stickOwners[kind]=null;touch[kind]={x:0,y:0};if(kind==='aim')touch.aimFire=false;nubs[kind].style.transform='';captures.delete(e.pointerId);};
+  for(const type of ['pointerup','pointercancel','lostpointercapture']) element.addEventListener(type,release);
+}
+const fireButton=document.getElementById('touchFire');
+fireButton.addEventListener('pointerdown',e=>{if(gameState!=='PLAYING')return;e.preventDefault();touch.fire.add(e.pointerId);capture(fireButton,e.pointerId);});
+for(const type of ['pointerup','pointercancel','lostpointercapture'])fireButton.addEventListener(type,e=>{touch.fire.delete(e.pointerId);captures.delete(e.pointerId);});
+fireButton.addEventListener('click',e=>{if(isKeyboardActivation(e)&&gameState==='PLAYING')firePlayerWeapon();});
+for(const button of document.querySelectorAll('[data-action]')) {
+  bindPress(button,()=>performAction(button.dataset.action));
+}
+for(const button of document.querySelectorAll('[data-weapon]'))bindPress(button,()=>selectWeapon(Number(button.dataset.weapon)));
 
-// Gamepad Vibration & Poll
-let lastGpState = { a: false, b: false, x: false, y: false, lb: false, rb: false, lt: false, rt: false };
+// Standard-mapped controller only; device polling never spends resources off-screen.
+let lastGpState = {};
+let activePad = '';
+function getPads() { try { return navigator.getGamepads ? Array.from(navigator.getGamepads()) : []; } catch (_) { return []; } }
 function pollGamepad() {
-  const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-  for (let i = 0; i < gamepads.length; i++) {
-    const gp = gamepads[i];
-    if (!gp || !gp.connected) continue;
-
-    document.getElementById('gpBadge').style.borderColor = '#107c10';
-    document.getElementById('gpText').textContent = 'XBOX 360 CONTROLLER';
-
-    // Left Stick: Move
-    const lx = Math.abs(gp.axes[0]) > 0.15 ? gp.axes[0] : 0;
-    const ly = Math.abs(gp.axes[1]) > 0.15 ? gp.axes[1] : 0;
-    player.vx += lx * 0.9;
-    player.vy += ly * 0.9;
-
-    // Right Stick: Aim
-    const rx = gp.axes[2];
-    const ry = gp.axes[3];
-    if (Math.hypot(rx, ry) > 0.25) {
-      aimSource = 'gamepad';
-      player.angle = Math.atan2(ry, rx);
-    }
-
-    // RT / Fire (Button 7 or Right Trigger)
-    const rt = (gp.buttons[7] && gp.buttons[7].value > 0.3) || (gp.buttons[0] && gp.buttons[0].pressed);
-    if (rt) firePlayerWeapon();
-
-    // LT / Chrono Slow-Mo (Button 6)
-    if (gp.buttons[6] && gp.buttons[6].value > 0.5 && !lastGpState.lt) activateChrono();
-
-    // A Button: Singularity Bomb (Button 0)
-    if (gp.buttons[0] && gp.buttons[0].pressed && !lastGpState.a) fireBomb();
-
-    // B Button: Afterburner Dodge (Button 1)
-    if (gp.buttons[1] && gp.buttons[1].pressed && !lastGpState.b) dodgeRoll();
-
-    // X Button: Cycle Weapon (Button 2)
-    if (gp.buttons[2] && gp.buttons[2].pressed && !lastGpState.x) {
-      selectWeapon((player.weapon + 1) % 3);
-      vibrate(60, 0.4, 0.4);
-    }
-
-    // Save state
-    lastGpState.a = gp.buttons[0]?.pressed;
-    lastGpState.b = gp.buttons[1]?.pressed;
-    lastGpState.x = gp.buttons[2]?.pressed;
-    lastGpState.lt = gp.buttons[6]?.value > 0.5;
-    return;
+  const gp=getPads().find(p=>p&&p.connected!==false&&p.mapping==='standard');
+  if(!gp) {lastGpState={};activePad='';if(inputDevice==='Controller')setInputDevice(nonPadDevice);return;}
+  const identity=String(gp.index)+':'+gp.id;
+  if(identity!==activePad){lastGpState={};activePad=identity;}
+  if(gp.axes.some(v=>Number.isFinite(v)&&Math.abs(v)>.15)||gp.buttons.some(b=>b?.pressed||b?.value>.5))setInputDevice('Controller');
+  const held=i=>!!(gp.buttons[i]?.pressed||gp.buttons[i]?.value>.5);
+  const current={a:held(0),b:held(1),x:held(2),lt:held(6),menu:held(9)};
+  if(current.menu&&!lastGpState.menu) {if(gameState==='TITLE'||gameState==='GAMEOVER')startGame();else togglePause();}
+  if(gameState==='PLAYING') {
+    const axis=i=>Number.isFinite(gp.axes[i])?gp.axes[i]:0;
+    const lx=Math.abs(axis(0))>.15?axis(0):0,ly=Math.abs(axis(1))>.15?axis(1):0;
+    player.vx+=lx*.9;player.vy+=ly*.9;
+    const rx=axis(2),ry=axis(3);
+    if(Math.hypot(rx,ry)>.25){aimSource='gamepad';player.angle=Math.atan2(ry,rx);}
+    if(held(7))firePlayerWeapon();
+    if(current.lt&&!lastGpState.lt)activateChrono();
+    if(current.a&&!lastGpState.a)fireBomb();
+    if(current.b&&!lastGpState.b)dodgeRoll();
+    if(current.x&&!lastGpState.x)selectWeapon((player.weapon+1)%3);
+  }
+  lastGpState=current;
+}
+function vibrate(duration=100,weak=.5,strong=.5) {
+  for(const gp of getPads())if(typeof gp?.vibrationActuator?.playEffect==='function') {
+    try{Promise.resolve(gp.vibrationActuator.playEffect('dual-rumble',{startDelay:0,duration,weakMagnitude:weak,strongMagnitude:strong})).catch(()=>{});}catch(_){}
   }
 }
 
-function vibrate(duration = 100, weak = 0.5, strong = 0.5) {
-  const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-  for (let i = 0; i < gamepads.length; i++) {
-    const gp = gamepads[i];
-    if (gp && gp.vibrationActuator) {
-      gp.vibrationActuator.playEffect('dual-rumble', {
-        startDelay: 0, duration: duration,
-        weakMagnitude: weak, strongMagnitude: strong
-      }).catch(() => {});
-    }
-  }
-}
-
-// Achievements System
+// Milestones are plain page status, never an overlay on the arena.
 const unlockedAchievements = new Set();
-function triggerAchievement(id, title, scoreG) {
-  if (unlockedAchievements.has(id)) return;
-  unlockedAchievements.add(id);
-  audio.achievement();
-  vibrate(250, 0.8, 1.0);
-  const toast = document.getElementById('achievement-toast');
-  document.getElementById('achTitle').textContent = title;
-  document.getElementById('achG').textContent = scoreG + 'G';
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 4200);
-}
+function triggerAchievement(id,title) {if(unlockedAchievements.has(id))return;unlockedAchievements.add(id);document.getElementById('milestone').textContent=' · '+title;}
 
 // Weapons & Abilities
 function selectWeapon(idx) {
@@ -691,6 +582,7 @@ function fireBomb() {
   // Annihilate enemies
   enemies.forEach(e => {
     e.hp -= 300;
+    e.damageFlash=12; // Visual hit feedback; bomb damage remains unchanged.
     for (let i = 0; i < 20; i++) {
       particles.push({
         x: e.x, y: e.y,
@@ -720,8 +612,10 @@ function shakeScreen(duration, magnitude) {
 // Wave Spawner
 function spawnWave(w) {
   wave = w;
+  if(w>=2){portalDiscovered=true;updatePortalThread();}
   enemiesRemaining = 8 + w * 6;
-  document.getElementById('waveVal').textContent = `WAVE ${String(w).padStart(2, '0')}`;
+  document.getElementById('waveVal').textContent = `Wave ${String(w).padStart(2, '0')}`;
+  document.getElementById('enemyCount').textContent = 'Enemies: '+enemiesRemaining;
   triggerAchievement('first_contact', 'First Contact', '10');
 
   // Spawn scouts & gunships
@@ -753,6 +647,8 @@ function gameLoop(now) {
   lastTime = now;
 
   pollGamepad();
+  // Keep the last combat frame visible while inputs and simulation are paused.
+  if(gameState==='PAUSED'){requestAnimationFrame(gameLoop);return;}
 
   // Screen shake
   let sx = 0, sy = 0;
@@ -766,10 +662,14 @@ function gameLoop(now) {
   ctx.translate(sx, sy);
   ctx.fillStyle = '#030409';
   ctx.fillRect(-20, -20, W + 40, H + 40);
+  drawFarEnvironment();
 
   // Draw Starfield
   stars.forEach(s => {
-    s.y += s.speed * (chronoTimer > 0 ? 0.3 : 1.0) * dt;
+    s.x-=player.vx*s.speed*.035*dt;
+    s.y += (s.speed * (chronoTimer > 0 ? 0.3 : 1.0)-player.vy*s.speed*.025) * dt;
+    if(s.x<0)s.x+=W;else if(s.x>W)s.x-=W;
+    if(s.y<0)s.y=H;
     if (s.y > H) { s.y = 0; s.x = Math.random() * W; }
     ctx.fillStyle = s.color;
     ctx.fillRect(s.x, s.y, s.size, s.size);
@@ -789,6 +689,8 @@ function gameLoop(now) {
     if (player.shield < player.maxShield) player.shield += 0.06 * dt;
 
     // Player Cooldowns
+    player.contactCd = Math.max(0, player.contactCd - dt);
+    if(player.damageFlash>0)player.damageFlash=Math.max(0,player.damageFlash-dt);
     if (player.fireCd > 0) player.fireCd -= dt;
     if (player.dodgeCd > 0) player.dodgeCd -= dt;
 
@@ -797,12 +699,15 @@ function gameLoop(now) {
     if (keys['s'] || keys['arrowdown']) player.vy += 0.8;
     if (keys['a'] || keys['arrowleft']) player.vx -= 0.8;
     if (keys['d'] || keys['arrowright']) player.vx += 0.8;
-    if (mouse.down) firePlayerWeapon();
+    player.vx += touch.move.x * .8;
+    player.vy += touch.move.y * .8;
+    // Resolve the chosen bearing before spawning this frame's projectiles.
 
     // A neutral controller stick retains its bearing; only intentional mouse input takes over.
     if (aimSource === 'mouse') {
       player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
     }
+    if (mouse.down || touch.aimFire || touch.fire.size) firePlayerWeapon();
 
     // Player Physics & Friction
     player.vx *= 0.94;
@@ -823,26 +728,7 @@ function gameLoop(now) {
       });
     }
 
-    // Draw Player Ship
-    ctx.save();
-    ctx.translate(player.x, player.y);
-    ctx.rotate(player.angle);
-    ctx.shadowColor = '#00e5ff'; ctx.shadowBlur = 15;
-    // Wing thrusters
-    ctx.fillStyle = '#00e5ff';
-    ctx.fillRect(-18, -12, 10, 4);
-    ctx.fillRect(-18, 8, 10, 4);
-    // Ship fuselage
-    ctx.fillStyle = player.isInvulnerable ? '#ffffff' : '#0f172a';
-    ctx.strokeStyle = '#00e5ff'; ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(22, 0); ctx.lineTo(-16, -14); ctx.lineTo(-10, 0); ctx.lineTo(-16, 14);
-    ctx.closePath();
-    ctx.fill(); ctx.stroke();
-    // Cockpit canopy
-    ctx.fillStyle = '#f5c542';
-    ctx.beginPath(); ctx.ellipse(4, 0, 7, 3, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
+    drawPlayerShip();
 
     // Bullets Update & Render
     for (let i = bullets.length - 1; i >= 0; i--) {
@@ -857,22 +743,26 @@ function gameLoop(now) {
       b.y += b.vy * dt;
       b.life -= dt;
 
-      ctx.save();
-      ctx.shadowColor = b.color; ctx.shadowBlur = 10;
-      ctx.fillStyle = b.color;
-      if (b.beam) {
-        ctx.fillRect(b.x - 6, b.y - 6, 12, 12);
-      } else {
-        ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, Math.PI * 2); ctx.fill();
+      if(!weaponArt?.drawFlight?.(ctx,b)) {
+        ctx.save();
+        ctx.shadowColor = b.color; ctx.shadowBlur = 10;
+        ctx.fillStyle = b.color;
+        if (b.beam) {
+          ctx.fillRect(b.x - 6, b.y - 6, 12, 12);
+        } else {
+          ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.restore();
       }
-      ctx.restore();
 
       // Bullet collision with enemies
       for (let j = enemies.length - 1; j >= 0; j--) {
         const e = enemies[j];
         if (Math.hypot(b.x - e.x, b.y - e.y) < 22) {
           e.hp -= b.dmg;
+          e.damageFlash=12;
           b.life = 0;
+          weaponArt?.recordImpact?.(b); // Visual snapshot at the existing hit point only.
           vibrate(30, 0.2, 0.2);
           for (let p = 0; p < 4; p++) {
             particles.push({
@@ -890,6 +780,7 @@ function gameLoop(now) {
       }
     }
 
+    enemyVisualClock+=dt;
     // Enemies Update & Render
     for (let i = enemies.length - 1; i >= 0; i--) {
       const e = enemies[i];
@@ -899,29 +790,19 @@ function gameLoop(now) {
       e.x += e.vx * dt;
       e.y += e.vy * dt;
 
-      // Enemy Render
-      ctx.save();
-      ctx.translate(e.x, e.y);
-      ctx.rotate(angle);
-      ctx.shadowColor = '#ef4444'; ctx.shadowBlur = 12;
-      ctx.fillStyle = '#1e1b4b'; ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 2;
-      ctx.beginPath();
-      if (e.type === 'gunship') {
-        ctx.rect(-14, -14, 28, 28);
-      } else {
-        ctx.moveTo(14, 0); ctx.lineTo(-12, -10); ctx.lineTo(-6, 0); ctx.lineTo(-12, 10);
-      }
-      ctx.closePath();
-      ctx.fill(); ctx.stroke();
-      ctx.restore();
+      // Existing pursuit bearing also orients the nose-right source art.
+      drawEnemyShip(e,angle);
+      e.damageFlash=Math.max(0,(e.damageFlash||0)-dt);
 
       // Enemy collision with player
-      if (!player.isInvulnerable && Math.hypot(player.x - e.x, player.y - e.y) < 26) {
+      if (e.hp > 0 && player.contactCd <= 0 && !player.isInvulnerable && Math.hypot(player.x - e.x, player.y - e.y) < 26) {
         if (player.shield > 0) {
           player.shield -= 25;
         } else {
           player.hull -= 30;
         }
+        player.contactCd = CONTACT_HIT_COOLDOWN;
+        player.damageFlash=18;
         e.hp = 0;
         shakeScreen(15, 12);
         audio.explosion(false);
@@ -930,6 +811,8 @@ function gameLoop(now) {
 
       // Enemy Death
       if (e.hp <= 0) {
+        enemyHitEchoes.push({x:e.x,y:e.y,vx:0,vy:0,type:e.type,damageFlash:1,angle,life:10});
+        if(enemyHitEchoes.length>24)enemyHitEchoes.shift();
         audio.explosion(false);
         score += e.type === 'gunship' ? 250 : 100;
         document.getElementById('scoreVal').textContent = String(score).padStart(6, '0');
@@ -949,6 +832,12 @@ function gameLoop(now) {
       }
     }
 
+    // Brief damage-pose echoes stay outside the combat entity list.
+    for(let i=enemyHitEchoes.length-1;i>=0;i--){const echo=enemyHitEchoes[i];
+      drawEnemyShip(echo,echo.angle,echo.life/10);echo.life-=dt;
+      if(echo.life<=0)enemyHitEchoes.splice(i,1);
+    }
+
     // Particles Render
     for (let i = particles.length - 1; i >= 0; i--) {
       const p = particles[i];
@@ -958,6 +847,9 @@ function gameLoop(now) {
       if (p.life <= 0) particles.splice(i, 1);
     }
 
+    // Textured hit cores remain legible above the unchanged particle scatter.
+    weaponArt?.drawImpacts?.(ctx,dt);
+
     // Update HUD Bars
     document.getElementById('shieldBar').style.width = Math.max(0, (player.shield / player.maxShield) * 100) + '%';
     document.getElementById('hullBar').style.width = Math.max(0, (player.hull / player.maxHull) * 100) + '%';
@@ -966,6 +858,7 @@ function gameLoop(now) {
     // Game Over Condition
     if (player.hull <= 0) {
       gameState = 'GAMEOVER';
+      clearHeldInput(); updateModeUi();
       audio.explosion(true);
       vibrate(500, 1.0, 1.0);
       document.getElementById('finalStats').textContent = `FINAL SCORE: ${score} // REACHED WAVE ${wave}`;
@@ -977,27 +870,29 @@ function gameLoop(now) {
   requestAnimationFrame(gameLoop);
 }
 
-// Start Game Handler
-document.getElementById('startBtn').addEventListener('click', () => {
-  audio.init();
-  document.getElementById('titleScreen').classList.add('hidden');
-  gameState = 'PLAYING';
-  spawnWave(1);
-});
-
-document.getElementById('retryBtn').addEventListener('click', () => {
-  player.shield = 100; player.hull = 100; player.chrono = 100; player.bombs = 3;
-  player.x = W / 2; player.y = H / 2; player.vx = 0; player.vy = 0;
-  score = 0; enemies = []; bullets = []; particles = [];
-  document.getElementById('scoreVal').textContent = '000,000';
-  document.getElementById('bombVal').textContent = '3';
-  document.getElementById('gameOverScreen').classList.add('hidden');
-  gameState = 'PLAYING';
-  spawnWave(1);
-});
+// A new sortie clears every held device and transient combat state.
+function startGame() {
+  portalDiscovered=false;updatePortalThread();
+  audio.init(); if(muted)audio.ctx.suspend().catch(()=>{});else audio.ctx.resume().catch(()=>{});
+  clearHeldInput();
+  player.shield=100;player.hull=100;player.chrono=100;player.bombs=3;
+  player.angle=-Math.PI/2;aimSource='default';
+  player.fireCd=0;player.dodgeCd=0;player.isInvulnerable=false;player.damageFlash=0;player.contactCd=0;
+  chronoTimer=0;timeDilation=1;score=0;enemies=[];bullets=[];particles=[];shakeTime=0;enemyHitEchoes=[];enemyVisualClock=0;
+  weaponArt?.clear?.();
+  document.getElementById('scoreVal').textContent='000,000';document.getElementById('bombVal').textContent='3';
+  document.getElementById('titleScreen').classList.add('hidden');document.getElementById('gameOverScreen').classList.add('hidden');
+  gameState='PLAYING';updateModeUi();resizeArena();
+  player.x=W/2;player.y=H/2;player.vx=0;player.vy=0;mouse.x=player.x;mouse.y=player.y-100;
+  selectWeapon(0);spawnWave(1);canvas.focus({preventScroll:true});
+}
+bindPress(document.getElementById('startBtn'),startGame);
+bindPress(document.getElementById('retryBtn'),startGame);
+bindPress(document.getElementById('restartBtn'),startGame);
+resizeArena();updateModeUi();updatePortalThread();
 
 requestAnimationFrame(gameLoop);
 </script>
-<nav id="nsp-related" aria-label="More games" style="font:13px sans-serif;padding:10px;background:#080c16;color:#ccc">More games: <a href="/arcade/custom/pac-dharma/" style="color:#9cf;margin-right:12px">PAC-DHARMA // Xbox 360 Arcade Edition</a><a href="/arcade/custom/paperclip-resistance/" style="color:#9cf;margin-right:12px">Paperclip Resistance</a><a href="/arcade/custom/precinct-404/" style="color:#9cf;margin-right:12px">Precinct 404</a><a href="/arcade/" style="color:#9cf;margin-right:12px">All arcade games</a><a href="/store/" style="color:#fc6">Store</a></nav>
+
 </body>
 </html>

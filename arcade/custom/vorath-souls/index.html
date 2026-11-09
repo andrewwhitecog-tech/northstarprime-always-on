@@ -38,6 +38,7 @@
   @media(max-width:620px),(any-pointer:coarse){.eyebrow,.resource label,.objective,.controls,.footer-status,button,.arcade-return,.touch-action small,.touch-caption,.modal p,.prompt,.prompt button{font-size:14px}.eyebrow{letter-spacing:.08em}.controls{line-height:1.4}.touch-action small{letter-spacing:0}.game-footer{gap:8px 14px}}
   @media(any-pointer:coarse) and (min-width:621px) and (max-height:500px){.game-footer{grid-row:4;display:grid;grid-template-columns:1fr auto auto auto;padding:6px 14px;gap:6px 14px}.controls{grid-column:1/-1;min-width:0;margin:0}.footer-status{grid-column:1}.resource label,.objective,.controls,.footer-status,button,.arcade-return,.touch-action small,.touch-caption,.eyebrow{font-size:14px}.modal p,.prompt,.prompt button{font-size:14px}}
   body[data-mode="checkpoint"]{display:flex;overflow:auto}body[data-mode="checkpoint"] #touchControls,body[data-mode="paused"] #touchControls{display:none}body[data-mode="checkpoint"] #playfield{display:block;flex:1;height:auto;min-height:140px}body[data-mode="checkpoint"] .center{flex:none}body[data-mode="checkpoint"] .modal p,body[data-mode="checkpoint"] .prompt,body[data-mode="checkpoint"] .prompt button{font-size:14px}body[data-mode="paused"] #playfield{grid-column:1/-1}
+  @media(max-width:620px) and (min-height:700px){body[data-mode="playing"] #playfield,body[data-mode="paused"] #playfield,body[data-mode="dead"] #playfield,body[data-mode="victory"] #playfield{flex:1;aspect-ratio:auto;min-height:260px}body[data-mode="playing"] .touch-controls,body[data-mode="dead"] .touch-controls,body[data-mode="victory"] .touch-controls{flex:none;min-height:198px;padding:12px 14px 24px}.game-header{padding-top:8px;padding-bottom:8px}.identity h1{font-size:1.25rem}.eyebrow{margin-bottom:2px}.objective{line-height:1.35}.game-footer{padding-top:7px;padding-bottom:7px}}
 </style>
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "VideoGame", "name": "Vorath Souls", "url": "https://northstarprime.net/arcade/custom/vorath-souls/", "gamePlatform": "Web browser", "applicationCategory": "Game", "operatingSystem": "Any", "isAccessibleForFree": true, "publisher": {"@type": "Organization", "name": "NorthStar Prime", "url": "https://northstarprime.net/"}, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "description": "Play Vorath Souls - The Bone Gate free in your browser in the NorthStar Prime IDG Arcade, an original game from the Vorath universe.", "image": "https://northstarprime.net/static/games/og/vorath-souls_og_1200x630.jpg"}</script>
 </head>
@@ -76,6 +77,7 @@
 <script src="./input.js"></script>
 <script src="./journey.js"></script>
 <script src="./threats.js"></script>
+<script src="./camera.js"></script>
 <script>
 (() => {
   "use strict";
@@ -260,13 +262,14 @@
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = Math.floor(width * dpr); canvas.height = Math.floor(height * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    world.scale = Math.min(width / world.w, height / world.h);
-    world.ox = (width - world.w * world.scale) * 0.5;
-    world.oy = (height - world.h * world.scale) * 0.5;
+    updateCamera();
+  }
+  function updateCamera() {
+    Object.assign(world,window.VorathCamera.frame(canvas.clientWidth,canvas.clientHeight,game.player,game.mode!=="title"&&game.mode!=="checkpoint"));
   }
   function toWorld(clientX, clientY) {
     const rect = canvas.getBoundingClientRect();
-    return {x:(clientX - rect.left - world.ox) / world.scale, y:(clientY - rect.top - world.oy) / world.scale};
+    return window.VorathCamera.point(world,clientX-rect.left,clientY-rect.top);
   }
 
   function newPlayer() {
@@ -638,6 +641,7 @@
   }
 
   function draw() {
+    updateCamera();
     ctx.save();
     ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
     const sx = !reducedMotion && game.shake > 0 ? (Math.random() - 0.5) * game.shake * 22 : 0;
@@ -656,6 +660,17 @@
       drawMessage();
     }
     ctx.restore();
+    drawEdgeCues();
+  }
+  function drawEdgeCues() {
+    if(!world.follow||!game.player)return;
+    for(const target of [...game.enemies.filter(e=>!e.dead),{x:1100,y:360,gate:true}]){
+      const cue=window.VorathCamera.cue(world,target.x,target.y,18);if(!cue)continue;
+      ctx.save();ctx.translate(cue.x,cue.y);ctx.rotate(cue.angle);ctx.strokeStyle=target.gate?"#e5bb6a":"#ef747e";ctx.fillStyle=target.gate?"#e5bb6a":"#ef747e";ctx.lineWidth=2;
+      if(target.gate){ctx.strokeRect(-5,-5,10,10);ctx.beginPath();ctx.moveTo(8,0);ctx.lineTo(13,0);ctx.stroke();}
+      else{ctx.beginPath();ctx.moveTo(7,0);ctx.lineTo(-5,-5);ctx.lineTo(-5,5);ctx.closePath();ctx.fill();}
+      ctx.restore();
+    }
   }
 
   // Only the unchanged floor and bone silhouettes are rasterized. Runes, lights,
@@ -663,20 +678,21 @@
   const arenaCache={key:null,layers:{},builds:0,lastBuildMs:0,bypassed:false,failed:false};
   function paintArenaLayer(name,paint) {
     const dpr=Math.min(window.devicePixelRatio||1,2);
-    if(canvas.width*canvas.height>4194304){for(const layer of Object.values(arenaCache.layers)){layer.canvas.width=0;layer.canvas.height=0;}arenaCache.layers={};arenaCache.key=null;arenaCache.bypassed=true;paint(ctx);return;}
+    const cacheWidth=world.follow?Math.ceil(world.w*world.scale*dpr):canvas.width,cacheHeight=world.follow?Math.ceil(world.h*world.scale*dpr):canvas.height;
+    if(cacheWidth*cacheHeight>4194304){for(const layer of Object.values(arenaCache.layers)){layer.canvas.width=0;layer.canvas.height=0;}arenaCache.layers={};arenaCache.key=null;arenaCache.bypassed=true;paint(ctx);return;}
     arenaCache.bypassed=false;
-    const key=[canvas.width,canvas.height,world.scale,world.ox,world.oy,dpr,journey.arena].join(':');
+    const key=[world.follow,cacheWidth,cacheHeight,world.scale,world.follow?0:world.ox,world.follow?0:world.oy,dpr,journey.arena].join(':');
     if(arenaCache.key!==key){for(const layer of Object.values(arenaCache.layers)){layer.canvas.width=0;layer.canvas.height=0;}arenaCache.key=key;arenaCache.layers={};arenaCache.bypassed=false;arenaCache.failed=false;}
     if(arenaCache.failed){paint(ctx);return;}
     let layer=arenaCache.layers[name];
     if(!layer){
-      const started=performance.now(),surface=document.createElement('canvas');surface.width=canvas.width;surface.height=canvas.height;const target=surface.getContext('2d');
+      const started=performance.now(),surface=document.createElement('canvas');surface.width=cacheWidth;surface.height=cacheHeight;const target=surface.getContext('2d');
       if(!target){arenaCache.failed=true;paint(ctx);return;}
-      target.setTransform(dpr*world.scale,0,0,dpr*world.scale,world.ox*dpr,world.oy*dpr);paint(target);
+      target.setTransform(dpr*world.scale,0,0,dpr*world.scale,world.follow?0:world.ox*dpr,world.follow?0:world.oy*dpr);paint(target);
       layer={canvas:surface};arenaCache.layers[name]=layer;arenaCache.builds++;arenaCache.lastBuildMs=performance.now()-started;
     }
     const transform=ctx.getTransform();
-    ctx.save();ctx.setTransform(1,0,0,1,transform.e-world.ox*dpr,transform.f-world.oy*dpr);ctx.drawImage(layer.canvas,0,0);ctx.restore();
+    ctx.save();ctx.setTransform(1,0,0,1,transform.e-(world.follow?0:world.ox*dpr),transform.f-(world.follow?0:world.oy*dpr));ctx.drawImage(layer.canvas,0,0);ctx.restore();
   }
   function drawArenaGround(target) {
     target.fillStyle = "#05070a";

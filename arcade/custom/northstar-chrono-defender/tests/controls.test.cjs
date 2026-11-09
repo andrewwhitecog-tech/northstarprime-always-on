@@ -68,3 +68,33 @@ test('real enemy collision keeps25shield damage and adds only visual damage feed
  const g=game();g.read("player.x=300;player.y=200;mouse.x=300;mouse.y=200;enemies=[{x:300,y:200,vx:0,vy:0,hp:30,type:'scout',speed:0}];");g.frame();
  assert.equal(g.read('player.shield'),75);assert.equal(g.read('player.hull'),100);assert.equal(g.read('player.damageFlash'),18);assert.equal(g.read('player.isInvulnerable'),false);assert.equal(g.read('chooseShipPose()'),4);
 });
+
+test('far frame covers every arena edge at center and clamped movement extremes',()=>{
+ const g=game();for(const [w,h]of [[980,460],[370,208],[554,216],[160,160],[1220,640]])for(const [x,y]of [[0,0],[w,h],[w/2,h/2],[-100,-100],[w*2,h*2]]){
+  const f=g.read('farFrame('+[w,h,x,y].join(',')+')');assert.ok(f.x<=1e-9&&f.y<=1e-9);assert.ok(f.x+f.width>=w-1e-9&&f.y+f.height>=h-1e-9);near(f.width/f.height,2,'background aspect ratio stays intact');
+ }
+});
+test('far movement follows player camera at a distinct bounded depth',()=>{
+ const g=game(),a=g.read('farFrame(980,460,490,230)'),b=g.read('farFrame(980,460,800,350)');
+ assert.ok(b.x<a.x&&b.y<a.y);assert.equal(b.width,a.width);assert.equal(b.height,a.height);assert.ok(Math.abs(b.x-a.x)<12&&Math.abs(b.y-a.y)<8);
+});
+test('failed far image keeps the actual starfield and ship fallback running',()=>{
+ const g=game();g.read("farEnvironmentState='error'");g.frame();assert.equal(g.read('gameState'),'PLAYING');assert.ok(g.drawing.filter(x=>x.method==='fillRect').length>=180);assert.equal(g.drawing.filter(x=>x.method==='drawImage').length,0);
+});
+test('far callback accepts only the retained1774x887 source',()=>{
+ const g=game();g.read('farEnvironment.naturalWidth=1536;farEnvironment.naturalHeight=1024;farEnvironment.onload()');assert.equal(g.read('farEnvironmentState'),'invalid');
+ g.read('farEnvironment.naturalWidth=1774;farEnvironment.naturalHeight=887;farEnvironment.onload()');assert.equal(g.read('farEnvironmentState'),'ready');
+ g.read('farEnvironment.onerror()');assert.equal(g.read('farEnvironmentState'),'error');
+});
+test('resize scales visual star coordinates instead of bunching them at the top edge',()=>{
+ const g=game();g.read('stars=[{x:960,y:180,size:1,speed:.5,color:"#ffffff"}];canvas.getBoundingClientRect=()=>({width:640,height:360});resizeArena()');assert.equal(g.read('stars[0].x'),480);assert.equal(g.read('stars[0].y'),90);
+});
+test('actual wave progression discovers the thread and pause/resume preserves it',()=>{
+ const g=game();assert.equal(g.read('portalDiscovered'),false);assert.equal(g.read("document.getElementById('chronoThread').hidden"),true);
+ g.read('spawnWave(1)');assert.equal(g.read('portalDiscovered'),false);g.read('spawnWave(2)');assert.equal(g.read('portalDiscovered'),true);assert.equal(g.read("document.getElementById('chronoThread').hidden"),false);
+ g.read('pauseGame();resumeGame()');assert.equal(g.read('portalDiscovered'),true);assert.equal(g.read("document.getElementById('chronoThread').hidden"),false);
+});
+test('a real new-sortie reset clears discovery and restores first-wave state',()=>{
+ const g=game();g.read('audio.init=()=>{audio.ctx={resume:()=>Promise.resolve(),suspend:()=>Promise.resolve()}};spawnWave(2);startGame()');
+ assert.equal(g.read('portalDiscovered'),false);assert.equal(g.read('wave'),1);assert.equal(g.read("document.getElementById('chronoThread').hidden"),true);assert.equal(g.read('player.bombs'),3);
+});

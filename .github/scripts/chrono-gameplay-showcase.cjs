@@ -106,17 +106,31 @@ async function main() {
   const context = await browser.newContext({viewport: null, deviceScaleFactor: 1});
   const page = await context.newPage();
   page.on('pageerror', e => receipt.errors.push(String(e)));
+  const assetResponses = [];
   page.on('response', response => {
-    if (response.url().includes(pin.gameRoute + 'assets/') && !response.ok())
-      receipt.errors.push('Asset HTTP ' + response.status() + ': ' + response.url());
+    if (response.url().includes(pin.gameRoute + 'assets/')) {
+      assetResponses.push({url: response.url(), status: response.status()});
+      if (!response.ok()) receipt.errors.push('Asset HTTP ' + response.status() + ': ' + response.url());
+    }
   });
   await page.goto(url, {waitUntil: 'networkidle'});
   await page.bringToFront();
   await sleep(750);
-  await page.waitForFunction(() => [...document.images].every(image => image.complete && image.naturalWidth > 0));
+  const decoded = await page.evaluate(async () => {
+    await Promise.all([farEnvironment.decode(), shipAtlas.decode(), enemyAtlas.decode()]);
+    return {far: {state: farEnvironmentState, width: farEnvironment.naturalWidth, height: farEnvironment.naturalHeight},
+      ship: {state: shipAtlasState, width: shipAtlas.naturalWidth, height: shipAtlas.naturalHeight},
+      enemy: {state: enemyAtlasState, width: enemyAtlas.naturalWidth, height: enemyAtlas.naturalHeight}};
+  });
+  assert.deepEqual(decoded, {far:{state:'ready',width:1774,height:887},
+    ship:{state:'ready',width:1536,height:1024},enemy:{state:'ready',width:1536,height:1024}});
+  for (const asset of ['far-environment-v01.png','interceptor-v02.png','hostiles-v02.png'])
+    assert.ok(assetResponses.some(response => response.url().endsWith('/'+asset) && response.status===200), 'Missing actual successful image response: '+asset);
+  receipt.decodedImages = decoded;
+  receipt.assetResponses = assetResponses;
   const windowFacts = await page.evaluate(() => ({innerWidth, innerHeight, outerWidth, outerHeight,
     screenX, screenY, focused: document.hasFocus(), visibility: document.visibilityState,
-    images: [...document.images].map(image => ({src: image.getAttribute('src'), width: image.naturalWidth, height: image.naturalHeight}))}));
+    imageReadiness: 'Actual canvas image objects decoded and source-sized above'}));
   receipt.window = windowFacts;
   assert.deepEqual([windowFacts.screenX, windowFacts.screenY, windowFacts.innerWidth, windowFacts.innerHeight],
     [0, 0, 1324, 900], 'Kiosk geometry differs; do not guess screen-to-canvas alignment');
@@ -129,6 +143,14 @@ async function main() {
   assert.deepEqual([crop.width, crop.height], [1024, 576], 'Preserve the reviewed native 16:9 canvas geometry; never scale a different layout');
   receipt.captureGeometry = crop;
   await page.screenshot({path: path.join(out, 'before-native-input.png')});
+  await page.locator('#startBtn').click();
+  await page.waitForFunction(() => document.body.dataset.mode === 'PLAYING');
+  assert.equal(await page.locator('#titleScreen').isVisible(), false);
+  assert.equal(await page.locator('#gameOverScreen').isVisible(), false);
+  await page.mouse.move(bounds.x + bounds.width * .8, bounds.y + bounds.height * .5);
+  await page.mouse.down();
+  receipt.beforeCaptureMode = await page.locator('body').getAttribute('data-mode');
+  receipt.preCaptureNativeInputs = ['trusted Start click', 'native canvas aim', 'native left mouse down'];
   const raw = path.join(out, 'chrono-gameplay-native.mp4');
   const display = (process.env.DISPLAY || ':99').replace(/\.\d+$/, '') + '.0';
   const args = ['-hide_banner', '-y', '-thread_queue_size', '512',
@@ -140,7 +162,7 @@ async function main() {
     '-map', '0:v:0', '-map', '1:a:0', '-af', 'aresample=async=1:first_pts=0',
     '-c:v', 'libx264', '-preset', 'fast', '-crf', '18', '-threads', '2',
     '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k',
-    '-t', '27', '-movflags', '+faststart', raw];
+    '-t', '22', '-movflags', '+faststart', raw];
   receipt.ffmpegArgs = args;
   recorder = launch('ffmpeg', args, 'capture.ffmpeg.log');
   recorderDone = closed(recorder);
@@ -159,11 +181,8 @@ async function main() {
     else if (kind === 'down') await page.keyboard.down(key);
     else await page.keyboard.up(key);
   };
-  await page.locator('#startBtn').click();
-  await page.waitForFunction(() => document.body.dataset.mode === 'PLAYING');
+  assert.equal(await page.locator('body').getAttribute('data-mode'), 'PLAYING', 'Sortie ended while encoder started');
   // One native sortie: no game globals, seeded randomness, fake actors, scores or time rewrites.
-  await page.mouse.move(bounds.x + bounds.width * .8, bounds.y + bounds.height * .5);
-  await page.mouse.down();
   const movement = ['d', 's', 'a', 'w', 'd', 's', 'a', 'w'];
   let elapsedSeconds = 0;
   for (let segment = 0; segment < movement.length; segment++) {
@@ -173,15 +192,19 @@ async function main() {
       enemies: document.querySelector('#enemyCount')?.textContent,
       portalThreadVisible: !document.querySelector('#chronoThread')?.hidden}));
     receipt.observations.push({elapsedSeconds, ...observed});
-    if (observed.mode !== 'PLAYING') {receipt.stoppedForActualGameMode = observed.mode; break;}
+    assert.equal(observed.mode, 'PLAYING', 'Actual sortie left PLAYING; capture is failed, never accepted');
     if (segment === 2) await input('press', '2');
     if (segment === 3) await input('press', 'c');
     if (segment === 5) await input('press', '3');
     if (segment === 6) await input('press', 'Space');
     if (segment === 7) await input('press', 'Shift');
     await input('down', movement[segment]);
-    const stopAt = performance.now() + 3000;
+    const stopAt = performance.now() + 2500;
     while (performance.now() < stopAt) {
+      const mode = await page.locator('body').getAttribute('data-mode');
+      receipt.modeObservations = receipt.modeObservations || [];
+      receipt.modeObservations.push({elapsedMs:Math.round(performance.now()-started),mode});
+      assert.equal(mode, 'PLAYING', 'Actual sortie left PLAYING during capture; no completed showcase');
       const angle = (performance.now() - started) / 1900;
       await page.mouse.move(bounds.x + bounds.width * (.5 + .42 * Math.cos(angle)),
         bounds.y + bounds.height * (.5 + .42 * Math.sin(angle)));
@@ -190,18 +213,22 @@ async function main() {
     await input('up', movement[segment]);
     elapsedSeconds = (performance.now() - started) / 1000;
   }
+  assert.equal(await page.locator('body').getAttribute('data-mode'), 'PLAYING');
+  receipt.requestedRecorderStop = 'Completed 20-second native PLAYING target';
+  recorder.kill('SIGINT');
   await page.mouse.up();
   await page.screenshot({path: path.join(out, 'after-native-input.png')});
   receipt.actualInputDurationSeconds = (performance.now() - started) / 1000;
   const rec = await recorderDone;
-  assert.equal(rec.code, 0, 'Actual capture failed; inspect capture.ffmpeg.log');
+  assert.ok([0,255].includes(rec.code), 'Actual capture failed; inspect capture.ffmpeg.log');
+  receipt.recorderExit = rec;
   recorder = null;
-  assert.ok(receipt.actualInputDurationSeconds >= 15, 'Sortie ended before a useful gameplay interval');
+  assert.ok(receipt.actualInputDurationSeconds >= 20, 'Sortie ended before the 20-second PLAYING target');
   assert.equal(receipt.errors.length, 0, 'Browser errors during capture');
   const probe = JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-show_streams', '-show_format', '-of', 'json', raw], {encoding: 'utf8'}));
   write('ffprobe.json', probe);
   const duration = Number(probe.format.duration);
-  assert.ok(duration >= 25 && duration <= 29);
+  assert.ok(duration >= 19 && duration <= 22, 'Preserve honest actual duration of the 20-second capture target');
   assert.ok(probe.streams.some(s => s.codec_type === 'audio'), 'Actual game sound was not captured');
   await command('ffmpeg', ['-v', 'error', '-i', raw, '-f', 'null', '-'], 'full-decode.log');
   for (const [index, fraction] of [0, .25, .5, .75, 1].entries()) {
@@ -229,7 +256,7 @@ async function main() {
   try {await main();}
   catch (e) {receipt.status = 'failed'; receipt.errors.push(e.stack || String(e)); process.exitCode = 1;}
   finally {
-    if (recorder && recorder.exitCode === null) recorder.kill('SIGINT');
+    if (recorder && recorder.exitCode === null) {recorder.kill('SIGINT'); await recorderDone?.catch(e => receipt.errors.push(String(e)));}
     await browser?.close().catch(e => receipt.errors.push(String(e)));
     if (server) await new Promise(resolve => server.close(resolve));
     for (const child of ownChildren) if (child.exitCode === null) child.kill('SIGTERM');

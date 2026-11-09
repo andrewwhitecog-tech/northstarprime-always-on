@@ -244,7 +244,8 @@ def rewrite_release_media_refs(raw: str, relative: Path, selected: set[str], com
         path = unquote(parsed.path)
         resolved = posixpath.normpath(path.lstrip("/") if path.startswith("/") else posixpath.join(relative.parent.as_posix(), path))
         dynamic_prefix = (
-            "/" in path and not Path(path).suffix
+            "/" in path and bool(path.strip("/.")) and resolved != "."
+            and not Path(path).suffix
             and raw[match.end() + 1:].lstrip().startswith("+")
             and any(item.startswith(resolved) for item in selected)
         )
@@ -434,12 +435,62 @@ def materialize_b64_zips(output: Path) -> int:
     return count
 
 
+def immutable_release_files(root: Path) -> frozenset[str]:
+    """Manifest-pinned browser release files bypass every text transformation."""
+    manifest = json.loads((root / "CHRONOSPHERE_RELEASE_MANIFEST.json").read_text(encoding="utf-8"))
+    selected = set()
+    release_root = (root / "chronosphere").resolve()
+    for row in manifest["browser_files"]:
+        relative = Path(row["path"])
+        source = (root / relative).resolve()
+        if relative.is_absolute() or ".." in relative.parts or not source.is_relative_to(release_root):
+            raise ValueError(f"Invalid immutable release path: {row['path']}")
+        payload = source.read_bytes()
+        if len(payload) != row["bytes"] or hashlib.sha256(payload).hexdigest() != row["sha256"]:
+            raise ValueError(f"Immutable release source identity mismatch: {row['path']}")
+        selected.add(relative.as_posix())
+    return frozenset(selected)
+
+
+def copy_artifact_source(source: Path, relative: Path, destination: Path,
+                         selected_media: set[str], media_commit: str,
+                         immutable_files: frozenset[str]) -> int:
+    """Copy one file, preserving pinned releases and rewriting ordinary pages."""
+    if relative.as_posix() in immutable_files:
+        shutil.copy2(source, destination)
+        return 0
+    if source.suffix.lower() in TEXT_SUFFIXES:
+        raw = pages_art_quality.artifact_page_text(
+            ROOT, relative, source.read_text(encoding="utf-8"))
+        count = raw.count(LOCAL_VIDEO_BASE)
+        if count:
+            raw = raw.replace(LOCAL_VIDEO_BASE, APP_VIDEO_BASE)
+        raw = pages_art_quality.rewrite_reviewed_art_urls(raw, relative)
+        raw = rewrite_sticker_refs(raw, relative)
+        raw = rewrite_release_media_refs(raw, relative, selected_media, media_commit)
+        raw = inject_cf_web_analytics(raw, relative)
+        destination.write_text(raw, encoding="utf-8", newline="\n")
+        shutil.copymode(source, destination)
+        return count
+    for attempt in range(5):
+        try:
+            shutil.copy2(source, destination)
+            break
+        except PermissionError:
+            if attempt == 4:
+                raise
+            import time
+            time.sleep(0.1)
+    return 0
+
+
 def build(output: Path) -> dict:
     # Immutable media URLs must identify the exact bytes copied and omitted.
     # Reject both staged and unstaged tracked edits; untracked exports are excluded.
     subprocess.run(["git", "diff", "--quiet", "HEAD", "--"], cwd=ROOT, check=True)
     media_commit = source_commit()
     pages_art_quality.validate_source(ROOT)
+    immutable_files = immutable_release_files(ROOT)
     video_root = ROOT / "static" / "idc_video"
     video_files = sorted(path for path in video_root.rglob("*") if path.is_file())
     omitted_video_bytes = sum(path.stat().st_size for path in video_files)
@@ -478,29 +529,8 @@ def build(output: Path) -> dict:
     for source, relative in iter_source_files():
         destination = output / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
-        if source.suffix.lower() in TEXT_SUFFIXES:
-            raw = pages_art_quality.artifact_page_text(
-                ROOT, relative, source.read_text(encoding="utf-8"))
-            count = raw.count(LOCAL_VIDEO_BASE)
-            if count:
-                raw = raw.replace(LOCAL_VIDEO_BASE, APP_VIDEO_BASE)
-                rewrites += count
-            raw = pages_art_quality.rewrite_reviewed_art_urls(raw, relative)
-            raw = rewrite_sticker_refs(raw, relative)
-            raw = rewrite_release_media_refs(raw, relative, selected_media, media_commit)
-            raw = inject_cf_web_analytics(raw, relative)
-            destination.write_text(raw, encoding="utf-8", newline="\n")
-            shutil.copymode(source, destination)
-        else:
-            for attempt in range(5):
-                try:
-                    shutil.copy2(source, destination)
-                    break
-                except PermissionError:
-                    if attempt == 4:
-                        raise
-                    import time
-                    time.sleep(0.1)
+        rewrites += copy_artifact_source(
+            source, relative, destination, selected_media, media_commit, immutable_files)
         copied += 1
 
     materialized_zips = materialize_b64_zips(output)

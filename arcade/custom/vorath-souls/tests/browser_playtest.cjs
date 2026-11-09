@@ -32,10 +32,11 @@ async function assertStory(label,unlocked){const state=await snapshot();const do
 async function assertLandscapeCourt(label,minimumHeight){
  const state=await snapshot();
  const layout=await page.evaluate(()=>({width:innerWidth,height:innerHeight,coarse:matchMedia('(any-pointer:coarse)').matches,scrollWidth:document.documentElement.scrollWidth,scrollHeight:document.documentElement.scrollHeight,field:document.getElementById('playfield').getBoundingClientRect().toJSON(),parts:[...document.querySelectorAll('.game-header,#overlay,#touchControls,.game-footer')].filter(el=>el.getBoundingClientRect().height>0).map(el=>({id:el.id||el.className,rect:el.getBoundingClientRect().toJSON()})),targets:[...document.querySelectorAll('#touchStick,.touch-action,#newJourneyButton,#pauseButton,#retryButton,.arcade-return,#overlay button')].filter(el=>el.getBoundingClientRect().height>0).map(el=>({label:el.getAttribute('aria-label')||el.textContent.trim(),rect:el.getBoundingClientRect().toJSON()})),text:[...document.querySelectorAll('.resource label,.objective,.controls,.footer-status,button,.arcade-return,.touch-action small,.touch-caption,.modal p,.prompt')].filter(el=>el.getBoundingClientRect().height>0).map(el=>({label:el.textContent.trim(),font:parseFloat(getComputedStyle(el).fontSize),rect:el.getBoundingClientRect().toJSON()}))}));
+ const courtHeight=state.world.scale*720;
+ (report.landscapeCourt??=[]).push({label,mode:state.mode,minimumHeight,courtHeight,world:{...state.world},layout});
  assert.equal(layout.coarse,true,'fixture must retain actual coarse-pointer capability through capture');
  assert.ok(layout.scrollWidth<=layout.width&&layout.scrollHeight<=layout.height+1,label+' keeps the page within the viewport');
  assert.ok(layout.field.height>=minimumHeight,label+' must enlarge the actual landscape field');
- const courtHeight=state.world.scale*720;
  assert.ok(courtHeight>=minimumHeight,label+' must enlarge painted world space, not an empty letterbox');
  assert.equal(state.world.follow,false,'landscape retains the unchanged full-arena camera');
  const visible=r=>r.x>=-.5&&r.y>=-.5&&r.right<=layout.width+.5&&r.bottom<=layout.height+.5;
@@ -43,7 +44,7 @@ async function assertLandscapeCourt(label,minimumHeight){
  for(const target of layout.targets){assert.ok(visible(target.rect),label+' visible target '+target.label);assert.ok(target.rect.width>=44&&target.rect.height>=44,label+' touch target is at least44px: '+target.label);}
  for(const text of layout.text){assert.ok(text.font>=14,label+' readable text '+text.label);assert.ok(visible(text.rect),label+' text remains on screen '+text.label);}
  for(const [name,x,y] of [['player',state.player.x,state.player.y],['gate',1080,360]]){const px=x*state.world.scale+state.world.ox,py=y*state.world.scale+state.world.oy;assert.ok(px>=0&&py>=0&&px<=layout.field.width&&py<=layout.field.height,label+' '+name+' stays in the actual overview');}
- (report.landscapeCourt??=[]).push({label,mode:state.mode,minimumHeight,courtHeight,world:{...state.world},layout});return{state,layout,courtHeight};
+ return{state,layout,courtHeight};
 }
 async function screenshot(name){await page.screenshot({path:path.join(out,name+'.png')});}
 async function until(check,label,timeout=20000){const until=Date.now()+timeout;while(Date.now()<until){if(await check())return;await page.waitForTimeout(60);}throw Error('Timeout: '+label);}

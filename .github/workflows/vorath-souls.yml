@@ -15,6 +15,9 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
+          sparse-checkout: |
+            arcade/custom/vorath-souls
+            .github/scripts
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22'
@@ -29,6 +32,12 @@ jobs:
           NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/vorath-browser/node_modules/playwright
           NSP_PLAYTEST_OUT: ${{ runner.temp }}/vorath-souls-playtest
         run: node arcade/custom/vorath-souls/tests/browser_playtest.cjs
+      - name: Independently read the pinned Chromatic copy at phone and desktop widths
+        if: always()
+        env:
+          NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/vorath-browser/node_modules/playwright
+          NSP_PLAYTEST_OUT: ${{ runner.temp }}/vorath-souls-playtest
+        run: node .github/scripts/chromatic-copy-qa.cjs
       - name: Retain actual playtest screenshots and result
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

@@ -207,6 +207,7 @@ body{
     <div style="margin-top:10px">
       <button class="btn bet-btn" onclick="clearBet()">CLEAR</button>
       <button class="btn" onclick="deal()" id="deal-btn" disabled>DEAL</button>
+      <button class="btn" id="rebuy-btn" style="display:none" onclick="rebuy()">BUY BACK IN · 200</button>
     </div>
   </div>
 
@@ -306,10 +307,36 @@ function isSoft(hand){
 function isBlackjack(hand){return hand.length===2&&handValue(hand)===21}
 
 // ===== GAME STATE =====
-let tokens=1000,bet=0,insuranceBet=0;
+let tokens=1000,bet=0,insuranceBet=0,mainStake=0,splitStake=0;
 let playerHand=[],dealerHand=[],splitHand=[];
 let gameActive=false,splitActive=false,playingSplit=false,insured=false;
-let stats={hands:0,wins:0,losses:0,pushes:0,pl:0,streak:0,bestStreak:0};
+let stats={hands:0,wins:0,losses:0,pushes:0,pl:0,streak:0,bestStreak:0,rebuys:0};
+const BANK_KEY='idg-blackjack-noir-bank-v1';
+function loadBank(){
+  try{
+    const data=JSON.parse(localStorage.getItem(BANK_KEY)||'null');
+    if(!data||typeof data.tokens!=='number'||data.tokens<0)return;
+    tokens=Math.floor(data.tokens);
+    if(data.stats&&typeof data.stats==='object'){
+      for(const key of Object.keys(stats)){
+        if(typeof data.stats[key]==='number')stats[key]=data.stats[key];
+      }
+    }
+  }catch(e){}
+}
+function saveBank(){localStorage.setItem(BANK_KEY,JSON.stringify({tokens,stats}))}
+function quip(net){
+  if(net>0)return ' The dealer slides the chips across without looking up.';
+  if(net<0)return ' The dealer pulls the bet in.';
+  return ' The dealer leaves the chips where they are.';
+}
+function rebuy(){
+  if(gameActive||tokens>=5)return;
+  tokens=200;stats.rebuys+=1;stats.streak=0;bet=0;
+  saveBank();updateTokens();updateStats();
+  $('rebuy-btn').style.display='none';
+  setMessage('Back in for 200. The old streak stays on the table.','push');
+}
 
 // ===== UI =====
 const $=id=>document.getElementById(id);
@@ -398,6 +425,7 @@ function deal(){
   $('controls').style.display='block';
   setMessage('');
 
+  mainStake=bet;splitStake=0;
   playerHand=[drawCard(),drawCard()];
   dealerHand=[drawCard(),drawCard()];
 
@@ -443,8 +471,8 @@ function hit(){
   $('insurance-btn').style.display='none';
 
   if(handValue(hand)>21){
-    if(playingSplit){playingSplit=false;setMessage('Split hand busts! Playing main hand...');return}
-    if(splitActive&&!playingSplit){endRound('bust');return}
+    if(playingSplit){playingSplit=false;setMessage('Split hand busts. The main hand is still live.');return}
+    if(splitActive&&handValue(splitHand)<=21){dealerPlay();return}
     endRound('bust');
   }else if(handValue(hand)===21){
     stand();
@@ -466,16 +494,21 @@ function stand(){
 }
 
 function doubleDown(){
-  if(!gameActive||tokens<bet)return;
-  tokens-=bet;bet*=2;updateTokens();
+  const onSplit=splitActive&&playingSplit;
+  const stake=onSplit?splitStake:mainStake;
+  if(!gameActive||stake<=0||tokens<stake)return;
+  tokens-=stake;
+  if(onSplit)splitStake*=2;else{mainStake*=2;bet=mainStake}
+  updateTokens();
   playSound('chip');
-  const hand=playingSplit?splitHand:playerHand;
+  const hand=onSplit?splitHand:playerHand;
   hand.push(drawCard());
   playSound('flip');
-  renderHand(playingSplit?'split-cards':'player-cards',hand);
+  renderHand(onSplit?'split-cards':'player-cards',hand);
   updateValues();
   if(handValue(hand)>21){
-    if(splitActive&&playingSplit){playingSplit=false;return}
+    if(onSplit){playingSplit=false;setMessage('Split hand busts. The main hand is still live.');return}
+    if(splitActive&&handValue(splitHand)<=21){dealerPlay();return}
     endRound('bust');
   }else{
     stand();
@@ -483,8 +516,9 @@ function doubleDown(){
 }
 
 function split(){
-  if(!gameActive||playerHand[0].rank!==playerHand[1].rank||tokens<bet)return;
-  tokens-=bet;
+  if(!gameActive||playerHand[0].rank!==playerHand[1].rank||tokens<mainStake)return;
+  tokens-=mainStake;
+  splitStake=mainStake;
   splitActive=true;playingSplit=true;
   splitHand=[playerHand.pop()];
   playerHand.push(drawCard());
@@ -536,36 +570,27 @@ function dealerPlay(){
   dealerDraw();
 }
 
+function settleHand(hand,stake){
+  const hv=handValue(hand),dv=handValue(dealerHand);
+  if(hv>21)return {pay:0,text:'Bust'};
+  if(dv>21||hv>dv)return {pay:stake*2,text:dv>21?'Dealer busts':'Win'};
+  if(hv===dv)return {pay:stake,text:'Push'};
+  return {pay:0,text:'Lose'};
+}
 function resolveHands(){
-  const dv=handValue(dealerHand);
-  const pv=handValue(playerHand);
-  let totalWin=0,results=[];
-
-  // Insurance check
-  if(insured){
-    if(isBlackjack(dealerHand)){totalWin+=insuranceBet*3;results.push('Insurance pays!')}
-  }
-
-  // Main hand
-  if(pv>21){results.push('Main: Bust')}
-  else if(dv>21){totalWin+=bet*2;results.push('Main: Dealer busts!')}
-  else if(pv>dv){totalWin+=bet*2;results.push('Main: Win!')}
-  else if(pv===dv){totalWin+=bet;results.push('Main: Push')}
-  else{results.push('Main: Lose')}
-
-  // Split hand
+  const main=settleHand(playerHand,mainStake);
+  let pay=main.pay,staked=mainStake;
+  const results=['Main: '+main.text];
   if(splitActive){
-    const sv=handValue(splitHand);
-    if(sv>21){results.push('Split: Bust')}
-    else if(dv>21){totalWin+=bet;results.push('Split: Win!')} // original bet for split
-    else if(sv>dv){totalWin+=bet;results.push('Split: Win!')}
-    else if(sv===dv){totalWin+=Math.floor(bet/2);results.push('Split: Push')}
-    else{results.push('Split: Lose')}
+    const side=settleHand(splitHand,splitStake);
+    pay+=side.pay;staked+=splitStake;results.push('Split: '+side.text);
   }
-
-  tokens+=totalWin;
-  const netPL=totalWin-bet-(splitActive?bet:0)-insuranceBet;
-  finishRound(netPL,results.join(' | '));
+  if(insured){
+    staked+=insuranceBet;
+    if(isBlackjack(dealerHand)){pay+=insuranceBet*3;results.push('Insurance pays')}
+  }
+  tokens+=pay;
+  finishRound(pay-staked,results.join(' | '));
 }
 
 function endRound(result){
@@ -575,16 +600,16 @@ function endRound(result){
 
   let netPL=0,msg='';
   if(result==='blackjack'){
-    const win=Math.floor(bet*2.5);tokens+=win;netPL=win-bet;
+    const win=Math.floor(mainStake*2.5);tokens+=win;netPL=win-mainStake;
     msg='BLACKJACK! +'+netPL;setMessage(msg,'win');playSound('win');
   }else if(result==='dealer-blackjack'){
-    if(insured){tokens+=insuranceBet*3;netPL=insuranceBet*2-bet;msg='Dealer Blackjack. Insurance saves you!'}
-    else{netPL=-bet;msg='Dealer Blackjack.'}
+    if(insured){tokens+=insuranceBet*3;netPL=insuranceBet*2-mainStake;msg='Dealer Blackjack. Insurance saves you!'}
+    else{netPL=-mainStake;msg='Dealer Blackjack.'}
     setMessage(msg,netPL>=0?'win':'lose');netPL>=0?playSound('win'):playSound('lose');
   }else if(result==='bust'){
-    netPL=-bet-(splitActive?bet:0);msg='BUST! '+netPL;setMessage(msg,'lose');playSound('lose');
+    netPL=-(mainStake+splitStake+insuranceBet);msg='BUST! '+netPL;setMessage(msg,'lose');playSound('lose');
   }else if(result==='push'){
-    tokens+=bet;netPL=0;msg='PUSH';setMessage(msg,'push');
+    tokens+=mainStake;netPL=0;msg='PUSH';setMessage(msg,'push');
   }
   finishRound(netPL,msg);
 }
@@ -593,18 +618,21 @@ function finishRound(netPL,msg){
   gameActive=false;
   $('controls').style.display='none';
   stats.hands++;stats.pl+=netPL;
-  if(netPL>0){stats.wins++;stats.streak=Math.max(1,stats.streak+1)}
+  if(netPL>0){stats.wins++;stats.streak=Math.max(1,stats.streak+1);if(stats.streak>stats.bestStreak)stats.bestStreak=stats.streak}
   else if(netPL<0){stats.losses++;stats.streak=Math.min(-1,stats.streak-1)}
   else{stats.pushes++;stats.streak=0}
-  if(msg&&!$('message').textContent)setMessage(msg,netPL>0?'win':netPL<0?'lose':'push');
+  const spoken=(msg||$('message').textContent||'')+quip(netPL);
+  setMessage(spoken,netPL>0?'win':netPL<0?'lose':'push');
   updateTokens();updateStats();updateValues();
+  saveBank();
 
-  bet=0;
+  bet=0;mainStake=0;splitStake=0;
   setTimeout(()=>{
     $('betting').style.display='block';
     $('deal-btn').disabled=true;
+    $('rebuy-btn').style.display=tokens<5?'inline-block':'none';
     updateTokens();
-    if(tokens<=0){setMessage('OUT OF TOKENS. Refresh to restart.','lose')}
+    if(tokens<5)setMessage(spoken+' Not enough for a chip. Buy back in, or stop.','lose');
   },1500);
 }
 
@@ -619,7 +647,8 @@ document.addEventListener('keydown',e=>{
 });
 
 // ===== BOOT SEQUENCE =====
-createShoe();updateStats();
+loadBank();createShoe();updateStats();updateTokens();
+if(tokens<5)$('rebuy-btn').style.display='inline-block';
 const bootLines=document.querySelectorAll('#boot .line');
 bootLines.forEach(l=>{setTimeout(()=>l.classList.add('show'),parseInt(l.dataset.delay))});
 setTimeout(()=>{document.getElementById('boot').classList.add('done');setTimeout(()=>document.getElementById('boot').style.display='none',800)},2800);

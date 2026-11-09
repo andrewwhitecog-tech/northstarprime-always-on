@@ -1,0 +1,27 @@
+name: Pinned Lychee installer regression
+on:
+  pull_request:
+    paths:
+      - '.github/scripts/install-lychee.sh'
+      - '.github/lychee_review/**'
+      - '.github/workflows/lychee-installer.yml'
+permissions:
+  contents: read
+jobs:
+  install-and-check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/scripts/install-lychee.sh
+            /.github/lychee_review/
+      - name: Check actual shell and test syntax
+        run: |
+          bash -n .github/scripts/install-lychee.sh
+          python -m py_compile .github/lychee_review/test_installer.py
+      - name: Test actual installer, official asset and real checker
+        run: python -m unittest discover -s .github/lychee_review -p 'test_*.py' -v

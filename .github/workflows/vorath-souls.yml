@@ -1,0 +1,169 @@
+name: Vorath Souls combat and browser playtest
+on:
+  pull_request:
+    paths: ["arcade/custom/vorath-souls/**", ".github/workflows/vorath-souls.yml", ".github/scripts/vorath-render-benchmark.cjs", ".github/scripts/vorath-public-transform-ac229.json"]
+  workflow_run:
+    workflows: ["Deploy curated NorthStar Pages"]
+    types: [completed]
+permissions:
+  contents: read
+concurrency:
+  group: vorath-souls-${{ github.event_name }}-${{ github.event.workflow_run.head_sha || github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  encounter:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      NSP_TARGETED_LIVE_ONLY: ${{ github.event.action == 'synchronize' && startsWith(github.head_ref, 'codex/vorath-souls-render-cache-') && contains(github.event.pull_request.title, '[live smoke]') }}
+      NSP_RETAINED_PORTRAIT: ${{ github.head_ref == 'codex/vorath-souls-portrait-camera-20261109' && contains(github.event.pull_request.title, '[inventory rebase]') }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            arcade/custom/vorath-souls
+            .github/scripts
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Run actual combat contract tests
+        if: env.NSP_TARGETED_LIVE_ONLY != 'true'
+        run: node --test arcade/custom/vorath-souls/tests/*.test.cjs
+      - name: Bind inventory-only rebase to the exact genuinely tested game tree
+        if: env.NSP_RETAINED_PORTRAIT == 'true'
+        env:
+          NSP_PLAYTEST_OUT: ${{ runner.temp }}/vorath-souls-playtest
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs'),cp=require('node:child_process'),assert=require('node:assert/strict'),path=require('node:path');
+          const actualTree=cp.execFileSync('git',['rev-parse','HEAD:arcade/custom/vorath-souls'],{encoding:'utf8',windowsHide:true}).trim();
+          assert.equal(actualTree,'ccf7227d21f169b22cc5c85e7bae3de3510b7640','retained gameplay is valid only for the exact unchanged game, tests and assets');
+          const receipt={scope:'Exact tree identity after shared inventory-only rebase; gameplay NOT rerun',actualTree,retainedRealRun:42572100032,retainedHead:'a521387dcd21b030eb4e093c521dd636b81a9f89',retainedBrowserChecks:15,reason:'Preserve both current Chrono atlas and Souls camera in the shared release inventory',verifiedUtc:new Date().toISOString()};
+          fs.mkdirSync(process.env.NSP_PLAYTEST_OUT,{recursive:true});fs.writeFileSync(path.join(process.env.NSP_PLAYTEST_OUT,'RETAINED_GAMEPLAY_BINDING.json'),JSON.stringify(receipt,null,2));console.log(JSON.stringify(receipt,null,2));
+          NODE
+      - name: Install the pinned isolated test browser
+        if: env.NSP_RETAINED_PORTRAIT != 'true'
+        run: |
+          npm install --prefix "$RUNNER_TEMP/vorath-browser" --no-save --package-lock=false --ignore-scripts playwright@1.55.1
+          "$RUNNER_TEMP/vorath-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Remove only pinned driver focus emulation for native event acceptance
+        if: env.NSP_RETAINED_PORTRAIT != 'true'
+        env:
+          NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/vorath-browser/node_modules/playwright
+          NSP_PLAYTEST_OUT: ${{ runner.temp }}/vorath-souls-playtest
+        run: node .github/scripts/native-browser-focus.cjs
+      - name: Record one matched render comparison and independent live release smoke
+        if: github.event.action == 'opened' && startsWith(github.head_ref, 'codex/vorath-souls-render-cache-')
+        env:
+          NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/vorath-browser/node_modules/playwright
+          NSP_PLAYTEST_OUT: ${{ runner.temp }}/vorath-souls-playtest
+          NSP_VIRTUAL_DISPLAY: '1'
+        run: xvfb-run --auto-servernum node .github/scripts/vorath-render-benchmark.cjs
+      - name: Verify only live delivery against the unchanged already-tested candidate
+        if: env.NSP_TARGETED_LIVE_ONLY == 'true'
+        env:
+          NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/vorath-browser/node_modules/playwright
+          NSP_PLAYTEST_OUT: ${{ runner.temp }}/vorath-souls-playtest
+          NSP_VIRTUAL_DISPLAY: '1'
+          NSP_RENDER_LIVE_ONLY: '1'
+        run: xvfb-run --auto-servernum node .github/scripts/vorath-render-benchmark.cjs
+      - name: Play the actual encounter with native focus in an isolated virtual display
+        if: always() && env.NSP_TARGETED_LIVE_ONLY != 'true' && env.NSP_RETAINED_PORTRAIT != 'true'
+        env:
+          NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/vorath-browser/node_modules/playwright
+          NSP_PLAYTEST_OUT: ${{ runner.temp }}/vorath-souls-playtest
+          NSP_VIRTUAL_DISPLAY: '1'
+        run: xvfb-run --auto-servernum node arcade/custom/vorath-souls/tests/browser_playtest.cjs
+      - name: Retain actual playtest screenshots and result
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: vorath-souls-playtest
+          path: ${{ runner.temp }}/vorath-souls-playtest/
+          retention-days: 14
+
+  public-release:
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    env:
+      NSP_TARGET_RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 2
+          sparse-checkout: |
+            arcade/custom/vorath-souls
+            .github/scripts
+            tools
+      - name: Initialize isolated public proof paths on the assigned runner
+        run: |
+          echo "NSP_PLAYTEST_OUT=$RUNNER_TEMP/vorath-souls-public" >> "$GITHUB_ENV"
+          echo "NSP_SOURCE_PROOF_DIR=$RUNNER_TEMP/vorath-souls-source-proof" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Fingerprint actual Souls source and owning export helpers
+        id: source
+        run: node arcade/custom/vorath-souls/tests/release_proof.cjs fingerprint
+      - name: Restore only the exact earlier source acceptance
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # official v6.1.0
+        env:
+          SEGMENT_DOWNLOAD_TIMEOUT_MINS: '1'
+        with:
+          key: ${{ steps.source.outputs.key }}
+          path: ${{ env.NSP_SOURCE_PROOF_DIR }}/accepted.json
+      - name: Validate retained proof or require a real public native run
+        id: gate
+        run: node arcade/custom/vorath-souls/tests/release_proof.cjs plan
+      - name: Install the pinned official isolated uv runner
+        if: steps.gate.outputs.needs-native == 'true'
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # official v10.3.3
+        with:
+          version: '0.13.7'
+          enable-cache: 'false'
+          download-from-astral-mirror: 'false'
+      - name: Install the pinned isolated release browser
+        if: steps.gate.outputs.needs-native == 'true'
+        run: |
+          npm install --prefix "$RUNNER_TEMP/vorath-browser" --no-save --package-lock=false --ignore-scripts playwright@1.55.1
+          "$RUNNER_TEMP/vorath-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Remove only pinned focus emulation for public native input
+        if: steps.gate.outputs.needs-native == 'true'
+        env:
+          NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/vorath-browser/node_modules/playwright
+        run: node .github/scripts/native-browser-focus.cjs
+      - name: Verify real exported bytes and desktop/phone Start move pause
+        id: native
+        if: steps.gate.outputs.needs-native == 'true'
+        env:
+          NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/vorath-browser/node_modules/playwright
+          NSP_VIRTUAL_DISPLAY: '1'
+          NSP_SYSTEM_PYTHON: /usr/bin/python3
+          PYTHONUTF8: '1'
+          PYTHONIOENCODING: utf-8
+          UV_PYTHON_DOWNLOADS: never
+        run: xvfb-run --auto-servernum node arcade/custom/vorath-souls/tests/public_smoke.cjs
+      - name: Seal only a parsed successful public result
+        id: seal
+        if: steps.native.outcome == 'success'
+        run: node arcade/custom/vorath-souls/tests/release_proof.cjs seal
+      - name: Save successful source acceptance for future unchanged releases
+        if: steps.native.outcome == 'success' && steps.seal.outcome == 'success'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # official v6.1.0
+        with:
+          key: ${{ steps.source.outputs.key }}
+          path: ${{ env.NSP_SOURCE_PROOF_DIR }}/accepted.json
+      - name: Retain actual public result or explicitly reused earlier source proof
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: vorath-souls-public
+          path: |
+            ${{ runner.temp }}/vorath-souls-public/*.json
+            ${{ runner.temp }}/vorath-souls-public/*.png
+          retention-days: 14

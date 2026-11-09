@@ -8,10 +8,10 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: prism-public-${{ github.event_name }}-${{ github.event.pull_request.number || 'main' }}
+  group: prism-public-${{ github.event_name }}-${{ github.event.workflow_run.head_sha || github.ref }}
   cancel-in-progress: true
 jobs:
-  source-syntax:
+  source-preflight:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 3
@@ -19,7 +19,11 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
-          sparse-checkout: .github/scripts
+          sparse-checkout: |
+            .github/scripts
+            arcade/custom/prism-drift
+            static/games/nsp-return.js
+            tools
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22'
@@ -36,6 +40,23 @@ jobs:
         run: |
           node --check .github/scripts/prism-public-smoke.cjs
           uv run --offline --no-project --no-managed-python --no-python-downloads --python /usr/bin/python3 -m py_compile .github/scripts/prism-public-export.py
+      - name: Exercise actual owning per-file export derivation without public traffic
+        env:
+          NSP_PLAYTEST_OUT: ${{ runner.temp }}/prism-export-preflight
+          NSP_SOURCE_PROOF_DIR: ${{ runner.temp }}/prism-export-proof
+          NSP_TARGET_RELEASE_SHA: ${{ github.sha }}
+          NSP_SYSTEM_PYTHON: /usr/bin/python3
+          PYTHONUTF8: '1'
+          PYTHONIOENCODING: utf-8
+          UV_PYTHON_DOWNLOADS: never
+        run: node .github/scripts/prism-public-smoke.cjs fingerprint
+      - name: Retain actual source-only export derivation
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: prism-export-preflight
+          path: ${{ runner.temp }}/prism-export-preflight/expected.json
+          retention-days: 14
   public-release:
     if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-24.04

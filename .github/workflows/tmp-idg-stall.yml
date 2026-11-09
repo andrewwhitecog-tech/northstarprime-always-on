@@ -19,13 +19,12 @@ jobs:
         with: { path: tool, show-progress: false, sparse-checkout: tmp_capture }
       - uses: actions/checkout@v4
         with:
-          ref: 9dea24d4e68e3b95bee3328a9b79fe9981009274
+          ref: 522eb3c5944a334631b2678debe1613dabb9ecb4
           path: pr
           show-progress: false
           sparse-checkout: |
-            arcade/custom/vorath-souls
-            arcade/custom/prism-runner-2049
-            arcade/custom/chrono-blade-2049
+            arcade/custom/precinct-404
+            arcade/custom/dharma-invaders
             static/games
             static/art/games
       - uses: actions/checkout@v4
@@ -34,9 +33,8 @@ jobs:
           path: main
           show-progress: false
           sparse-checkout: |
-            arcade/custom/vorath-souls
-            arcade/custom/prism-runner-2049
-            arcade/custom/chrono-blade-2049
+            arcade/custom/precinct-404
+            arcade/custom/dharma-invaders
             static/games
             static/art/games
       - uses: actions/setup-python@v5
@@ -50,11 +48,11 @@ jobs:
           nohup python tool/tmp_capture/serve.py 8766 pr >/dev/null 2>&1 &
           nohup python tool/tmp_capture/serve.py 8765 main >/dev/null 2>&1 &
           sleep 3
-      - name: Ablate FX pieces on the PR head (each set twice)
+      - name: Profile PR head 522eb3c5 (twice) and main, Precinct 404 and Commentary Siege
         continue-on-error: true
         run: |
-          SETS="none;particles;light;rays;vignette;motes,floaters,rings;eye,cover;particles,light,rays,vignette,motes,floaters,rings,eye,cover"
-          for r in 1 2; do python tool/tmp_capture/profile_stall.py --base http://127.0.0.1:8766 --slugs chrono-blade-2049,prism-runner-2049,vorath-souls --out out/ablate_$r --ablate "$SETS"; done
+          for r in 1 2; do python tool/tmp_capture/profile_stall.py --base http://127.0.0.1:8766 --slugs precinct-404,dharma-invaders --out out/pr_$r; done
+          python tool/tmp_capture/profile_stall.py --base http://127.0.0.1:8765 --slugs precinct-404,dharma-invaders --out out/main
       - uses: actions/upload-artifact@v4
         if: always()
         with:

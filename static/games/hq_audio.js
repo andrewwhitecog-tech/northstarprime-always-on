@@ -130,7 +130,7 @@ function HQAudio(opts) {
   function ensureMusic() {
     if (musicEl || !musicName || (!ctx && !noWebAudio)) return;   // wait for unlock, unless this browser has no Web Audio
     // createElement, not new Audio(): a game script may shadow the global Audio name.
-    musicEl = document.createElement('audio'); musicEl.src = base + musicName + '.mp3'; musicEl.loop = true; musicEl.preload = 'auto';
+    musicEl = document.createElement('audio'); musicEl.crossOrigin = 'anonymous'; musicEl.src = base + musicName + '.mp3'; musicEl.loop = true; musicEl.preload = 'auto';
     loadedName = musicName;
     if (!ctx) { musicEl.volume = musicVol * musicLevel; musicEl.muted = muted; return; }   // no Web Audio: plain element
     try {   // through Web Audio, so mute and the depth filter apply to it

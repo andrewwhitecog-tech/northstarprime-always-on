@@ -14,34 +14,38 @@ async function bounded(promise,label){let timer;try{return await Promise.race([p
   for(const phone of [false,true])for(const side of ['left','right']){
     const viewport=phone?{width:390,height:844}:{width:1280,height:1000};
     const entry={phone,side,viewport,passed:false,trace:[],errors:[]};result.cases.push(entry);
-    const context=await browser.newContext({viewport,hasTouch:phone,isMobile:phone}),page=await context.newPage();let touch;
+    const context=await browser.newContext({viewport,hasTouch:phone,isMobile:phone}),page=await context.newPage();let input;
     try{
       page.on('pageerror',e=>entry.errors.push(String(e)));
       page.on('response',r=>{if(r.status()>=400)entry.errors.push(r.status()+' '+r.url());});
       await page.goto('http://127.0.0.1:'+server.address().port+'/arcade/custom/dharma-invaders/');
       await page.bringToFront();await page.waitForFunction(()=>__COMMENTARY_DEBUG__.atlas().ready);
-      if(phone)touch=await context.newCDPSession(page);
-      // Real browser input at observed button coordinates; no DOM.click/dispatchEvent.
-      const click=async selector=>{const r=await page.locator(selector).boundingBox();assert.ok(r);const x=r.x+r.width/2,y=r.y+r.height/2;
-        if(phone){await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});}
-        else await page.mouse.click(x,y);
+      input=await context.newCDPSession(page);
+      // Precomputed direct CDP input avoids actionability/geometry roundtrips during .2s dash.
+      const point=async selector=>{const r=await page.locator(selector).boundingBox();assert.ok(r);return {x:r.x+r.width/2,y:r.y+r.height/2};};
+      const clickAt=async({x,y})=>{
+        if(phone){await input.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});await input.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});}
+        else{await input.send('Input.dispatchMouseEvent',{type:'mousePressed',x,y,button:'left',buttons:1,clickCount:1});await input.send('Input.dispatchMouseEvent',{type:'mouseReleased',x,y,button:'left',buttons:0,clickCount:1});}
       };
+      const click=async selector=>clickAt(await point(selector));
       await click('#start');
-      if(phone){const r=await page.locator('#c').boundingBox();await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:r.x+r.width*(side==='left'?.01:.99),y:r.y+r.height*.85}]});}
+      if(phone){const r=await page.locator('#c').boundingBox();await input.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:r.x+r.width*(side==='left'?.01:.99),y:r.y+r.height*.85}]});}
       else await page.keyboard.down(side==='left'?'ArrowLeft':'ArrowRight');
       await page.waitForFunction(side=>side==='left'?__COMMENTARY_DEBUG__.snapshot().sentinel.x<=43:__COMMENTARY_DEBUG__.snapshot().sentinel.x>=757,side,{timeout:5000});
-      if(phone)await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+      if(phone)await input.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
       else await page.keyboard.up(side==='left'?'ArrowLeft':'ArrowRight');
       entry.before=await page.evaluate(()=>__COMMENTARY_DEBUG__.snapshot());
+      const parryPoint=await point('#parry'),pausePoint=await point('#pause');entry.inputPoints={parryPoint,pausePoint};entry.pauseEvents=[];
       let activeResolve,doneResolve;
       const active=new Promise(r=>{activeResolve=r;}),done=new Promise(r=>{doneResolve=r;});
       await page.exposeBinding('edgeSample',(_,sample)=>{entry.trace.push(sample);if(sample.isDashing)activeResolve(sample);});
       await page.exposeBinding('edgeEvent',(_,event)=>{entry.parryEvent=event;});
       await page.exposeBinding('edgeDone',(_,value)=>doneResolve(value));
+      await page.exposeBinding('edgePauseEvent',(_,event)=>entry.pauseEvents.push(event));
       // Arm immediately and start the observer ONLY on the actual trusted native click.
       // The existing game listener runs first and owns every state change.
       await page.evaluate(()=>document.querySelector('#parry').addEventListener('click',event=>{
-        window.edgeEvent({trusted:event.isTrusted,detail:event.detail,pointerType:event.pointerType||''});
+        window.edgeEvent({at:performance.now(),trusted:event.isTrusted,detail:event.detail,pointerType:event.pointerType||''});
         const start=performance.now();let seenActive=false;
         function sample(){const state=__COMMENTARY_DEBUG__.snapshot(),row={at:performance.now(),paused:state.paused,...state.sentinel};
           window.edgeSample(row);if(row.isDashing)seenActive=true;
@@ -50,8 +54,11 @@ async function bounded(promise,label){let timer;try{return await Promise.race([p
           requestAnimationFrame(sample);
         }sample();
       },{once:true}));
-      await click('#parry');entry.firstActive=await bounded(active,'actual active dash');
-      await click('#pause');entry.paused=await page.evaluate(()=>__COMMENTARY_DEBUG__.snapshot());
+      await page.evaluate(()=>document.querySelector('#pause').addEventListener('click',event=>window.edgePauseEvent({at:performance.now(),trusted:event.isTrusted,paused:__COMMENTARY_DEBUG__.snapshot().paused,sentinel:__COMMENTARY_DEBUG__.snapshot().sentinel})));
+      // Send genuine ordered Parry then Pause input without a new geometry lookup or binding wait.
+      // The trusted click observer must still prove an actual active state; no state is injected.
+      await clickAt(parryPoint);await clickAt(pausePoint);
+      entry.firstActive=await bounded(active,'actual active dash');entry.paused=await page.evaluate(()=>__COMMENTARY_DEBUG__.snapshot());
       assert.equal(entry.paused.paused,true);assert.equal(entry.paused.sentinel.isDashing,true,'native Pause occurred during an actual active dash');
       assert.ok(entry.paused.sentinel.dashTimer>0);
       assert.ok(entry.paused.sentinel.x>=42&&entry.paused.sentinel.x<=758);
@@ -66,12 +73,12 @@ async function bounded(promise,label){let timer;try{return await Promise.race([p
       entry.activeMaxX=Math.max(...entry.trace.filter(r=>r.isDashing).map(r=>r.x));
       entry.transientOutside=entry.trace.some(r=>r.x<42||r.x>758);
       await page.screenshot({path:path.join(out,'dash-complete-'+(phone?'phone':'desktop')+'-'+side+'.png'),fullPage:true});
-      assert.equal(entry.parryEvent.trusted,true);assert.ok(entry.activeSamples>0,'real active dash samples are required');
+      assert.equal(entry.parryEvent.trusted,true);assert.ok(entry.pauseEvents[0]?.trusted);assert.ok(entry.pauseEvents[0].at>=entry.parryEvent.at);assert.ok(entry.activeSamples>0,'real active dash samples are required');assert.ok(entry.pausedSamples>0,'real paused-active dash samples are required');
       assert.equal(entry.observer.completed,true);assert.equal(entry.transientOutside,false,'all actual active/paused/completed samples stay in existing court');
       assert.equal(entry.after.sentinel.isDashing,false);assert.ok(entry.after.sentinel.dashTimer<=0);
       assert.ok(entry.after.sentinel.x>=42&&entry.after.sentinel.x<=758);assert.deepEqual(entry.errors,[]);entry.passed=true;
     }catch(e){entry.failure=e.stack;await page.screenshot({path:path.join(out,'dash-failure-'+(phone?'phone':'desktop')+'-'+side+'.png'),fullPage:true}).catch(()=>{});}
-    finally{if(touch)await touch.detach().catch(()=>{});await context.close();}
+    finally{if(input)await input.detach().catch(()=>{});await context.close();}
   }
   result.passed=result.cases.length===4&&result.cases.every(c=>c.passed);if(!result.passed)process.exitCode=1;
 }catch(e){result.errors.push(e.stack);process.exitCode=1;}

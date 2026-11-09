@@ -2,7 +2,6 @@
 // Capture the unmodified, public original Chrono client. Never write game state.
 const fs = require('node:fs');
 const path = require('node:path');
-const http = require('node:http');
 const crypto = require('node:crypto');
 const assert = require('node:assert/strict');
 const {spawn, execFileSync} = require('node:child_process');
@@ -13,9 +12,14 @@ const receipt = {startedUtc: new Date().toISOString(), status: 'started', accept
   inputs: [], observations: [], errors: []};
 const write = (name, value) => fs.writeFileSync(path.join(out, name), JSON.stringify(value, null, 2) + '\n');
 const hash = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
+function engine(html) {
+  const match = html.match(/<script>\s*'use strict';([\s\S]*?)<\/script>/);
+  assert.ok(match, 'Actual original inline engine missing');
+  return match[1].replace(/\r\n/g, '\n');
+}
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const ownChildren = new Set();
-let server, browser, recorder, recorderDone;
+let browser, recorder, recorderDone;
 function launch(binary, args, stderrName) {
   const log = fs.openSync(path.join(out, stderrName), 'w');
   const child = spawn(binary, args, {stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true});
@@ -60,19 +64,16 @@ async function verifySource(pin, root) {
   assert.equal(pin.publicOrigin, 'https://northstarprime.net/');
   assert.ok(pin.files.length >= 4, 'Pin page, FAR, player and enemy assets');
   const pagePin = pin.files.find(entry => entry.path === pin.gameRoute.slice(1) + 'index.html');
-  assert.match(pagePin?.releasedSha256 || '', /^[0-9a-f]{64}$/, 'Exact deployed page hash is still pending');
+  assert.ok(pagePin, 'Pin the source page');
+  assert.match(pin.releasedEngineSha256 || '', /^[0-9a-f]{64}$/, 'Verified released engine digest is pending');
   const facts = [];
   for (const entry of pin.files) {
     assert.match(entry.sha256, /^[0-9a-f]{64}$/);
     assert.ok(!entry.path.includes('..') && !path.isAbsolute(entry.path));
     const bytes = fs.readFileSync(path.join(root, entry.path));
     assert.equal(hash(bytes), entry.sha256, 'Source hash mismatch: ' + entry.path);
-    const response = await fetch(new URL(entry.path, pin.publicOrigin), {signal: AbortSignal.timeout(20000)});
-    assert.equal(response.status, 200, 'Released resource unavailable: ' + entry.path);
-    const live = Buffer.from(await response.arrayBuffer());
-    assert.equal(hash(live), entry.releasedSha256 || entry.sha256, 'Live release hash mismatch: ' + entry.path);
-    facts.push({path: entry.path, sourceBytes: bytes.length, sourceSha256: hash(bytes),
-      releasedBytes: live.length, releasedSha256: hash(live)});
+    if (entry.path.endsWith('/index.html')) assert.equal(hash(engine(bytes.toString('utf8'))), pin.releasedEngineSha256);
+    facts.push({path:entry.path,sourceBytes:bytes.length,sourceSha256:hash(bytes)});
   }
   receipt.source = {commit: head, publicOrigin: pin.publicOrigin, files: facts};
   write('SOURCE_VERIFIED.json', receipt.source);
@@ -85,35 +86,40 @@ async function main() {
   const pwPath = process.env.NSP_PLAYWRIGHT_PATH;
   patchNativeFocus(pwPath);
   const {chromium} = require(pwPath);
-  server = http.createServer((req, res) => {
-    try {
-      const relative = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
-      let file = path.resolve(root, '.' + relative);
-      if (!file.startsWith(root + path.sep)) throw Error('Outside source root');
-      if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, 'index.html');
-      if (!fs.existsSync(file)) {res.writeHead(404); res.end(); return;}
-      const mime = {'.html': 'text/html', '.png': 'image/png', '.js': 'text/javascript',
-        '.json': 'application/json', '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg'}[path.extname(file)] || 'application/octet-stream';
-      res.writeHead(200, {'Content-Type': mime, 'Cache-Control': 'no-store'});
-      fs.createReadStream(file).pipe(res);
-    } catch {res.writeHead(400); res.end();}
-  });
-  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-  const url = 'http://127.0.0.1:' + server.address().port + pin.gameRoute;
+  const url = new URL(pin.gameRoute, pin.publicOrigin).href;
   browser = await chromium.launch({headless: false, args: [
     '--kiosk', '--window-position=0,0', '--window-size=1324,900', '--disable-dev-shm-usage'
   ]});
   const context = await browser.newContext({viewport: null, deviceScaleFactor: 1});
+  await context.route('**/*', route => /cloudflareinsights\.com|google-analytics\.com|googletagmanager\.com/.test(route.request().url()) ? route.abort() : route.continue());
   const page = await context.newPage();
   page.on('pageerror', e => receipt.errors.push(String(e)));
-  const assetResponses = [];
+  const assetResponses = [], assetBodies = [];
+  receipt.assetResponses = assetResponses;
   page.on('response', response => {
-    if (response.url().includes(pin.gameRoute + 'assets/')) {
-      assetResponses.push({url: response.url(), status: response.status()});
-      if (!response.ok()) receipt.errors.push('Asset HTTP ' + response.status() + ': ' + response.url());
+    const parsed = new URL(response.url());
+    if (parsed.origin === pin.publicOrigin.replace(/\/$/, '') && parsed.pathname.startsWith(pin.gameRoute + 'assets/')) {
+      assetBodies.push((async () => {
+        const body = await response.body();
+        const observation = {url:response.url(),status:response.status(),bytes:body.length,sha256:hash(body)};
+        assetResponses.push(observation);
+        const expected = pin.files.find(entry => '/' + entry.path === parsed.pathname);
+        assert.ok(expected, 'Unexpected game image response: '+parsed.pathname);
+        assert.equal(response.status(),200,'Actual public image HTTP failure');
+        assert.equal(observation.sha256,expected.sha256,'Actual public image differs from accepted source');
+      })().catch(error => {receipt.errors.push(error.stack || String(error));}));
     }
   });
-  await page.goto(url, {waitUntil: 'networkidle'});
+  const navigation = await page.goto(url, {waitUntil: 'networkidle'});
+  assert.ok(navigation && navigation.status()===200, 'Actual public game response failed');
+  const publicPage = await navigation.body();
+  const publicEngineSha = hash(engine(publicPage.toString('utf8')));
+  assert.equal(publicEngineSha,pin.releasedEngineSha256,'Actual public engine differs from the accepted release');
+  if (pin.releasedPageSha256) assert.equal(hash(publicPage),pin.releasedPageSha256);
+  receipt.publicPage = {url:page.url(),status:navigation.status(),bytes:publicPage.length,
+    fullPageSha256:hash(publicPage),engineSha256:publicEngineSha};
+  await Promise.all(assetBodies);
+  assert.equal(receipt.errors.length,0,'Actual public resource validation failed');
   await page.bringToFront();
   await sleep(750);
   const decoded = await page.evaluate(async () => {
@@ -258,7 +264,6 @@ async function main() {
   finally {
     if (recorder && recorder.exitCode === null) {recorder.kill('SIGINT'); await recorderDone?.catch(e => receipt.errors.push(String(e)));}
     await browser?.close().catch(e => receipt.errors.push(String(e)));
-    if (server) await new Promise(resolve => server.close(resolve));
     for (const child of ownChildren) if (child.exitCode === null) child.kill('SIGTERM');
     receipt.finishedUtc = new Date().toISOString();
     write('CAPTURE_ACTUAL.json', receipt);

@@ -88,6 +88,8 @@ jobs:
     if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-24.04
     timeout-minutes: 7
+    env:
+      NSP_TARGET_RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -98,51 +100,66 @@ jobs:
             arcade/custom/vorath-souls
             .github/scripts
             tools
-      - name: Bound the public smoke to an actual changed Souls release
-        id: scope
+      - name: Initialize isolated public proof paths on the assigned runner
         run: |
-          git rev-parse --verify HEAD^ > /dev/null
-          if git diff --quiet HEAD^ HEAD -- arcade/custom/vorath-souls; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          fi
+          echo "NSP_PLAYTEST_OUT=$RUNNER_TEMP/vorath-souls-public" >> "$GITHUB_ENV"
+          echo "NSP_SOURCE_PROOF_DIR=$RUNNER_TEMP/vorath-souls-source-proof" >> "$GITHUB_ENV"
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        if: steps.scope.outputs.changed == 'true'
         with:
           node-version: '22'
+      - name: Fingerprint actual Souls source and owning export helpers
+        id: source
+        run: node arcade/custom/vorath-souls/tests/release_proof.cjs fingerprint
+      - name: Restore only the exact earlier source acceptance
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # official v6.1.0
+        env:
+          SEGMENT_DOWNLOAD_TIMEOUT_MINS: '1'
+        with:
+          key: ${{ steps.source.outputs.key }}
+          path: ${{ env.NSP_SOURCE_PROOF_DIR }}/accepted.json
+      - name: Validate retained proof or require a real public native run
+        id: gate
+        run: node arcade/custom/vorath-souls/tests/release_proof.cjs plan
       - name: Install the pinned official isolated uv runner
-        if: steps.scope.outputs.changed == 'true'
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3; official tag verified
+        if: steps.gate.outputs.needs-native == 'true'
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # official v10.3.3
         with:
           version: '0.13.7'
           enable-cache: 'false'
           download-from-astral-mirror: 'false'
       - name: Install the pinned isolated release browser
-        if: steps.scope.outputs.changed == 'true'
+        if: steps.gate.outputs.needs-native == 'true'
         run: |
           npm install --prefix "$RUNNER_TEMP/vorath-browser" --no-save --package-lock=false --ignore-scripts playwright@1.55.1
           "$RUNNER_TEMP/vorath-browser/node_modules/.bin/playwright" install --with-deps chromium
       - name: Remove only pinned focus emulation for public native input
-        if: steps.scope.outputs.changed == 'true'
+        if: steps.gate.outputs.needs-native == 'true'
         env:
           NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/vorath-browser/node_modules/playwright
-          NSP_PLAYTEST_OUT: ${{ runner.temp }}/vorath-souls-public
         run: node .github/scripts/native-browser-focus.cjs
       - name: Verify real exported bytes and desktop/phone Start move pause
-        if: steps.scope.outputs.changed == 'true'
+        id: native
+        if: steps.gate.outputs.needs-native == 'true'
         env:
           NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/vorath-browser/node_modules/playwright
-          NSP_PLAYTEST_OUT: ${{ runner.temp }}/vorath-souls-public
           NSP_VIRTUAL_DISPLAY: '1'
-          NSP_TARGET_RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
           NSP_SYSTEM_PYTHON: /usr/bin/python3
           PYTHONUTF8: '1'
           PYTHONIOENCODING: utf-8
           UV_PYTHON_DOWNLOADS: never
         run: xvfb-run --auto-servernum node arcade/custom/vorath-souls/tests/public_smoke.cjs
-      - name: Retain actual public screenshots and result
-        if: always() && steps.scope.outputs.changed == 'true'
+      - name: Seal only a parsed successful public result
+        id: seal
+        if: steps.native.outcome == 'success'
+        run: node arcade/custom/vorath-souls/tests/release_proof.cjs seal
+      - name: Save successful source acceptance for future unchanged releases
+        if: steps.native.outcome == 'success' && steps.seal.outcome == 'success'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # official v6.1.0
+        with:
+          key: ${{ steps.source.outputs.key }}
+          path: ${{ env.NSP_SOURCE_PROOF_DIR }}/accepted.json
+      - name: Retain actual public result or explicitly reused earlier source proof
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: vorath-souls-public

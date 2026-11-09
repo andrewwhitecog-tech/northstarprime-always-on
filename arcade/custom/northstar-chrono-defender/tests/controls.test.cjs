@@ -8,7 +8,7 @@ function game(){
  const handlers={};const elements=new Map();const gradient={addColorStop(){}};
  const drawing=[];const ctx=new Proxy({}, {get:(o,k)=>o[k]||((...args)=>{if(k==='fillRect'||k==='drawImage')drawing.push({method:k,args});return gradient;}),set:(o,k,v)=>(o[k]=v,true)});
  const element=id=>{if(!elements.has(id)){const captured=new Set();elements.set(id,{style:{},dataset:{},classList:{add(){},remove(){},toggle(){}},closest:()=>null,focus(){},getBoundingClientRect:()=>({left:0,top:0,width:id.endsWith('Stick')?100:1280,height:id.endsWith('Stick')?100:720}),setPointerCapture:i=>captured.add(i),hasPointerCapture:i=>captured.has(i),releasePointerCapture:i=>captured.delete(i),addEventListener:(name,fn)=>handlers[id+':'+name]=fn,getContext:()=>ctx});}return elements.get(id);};
- let pads=[];const sandbox={console,performance:{now:()=>0},requestAnimationFrame(){},setTimeout(){},setInterval(){},Math,
+ let pads=[];const sandbox={console,Image:class{constructor(){this.naturalWidth=0;this.naturalHeight=0;}},performance:{now:()=>0},requestAnimationFrame(){},setTimeout(){},setInterval(){},Math,
  ResizeObserver:class{observe(){}},document:{createElement:()=>({width:0,height:0,getContext:()=>ctx}),getElementById:element,documentElement:{classList:{toggle(){}}},body:{dataset:{}},querySelectorAll:selector=>selector==='[data-action]'?['bomb','chrono','dodge','weapon'].map(action=>{const e=element('action-'+action);e.dataset.action=action;return e;}):[],addEventListener:(name,fn)=>handlers['document:'+name]=fn},window:{innerWidth:1280,innerHeight:720,matchMedia:()=>({matches:false}),addEventListener:(name,fn)=>handlers[name]=fn},navigator:{maxTouchPoints:0,getGamepads:()=>pads}};
  vm.createContext(sandbox);vm.runInContext("'use strict';"+script[1],sandbox);
  const evalGame=code=>vm.runInContext(code,sandbox);
@@ -42,3 +42,29 @@ test('keyboard and touch click discrimination preserves accessible activation',(
 
 test('pause preserves the actual last rendered arena instead of clearing combat art',()=>{const g=game();g.frame();const before=g.drawing.length;g.read("gameState='PAUSED'");g.frame();assert.equal(g.drawing.length,before,'paused frames must not clear the arena');});
 test('resize retains the paused frame at the new arena dimensions',()=>{const g=game();g.frame();g.read("gameState='PAUSED';canvas.getBoundingClientRect=()=>({width:640,height:360});resizeArena()");assert.equal(g.read('W'),640);assert.equal(g.read('H'),360);assert.ok(g.drawing.some(x=>x.method==='drawImage'&&x.args.length===5&&x.args[3]===640&&x.args[4]===360),'existing frame must be scaled into resized arena');});
+
+test('six ship poses follow real combat and local lateral movement priority',()=>{
+ const g=game();const pose=o=>g.read('chooseShipPose('+JSON.stringify({damageFlash:0,isInvulnerable:false,fireCd:0,angle:0,vx:0,vy:0,...o})+')');
+ assert.equal(pose({}),0);assert.equal(pose({vy:-1}),1);assert.equal(pose({vy:1}),2);
+ assert.equal(pose({fireCd:4,vy:1}),3);assert.equal(pose({isInvulnerable:true,fireCd:4}),5);
+ assert.equal(pose({damageFlash:3,isInvulnerable:true,fireCd:4}),4);
+ assert.equal(pose({angle:Math.PI/2,vx:1}),1,'banking must rotate with ship heading');
+});
+test('actual atlas renderer crops each512cell and keeps64px center anchor',()=>{
+ const g=game();g.read("shipAtlasState='ready'");
+ const configs=[{}, {vy:-1},{vy:1},{fireCd:1},{damageFlash:1},{isInvulnerable:true}];
+ configs.forEach((config,pose)=>{g.read('Object.assign(player,'+JSON.stringify({vx:0,vy:0,angle:0,damageFlash:0,fireCd:0,isInvulnerable:false,...config})+');drawPlayerShip()');const call=g.drawing.filter(x=>x.method==='drawImage').at(-1);assert.deepEqual(call.args.slice(1),[(pose%3)*512,Math.floor(pose/3)*512,512,512,-32,-32,64,64]);});
+});
+test('loading invalid or failed atlas uses the retained geometric renderer',()=>{
+ const g=game();for(const state of ['loading','invalid','error']){g.read('shipAtlasState='+JSON.stringify(state)+';drawPlayerShip()');}
+ assert.equal(g.drawing.filter(x=>x.method==='drawImage').length,0);assert.ok(g.drawing.filter(x=>x.method==='fillRect').length>=6);
+});
+test('atlas load callback accepts only the actual six-cell dimensions',()=>{
+ const g=game();g.read('shipAtlas.naturalWidth=512;shipAtlas.naturalHeight=512;shipAtlas.onload()');assert.equal(g.read('shipAtlasState'),'invalid');
+ g.read('shipAtlas.naturalWidth=1536;shipAtlas.naturalHeight=1024;shipAtlas.onload()');assert.equal(g.read('shipAtlasState'),'ready');
+ g.read('shipAtlas.onerror()');assert.equal(g.read('shipAtlasState'),'error');
+});
+test('real enemy collision keeps25shield damage and adds only visual damage feedback',()=>{
+ const g=game();g.read("player.x=300;player.y=200;mouse.x=300;mouse.y=200;enemies=[{x:300,y:200,vx:0,vy:0,hp:30,type:'scout',speed:0}];");g.frame();
+ assert.equal(g.read('player.shield'),75);assert.equal(g.read('player.hull'),100);assert.equal(g.read('player.damageFlash'),18);assert.equal(g.read('player.isInvulnerable'),false);assert.equal(g.read('chooseShipPose()'),4);
+});

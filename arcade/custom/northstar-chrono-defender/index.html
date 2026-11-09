@@ -245,8 +245,46 @@ const player = {
   bombs: 3,
   weapon: 0, // 0: Twin Plasma, 1: Tachyon Beam, 2: Missiles
   dodgeCd: 0, isInvulnerable: false,
-  fireCd: 0
+  fireCd: 0, damageFlash: 0
 };
+
+// Accepted six-state atlas: 3 columns × 2 rows, each cell 512 square, nose right.
+const shipAtlas = new Image();
+let shipAtlasState = 'loading';
+shipAtlas.onload = () => { shipAtlasState = shipAtlas.naturalWidth===1536&&shipAtlas.naturalHeight===1024?'ready':'invalid'; };
+shipAtlas.onerror = () => { shipAtlasState = 'error'; };
+shipAtlas.src = '/arcade/custom/northstar-chrono-defender/assets/interceptor-v02.png';
+function chooseShipPose(ship=player) {
+  if(ship.damageFlash>0)return 4;
+  if(ship.isInvulnerable)return 5;
+  if(ship.fireCd>0)return 3;
+  const lateral=-Math.sin(ship.angle)*ship.vx+Math.cos(ship.angle)*ship.vy;
+  return lateral<-.35?1:lateral>.35?2:0;
+}
+function drawPlayerShip() {
+  ctx.save();ctx.translate(player.x,player.y);ctx.rotate(player.angle);
+  if(shipAtlasState==='ready') {
+    const pose=chooseShipPose();
+    ctx.drawImage(shipAtlas,(pose%3)*512,Math.floor(pose/3)*512,512,512,-32,-32,64,64);
+  } else {
+      ctx.shadowColor = '#00e5ff'; ctx.shadowBlur = 15;
+      // Wing thrusters
+      ctx.fillStyle = '#00e5ff';
+      ctx.fillRect(-18, -12, 10, 4);
+      ctx.fillRect(-18, 8, 10, 4);
+      // Ship fuselage
+      ctx.fillStyle = player.isInvulnerable ? '#ffffff' : '#0f172a';
+      ctx.strokeStyle = '#00e5ff'; ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(22, 0); ctx.lineTo(-16, -14); ctx.lineTo(-10, 0); ctx.lineTo(-16, 14);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      // Cockpit canopy
+      ctx.fillStyle = '#f5c542';
+      ctx.beginPath(); ctx.ellipse(4, 0, 7, 3, 0, 0, Math.PI * 2); ctx.fill();
+    }
+  ctx.restore();
+}
 
 // Entities
 let bullets = [];
@@ -566,6 +604,7 @@ function gameLoop(now) {
     if (player.shield < player.maxShield) player.shield += 0.06 * dt;
 
     // Player Cooldowns
+    if(player.damageFlash>0)player.damageFlash=Math.max(0,player.damageFlash-dt);
     if (player.fireCd > 0) player.fireCd -= dt;
     if (player.dodgeCd > 0) player.dodgeCd -= dt;
 
@@ -603,26 +642,7 @@ function gameLoop(now) {
       });
     }
 
-    // Draw Player Ship
-    ctx.save();
-    ctx.translate(player.x, player.y);
-    ctx.rotate(player.angle);
-    ctx.shadowColor = '#00e5ff'; ctx.shadowBlur = 15;
-    // Wing thrusters
-    ctx.fillStyle = '#00e5ff';
-    ctx.fillRect(-18, -12, 10, 4);
-    ctx.fillRect(-18, 8, 10, 4);
-    // Ship fuselage
-    ctx.fillStyle = player.isInvulnerable ? '#ffffff' : '#0f172a';
-    ctx.strokeStyle = '#00e5ff'; ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(22, 0); ctx.lineTo(-16, -14); ctx.lineTo(-10, 0); ctx.lineTo(-16, 14);
-    ctx.closePath();
-    ctx.fill(); ctx.stroke();
-    // Cockpit canopy
-    ctx.fillStyle = '#f5c542';
-    ctx.beginPath(); ctx.ellipse(4, 0, 7, 3, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
+    drawPlayerShip();
 
     // Bullets Update & Render
     for (let i = bullets.length - 1; i >= 0; i--) {
@@ -702,6 +722,7 @@ function gameLoop(now) {
         } else {
           player.hull -= 30;
         }
+        player.damageFlash=18; // Visual feedback only; collision damage and timing stay unchanged.
         e.hp = 0;
         shakeScreen(15, 12);
         audio.explosion(false);
@@ -763,7 +784,7 @@ function startGame() {
   audio.init(); if(muted)audio.ctx.suspend().catch(()=>{});else audio.ctx.resume().catch(()=>{});
   clearHeldInput();
   player.shield=100;player.hull=100;player.chrono=100;player.bombs=3;
-  player.x=W/2;player.y=H/2;player.fireCd=0;player.dodgeCd=0;player.isInvulnerable=false;
+  player.x=W/2;player.y=H/2;player.fireCd=0;player.dodgeCd=0;player.isInvulnerable=false;player.damageFlash=0;
   chronoTimer=0;timeDilation=1;score=0;enemies=[];bullets=[];particles=[];shakeTime=0;
   document.getElementById('scoreVal').textContent='000,000';document.getElementById('bombVal').textContent='3';
   document.getElementById('titleScreen').classList.add('hidden');document.getElementById('gameOverScreen').classList.add('hidden');

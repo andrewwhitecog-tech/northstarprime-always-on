@@ -1265,7 +1265,7 @@
       drawEchoes();
       drawRoundText();
       drawFade();
-      drawTribunalDirectorHud();
+      // (The AI director's state and latency readout no longer prints over the arena.)
     }
 
     // Additive sprite afterimages behind the fighters (strike/dodge trails).
@@ -1510,13 +1510,13 @@
     }
 
     function drawBars() {
-      drawGauge(32, 24, view.w * 0.36, 16, player.hp / (player.maxHp || 100), "#3dffad", "EMERALD VOTARY");
-      drawGauge(view.w - view.w * 0.36 - 32, 24, view.w * 0.36, 16, enemy.hp / (enemy.maxHp || 100), enemy.color || "#ff2e6d", enemy.name.toUpperCase());
+      drawGauge(32, 24, view.w * 0.36, 16, player.hp / (player.maxHp || 100), "#3dffad", "EMERALD VOTARY", "left");
+      drawGauge(view.w - view.w * 0.36 - 32, 24, view.w * 0.36, 16, enemy.hp / (enemy.maxHp || 100), enemy.color || "#ff2e6d", enemy.name.toUpperCase(), "right");
       drawGauge(32, 48, view.w * 0.27, 9, player.stamina / 100, "#38e9ff", "STAMINA");
       drawGauge(view.w - view.w * 0.27 - 32, 48, view.w * 0.27, 9, enemy.stamina / 100, "#ffd75e", "AI STAMINA");
     }
 
-    function drawGauge(x, y, w, h, pct, color, label) {
+    function drawGauge(x, y, w, h, pct, color, label, above) {
       ctx.save();
       ctx.fillStyle = "rgba(0,0,0,0.44)";
       roundRect(x, y, w, h, h / 2);
@@ -1531,9 +1531,10 @@
       ctx.stroke();
       ctx.fillStyle = "rgba(248,251,255,0.8)";
       ctx.font = "800 10px ui-sans-serif";
-      ctx.textAlign = "left";
+      ctx.textAlign = above === "right" ? "right" : "left";
       if ("letterSpacing" in ctx) ctx.letterSpacing = "1.5px";
-      ctx.fillText(label, x, y + h + 13);
+      if (above) ctx.fillText(label, above === "right" ? x + w : x, y - 5);
+      else ctx.fillText(label, x, y + h + 13);
       if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
       ctx.restore();
     }

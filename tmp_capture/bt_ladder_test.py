@@ -26,7 +26,19 @@ PROBE = """(() => { const p = window.__fp = {d: [], last: 0};
   const AC = window.AudioContext; if (AC) { const P = AC.prototype, o = P.createOscillator, d = P.decodeAudioData, b = P.createBufferSource;
     P.createOscillator = function () { au.osc++; return o.apply(this, arguments); };
     P.decodeAudioData = function () { au.decode++; return d.apply(this, arguments); };
-    P.createBufferSource = function () { au.buf++; return b.apply(this, arguments); }; } })();"""
+    P.createBufferSource = function () { au.buf++; return b.apply(this, arguments); }; }
+  // Rule 30(g) proof: which lettering cells were drawn (by source x,y), and any typed canvas text.
+  const lt = window.__lt = {cells: {}, typed: {}};
+  const C2 = CanvasRenderingContext2D.prototype, di = C2.drawImage;
+  C2.drawImage = function (img, sx, sy) { if (img && img.src && img.src.indexOf('lettering_v04') >= 0 && arguments.length >= 9) { const k = sx + ',' + sy; lt.cells[k] = (lt.cells[k] || 0) + 1; } return di.apply(this, arguments); };
+  for (const n of ['fillText', 'strokeText']) { const f = C2[n]; C2[n] = function (t) { const k = String(t).slice(0, 40); lt.typed[k] = (lt.typed[k] || 0) + 1; return f.apply(this, arguments); }; } })();"""
+CELLS = json.loads((Path(__file__).resolve().parent / "cells.json").read_text(encoding="utf-8"))["cells"]
+BY_XY = {f"{v[0]},{v[1]}": k for k, v in CELLS.items()}
+
+
+async def art_seen(page):
+    lt = await page.evaluate("() => window.__lt")
+    return sorted({BY_XY.get(k, "?" + k) for k in lt["cells"]}), lt["typed"]
 
 
 async def cors_shim(ctx, fetched):
@@ -105,10 +117,16 @@ async def main():
         await page.wait_for_timeout(3000)
         l0 = await L(page)
         check("atlases loaded, two bouts open", l0["open"] == ["ruby", "duelist"], l0["open"])
+        check("accepted lettering atlas loaded", await page.evaluate("() => letteringReady === true"), "lettering_v04_d438.webp")
+        box = await page.evaluate("""() => ['#callout', '.meter', '.panel', '.arena-wrap'].map(q => { const e = document.querySelector(q); if (!e) return [q, null];
+          const c = getComputedStyle(e); return [q, c.backgroundColor, c.backgroundImage.slice(0, 20), c.borderTopWidth + ' ' + c.borderTopStyle]; })""")
+        check("no box behind any words in the page (rule 30(a))", all(r[1] in (None, "rgba(0, 0, 0, 0)") and r[2] == "none" and (r[3].endswith("none") or r[3].startswith("0px")) for r in box if r[1] is not None), box)
         await page.screenshot(path=str(out / "01_title.png"))
         await page.keyboard.press("Enter")
         await page.wait_for_timeout(700)
         await page.screenshot(path=str(out / "02_bout1_intro.png"))
+        await wait_until(page, "() => (state.roundCall || 0) > 0 && state.roundCall < 100 && ladder.intro <= 70", 30)
+        await page.screenshot(path=str(out / "02b_round_call.png"))
         l1 = await L(page)
         check("bout 1 is Ruby Mantis Regent", l1["enemy"] == "Ruby Mantis Regent" and l1["running"], l1["enemy"])
         await play(page, 8, [("KeyD", 400), ("KeyJ", 120), ("KeyK", 120), ("KeyL", 300), ("Space", 100), ("KeyA", 250), ("KeyJ", 120)])
@@ -117,6 +135,8 @@ async def main():
         check("HQ audio: recorded files fetched and decoded, no oscillators", au["osc"] == 0 and au["decode"] > 0 and len(fetched) > 0,
               {"probe": au, "fetched": fetched[:8]})
         await finish_bout(page)
+        await page.wait_for_timeout(300)
+        await page.screenshot(path=str(out / "03b_ko.png"))
         # The between-bout pause runs in game time; on a slow software-GL runner it takes far longer than 3.5 s.
         ok = await wait_until(page, "() => window.__bladeTribunalDebug.ladder().enemy === 'Justiciar Duelist' && window.__bladeTribunalDebug.ladder().running", 60)
         l2 = await L(page)
@@ -142,6 +162,8 @@ async def main():
             ok = await wait_until(page, "() => window.__bladeTribunalDebug.ladder().result === 'cleared'", 30)
             l5 = await L(page)
             check("ladder cleared, Thorn blade unlocked and saved", ok and "thorn" in l5["save"]["blades"] and l5["save"]["clears"] >= 1, l5["save"])
+            await wait_until(page, "() => !(state.koBanner > 0)", 30)
+            await page.wait_for_timeout(600)
             await page.screenshot(path=str(out / "06_cleared.png"))
             await page.keyboard.press("b")
             await page.wait_for_timeout(200)
@@ -149,6 +171,11 @@ async def main():
             check("B changes to the Thorn blade", l6["blade"] == "thorn", l6["blade"])
             stored = await page.evaluate("() => localStorage.getItem('nsp.bladeTribunal.v2')")
             check("save written to localStorage", bool(stored) and "thorn" in stored, (stored or "")[:120])
+        seen, typed = await art_seen(page)
+        need = {"bout", "round", "fight", "ko", "minus"}
+        check("art callouts drawn from the accepted sheet: BOUT, ROUND, FIGHT, K.O., damage numbers (+ CLEARED/FALLEN, GUARD, FLASH PARRY when reached)",
+              need <= set(seen) and any(d in seen for d in "0123456789"), seen)
+        check("no typed text on the arena (fillText/strokeText)", not typed, typed)
         fp = await page.evaluate("() => { const d = window.__fp.d.slice(60).sort((a,b)=>a-b); return {n: d.length, med: d[d.length>>1], p95: d[Math.floor(d.length*0.95)], max: d[d.length-1]}; }")
         check("frame times on this runner (software GL; not the PC measure)", True, fp)
         await ctx.close()
@@ -175,6 +202,12 @@ async def main():
         lp = await page.evaluate("() => window.__bladeTribunalDebug.ladder()")
         sw = await page.evaluate("() => (document.scrollingElement || document.documentElement).scrollWidth")
         check("phone: duel starts from a tap", lp["running"], {"enemy": lp["enemy"], "scrollWidth": sw})
+        geo = await page.evaluate("""() => { const r = e => { const b = document.querySelector(e).getBoundingClientRect(); return [Math.round(b.top), Math.round(b.bottom), Math.round(b.width), Math.round(b.height)]; };
+          return {scrollY: scrollY, canvas: r('#game'), slash: r('#slashBtn'), dodge: r('#dodgeBtn'), left: r('#leftBtn'), vh: innerHeight}; }""")
+        c, vh = geo["canvas"], geo["vh"]
+        one = all(0 <= geo[k][0] and geo[k][1] <= vh for k in ("canvas", "slash", "dodge", "left"))
+        check("phone: fighters and controls on one screen without scrolling", one and geo["scrollY"] == 0, geo)
+        check("phone: arena keeps its shape (620:560), not squashed", abs(c[2] / max(1, c[3]) - 620 / 560) < 0.03, c)
         check("phone: no sideways scroll at 390 px", sw <= 392, sw)
         await ctx.close()
         await b.close()

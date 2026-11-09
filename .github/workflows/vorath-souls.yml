@@ -1,0 +1,38 @@
+name: Vorath Souls combat and browser playtest
+on:
+  pull_request:
+    paths: ["arcade/custom/vorath-souls/**", ".github/workflows/vorath-souls.yml"]
+permissions:
+  contents: read
+concurrency:
+  group: vorath-souls-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  encounter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Run actual combat contract tests
+        run: node --test arcade/custom/vorath-souls/tests/combat.test.cjs
+      - name: Install the pinned isolated test browser
+        run: |
+          npm install --prefix "$RUNNER_TEMP/vorath-browser" --no-save --package-lock=false --ignore-scripts playwright@1.55.1
+          "$RUNNER_TEMP/vorath-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Play the actual encounter through keyboard and mouse
+        env:
+          NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/vorath-browser/node_modules/playwright
+          NSP_PLAYTEST_OUT: ${{ runner.temp }}/vorath-souls-playtest
+        run: node arcade/custom/vorath-souls/tests/browser_playtest.cjs
+      - name: Retain actual playtest screenshots and result
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: vorath-souls-playtest
+          path: ${{ runner.temp }}/vorath-souls-playtest/
+          retention-days: 14

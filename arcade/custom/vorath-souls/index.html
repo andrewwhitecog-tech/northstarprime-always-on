@@ -197,7 +197,7 @@
 <div class="hud">
   <div class="topbar">
     <div class="panel">
-      <div class="title">Vorath Souls // Prototype</div>
+      <div class="title">Vorath Souls · The Bone Gate</div>
       <div class="bar"><div id="hp" class="fill hp"></div></div>
       <div class="bar"><div id="stamina" class="fill stamina"></div></div>
       <div class="bar"><div id="rage" class="fill rage"></div></div>
@@ -223,6 +223,7 @@
   <span id="status">Concept prototype</span>
   <span id="debug">0 enemies</span>
 </div>
+<script src="./combat.js"></script>
 <script>
 (() => {
   "use strict";
@@ -237,9 +238,13 @@
   const statusEl = document.getElementById("status");
   const debugEl = document.getElementById("debug");
 
+  const combat = window.VorathCombat;
+  const actionBuffer = new combat.ActionBuffer(0.18);
+  let inputTime = 0;
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const keys = new Set();
   const pressed = new Set();
-  const mouse = { x: 0, y: 0, down: false, right: false };
+  const mouse = { x: 0, y: 0, down: false, right: false, active: false };
   const world = { w: 1280, h: 720, scale: 1, ox: 0, oy: 0 };
 
   const game = {
@@ -443,6 +448,8 @@
       maxHp: guard ? 170 : 55,
       stun: 0,
       maxStun: guard ? 100 : 46,
+      staggerT: 0,
+      staggerMax: 0,
       speed: guard ? 80 : 132,
       state: "idle",
       stateT: 0,
@@ -456,6 +463,8 @@
 
   function reset() {
     game.mode = "playing";
+    actionBuffer.clear();
+    inputTime = 0;
     game.time = 0;
     game.shake = 0;
     game.hitStop = 0;
@@ -477,6 +486,8 @@
 
   function pauseGame() {
     game.mode = "paused";
+    actionBuffer.clear();
+    keys.clear();
     setOverlay("Paused", "The Bone Gate waits.", "Press Escape to resume or R to restart");
   }
 
@@ -509,7 +520,7 @@
   function aimDirection() {
     const p = game.player;
     const a = norm(mouse.x - p.x, mouse.y - p.y);
-    if (Number.isFinite(a.x) && Math.hypot(mouse.x - p.x, mouse.y - p.y) > 8) {
+    if (mouse.active && Number.isFinite(a.x) && Math.hypot(mouse.x - p.x, mouse.y - p.y) > 8) {
       p.faceX = a.x;
       p.faceY = a.y;
     }
@@ -559,7 +570,7 @@
 
   function doFinisher(target) {
     const p = game.player;
-    if (!target || target.dead || target.stun < target.maxStun) return false;
+    if (!combat.canFinish(target)) return false;
     p.finisherT = 0.65;
     p.rage = clamp(p.rage + 25, 0, 100);
     p.hp = clamp(p.hp + 14, 0, 100);
@@ -570,6 +581,20 @@
     addParticle(target.x, target.y, "#22d3ee", 46, 340);
     flashMessage("Finisher: gate-blood claimed", 1.3);
     return true;
+  }
+
+  function captureCombatInput() {
+    if (pressed.has("KeyJ") || mouse.down) actionBuffer.queue("attack", "light", inputTime);
+    if (pressed.has("KeyK") || mouse.right) actionBuffer.queue("attack", "heavy", inputTime);
+    if (pressed.has("Space")) actionBuffer.queue("dodge", true, inputTime);
+    if (pressed.has("ShiftLeft") || pressed.has("ShiftRight") || pressed.has("KeyL")) actionBuffer.queue("parry", true, inputTime);
+    if (pressed.has("KeyE")) actionBuffer.queue("interact", true, inputTime);
+  }
+
+  function startStagger(enemy, force = false) {
+    if (!combat.beginStagger(enemy, force)) return;
+    addParticle(enemy.x, enemy.y, "#22d3ee", 24, 200);
+    flashMessage(enemy.type === "guard" ? "Maw Guard staggered · E to finish" : "Guard broken · E to finish", 1.3);
   }
 
   function update(dt) {
@@ -597,6 +622,8 @@
       pressed.clear();
       return;
     }
+    inputTime += dt;
+    captureCombatInput();
     if (game.hitStop > 0) {
       game.hitStop -= dt;
       pressed.clear();
@@ -632,32 +659,34 @@
     if (keys.has("KeyD") || keys.has("ArrowRight")) mx += 1;
     const m = norm(mx, my);
     if (mx || my) {
+      if (["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].some(key => pressed.has(key))) mouse.active = false;
       p.faceX = m.x;
       p.faceY = m.y;
     }
 
-    if ((pressed.has("Space")) && p.stamina >= 22 && p.dodge <= 0 && p.finisherT <= 0) {
+    if (actionBuffer.consume("dodge", p.stamina >= 22 && p.dodge <= 0 && p.finisherT <= 0, inputTime)) {
       p.stamina -= 22;
       p.dodge = 0.22;
       p.invuln = 0.18;
       addParticle(p.x, p.y, "#22d3ee", 10, 180);
     }
 
-    if ((pressed.has("ShiftLeft") || pressed.has("ShiftRight") || pressed.has("KeyL")) && p.parryCooldown <= 0 && p.stamina >= 10) {
+    if (actionBuffer.consume("parry", p.parryCooldown <= 0 && p.stamina >= 10 && p.dodge <= 0 && p.finisherT <= 0, inputTime)) {
       p.parry = 0.24;
       p.parryCooldown = 0.72;
       p.stamina -= 10;
       addParticle(p.x + p.faceX * 22, p.y + p.faceY * 22, "#22d3ee", 6, 120);
     }
 
-    if (pressed.has("KeyJ") || mouse.down) makeAttack("light");
-    if (pressed.has("KeyK") || mouse.right) makeAttack("heavy");
+    const bufferedAttack = actionBuffer.actions.get("attack");
+    const attackCost = bufferedAttack?.payload === "heavy" ? 28 : 12;
+    const attack = actionBuffer.consume("attack", p.attackCooldown <= 0 && p.dodge <= 0 && p.finisherT <= 0 && p.stamina >= attackCost, inputTime);
+    if (attack) makeAttack(attack.payload);
 
-    if (pressed.has("KeyE")) {
-      const stunned = game.enemies.find(e => !e.dead && e.stun >= e.maxStun && dist(p, e) < 92);
-      if (!doFinisher(stunned) && game.gateOpen && dist(p, { x: 1080, y: 360 }) < 120) {
-        victory();
-      }
+    const stunned = game.enemies.find(e => combat.canFinish(e) && dist(p, e) < 92);
+    const atGate = game.gateOpen && dist(p, { x: 1080, y: 360 }) < 120;
+    if (actionBuffer.consume("interact", p.finisherT <= 0 && (!!stunned || atGate), inputTime)) {
+      if (!doFinisher(stunned) && atGate) victory();
     }
 
     const speed = p.dodge > 0 ? 440 : 210;
@@ -676,13 +705,8 @@
       e.stateT = Math.max(0, e.stateT - dt);
       e.cooldown = Math.max(0, e.cooldown - dt);
       e.hitFlash = Math.max(0, e.hitFlash - dt);
+      if (combat.advanceStagger(e, dt)) continue;
       e.stun = Math.max(0, e.stun - dt * (e.type === "guard" ? 7 : 14));
-
-      if (e.stun >= e.maxStun) {
-        e.state = "stunned";
-        e.stateT = Math.max(e.stateT, 0.25);
-        continue;
-      }
 
       const toP = norm(p.x - e.x, p.y - e.y);
       const d = dist(e, p);
@@ -728,6 +752,7 @@
       e.stun = clamp(e.stun + (e.type === "guard" ? 34 : 50), 0, e.maxStun);
       e.state = "recover";
       e.stateT = 0.55;
+      startStagger(e);
       p.rage = clamp(p.rage + 18, 0, 100);
       p.stamina = clamp(p.stamina + 12, 0, 100);
       game.hitStop = 0.06;
@@ -753,6 +778,7 @@
           a.hit.add(e);
           e.hp -= a.damage;
           e.stun = clamp(e.stun + a.stun, 0, e.maxStun + 10);
+          startStagger(e);
           e.hitFlash = 0.12;
           game.player.rage = clamp(game.player.rage + (a.kind === "heavy" ? 7 : 4), 0, 100);
           game.hitStop = a.kind === "heavy" ? 0.045 : 0.025;
@@ -765,8 +791,7 @@
           }
           if (e.hp <= 0 && e.type === "guard") {
             e.hp = 1;
-            e.stun = e.maxStun;
-            flashMessage("Maw Guard stunned - press E");
+            startStagger(e, true);
           }
         }
       }
@@ -798,7 +823,7 @@
 
   function victory() {
     game.mode = "victory";
-    setOverlay("Gate Broken", "The exile carves the sigil. This prototype slice is complete.", "Press R to restart");
+    setOverlay("Gate Broken", "The Vorathic Exile carves the sigil. The Maw Guard has fallen.", "Press R to restart");
   }
 
   function death() {
@@ -813,14 +838,14 @@
     rageFill.style.width = clamp(p.rage, 0, 100) + "%";
     const living = game.enemies.filter(e => !e.dead).length;
     debugEl.textContent = living + " enemies";
-    statusEl.textContent = game.gateOpen ? "Bone Gate exposed" : "Prototype encounter";
+    statusEl.textContent = game.gateOpen ? "Bone Gate exposed" : "Read the windup · break their guard";
   }
 
   function draw() {
     ctx.save();
     ctx.clearRect(0, 0, innerWidth, innerHeight);
-    const sx = game.shake > 0 ? (Math.random() - 0.5) * game.shake * 22 : 0;
-    const sy = game.shake > 0 ? (Math.random() - 0.5) * game.shake * 22 : 0;
+    const sx = !reducedMotion && game.shake > 0 ? (Math.random() - 0.5) * game.shake * 22 : 0;
+    const sy = !reducedMotion && game.shake > 0 ? (Math.random() - 0.5) * game.shake * 22 : 0;
     ctx.translate(world.ox + sx, world.oy + sy);
     ctx.scale(world.scale, world.scale);
     drawArena();
@@ -1144,8 +1169,20 @@
   function drawEnemy(e) {
     ctx.save();
     ctx.translate(e.x, e.y);
-    const stunned = e.stun >= e.maxStun;
+    const stunned = combat.canFinish(e);
     const hue = stunned ? 188 : e.type === "guard" ? 4 : 335;
+    if (stunned) {
+      ctx.save();
+      ctx.strokeStyle = "#f6efd6";
+      ctx.lineWidth = 3;
+      ctx.setLineDash([5, 6]);
+      ctx.beginPath(); ctx.arc(0, 0, e.r + 15, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.strokeStyle = "#22d3ee";
+      ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.arc(0, 0, e.r + 20, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * e.staggerT / e.staggerMax); ctx.stroke();
+      ctx.restore();
+    }
     ctx.shadowColor = stunned ? "#22d3ee" : e.state === "windup" ? "#f59e0b" : "#ec4899";
     ctx.shadowBlur = e.type === "guard" ? 24 : 15;
     const body = ctx.createLinearGradient(-42, -42, 42, 42);
@@ -1358,8 +1395,10 @@
     const p = toWorld(e.clientX, e.clientY);
     mouse.x = p.x;
     mouse.y = p.y;
+    mouse.active = true;
   });
   addEventListener("mousedown", (e) => {
+    mouse.active = true;
     const p = toWorld(e.clientX, e.clientY);
     mouse.x = p.x;
     mouse.y = p.y;
@@ -1376,6 +1415,11 @@
     pressed.clear();
     mouse.down = false;
     mouse.right = false;
+    actionBuffer.clear();
+    if (game.mode === "playing") pauseGame();
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden && game.mode === "playing") pauseGame();
   });
 
   resize();

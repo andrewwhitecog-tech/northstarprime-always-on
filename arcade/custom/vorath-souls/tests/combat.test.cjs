@@ -1,0 +1,13 @@
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const combat=require('../combat.js');
+const guard=()=>({type:'guard',maxStun:100,stun:100,staggerT:0,state:'recover',dead:false});
+test('Maw Guard threshold has a durable 2.4-second finisher window',()=>{const e=guard();assert.equal(combat.beginStagger(e),true);for(let i=0;i<60;i++)combat.advanceStagger(e,1/60);assert.equal(combat.canFinish(e),true);assert.ok(e.staggerT>1.3&&e.staggerT<1.5);assert.equal(e.stun,100);});
+test('stagger expiry creates recovery instead of permanent vulnerability',()=>{const e=guard();combat.beginStagger(e);combat.advanceStagger(e,2.5);assert.equal(combat.canFinish(e),false);assert.equal(e.state,'recover');assert.equal(e.stateT,0.55);assert.equal(e.stun,35);});
+test('additional hits cannot keep resetting the finisher timer',()=>{const e=guard();combat.beginStagger(e);combat.advanceStagger(e,1);assert.equal(combat.beginStagger(e,true),false);assert.equal(e.staggerT,1.4);});
+test('lethal guard damage can force a stagger and dead enemies cannot stagger',()=>{const e=guard();e.stun=4;assert.equal(combat.beginStagger(e),false);assert.equal(combat.beginStagger(e,true),true);e.dead=true;assert.equal(combat.canFinish(e),false);assert.equal(combat.beginStagger(e,true),false);});
+test('thrall finisher window is shorter and expires cleanly',()=>{const e={...guard(),type:'thrall',maxStun:46,stun:46};combat.beginStagger(e);assert.equal(e.staggerT,1.6);combat.advanceStagger(e,1.7);assert.equal(combat.canFinish(e),false);});
+test('action entered during hitstop survives until combat becomes ready',()=>{const b=new combat.ActionBuffer();b.queue('interact',true,10);assert.equal(b.consume('interact',false,10.06),null);assert.ok(b.consume('interact',true,10.10));assert.equal(b.consume('interact',true,10.11),null);});
+test('expired actions do not fire late after an unavailable move',()=>{const b=new combat.ActionBuffer();b.queue('attack','heavy',0);assert.equal(b.consume('attack',false,0.1),null);assert.equal(b.consume('attack',true,0.2),null);});
+test('latest attack intent replaces old input without double firing',()=>{const b=new combat.ActionBuffer();b.queue('attack','light',0);b.queue('attack','heavy',0.05);assert.equal(b.consume('attack',true,0.1).payload,'heavy');assert.equal(b.consume('attack',true,0.12),null);});
+test('pause/reset can discard queued actions',()=>{const b=new combat.ActionBuffer();b.queue('dodge',true,0);b.clear();assert.equal(b.consume('dodge',true,0.01),null);});

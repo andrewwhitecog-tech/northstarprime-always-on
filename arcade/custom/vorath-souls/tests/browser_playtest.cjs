@@ -1,0 +1,57 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');const path=require('node:path');const http=require('node:http');
+const {chromium}=require(process.env.NSP_PLAYWRIGHT_PATH||'playwright');
+const gameRoot=path.resolve(__dirname,'..');const out=path.resolve(process.env.NSP_PLAYTEST_OUT||path.join(gameRoot,'playtest-artifacts'));
+fs.mkdirSync(out,{recursive:true});
+const report={startedUtc:new Date().toISOString(),scope:'Real Chromium; ordinary keyboard/mouse inputs; read-only observer; no game-state mutation',checks:[],pageErrors:[],consoleErrors:[],failedRequests:[]};
+const observe=String.raw`  window.__soulsObserve = () => ({mode:game.mode,time:game.time,hitStop:game.hitStop,gateOpen:game.gateOpen,player:{...game.player},enemies:game.enemies.map(e=>({...e,hitBy:undefined})),attacks:game.attacks.map(a=>({x:a.x,y:a.y,kind:a.kind})),world:{...world}} );`;
+const source=fs.readFileSync(path.join(gameRoot,'index.html'),'utf8');
+const end='  requestAnimationFrame(frame);\n})();';assert.ok(source.includes(end),'read-only observer anchor must match actual export');
+const instrumented=source.replace(end,observe+'\n'+end);
+const server=http.createServer((req,res)=>{try{const u=new URL(req.url,'http://local');if(u.pathname==='/favicon.ico'){res.writeHead(204);return res.end();}const relative=decodeURIComponent(u.pathname).replace(/^\/+/, '');let file=path.resolve(gameRoot,relative||'index.html');if(!file.startsWith(gameRoot+path.sep)&&file!==path.join(gameRoot,'index.html'))throw Error('outside root');if(file.endsWith(path.sep+'index.html')){res.setHeader('Content-Type','text/html');return res.end(instrumented);}res.setHeader('Content-Type',file.endsWith('.js')?'text/javascript':file.endsWith('.mp3')?'audio/mpeg':'application/octet-stream');res.end(fs.readFileSync(file));}catch(e){res.writeHead(404);res.end('Not found');}});
+let browser;let page;const held=new Set();
+async function keys(next){const wanted=new Set(next);for(const key of held)if(!wanted.has(key)){await page.keyboard.up(key);held.delete(key);}for(const key of wanted)if(!held.has(key)){await page.keyboard.down(key);held.add(key);}}
+async function snapshot(){return page.evaluate(()=>window.__soulsObserve());}
+async function screenshot(name){await page.screenshot({path:path.join(out,name+'.png')});}
+async function until(check,label,timeout=20000){const until=Date.now()+timeout;while(Date.now()<until){if(await check())return;await page.waitForTimeout(60);}throw Error('Timeout: '+label);}
+async function mark(name,fn){await fn();report.checks.push({name,passed:true,atUtc:new Date().toISOString()});}
+(async()=>{try{
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const port=server.address().port;
+ browser=await chromium.launch({headless:true,args:['--disable-gpu','--disable-dev-shm-usage','--no-sandbox']});
+ page=await browser.newPage({viewport:{width:1280,height:720},reducedMotion:'reduce'});
+ page.on('pageerror',error=>report.pageErrors.push(error.message));page.on('console',message=>{if(message.type()==='error')report.consoleErrors.push(message.text());});page.on('response',r=>{if(r.status()>=400)report.failedRequests.push({url:r.url(),status:r.status()});});
+ await page.goto('http://127.0.0.1:'+port+'/index.html');await page.waitForFunction(()=>typeof window.__soulsObserve==='function');
+ await mark('actual title loads with a visible canvas',async()=>{assert.equal((await snapshot()).mode,'title');assert.equal(await page.locator('canvas').isVisible(),true);await screenshot('01-title');});
+ await page.keyboard.press('Enter');await until(async()=>(await snapshot()).mode==='playing','Enter starts');
+ await mark('keyboard-only movement and attack face the intended direction',async()=>{const start=await snapshot();await keys(['d']);await page.waitForTimeout(160);await keys([]);const moved=await snapshot();assert.ok(moved.player.x>start.player.x+10);await page.keyboard.press('j');await until(async()=>(await snapshot()).attacks.length>0,'keyboard attack');const a=await snapshot();assert.ok(a.attacks[0].x>a.player.x,'untouched mouse must not redirect keyboard attack to (0,0)');});
+ await mark('pause freezes the encounter and resumes by keyboard',async()=>{await page.keyboard.press('Escape');const paused=await snapshot();assert.equal(paused.mode,'paused');await page.waitForTimeout(220);assert.equal((await snapshot()).time,paused.time);await page.keyboard.press('Escape');await until(async()=>(await snapshot()).mode==='playing','resume');});
+ await page.keyboard.press('r');
+ await mark('a lost fight reaches death and R starts a fresh encounter',async()=>{await keys([]);await until(async()=>(await snapshot()).mode==='dead','real enemy damage causes death',25000);await screenshot('02-defeat');await page.keyboard.press('r');await until(async()=>(await snapshot()).mode==='playing','retry');assert.equal((await snapshot()).player.hp,100);});
+ let staggerObserved=false;const deadline=Date.now()+100000;
+ while(Date.now()<deadline){
+  const state=await snapshot();if(state.mode==='dead')throw Error('Natural-input victory attempt died');if(state.mode==='victory')break;
+  const p=state.player;const living=state.enemies.filter(e=>!e.dead);
+  if(state.gateOpen){const dx=1080-p.x,dy=360-p.y;const move=[];if(Math.abs(dx)>22)move.push(dx>0?'d':'a');if(Math.abs(dy)>22)move.push(dy>0?'s':'w');await keys(move);if(Math.hypot(dx,dy)<115)await page.keyboard.press('e');await page.waitForTimeout(60);continue;}
+  const vulnerable=living.filter(e=>e.staggerT>0).sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0];
+  const target=vulnerable||living.sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0];
+  if(!target){await page.waitForTimeout(60);continue;}
+  let dx=target.x-p.x,dy=target.y-p.y,distance=Math.hypot(dx,dy);let move=[];
+  const ideal=vulnerable?72:118;const direction=distance>ideal+10?1:distance<ideal-15?-1:0;
+  if(direction){if(Math.abs(dx)>distance*.2)move.push(dx*direction>0?'d':'a');if(Math.abs(dy)>distance*.2)move.push(dy*direction>0?'s':'w');}
+  await keys(move);await page.mouse.move(target.x,target.y);
+  if(target.type==='guard'&&target.staggerT>0&&!staggerObserved){staggerObserved=true;await keys([]);const before=target.staggerT;await page.waitForTimeout(220);const after=(await snapshot()).enemies.find(e=>e.type==='guard');assert.ok(after&&after.staggerT>0&&after.staggerT<before,'actual guard stays finishable beyond a single frame');await screenshot('03-maw-stagger-window');report.checks.push({name:'real Maw Guard stagger remains available after 220ms',passed:true});}
+  else if(vulnerable&&distance<90)await page.keyboard.press('e');
+  else {
+   const threat=living.find(e=>e.state==='windup'&&e.stateT<.18&&Math.hypot(e.x-p.x,e.y-p.y)<105);
+   if(threat&&p.parryCooldown<=0)await page.keyboard.press('l');
+   if(distance<165&&p.attackCooldown<=0&&p.dodge<=0&&p.finisherT<=0&&p.stamina>=28)await page.keyboard.press('k');
+  }
+  await page.waitForTimeout(60);
+ }
+ await keys([]);const final=await snapshot();assert.equal(final.mode,'victory','ordinary inputs must complete the real encounter and gate interaction');assert.ok(staggerObserved,'Maw Guard actual stagger must be observed');await screenshot('04-gate-broken');report.checks.push({name:'natural-input combat, Maw Guard finisher and Bone Gate objective complete',passed:true});report.final=final;
+ await page.keyboard.press('r');await until(async()=>(await snapshot()).mode==='playing','victory retry');assert.equal((await snapshot()).enemies.filter(e=>!e.dead).length,4);report.checks.push({name:'victory retry restores the complete encounter',passed:true});
+ await page.setViewportSize({width:390,height:844});await screenshot('05-phone-layout');report.checks.push({name:'390x844 canvas renders without runtime error',passed:true});
+ assert.deepEqual(report.pageErrors,[]);assert.deepEqual(report.failedRequests,[]);assert.deepEqual(report.consoleErrors,[]);report.passed=true;
+}catch(error){report.passed=false;report.error=error.stack;if(page)await screenshot('failure').catch(()=>{});console.error(error.stack);process.exitCode=1;
+}finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));report.finishedUtc=new Date().toISOString();fs.writeFileSync(path.join(out,'PLAYTEST_ACTUAL.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));}})();

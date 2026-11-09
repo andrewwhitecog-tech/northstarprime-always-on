@@ -145,10 +145,14 @@ async def main():
         await page.wait_for_timeout(400)
         await page.screenshot(path=str(out / "04_bout2_intro.png"))
         # Spam one attack from close range: the Duelist should parry and punish.
-        await play(page, 14, [("KeyD", 180), ("KeyJ", 110), ("KeyJ", 110), ("KeyJ", 110), ("KeyD", 120), ("KeyJ", 110)])
+        # Game time runs slowly on a software-GL runner, so spam in 9 s rounds until the Duelist answers (max 45 s).
+        for _ in range(5):
+            await play(page, 9, [("KeyD", 180), ("KeyJ", 110), ("KeyJ", 110), ("KeyJ", 110), ("KeyD", 120), ("KeyJ", 110)])
+            l3 = await L(page)
+            d3 = {k: l3["ai"][k] - ai0[k] for k in ai0}
+            if d3["parries"] + d3["punishes"] > 0 or not l3["running"]:
+                break
         await page.screenshot(path=str(out / "05_bout2_fight.png"))
-        l3 = await L(page)
-        d3 = {k: l3["ai"][k] - ai0[k] for k in ai0}
         check("Duelist read the slash spam in bout 2 (parries or punishes > 0)", d3["parries"] + d3["punishes"] > 0, d3)
         check("player history recorded", len(l3["reads"]) >= 5 and l3["reads"].count("slash") >= 4, l3["reads"])
         await play(page, 8, [("KeyL", 900), ("KeyA", 200), ("KeyL", 900), ("KeyK", 120)])

@@ -199,33 +199,33 @@
     ctx.restore();
   }
 
-  function drawBoneShard(x, y, w, h, rot, alpha = 1) {
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(rot);
-    ctx.globalAlpha *= alpha;
-    const g = ctx.createLinearGradient(-w, -h, w, h);
+  function drawBoneShard(x, y, w, h, rot, alpha = 1, target = ctx) {
+    target.save();
+    target.translate(x, y);
+    target.rotate(rot);
+    target.globalAlpha *= alpha;
+    const g = target.createLinearGradient(-w, -h, w, h);
     g.addColorStop(0, "rgba(255,247,214,0.86)");
     g.addColorStop(0.45, "rgba(217,202,163,0.52)");
     g.addColorStop(1, "rgba(70,55,38,0.18)");
-    ctx.fillStyle = g;
-    ctx.strokeStyle = "rgba(255,247,214,0.36)";
-    ctx.lineWidth = 1.4;
-    ctx.beginPath();
-    ctx.moveTo(-w * 0.18, -h);
-    ctx.quadraticCurveTo(w * 0.8, -h * 0.54, w * 0.42, h * 0.24);
-    ctx.quadraticCurveTo(w * 0.04, h * 0.94, -w * 0.5, h * 0.34);
-    ctx.quadraticCurveTo(-w * 0.16, -h * 0.22, -w * 0.18, -h);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    ctx.strokeStyle = "rgba(32,18,14,0.45)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(0, -h * 0.72);
-    ctx.quadraticCurveTo(w * 0.16, -h * 0.06, -w * 0.06, h * 0.44);
-    ctx.stroke();
-    ctx.restore();
+    target.fillStyle = g;
+    target.strokeStyle = "rgba(255,247,214,0.36)";
+    target.lineWidth = 1.4;
+    target.beginPath();
+    target.moveTo(-w * 0.18, -h);
+    target.quadraticCurveTo(w * 0.8, -h * 0.54, w * 0.42, h * 0.24);
+    target.quadraticCurveTo(w * 0.04, h * 0.94, -w * 0.5, h * 0.34);
+    target.quadraticCurveTo(-w * 0.16, -h * 0.22, -w * 0.18, -h);
+    target.closePath();
+    target.fill();
+    target.stroke();
+    target.strokeStyle = "rgba(32,18,14,0.45)";
+    target.lineWidth = 1;
+    target.beginPath();
+    target.moveTo(0, -h * 0.72);
+    target.quadraticCurveTo(w * 0.16, -h * 0.06, -w * 0.06, h * 0.44);
+    target.stroke();
+    target.restore();
   }
 
   function drawRunedChip(x, y, w, h, rot, hue, alpha = 1) {
@@ -296,7 +296,7 @@
     journey=new progress.Journey();try{localStorage.removeItem(progress.KEY);}catch(_){}game.elapsed=0;game.metrics={kills:{},attacks:{},soulsEarned:0,shieldBlocks:0,phase2:0,mawPhase2Attacks:0,bolts:0,rings:0,clears:[]};loadArena();
   }
   function showCheckpoint() {
-    document.body.dataset.mode="checkpoint";overlay.style.display="grid";const labels={blade:"Blade · +15% damage",vitality:"Vitality · +20 health",flow:"Flow · +7 stamina / second"};const choices=progress.UPGRADES.map(key=>{const cost=journey.cost(key);return '<button type="button" data-upgrade="'+key+'" '+(cost===null||journey.charges<cost?'disabled':'')+'>'+labels[key]+' · '+(cost===null?'mastered':cost+' souls')+' · '+journey.upgrades[key]+'/3</button>';}).join(' · ');overlay.innerHTML='<div class="modal"><h1>CHECKPOINT · '+progress.ARENAS[journey.arena].name+'</h1><p>'+journey.charges+' soul charge banked. Choose your edge; the next arena restores your health.</p><div class="prompt">'+choices+'</div><p>1 Blade · 2 Vitality · 3 Flow · E continue</p><div class="prompt"><button type="button" data-continue>Enter the next arena</button></div></div>';
+    document.body.dataset.mode="checkpoint";objectiveEl.textContent="Checkpoint banked · choose your upgrades, then enter "+progress.ARENAS[journey.arena].name+".";overlay.style.display="grid";const labels={blade:"Blade · +15% damage",vitality:"Vitality · +20 health",flow:"Flow · +7 stamina / second"};const choices=progress.UPGRADES.map(key=>{const cost=journey.cost(key);return '<button type="button" data-upgrade="'+key+'" '+(cost===null||journey.charges<cost?'disabled':'')+'>'+labels[key]+' · '+(cost===null?'mastered':cost+' souls')+' · '+journey.upgrades[key]+'/3</button>';}).join(' · ');overlay.innerHTML='<div class="modal"><h1>CHECKPOINT · '+progress.ARENAS[journey.arena].name+'</h1><p>'+journey.charges+' soul charge banked. Choose your edge; the next arena restores your health.</p><div class="prompt">'+choices+'</div><p>1 Blade · 2 Vitality · 3 Flow · E continue</p><div class="prompt"><button type="button" data-continue>Enter the next arena</button></div></div>';
   }
   function buyUpgrade(key) { if(journey.spend(key)){persistCheckpoint();showCheckpoint();updateUi();} }
   function advanceArena() {
@@ -626,7 +626,7 @@
   }
 
   function victory() {
-    game.mode="victory";clearInputState();pauseButton.disabled=true;setOverlay("THREE SEALS BROKEN","The Vorathic Exile clears all three arenas. The Maw Guard has fallen through both phases. "+journey.charges+" soul charge remains · Blade "+journey.upgrades.blade+" · Vitality "+journey.upgrades.vitality+" · Flow "+journey.upgrades.flow,"Press R for a new journey");
+    game.mode="victory";clearInputState();pauseButton.disabled=true;objectiveEl.textContent="Three seals broken. The Maw Guard has fallen. Start a new journey when ready.";setOverlay("THREE SEALS BROKEN","The Vorathic Exile clears all three arenas. The Maw Guard has fallen through both phases. "+journey.charges+" soul charge remains · Blade "+journey.upgrades.blade+" · Vitality "+journey.upgrades.vitality+" · Flow "+journey.upgrades.flow,"Press R for a new journey");
   }
 
   function death() {
@@ -634,7 +634,7 @@
   }
 
   function updateUi() {
-    const p=game.player;if(!p)return;hpFill.style.width=clamp(p.hp/p.maxHp*100,0,100)+"%";staminaFill.style.width=clamp(p.stamina/p.maxStamina*100,0,100)+"%";rageFill.style.width=clamp(p.rage,0,100)+"%";hpFill.setAttribute("aria-valuemax",p.maxHp);hpFill.setAttribute("aria-valuenow",Math.round(Math.max(0,p.hp)));staminaFill.setAttribute("aria-valuemax",p.maxStamina);staminaFill.setAttribute("aria-valuenow",Math.round(p.stamina));rageFill.setAttribute("aria-valuenow",Math.round(p.rage));document.getElementById("souls").textContent=journey.charges;debugEl.textContent=(journey.arena+1)+"/3 · "+game.enemies.filter(e=>!e.dead).length+" enemies";const maw=game.enemies.find(e=>e.type==="guard"&&!e.dead);statusEl.textContent=game.persistenceWarning?"Checkpoint kept for this visit · browser storage unavailable":game.mode==="checkpoint"?"Soul charge banked":game.gateOpen?"Passage exposed":maw?"Maw Guard · phase "+(maw.phase===2?"II":"I"):"Read the roles · claim the passage";
+    const p=game.player;if(!p)return;hpFill.style.width=clamp(p.hp/p.maxHp*100,0,100)+"%";staminaFill.style.width=clamp(p.stamina/p.maxStamina*100,0,100)+"%";rageFill.style.width=clamp(p.rage,0,100)+"%";hpFill.setAttribute("aria-valuemax",p.maxHp);hpFill.setAttribute("aria-valuenow",Math.round(Math.max(0,p.hp)));staminaFill.setAttribute("aria-valuemax",p.maxStamina);staminaFill.setAttribute("aria-valuenow",Math.round(p.stamina));rageFill.setAttribute("aria-valuenow",Math.round(p.rage));document.getElementById("souls").textContent=journey.charges;debugEl.textContent=(journey.arena+1)+"/3 · "+game.enemies.filter(e=>!e.dead).length+" enemies";const maw=game.enemies.find(e=>e.type==="guard"&&!e.dead);statusEl.textContent=game.persistenceWarning?"Checkpoint kept for this visit · browser storage unavailable":game.mode==="checkpoint"?"Soul charge banked":game.mode==="victory"?"Three seals broken":game.gateOpen?"Passage exposed":maw?"Maw Guard · phase "+(maw.phase===2?"II":"I"):"Read the roles · claim the passage";
   }
 
   function draw() {
@@ -658,67 +658,97 @@
     ctx.restore();
   }
 
-  function drawArena() {
-    ctx.fillStyle = "#05070a";
-    ctx.fillRect(0, 0, world.w, world.h);
+  // Only the unchanged floor and bone silhouettes are rasterized. Runes, lights,
+  // portal, moving gems, actors, projectiles and combat telegraphs stay live.
+  const arenaCache={key:null,layers:{},builds:0,lastBuildMs:0,bypassed:false,failed:false};
+  function paintArenaLayer(name,paint) {
+    const dpr=Math.min(window.devicePixelRatio||1,2);
+    if(canvas.width*canvas.height>4194304){for(const layer of Object.values(arenaCache.layers)){layer.canvas.width=0;layer.canvas.height=0;}arenaCache.layers={};arenaCache.key=null;arenaCache.bypassed=true;paint(ctx);return;}
+    arenaCache.bypassed=false;
+    const key=[canvas.width,canvas.height,world.scale,world.ox,world.oy,dpr,journey.arena].join(':');
+    if(arenaCache.key!==key){for(const layer of Object.values(arenaCache.layers)){layer.canvas.width=0;layer.canvas.height=0;}arenaCache.key=key;arenaCache.layers={};arenaCache.bypassed=false;arenaCache.failed=false;}
+    if(arenaCache.failed){paint(ctx);return;}
+    let layer=arenaCache.layers[name];
+    if(!layer){
+      const started=performance.now(),surface=document.createElement('canvas');surface.width=canvas.width;surface.height=canvas.height;const target=surface.getContext('2d');
+      if(!target){arenaCache.failed=true;paint(ctx);return;}
+      target.setTransform(dpr*world.scale,0,0,dpr*world.scale,world.ox*dpr,world.oy*dpr);paint(target);
+      layer={canvas:surface};arenaCache.layers[name]=layer;arenaCache.builds++;arenaCache.lastBuildMs=performance.now()-started;
+    }
+    const transform=ctx.getTransform();
+    ctx.save();ctx.setTransform(1,0,0,1,transform.e-world.ox*dpr,transform.f-world.oy*dpr);ctx.drawImage(layer.canvas,0,0);ctx.restore();
+  }
+  function drawArenaGround(target) {
+    target.fillStyle = "#05070a";
+    target.fillRect(0, 0, world.w, world.h);
     const cx = 640;
     const cy = 360;
-    const g = ctx.createRadialGradient(cx, cy, 40, cx, cy, 470);
+    const g = target.createRadialGradient(cx, cy, 40, cx, cy, 470);
     g.addColorStop(0, ["#142b35","#2b1d3b","#33271a"][journey.arena]);
     g.addColorStop(0.45, ["#101d25","#1b122b","#211b13"][journey.arena]);
     g.addColorStop(1, "#05070a");
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, 500, 270, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.save();
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, 500, 270, 0, 0, Math.PI * 2);
-    ctx.clip();
+    target.fillStyle = g;
+    target.beginPath();
+    target.ellipse(cx, cy, 500, 270, 0, 0, Math.PI * 2);
+    target.fill();
+    target.save();
+    target.beginPath();
+    target.ellipse(cx, cy, 500, 270, 0, 0, Math.PI * 2);
+    target.clip();
     for (let row = 0; row < 7; row++) {
       for (let col = 0; col < 12; col++) {
         const px = cx - 470 + col * 84 + ((row % 2) * 38);
         const py = cy - 220 + row * 68;
         const shade = 10 + ((row * 7 + col * 11) % 18);
-        ctx.fillStyle = `rgba(${shade},${shade + 8},${shade + 12},0.22)`;
-        ctx.strokeStyle = "rgba(217,202,163,0.045)";
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(px - 44, py - 20);
-        ctx.lineTo(px + 38, py - 28);
-        ctx.lineTo(px + 54, py + 20);
-        ctx.lineTo(px - 26, py + 32);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
+        target.fillStyle = `rgba(${shade},${shade + 8},${shade + 12},0.22)`;
+        target.strokeStyle = "rgba(217,202,163,0.045)";
+        target.lineWidth = 1;
+        target.beginPath();
+        target.moveTo(px - 44, py - 20);
+        target.lineTo(px + 38, py - 28);
+        target.lineTo(px + 54, py + 20);
+        target.lineTo(px - 26, py + 32);
+        target.closePath();
+        target.fill();
+        target.stroke();
       }
     }
-    ctx.strokeStyle = "rgba(217,202,163,0.12)";
-    ctx.lineWidth = 1.4;
+    target.strokeStyle = "rgba(217,202,163,0.12)";
+    target.lineWidth = 1.4;
     for (let i = 0; i < 22; i++) {
       const a = i * 1.718;
       const x = cx + Math.cos(a) * (70 + (i % 6) * 62);
       const y = cy + Math.sin(a * 1.31) * (32 + (i % 5) * 38);
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + Math.cos(a + 0.7) * (28 + (i % 4) * 18), y + Math.sin(a - 0.5) * (18 + (i % 3) * 16));
-      ctx.lineTo(x + Math.cos(a + 1.9) * (42 + (i % 3) * 14), y + Math.sin(a + 1.6) * (18 + (i % 4) * 9));
-      ctx.stroke();
+      target.beginPath();
+      target.moveTo(x, y);
+      target.lineTo(x + Math.cos(a + 0.7) * (28 + (i % 4) * 18), y + Math.sin(a - 0.5) * (18 + (i % 3) * 16));
+      target.lineTo(x + Math.cos(a + 1.9) * (42 + (i % 3) * 14), y + Math.sin(a + 1.6) * (18 + (i % 4) * 9));
+      target.stroke();
     }
+    target.restore();
+  }
+  function drawArenaBones(target) {
+    const cx=640,cy=360;
+    target.save();
+    target.globalAlpha = 0.34;
+    for (let i = 0; i < 9; i++) {
+      const side = i % 2 ? 1 : -1;
+      const x = cx + side * (365 + (i % 3) * 36);
+      const y = cy - 215 + i * 46;
+      drawBoneShard(x, y, 16 + (i % 4) * 5, 76 + (i % 3) * 20, side * (0.44 + i * 0.05), 0.72, target);
+    }
+    target.restore();
+  }
+  function drawArena() {
+    const cx=640,cy=360;
+    paintArenaLayer("ground",drawArenaGround);
+    ctx.save();ctx.beginPath();ctx.ellipse(cx,cy,500,270,0,0,Math.PI*2);ctx.clip();
     for (let i = 0; i < 15; i++) {
       const a = i * Math.PI * 2 / 15 + 0.22;
       drawRunedChip(cx + Math.cos(a) * 368, cy + Math.sin(a) * 192, 20 + (i % 3) * 7, 14 + (i % 4) * 5, a + game.time * 0.04, 36 + i * 19, 0.4);
     }
     ctx.restore();
-    ctx.save();
-    ctx.globalAlpha = 0.34;
-    for (let i = 0; i < 9; i++) {
-      const side = i % 2 ? 1 : -1;
-      const x = cx + side * (365 + (i % 3) * 36);
-      const y = cy - 215 + i * 46;
-      drawBoneShard(x, y, 16 + (i % 4) * 5, 76 + (i % 3) * 20, side * (0.44 + i * 0.05), 0.72);
-    }
-    ctx.restore();
+    paintArenaLayer("bones",drawArenaBones);
     ctx.save();
     ctx.globalCompositeOperation = "screen";
     for (let i = 0; i < 20; i++) {

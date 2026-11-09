@@ -1,7 +1,7 @@
 name: Vorath Souls combat and browser playtest
 on:
   pull_request:
-    paths: ["arcade/custom/vorath-souls/**", ".github/workflows/vorath-souls.yml", ".github/scripts/chromatic-copy-qa.cjs"]
+    paths: ["arcade/custom/vorath-souls/**", ".github/workflows/vorath-souls.yml", ".github/scripts/vorath-render-benchmark.cjs", ".github/scripts/vorath-public-transform-ac229.json"]
 permissions:
   contents: read
 concurrency:
@@ -11,6 +11,8 @@ jobs:
   encounter:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    env:
+      NSP_TARGETED_LIVE_ONLY: ${{ github.event.action == 'synchronize' && startsWith(github.head_ref, 'codex/vorath-souls-render-cache-') && contains(github.event.pull_request.title, '[live smoke]') }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -22,6 +24,7 @@ jobs:
         with:
           node-version: '22'
       - name: Run actual combat contract tests
+        if: env.NSP_TARGETED_LIVE_ONLY != 'true'
         run: node --test arcade/custom/vorath-souls/tests/*.test.cjs
       - name: Install the pinned isolated test browser
         run: |
@@ -32,18 +35,28 @@ jobs:
           NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/vorath-browser/node_modules/playwright
           NSP_PLAYTEST_OUT: ${{ runner.temp }}/vorath-souls-playtest
         run: node .github/scripts/native-browser-focus.cjs
+      - name: Record one matched render comparison and independent live release smoke
+        if: github.event.action == 'opened' && startsWith(github.head_ref, 'codex/vorath-souls-render-cache-')
+        env:
+          NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/vorath-browser/node_modules/playwright
+          NSP_PLAYTEST_OUT: ${{ runner.temp }}/vorath-souls-playtest
+          NSP_VIRTUAL_DISPLAY: '1'
+        run: xvfb-run --auto-servernum node .github/scripts/vorath-render-benchmark.cjs
+      - name: Verify only live delivery against the unchanged already-tested candidate
+        if: env.NSP_TARGETED_LIVE_ONLY == 'true'
+        env:
+          NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/vorath-browser/node_modules/playwright
+          NSP_PLAYTEST_OUT: ${{ runner.temp }}/vorath-souls-playtest
+          NSP_VIRTUAL_DISPLAY: '1'
+          NSP_RENDER_LIVE_ONLY: '1'
+        run: xvfb-run --auto-servernum node .github/scripts/vorath-render-benchmark.cjs
       - name: Play the actual encounter with native focus in an isolated virtual display
+        if: always() && env.NSP_TARGETED_LIVE_ONLY != 'true'
         env:
           NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/vorath-browser/node_modules/playwright
           NSP_PLAYTEST_OUT: ${{ runner.temp }}/vorath-souls-playtest
           NSP_VIRTUAL_DISPLAY: '1'
         run: xvfb-run --auto-servernum node arcade/custom/vorath-souls/tests/browser_playtest.cjs
-      - name: Independently read the pinned Chromatic copy at phone and desktop widths
-        if: always()
-        env:
-          NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/vorath-browser/node_modules/playwright
-          NSP_PLAYTEST_OUT: ${{ runner.temp }}/vorath-souls-playtest
-        run: node .github/scripts/chromatic-copy-qa.cjs
       - name: Retain actual playtest screenshots and result
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

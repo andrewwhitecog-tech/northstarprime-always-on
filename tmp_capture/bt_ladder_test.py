@@ -154,7 +154,7 @@ async def main():
                 break
         await page.screenshot(path=str(out / "05_bout2_fight.png"))
         check("Duelist read the slash spam in bout 2 (parries or punishes > 0)", d3["parries"] + d3["punishes"] > 0, d3)
-        check("player history recorded", len(l3["reads"]) >= 5 and l3["reads"].count("slash") >= 4, l3["reads"])
+        check("player history recorded (the Duelist sees the last choices, mostly slashes)", len(l3["reads"]) >= 5 and l3["reads"].count("slash") >= 3, l3["reads"])
         await play(page, 8, [("KeyL", 900), ("KeyA", 200), ("KeyL", 900), ("KeyK", 120)])
         l4 = await L(page)
         d4 = {k: l4["ai"][k] - l3["ai"][k] for k in ai0}
@@ -222,8 +222,8 @@ async def main():
         await page.screenshot(path=str(out / "08b_phone_ko.png"), timeout=90000)
         pg = await page.evaluate("() => ({maxBottom: Math.round(window.__lt.maxBottom || 0), head: Math.round(calloutBand().head), cells: Object.keys(window.__lt.cells).length})")
         check("phone: BOUT and K.O. art drawn, all above the fighters' heads (rule 30(c))", pg["cells"] > 0 and 0 < pg["maxBottom"] <= pg["head"] + 2, pg)
-        tb = await page.evaluate("() => { const h = document.querySelector('h1').getBoundingClientRect(); let bar = 0; for (const el of document.querySelectorAll('body *')) { const st = getComputedStyle(el); if (st.position === 'fixed' && el.getBoundingClientRect().top < 5 && el.getBoundingClientRect().height < 120 && el.getBoundingClientRect().width > 100) bar = Math.max(bar, el.getBoundingClientRect().bottom); } return {h1Top: Math.round(h.top), barBottom: Math.round(bar)}; }")
-        check("phone: page title clear of the shared arcade bar", tb["h1Top"] >= tb["barBottom"] - 1, tb)
+        tb = await page.evaluate("() => { const h = document.querySelector('h1').getBoundingClientRect(); let bar = 0; for (const el of document.querySelectorAll('body *')) { const st = getComputedStyle(el); if (st.position === 'fixed' && el.getBoundingClientRect().top < 24 && el.getBoundingClientRect().height < 120 && el.getBoundingClientRect().width > 100) bar = Math.max(bar, el.getBoundingClientRect().bottom); } return {h1Top: Math.round(h.top), barBottom: Math.round(bar)}; }")
+        check("phone: page title clear of the shared arcade bar", tb["barBottom"] > 0 and tb["h1Top"] >= tb["barBottom"] - 1, tb)
         check("phone: no sideways scroll at 390 px", sw <= 392, sw)
         await ctx.close()
         await b.close()

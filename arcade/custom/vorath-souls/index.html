@@ -37,7 +37,7 @@
   @media(any-pointer:coarse) and (min-width:621px) and (max-height:500px){body{display:grid;grid-template-columns:minmax(0,1fr) 270px;grid-template-rows:auto auto minmax(0,1fr) auto}.game-header{grid-column:1/-1;padding:7px 14px;gap:4px 22px}.identity h1{font-size:1.35rem}.eyebrow{font-size:.55rem}.objective{font-size:.65rem}.center{grid-column:1/-1;padding:5px 14px}.modal h1{font-size:1rem}.modal p{font-size:.68rem}.prompt{margin-top:4px}.prompt button{padding:3px 8px}#playfield{grid-column:1;grid-row:3;aspect-ratio:auto;width:100%;height:100%;min-height:0}.touch-controls{grid-column:2;grid-row:3;min-height:0;padding:8px 10px 24px;grid-template-columns:100px 1fr;gap:5px}.touch-stick{width:90px;height:90px}.touch-nub{left:28px;top:28px}.touch-actions{grid-template-columns:repeat(3,42px);gap:23px 8px}.touch-action{width:42px;height:42px;font-size:1.2rem}.touch-action small{top:45px;font-size:.55rem}.touch-caption{font-size:.58rem}.movement-control{gap:6px}.game-footer{grid-column:1/-1;min-height:0;padding:6px 14px;gap:5px 14px}.controls{font-size:.6rem;min-width:180px}.footer-status,button,.arcade-return{font-size:.63rem}}
   @media(max-width:620px),(any-pointer:coarse){.eyebrow,.resource label,.objective,.controls,.footer-status,button,.arcade-return,.touch-action small,.touch-caption,.modal p,.prompt,.prompt button{font-size:14px}.eyebrow{letter-spacing:.08em}.controls{line-height:1.4}.touch-action small{letter-spacing:0}.game-footer{gap:8px 14px}}
   @media(any-pointer:coarse) and (min-width:621px) and (max-height:500px){.game-footer{grid-row:4;display:grid;grid-template-columns:1fr auto auto auto;padding:6px 14px;gap:6px 14px}.controls{grid-column:1/-1;min-width:0;margin:0}.footer-status{grid-column:1}.resource label,.objective,.controls,.footer-status,button,.arcade-return,.touch-action small,.touch-caption,.eyebrow{font-size:14px}.modal p,.prompt,.prompt button{font-size:14px}}
-  body[data-mode="checkpoint"]{display:flex;overflow:auto}body[data-mode="checkpoint"] #playfield,body[data-mode="checkpoint"] #touchControls,body[data-mode="paused"] #touchControls{display:none}body[data-mode="checkpoint"] .center{flex:1}body[data-mode="paused"] #playfield{grid-column:1/-1}
+  body[data-mode="checkpoint"]{display:flex;overflow:auto}body[data-mode="checkpoint"] #touchControls,body[data-mode="paused"] #touchControls{display:none}body[data-mode="checkpoint"] #playfield{display:block;flex:1;height:auto;min-height:140px}body[data-mode="checkpoint"] .center{flex:none}body[data-mode="checkpoint"] .modal p,body[data-mode="checkpoint"] .prompt,body[data-mode="checkpoint"] .prompt button{font-size:14px}body[data-mode="paused"] #playfield{grid-column:1/-1}
 </style>
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "VideoGame", "name": "Vorath Souls", "url": "https://northstarprime.net/arcade/custom/vorath-souls/", "gamePlatform": "Web browser", "applicationCategory": "Game", "operatingSystem": "Any", "isAccessibleForFree": true, "publisher": {"@type": "Organization", "name": "NorthStar Prime", "url": "https://northstarprime.net/"}, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "description": "Play Vorath Souls - The Bone Gate free in your browser in the NorthStar Prime IDG Arcade, an original game from the Vorath universe.", "image": "https://northstarprime.net/static/games/og/vorath-souls_og_1200x630.jpg"}</script>
 </head>
@@ -48,7 +48,7 @@
     <div class="resource"><label>Vitality</label><div class="bar"><div id="hp" class="fill hp" role="progressbar" aria-label="Vitality" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"></div></div></div>
     <div class="resource"><label>Stamina</label><div class="bar"><div id="stamina" class="fill stamina" role="progressbar" aria-label="Stamina" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"></div></div></div>
     <div class="resource"><label>Resolve</label><div class="bar"><div id="rage" class="fill rage" role="progressbar" aria-label="Resolve" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div></div></div>
-    <div class="resource"><label>Soul charge</label><span id="souls" role="status">0</span></div>
+    <div class="resource"><label>Souls</label><span id="souls" role="status">0</span></div>
   </div>
   <p class="objective" id="objective">Clear three arenas. Bank soul charge, shape your upgrades, and finish the Maw Guard.</p>
 </header>
@@ -303,7 +303,7 @@
     if(!game.gateOpen||game.enemies.some(e=>!e.dead))return;
     game.metrics.clears.push(journey.arena);if(!journey.completeArena())return;
     if(journey.completed){victory();return;}
-    persistCheckpoint();clearInputState();game.mode="checkpoint";pauseButton.disabled=true;showCheckpoint();updateUi();
+    persistCheckpoint();clearInputState();game.enemies=[];game.attacks=[];game.projectiles=[];game.waves=[];game.particles=[];game.mode="checkpoint";pauseButton.disabled=true;showCheckpoint();updateUi();
   }
 
   function reset() { journey.retry();loadArena(); }
@@ -625,7 +625,7 @@
   }
 
   function victory() {
-    game.mode="victory";clearInputState();pauseButton.disabled=true;setOverlay("THREE SEALS BROKEN","The Vorathic Exile clears all three arenas. The Maw Guard has fallen through both phases. "+game.metrics.soulsEarned+" soul charge earned across the journey.","Press R for a new journey");
+    game.mode="victory";clearInputState();pauseButton.disabled=true;setOverlay("THREE SEALS BROKEN","The Vorathic Exile clears all three arenas. The Maw Guard has fallen through both phases. "+journey.charges+" soul charge remains · Blade "+journey.upgrades.blade+" · Vitality "+journey.upgrades.vitality+" · Flow "+journey.upgrades.flow,"Press R for a new journey");
   }
 
   function death() {
@@ -1222,6 +1222,7 @@
 
   addEventListener("resize", resize);
   addEventListener("keydown", (e) => {
+    if (["Space","Enter"].includes(e.code) && e.target?.closest?.("button,a,input,select,textarea")) return;
     if (e.repeat) {
       if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) e.preventDefault();
       return;

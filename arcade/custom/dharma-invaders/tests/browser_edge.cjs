@@ -35,13 +35,15 @@ async function bounded(promise,label){let timer;try{return await Promise.race([p
       if(phone)await input.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
       else await page.keyboard.up(side==='left'?'ArrowLeft':'ArrowRight');
       entry.before=await page.evaluate(()=>__COMMENTARY_DEBUG__.snapshot());
-      const parryPoint=await point('#parry'),pausePoint=await point('#pause');entry.inputPoints={parryPoint,pausePoint};entry.pauseEvents=[];
+      const parryPoint=await point('#parry'),pausePoint=await point('#pause');entry.inputPoints={parryPoint,pausePoint};entry.pauseEvents=[];entry.nativeInputEvents=[];
       let activeResolve,doneResolve;
       const active=new Promise(r=>{activeResolve=r;}),done=new Promise(r=>{doneResolve=r;});
       await page.exposeBinding('edgeSample',(_,sample)=>{entry.trace.push(sample);if(sample.isDashing)activeResolve(sample);});
       await page.exposeBinding('edgeEvent',(_,event)=>{entry.parryEvent=event;});
       await page.exposeBinding('edgeDone',(_,value)=>doneResolve(value));
       await page.exposeBinding('edgePauseEvent',(_,event)=>entry.pauseEvents.push(event));
+      await page.exposeBinding('edgeInputEvent',(_,event)=>entry.nativeInputEvents.push(event));
+      await page.evaluate(()=>{for(const id of ['parry','pause'])for(const type of ['pointerdown','pointerup','touchstart','touchend','click'])document.getElementById(id).addEventListener(type,event=>window.edgeInputEvent({id,type,at:performance.now(),trusted:event.isTrusted,pointerType:event.pointerType||''}),{passive:true});});
       // Arm immediately and start the observer ONLY on the actual trusted native click.
       // The existing game listener runs first and owns every state change.
       await page.evaluate(()=>document.querySelector('#parry').addEventListener('click',event=>{
@@ -57,7 +59,19 @@ async function bounded(promise,label){let timer;try{return await Promise.race([p
       await page.evaluate(()=>document.querySelector('#pause').addEventListener('click',event=>window.edgePauseEvent({at:performance.now(),trusted:event.isTrusted,paused:__COMMENTARY_DEBUG__.snapshot().paused,sentinel:__COMMENTARY_DEBUG__.snapshot().sentinel})));
       // Send genuine ordered Parry then Pause input without a new geometry lookup or binding wait.
       // The trusted click observer must still prove an actual active state; no state is injected.
-      await clickAt(parryPoint);await clickAt(pausePoint);
+      if(phone){
+        // Same-session send calls enqueue in protocol order BEFORE awaiting acknowledgements.
+        // Pinned Playwright1.55.1 RawTouchscreenImpl.tap likewise queues start/end together.
+        const packets=[
+          {target:'parry',type:'touchStart',touchPoints:[parryPoint]},
+          {target:'parry',type:'touchEnd',touchPoints:[]},
+          {target:'pause',type:'touchStart',touchPoints:[pausePoint]},
+          {target:'pause',type:'touchEnd',touchPoints:[]}
+        ];
+        entry.touchPacketEnqueue=[];
+        const acknowledgements=packets.map((packet,i)=>{entry.touchPacketEnqueue.push({seq:i+1,target:packet.target,type:packet.type,clientUtc:new Date().toISOString()});return input.send('Input.dispatchTouchEvent',{type:packet.type,touchPoints:packet.touchPoints});});
+        await Promise.all(acknowledgements);
+      }else{await clickAt(parryPoint);await clickAt(pausePoint);}
       entry.firstActive=await bounded(active,'actual active dash');entry.paused=await page.evaluate(()=>__COMMENTARY_DEBUG__.snapshot());
       assert.equal(entry.paused.paused,true);assert.equal(entry.paused.sentinel.isDashing,true,'native Pause occurred during an actual active dash');
       assert.ok(entry.paused.sentinel.dashTimer>0);
@@ -73,6 +87,7 @@ async function bounded(promise,label){let timer;try{return await Promise.race([p
       entry.activeMaxX=Math.max(...entry.trace.filter(r=>r.isDashing).map(r=>r.x));
       entry.transientOutside=entry.trace.some(r=>r.x<42||r.x>758);
       await page.screenshot({path:path.join(out,'dash-complete-'+(phone?'phone':'desktop')+'-'+side+'.png'),fullPage:true});
+      assert.deepEqual(entry.nativeInputEvents.filter(e=>e.type==='click').slice(0,2).map(e=>e.id),['parry','pause'],'actual trusted click target order');assert.ok(entry.nativeInputEvents.every(e=>e.trusted));
       assert.equal(entry.parryEvent.trusted,true);assert.ok(entry.pauseEvents[0]?.trusted);assert.ok(entry.pauseEvents[0].at>=entry.parryEvent.at);assert.ok(entry.activeSamples>0,'real active dash samples are required');assert.ok(entry.pausedSamples>0,'real paused-active dash samples are required');
       assert.equal(entry.observer.completed,true);assert.equal(entry.transientOutside,false,'all actual active/paused/completed samples stay in existing court');
       assert.equal(entry.after.sentinel.isDashing,false);assert.ok(entry.after.sentinel.dashTimer<=0);

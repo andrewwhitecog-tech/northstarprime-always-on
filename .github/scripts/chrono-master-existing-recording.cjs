@@ -64,6 +64,12 @@ async function main(){
  report.source={file:'chrono-gameplay-native.mp4',sha256:sourceSha,gameCommit:original.source.commit,raw:original.rawOutput,originalInputInterval:original.actualInputDurationSeconds};
  const sourceProbe=await probe(source,'source'),sourceVideo=sourceProbe.streams.find(s=>s.codec_type==='video'),sourceAudio=sourceProbe.streams.find(s=>s.codec_type==='audio');
  assert.ok(sourceVideo&&sourceAudio);assert.equal(sourceVideo.codec_name,'h264');
+ assert.equal(sourceAudio.sample_rate,'48000');assert.equal(sourceAudio.time_base,'1/48000');
+ assert.equal(Number(sourceAudio.start_time),0,'Source audio must begin at zero before sample-count timestamp reconstruction');
+ const sourceAudioSamples=Number(sourceAudio.duration_ts);
+ assert.ok(Number.isSafeInteger(sourceAudioSamples)&&sourceAudioSamples>0,'Exact source audio sample interval required');
+ assert.equal(sourceAudioSamples/48000,Number(sourceAudio.duration));
+ report.audioInterval={sourceSamples:sourceAudioSamples,sourceRate:48000,method:'Post-normalization resample, continuous sample-count PTS, source sample interval trim; no padding or time stretch'};
  const timebase=sourceVideo.time_base.match(/^1\/(\d+)$/);assert.ok(timebase,'Exact video timebase required');
  const target='loudnorm=I=-14:TP=-1.5:LRA=11';
  await run('ffmpeg',['-hide_banner','-i',source,'-map','0:a:0','-af',target+':print_format=json','-f','null','-'],'first-pass.log');
@@ -75,7 +81,7 @@ async function main(){
  const filter=target+':measured_I='+measured.input_i+':measured_TP='+measured.input_tp+':measured_LRA='+measured.input_lra+':measured_thresh='+measured.input_thresh+':offset='+measured.target_offset+':linear=true:print_format=json';
  const final=path.join(out,'NorthStar_Chrono_Defender_20s_Gameplay_Master_v01.mp4');
  await run('ffmpeg',['-hide_banner','-y','-copyts','-i',source,'-map','0:v:0','-map','0:a:0','-c:v','copy','-video_track_timescale',timebase[1],
-  '-af',filter,'-c:a','aac','-b:a','192k','-ar','48000','-ac','2','-avoid_negative_ts','disabled','-movflags','+faststart',final],'second-pass.log');
+  '-af',filter+',aresample=48000,asetpts=N/SR/TB,atrim=end_sample='+sourceAudioSamples,'-c:a','aac','-b:a','192k','-ar','48000','-ac','2','-avoid_negative_ts','disabled','-movflags','+faststart',final],'second-pass.log');
  const masterProbe=await probe(final,'master'),masterVideo=masterProbe.streams.find(s=>s.codec_type==='video'),masterAudio=masterProbe.streams.find(s=>s.codec_type==='audio');
  assert.equal(masterVideo.time_base,sourceVideo.time_base);assert.equal(masterVideo.start_time,sourceVideo.start_time);
  assert.equal(masterVideo.duration,sourceVideo.duration);

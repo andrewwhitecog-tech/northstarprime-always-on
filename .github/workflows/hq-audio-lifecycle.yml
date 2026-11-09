@@ -1,0 +1,53 @@
+name: HQAudio public client lifecycle
+on:
+  pull_request:
+    paths:
+      - 'static/games/hq_audio.js'
+      - '.github/hq_audio_review/**'
+      - '.github/workflows/hq-audio-lifecycle.yml'
+permissions:
+  contents: read
+concurrency:
+  group: hq-audio-client-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native-audio:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /static/games/hq_audio.js
+            /.github/hq_audio_review/
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Check actual public client and test syntax
+        run: |
+          node --check static/games/hq_audio.js
+          node --check .github/hq_audio_review/hq_audio_lifecycle.cjs
+          node --check .github/hq_audio_review/native-focus.cjs
+      - name: Install the pinned isolated browser
+        run: |
+          npm install --prefix "$RUNNER_TEMP/hq-audio-browser" --no-save --package-lock=false --ignore-scripts playwright@1.55.1
+          "$RUNNER_TEMP/hq-audio-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Verify native pause and delayed-stop behavior with the public fixture
+        env:
+          NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/hq-audio-browser/node_modules/playwright
+          NSP_PLAYTEST_OUT: ${{ runner.temp }}/hq-audio-client-results
+          NSP_HQ_BASELINE: ${{ github.workspace }}/.github/hq_audio_review/fixtures/hq_audio.baseline.js
+          NSP_HQ_CANDIDATE: ${{ github.workspace }}/static/games/hq_audio.js
+          NSP_HQ_FIXTURE: ${{ github.workspace }}/.github/hq_audio_review/fixtures/hammer_swing_1.mp3
+        run: |
+          node .github/hq_audio_review/native-focus.cjs
+          xvfb-run -a node .github/hq_audio_review/hq_audio_lifecycle.cjs
+      - name: Retain actual native client results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: hq-audio-client-lifecycle-results
+          path: ${{ runner.temp }}/hq-audio-client-results/
+          retention-days: 14

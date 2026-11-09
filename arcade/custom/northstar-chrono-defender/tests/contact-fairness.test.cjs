@@ -38,11 +38,11 @@ for(const hz of [60,120]){
   t.diagnostic(JSON.stringify({fixtureHz:hz,...observed}));
   assert.equal(observed.shield,100,'dead enemy must not cause contact damage');assert.equal(observed.hull,100);assert.equal(observed.score,100);
  });
- test('controlled '+hz+'Hz: simultaneous live contacts share one damage cadence but retain removals and score',t=>{
+ test('controlled '+hz+'Hz: simultaneous live contacts leave recovering enemies alive and unscored',t=>{
   const f=fixture(hz);f.enemy(4);f.tick();
   const observed=JSON.parse(f.g.read('JSON.stringify({shield:player.shield,hull:player.hull,score,enemies:enemies.length})'));
   t.diagnostic(JSON.stringify({fixtureHz:hz,...observed}));
-  assert.equal(observed.shield,75,'a same-update pile-up must not bypass shared contact cadence');assert.equal(observed.hull,100);assert.equal(observed.score,400);assert.equal(observed.enemies,1);
+  assert.equal(observed.shield,75,'a same-update pile-up must not bypass shared contact cadence');assert.equal(observed.hull,100);assert.equal(observed.score,100);assert.equal(observed.enemies,4);
  });
 }
 
@@ -53,12 +53,17 @@ for(const hz of [60,120]){
   assert.ok(f.g.read('player.contactCd')>14.9&&f.g.read('player.contactCd')<15.1);
   const before=f.g.read('player.shield');f.enemy();f.tick();
   assert.ok(f.g.read('player.shield')>before,'contact within cooldown must only receive normal shield regeneration');
-  assert.equal(f.g.read('score'),200,'suppressed contact still preserves enemy destruction and score');
-  for(let i=0;i<hz/4-1;i++)f.tick();
-  assert.equal(f.g.read('player.contactCd'),0);
-  const ready=f.g.read('player.shield');f.enemy();f.tick();
+  assert.equal(f.g.read('score'),100,'recovery must not award another contact kill');
+  assert.equal(f.g.read('enemies.length'),2,'recovering overlap remains a living enemy');
+  assert.equal(f.g.read('enemies[0].hp'),30);
+  for(let i=0;i<hz/4-2;i++)f.tick();
+  assert.ok(f.g.read('player.contactCd')>0);
+  assert.equal(f.g.read('score'),100,'living overlap cannot be scored before expiry');
+  const ready=f.g.read('player.shield');f.tick();
   const actual=f.g.read('player.shield');const regen=.06*(1000/hz)/16.666;
-  assert.ok(Math.abs(actual-(ready+regen-25))<1e-8,'next contact after 0.5 simulation seconds deals exactly 25 shield');
+  assert.ok(Math.abs(actual-(ready+regen-25))<1e-8,'existing live contact after 0.5 simulation seconds deals exactly 25 shield');
+  assert.equal(f.g.read('score'),200);assert.equal(f.g.read('enemies.length'),1);
+  assert.equal(f.g.read('player.contactCd'),30);
  });
  test('controlled '+hz+'Hz: a bomb-killed overlapping enemy cannot deal contact damage',()=>{
   const f=fixture(hz);f.enemy();f.g.read('fireBomb()');f.tick();
@@ -72,7 +77,8 @@ for(const hz of [60,120]){
  });
  test('controlled '+hz+'Hz: a live hull hit remains 30 and shares the same contact cadence',()=>{
   const f=fixture(hz);f.enemy(2);f.g.read('player.shield=-1');f.tick();
-  assert.equal(f.g.read('player.hull'),70);assert.equal(f.g.read('score'),200);assert.equal(f.g.read('enemies.length'),1);
+  assert.equal(f.g.read('player.hull'),70);assert.equal(f.g.read('score'),100);assert.equal(f.g.read('enemies.length'),2);
+  assert.equal(f.g.read('enemies[0].hp'),30);
  });
  test('controlled '+hz+'Hz: the 26 pixel collision boundary is unchanged',()=>{
   const f=fixture(hz);f.enemy();f.g.read('enemies[0].x=326');f.tick();assert.equal(f.g.read('player.shield'),100);
@@ -92,3 +98,10 @@ for(const hz of [60,120]){
   assert.equal(f.g.read('timeDilation'),.25);assert.equal(f.g.read('player.contactCd'),0);
  });
 }
+
+for(const hz of [60,120]) test('controlled '+hz+'Hz: recovery never blocks a genuine weapon kill or awards a free contact kill',()=>{
+ const f=fixture(hz);f.enemy();f.tick();f.enemy();
+ f.g.read('bullets=[{x:300,y:200,vx:0,vy:0,life:20,dmg:30,color:"#fff"}]');f.tick();
+ assert.equal(f.g.read('score'),200);assert.equal(f.g.read('enemies.length'),1);
+ assert.ok(f.g.read('player.shield')>75);assert.equal(f.g.read('player.hull'),100);
+});

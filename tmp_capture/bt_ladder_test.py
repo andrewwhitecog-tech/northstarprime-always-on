@@ -30,7 +30,7 @@ PROBE = """(() => { const p = window.__fp = {d: [], last: 0};
   // Rule 30(g) proof: which lettering cells were drawn (by source x,y), and any typed canvas text.
   const lt = window.__lt = {cells: {}, typed: {}};
   const C2 = CanvasRenderingContext2D.prototype, di = C2.drawImage;
-  C2.drawImage = function (img, sx, sy) { if (img && img.src && img.src.indexOf('lettering_v04') >= 0 && arguments.length >= 9) { const k = sx + ',' + sy; lt.cells[k] = (lt.cells[k] || 0) + 1; lt.maxBottom = Math.max(lt.maxBottom || 0, arguments[6] + arguments[8]); } if (img && img.src) { for (const n of ['justiciar_ronin', 'justiciar_veilcutter', 'justiciar_seraph', 'justiciar_duelist', 'arena_high_chancel_eye', 'arena_high_chancel_colonnade', 'arena_reliquary_court_stelae', 'arena_reliquary_court_far']) if (img.src.indexOf(n) >= 0) { lt.drawn = lt.drawn || {}; lt.drawn[n] = (lt.drawn[n] || 0) + 1; } } return di.apply(this, arguments); };
+  C2.drawImage = function (img, sx, sy) { if (img && img.src && img.src.indexOf('lettering_v04') >= 0 && arguments.length >= 9) { const k = sx + ',' + sy; lt.cells[k] = (lt.cells[k] || 0) + 1; lt.maxBottom = Math.max(lt.maxBottom || 0, arguments[6] + arguments[8]); } if (img && img.src) { for (const n of ['justiciar_ronin', 'justiciar_veilcutter', 'justiciar_seraph', 'justiciar_duelist', 'arena_high_chancel_eye', 'arena_high_chancel_colonnade', 'arena_reliquary_court_stelae', 'arena_reliquary_court_far', 'justiciar_two_verdicts_p1', 'justiciar_two_verdicts_p2', 'arena_split_scales_crucible']) if (img.src.indexOf(n) >= 0) { lt.drawn = lt.drawn || {}; lt.drawn[n] = (lt.drawn[n] || 0) + 1; } } return di.apply(this, arguments); };
   for (const n of ['fillText', 'strokeText']) { const f = C2[n]; C2[n] = function (t) { const k = String(t).slice(0, 40); lt.typed[k] = (lt.typed[k] || 0) + 1; return f.apply(this, arguments); }; } })();"""
 CELLS = json.loads((Path(__file__).resolve().parent / "cells.json").read_text(encoding="utf-8"))["cells"]
 BY_XY = {f"{v[0]},{v[1]}": k for k, v in CELLS.items()}
@@ -116,7 +116,7 @@ async def main():
         await page.goto(a.base + URL, wait_until="load")
         await page.wait_for_timeout(3000)
         l0 = await L(page)
-        check("atlases loaded, five bouts open", l0["open"] == ["ruby", "duelist", "ronin", "veilcutter", "seraph"], l0["open"])
+        check("atlases loaded, six bouts open", l0["open"] == ["ruby", "duelist", "ronin", "veilcutter", "seraph", "verdicts1"], l0["open"])
         check("accepted lettering atlas loaded", await page.evaluate("() => letteringReady === true"), "lettering_v04_d438.webp")
         box = await page.evaluate("""() => ['#callout', '.meter', '.panel', '.arena-wrap'].map(q => { const e = document.querySelector(q); if (!e) return [q, null];
           const c = getComputedStyle(e); return [q, c.backgroundColor, c.backgroundImage.slice(0, 20), c.borderTopWidth + ' ' + c.borderTopStyle]; })""")
@@ -198,9 +198,43 @@ async def main():
                 if name == "Justiciar Veilcutter":
                     lv = await L(page)
                     check("Verdict blade earned after bout 4 and saved", "verdict" in lv["save"]["blades"], lv["save"]["blades"])
+            # Bout 6: Justiciar Two Verdicts. Phase 1 in real play, then below half health the beat and Wrath.
+            ok = await wait_until(page, "() => window.__bladeTribunalDebug.ladder().enemy === 'Justiciar Two Verdicts' && window.__bladeTribunalDebug.ladder().running", 90)
+            if ok:
+                await page.evaluate("() => { window.__lt.maxBottom = 0; }")
+                b0 = await L(page)
+                await play(page, 10, [("KeyD", 300), ("KeyJ", 110), ("KeyJ", 110), ("KeyL", 400), ("KeyA", 200)])
+                b1 = await L(page)
+                check("Two Verdicts phase 1 (Mercy) in play: phase-1 sheet on the crucible arena, still phase 1 above half health",
+                      (await page.evaluate("() => (window.__lt.drawn || {})['justiciar_two_verdicts_p1'] || 0")) > 0 and b1["arena"] == "crucible" and (b1["boss"]["phase2"] is False or b1["enemyHp"] <= b1["enemyMax"] * 0.5),
+                      {"arena": b1["arena"], "boss": b1["boss"], "hp": [b1["enemyHp"], b1["enemyMax"]], "ai": {k: b1["ai"][k] - b0["ai"][k] for k in b0["ai"]}})
+                for _ in range(40):
+                    hp = await page.evaluate("() => window.__bladeTribunalDebug.damageEnemy(12)")
+                    st = await L(page)
+                    if st["boss"]["phase2"]:
+                        break
+                    await page.wait_for_timeout(200)
+                await page.wait_for_timeout(150)
+                await page.screenshot(path=str(out / "10_boss_phase_beat.png"))
+                st = await L(page)
+                await wait_until(page, "() => window.__bladeTribunalDebug.ladder().boss.beat === 0", 30)
+                await play(page, 8, [("KeyD", 250), ("KeyJ", 110), ("KeyL", 500), ("KeyA", 300)])
+                await page.screenshot(path=str(out / "11_boss_wrath.png"))
+                st2 = await L(page)
+                drawn = await page.evaluate("() => window.__lt.drawn || {}")
+                band = await page.evaluate("() => ({maxBottom: Math.round(window.__lt.maxBottom || 0), head: Math.round(calloutBand().head)})")
+                check("Two Verdicts: below half health the phase changes once, to the Wrath sheet (no words)",
+                      st["boss"]["phaseChanges"] >= 1 and (st2["boss"]["phase2"] or not st2["running"]) and drawn.get("justiciar_two_verdicts_p2", 0) > 0 and drawn.get("arena_split_scales_crucible", 0) > 0,
+                      {"beat": st["boss"], "after": st2["boss"], "drawn": {k: drawn.get(k, 0) for k in ("justiciar_two_verdicts_p1", "justiciar_two_verdicts_p2", "arena_split_scales_crucible")}})
+                check("Two Verdicts: callouts stay above the boss's head", band["maxBottom"] <= band["head"] + 2, band)
+                if st2["running"] or st2["result"] != "fallen":
+                    await finish_bout(page)
+            else:
+                lx = await L(page)
+                check("Two Verdicts: bout starts", False, {k: lx[k] for k in ("bout", "enemy", "running", "result", "open")})
             ok = await wait_until(page, "() => window.__bladeTribunalDebug.ladder().result === 'cleared'", 60)
             l5 = await L(page)
-            check("five-bout ladder cleared and saved", ok and l5["save"]["clears"] >= 1 and l5["save"]["bestBout"] >= 5, l5["save"])
+            check("six-bout ladder cleared and saved", ok and l5["save"]["clears"] >= 1 and l5["save"]["bestBout"] >= 6, l5["save"])
             await wait_until(page, "() => !(state.koBanner > 0)", 30)
             await page.wait_for_timeout(600)
             await page.screenshot(path=str(out / "06_cleared.png"))

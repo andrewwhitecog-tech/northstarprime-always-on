@@ -13,6 +13,61 @@ concurrency:
   group: chrono-gameplay-showcase
   cancel-in-progress: false
 jobs:
+  geometry-preflight:
+    if: github.event_name == 'pull_request'
+    needs: guard-validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            .github/scripts/chrono-gameplay-showcase.cjs
+            .github/scripts/chrono-gameplay-source-pin.json
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.14.0'
+      - name: Read the unchanged accepted source pin
+        id: source
+        run: |
+          node - <<'NODE'
+          const fs=require('node:fs'),assert=require('node:assert/strict');
+          const pin=JSON.parse(fs.readFileSync('.github/scripts/chrono-gameplay-source-pin.json'));
+          assert.equal(pin.captureAuthorizedAfterEnemyAcceptance,true);
+          assert.match(pin.acceptedSourceCommit,/^[0-9a-f]{40}$/);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,'commit='+pin.acceptedSourceCommit+'\n');
+          NODE
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ steps.source.outputs.commit }}
+          path: capture-source
+          persist-credentials: false
+          sparse-checkout: |
+            arcade/custom/northstar-chrono-defender
+      - name: Install only the pinned geometry-test browser and native X window manager
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends openbox x11-utils
+          npm install --prefix "$RUNNER_TEMP/chrono-preflight-browser" --no-save --package-lock=false --ignore-scripts playwright@1.55.1
+          "$RUNNER_TEMP/chrono-preflight-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Verify real native fullscreen and canvas geometry without Start or recording
+        env:
+          NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/chrono-preflight-browser/node_modules/playwright
+          CHRONO_GAME_ROOT: ${{ github.workspace }}/capture-source
+          CHRONO_CAPTURE_OUT: ${{ runner.temp }}/chrono-geometry-preflight
+        run: |
+          xvfb-run --auto-servernum --server-args="-screen 0 1324x900x24 -nolisten tcp" \
+            timeout --signal=TERM --kill-after=10s 90s node .github/scripts/chrono-gameplay-showcase.cjs --preflight-only
+      - name: Preserve actual native-window facts and screenshots
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: chrono-geometry-preflight-${{ github.run_id }}
+          path: ${{ runner.temp }}/chrono-geometry-preflight/
+          if-no-files-found: warn
+          retention-days: 14
   guard-validation:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
@@ -72,7 +127,7 @@ jobs:
       - name: Install pinned isolated browser and system capture tools
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends ffmpeg pulseaudio xvfb
+          sudo apt-get install -y --no-install-recommends ffmpeg pulseaudio xvfb openbox x11-utils
           npm install --prefix "$RUNNER_TEMP/chrono-browser" --no-save --package-lock=false --ignore-scripts playwright@1.55.1
           "$RUNNER_TEMP/chrono-browser/node_modules/.bin/playwright" install --with-deps chromium
           mkdir -p "$RUNNER_TEMP/chrono-capture"

@@ -396,21 +396,49 @@
 
     const BLADE_ATLAS_SRC = {
       emerald: "/static/art/games/vorath_overhaul_v01/blade_tribunal/emerald_votary_atlas_v01.png",
-      ruby: "/static/art/games/vorath_overhaul_v01/blade_tribunal/ruby_mantis_regent_atlas_v01.png"
+      ruby: "/static/art/games/vorath_overhaul_v01/blade_tribunal/ruby_mantis_regent_atlas_v01.png",
+      duelist: "/static/art/games/vorath_overhaul_v01/blade_tribunal/justiciar_duelist_atlas_v02.webp"
     };
-    const BLADE_ATLAS = { emerald: new Image(), ruby: new Image() };
-    const BLADE_ATLAS_READY = { emerald: false, ruby: false };
-    for (const who of ["emerald", "ruby"]) {
+    // Each atlas: grid, on-screen height of one cell, and which cells play each pose.
+    // Four-pose atlases fall back: guard/dodge/step -> idle, heavy/charged -> strike, ko -> hurt, parry -> windup.
+    const FOUR_POSE = { idle: [0], windup: [1], strike: [2], hurt: [3] };
+    const ATLAS_GRID = {
+      emerald: { cols: 2, cw: 512, ch: 768, drawH: 330, poses: FOUR_POSE },
+      ruby: { cols: 2, cw: 512, ch: 768, drawH: 330, poses: FOUR_POSE },
+      duelist: { cols: 4, cw: 512, ch: 512, drawH: 340, idleFps: 3, poses: {
+        idle: [0, 1, 2, 3], step: [4, 5], windup: [5], strike: [8], heavyWindup: [11], heavy: [10], charged: [9],
+        dodge: [6], guard: [13], parry: [12], hurt: [14], ko: [15], feint: [11] } }
+    };
+    const POSE_FALLBACK = { guard: "idle", dodge: "idle", step: "idle", heavy: "strike", charged: "strike",
+      heavyWindup: "windup", feint: "windup", ko: "hurt", parry: "windup" };
+    const BLADE_ATLAS = {};
+    const BLADE_ATLAS_READY = {};
+    for (const who of Object.keys(BLADE_ATLAS_SRC)) {
+      BLADE_ATLAS[who] = new Image();
+      BLADE_ATLAS_READY[who] = false;
       BLADE_ATLAS[who].decoding = "async";
       BLADE_ATLAS[who].addEventListener("load", () => { BLADE_ATLAS_READY[who] = true; });
       BLADE_ATLAS[who].src = BLADE_ATLAS_SRC[who];
     }
-    const BLADE_POSE_INDEX = { idle: 0, windup: 1, strike: 2, hurt: 3 };
-    function drawBladeAtlasPose(atlas, pose, x, y, width, height) {
-      const index = BLADE_POSE_INDEX[pose] ?? 0;
-      const sourceX = (index % 2) * 512;
-      const sourceY = Math.floor(index / 2) * 768;
-      ctx.drawImage(atlas, sourceX, sourceY, 512, 768, x, y, width, height);
+    function atlasCell(who, pose) {
+      const g = ATLAS_GRID[who] || ATLAS_GRID.ruby;
+      let list = g.poses[pose];
+      if (!list) list = g.poses[POSE_FALLBACK[pose]] || g.poses.idle;
+      if (list.length === 1) return list[0];
+      const fps = pose === "idle" ? (g.idleFps || 3) : 8;
+      return list[Math.floor(performance.now() / 1000 * fps) % list.length];
+    }
+    function drawBladeAtlasPose(who, pose, x, y, width, height) {
+      const g = ATLAS_GRID[who] || ATLAS_GRID.ruby;
+      const index = atlasCell(who, pose);
+      const sourceX = (index % g.cols) * g.cw;
+      const sourceY = Math.floor(index / g.cols) * g.ch;
+      ctx.drawImage(BLADE_ATLAS[who], sourceX, sourceY, g.cw, g.ch, x, y, width, height);
+    }
+    function atlasSize(who, breathe, lunge) {
+      const g = ATLAS_GRID[who] || ATLAS_GRID.ruby;
+      const sh = g.drawH * breathe * lunge;
+      return { sh, sw: sh * g.cw / g.ch };
     }
 
     // Seamless parallax arena backdrop (mirror-tiled, no hard seam).
@@ -504,14 +532,82 @@
       rounds: 0,
       color: "#ff2e6d",
       blade: "#ffd75e",
-      core: "#b760ff"
+      core: "#b760ff",
+      atlas: "ruby",
+      ai: null,
+      mods: {}
     };
+    player.atlas = "emerald";
+    player.mods = {};
+    function setOpponent(d) {
+      enemy.name = d.name; enemy.atlas = d.key; enemy.color = d.color; enemy.blade = d.blade; enemy.core = d.core;
+      enemy.maxHp = d.hp; enemy.ai = d.ai; enemy.mods = buildMods(d.mods); enemy.comboLeft = 0;
+    }
+    function setBlade(key) {
+      if (!BLADES[key]) key = "votary";
+      ladder.save.blade = key;
+      player.mods = buildMods(BLADES[key].mods);
+      updateStartLabel();
+    }
+    function updateStartLabel() {
+      if (!els.startBtn) return;
+      const b = BLADES[ladder.save.blade] || BLADES.votary;
+      const more = ladder.save.blades.length > 1 ? " · B: change blade" : "";
+      els.startBtn.textContent = ladder.active ? "Duel in progress" : `Enter the Tribunal · ${b.name}${more} [Start / Enter]`;
+    }
 
     const attacks = {
       slash: { cost: 12, damage: 10, reach: 96, activeStart: 5, activeEnd: 12, cooldown: 24, push: 42, label: "prism slash" },
       heavy: { cost: 25, damage: 22, reach: 138, activeStart: 10, activeEnd: 20, cooldown: 44, push: 78, label: "crystal cleave" },
-      charged: { cost: 42, damage: 34, reach: 160, activeStart: 8, activeEnd: 18, cooldown: 52, push: 110, label: "soul-charge verdict" }
+      charged: { cost: 42, damage: 34, reach: 160, activeStart: 8, activeEnd: 18, cooldown: 52, push: 110, label: "soul-charge verdict" },
+      feint: { cost: 6, damage: 0, reach: 0, activeStart: 999, activeEnd: 999, cooldown: 20, push: 0, label: "feint" }
     };
+    // A fighter's own move set: the shared table, with its blade's or its style's overrides.
+    function specOf(fighter, type) {
+      const base = attacks[type];
+      if (!base || !fighter || !fighter.mods || !fighter.mods[type]) return base;
+      return fighter.mods[type];
+    }
+    function buildMods(over) {
+      const mods = {};
+      for (const k of Object.keys(over || {})) mods[k] = Object.assign({}, attacks[k], over[k]);
+      return mods;
+    }
+
+    // The tribunal ladder. Each duelist plays differently (canon names only:
+    // Ruby Mantis Regent is in the game; Justiciar Duelist is in CAST_BIBLE_DRAFT.md).
+    // A bout is offered only once its art has loaded, so no code-drawn stand-in goes live.
+    const ROSTER = [
+      { key: "ruby", name: "Ruby Mantis Regent", title: "patient striker", color: "#ff2e6d", blade: "#ffd75e", core: "#b760ff", hp: 100,
+        mods: { heavy: { activeStart: 13 } },
+        ai: { think: [18, 40], aggression: 0.5, guard: 0.32, parry: 0.08, dodge: 0.14, feint: 0.0, read: 0.25,
+              whiffPunish: 0.25, punishFrames: 16, combo: 1, range: 150, heavyBias: 0.45, riposte: "slash" } },
+      { key: "duelist", name: "Justiciar Duelist", title: "punishes every miss", color: "#f4f0ff", blade: "#ff4fd8", core: "#ffd75e", hp: 110,
+        mods: { slash: { cooldown: 21, activeStart: 4 } },
+        ai: { think: [12, 26], aggression: 0.62, guard: 0.26, parry: 0.3, dodge: 0.2, feint: 0.12, read: 0.65,
+              whiffPunish: 0.85, punishFrames: 11, combo: 2, range: 118, heavyBias: 0.25, riposte: "charged" } }
+    ];
+    const BLADES = {
+      votary: { name: "Votary blade", note: "balanced", mods: {} },
+      thorn: { name: "Thorn blade", note: "fast, short", mods: {
+        slash: { cost: 9, damage: 8, reach: 86, cooldown: 17, activeStart: 4, activeEnd: 10 },
+        heavy: { cost: 20, damage: 18, reach: 120, cooldown: 36, activeStart: 8 } } },
+      verdict: { name: "Verdict blade", note: "slow, long, heavy", mods: {
+        slash: { cost: 14, damage: 12, reach: 112, cooldown: 28 },
+        heavy: { cost: 28, damage: 28, reach: 158, cooldown: 52, activeStart: 12 } } }
+    };
+    const SAVE_KEY = "nsp.bladeTribunal.v2";
+    function loadSave() {
+      try { return Object.assign({ bestBout: 0, clears: 0, blades: ["votary"], blade: "votary", bestMs: {} }, JSON.parse(localStorage.getItem(SAVE_KEY) || "{}")); }
+      catch (e) { return { bestBout: 0, clears: 0, blades: ["votary"], blade: "votary", bestMs: {} }; }
+    }
+    function writeSave() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(ladder.save)); } catch (e) {} }
+    const ladder = { active: false, bout: 0, between: 0, result: "", boutStart: 0, intro: 0, save: loadSave(), unlocked: "" };
+    function openBouts() { const o = ROSTER.filter(d => BLADE_ATLAS_READY[d.key]); return o.length ? o : [ROSTER[0]]; }
+    // What the opponent has seen the player do (last 10 choices).
+    const reads = { hist: [], guardFrames: 0, frames: 0 };
+    function recordPlayer(type) { reads.hist.push(type); if (reads.hist.length > 10) reads.hist.shift(); }
+    function readRate(type) { return reads.hist.length ? reads.hist.filter(t => t === type).length / reads.hist.length : 0; }
 
     function resize() {
       const rect = canvas.getBoundingClientRect();
@@ -536,6 +632,18 @@
     }
 
     function startDuel() {
+      if (state.running || ladder.between > 0) return;
+      const bouts = openBouts();
+      if (!ladder.active) {
+        ladder.active = true; ladder.bout = 0; ladder.result = ""; ladder.unlocked = "";
+        reads.hist.length = 0;
+        setBlade(ladder.save.blade);
+      }
+      const d = bouts[Math.min(ladder.bout, bouts.length - 1)] || ROSTER[0];
+      setOpponent(d);
+      ladder.boutStart = performance.now();
+      ladder.intro = 150;
+      updateStartLabel();
       state.running = true;
       try { const a = AC(); if (a && a.state === "suspended") a.resume(); } catch(e){}
       try { announcer.currentTime = 0; announcer.play().catch(()=>{}); } catch(e){}
@@ -547,7 +655,7 @@
       player.rounds = 0;
       enemy.rounds = 0;
       resetRound("First bell.");
-      addLog("Duel started. Emerald blade is yours.");
+      addLog(`Bout ${ladder.bout + 1} of ${bouts.length}: ${enemy.name}, ${d.title}.`);
     }
 
     function resetRound(reason) {
@@ -556,7 +664,7 @@
       for (const fighter of [player, enemy]) {
         fighter.y = view.floor;
         fighter.vx = 0;
-        fighter.hp = 100;
+        fighter.hp = fighter.maxHp || 100;
         fighter.stamina = 100;
         fighter.charge = 0;
         fighter.action = "idle";
@@ -579,6 +687,11 @@
     }
 
     function beginAction(fighter, type) {
+      const ok = beginActionCore(fighter, type);
+      if (ok && fighter === player) recordPlayer(type);
+      return ok;
+    }
+    function beginActionCore(fighter, type) {
       if (!state.running || state.roundDelay > 0) return false;
       if (fighter.cooldown > 0 || fighter.action !== "idle") return false;
       if (type === "dodge") {
@@ -592,15 +705,14 @@
         addSlash(fighter, "rgba(56,233,255,0.58)", 58, 0.72);
         return true;
       }
-      const spec = attacks[type];
+      const spec = specOf(fighter, type);
       if (!spec || fighter.stamina < spec.cost) return false;
       fighter.action = type;
       fighter.frame = 0;
       fighter.cooldown = spec.cooldown;
       fighter.hitDone = false;
       fighter.stamina -= spec.cost;
-      addSlash(fighter, fighter.blade, spec.reach, type === "heavy" ? 1.1 : 0.72);
-      sfx("whoosh");
+      if (type !== "feint") { addSlash(fighter, fighter.blade, spec.reach, type === "heavy" ? 1.1 : 0.72); sfx("whoosh"); }
       return true;
     }
 
@@ -723,33 +835,144 @@
 
     function enemyAI(dt) {
       if (!state.running || state.roundDelay > 0) return;
-      state.aiTimer -= dt;
+      const ai = enemy.ai || ROSTER[0].ai;
+      const td = state.tribunalDirector || { aggression: 1 };
       const dist = Math.abs(enemy.x - player.x);
+      const toward = enemy.x > player.x ? -1 : 1;
       enemy.guard = false;
+      reads.frames += dt;
+      if (player.guard) reads.guardFrames += dt;
+      const playerTurtles = reads.frames > 120 && reads.guardFrames / reads.frames > 0.35;
+      // A queued follow-up (riposte after a parry, the next hit of a chain).
+      if (state.aiQueue) {
+        state.aiQueue.wait -= dt;
+        if (state.aiQueue.wait <= 0 && enemy.action === "idle") {
+          const q = state.aiQueue; state.aiQueue = null;
+          if (dist < (specOf(enemy, q.action) || attacks.slash).reach + 40) beginAction(enemy, enemy.charge >= 100 ? "charged" : q.action);
+        }
+        return;
+      }
+      if (enemy.action !== "idle") return;
+      // 1. Punish a miss: the player is recovering from a whiff.
+      if (player.whiff > 0 && player.action !== "idle" && dist < 175) {
+        if (!enemy.punishRolled) {
+          enemy.punishRolled = true;
+          if (Math.random() < ai.whiffPunish) {
+            enemy.punishes = (enemy.punishes || 0) + 1;
+            enemy.vx = toward * 260;
+            state.aiQueue = { action: dist < 110 ? "slash" : "heavy", wait: Math.max(2, ai.punishFrames - 8) };
+            return;
+          }
+        }
+      } else enemy.punishRolled = false;
+      // 2. React to the player's wind-up: parry, guard or step out.
+      const ps = specOf(player, player.action);
+      if (ps && player.action !== "feint" && player.frame < ps.activeStart && dist < ps.reach + 30) {
+        if (!enemy.reactRolled) {
+          enemy.reactRolled = true;
+          // The more the player leans on one attack, the better the opponent reads it.
+          const lean = Math.max(readRate("slash"), readRate("heavy"));
+          const pParry = ai.parry * (1 + ai.read * lean * 1.6);
+          const r = Math.random();
+          if (r < pParry) { enemy.guardJustPressed = 0.22; enemy.guard = true; enemy.reactMode = "parry"; }
+          else if (r < pParry + ai.guard) { enemy.reactMode = "guard"; }
+          else if (r < pParry + ai.guard + ai.dodge && enemy.stamina > 30) { beginAction(enemy, "dodge"); return; }
+          else enemy.reactMode = "";
+        }
+        if (enemy.reactMode === "guard" || enemy.reactMode === "parry") {
+          enemy.guard = true;
+          enemy.stamina = Math.max(0, enemy.stamina - 0.24 * dt);
+          return;
+        }
+      } else enemy.reactRolled = false;
+      // 3. Plan.
+      state.aiTimer -= dt * (td.aggression || 1);
       if (state.aiTimer <= 0) {
-        if (enemy.hp < 34 && Math.random() < 0.22) state.aiIntent = "guard";
-        else if (dist > 230) state.aiIntent = "approach";
-        else if (dist < 92 && Math.random() < 0.3) state.aiIntent = "dodge";
-        else state.aiIntent = Math.random() < 0.64 ? "slash" : "heavy";
-        state.aiTimer = 16 + Math.random() * 26;
+        const [lo, hi] = ai.think;
+        state.aiTimer = lo + Math.random() * (hi - lo);
+        const r = Math.random();
+        if (dist > ai.range + 70) state.aiIntent = "approach";
+        else if (dist < ai.range * 0.55 && Math.random() < 0.35) state.aiIntent = "space";
+        else if (playerTurtles && r < 0.45) state.aiIntent = Math.random() < ai.feint + 0.25 ? "feint" : "heavy";
+        else if (r < ai.feint) state.aiIntent = "feint";
+        else if (r < ai.feint + ai.aggression) state.aiIntent = Math.random() < ai.heavyBias ? "heavy" : "slash";
+        else if (enemy.hp < (enemy.maxHp || 100) * 0.3 && Math.random() < 0.4) state.aiIntent = "guard";
+        else state.aiIntent = "measure";
+        enemy.comboLeft = ai.combo - 1;
       }
       enemy.vx = 0;
-      if (enemy.action !== "idle") return;
-      if (state.aiIntent === "approach") {
-        enemy.vx = enemy.x > player.x ? -215 : 215;
-      } else if (state.aiIntent === "guard") {
-        enemy.guard = true;
-        enemy.stamina = Math.max(0, enemy.stamina - 0.24);
-      } else if (state.aiIntent === "dodge") {
-        beginAction(enemy, "dodge");
-      } else if (state.aiIntent === "slash" && dist < 170) {
-        beginAction(enemy, enemy.charge >= 100 ? "charged" : "slash");
-      } else if (state.aiIntent === "heavy" && dist < 210) {
-        beginAction(enemy, "heavy");
-      } else {
-        enemy.vx = enemy.x > player.x ? -180 : 180;
+      switch (state.aiIntent) {
+        case "approach": enemy.vx = toward * 215; break;
+        case "space": enemy.vx = -toward * 190; break;
+        case "measure":
+          enemy.vx = (dist > ai.range ? toward : -toward) * 90 * Math.sin(performance.now() * 0.004);
+          break;
+        case "guard":
+          enemy.guard = true; enemy.stamina = Math.max(0, enemy.stamina - 0.24 * dt); break;
+        case "feint":
+          if (dist < ai.range + 60 && beginAction(enemy, "feint")) {
+            enemy.feints = (enemy.feints || 0) + 1;
+            state.aiQueue = { action: "heavy", wait: 16 + Math.random() * 10 };
+            state.aiIntent = "measure";
+          } else enemy.vx = toward * 180;
+          break;
+        case "slash":
+        case "heavy": {
+          const sp = specOf(enemy, state.aiIntent);
+          if (dist < sp.reach + 30) {
+            const kind = enemy.charge >= 100 ? "charged" : state.aiIntent;
+            if (beginAction(enemy, kind)) {
+              if (enemy.comboLeft > 0 && kind === "slash") { enemy.comboLeft -= 1; state.aiQueue = { action: "slash", wait: sp.cooldown * 0.75 }; }
+              state.aiIntent = "measure";
+            }
+          } else enemy.vx = toward * 200;
+          break;
+        }
       }
-      if (!enemy.guard) enemy.stamina = Math.min(100, enemy.stamina + 0.23);
+      if (!enemy.guard) enemy.stamina = Math.min(100, enemy.stamina + 0.23 * dt);
+    }
+
+    // Ladder flow: between bouts, results, unlocks, save.
+    function ladderMatchEnd(playerWon) {
+      const bouts = openBouts();
+      const took = Math.round(performance.now() - ladder.boutStart);
+      if (playerWon) {
+        const k = enemy.atlas;
+        if (!ladder.save.bestMs[k] || took < ladder.save.bestMs[k]) ladder.save.bestMs[k] = took;
+        ladder.save.bestBout = Math.max(ladder.save.bestBout, ladder.bout + 1);
+        if (ladder.bout + 1 >= bouts.length) {
+          ladder.active = false;
+          ladder.result = "cleared";
+          ladder.save.clears += 1;
+          if (!ladder.save.blades.includes("thorn")) { ladder.save.blades.push("thorn"); ladder.unlocked = "Thorn blade"; }
+          addLog(`The tribunal is cleared.${ladder.unlocked ? " " + ladder.unlocked + " unlocked." : ""}`);
+        } else {
+          ladder.bout += 1;
+          ladder.between = 210;
+          addLog(`Bout won. Next: ${bouts[ladder.bout].name}.`);
+        }
+      } else {
+        ladder.active = false;
+        ladder.result = "fallen";
+        addLog(`Fallen at bout ${ladder.bout + 1}. Press Start to try the tribunal again.`);
+      }
+      writeSave();
+      updateStartLabel();
+    }
+    function ladderTick(dt) {
+      if (ladder.intro > 0) ladder.intro -= dt;
+      if (ladder.between > 0) {
+        ladder.between -= dt;
+        if (ladder.between <= 0) { ladder.between = 0; startDuel(); }
+      }
+    }
+    function cycleBlade() {
+      if (state.running || ladder.active) return;
+      const owned = ladder.save.blades;
+      const i = owned.indexOf(ladder.save.blade);
+      setBlade(owned[(i + 1) % owned.length]);
+      writeSave();
+      addLog(`${BLADES[ladder.save.blade].name}: ${BLADES[ladder.save.blade].note}.`);
     }
 
     function updateFighter(fighter, opponent, dt) {
@@ -757,17 +980,19 @@
       fighter.invuln = Math.max(0, fighter.invuln - dt);
       fighter.hurtTime = Math.max(0, (fighter.hurtTime || 0) - dt);
       fighter.cooldown = Math.max(0, fighter.cooldown - dt);
+      fighter.whiff = Math.max(0, (fighter.whiff || 0) - dt);
+      fighter.parryFlash = Math.max(0, (fighter.parryFlash || 0) - dt);
       if (fighter.guardJustPressed > 0) fighter.guardJustPressed = Math.max(0, fighter.guardJustPressed - dt / 60);
       if (fighter.action !== "idle") {
         fighter.frame += dt;
         // Ghost afterimage trail on strike/dodge frames (drawn additively behind fighters).
         fighter.ghostGap = (fighter.ghostGap || 0) - dt;
-        if (fighter.ghostGap <= 0 && (fighter.action === "dodge" || fighter.frame >= (attacks[fighter.action] ? attacks[fighter.action].activeStart * 0.6 : 0))) {
-          state.ghosts.push({ who: fighter.id === "player" ? "emerald" : "ruby", action: fighter.action, frame: fighter.frame, x: fighter.x, y: fighter.y, facing: fighter.facing, life: 11, max: 11, color: fighter.blade });
+        if (fighter.ghostGap <= 0 && (fighter.action === "dodge" || fighter.frame >= (specOf(fighter, fighter.action) ? specOf(fighter, fighter.action).activeStart * 0.6 : 0))) {
+          state.ghosts.push({ who: fighter.atlas, action: fighter.action, frame: fighter.frame, x: fighter.x, y: fighter.y, facing: fighter.facing, life: 11, max: 11, color: fighter.blade });
           if (state.ghosts.length > 14) state.ghosts.splice(0, state.ghosts.length - 14);
           fighter.ghostGap = 2.4;
         }
-        const spec = attacks[fighter.action];
+        const spec = specOf(fighter, fighter.action);
         if (spec && fighter.frame >= spec.activeStart && fighter.frame <= spec.activeEnd && !fighter.hitDone) {
           resolveHit(fighter, opponent, spec);
           fighter.hitDone = true;
@@ -801,7 +1026,7 @@
       const dx = defender.x - attacker.x;
       const inFront = Math.sign(dx || attacker.facing) === attacker.facing;
       const distance = Math.abs(dx);
-      if (!inFront || distance > reach) return;
+      if (!inFront || distance > reach) { attacker.whiff = 24; return; }
       let damage = spec.damage;
       let blocked = false;
       const isFlashParry = (defender.guardJustPressed > 0 || (defender.id === "player" && state.tribunalDirector.parryWindow > 0)) && Math.sign(attacker.x - defender.x) === defender.facing;
@@ -809,6 +1034,8 @@
         state.tribunalDirector.flashParryStreak++;
         state.tribunalDirector.tension = Math.min(100, state.tribunalDirector.tension + 15);
         state.tribunalDirector.parryWindow = 0;
+        defender.parryFlash = 14;
+        if (defender === enemy && enemy.ai) { state.aiQueue = { action: enemy.ai.riposte || "slash", wait: 5 }; enemy.parries = (enemy.parries || 0) + 1; }
         defender.stamina = Math.min(100, defender.stamina + 25);
         defender.charge = Math.min(100, defender.charge + 35);
         attacker.cooldown = 46;
@@ -902,9 +1129,9 @@
       }
       if (player.rounds >= 2 || enemy.rounds >= 2) {
         state.running = false;
-        state.judgment = player.rounds >= 2 ? "VOTARY" : "REGENT";
-        addLog(`${state.judgment} wins the match. Export the receipt.`);
+        state.judgment = player.rounds >= 2 ? "VOTARY" : enemy.name.toUpperCase();
         stopMusic();
+        ladderMatchEnd(player.rounds >= 2);
       }
     }
 
@@ -983,6 +1210,7 @@
       if ((state.koFlash || 0) > 0) state.koFlash = Math.max(0, state.koFlash - 0.05);
 
       updateTribunalDirector(dt);
+      ladderTick(dt);
       fighterInput();
       enemyAI(dt);
       if (state.running && state.roundDelay <= 0) {
@@ -1064,16 +1292,16 @@
         let pose = "idle";
         if (g.action === "slash" || g.action === "heavy" || g.action === "charged") {
           const sp = attacks[g.action];
-          pose = (sp && g.frame < sp.activeStart) ? "windup" : "strike";
-        }
+          pose = (sp && g.frame < sp.activeStart) ? (g.action === "heavy" ? "heavyWindup" : "windup") : (g.action === "slash" ? "strike" : g.action);
+        } else if (g.action === "dodge") pose = "dodge";
         const t = Math.max(0, g.life / g.max);
         ctx.globalAlpha = t * 0.22;
         ctx.save();
         ctx.translate(g.x, g.y);
         ctx.scale(g.facing * scale, scale);
         if (BLADE_ATLAS_READY[g.who]) {
-          const sh = 330, sw = sh * (512 / 768);
-          drawBladeAtlasPose(BLADE_ATLAS[g.who], pose, -sw / 2, 16 - sh, sw, sh);
+          const { sh, sw } = atlasSize(g.who, 1, 1);
+          drawBladeAtlasPose(g.who, pose, -sw / 2, 16 - sh, sw, sh);
         } else {
           const spr = SPR[g.who + "_" + pose] || SPR[g.who + "_idle"] || SPR[g.who];
           if (spr) {
@@ -1296,17 +1524,8 @@
     }
 
     function drawBars() {
-      // Glass plates behind each gauge cluster (flat fills, no per-frame gradients).
-      ctx.save();
-      ctx.fillStyle = "rgba(4,7,16,0.52)";
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = "rgba(61,255,173,0.4)";
-      roundRect(20, 12, view.w * 0.36 + 24, 66, 10); ctx.fill(); ctx.stroke();
-      ctx.strokeStyle = "rgba(255,46,109,0.4)";
-      roundRect(view.w - view.w * 0.36 - 44, 12, view.w * 0.36 + 24, 66, 10); ctx.fill(); ctx.stroke();
-      ctx.restore();
-      drawGauge(32, 24, view.w * 0.36, 16, player.hp / 100, "#3dffad", "EMERALD VOTARY");
-      drawGauge(view.w - view.w * 0.36 - 32, 24, view.w * 0.36, 16, enemy.hp / 100, "#ff2e6d", "RUBY MANTIS REGENT");
+      drawGauge(32, 24, view.w * 0.36, 16, player.hp / (player.maxHp || 100), "#3dffad", "EMERALD VOTARY");
+      drawGauge(view.w - view.w * 0.36 - 32, 24, view.w * 0.36, 16, enemy.hp / (enemy.maxHp || 100), enemy.color || "#ff2e6d", enemy.name.toUpperCase());
       drawGauge(32, 48, view.w * 0.27, 9, player.stamina / 100, "#38e9ff", "STAMINA");
       drawGauge(view.w - view.w * 0.27 - 32, 48, view.w * 0.27, 9, enemy.stamina / 100, "#ffd75e", "AI STAMINA");
     }
@@ -1375,30 +1594,37 @@
 
       // AI-art fighter sprite (falls back to the procedural crystal figure if not loaded yet)
       // Pose from state: hurt > windup/strike (by attack phase) > idle. Procedural breathe + lunge sell the motion.
-      const _who = fighter.id === "player" ? "emerald" : "ruby";
+      const _who = fighter.atlas || (fighter.id === "player" ? "emerald" : "ruby");
       let _pose = "idle";
-      if ((fighter.hurtTime || 0) > 0) _pose = "hurt";
+      if (fighter.hp <= 0) _pose = "ko";
+      else if ((fighter.hurtTime || 0) > 0) _pose = "hurt";
+      else if ((fighter.parryFlash || 0) > 0) _pose = "parry";
       else if (fighter.action === "slash" || fighter.action === "heavy" || fighter.action === "charged") {
-        const _sp = attacks[fighter.action];
-        _pose = (_sp && fighter.frame < _sp.activeStart) ? "windup" : "strike";
+        const _sp = specOf(fighter, fighter.action);
+        const wind = _sp && fighter.frame < _sp.activeStart;
+        _pose = wind ? (fighter.action === "heavy" ? "heavyWindup" : "windup") : (fighter.action === "slash" ? "strike" : fighter.action);
       }
+      else if (fighter.action === "feint") _pose = "feint";
+      else if (fighter.action === "dodge") _pose = "dodge";
+      else if (fighter.guard) _pose = "guard";
+      else if (Math.abs(fighter.vx) > 60) _pose = "step";
       if (BLADE_ATLAS_READY[_who]) {
         ctx.shadowBlur = 0;
         const breathe = 1 + Math.sin(performance.now() * 0.003 + (fighter.id === "player" ? 0 : 1.6)) * 0.015;
         const lunge = _pose === "strike" ? 1.07 : 1;
-        const sh = 330 * breathe * lunge, sw = sh * (512 / 768);
+        const { sh, sw } = atlasSize(_who, breathe, lunge);
         const yOff = _pose === "hurt" ? -6 : 0;
-        drawBladeAtlasPose(BLADE_ATLAS[_who], _pose, -sw / 2, 16 - sh + yOff, sw, sh);
+        drawBladeAtlasPose(_who, _pose, -sw / 2, 16 - sh + yOff, sw, sh);
         if ((fighter.hurtTime || 0) > 0) {
           ctx.globalAlpha = Math.min(0.75, fighter.hurtTime / 16 * 0.75);
           ctx.globalCompositeOperation = "lighter";
-          drawBladeAtlasPose(BLADE_ATLAS[_who], _pose, -sw / 2, 16 - sh + yOff, sw, sh);
+          drawBladeAtlasPose(_who, _pose, -sw / 2, 16 - sh + yOff, sw, sh);
           ctx.globalAlpha = 1;
           ctx.globalCompositeOperation = "source-over";
         } else if (fighter.invuln > 0) {
           ctx.globalAlpha = 0.5;
           ctx.globalCompositeOperation = "lighter";
-          drawBladeAtlasPose(BLADE_ATLAS[_who], _pose, -sw / 2, 16 - sh, sw, sh);
+          drawBladeAtlasPose(_who, _pose, -sw / 2, 16 - sh, sw, sh);
           ctx.globalAlpha = 1;
           ctx.globalCompositeOperation = "source-over";
         }
@@ -1735,9 +1961,30 @@
       ctx.shadowColor = "#b760ff";
       ctx.font = `900 ${Math.max(18, view.w * 0.026)}px ui-sans-serif`;
       ctx.textAlign = "center";
-      const label = state.running ? `ROUND ${state.round} - ${state.judgment}` : "PRESS START DUEL";
+      const nB = openBouts().length || 1;
+      let label;
+      if (state.running) label = `BOUT ${ladder.bout + 1}/${nB} · ${enemy.name.toUpperCase()} · ROUND ${state.round}`;
+      else if (ladder.between > 0) label = `NEXT: ${(openBouts()[ladder.bout] || {}).name || ""}`.toUpperCase();
+      else if (ladder.result === "cleared") label = ladder.unlocked ? `TRIBUNAL CLEARED · ${ladder.unlocked.toUpperCase()} UNLOCKED` : "TRIBUNAL CLEARED";
+      else if (ladder.result === "fallen") label = `FALLEN AT BOUT ${ladder.bout + 1} · PRESS START`;
+      else label = `ENTER THE TRIBUNAL · BEST ${ladder.save.bestBout}/${nB}`;
       ctx.fillText(label, view.w / 2, view.h - 34);
       ctx.restore();
+      // Opponent call at the start of each bout
+      if (ladder.intro > 0 && state.running) {
+        ctx.save();
+        ctx.textAlign = "center";
+        const a = Math.min(1, ladder.intro / 40);
+        ctx.globalAlpha = a;
+        ctx.font = `900 ${Math.max(30, view.w * 0.05)}px ui-sans-serif`;
+        ctx.fillStyle = "#fff4d8"; ctx.shadowBlur = 30; ctx.shadowColor = enemy.blade;
+        ctx.fillText(enemy.name.toUpperCase(), view.w / 2, view.h * 0.2);
+        ctx.font = `700 ${Math.max(15, view.w * 0.017)}px ui-sans-serif`;
+        ctx.shadowBlur = 12;
+        const d = ROSTER.find(r => r.key === enemy.atlas);
+        ctx.fillText(`BOUT ${ladder.bout + 1} · ${d ? d.title.toUpperCase() : ""}`, view.w / 2, view.h * 0.2 + Math.max(30, view.w * 0.034));
+        ctx.restore();
+      }
       // Big pulsing K.O. during the slow-mo dwell
       if ((state.koBanner || 0) > 0) {
         ctx.save();
@@ -1924,6 +2171,7 @@
 
     window.addEventListener("keydown", event => {
       const key = event.key.toLowerCase();
+      if (key === "b" && !event.repeat) cycleBlade();
       if ([" ", "arrowleft", "arrowright"].includes(key)) event.preventDefault();
       keys.add(key);
     });
@@ -1933,6 +2181,7 @@
     });
 
     els.startBtn.addEventListener("click", startDuel);
+    setBlade(ladder.save.blade);
     els.exportBtn.addEventListener("click", exportReceipt);
     els.exportTop.addEventListener("click", exportReceipt);
     if (els.parryBtn) {
@@ -1962,7 +2211,13 @@
       payload: bladeTribunalPayload,
       triggerParry: triggerFlashParry,
       setTension: (val) => { if (state.tribunalDirector) state.tribunalDirector.tension = val; },
-      startDuel: () => { startDuel(); return bladeTribunalPayload(); }
+      startDuel: () => { startDuel(); return bladeTribunalPayload(); },
+      ladder: () => ({ active: ladder.active, bout: ladder.bout, between: Math.round(ladder.between), result: ladder.result,
+        open: openBouts().map(d => d.key), enemy: enemy.name, enemyAtlas: enemy.atlas, enemyHp: enemy.hp, enemyMax: enemy.maxHp || 100,
+        running: state.running, round: state.round, save: JSON.parse(JSON.stringify(ladder.save)), reads: reads.hist.slice(),
+        ai: { parries: enemy.parries || 0, punishes: enemy.punishes || 0, feints: enemy.feints || 0 }, blade: ladder.save.blade }),
+      koEnemy: () => { if (state.running && state.roundDelay <= 0) { enemy.hp = 0; checkRoundEnd(); } return enemy.hp; },
+      cycleBlade
     };
 
     resize();

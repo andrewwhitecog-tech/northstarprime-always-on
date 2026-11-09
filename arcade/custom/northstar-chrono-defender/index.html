@@ -312,6 +312,37 @@ function drawPlayerShip() {
   ctx.restore();
 }
 
+// Accepted hostile atlas: exact 512px cells, center anchor, nose right.
+const enemyAtlas = new Image();
+let enemyAtlasState = 'loading';
+enemyAtlas.onload = () => { enemyAtlasState = enemyAtlas.naturalWidth===1536&&enemyAtlas.naturalHeight===1024?'ready':'invalid'; };
+enemyAtlas.onerror = () => { enemyAtlasState = 'error'; };
+enemyAtlas.src = '/arcade/custom/northstar-chrono-defender/assets/hostiles-v02.png';
+let enemyVisualClock = 0;
+let enemyHitEchoes = []; // Visual only: never queried by targeting, collisions, score or waves.
+function chooseEnemyPose(enemy,clock=enemyVisualClock) {
+  const row=enemy.type==='gunship'?3:0;
+  if(enemy.damageFlash>0)return row+2;
+  const moving=Math.hypot(enemy.vx,enemy.vy)>.01;
+  return row+(moving&&Math.floor((clock+enemy.x*.05+enemy.y*.05)/12)%2?1:0);
+}
+function drawEnemyShip(enemy,angle,opacity=1) {
+  ctx.save();ctx.translate(enemy.x,enemy.y);ctx.rotate(angle);ctx.globalAlpha=opacity;
+  if(enemyAtlasState==='ready') {
+    const pose=chooseEnemyPose(enemy);
+    ctx.drawImage(enemyAtlas,(pose%3)*512,Math.floor(pose/3)*512,512,512,-32,-32,64,64);
+  } else {
+    // Retain the original readable silhouettes when the image is unavailable.
+    ctx.shadowColor='#ef4444';ctx.shadowBlur=12;
+    ctx.fillStyle='#1e1b4b';ctx.strokeStyle='#ef4444';ctx.lineWidth=2;
+    ctx.beginPath();
+    if(enemy.type==='gunship')ctx.rect(-14,-14,28,28);
+    else {ctx.moveTo(14,0);ctx.lineTo(-12,-10);ctx.lineTo(-6,0);ctx.lineTo(-12,10);}
+    ctx.closePath();ctx.fill();ctx.stroke();
+  }
+  ctx.restore();
+}
+
 // Entities
 let bullets = [];
 let enemies = [];
@@ -529,6 +560,7 @@ function fireBomb() {
   // Annihilate enemies
   enemies.forEach(e => {
     e.hp -= 300;
+    e.damageFlash=12; // Visual hit feedback; bomb damage remains unchanged.
     for (let i = 0; i < 20; i++) {
       particles.push({
         x: e.x, y: e.y,
@@ -703,6 +735,7 @@ function gameLoop(now) {
         const e = enemies[j];
         if (Math.hypot(b.x - e.x, b.y - e.y) < 22) {
           e.hp -= b.dmg;
+          e.damageFlash=12;
           b.life = 0;
           vibrate(30, 0.2, 0.2);
           for (let p = 0; p < 4; p++) {
@@ -721,6 +754,7 @@ function gameLoop(now) {
       }
     }
 
+    enemyVisualClock+=dt;
     // Enemies Update & Render
     for (let i = enemies.length - 1; i >= 0; i--) {
       const e = enemies[i];
@@ -730,21 +764,9 @@ function gameLoop(now) {
       e.x += e.vx * dt;
       e.y += e.vy * dt;
 
-      // Enemy Render
-      ctx.save();
-      ctx.translate(e.x, e.y);
-      ctx.rotate(angle);
-      ctx.shadowColor = '#ef4444'; ctx.shadowBlur = 12;
-      ctx.fillStyle = '#1e1b4b'; ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 2;
-      ctx.beginPath();
-      if (e.type === 'gunship') {
-        ctx.rect(-14, -14, 28, 28);
-      } else {
-        ctx.moveTo(14, 0); ctx.lineTo(-12, -10); ctx.lineTo(-6, 0); ctx.lineTo(-12, 10);
-      }
-      ctx.closePath();
-      ctx.fill(); ctx.stroke();
-      ctx.restore();
+      // Existing pursuit bearing also orients the nose-right source art.
+      drawEnemyShip(e,angle);
+      e.damageFlash=Math.max(0,(e.damageFlash||0)-dt);
 
       // Enemy collision with player
       if (!player.isInvulnerable && Math.hypot(player.x - e.x, player.y - e.y) < 26) {
@@ -762,6 +784,8 @@ function gameLoop(now) {
 
       // Enemy Death
       if (e.hp <= 0) {
+        enemyHitEchoes.push({x:e.x,y:e.y,vx:0,vy:0,type:e.type,damageFlash:1,angle,life:10});
+        if(enemyHitEchoes.length>24)enemyHitEchoes.shift();
         audio.explosion(false);
         score += e.type === 'gunship' ? 250 : 100;
         document.getElementById('scoreVal').textContent = String(score).padStart(6, '0');
@@ -779,6 +803,12 @@ function gameLoop(now) {
           spawnWave(wave + 1);
         }
       }
+    }
+
+    // Brief damage-pose echoes stay outside the combat entity list.
+    for(let i=enemyHitEchoes.length-1;i>=0;i--){const echo=enemyHitEchoes[i];
+      drawEnemyShip(echo,echo.angle,echo.life/10);echo.life-=dt;
+      if(echo.life<=0)enemyHitEchoes.splice(i,1);
     }
 
     // Particles Render
@@ -819,7 +849,7 @@ function startGame() {
   player.x=W/2;player.y=H/2;player.angle=-Math.PI/2;
   aimSource='default';mouse.x=player.x;mouse.y=player.y-100;
   player.fireCd=0;player.dodgeCd=0;player.isInvulnerable=false;player.damageFlash=0;
-  chronoTimer=0;timeDilation=1;score=0;enemies=[];bullets=[];particles=[];shakeTime=0;
+  chronoTimer=0;timeDilation=1;score=0;enemies=[];bullets=[];particles=[];shakeTime=0;enemyHitEchoes=[];enemyVisualClock=0;
   document.getElementById('scoreVal').textContent='000,000';document.getElementById('bombVal').textContent='3';
   document.getElementById('titleScreen').classList.add('hidden');document.getElementById('gameOverScreen').classList.add('hidden');
   gameState='PLAYING';updateModeUi();selectWeapon(0);spawnWave(1);canvas.focus({preventScroll:true});

@@ -6,16 +6,16 @@ const script=html.match(/<script>\s*'use strict';([\s\S]*?)<\/script>/);
 assert.ok(script,'actual inline game engine must be found');
 function game(){
  const handlers={};const elements=new Map();const gradient={addColorStop(){}};
- const drawing=[];const ctx=new Proxy({}, {get:(o,k)=>o[k]||((...args)=>{if(k==='fillRect'||k==='drawImage')drawing.push({method:k,args});return gradient;}),set:(o,k,v)=>(o[k]=v,true)});
+ const drawing=[];const ctx=new Proxy({}, {get:(o,k)=>o[k]||((...args)=>{if(['fillRect','drawImage','translate','rotate','stroke'].includes(k))drawing.push({method:k,args});return gradient;}),set:(o,k,v)=>(o[k]=v,true)});
  const element=id=>{if(!elements.has(id)){const captured=new Set();elements.set(id,{style:{},dataset:{},classList:{add(){},remove(){},toggle(){}},closest:()=>null,focus(){},getBoundingClientRect:()=>({left:0,top:0,width:id.endsWith('Stick')?100:1280,height:id.endsWith('Stick')?100:720}),setPointerCapture:i=>captured.add(i),hasPointerCapture:i=>captured.has(i),releasePointerCapture:i=>captured.delete(i),addEventListener:(name,fn)=>handlers[id+':'+name]=fn,getContext:()=>ctx});}return elements.get(id);};
- let pads=[];const sandbox={console,Image:class{constructor(){this.naturalWidth=0;this.naturalHeight=0;}},performance:{now:()=>0},requestAnimationFrame(){},setTimeout(){},setInterval(){},Math,
+ let frameNow=0;let pads=[];const sandbox={console,Image:class{constructor(){this.naturalWidth=0;this.naturalHeight=0;}},performance:{now:()=>0},requestAnimationFrame(){},setTimeout(){},setInterval(){},Math,
  ResizeObserver:class{observe(){}},document:{createElement:()=>({width:0,height:0,getContext:()=>ctx}),getElementById:element,documentElement:{classList:{toggle(){}}},body:{dataset:{}},querySelectorAll:selector=>selector==='[data-action]'?['bomb','chrono','dodge','weapon'].map(action=>{const e=element('action-'+action);e.dataset.action=action;return e;}):[],addEventListener:(name,fn)=>handlers['document:'+name]=fn},window:{innerWidth:1280,innerHeight:720,matchMedia:()=>({matches:false}),addEventListener:(name,fn)=>handlers[name]=fn},navigator:{maxTouchPoints:0,getGamepads:()=>pads}};
  vm.createContext(sandbox);vm.runInContext("'use strict';"+script[1],sandbox);
  const evalGame=code=>vm.runInContext(code,sandbox);
  evalGame("gameState='PLAYING'; mouse.x=100; mouse.y=360;");
  const pad=(axes=[0,0,0,0],buttons=[])=>({connected:true,mapping:'standard',index:0,id:'fixture',axes,buttons:Array.from({length:10},(_,i)=>({pressed:buttons.includes(i),value:buttons.includes(i)?1:0}))});
  const pointer=(id,type,pointerId,x=50,y=50)=>handlers[id+':'+type]({pointerId,clientX:x,clientY:y,preventDefault(){}});
- return{drawing,tap:id=>{handlers[id+':pointerdown']?.({pointerId:11,preventDefault(){}});handlers[id+':click']?.({detail:0,pointerType:'touch'});},read:evalGame,frame:()=>evalGame('gameLoop(16.666)'),pad:(axes,fire=false)=>pads=[pad(axes,fire?[7]:[])],buttons:(buttons,axes=[0,0,0,0])=>pads=[pad(axes,buttons)],mouse:(x,y)=>handlers['gameCanvas:mousemove']({clientX:x,clientY:y}),pointer,key:(key,repeat=false)=>handlers.keydown({key,repeat,preventDefault(){}})};
+ return{drawing,tap:id=>{handlers[id+':pointerdown']?.({pointerId:11,preventDefault(){}});handlers[id+':click']?.({detail:0,pointerType:'touch'});},read:evalGame,frame:()=>evalGame('gameLoop('+(frameNow+=16.666)+')'),pad:(axes,fire=false)=>pads=[pad(axes,fire?[7]:[])],buttons:(buttons,axes=[0,0,0,0])=>pads=[pad(axes,buttons)],mouse:(x,y)=>handlers['gameCanvas:mousemove']({clientX:x,clientY:y}),pointer,key:(key,repeat=false)=>handlers.keydown({key,repeat,preventDefault(){}})};
 }
 function near(actual,expected,message){assert.ok(Math.abs(actual-expected)<1e-9,message+'; actual='+actual);}
 test('right stick facing survives the real frame mouse-aim stage',()=>{const g=game();g.pad([0,0,0,-1]);g.frame();near(g.read('player.angle'),-Math.PI/2,'right stick must point up despite stale mouse on left');});
@@ -105,4 +105,33 @@ test('fresh-sortie neutral aim and first shot point up before any new device int
  g.pad([1,0,0,0]);g.frame();g.frame();near(g.read('player.angle'),-Math.PI/2,'neutral aim retains initial up bearing while strafing');
  g.read('audio.ctx=null;firePlayerWeapon()');assert.ok(g.read('bullets[0].vy')<0);near(g.read('bullets[0].vx'),0,'neutral first shot must go up');
  g.pad([0,0,1,0]);g.frame();g.read('startGame()');g.pad([0,0,0,0]);g.frame();near(g.read('player.angle'),-Math.PI/2,'new sortie resets previous device bearing only at restart');
+});
+
+test('hostile atlas validates exact dimensions and retains fallback on every unavailable state',()=>{
+ const g=game();g.read('enemyAtlas.naturalWidth=512;enemyAtlas.naturalHeight=512;enemyAtlas.onload()');assert.equal(g.read('enemyAtlasState'),'invalid');
+ g.read('enemyAtlas.naturalWidth=1536;enemyAtlas.naturalHeight=1024;enemyAtlas.onload()');assert.equal(g.read('enemyAtlasState'),'ready');g.read('enemyAtlas.onerror()');assert.equal(g.read('enemyAtlasState'),'error');
+ for(const s of ['loading','invalid','error'])g.read('enemyAtlasState='+JSON.stringify(s)+';drawEnemyShip({x:20,y:30,vx:1,vy:0,type:"scout"},Math.PI/2)');
+ assert.equal(g.drawing.filter(x=>x.method==='drawImage').length,0);assert.equal(g.drawing.filter(x=>x.method==='stroke').length,3);
+});
+test('six hostile cells retain64px center anchor and actual pursuit bearing',()=>{
+ const g=game();g.read("enemyAtlasState='ready'");
+ for(const type of ['scout','gunship'])for(const state of ['neutral','thrust','damage']){const pose=(type==='gunship'?3:0)+['neutral','thrust','damage'].indexOf(state);
+  g.read('enemyVisualClock='+ (state==='thrust'?12:0)+';drawEnemyShip('+JSON.stringify({x:0,y:0,vx:state==='neutral'?0:1,vy:0,type,damageFlash:state==='damage'?1:0})+',-Math.PI/2)');
+  const draw=g.drawing.filter(x=>x.method==='drawImage').at(-1);assert.deepEqual(draw.args.slice(1),[(pose%3)*512,Math.floor(pose/3)*512,512,512,-32,-32,64,64]);near(g.drawing.filter(x=>x.method==='rotate').at(-1).args[0],-Math.PI/2,'nose-right art must use existing heading');
+ }
+});
+test('actual bullet damage creates visual feedback while preserving damage and score',()=>{
+ const g=game();g.read('player.x=900;player.y=500;enemies=[{x:100,y:100,vx:0,vy:0,hp:80,type:"gunship",speed:0}];bullets=[{x:100,y:100,vx:0,vy:0,life:20,dmg:15,color:"#fff"}]');g.frame();
+ assert.equal(g.read('enemies[0].hp'),65);assert.ok(g.read('enemies[0].damageFlash')>0);assert.equal(g.read('chooseEnemyPose(enemies[0])'),5);assert.equal(g.read('score'),0);assert.equal(g.read('enemyHitEchoes.length'),0);
+});
+test('lethal real hit removes combat entity immediately and echo cannot be targeted',()=>{
+ const g=game();g.read('player.x=900;player.y=500;enemies=[{x:100,y:100,vx:0,vy:0,hp:30,type:"scout",speed:0},{x:700,y:100,vx:0,vy:0,hp:80,type:"gunship",speed:0}];bullets=[{x:100,y:100,vx:0,vy:0,life:20,dmg:35,color:"#fff"}]');g.frame();
+ assert.equal(g.read('enemies.length'),1);assert.equal(g.read('enemies[0].type'),'gunship');assert.equal(g.read('score'),100);assert.equal(g.read('enemyHitEchoes.length'),1);assert.equal(g.read('chooseEnemyPose(enemyHitEchoes[0])'),2);
+ g.read('bullets=[{x:100,y:100,vx:0,vy:0,life:20,dmg:35,color:"#fff"}]');g.frame();assert.equal(g.read('score'),100);assert.equal(g.read('enemies[0].hp'),80);assert.ok(g.read('bullets.length')>0);
+ for(let i=0;i<12;i++)g.frame();assert.equal(g.read('enemyHitEchoes.length'),0);
+});
+test('real bomb retains300damage and wave progression while echoes are purely visual',()=>{
+ const g=game();g.read('enemies=[{x:50,y:50,vx:0,vy:0,hp:30,type:"scout",speed:0},{x:800,y:50,vx:0,vy:0,hp:80,type:"gunship",speed:0}];fireBomb()');assert.equal(g.read('enemies[0].hp'),-270);assert.equal(g.read('enemies[1].hp'),-220);g.frame();
+ assert.equal(g.read('score'),350);assert.equal(g.read('wave'),2);assert.equal(g.read('enemies.length'),20);assert.equal(g.read('portalDiscovered'),true);assert.equal(g.read('enemyHitEchoes.length'),2);
+ g.read('audio.init=()=>{audio.ctx={resume:()=>Promise.resolve(),suspend:()=>Promise.resolve()}};startGame()');assert.equal(g.read('enemyHitEchoes.length'),0);assert.equal(g.read('enemyVisualClock'),0);
 });

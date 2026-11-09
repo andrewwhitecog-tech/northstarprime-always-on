@@ -102,7 +102,7 @@
       <div class="badge" id="menuBtn" style="cursor:pointer;pointer-events:auto" title="Menu (Esc)">☰ MENU</div>
     </div>
   </div>
-  <div id="hint">LMB dig · RMB build · [1–9] tile · WASD move · [F] strike · [E] craft · [G] recruit Reveler · [L] aura · [M] sound · [Esc] menu</div>
+  <div id="hint">LMB dig · RMB build · [1–9] tile · WASD move · [F] strike · [Q] prism pulse · [E] craft · [G] recruit Reveler · [L] aura · [M] sound · [Esc] menu</div>
   <div id="hotbar"></div>
 </div>
 
@@ -120,7 +120,7 @@
     <p>
       A crystal-carnival crust hides a grimdark deep.<br>
       <kbd>A</kbd>/<kbd>D</kbd> or <kbd>←</kbd><kbd>→</kbd> move &nbsp; <kbd>W</kbd>/<kbd>Space</kbd> jump<br>
-      <kbd>LMB</kbd> dig &nbsp; <kbd>RMB</kbd> build &nbsp; <kbd>1</kbd>–<kbd>9</kbd> tile &nbsp; <kbd>F</kbd> strike<br>
+      <kbd>LMB</kbd> dig &nbsp; <kbd>RMB</kbd> build &nbsp; <kbd>1</kbd>–<kbd>9</kbd> tile &nbsp; <kbd>F</kbd> strike &nbsp; <kbd>Q</kbd> prism pulse<br>
       Ride the <b style="color:#ff6a9c">R</b> meter — light is power, the redline is death.<br>
       Place a Glyph Altar, press <kbd>E</kbd> to craft. Plant a Core Sigil deep to face the Ouroboros.<br>
       Walk up to a Reveler &amp; press <kbd>G</kbd> to recruit a follower · <kbd>L</kbd> toggles their light aura.<br>
@@ -798,6 +798,7 @@ addEventListener('keydown',e=>{
   if(e.code==='KeyE'){ toggleCraft(); }
   if(craftOpen && (e.code==='Enter'||e.code==='Space')){ const rec=RECIPES[craftSel]; if(rec&&!craftHas(rec)&&canAfford(rec)) doCraft(rec); e.preventDefault(); }
   if(e.code==='KeyG'){ recruitNearest(); }
+  if(e.code==='KeyQ' && !e.repeat){ triggerPrismPulse(); }
   if(e.code==='KeyL'){ followerAura=!followerAura; banner(followerAura?'AURA LIT':'AURA VEILED', followerAura?'followers bathe you in light':'followers dim — R cools', followerAura?'#ffd86b':'#5aa8ff'); }
   if(e.code==='Escape' && craftOpen){ closeCraft(); }
   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
@@ -2065,7 +2066,55 @@ addEventListener('pagehide', saveGame);
 
 // ---------- Main loop ----------
 let started=false, lastT=0;
+// ---- Prism Pulse [Q]: parry and vent (carried over from the arcade build, 2026-11-09) ----
+const prism = { streak: 0, cd: 0 };
+function triggerPrismPulse(){
+  if (prism.cd > 0) return false;
+  prism.cd = 40;
+  const px = player.x + player.w / 2, py = player.y + player.h / 2;
+  let parried = false;
+  for (const r of revelers) {
+    if (r.dead || r.dying) continue;
+    const rx = r.x + r.w / 2, ry = r.y + r.h / 2;
+    if (Math.hypot(rx - px, ry - py) < 64) {
+      parried = true;
+      r.hp -= 2; r.flash = 14; r.vx = Math.sign(rx - px) * 8; r.vy = -5;
+      spawnFxBurst(rx, ry, 6, [0, 3]);
+      if (r.hp <= 0) killReveler(r);
+    }
+  }
+  if (typeof boss !== 'undefined' && boss.active && !boss.dead && !boss.dying) {
+    for (let i = 0; i <= BSEGS; i++) {
+      const p = boss.path[Math.min(i * BSEG_STEP, boss.path.length - 1)]; if (!p) continue;
+      const d = Math.hypot(p.x - px, p.y - py);
+      if (d < 80 || (boss.lunge > 0 && d < 110)) {
+        parried = true;
+        boss.hp -= (i === 0 ? 16 : 9); boss.hitFlash = 12; boss.lunge = 0;
+        boss.attackCd = Math.max(boss.attackCd || 0, 120);
+        spawnFxBurst(p.x, p.y, 10, [0, 3]);
+        if (boss.hp <= 0) beginBossDeath();
+        break;
+      }
+    }
+  }
+  if (parried) {
+    prism.streak++;
+    player.R = Math.max(0, player.R - 1.5);
+    player.iframe = Math.max(player.iframe || 0, 30);
+    SFX.shatter();
+    banner('PRISM DEFLECTION', 'R vented 1.5 · x' + prism.streak, '#38e9ff');
+  } else {
+    prism.streak = 0;
+    const v = Math.min(player.R, 0.85);
+    player.R = Math.max(0, player.R - v);
+    SFX.bloom();
+    banner('REFRACTION VENT', 'heat purged ' + v.toFixed(1), '#ffd75e');
+  }
+  spawnFxBurst(px, py, parried ? 12 : 6, [0, 3]);
+  return true;
+}
 function update(){
+  if (prism.cd > 0) prism.cd--;
   // horizontal
   if(keys['KeyA']||keys['ArrowLeft']){ player.vx-=MOVE; player.face=-1; }
   if(keys['KeyD']||keys['ArrowRight']){ player.vx+=MOVE; player.face=1; }

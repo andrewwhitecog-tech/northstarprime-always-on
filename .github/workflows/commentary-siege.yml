@@ -1,0 +1,46 @@
+name: Commentary Siege page UI and native inputs
+on:
+  pull_request:
+    paths: ["arcade/custom/dharma-invaders/**", ".github/workflows/commentary-siege.yml"]
+permissions:
+  contents: read
+concurrency:
+  group: commentary-siege-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  native-ui:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            arcade/custom/dharma-invaders
+            .github/scripts/native-browser-focus.cjs
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Run real focused UI and unchanged-game contracts
+        run: node --test arcade/custom/dharma-invaders/tests/*.test.cjs
+      - name: Install isolated pinned browser
+        run: |
+          npm install --prefix "$RUNNER_TEMP/commentary-browser" --no-save --package-lock=false --ignore-scripts playwright@1.55.1
+          "$RUNNER_TEMP/commentary-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Remove only pinned focus emulation for authentic native events
+        env:
+          NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/commentary-browser/node_modules/playwright
+        run: node .github/scripts/native-browser-focus.cjs
+      - name: Run native desktop and phone page UI checks
+        env:
+          NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/commentary-browser/node_modules/playwright
+          NSP_PLAYTEST_OUT: ${{ runner.temp }}/commentary-playtest
+          NSP_VIRTUAL_DISPLAY: '1'
+        run: xvfb-run --auto-servernum node arcade/custom/dharma-invaders/tests/browser_ui.cjs
+      - name: Retain actual screenshots, failures and result
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: commentary-siege-native-ui
+          path: ${{ runner.temp }}/commentary-playtest/
+          retention-days: 14

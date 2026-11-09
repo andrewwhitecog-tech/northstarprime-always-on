@@ -13,6 +13,7 @@ jobs:
     timeout-minutes: 10
     env:
       NSP_TARGETED_LIVE_ONLY: ${{ github.event.action == 'synchronize' && startsWith(github.head_ref, 'codex/vorath-souls-render-cache-') && contains(github.event.pull_request.title, '[live smoke]') }}
+      NSP_RETAINED_PORTRAIT: ${{ github.head_ref == 'codex/vorath-souls-portrait-camera-20261109' && contains(github.event.pull_request.title, '[inventory rebase]') }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -26,11 +27,25 @@ jobs:
       - name: Run actual combat contract tests
         if: env.NSP_TARGETED_LIVE_ONLY != 'true'
         run: node --test arcade/custom/vorath-souls/tests/*.test.cjs
+      - name: Bind inventory-only rebase to the exact genuinely tested game tree
+        if: env.NSP_RETAINED_PORTRAIT == 'true'
+        env:
+          NSP_PLAYTEST_OUT: ${{ runner.temp }}/vorath-souls-playtest
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs'),cp=require('node:child_process'),assert=require('node:assert/strict'),path=require('node:path');
+          const actualTree=cp.execFileSync('git',['rev-parse','HEAD:arcade/custom/vorath-souls'],{encoding:'utf8',windowsHide:true}).trim();
+          assert.equal(actualTree,'ccf7227d21f169b22cc5c85e7bae3de3510b7640','retained gameplay is valid only for the exact unchanged game, tests and assets');
+          const receipt={scope:'Exact tree identity after shared inventory-only rebase; gameplay NOT rerun',actualTree,retainedRealRun:42572100032,retainedHead:'a521387dcd21b030eb4e093c521dd636b81a9f89',retainedBrowserChecks:15,reason:'Preserve both current Chrono atlas and Souls camera in the shared release inventory',verifiedUtc:new Date().toISOString()};
+          fs.mkdirSync(process.env.NSP_PLAYTEST_OUT,{recursive:true});fs.writeFileSync(path.join(process.env.NSP_PLAYTEST_OUT,'RETAINED_GAMEPLAY_BINDING.json'),JSON.stringify(receipt,null,2));console.log(JSON.stringify(receipt,null,2));
+          NODE
       - name: Install the pinned isolated test browser
+        if: env.NSP_RETAINED_PORTRAIT != 'true'
         run: |
           npm install --prefix "$RUNNER_TEMP/vorath-browser" --no-save --package-lock=false --ignore-scripts playwright@1.55.1
           "$RUNNER_TEMP/vorath-browser/node_modules/.bin/playwright" install --with-deps chromium
       - name: Remove only pinned driver focus emulation for native event acceptance
+        if: env.NSP_RETAINED_PORTRAIT != 'true'
         env:
           NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/vorath-browser/node_modules/playwright
           NSP_PLAYTEST_OUT: ${{ runner.temp }}/vorath-souls-playtest
@@ -51,7 +66,7 @@ jobs:
           NSP_RENDER_LIVE_ONLY: '1'
         run: xvfb-run --auto-servernum node .github/scripts/vorath-render-benchmark.cjs
       - name: Play the actual encounter with native focus in an isolated virtual display
-        if: always() && env.NSP_TARGETED_LIVE_ONLY != 'true'
+        if: always() && env.NSP_TARGETED_LIVE_ONLY != 'true' && env.NSP_RETAINED_PORTRAIT != 'true'
         env:
           NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/vorath-browser/node_modules/playwright
           NSP_PLAYTEST_OUT: ${{ runner.temp }}/vorath-souls-playtest

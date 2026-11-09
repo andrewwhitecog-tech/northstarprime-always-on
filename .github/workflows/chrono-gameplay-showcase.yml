@@ -46,8 +46,10 @@ jobs:
           persist-credentials: false
           sparse-checkout: |
             arcade/custom/northstar-chrono-defender
-      - name: Install only the pinned geometry-test browser
+      - name: Install only the pinned geometry-test browser and native X window manager
         run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends openbox x11-utils
           npm install --prefix "$RUNNER_TEMP/chrono-preflight-browser" --no-save --package-lock=false --ignore-scripts playwright@1.55.1
           "$RUNNER_TEMP/chrono-preflight-browser/node_modules/.bin/playwright" install --with-deps chromium
       - name: Verify real native fullscreen and canvas geometry without Start or recording
@@ -125,7 +127,7 @@ jobs:
       - name: Install pinned isolated browser and system capture tools
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends ffmpeg pulseaudio xvfb
+          sudo apt-get install -y --no-install-recommends ffmpeg pulseaudio xvfb openbox x11-utils
           npm install --prefix "$RUNNER_TEMP/chrono-browser" --no-save --package-lock=false --ignore-scripts playwright@1.55.1
           "$RUNNER_TEMP/chrono-browser/node_modules/.bin/playwright" install --with-deps chromium
           mkdir -p "$RUNNER_TEMP/chrono-capture"

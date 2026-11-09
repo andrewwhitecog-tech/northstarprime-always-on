@@ -652,7 +652,9 @@
    opts = { files: {key: [file names without .mp3/.wav]}, vol: {key: gain}, loops: {key: true} (those load .wav),
             music: 'music' (streams music.mp3), musicVol: 0.4, master: 0.8, muteKey: 'localStorage key' } */
 function HQAudio(opts) {
-  const base = opts.base || 'audio/';
+  // A directory literal followed by + is what the Pages build rewrites to its media host (tools/build_pages_artifact.py,
+  // rewrite_release_media_refs); a bare 'audio/' is left as is and every sound 404s on northstarprime.net.
+  const base = opts.base || ('audio/' + '');
   const loopKeys = opts.loops || {};
   let ctx = null, master = null, limiter = null, muted = false;
   let musicEl = null, musicGain = null, musicFilter = null;
@@ -711,7 +713,9 @@ function HQAudio(opts) {
 
   function ensureMusic() {
     if (musicEl || !opts.music || !ctx) return;
-    musicEl = new Audio(base + opts.music + '.mp3'); musicEl.loop = true; musicEl.preload = 'auto';
+    // crossOrigin before src: on northstarprime.net the music comes from the media host, and Web Audio plays a
+    // cross-origin element only when it was fetched with CORS (otherwise it outputs silence).
+    musicEl = new Audio(); musicEl.crossOrigin = 'anonymous'; musicEl.src = base + opts.music + '.mp3'; musicEl.loop = true; musicEl.preload = 'auto';
     try {   // through Web Audio, so mute and the depth filter apply to it
       const src = ctx.createMediaElementSource(musicEl);
       musicFilter = ctx.createBiquadFilter(); musicFilter.type = 'lowpass'; musicFilter.frequency.value = 20000;

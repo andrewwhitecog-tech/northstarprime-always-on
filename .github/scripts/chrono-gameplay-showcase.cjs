@@ -93,6 +93,16 @@ async function main() {
   patchNativeFocus(pwPath);
   const {chromium} = require(pwPath);
   const url = new URL(pin.gameRoute, pin.publicOrigin).href;
+  const xScreenText=execFileSync('xdpyinfo',[],{encoding:'utf8',timeout:5000});
+  fs.writeFileSync(path.join(out,'X_SCREEN_ACTUAL.txt'),xScreenText);
+  const xSize=xScreenText.match(/dimensions:\s+(\d+)x(\d+)\s+pixels/);
+  assert.ok(xSize,'Actual X server dimensions were not reported');
+  receipt.xScreenDimensions={width:Number(xSize[1]),height:Number(xSize[2]),display:process.env.DISPLAY};
+  assert.deepEqual([receipt.xScreenDimensions.width,receipt.xScreenDimensions.height],[1324,900]);
+  const windowManager=launch('openbox',['--sm-disable'],'window-manager.log');
+  receipt.windowManager={binary:'openbox',pid:windowManager.pid,scope:'Owned disposable X display only; terminated by own-child cleanup'};
+  await sleep(500);
+  assert.ok(windowManager.exitCode===null && windowManager.signalCode===null,'Owned Openbox exited before native browser startup');
   browser = await chromium.launch({headless: false, args: [
     '--kiosk', '--window-position=0,0', '--window-size=1324,900', '--disable-dev-shm-usage'
   ]});
@@ -150,7 +160,8 @@ async function main() {
   receipt.browserVersion = await browser.version();
   await page.screenshot({path:path.join(out,'native-window-before-geometry-guard.png')});
   const windowFacts = await page.evaluate(() => ({innerWidth, innerHeight, outerWidth, outerHeight,
-    screenX, screenY, devicePixelRatio, focused: document.hasFocus(), visibility: document.visibilityState,
+    screenX, screenY, screenWidth:screen.width, screenHeight:screen.height,
+    availableScreenWidth:screen.availWidth, availableScreenHeight:screen.availHeight, devicePixelRatio, focused: document.hasFocus(), visibility: document.visibilityState,
     imageReadiness: 'Actual canvas image objects decoded and source-sized above'}));
   receipt.window = windowFacts;
   if(fullscreenError) throw fullscreenError;

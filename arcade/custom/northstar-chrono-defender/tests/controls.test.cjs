@@ -15,7 +15,7 @@ function game(){
  evalGame("gameState='PLAYING'; mouse.x=100; mouse.y=360;");
  const pad=(axes=[0,0,0,0],buttons=[])=>({connected:true,mapping:'standard',index:0,id:'fixture',axes,buttons:Array.from({length:10},(_,i)=>({pressed:buttons.includes(i),value:buttons.includes(i)?1:0}))});
  const pointer=(id,type,pointerId,x=50,y=50)=>handlers[id+':'+type]({pointerId,clientX:x,clientY:y,preventDefault(){}});
- return{drawing,tap:id=>{handlers[id+':pointerdown']?.({pointerId:11,preventDefault(){}});handlers[id+':click']?.({detail:0,pointerType:'touch'});},read:evalGame,frame:()=>evalGame('gameLoop('+(frameNow+=16.666)+')'),pad:(axes,fire=false)=>pads=[pad(axes,fire?[7]:[])],buttons:(buttons,axes=[0,0,0,0])=>pads=[pad(axes,buttons)],mouse:(x,y)=>handlers['gameCanvas:mousemove']({clientX:x,clientY:y}),pointer,key:(key,repeat=false)=>handlers.keydown({key,repeat,preventDefault(){}})};
+ return{drawing,input:(event,value)=>handlers['document:'+event](value),disconnect:()=>pads=[],tap:id=>{handlers[id+':pointerdown']?.({pointerId:11,preventDefault(){}});handlers[id+':click']?.({detail:0,pointerType:'touch'});},read:evalGame,frame:()=>evalGame('gameLoop('+(frameNow+=16.666)+')'),pad:(axes,fire=false)=>pads=[pad(axes,fire?[7]:[])],buttons:(buttons,axes=[0,0,0,0])=>pads=[pad(axes,buttons)],mouse:(x,y)=>handlers['gameCanvas:mousemove']({clientX:x,clientY:y}),pointer,key:(key,repeat=false)=>handlers.keydown({key,repeat,preventDefault(){}})};
 }
 function near(actual,expected,message){assert.ok(Math.abs(actual-expected)<1e-9,message+'; actual='+actual);}
 test('right stick facing survives the real frame mouse-aim stage',()=>{const g=game();g.pad([0,0,0,-1]);g.frame();near(g.read('player.angle'),-Math.PI/2,'right stick must point up despite stale mouse on left');});
@@ -135,3 +135,12 @@ test('real bomb retains300damage and wave progression while echoes are purely vi
  assert.equal(g.read('score'),350);assert.equal(g.read('wave'),2);assert.equal(g.read('enemies.length'),20);assert.equal(g.read('portalDiscovered'),true);assert.equal(g.read('enemyHitEchoes.length'),2);
  g.read('audio.init=()=>{audio.ctx={resume:()=>Promise.resolve(),suspend:()=>Promise.resolve()}};startGame()');assert.equal(g.read('enemyHitEchoes.length'),0);assert.equal(g.read('enemyVisualClock'),0);
 });
+
+test('new sortie centers after actual portrait layout and clears inherited velocity',()=>{
+ const g=game();g.read('audio.init=()=>{audio.ctx={resume:()=>Promise.resolve(),suspend:()=>Promise.resolve()}};player.vx=8;player.vy=-5;canvas.getBoundingClientRect=()=>({width:370,height:350});startGame()');
+ assert.equal(g.read('W'),370);assert.equal(g.read('H'),350);assert.equal(g.read('player.x'),185);assert.equal(g.read('player.y'),175);assert.equal(g.read('player.vx'),0);assert.equal(g.read('player.vy'),0);assert.equal(g.read('mouse.x'),185);assert.equal(g.read('mouse.y'),75);
+});
+
+test('real touch event owns device caption even when navigator reports zero touch points',()=>{const g=game();g.input('pointerdown',{pointerType:'touch'});g.frame();assert.equal(g.read('navigator.maxTouchPoints'),0);assert.equal(g.read('inputDevice'),'Touch controls');assert.equal(g.read('document.getElementById("gpText").textContent'),'Touch controls');});
+test('neutral connected controller does not steal the last actual mouse keyboard or touch device',()=>{const g=game();g.pad([0,0,0,0]);g.input('pointerdown',{pointerType:'touch'});g.frame();assert.equal(g.read('inputDevice'),'Touch controls');g.input('pointermove',{pointerType:'mouse'});g.frame();assert.equal(g.read('inputDevice'),'Keyboard / mouse');g.pad([0,0,1,0]);g.frame();assert.equal(g.read('inputDevice'),'Controller');g.pad([0,0,0,0]);g.input('keydown',{key:'Escape'});g.frame();assert.equal(g.read('inputDevice'),'Keyboard / mouse');});
+test('controller disconnect restores the last noncontroller device caption',()=>{const g=game();g.input('pointerdown',{pointerType:'touch'});g.pad([0,0,1,0]);g.frame();assert.equal(g.read('inputDevice'),'Controller');g.disconnect();g.frame();assert.equal(g.read('inputDevice'),'Touch controls');});

@@ -51,6 +51,7 @@
 <div class="weapon-dock" aria-label="Weapon selection"><button class="weapon-card active" id="wCard0" data-weapon="0">Twin plasma<span class="weapon-key"> · 1</span></button><button class="weapon-card" id="wCard1" data-weapon="1">Tachyon beam<span class="weapon-key"> · 2</span></button><button class="weapon-card" id="wCard2" data-weapon="2">Micro-missiles<span class="weapon-key"> · 3</span></button></div>
 <footer class="page-footer"><p>Bombs: <b id="bombVal">3</b> <span id="milestone" role="status"></span> <a id="chronoThread" href="https://northstarprime.net/404.html" target="_blank" rel="noopener" title="Optional VORATH fiction trail; opens in a new tab without ending this sortie" hidden>Signal found →</a></p><nav id="nsp-related" aria-label="More games"><a href="/arcade/">Arcade</a> · <a href="/store/">Store</a></nav><small class="story-disclosure">An NSP story game; fiction; no purchase needed.</small></footer>
 </div>
+<script src="/arcade/custom/northstar-chrono-defender/weapon_atlas.js"></script>
 <script>
 'use strict';
 /**
@@ -320,6 +321,11 @@ let enemyAtlasState = 'loading';
 enemyAtlas.onload = () => { enemyAtlasState = enemyAtlas.naturalWidth===1536&&enemyAtlas.naturalHeight===1024?'ready':'invalid'; };
 enemyAtlas.onerror = () => { enemyAtlasState = 'error'; };
 enemyAtlas.src = '/arcade/custom/northstar-chrono-defender/assets/hostiles-v02.png';
+
+// Optional visual layer; loading/invalid/error falls back to existing primitives.
+const weaponAtlasImage = new Image();
+const weaponArt = window.ChronoWeaponAtlas?.create?.(weaponAtlasImage) || null;
+if(weaponArt)weaponAtlasImage.src=window.ChronoWeaponAtlas.SOURCE;
 let enemyVisualClock = 0;
 let enemyHitEchoes = []; // Visual only: never queried by targeting, collisions, score or waves.
 function chooseEnemyPose(enemy,clock=enemyVisualClock) {
@@ -733,15 +739,17 @@ function gameLoop(now) {
       b.y += b.vy * dt;
       b.life -= dt;
 
-      ctx.save();
-      ctx.shadowColor = b.color; ctx.shadowBlur = 10;
-      ctx.fillStyle = b.color;
-      if (b.beam) {
-        ctx.fillRect(b.x - 6, b.y - 6, 12, 12);
-      } else {
-        ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, Math.PI * 2); ctx.fill();
+      if(!weaponArt?.drawFlight?.(ctx,b)) {
+        ctx.save();
+        ctx.shadowColor = b.color; ctx.shadowBlur = 10;
+        ctx.fillStyle = b.color;
+        if (b.beam) {
+          ctx.fillRect(b.x - 6, b.y - 6, 12, 12);
+        } else {
+          ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.restore();
       }
-      ctx.restore();
 
       // Bullet collision with enemies
       for (let j = enemies.length - 1; j >= 0; j--) {
@@ -750,6 +758,7 @@ function gameLoop(now) {
           e.hp -= b.dmg;
           e.damageFlash=12;
           b.life = 0;
+          weaponArt?.recordImpact?.(b); // Visual snapshot at the existing hit point only.
           vibrate(30, 0.2, 0.2);
           for (let p = 0; p < 4; p++) {
             particles.push({
@@ -824,6 +833,8 @@ function gameLoop(now) {
       if(echo.life<=0)enemyHitEchoes.splice(i,1);
     }
 
+    weaponArt?.drawImpacts?.(ctx,dt);
+
     // Particles Render
     for (let i = particles.length - 1; i >= 0; i--) {
       const p = particles[i];
@@ -862,6 +873,7 @@ function startGame() {
   player.angle=-Math.PI/2;aimSource='default';
   player.fireCd=0;player.dodgeCd=0;player.isInvulnerable=false;player.damageFlash=0;
   chronoTimer=0;timeDilation=1;score=0;enemies=[];bullets=[];particles=[];shakeTime=0;enemyHitEchoes=[];enemyVisualClock=0;
+  weaponArt?.clear?.();
   document.getElementById('scoreVal').textContent='000,000';document.getElementById('bombVal').textContent='3';
   document.getElementById('titleScreen').classList.add('hidden');document.getElementById('gameOverScreen').classList.add('hidden');
   gameState='PLAYING';updateModeUi();resizeArena();

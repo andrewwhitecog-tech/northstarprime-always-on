@@ -134,7 +134,7 @@ async def main():
         await play(page, 8, [("KeyL", 900), ("KeyA", 200), ("KeyL", 900), ("KeyK", 120)])
         l4 = await L(page)
         d4 = {k: l4["ai"][k] - l3["ai"][k] for k in ai0}
-        check("Duelist feints, punishes or parries against a guarding player", sum(d4.values()) >= 1, d4)
+        check("Duelist presses a guarding player (turtle-breaks, feints, punishes or parries)", sum(d4.values()) >= 1, d4)
         if not l4["running"]:
             check("player lost bout 2 to the Duelist (allowed)", True, l4["result"])
         else:

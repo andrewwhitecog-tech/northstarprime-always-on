@@ -401,7 +401,9 @@
       duelist: "/static/art/games/vorath_overhaul_v01/blade_tribunal/justiciar_duelist_atlas_v02.webp",
       ronin: "/static/art/games/vorath_overhaul_v01/blade_tribunal/justiciar_ronin_atlas_v01.webp",
       veilcutter: "/static/art/games/vorath_overhaul_v01/blade_tribunal/justiciar_veilcutter_atlas_v01.webp",
-      seraph: "/static/art/games/vorath_overhaul_v01/blade_tribunal/justiciar_seraph_atlas_v01.webp"
+      seraph: "/static/art/games/vorath_overhaul_v01/blade_tribunal/justiciar_seraph_atlas_v01.webp",
+      verdicts1: "/static/art/games/vorath_overhaul_v01/blade_tribunal/justiciar_two_verdicts_p1_atlas_v01.webp",
+      verdicts2: "/static/art/games/vorath_overhaul_v01/blade_tribunal/justiciar_two_verdicts_p2_atlas_v01.webp"
     };
     // Each atlas: grid, on-screen height of one cell, and which cells play each pose.
     // Four-pose atlases fall back: guard/dodge/step -> idle, heavy/charged -> strike, ko -> hurt, parry -> windup.
@@ -421,7 +423,13 @@
         feint: [9], parry: [12], guard: [13], hurt: [14], ko: [15] } },
       seraph: { cols: 4, cw: 512, ch: 512, drawH: 372, idleFps: 3, poses: {
         idle: [0, 1, 2, 3], step: [4], dodge: [5], windup: [8], strike: [11], heavyWindup: [8], heavy: [10], charged: [9],
-        feint: [8], parry: [13], guard: [12], hurt: [14], ko: [15] } }
+        feint: [8], parry: [13], guard: [12], hurt: [14], ko: [15] } },
+      verdicts1: { cols: 4, cw: 512, ch: 512, drawH: 384, idleFps: 2, poses: {
+        idle: [0, 1], step: [1, 2], dodge: [6], windup: [3], strike: [4], heavyWindup: [12], heavy: [5], charged: [11],
+        feint: [3], parry: [15], guard: [7], hurt: [8], ko: [14] } },
+      verdicts2: { cols: 4, cw: 512, ch: 512, drawH: 384, idleFps: 3, poses: {
+        idle: [0, 8], step: [10], dodge: [14], windup: [13], strike: [12], heavyWindup: [5], heavy: [3], charged: [15],
+        feint: [13], parry: [7], guard: [11], hurt: [9], ko: [9] } }
     };
     const POSE_FALLBACK = { guard: "idle", dodge: "idle", step: "idle", heavy: "strike", charged: "strike",
       heavyWindup: "windup", feint: "windup", ko: "hurt", parry: "windup" };
@@ -435,6 +443,7 @@
       BLADE_ATLAS[who].src = BLADE_ATLAS_SRC[who];
     }
     function atlasCell(who, pose) {
+      if (who === "verdicts2" && (state.phaseBeat || 0) > 0) return 9;   // the rage burst while the phase changes
       const g = ATLAS_GRID[who] || ATLAS_GRID.ruby;
       let list = g.poses[pose];
       if (!list) list = g.poses[POSE_FALLBACK[pose]] || g.poses.idle;
@@ -544,6 +553,7 @@
       enemy.name = d.name; enemy.atlas = d.key; enemy.color = d.color; enemy.blade = d.blade; enemy.core = d.core;
       enemy.maxHp = d.hp; enemy.ai = d.ai; enemy.mods = buildMods(d.mods); enemy.comboLeft = 0;
       enemy.arenaKey = d.arena || "";
+      enemy.boss = d.phase2 ? d : null; enemy.phase2On = false;
       loadArena(d.arena);
       const i = ROSTER.indexOf(d); if (i >= 0 && ROSTER[i + 1]) loadArena(ROSTER[i + 1].arena);
     }
@@ -601,14 +611,23 @@
       { key: "seraph", name: "Justiciar Seraph", title: "strikes from above, breaks guards", color: "#f6f1ff", blade: "#bfe9ff", core: "#ffd75e", hp: 125,
         arena: "reliquary", mods: { heavy: { reach: 200, activeStart: 14, damage: 26 } },
         ai: { think: [14, 28], aggression: 0.55, guard: 0.3, parry: 0.24, dodge: 0.12, feint: 0.1, read: 0.6,
-              whiffPunish: 0.6, punishFrames: 13, combo: 1, range: 190, heavyBias: 0.6, riposte: "heavy", sig: "overhead", guardBreak: 2.2 } }
+              whiffPunish: 0.6, punishFrames: 13, combo: 1, range: 190, heavyBias: 0.6, riposte: "heavy", sig: "overhead", guardBreak: 2.2 } },
+      { key: "verdicts1", name: "Justiciar Two Verdicts", title: "the twin-blade arbiter", color: "#c98a4b", blade: "#ff3b3b", core: "#ffd75e", hp: 170,
+        arena: "crucible", mods: { heavy: { reach: 170, damage: 26 }, slash: { cooldown: 22 } },
+        ai: { think: [16, 30], aggression: 0.42, guard: 0.4, parry: 0.38, dodge: 0.08, feint: 0.1, read: 0.85,
+              whiffPunish: 0.95, punishFrames: 10, combo: 1, range: 150, heavyBias: 0.45, riposte: "charged" },
+        // Below half health: Wrath. Faster plans, four-hit twin-blade chains and a lunge.
+        phase2: { atlas: "verdicts2", mods: { slash: { cooldown: 15, activeStart: 4, damage: 12 }, heavy: { reach: 180, damage: 30, cooldown: 36 } },
+          ai: { think: [8, 16], aggression: 0.85, guard: 0.15, parry: 0.2, dodge: 0.1, feint: 0.2, read: 0.7,
+                whiffPunish: 0.9, punishFrames: 9, combo: 4, range: 160, heavyBias: 0.4, riposte: "charged", sig: "dashcut" } } }
     ];
     // Painted backdrops per bout (Antigravity's arena plates; each is a whole picture, DESIGN.md "Arenas").
     const ARENA_ART = {
       eye: "/static/art/games/vorath_overhaul_v01/blade_tribunal/arena_high_chancel_eye_v01.webp",
       colonnade: "/static/art/games/vorath_overhaul_v01/blade_tribunal/arena_high_chancel_colonnade_v01.webp",
       stelae: "/static/art/games/vorath_overhaul_v01/blade_tribunal/arena_reliquary_court_stelae_v01.webp",
-      reliquary: "/static/art/games/vorath_overhaul_v01/blade_tribunal/arena_reliquary_court_far_v01.webp"
+      reliquary: "/static/art/games/vorath_overhaul_v01/blade_tribunal/arena_reliquary_court_far_v01.webp",
+      crucible: "/static/art/games/vorath_overhaul_v01/blade_tribunal/arena_split_scales_crucible_v01.webp"
     };
     const ARENA_IMG = {};
     function loadArena(key) {
@@ -712,6 +731,8 @@
       state.koFlash = 0;
       state.koBanner = 0;
       state.roundCall = 120;
+      state.phaseBeat = 0;
+      leavePhase2();
       state.fadeIn = Math.max(state.fadeIn, 0.85);
       state.judgment = "FIGHT";
       addLog(reason);
@@ -723,7 +744,7 @@
       return ok;
     }
     // No blow starts while BOUT n or ROUND n is on screen: the call is the referee, and a hit there would print on it.
-    function callHolding() { return ladder.intro > 70 || (state.roundCall || 0) > 50; }
+    function callHolding() { return ladder.intro > 70 || (state.roundCall || 0) > 50 || (state.phaseBeat || 0) > 0; }
     function beginActionCore(fighter, type) {
       if (!state.running || state.roundDelay > 0 || callHolding()) return false;
       if (fighter.cooldown > 0 || fighter.action !== "idle") return false;
@@ -864,6 +885,23 @@
         beginAction(player, "dodge");
         keys.delete(" ");
       }
+    }
+
+    // Two Verdicts: Mercy above half health, Wrath below; the beat between is about 1.5 s with no blows.
+    function checkPhase(f) {
+      if (f !== enemy || !enemy.boss || enemy.phase2On || enemy.hp <= 0 || enemy.hp > (enemy.maxHp || 100) * 0.5) return;
+      const ph = enemy.boss.phase2;
+      enemy.phase2On = true;
+      enemy.atlas = ph.atlas; enemy.ai = ph.ai; enemy.mods = buildMods(ph.mods);
+      enemy.action = "idle"; enemy.frame = 0; enemy.cooldown = 0; state.aiQueue = null;
+      state.phaseBeat = 90; state.phaseChanges = (state.phaseChanges || 0) + 1;
+      shakeAmt = Math.max(shakeAmt, 24); state.hitStop = Math.max(state.hitStop || 0, 8);
+      burst(enemy.x, enemy.y - 150, 60, "#ff3b3b", 12); burst(enemy.x, enemy.y - 150, 30, "#ffd75e", 9);
+      rumble(0.8, 1.0, 420); sfx("stagger");
+    }
+    function leavePhase2() {
+      if (!enemy.boss) return;
+      enemy.phase2On = false; enemy.atlas = enemy.boss.key; enemy.ai = enemy.boss.ai; enemy.mods = buildMods(enemy.boss.mods);
     }
 
     // Each Justiciar's own move (DESIGN.md). Counted so the real-play test can show it happened.
@@ -1030,6 +1068,7 @@
     function ladderTick(dt) {
       if (ladder.intro > 0) ladder.intro -= dt;
       if ((state.roundCall || 0) > 0 && !(ladder.intro > 70)) state.roundCall = Math.max(0, state.roundCall - dt);
+      if ((state.phaseBeat || 0) > 0) state.phaseBeat = Math.max(0, state.phaseBeat - dt);
       if (ladder.between > 0) {
         ladder.between -= dt;
         if (ladder.between <= 0) { ladder.between = 0; startDuel(); }
@@ -1144,6 +1183,7 @@
         rumble(0.35, 0.55, 120);
       } else {
         defender.hp = Math.max(0, defender.hp - damage);
+        checkPhase(defender);
         defender.vx += attacker.facing * spec.push;
         defender.hurtTime = 16;
         attacker.charge = Math.min(100, attacker.charge + 18);
@@ -1180,6 +1220,7 @@
       shakeAmt = 30;
       state.koFlash = 1;
       state.koBanner = 82;
+      if (loser === enemy && enemy.phase2On) enemy.atlas = enemy.boss.key;
       burst(loser.x, loser.y - 120, 60, loser.blade, 13);
       burst(loser.x, loser.y - 120, 40, "#ffffff", 9);
       rumble(0.6, 1.0, 450);
@@ -1456,6 +1497,13 @@
         if (vw && vh) { const sc = Math.max(view.w / vw, view.h / vh);
           ctx.save(); ctx.globalAlpha = 0.42;
           ctx.drawImage(motionPlate, (view.w - vw * sc) / 2, (view.h - vh * sc) / 2, vw * sc, vh * sc); ctx.restore(); }
+      }
+      if (paintedOk && enemy.phase2On) {
+        // Wrath: the crucible's light turns red, strongest during the phase beat.
+        const beat = Math.min(1, (state.phaseBeat || 0) / 90);
+        ctx.save(); ctx.globalCompositeOperation = "multiply"; ctx.globalAlpha = 0.45 + 0.35 * beat;
+        ctx.fillStyle = "rgb(255, 60, 50)";
+        ctx.fillRect(0, 0, view.w, view.h); ctx.restore();
       }
       if (paintedOk) {
         // A painted arena carries its own floor and light; only a soft floor shadow line under the fighters.
@@ -2345,8 +2393,10 @@
         running: state.running, round: state.round, save: JSON.parse(JSON.stringify(ladder.save)), reads: reads.hist.slice(),
         ai: { parries: enemy.parries || 0, punishes: enemy.punishes || 0, feints: enemy.feints || 0, turtleBreaks: enemy.turtleBreaks || 0,
               dashCuts: enemy.dashCuts || 0, swaps: enemy.swaps || 0, overheads: enemy.overheads || 0, guardBreaks: enemy.guardBreaks || 0 },
+        boss: { phase2: !!enemy.phase2On, phaseChanges: state.phaseChanges || 0, beat: Math.round(state.phaseBeat || 0) },
         arena: enemy.arenaKey || "", arenaReady: !!(enemy.arenaKey && ARENA_IMG[enemy.arenaKey] && ARENA_IMG[enemy.arenaKey].complete && ARENA_IMG[enemy.arenaKey].naturalWidth),
         blade: ladder.save.blade }),
+      damageEnemy: (n) => { if (state.running && state.roundDelay <= 0) { enemy.hp = Math.max(1, enemy.hp - n); checkPhase(enemy); } return enemy.hp; },
       koEnemy: () => { if (state.running && state.roundDelay <= 0) { enemy.hp = 0; checkRoundEnd(); } return enemy.hp; },
       cycleBlade
     };

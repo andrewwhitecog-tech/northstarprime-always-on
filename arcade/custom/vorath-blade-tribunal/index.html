@@ -251,6 +251,7 @@
       <div class="arena-wrap">
         <canvas id="game" width="1280" height="760"></canvas>
 <script src="/static/games/juice.js"></script>
+<script src="/static/games/hq_audio.js"></script>
 <script>addEventListener("DOMContentLoaded",function(){if(window.Juice){var c=document.getElementById("game");if(c)Juice.attachFX(c,{vignette:0.5,scanlines:0.04,glow:0.07});}});</script>
       </div>
 
@@ -454,44 +455,29 @@
     Object.values(voRound).forEach(a => { a.volume = 0.85; });
     // Procedural music bed (low drone + pentatonic arpeggio). Starts on duel, stops on match end.
     let _music = null;
-    function startMusic(){ const a = AC(); if(!a || _music) return;
-      const master = a.createGain(); master.gain.value = 0.0001; master.connect(a.destination);
-      master.gain.exponentialRampToValueAtTime(0.085, a.currentTime + 2.5);
-      const lp = a.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 520; lp.connect(master);
-      const d1 = a.createOscillator(), d2 = a.createOscillator(), dg = a.createGain();
-      d1.type = "sawtooth"; d2.type = "sawtooth"; d1.frequency.value = 55; d2.frequency.value = 55.4; dg.gain.value = 0.5;
-      d1.connect(dg); d2.connect(dg); dg.connect(lp); d1.start(); d2.start();
-      const scale = [220, 261.63, 293.66, 349.23, 392, 523.25]; let step = 0;
-      const timer = setInterval(() => { const t = a.currentTime; const f = scale[step % scale.length] * (step % 12 < 6 ? 1 : 0.5); step++;
-        const o = a.createOscillator(), g = a.createGain(); o.type = "triangle"; o.frequency.value = f; o.connect(g); g.connect(master);
-        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
-        o.start(t); o.stop(t + 0.55); }, 340);
-      _music = { master, nodes: [d1, d2], timer };
-    }
-    function stopMusic(){ if(!_music) return; const a = AC(); try { _music.master.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + 1.2); } catch(e){}
-      clearInterval(_music.timer); const m = _music; _music = null; setTimeout(() => { try { m.nodes.forEach(n => n.stop()); } catch(e){} }, 1400);
-    }
+    // HQ audio (ElevenLabs SFX, Suno track) from the app host; CORS opened for northstarprime.net.
+    const HQ_BASE = (location.hostname === "app.northstarprime.net" ? "" : "https://app.northstarprime.net") + "/static/games/hq/vorath_blade_tribunal/";
+    const AUDIO = (typeof HQAudio === "function") ? HQAudio({
+      base: HQ_BASE, muteKey: "nsp_vorath_blade_tribunal_muted", master: 0.8, music: "music", musicVol: 0.35, tracks: ["music"],
+      files: { whoosh: ["whoosh"], hit: ["hit"], block: ["block"], duel_bed: ["duel_bed"], sound_on: ["sound_on"] },
+      loops: { duel_bed: true },
+      vol: { whoosh: 0.65, hit: 0.65, block: 0.65, duel_bed: 0.3, sound_on: 0.65 }
+    }) : null;
+    function HQ(k, o) { try { if (AUDIO) AUDIO.play(k, o || { limit: 70 }); } catch (e) {} }
+    function hqUnlock() { try { if (AUDIO) AUDIO.unlock(); } catch (e) {} }
+    ["pointerdown", "keydown"].forEach(ev => window.addEventListener(ev, hqUnlock));
+    window.addEventListener("keydown", e => {
+      if ((e.key === "m" || e.key === "M") && !e.repeat && AUDIO) { try { if (!AUDIO.toggle()) HQ("sound_on"); } catch (err) {} }
+    });
+    function startMusic(){ if (_music) return; try { if (AUDIO) { AUDIO.loop("duel_bed", 0.45); AUDIO.music(true); } } catch (e) {} _music = true; }
+    function stopMusic(){ if (!_music) return; try { if (AUDIO) AUDIO.loop("duel_bed", 0); } catch (e) {} _music = null; }
     // Screen-shake accumulator.
     let shakeAmt = 0;
-    // Procedural WebAudio combat SFX (reliable, no asset deps).
-    let _actx = null;
-    function AC(){ if(!_actx){ try{ _actx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } return _actx; }
-    function sfx(kind){ const a = AC(); if(!a) return; const t = a.currentTime;
-      const o = a.createOscillator(), g = a.createGain(); o.connect(g); g.connect(a.destination);
-      if(kind==="whoosh"){ o.type="sawtooth"; o.frequency.setValueAtTime(340,t); o.frequency.exponentialRampToValueAtTime(90,t+0.16);
-        g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.15,t+0.03); g.gain.exponentialRampToValueAtTime(0.0001,t+0.2); o.start(t); o.stop(t+0.22); }
-      else if(kind==="hit"){ o.type="square"; o.frequency.setValueAtTime(190,t); o.frequency.exponentialRampToValueAtTime(55,t+0.13);
-        g.gain.setValueAtTime(0.3,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.16); o.start(t); o.stop(t+0.18);
-        const n=a.createBuffer(1,(a.sampleRate*0.12)|0,a.sampleRate), d=n.getChannelData(0);
-        for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2);
-        const ns=a.createBufferSource(), ng=a.createGain(); ns.buffer=n; ng.gain.value=0.24; ns.connect(ng); ng.connect(a.destination); ns.start(t); }
-      else if(kind==="block"){ o.type="triangle"; o.frequency.setValueAtTime(900,t); o.frequency.exponentialRampToValueAtTime(320,t+0.1);
-        g.gain.setValueAtTime(0.2,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.14); o.start(t); o.stop(t+0.16); }
-      else if(kind==="parry"){ o.type="sine"; o.frequency.setValueAtTime(659.25,t); o.frequency.exponentialRampToValueAtTime(1318.5,t+0.16);
-        g.gain.setValueAtTime(0.35,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.35); o.start(t); o.stop(t+0.36); }
-      else if(kind==="stagger"){ o.type="sawtooth"; o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(45,t+0.25);
-        g.gain.setValueAtTime(0.3,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.28); o.start(t); o.stop(t+0.3); }
-    }
+    // Combat sounds: recorded files (parry and stagger reuse block and hit at another pitch).
+    function AC(){ hqUnlock(); return null; }
+    const SFX_MAP = { whoosh: ["whoosh", { limit: 60 }], hit: ["hit", { limit: 50 }], block: ["block", { limit: 50 }],
+      parry: ["block", { rate: 1.35, limit: 40 }], stagger: ["hit", { rate: 0.72, limit: 60 }] };
+    function sfx(kind){ const m = SFX_MAP[kind]; if (m) HQ(m[0], m[1]); }
 
     const player = {
       id: "player",

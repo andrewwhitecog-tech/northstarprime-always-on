@@ -230,13 +230,21 @@ header.topbar{
 }
 
 @media (max-width:600px){
-  .brand-title{font-size:16px;letter-spacing:2px}
-  #zone-ribbon{grid-template-columns:repeat(2,1fr)}
-  #abyss-viewport{height:145px}
-  #reels-canvas{height:215px}
-  .hold-btn{font-size:13px;min-height:38px}
-  .ctrl-btn{padding:8px 14px;font-size:14px;min-height:44px}
-  .ctrl-btn.spin-primary{padding:10px 26px;font-size:16px}
+  header.topbar{padding:6px 8px;flex-wrap:wrap;gap:4px}
+  .back-btn,.pill-btn{padding:4px 8px;font-size:14px;min-height:32px;letter-spacing:0}
+  .brand-title{font-size:15px;letter-spacing:1px}
+  #game-wrap{padding:4px 8px 10px;gap:5px}
+  #zone-ribbon{grid-template-columns:repeat(2,1fr);gap:4px}
+  .zone-node{padding:5px 6px;font-size:14px}
+  #abyss-viewport{height:122px}
+  #machine{padding:8px 10px 12px}
+  #reels-canvas{height:204px}
+  .hold-strip{gap:4px}
+  .hold-btn{font-size:14px;min-height:34px;letter-spacing:0}
+  #verdict-line{font-size:15px;letter-spacing:1px;min-height:22px;margin:4px 0}
+  #controls-area{gap:6px}
+  .ctrl-btn{padding:6px 10px;font-size:14px;min-height:38px;letter-spacing:0.5px}
+  .ctrl-btn.spin-primary{padding:8px 18px;font-size:15px}
 }
 </style>
 </head>
@@ -618,7 +626,12 @@ function renderLoop(ts) {
   const t = ts * 0.001;
 
   // --- 1. Render Abyssal Parallax Header & Kraken Boss ---
-  const AW = 920, AH = 175;
+  const AW = abyssCanvas.clientWidth || 920, AH = abyssCanvas.clientHeight || 175;
+  if (abyssCanvas.width !== Math.round(AW * DPR) || abyssCanvas.height !== Math.round(AH * DPR)) {
+    abyssCanvas.width = Math.round(AW * DPR);
+    abyssCanvas.height = Math.round(AH * DPR);
+    actx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
   const z = ZONES[currentZone];
   const g = actx.createLinearGradient(0, 0, 0, AH);
   g.addColorStop(0, z.sky);
@@ -628,7 +641,7 @@ function renderLoop(ts) {
 
   // Volumetric god-rays from surface / Eye portal
   for (let i = 0; i < 5; i++) {
-    const rx = 140 + i * 160 + Math.sin(t * 0.7 + i) * 24;
+    const rx = (AW * 0.15) + i * (AW * 0.175) + Math.sin(t * 0.7 + i) * 24;
     const rg = actx.createLinearGradient(rx, 0, rx + 40, AH);
     rg.addColorStop(0, 'rgba(103,232,249,0.14)');
     rg.addColorStop(1, 'transparent');
@@ -647,6 +660,7 @@ function renderLoop(ts) {
     sp.y += sp.vy;
     sp.x += Math.sin(t + sp.y * 0.03) * 0.4;
     if (sp.y < -10) { sp.y = AH + 10; sp.x = Math.random() * AW; }
+    if (sp.x > AW) sp.x = sp.x % AW;
     actx.fillStyle = sp.col;
     actx.beginPath();
     actx.arc(sp.x, sp.y, sp.r, 0, Math.PI * 2);
@@ -663,29 +677,33 @@ function renderLoop(ts) {
   actx.arc(cx, cy, 110, 0, Math.PI * 2);
   actx.fill();
 
+  const compactA = AW < 560;
   if (atlasLoaded) {
     const sw = atlasImg.width / 3, sh = atlasImg.height / 3;
-    // Draw Kraken (0,0) on left & Eye of the Deep (2,2) on right
+    // Draw Kraken (0,0) on left & Eye of the Deep (2,2) on right with 1:1 square aspect ratio
     const bob = Math.sin(t * 2.5) * 4;
-    actx.drawImage(atlasImg, 0, 0, sw, sh, 45, 18 + bob, 138, 138);
-    actx.drawImage(atlasImg, 2 * sw, 2 * sh, sw, sh, AW - 183, 18 - bob, 138, 138);
+    const iconSz = compactA ? 64 : 138;
+    const iconY = (AH - iconSz) * 0.5;
+    const padX = compactA ? 6 : 45;
+    actx.drawImage(atlasImg, 0, 0, sw, sh, padX, iconY + bob, iconSz, iconSz);
+    actx.drawImage(atlasImg, 2 * sw, 2 * sh, sw, sh, AW - padX - iconSz, iconY - bob, iconSz, iconSz);
   }
 
   // Diegetic Gold/Biolume Jackpot & Boss Bar in Header
   actx.save();
   actx.textAlign = 'center';
-  actx.font = '800 14px Cinzel, serif';
+  actx.font = compactA ? '800 10px Cinzel, serif' : '800 14px Cinzel, serif';
   actx.fillStyle = '#67e8f9';
-  actx.fillText(currentZone === 3 ? 'ABYSSAL KRAKEN BOSS LAIR // GRAND JACKPOT' : `${z.name} // PROGRESSIVE ABYSSAL JACKPOT`, cx, 32);
+  actx.fillText(currentZone === 3 ? 'ABYSSAL KRAKEN BOSS // GRAND JACKPOT' : `${z.name} // PROGRESSIVE JACKPOT`, cx, compactA ? 22 : 32);
 
-  actx.font = '900 36px Cinzel, serif';
+  actx.font = compactA ? '900 22px Cinzel, serif' : '900 36px Cinzel, serif';
   actx.fillStyle = '#fde047';
   actx.shadowColor = 'rgba(244,114,182,0.85)';
   actx.shadowBlur = 18;
-  actx.fillText(jackpot.toLocaleString() + ' TOKENS', cx, 74);
+  actx.fillText(jackpot.toLocaleString() + ' TOKENS', cx, compactA ? 52 : 74);
 
   // Kraken Boss Health Bar (always visible so player sees boss progress, supercharged in Zone 4)
-  const bw = 380, bh = 14, bx = cx - bw / 2, by = 96;
+  const bw = compactA ? Math.min(200, AW - 150) : 380, bh = compactA ? 10 : 14, bx = cx - bw / 2, by = compactA ? 66 : 96;
   actx.fillStyle = 'rgba(2,8,18,0.85)';
   actx.strokeStyle = '#67e8f9';
   actx.lineWidth = 1.5;
@@ -699,25 +717,30 @@ function renderLoop(ts) {
   actx.fillStyle = barG;
   actx.fillRect(bx + 1, by + 1, (bw - 2) * hpPct, bh - 2);
 
-  actx.font = '800 13px Cinzel, serif';
+  actx.font = compactA ? '800 10px Cinzel, serif' : '800 13px Cinzel, serif';
   actx.fillStyle = '#fff';
   actx.shadowBlur = 6;
   const phaseTxt = krakenDefeated
-    ? 'ABYSSAL KRAKEN VANQUISHED // 2X WILDS UNLOCKED!'
+    ? 'KRAKEN VANQUISHED // 2X WILDS!'
     : (krakenHp <= krakenMaxHp * 0.5
-        ? `KRAKEN PHASE II: SINGULARITY EYE (${krakenHp}/${krakenMaxHp} HP)`
-        : `KRAKEN PHASE I: TENTACLE GRIP (${krakenHp}/${krakenMaxHp} HP)`);
-  actx.fillText(phaseTxt, cx, by + 32);
+        ? `PHASE II: SINGULARITY EYE (${krakenHp}/${krakenMaxHp})`
+        : `KRAKEN PHASE I (${krakenHp}/${krakenMaxHp} HP)`);
+  actx.fillText(phaseTxt, cx, by + (compactA ? 22 : 32));
 
   if (freeSpins > 0) {
     actx.fillStyle = '#4effb5';
-    actx.font = '900 15px Cinzel, serif';
-    actx.fillText(`FREE SPINS ACTIVE: ${freeSpins} REMAINING (2X PAYOUTS)`, cx, by + 54);
+    actx.font = compactA ? '900 11px Cinzel, serif' : '900 15px Cinzel, serif';
+    actx.fillText(`FREE SPINS: ${freeSpins} (2X)`, cx, by + (compactA ? 38 : 54));
   }
   actx.restore();
 
   // --- 2. Render 5x3 Bioluminescent Reels Canvas ---
-  const RW = 860, RH = 270;
+  const RW = reelsCanvas.clientWidth || 860, RH = reelsCanvas.clientHeight || 270;
+  if (reelsCanvas.width !== Math.round(RW * DPR) || reelsCanvas.height !== Math.round(RH * DPR)) {
+    reelsCanvas.width = Math.round(RW * DPR);
+    reelsCanvas.height = Math.round(RH * DPR);
+    rctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
   rctx.fillStyle = '#020814';
   rctx.fillRect(0, 0, RW, RH);
 

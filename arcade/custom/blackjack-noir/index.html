@@ -275,12 +275,21 @@ header.topbar{
 }
 
 @media (max-width:600px){
-  .brand-title{font-size:16px;letter-spacing:2px}
-  #stage-ribbon{grid-template-columns:repeat(2,1fr)}
-  #dealer-viewport{height:185px}
-  .playing-card{width:62px;height:88px;margin:0 -6px}
-  .casino-chip{width:50px;height:50px;font-size:14px}
-  .act-btn{padding:8px 14px;font-size:14px;min-height:44px}
+  header.topbar{padding:6px 8px;flex-wrap:wrap;gap:4px}
+  .back-btn,.pill-btn{padding:4px 8px;font-size:14px;min-height:32px;letter-spacing:0}
+  .brand-title{font-size:15px;letter-spacing:1px}
+  #game-wrap{padding:4px 8px 10px;gap:5px}
+  #stage-ribbon{grid-template-columns:repeat(2,1fr);gap:4px}
+  .stage-node{padding:5px 6px;font-size:14px}
+  #dealer-viewport{height:132px}
+  #table{padding:8px 10px 12px;min-height:240px;border-radius:20px 20px 44px 44px}
+  .cards-row{min-height:78px}
+  .playing-card{width:54px;height:76px;margin:0 -6px}
+  #verdict-banner{font-size:16px;min-height:24px;letter-spacing:1.5px}
+  #control-deck{gap:6px;padding:4px 2px}
+  .casino-chip{width:46px;height:46px;font-size:14px}
+  .action-row{gap:5px}
+  .act-btn{padding:6px 10px;font-size:14px;min-height:38px;letter-spacing:0.5px}
 }
 </style>
 </head>
@@ -551,7 +560,13 @@ function renderDealerStage(ts) {
   requestAnimationFrame(renderDealerStage);
   if (hitStopFrames > 0) { hitStopFrames--; return; }
 
-  const W = 940, H = 230;
+  const W = dealerCanvas.clientWidth || 940;
+  const H = dealerCanvas.clientHeight || 230;
+  if (dealerCanvas.width !== Math.round(W * DPR) || dealerCanvas.height !== Math.round(H * DPR)) {
+    dealerCanvas.width = Math.round(W * DPR);
+    dealerCanvas.height = Math.round(H * DPR);
+    dctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
   const t = ts * 0.001;
 
   // Layer 0: Deep Noir Skyline & Velvet Cathedral Backplate
@@ -606,13 +621,14 @@ function renderDealerStage(ts) {
   dctx.restore();
 
   // Layer 2 (Near Parallax): Gothic Brass & Velvet Arch Columns
+  const colPillarW = W < 500 ? 32 : 74;
   dctx.fillStyle = '#07120e';
-  dctx.fillRect(0, 0, 74, H);
-  dctx.fillRect(W - 74, 0, 74, H);
+  dctx.fillRect(0, 0, colPillarW, H);
+  dctx.fillRect(W - colPillarW, 0, colPillarW, H);
   dctx.strokeStyle = 'rgba(212,175,55,0.45)';
   dctx.lineWidth = 2;
-  dctx.strokeRect(10, 8, 54, H - 16);
-  dctx.strokeRect(W - 64, 8, 54, H - 16);
+  dctx.strokeRect(6, 6, colPillarW - 12, H - 12);
+  dctx.strokeRect(W - colPillarW + 6, 6, colPillarW - 12, H - 12);
 
   // Layer 3: Uncle Vorath Animated Dealer Sprite (from 2x2 RGBA Atlas)
   if (dealerPoseTimer > 0) {
@@ -625,11 +641,11 @@ function renderDealerStage(ts) {
     const sw = dealerImg.width / 2;
     const sh = dealerImg.height / 2;
     const bob = Math.sin(t * 2.4) * 3;
-    const dw = 225, dh = 225;
+    const dw = Math.min(225, H - 4), dh = dw;
     dctx.save();
     dctx.shadowColor = dealerPose === 3 ? 'rgba(46,229,157,0.75)' : 'rgba(212,175,55,0.45)';
     dctx.shadowBlur = 22;
-    dctx.drawImage(dealerImg, col * sw, row * sh, sw, sh, (W - dw) / 2, H - dh + 8 + bob, dw, dh);
+    dctx.drawImage(dealerImg, col * sw, row * sh, sw, sh, (W - dw) / 2, H - dh + 6 + bob, dw, dh);
     dctx.restore();
   }
 

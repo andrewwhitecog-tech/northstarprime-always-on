@@ -103,13 +103,8 @@
       align-items: stretch;
     }
 
-    .arena-wrap,
-    .panel {
-      border: 1px solid var(--line);
-      background: linear-gradient(180deg, rgba(8,10,22,0.84), rgba(6,4,13,0.95));
-      box-shadow: 0 0 42px rgba(56,233,255,0.12), inset 0 0 44px rgba(255,46,109,0.11);
-      border-radius: 8px;
-    }
+    /* Rule 30(a): no panel, card or strip behind any words; only the arena picture has a glow. */
+    .arena-wrap canvas { box-shadow: 0 0 42px rgba(56,233,255,0.14); border-radius: 6px; }
 
     .arena-wrap {
       position: relative;
@@ -141,14 +136,9 @@
 
     .meter,
     .controls,
-    .move-list,
+    .move-list { padding: 4px 2px; }
     .log,
-    .note {
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 8px;
-      background: rgba(3,5,12,0.66);
-      padding: 10px;
-    }
+    .note { display: none; }
 
     .label {
       color: var(--muted);
@@ -230,9 +220,18 @@
 
     @media (max-width: 620px) {
       .shell { width: min(100vw - 14px, 1460px); padding-top: 8px; }
-      .meters { grid-template-columns: 1fr; }
-      .controls { grid-template-columns: 1fr 1fr; }
-      canvas { height: 590px; min-height: 560px; }
+      header { padding-bottom: 8px; gap: 6px; }
+      .subtitle { margin-top: 6px; font-size: 0.86rem; line-height: 1.3; }
+      .layout { display: flex; flex-direction: column; gap: 8px; }
+      .arena-wrap { min-height: 0; order: 1; }
+      canvas { height: auto; min-height: 0; aspect-ratio: 620 / 560; }
+      .panel { display: contents; }
+      .controls { order: 2; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 0; }
+      .controls button { min-height: 46px; font-size: 0.8rem; padding: 2px; }
+      .controls .wide { grid-column: span 4; min-height: 40px; }
+      .meters { order: 3; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+      .move-list { order: 4; }
+      .key-hint { display: none; }
     }
     #callout { min-height: 28px; text-align: center; font: 700 18px/28px Georgia, "Times New Roman", serif;
       letter-spacing: 0.08em; color: #ffe7a6; text-shadow: 0 0 12px rgba(255, 46, 109, 0.55); }
@@ -244,9 +243,8 @@
     <header>
       <div>
         <h1>Vorath Blade Tribunal</h1>
-        <p class="subtitle">An original VORATH weapon-duel cabinet with crystal blade hitboxes, guard pressure, stamina, enemy AI, round judgment, aurora slash trails, jeweled armor, and local receipts.</p>
+        <p class="subtitle">Duel the Tribunal's champions with a crystal blade. Read their habits, parry on the flash, and clear the ladder to earn a second blade.</p>
       </div>
-      <button id="exportTop">Export Receipt</button>
     </header>
 
     <section class="layout" aria-label="Vorath Blade Tribunal playable cabinet">
@@ -287,15 +285,14 @@
         </div>
 
         <div class="controls" aria-label="Blade Tribunal controls">
-          <button id="startBtn" class="wide">Start Duel [Start / Enter]</button>
-          <button id="leftBtn">Left [A / ◀]</button>
-          <button id="rightBtn">Right [D / ▶]</button>
-          <button id="slashBtn">Slash [J / Ⓐ]</button>
-          <button id="heavyBtn">Heavy [K / Ⓧ]</button>
-          <button id="guardBtn">Guard [L / LT]</button>
-          <button id="parryBtn" style="border-color:#38e9ff;color:#38e9ff;background:rgba(56,233,255,0.12);">Parry [E / Ⓨ]</button>
-          <button id="dodgeBtn">Dodge [Space / Ⓑ]</button>
-          <button id="exportBtn" class="wide">Export Receipt</button>
+          <button id="startBtn" class="wide">Start Duel <span class="key-hint">[Start / Enter]</span></button>
+          <button id="leftBtn">Left <span class="key-hint">[A / ◀]</span></button>
+          <button id="rightBtn">Right <span class="key-hint">[D / ▶]</span></button>
+          <button id="slashBtn">Slash <span class="key-hint">[J / Ⓐ]</span></button>
+          <button id="heavyBtn">Heavy <span class="key-hint">[K / Ⓧ]</span></button>
+          <button id="guardBtn">Guard <span class="key-hint">[L / LT]</span></button>
+          <button id="parryBtn" style="border-color:#38e9ff;color:#38e9ff;background:rgba(56,233,255,0.12);">Parry <span class="key-hint">[E / Ⓨ]</span></button>
+          <button id="dodgeBtn">Dodge <span class="key-hint">[Space / Ⓑ]</span></button>
         </div>
 
         <div class="move-list">
@@ -352,12 +349,12 @@
       guardBtn: document.querySelector("#guardBtn"),
       parryBtn: document.querySelector("#parryBtn"),
       dodgeBtn: document.querySelector("#dodgeBtn"),
-      exportBtn: document.querySelector("#exportBtn"),
-      exportTop: document.querySelector("#exportTop")
+      exportBtn: null,
+      exportTop: null
     };
 
     const keys = new Set();
-    const view = { w: 1120, h: 700, dpr: 1, floor: 520 };
+    const view = { w: 1120, h: 700, dpr: 1, s: 1, floor: 520 };
     const state = {
       running: false,
       round: 1,
@@ -601,12 +598,14 @@
     function resize() {
       const rect = canvas.getBoundingClientRect();
       view.dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-      view.w = Math.max(620, rect.width);
-      view.h = Math.max(540, rect.height);
+      // Narrower than the 620 px arena (a phone): draw the whole arena scaled down at its own shape.
+      view.s = rect.width > 0 && rect.width < 620 ? rect.width / 620 : 1;
+      view.w = Math.max(620, rect.width / view.s);
+      view.h = Math.max(540, rect.height / view.s);
       view.floor = view.h * 0.76;
-      canvas.width = Math.floor(view.w * view.dpr);
-      canvas.height = Math.floor(view.h * view.dpr);
-      ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+      canvas.width = Math.floor(view.w * view.s * view.dpr);
+      canvas.height = Math.floor(view.h * view.s * view.dpr);
+      ctx.setTransform(view.dpr * view.s, 0, 0, view.dpr * view.s, 0, 0);
       player.y = view.floor;
       enemy.y = view.floor;
       clampFighter(player);
@@ -670,6 +669,7 @@
       state.ghosts.length = 0;
       state.koFlash = 0;
       state.koBanner = 0;
+      state.roundCall = 120;
       state.fadeIn = Math.max(state.fadeIn, 0.85);
       state.judgment = "FIGHT";
       addLog(reason);
@@ -945,11 +945,13 @@
         ladder.result = "fallen";
         addLog(`Fallen at bout ${ladder.bout + 1}. Press Start to try the tribunal again.`);
       }
+      ladder.resultAt = performance.now();
       writeSave();
       updateStartLabel();
     }
     function ladderTick(dt) {
       if (ladder.intro > 0) ladder.intro -= dt;
+      if ((state.roundCall || 0) > 0 && !(ladder.intro > 70)) state.roundCall = Math.max(0, state.roundCall - dt);
       if (ladder.between > 0) {
         ladder.between -= dt;
         if (ladder.between <= 0) { ladder.between = 0; startDuel(); }
@@ -1043,6 +1045,9 @@
           y: defender.y - 170,
           vy: -2.2,
           life: 55,
+          max: 55,
+          art: "flash",
+          n: state.tribunalDirector.flashParryStreak,
           color: "#38e9ff"
         });
         addLog(`FLASH PARRY! ${defender.name} deflected ${spec.label} perfectly!`);
@@ -1080,6 +1085,10 @@
         y: defender.y - 160,
         vy: -1.8,
         life: 42,
+        max: 42,
+        art: blocked ? "guard" : "num",
+        num: blocked ? "" : `-${damage}`,
+        big: !blocked && damage >= 20,
         color: blocked ? "#3dffad" : attacker.blade
       });
       addSlash(attacker, attacker.blade, reach, attacker.action === "heavy" || attacker.action === "charged" ? 1.2 : 0.82);
@@ -1256,8 +1265,8 @@
       els.round.textContent = ladder.active || state.running ? `Bout ${ladder.bout + 1}/${nB} · R${state.round}` : String(state.round);
       const lastEcho = state.echoes.length ? state.echoes[state.echoes.length - 1].text : "";
       let j = state.judgment;
-      if ((state.koBanner || 0) > 0) j = "K.O.";
-      else if (lastEcho) j = lastEcho;
+      if ((state.koBanner || 0) > 0) j = enemy.hp <= 0 ? enemy.name + " falls" : "Votary falls";
+      else if (lastEcho && !/^(-\d+|GUARD|FLASH PARRY)/.test(lastEcho)) j = lastEcho;
       else if (ladder.intro > 0 && state.running) j = enemy.name;
       else if (!state.running && ladder.between > 0) j = "Next: " + ((openBouts()[ladder.bout] || {}).name || "");
       else if (!state.running && ladder.result === "cleared") j = ladder.unlocked ? "Cleared · " + ladder.unlocked : "Tribunal cleared";
@@ -1912,13 +1921,98 @@
       }
     }
 
-    function drawEchoes() { /* callouts read in the panel beside the arena (rule 30) */ }
+    // Rule 30(g): callouts over play are the accepted lettering art (frozen v04 sheet, sha256 4b630878...).
+    const LETTERING = new Image();
+    let letteringReady = false;
+    LETTERING.onload = () => { letteringReady = true; };
+    LETTERING.src = "/static/art/games/vorath_overhaul_v01/blade_tribunal/lettering_v04_d438.webp";
+    const LCELL = {"ko":[473,6,464,164],"flash":[128,186,1153,164],"guard":[318,366,773,164],"bout":[392,546,625,164],"round":[401,726,607,164],"fight":[449,906,511,164],"cleared":[303,1086,804,163],"fallen":[337,1266,734,164],"0":[6,1454,117,248],"1":[283,1454,76,248],"2":[524,1454,106,248],"3":[780,1454,106,248],"4":[1030,1454,117,248],"5":[1291,1454,107,248],"6":[13,1734,104,248],"7":[268,1734,106,248],"8":[524,1734,106,248],"9":[780,1734,106,248],"minus":[995,1835,188,46],"x":[1281,1754,129,208]};
+    // Draw one cell centred on (cx, cy), h logical px tall. Returns its drawn width.
+    function drawCell(key, cx, cy, h, alpha) {
+      const c = LCELL[key]; if (!c || !letteringReady) return 0;
+      const w = c[2] * h / c[3];
+      ctx.save(); ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+      ctx.drawImage(LETTERING, c[0], c[1], c[2], c[3], cx - w / 2, cy - h / 2, w, h);
+      ctx.restore();
+      return w;
+    }
+    // A row of glyphs ("-22", "x3", "2") on one centre line; the minus sits at numeral mid-height.
+    function drawGlyphs(str, cx, cy, h, alpha) {
+      if (!letteringReady) return;
+      const keys = [...String(str)].map(ch => ch === "-" ? "minus" : ch.toLowerCase()).filter(k => LCELL[k]);
+      const gap = h * 0.04;
+      const ws = keys.map(k => k === "minus" ? h * 0.62 : k === "x" ? LCELL.x[2] * (h * 0.8) / LCELL.x[3] : LCELL[k][2] * h / LCELL[k][3]);
+      let x = cx - (ws.reduce((a, b) => a + b, 0) + gap * (keys.length - 1)) / 2;
+      keys.forEach((k, i) => {
+        const w = ws[i];
+        if (k === "minus") drawCell(k, x + w / 2, cy, w * LCELL.minus[3] / LCELL.minus[2], alpha);
+        else drawCell(k, x + w / 2, cy + (k === "x" ? h * 0.1 : 0), k === "x" ? h * 0.8 : h, alpha);
+        x += w + gap;
+      });
+    }
+    // A word with a punch-in: starts 30% larger and settles over the first frames of its life.
+    function punch(age) { return 1 + 0.3 * Math.max(0, 1 - age / 9); }
+
+    function drawEchoes() {
+      for (const e of state.echoes) {
+        if (!e.art) continue;
+        const max = e.max || e.life || 1;
+        const age = max - e.life;
+        const a = Math.min(1, e.life / 14) * Math.min(1, age / 3 + 0.4);
+        const k = punch(age);
+        if (e.art === "flash") {
+          const h = view.h * 0.075 * k;
+          drawCell("flash", e.x, e.y, h, a);
+          if (e.n > 1) drawGlyphs("x" + Math.min(e.n, 9), e.x, e.y + h * 1.05, h * 0.9, a);
+        } else if (e.art === "guard") {
+          drawCell("guard", e.x, e.y, view.h * 0.06 * k, a);
+        } else if (e.art === "num") {
+          drawGlyphs(e.num, e.x, e.y, view.h * (e.big ? 0.085 : 0.065) * k, a);
+        }
+      }
+    }
 
     function drawRoundText() {
-      // K.O. white flash only; every word lives in the panel beside the arena (rule 30).
       if ((state.koFlash || 0) > 0) {
         ctx.save(); ctx.globalAlpha = Math.min(0.7, state.koFlash * 0.7); ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, view.w, view.h); ctx.restore();
+      }
+      const cx = view.w / 2, cy = view.h * 0.36;
+      if ((state.koBanner || 0) > 0) {
+        const age = 82 - state.koBanner;
+        drawCell("ko", cx, cy, view.h * 0.2 * punch(age * 0.6), Math.min(1, state.koBanner / 12));
+        return;
+      }
+      if (state.running && ladder.intro > 70) {
+        const age = 150 - ladder.intro, a = Math.min(1, age / 8, (ladder.intro - 70) / 10);
+        const h = view.h * 0.1;
+        const bw = LCELL.bout[2] * h / LCELL.bout[3];
+        const nw = LCELL[String(Math.min(ladder.bout + 1, 9))][2] * h * 1.35 / LCELL["1"][3];
+        const x0 = cx - (bw + h * 0.25 + nw) / 2;
+        drawCell("bout", x0 + bw / 2, cy, h * punch(age), a);
+        drawGlyphs(String(Math.min(ladder.bout + 1, 9)), x0 + bw + h * 0.25 + nw / 2, cy, h * 1.35 * punch(age), a);
+        return;
+      }
+      if (state.running && (state.roundCall || 0) > 0 && !(ladder.intro > 70)) {
+        const t = state.roundCall;
+        if (t > 50) {
+          const age = 120 - t, a = Math.min(1, age / 6, (t - 50) / 8);
+          const h = view.h * 0.09;
+          const rw = LCELL.round[2] * h / LCELL.round[3];
+          const n = String(Math.min(state.round, 9));
+          const nw = LCELL[n][2] * h * 1.35 / LCELL[n][3];
+          const x0 = cx - (rw + h * 0.25 + nw) / 2;
+          drawCell("round", x0 + rw / 2, cy, h * punch(age), a);
+          drawGlyphs(n, x0 + rw + h * 0.25 + nw / 2, cy, h * 1.35 * punch(age), a);
+        } else {
+          const age = 50 - t;
+          drawCell("fight", cx, cy, view.h * 0.13 * punch(age), Math.min(1, t / 10));
+        }
+        return;
+      }
+      if (!state.running && ladder.between <= 0 && (ladder.result === "cleared" || ladder.result === "fallen")) {
+        const age = (performance.now() - (ladder.resultAt || 0)) / 16.7;
+        drawCell(ladder.result, cx, cy, view.h * 0.12 * punch(age), Math.min(1, age / 10));
       }
     }
 
@@ -2107,8 +2201,7 @@
 
     els.startBtn.addEventListener("click", startDuel);
     setBlade(ladder.save.blade);
-    els.exportBtn.addEventListener("click", exportReceipt);
-    els.exportTop.addEventListener("click", exportReceipt);
+    // (Export Receipt was a developer tool; it left the page in the rule 30(g) pass.)
     if (els.parryBtn) {
       els.parryBtn.addEventListener("click", triggerFlashParry);
     }

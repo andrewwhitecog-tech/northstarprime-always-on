@@ -90,7 +90,7 @@ async function main() {
   browser = await chromium.launch({headless: false, args: [
     '--kiosk', '--window-position=0,0', '--window-size=1324,900', '--disable-dev-shm-usage'
   ]});
-  const context = await browser.newContext({viewport: null, deviceScaleFactor: 1});
+  const context = await browser.newContext({viewport: null});
   await context.route('**/*', route => /cloudflareinsights\.com|google-analytics\.com|googletagmanager\.com/.test(route.request().url()) ? route.abort() : route.continue());
   const page = await context.newPage();
   page.on('pageerror', e => receipt.errors.push(String(e)));
@@ -135,11 +135,12 @@ async function main() {
   receipt.decodedImages = decoded;
   receipt.assetResponses = assetResponses;
   const windowFacts = await page.evaluate(() => ({innerWidth, innerHeight, outerWidth, outerHeight,
-    screenX, screenY, focused: document.hasFocus(), visibility: document.visibilityState,
+    screenX, screenY, devicePixelRatio, focused: document.hasFocus(), visibility: document.visibilityState,
     imageReadiness: 'Actual canvas image objects decoded and source-sized above'}));
   receipt.window = windowFacts;
   assert.deepEqual([windowFacts.screenX, windowFacts.screenY, windowFacts.innerWidth, windowFacts.innerHeight],
     [0, 0, 1324, 900], 'Kiosk geometry differs; do not guess screen-to-canvas alignment');
+  assert.equal(windowFacts.devicePixelRatio, 1, 'Verify native pixel ratio rather than setting incompatible null-viewport scale');
   assert.equal(windowFacts.focused, true);
   assert.equal(windowFacts.visibility, 'visible');
   const bounds = await page.locator('#gameCanvas').boundingBox();

@@ -2314,7 +2314,7 @@ function HQAudio(opts) {
     if (!ctx || !master) return;
     if (!L.src) {
       const name = pick(key), b = name && buf[name];
-      if (!b) return;
+      if (!b) { if (level > 0 && name) load(name); return; }   // first time this bed is wanted: fetch it; load() starts it
       L.src = ctx.createBufferSource(); L.src.buffer = b; L.src.loop = true;
       L.gain = ctx.createGain(); L.gain.gain.value = 0;
       L.src.connect(L.gain); L.gain.connect(master); L.src.start();
@@ -2348,7 +2348,9 @@ function HQAudio(opts) {
       limiter.threshold.value = -6; limiter.knee.value = 3; limiter.ratio.value = 20;
       limiter.attack.value = 0.002; limiter.release.value = 0.12;
       master.connect(limiter); limiter.connect(ctx.destination);
-      for (const k in opts.files) opts.files[k].forEach(load);
+      // Effects load now; the five ambience beds (5.5 MB WAVs each) load the first time their zone plays (loop below),
+      // so a phone fetches one bed at the start instead of about 28 MB.
+      for (const k in opts.files) if (!loopKeys[k]) opts.files[k].forEach(load);
       ensureMusic();
     },
     play, loop,

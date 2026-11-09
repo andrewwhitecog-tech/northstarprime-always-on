@@ -19,9 +19,8 @@ DEFAULT_ARTIFACT = ROOT / "output" / "pages-artifact"
 APP_ORIGIN = "https://app.northstarprime.net"
 APP_VIDEO_BASE = f"{APP_ORIGIN}/static/idc_video/"
 LOCAL_VIDEO_RE = re.compile(r"(?<!https://app\.northstarprime\.net)/static/idc_video/")
-# Keep 70 MB below the 1 GB published-site ceiling after the 4.45 MB
-# Chronosphere and Side Street addition to the existing 919.9 MB payload.
-RELEASE_GUARD_BYTES = 980_000_000
+# 2026-11-06: curated artifact must stay under 500 MiB (deploy-pages sync timeout).
+RELEASE_GUARD_BYTES = 500_000_000
 FILE_LIMIT_BYTES = 100_000_000
 TEXT_SUFFIXES = {".html", ".css", ".js", ".json", ".xml", ".txt", ".webmanifest"}
 
@@ -173,7 +172,28 @@ def verify(artifact: Path, network: bool) -> dict:
                 continue
             ref_path = urllib.parse.urlsplit(ref).path
             # Externalized media stays in git and is served from raw.githubusercontent.com.
-            if ref_path.startswith(("/static/videos/", "/static/cookbook_deluxe_media/")):
+            if ref_path.startswith((
+                "/static/videos/",
+                "/static/cookbook_deluxe_media/",
+                "/static/downloads/",
+                "/static/art/",
+                "/static/idg/",
+                "/static/literature/",
+                "/static/drops/",
+                "/static/idr_covers/",
+                "/static/cards/",
+                "/static/action_captures/",
+                "/static/curated/",
+                "/static/games/models/",
+                "/static/idc_covers/",
+                "/tarot/",
+                "/warband/",
+                "/memeforge/",
+                "/gallery/",
+                "/maison-gooch/",
+                "/literature/",
+                "/coloring-studio/assets/",
+            )):
                 continue
             target = local_target(artifact, path, reference)
             if target is not None and not target_exists(target, reference):

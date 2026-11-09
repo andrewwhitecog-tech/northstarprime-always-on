@@ -531,6 +531,8 @@ for (let i = 0; i < 180; i++) {
 // Controls
 const keys = {};
 const mouse = { x: W / 2, y: H / 2, down: false };
+// Preserve the last controller bearing until the player deliberately moves the mouse.
+let aimSource = 'mouse';
 window.addEventListener('keydown', e => {
   keys[e.key.toLowerCase()] = true;
   if (e.key === ' ' && gameState === 'PLAYING') fireBomb();
@@ -540,8 +542,8 @@ window.addEventListener('keydown', e => {
   if (e.key === '3') selectWeapon(2);
 });
 window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
-window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
-window.addEventListener('mousedown', () => { mouse.down = true; });
+window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; aimSource = 'mouse'; });
+window.addEventListener('mousedown', () => { mouse.down = true; aimSource = 'mouse'; });
 window.addEventListener('mouseup', () => { mouse.down = false; });
 
 // Gamepad Vibration & Poll
@@ -565,6 +567,7 @@ function pollGamepad() {
     const rx = gp.axes[2];
     const ry = gp.axes[3];
     if (Math.hypot(rx, ry) > 0.25) {
+      aimSource = 'gamepad';
       player.angle = Math.atan2(ry, rx);
     }
 
@@ -796,8 +799,8 @@ function gameLoop(now) {
     if (keys['d'] || keys['arrowright']) player.vx += 0.8;
     if (mouse.down) firePlayerWeapon();
 
-    // Aim toward mouse if no gamepad right stick active
-    if (!lastGpState.rt) {
+    // A neutral controller stick retains its bearing; only intentional mouse input takes over.
+    if (aimSource === 'mouse') {
       player.angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
     }
 

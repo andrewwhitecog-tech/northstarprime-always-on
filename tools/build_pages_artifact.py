@@ -30,9 +30,9 @@ DEFAULT_OUTPUT = ROOT / "output" / "pages-artifact"
 APP_VIDEO_BASE = "https://app.northstarprime.net/static/idc_video/"
 LOCAL_VIDEO_BASE = "/static/idc_video/"
 PUBLISHED_LIMIT_BYTES = 1_000_000_000
-# Chronosphere and Side Street add about 4.45 MB to the 919.9 MB artifact.
-# Cream tip CDN wave1 needs headroom; keep ~20 MB below the 1 GB published-site ceiling.
-RELEASE_GUARD_BYTES = 980_000_000
+# 2026-11-06 slim: tip/download zips, GLBs, large art shelves → raw.githubusercontent.com
+# so deploy-pages can finish under the 10-minute sync timeout (~500 MiB guard).
+RELEASE_GUARD_BYTES = 500_000_000
 GIT_BLOB_LIMIT_BYTES = 100_000_000
 SKIP_TOP_LEVEL = {".git", ".github", "output", "tools", "__pycache__", ".pytest_cache", ".playwright-cli", ".playwright", "little-light-media", "cookbook-media", "stickerforge-media", "PAGES_CAPACITY_BUDGET.json"}
 TEXT_SUFFIXES = {".html", ".css", ".js", ".json", ".xml", ".txt", ".webmanifest"}
@@ -77,10 +77,21 @@ def rewrite_sticker_refs(raw: str, relative: Path) -> str:
 
 AUDIO_SUFFIXES = {".mp3", ".wav", ".m4a", ".ogg"}
 # Heavy binary trees kept in git and served from raw.githubusercontent.com so the
-# curated Pages artifact stays under the 1 GB published-site / 980 MB release guard.
+# curated Pages artifact stays under the deploy-pages sync window (~500 MiB guard).
 EXTERNAL_RELEASE_PREFIXES = {
     ("static", "videos"),
     ("static", "cookbook_deluxe_media"),
+    # NOT static/downloads: MasterCook *.html readers must stay on Pages (raw.githubusercontent.com
+    # serves HTML as text/plain). Tip *.zip.b64 omitted via omit_unlinked_pages_payload; PDFs/zips
+    # still leave via HEAVY_EXTERNAL_SUFFIXES.
+    ("static", "art"),
+    # NOT static/idg: future-teller loads /static/idg/*.json locally; ROM zips omitted explicitly.
+    ("static", "literature"),
+    ("static", "drops"),
+    ("static", "idr_covers"),
+    ("static", "cards"),
+    ("static", "action_captures"),
+    ("static", "curated"),
     ("coloring-studio", "assets"),
     ("pnw-lost-tables-2020", "assets"),
     ("pnw-lost-tables-2020", "downloads"),
@@ -91,27 +102,117 @@ EXTERNAL_RELEASE_PREFIXES = {
     ("acid-voxel-halloween", "downloads"),
     ("brick-alchemy", "assets"),
 }
+EXTERNAL_RELEASE_PREFIXES_3 = {
+    ("static", "games", "models"),
+}
+EXTERNAL_TOP_LEVEL_MEDIA = {
+    "warband",
+    "memeforge",
+    "gallery",
+    "maison-gooch",
+    "literature",
+}
+HEAVY_EXTERNAL_SUFFIXES = {
+    ".glb", ".gltf", ".pdf", ".zip", ".epub", ".docx", ".wasm", ".bin",
+}
 MATURE_EXTERNAL_SUFFIXES = AUDIO_SUFFIXES | {
     ".png", ".webp", ".jpg", ".jpeg", ".gif", ".avif",
     ".mp4", ".webm", ".mov", ".mkv",
     ".glb", ".gltf", ".zip", ".pdf", ".wasm", ".bin",
 }
 
+
+def _must_stay_local(relative: Path) -> bool:
+    """Workshop / offline releases that verifiers pin to exact local artifact bytes."""
+    parts = relative.parts
+    if not parts:
+        return False
+    if parts[0] == "chronosphere":
+        return True
+    if len(parts) >= 2 and (parts[0], parts[1]) == ("static", "vendor"):
+        return True
+    # pages_art_quality exact-hash delivery + comic interiors stay in the artifact.
+    if len(parts) >= 3 and (parts[0], parts[1], parts[2]) == ("static", "art", "reviewed"):
+        return True
+    if len(parts) >= 3 and (parts[0], parts[1], parts[2]) in {
+        ("static", "games", "sfx"),
+        ("static", "games", "logic_foundry_v14"),
+        ("static", "games", "ladder_v13"),
+    }:
+        return True
+    return False
+
+
 def external_release_media(relative: Path) -> bool:
+    if _must_stay_local(relative):
+        return False
     # The SFX gallery constructs `${f}.mp3` and `${f}.wav` at runtime.
     # Keep this small directory local so its native template and downloads work.
-    if relative.parts[:3] == ("static", "games", "sfx"):
-        return False
     if relative.parts[:3] == ("static", "front", "store") and relative.suffix.lower() == ".png":
         return True
+    if len(relative.parts) >= 3 and tuple(relative.parts[:3]) in EXTERNAL_RELEASE_PREFIXES_3:
+        return True
     if len(relative.parts) >= 2 and tuple(relative.parts[:2]) in EXTERNAL_RELEASE_PREFIXES:
+        # Keep page/shell documents local so Pages does not rewrite them onto
+        # raw.githubusercontent.com (HTML there is often text/plain).
+        if relative.suffix.lower() in TEXT_SUFFIXES or relative.suffix.lower() == ".md":
+            return False
         return True
     # Mature route HTML/JSON stay local; bulky media is raw-delivered.
     if relative.parts and relative.parts[0] == "mature" and relative.suffix.lower() in MATURE_EXTERNAL_SUFFIXES:
         return True
+    # Tarot card art: keep player HTML/JSON local; WebP faces via raw.
+    # STOP Tarot/mushrooms = do not delete source; exclude-from-Pages only.
+    if (
+        relative.parts
+        and relative.parts[0] == "tarot"
+        and relative.suffix.lower() in {".webp", ".png", ".jpg", ".jpeg", ".gif", ".avif"}
+    ):
+        return True
+    if (
+        relative.parts
+        and relative.parts[0] in EXTERNAL_TOP_LEVEL_MEDIA
+        and relative.suffix.lower() in (
+            MATURE_EXTERNAL_SUFFIXES | {".png", ".webp", ".jpg", ".jpeg", ".gif", ".avif", ".svg"}
+        )
+    ):
+        return True
+    if relative.suffix.lower() in HEAVY_EXTERNAL_SUFFIXES:
+        return True
     if relative.suffix.lower() in {".mp4", ".webm", ".mov", ".mkv"}:
         return True
     return relative.suffix.lower() in AUDIO_SUFFIXES or relative.parts[:2] == ("static", "idc_covers")
+
+
+PAGES_OMIT_DOWNLOAD_NAMES = frozenset({
+    # Defense-in-depth: even if downloads prefix is removed later, tip packs stay out.
+    "Digital_MasterCook_Deluxe_Illustrated_Edition.pdf",
+    "data_cleanup_gateway_bundle_v1.zip",
+})
+
+
+def omit_unlinked_pages_payload(relative: Path) -> bool:
+    """Omit cream-tip zip.b64 and other unlinked download binaries from Pages.
+
+    Tip/free packs stay in git for cream CDN wave1 but no customer page hrefs
+    them today. Materializing ~107 MiB of tip zips into the curated artifact is
+    what pushed actions/deploy-pages@v5 past its 600s syncing_files timeout on
+    the SEO #212 deploys (artifact ~910 MB). Covered primarily by EXTERNAL
+    static/downloads; this remains as an explicit omit for clarity/audit.
+    """
+    parts = relative.parts
+    name = relative.name
+    if len(parts) >= 2 and parts[0] == "static" and parts[1] == "downloads":
+        if name.endswith(".zip.b64") or ".zip.b64.part" in name:
+            return True
+        if name.startswith("biolume-kit-public.zip.hex"):
+            return True
+        if name in PAGES_OMIT_DOWNLOAD_NAMES:
+            return True
+    if len(parts) >= 2 and parts[0] == "static" and parts[1] == "idg" and relative.suffix.lower() == ".zip":
+        return True
+    return False
+
 
 def tracked_source_paths():
     # A release is made from versioned source, never untracked workstation exports.
@@ -264,6 +365,8 @@ def iter_source_files():
         if relative.as_posix() in SUPERSEDED_BY_WEBP:
             continue
         if external_sticker_master(relative) or external_release_media(relative):
+            continue
+        if omit_unlinked_pages_payload(relative):
             continue
         yield path, relative
 

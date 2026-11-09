@@ -17,6 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Verify bounded report previews preserve findings and UTF-8
+        run: python3 -m unittest discover -s .github/link_summary_review -p 'test_*.py' -v
       - name: Install verified Lychee with bounded retries
         id: install
         run: bash .github/scripts/install-lychee.sh
@@ -53,8 +55,8 @@ jobs:
           printf 'Lychee checker exit code: %s (report-only policy)\n' "$checker_exit"
           test -s lychee/out.md
           cat lychee/out.md
-          cat lychee/out.md >> "$GITHUB_STEP_SUMMARY"
-          printf '\nChecker exit code: **%s**. Findings are **report-only**; a green job does not mean zero broken links.\n' "$checker_exit" >> "$GITHUB_STEP_SUMMARY"
+          python3 .github/scripts/lychee-summary.py --report lychee/out.md \
+            --checker-exit "$checker_exit" >> "$GITHUB_STEP_SUMMARY"
           printf '\n[Full GitHub Actions output](https://github.com/%s/actions/runs/%s?check_suite_focus=true)\n' "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" >> lychee/out.md
           if grep -E 'Total\s+\|\s+0' lychee/out.md; then
             echo "::error::No links were found (existing failIfEmpty policy)." >&2
@@ -87,6 +89,7 @@ jobs:
           set +e
           lychee --mode task --format markdown --output lychee/out.md \
             --no-progress --max-concurrency 8 --timeout 20 --max-retries 2 \
+            --root-dir "${{ github.workspace }}" \
             --accept 200..=299,403,429 --scheme https --scheme http \
             --exclude-path node_modules --exclude-path .git \
             './**/*.html' './**/*.md'
@@ -97,8 +100,8 @@ jobs:
           printf 'Lychee checker exit code: %s (report-only policy)\n' "$checker_exit"
           test -s lychee/out.md
           cat lychee/out.md
-          cat lychee/out.md >> "$GITHUB_STEP_SUMMARY"
-          printf '\nChecker exit code: **%s**. Findings are **report-only**; a green job does not mean zero broken links.\n' "$checker_exit" >> "$GITHUB_STEP_SUMMARY"
+          python3 .github/scripts/lychee-summary.py --report lychee/out.md \
+            --checker-exit "$checker_exit" >> "$GITHUB_STEP_SUMMARY"
           printf '\n[Full GitHub Actions output](https://github.com/%s/actions/runs/%s?check_suite_focus=true)\n' "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" >> lychee/out.md
           if grep -E 'Total\s+\|\s+0' lychee/out.md; then
             echo "::error::No links were found (existing failIfEmpty policy)." >&2

@@ -46,7 +46,7 @@ async def main():
             vis = await page.evaluate("() => { const t = document.getElementById('touchUI'); return t ? getComputedStyle(t).display : 'missing'; }")
             check(f"{tag}: touch controls shown on a touch screen", vis == "flex", vis)
             links = await page.evaluate("() => !!document.querySelector('#overlay #nsp-related')")
-            check(f"{tag}: More-games links sit in the title/menu card", links, links)
+            check(f"{tag}: no More-games text over the cover", not links, links)
             await page.screenshot(path=str(out / f"{tag}_01_title.png"), timeout=90000)
             await touch_hold(cdp, vw / 2, vh / 2, 120, page)  # start
             await page.wait_for_timeout(1500)

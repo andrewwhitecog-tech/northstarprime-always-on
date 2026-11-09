@@ -1,8 +1,8 @@
-name: TMP IDG stall hunt (PR 206, delete branch after)
+name: TMP IDG checks (PR heads, delete branch after)
 
-# Throwaway branch only. Profiles the long frames in Vorath Souls, Prism Runner
-# 2049 and Chrono Blade 2049 (PR 206 head vs main) with the V8 sampling
-# profiler in a muted headless Chromium. Nothing here deploys.
+# Throwaway branch only. Real-play checks of open IDG pull requests in a muted
+# headless Chromium: the Blade Tribunal ladder test, and desktop + phone
+# captures of PR 206 and PR 223 heads. Nothing here deploys.
 on:
   push:
     branches: [claude/tmp-idg-stall-20261109]
@@ -11,51 +11,50 @@ permissions:
   contents: read
 
 jobs:
-  stall:
+  checks:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: blade
+            ref: 3e6e31846f4559d6bd965e8a8a36576b70cb67a3
+            cmd: python tool/tmp_capture/bt_ladder_test.py --base http://127.0.0.1:8765 --out out/blade
+          - name: pr223
+            ref: 5da731184fd4acec8b9bcd4a6aeb7b8c97ea28c8
+            cmd: python tool/tmp_capture/capture_v3.py --base http://127.0.0.1:8765 --out out/pr223 --slugs vorath-delve,prism-drift --workers 1
+          - name: pr206
+            ref: 522eb3c5944a334631b2678debe1613dabb9ecb4
+            cmd: python tool/tmp_capture/capture_v3.py --base http://127.0.0.1:8765 --out out/pr206 --slugs precinct-404,dharma-invaders,chrono-blade-2049,prism-runner-2049 --workers 1
     steps:
       - uses: actions/checkout@v4
         with: { path: tool, show-progress: false, sparse-checkout: tmp_capture }
       - uses: actions/checkout@v4
         with:
-          ref: 522eb3c5944a334631b2678debe1613dabb9ecb4
-          path: pr
+          ref: ${{ matrix.ref }}
+          path: site
           show-progress: false
           sparse-checkout: |
-            arcade/custom/precinct-404
-            arcade/custom/dharma-invaders
-            static/games
-            static/art/games
-      - uses: actions/checkout@v4
-        with:
-          ref: f9888033f6815b5526af5b8359ac53542cfe48fc
-          path: main
-          show-progress: false
-          sparse-checkout: |
-            arcade/custom/precinct-404
-            arcade/custom/dharma-invaders
+            arcade
             static/games
             static/art/games
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
-      - name: Install Playwright Chromium
+      - name: Install Playwright Chromium and Pillow
         run: |
-          pip install playwright==1.58.0
+          pip install playwright==1.58.0 pillow
           python -m playwright install --with-deps chromium
-      - name: Serve PR head (8766) and main (8765)
+      - name: Serve the PR head (8765)
         run: |
-          nohup python tool/tmp_capture/serve.py 8766 pr >/dev/null 2>&1 &
-          nohup python tool/tmp_capture/serve.py 8765 main >/dev/null 2>&1 &
+          nohup python tool/tmp_capture/serve.py 8765 site >/dev/null 2>&1 &
           sleep 3
-      - name: Profile PR head 522eb3c5 (twice) and main, Precinct 404 and Commentary Siege
+      - name: Run ${{ matrix.name }}
         continue-on-error: true
-        run: |
-          for r in 1 2; do python tool/tmp_capture/profile_stall.py --base http://127.0.0.1:8766 --slugs precinct-404,dharma-invaders --out out/pr_$r; done
-          python tool/tmp_capture/profile_stall.py --base http://127.0.0.1:8765 --slugs precinct-404,dharma-invaders --out out/main
+        run: ${{ matrix.cmd }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: idg-stall
+          name: idg-check-${{ matrix.name }}
           path: out
           retention-days: 5

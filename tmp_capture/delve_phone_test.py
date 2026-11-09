@@ -76,9 +76,21 @@ async def main():
             await page.wait_for_timeout(1500)
             x0 = await page.evaluate("() => player.x")
             box = await (await page.query_selector('#touchUI [data-k="KeyD"]')).bounding_box()
-            await touch_hold(cdp, box["x"] + box["width"] / 2, box["y"] + box["height"] / 2, 1500, page)
+            jb = await (await page.query_selector('#touchUI [data-k="KeyW"]')).bounding_box()
+            # Each load makes a new random world; a one-tile step right of the spawn stops a walk until you jump,
+            # so hold right with one finger and tap jump with another, as a player would.
+            rx, ry = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+            jx, jy = jb["x"] + jb["width"] / 2, jb["y"] + jb["height"] / 2
+            await cdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [{"x": rx, "y": ry, "id": 1}]})
+            for _ in range(3):
+                await page.wait_for_timeout(350)
+                await cdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [{"x": rx, "y": ry, "id": 1}, {"x": jx, "y": jy, "id": 2}]})
+                await page.wait_for_timeout(150)
+                await cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": [{"x": rx, "y": ry, "id": 1}]})
+            await page.wait_for_timeout(350)
+            await cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
             x1 = await page.evaluate("() => player.x")
-            check(f"{tag}: holding the right pad moves the delver", x1 > x0 + 4, {"x0": round(x0), "x1": round(x1)})
+            check(f"{tag}: holding the right pad (with jump taps) moves the delver", x1 > x0 + 4, {"x0": round(x0), "x1": round(x1)})
             # touch the world: dig (mouse.btn 0), then toggle build (mouse.btn 2)
             await cdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [{"x": vw / 2, "y": vh * 0.45}]})
             await page.wait_for_timeout(300)

@@ -722,8 +722,10 @@
       if (ok && fighter === player) recordPlayer(type);
       return ok;
     }
+    // No blow starts while BOUT n or ROUND n is on screen: the call is the referee, and a hit there would print on it.
+    function callHolding() { return ladder.intro > 70 || (state.roundCall || 0) > 50; }
     function beginActionCore(fighter, type) {
-      if (!state.running || state.roundDelay > 0) return false;
+      if (!state.running || state.roundDelay > 0 || callHolding()) return false;
       if (fighter.cooldown > 0 || fighter.action !== "idle") return false;
       if (type === "dodge") {
         if (fighter.stamina < 18) return false;
@@ -894,7 +896,7 @@
     }
 
     function enemyAI(dt) {
-      if (!state.running || state.roundDelay > 0) return;
+      if (!state.running || state.roundDelay > 0 || callHolding()) return;
       const ai = enemy.ai || ROSTER[0].ai;
       const td = state.tribunalDirector || { aggression: 1 };
       const dist = Math.abs(enemy.x - player.x);

@@ -149,7 +149,7 @@ async def main():
         page.on("pageerror", lambda e: errors.append("phone: " + str(e)[:200]))
         await page.goto(a.base + URL, wait_until="load")
         await page.wait_for_timeout(2500)
-        await page.screenshot(path=str(out / "07_phone_title.png"))
+        await page.screenshot(path=str(out / "07_phone_title.png"), timeout=90000)
         btn = await page.query_selector("#startBtn")
         if btn:
             await btn.tap()
@@ -162,7 +162,7 @@ async def main():
                 except Exception:
                     pass
             await page.wait_for_timeout(250)
-        await page.screenshot(path=str(out / "08_phone_duel.png"))
+        await page.screenshot(path=str(out / "08_phone_duel.png"), timeout=90000)
         lp = await page.evaluate("() => window.__bladeTribunalDebug.ladder()")
         sw = await page.evaluate("() => (document.scrollingElement || document.documentElement).scrollWidth")
         check("phone: duel starts from a tap", lp["running"], {"enemy": lp["enemy"], "scrollWidth": sw})

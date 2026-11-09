@@ -21,7 +21,23 @@ ARGS = ["--mute-audio", "--autoplay-policy=no-user-gesture-required", "--disable
         "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"]
 URL = "/arcade/custom/vorath-blade-tribunal/"
 PROBE = """(() => { const p = window.__fp = {d: [], last: 0};
-  function t(ts) { if (p.last) p.d.push(ts - p.last); p.last = ts; requestAnimationFrame(t); } requestAnimationFrame(t); })();"""
+  function t(ts) { if (p.last) p.d.push(ts - p.last); p.last = ts; requestAnimationFrame(t); } requestAnimationFrame(t);
+  const au = window.__au = {osc: 0, decode: 0, buf: 0};
+  const AC = window.AudioContext; if (AC) { const P = AC.prototype, o = P.createOscillator, d = P.decodeAudioData, b = P.createBufferSource;
+    P.createOscillator = function () { au.osc++; return o.apply(this, arguments); };
+    P.decodeAudioData = function () { au.decode++; return d.apply(this, arguments); };
+    P.createBufferSource = function () { au.buf++; return b.apply(this, arguments); }; } })();"""
+
+
+async def cors_shim(ctx, fetched):
+    # The app host allows only northstarprime.net; the test page is served from 127.0.0.1.
+    async def handle(route):
+        resp = await route.fetch()
+        fetched.append((route.request.url.rsplit("/", 1)[-1], resp.status))
+        h = dict(resp.headers)
+        h["access-control-allow-origin"] = "*"
+        await route.fulfill(response=resp, headers=h)
+    await ctx.route("https://app.northstarprime.net/static/games/hq/**", handle)
 
 
 async def hold(page, key, ms):
@@ -76,6 +92,8 @@ async def main():
         b = await pw.chromium.launch(headless=True, args=ARGS)
         ctx = await b.new_context(viewport={"width": 1280, "height": 720})
         await ctx.add_init_script(PROBE)
+        fetched = []
+        await cors_shim(ctx, fetched)
         page = await ctx.new_page()
         page.on("pageerror", lambda e: errors.append(str(e)[:200]))
         await page.goto(a.base + URL, wait_until="load")
@@ -90,6 +108,9 @@ async def main():
         check("bout 1 is Ruby Mantis Regent", l1["enemy"] == "Ruby Mantis Regent" and l1["running"], l1["enemy"])
         await play(page, 8, [("KeyD", 400), ("KeyJ", 120), ("KeyK", 120), ("KeyL", 300), ("Space", 100), ("KeyA", 250), ("KeyJ", 120)])
         await page.screenshot(path=str(out / "03_bout1_fight.png"))
+        au = await page.evaluate("() => window.__au")
+        check("HQ audio: recorded files fetched and decoded, no oscillators", au["osc"] == 0 and au["decode"] > 0 and len(fetched) > 0,
+              {"probe": au, "fetched": fetched[:8]})
         await finish_bout(page)
         ok = await wait_until(page, "() => window.__bladeTribunalDebug.ladder().enemy === 'Justiciar Duelist' && window.__bladeTribunalDebug.ladder().running", 10)
         l2 = await L(page)

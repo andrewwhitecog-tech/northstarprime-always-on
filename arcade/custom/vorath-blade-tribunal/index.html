@@ -262,7 +262,7 @@
             <div class="value" id="playerHp">100</div>
           </div>
           <div class="meter">
-            <div class="label">Enemy HP</div>
+            <div class="label" id="enemyLabel">Enemy HP</div>
             <div class="value" id="enemyHp">100</div>
           </div>
           <div class="meter">
@@ -1249,8 +1249,19 @@
       els.enemyHp.textContent = `${Math.ceil(hudShown.ehp)} / ${enemy.rounds}`;
       els.stamina.textContent = Math.ceil(hudShown.sta);
       els.charge.textContent = Math.ceil(hudShown.chg);
-      els.round.textContent = String(state.round);
-      els.judgment.textContent = state.judgment;
+      const nB = openBouts().length || 1;
+      els.round.textContent = ladder.active || state.running ? `Bout ${ladder.bout + 1}/${nB} · R${state.round}` : String(state.round);
+      const lastEcho = state.echoes.length ? state.echoes[state.echoes.length - 1].text : "";
+      let j = state.judgment;
+      if ((state.koBanner || 0) > 0) j = "K.O.";
+      else if (lastEcho) j = lastEcho;
+      else if (ladder.intro > 0 && state.running) j = enemy.name;
+      else if (!state.running && ladder.between > 0) j = "Next: " + ((openBouts()[ladder.bout] || {}).name || "");
+      else if (!state.running && ladder.result === "cleared") j = ladder.unlocked ? "Cleared · " + ladder.unlocked : "Tribunal cleared";
+      else if (!state.running && ladder.result === "fallen") j = "Fallen at bout " + (ladder.bout + 1);
+      els.judgment.textContent = j;
+      const el = document.getElementById("enemyLabel");
+      if (el && el.textContent !== enemy.name) el.textContent = enemy.name;
     }
 
     function draw() {
@@ -1324,32 +1335,7 @@
       }
     }
 
-    function drawTribunalDirectorHud() {
-      const td = state.tribunalDirector;
-      if (!td) return;
-      ctx.save();
-      const cx = view.w / 2;
-      const cy = 24;
-      const tensionColor = td.tension > 70 ? "#ff2e6d" : (td.tension > 40 ? "#ffd75e" : "#3dffad");
-      ctx.font = "800 10px ui-sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillStyle = tensionColor;
-      ctx.shadowColor = tensionColor;
-      ctx.shadowBlur = 8;
-      ctx.fillText(`AI DIRECTOR [${td.state}] ${Math.round(td.tension)}% · ${td.decisionLatencyUs.toFixed(3)}µs`, cx, cy);
-
-      // Tension gauge
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = "rgba(255,255,255,0.16)";
-      ctx.fillRect(cx - 70, cy + 5, 140, 4);
-      ctx.fillStyle = tensionColor;
-      ctx.fillRect(cx - 70, cy + 5, 140 * (td.tension / 100), 4);
-
-      // Flash parry counter
-      ctx.fillStyle = td.flashParryStreak > 0 ? "#38e9ff" : "rgba(255,255,255,0.48)";
-      ctx.fillText(`FLASH PARRY: x${td.flashParryStreak} (FEINT ${Math.round(td.feintFrequency * 100)}%)`, cx, cy + 22);
-      ctx.restore();
-    }
+    // (the AI director's readout is no longer drawn; removed, rule 30)
 
     function drawArena() {
       if (shakeAmt > 0.3) { canvas.style.transform = "translate(" + ((Math.random()-0.5)*shakeAmt).toFixed(1) + "px," + ((Math.random()-0.5)*shakeAmt).toFixed(1) + "px)"; shakeAmt *= 0.85; }
@@ -1533,8 +1519,7 @@
       ctx.font = "800 10px ui-sans-serif";
       ctx.textAlign = above === "right" ? "right" : "left";
       if ("letterSpacing" in ctx) ctx.letterSpacing = "1.5px";
-      if (above) ctx.fillText(label, above === "right" ? x + w : x, y - 5);
-      else ctx.fillText(label, x, y + h + 13);
+      // (gauge names read in the panel beside the arena, rule 30)
       if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
       ctx.restore();
     }
@@ -1922,66 +1907,13 @@
       }
     }
 
-    function drawEchoes() {
-      for (const e of state.echoes) {
-        ctx.save();
-        ctx.globalAlpha = Math.max(0, e.life / 42);
-        ctx.fillStyle = e.color;
-        ctx.shadowBlur = 16;
-        ctx.shadowColor = e.color;
-        ctx.font = "900 24px ui-sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText(e.text, e.x, e.y);
-        ctx.restore();
-      }
-    }
+    function drawEchoes() { /* callouts read in the panel beside the arena (rule 30) */ }
 
     function drawRoundText() {
-      // KO white flash overlay (fades via state.koFlash)
+      // K.O. white flash only; every word lives in the panel beside the arena (rule 30).
       if ((state.koFlash || 0) > 0) {
         ctx.save(); ctx.globalAlpha = Math.min(0.7, state.koFlash * 0.7); ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, view.w, view.h); ctx.restore();
-      }
-      ctx.save();
-      ctx.fillStyle = "rgba(248,251,255,0.84)";
-      ctx.shadowBlur = 18;
-      ctx.shadowColor = "#b760ff";
-      ctx.font = `900 ${Math.max(18, view.w * 0.026)}px ui-sans-serif`;
-      ctx.textAlign = "center";
-      const nB = openBouts().length || 1;
-      let label;
-      if (state.running) label = `BOUT ${ladder.bout + 1}/${nB} · ${enemy.name.toUpperCase()} · ROUND ${state.round}`;
-      else if (ladder.between > 0) label = `NEXT: ${(openBouts()[ladder.bout] || {}).name || ""}`.toUpperCase();
-      else if (ladder.result === "cleared") label = ladder.unlocked ? `TRIBUNAL CLEARED · ${ladder.unlocked.toUpperCase()} UNLOCKED` : "TRIBUNAL CLEARED";
-      else if (ladder.result === "fallen") label = `FALLEN AT BOUT ${ladder.bout + 1} · PRESS START`;
-      else label = `ENTER THE TRIBUNAL · BEST ${ladder.save.bestBout}/${nB}`;
-      ctx.fillText(label, view.w / 2, view.h - 34);
-      ctx.restore();
-      // Opponent call at the start of each bout
-      if (ladder.intro > 0 && state.running) {
-        ctx.save();
-        ctx.textAlign = "center";
-        const a = Math.min(1, ladder.intro / 40);
-        ctx.globalAlpha = a;
-        ctx.font = `900 ${Math.max(30, view.w * 0.05)}px ui-sans-serif`;
-        ctx.fillStyle = "#fff4d8"; ctx.shadowBlur = 30; ctx.shadowColor = enemy.blade;
-        ctx.fillText(enemy.name.toUpperCase(), view.w / 2, view.h * 0.2);
-        ctx.font = `700 ${Math.max(15, view.w * 0.017)}px ui-sans-serif`;
-        ctx.shadowBlur = 12;
-        const d = ROSTER.find(r => r.key === enemy.atlas);
-        ctx.fillText(`BOUT ${ladder.bout + 1} · ${d ? d.title.toUpperCase() : ""}`, view.w / 2, view.h * 0.2 + Math.max(30, view.w * 0.034));
-        ctx.restore();
-      }
-      // Big pulsing K.O. during the slow-mo dwell
-      if ((state.koBanner || 0) > 0) {
-        ctx.save();
-        ctx.textAlign = "center";
-        const pulse = 1 + Math.sin(performance.now() * 0.014) * 0.07;
-        ctx.font = `900 ${Math.max(64, view.w * 0.14) * pulse}px ui-sans-serif`;
-        ctx.fillStyle = "#fff4d8";
-        ctx.shadowBlur = 42; ctx.shadowColor = "#ff2e6d";
-        ctx.fillText("K.O.", view.w / 2, view.h * 0.46);
-        ctx.restore();
       }
     }
 

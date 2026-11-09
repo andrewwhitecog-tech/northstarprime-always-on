@@ -2,13 +2,17 @@ name: Vorath Souls combat and browser playtest
 on:
   pull_request:
     paths: ["arcade/custom/vorath-souls/**", ".github/workflows/vorath-souls.yml", ".github/scripts/vorath-render-benchmark.cjs", ".github/scripts/vorath-public-transform-ac229.json"]
+  workflow_run:
+    workflows: ["Deploy curated NorthStar Pages"]
+    types: [completed]
 permissions:
   contents: read
 concurrency:
-  group: vorath-souls-${{ github.ref }}
+  group: vorath-souls-${{ github.event_name }}-${{ github.event.workflow_run.head_sha || github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 jobs:
   encounter:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
@@ -78,4 +82,71 @@ jobs:
         with:
           name: vorath-souls-playtest
           path: ${{ runner.temp }}/vorath-souls-playtest/
+          retention-days: 14
+
+  public-release:
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 2
+          sparse-checkout: |
+            arcade/custom/vorath-souls
+            .github/scripts
+            tools
+      - name: Bound the public smoke to an actual changed Souls release
+        id: scope
+        run: |
+          git rev-parse --verify HEAD^ > /dev/null
+          if git diff --quiet HEAD^ HEAD -- arcade/custom/vorath-souls; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        if: steps.scope.outputs.changed == 'true'
+        with:
+          node-version: '22'
+      - name: Install the pinned official isolated uv runner
+        if: steps.scope.outputs.changed == 'true'
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3; official tag verified
+        with:
+          version: '0.13.7'
+          enable-cache: 'false'
+          download-from-astral-mirror: 'false'
+      - name: Install the pinned isolated release browser
+        if: steps.scope.outputs.changed == 'true'
+        run: |
+          npm install --prefix "$RUNNER_TEMP/vorath-browser" --no-save --package-lock=false --ignore-scripts playwright@1.55.1
+          "$RUNNER_TEMP/vorath-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Remove only pinned focus emulation for public native input
+        if: steps.scope.outputs.changed == 'true'
+        env:
+          NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/vorath-browser/node_modules/playwright
+          NSP_PLAYTEST_OUT: ${{ runner.temp }}/vorath-souls-public
+        run: node .github/scripts/native-browser-focus.cjs
+      - name: Verify real exported bytes and desktop/phone Start move pause
+        if: steps.scope.outputs.changed == 'true'
+        env:
+          NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/vorath-browser/node_modules/playwright
+          NSP_PLAYTEST_OUT: ${{ runner.temp }}/vorath-souls-public
+          NSP_VIRTUAL_DISPLAY: '1'
+          NSP_TARGET_RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+          NSP_SYSTEM_PYTHON: /usr/bin/python3
+          PYTHONUTF8: '1'
+          PYTHONIOENCODING: utf-8
+          UV_PYTHON_DOWNLOADS: never
+        run: xvfb-run --auto-servernum node arcade/custom/vorath-souls/tests/public_smoke.cjs
+      - name: Retain actual public screenshots and result
+        if: always() && steps.scope.outputs.changed == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: vorath-souls-public
+          path: |
+            ${{ runner.temp }}/vorath-souls-public/*.json
+            ${{ runner.temp }}/vorath-souls-public/*.png
           retention-days: 14

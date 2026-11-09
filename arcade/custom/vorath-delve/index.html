@@ -78,7 +78,15 @@
   @keyframes pulse{ 0%,100%{opacity:.4} 50%{opacity:1} }
   /* IDG push 2026-11-09: no control text over the play field (rule 30); the controls are on the title card.
      This page fills the screen, so the More-games strip has no room below the game: the return link stays. */
-  #nsp-related{display:none !important}
+  #touchUI{display:none}
+  @media (pointer: coarse){
+    #touchUI{display:flex;position:fixed;left:0;right:0;bottom:max(10px,env(safe-area-inset-bottom));justify-content:space-between;align-items:flex-end;padding:0 10px;z-index:40;pointer-events:none}
+    #touchUI .tpad,#touchUI .tact{display:flex;gap:8px;pointer-events:auto;flex-wrap:wrap;max-width:60vw;justify-content:flex-end}
+    #touchUI button{width:54px;height:54px;border-radius:50%;border:1px solid rgba(201,168,255,.55);background:radial-gradient(circle at 40% 35%,rgba(120,70,220,.55),rgba(10,6,24,.55));color:#f3e8ff;font-size:24px;line-height:1;touch-action:none;-webkit-user-select:none;user-select:none}
+    #touchUI button[aria-pressed="true"]{border-color:#7dffb0;color:#7dffb0}
+  }
+  #overlay #nsp-related{display:block;position:static;background:none;padding:8px 0 0;font:12px sans-serif;color:#b9a8df}
+  #overlay #nsp-related a{color:#c9a8ff !important}
   #hint{display:none !important}
   #hint-unused{
     position:absolute; bottom:70px; left:50%; transform:translateX(-50%);
@@ -96,6 +104,10 @@
 <body>
 <nav class="nsp-return" aria-label="Return navigation"><a href="/arcade/">&larr; Arcade</a></nav>
 <div id="wrap"><canvas id="c"></canvas></div>
+<div id="touchUI" aria-label="Touch controls">
+  <div class="tpad"><button data-k="KeyA" aria-label="Move left">&#9664;</button><button data-k="KeyW" aria-label="Jump">&#9650;</button><button data-k="KeyD" aria-label="Move right">&#9654;</button></div>
+  <div class="tact"><button id="tBuild" aria-label="Dig or build" aria-pressed="false">&#9935;</button><button data-k="KeyF" aria-label="Strike">&#9876;</button><button data-k="KeyQ" aria-label="Prism pulse">&#10022;</button><button data-k="KeyE" aria-label="Craft">&#9879;</button><button data-k="KeyG" aria-label="Recruit">&#9737;</button></div>
+</div>
 
 <div id="hud">
   <div id="topbar">
@@ -820,6 +832,22 @@ canvas.addEventListener('mousemove',e=>{ mouse.cx=e.clientX; mouse.cy=e.clientY;
 canvas.addEventListener('mousedown',e=>{ mouse.down=true; mouse.btn=e.button; mouse.cx=e.clientX; mouse.cy=e.clientY; e.preventDefault(); });
 addEventListener('mouseup',()=>{ mouse.down=false; });
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
+// ---- touch play (2026-11-09): the pad sends the keyboard's codes; a touch on the world digs or builds ----
+const touchBuild={on:false};
+canvas.addEventListener('pointerdown',e=>{ if(e.pointerType!=='touch') return; e.preventDefault(); mouse.down=true; mouse.btn=touchBuild.on?2:0; mouse.cx=e.clientX; mouse.cy=e.clientY; },{passive:false});
+canvas.addEventListener('pointermove',e=>{ if(e.pointerType!=='touch') return; mouse.cx=e.clientX; mouse.cy=e.clientY; });
+addEventListener('pointerup',e=>{ if(e.pointerType==='touch') mouse.down=false; });
+addEventListener('pointercancel',e=>{ if(e.pointerType==='touch') mouse.down=false; });
+document.querySelectorAll('#touchUI [data-k]').forEach(b=>{
+  const k=b.dataset.k;
+  const down=e=>{ e.preventDefault(); dispatchEvent(new KeyboardEvent('keydown',{code:k})); };
+  const up=e=>{ e.preventDefault(); dispatchEvent(new KeyboardEvent('keyup',{code:k})); };
+  b.addEventListener('pointerdown',down); b.addEventListener('pointerup',up); b.addEventListener('pointercancel',up); b.addEventListener('pointerleave',up);
+});
+(()=>{ const tb=document.getElementById('tBuild'); if(!tb) return;
+  tb.addEventListener('pointerdown',e=>{ e.preventDefault(); touchBuild.on=!touchBuild.on; tb.innerHTML=touchBuild.on?'&#9635;':'&#9935;'; tb.setAttribute('aria-pressed',String(touchBuild.on)); });
+})();
+addEventListener('DOMContentLoaded',()=>{ const nav=document.getElementById('nsp-related'), card=document.querySelector('#overlay .card')||document.getElementById('overlay'); if(nav&&card) card.appendChild(nav); });
 
 function withinReach(tx,ty){
   const px=(player.x+player.w/2)/TS, py=(player.y+player.h/2)/TS;

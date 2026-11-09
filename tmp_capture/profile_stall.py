@@ -28,6 +28,29 @@ PROBE = r"""
   requestAnimationFrame(tick);
 })();
 """
+ABLATE = r"""
+(() => {
+  const off = new Set((window.__ablate || "").split(",").filter(Boolean));
+  const noop = function () {};
+  function patch(v) {
+    if (!v || v.__patched) return v;
+    v.__patched = true;
+    if (off.has("particles")) v.Particles.prototype.draw = noop;
+    if (off.has("rings")) v.Rings.prototype.draw = noop;
+    if (off.has("motes")) v.Motes.prototype.draw = noop;
+    if (off.has("floaters")) v.Floaters.prototype.draw = noop;
+    if (off.has("light")) v.light = noop;
+    if (off.has("rays")) v.rays = noop;
+    if (off.has("vignette")) v.vignette = noop;
+    if (off.has("bloom")) v.bloom = noop;
+    if (off.has("eye")) v.eye = noop;
+    if (off.has("cover")) v.cover = noop;
+    return v;
+  }
+  let held;
+  Object.defineProperty(window, "NSPFX", {configurable: true, get() { return held; }, set(v) { held = patch(v); }});
+})();
+"""
 KEYS = [("ArrowRight", 400), ("Space", 120), ("KeyJ", 120), ("ArrowLeft", 400), ("KeyK", 120), ("ArrowUp", 250),
         ("KeyZ", 120), ("KeyX", 120), ("ShiftLeft", 150), ("Enter", 100)]
 
@@ -63,14 +86,17 @@ def attribute(profile, t0_us, gaps):
     return out
 
 
-async def one(browser, base, slug, out: Path, secs, gap_ms):
+async def one(browser, base, slug, out: Path, secs, gap_ms, ablate=""):
     ctx = await browser.new_context(viewport={"width": 1280, "height": 720})
     await ctx.add_init_script(PROBE)
+    if ablate:
+        await ctx.add_init_script("window.__ablate = " + json.dumps(ablate) + ";")
+        await ctx.add_init_script(ABLATE)
     page = await ctx.new_page()
     errs = []
     page.on("pageerror", lambda e: errs.append(str(e)[:200]))
     cdp = await ctx.new_cdp_session(page)
-    rec = {"slug": slug}
+    rec = {"slug": slug, "ablate": ablate}
     try:
         await page.goto(f"{base}/arcade/custom/{slug}/", wait_until="load", timeout=45000)
         await page.wait_for_timeout(2000)
@@ -114,8 +140,10 @@ async def one(browser, base, slug, out: Path, secs, gap_ms):
         rec["error"] = repr(e)[:300]
     finally:
         await ctx.close()
-    (out / f"{slug}_stall.json").write_text(json.dumps(rec, indent=1), encoding="utf-8")
-    print(json.dumps({k: rec.get(k) for k in ("slug", "frames", "longest_ms", "gaps_over", "error")}), flush=True)
+    (out / f"{slug}_stall{('_off_' + ablate.replace(',', '+')) if ablate else ''}.json").write_text(json.dumps(rec, indent=1), encoding="utf-8")
+    print(json.dumps({k: rec.get(k) for k in ("slug", "ablate", "frames", "longest_ms", "gaps_over", "error")}), flush=True)
+    if ablate:
+        return
     for g in rec.get("gaps", [])[:6]:
         print("  gap", g["gap_ms"], "ms, samples", g["samples"], "top:", g["top"][:5], flush=True)
 
@@ -127,13 +155,18 @@ async def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--secs", type=float, default=12)
     ap.add_argument("--gap", type=float, default=200)
+    ap.add_argument("--ablate", default="", help="semicolon-separated sets, each a comma list, e.g. 'particles;rays;light,rays'")
     a = ap.parse_args()
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     async with async_playwright() as pw:
         b = await pw.chromium.launch(headless=True, args=ARGS)
         for s in a.slugs.split(","):
-            await one(b, a.base, s, out, a.secs, a.gap)
+            if a.ablate:
+                for abl in a.ablate.split(";"):
+                    await one(b, a.base, s, out, a.secs, a.gap, abl.strip())
+            else:
+                await one(b, a.base, s, out, a.secs, a.gap)
         await b.close()
 
 

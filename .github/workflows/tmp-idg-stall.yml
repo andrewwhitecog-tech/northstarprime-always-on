@@ -13,7 +13,7 @@ permissions:
 jobs:
   stall:
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
         with: { path: tool, show-progress: false, sparse-checkout: tmp_capture }
@@ -50,14 +50,11 @@ jobs:
           nohup python tool/tmp_capture/serve.py 8766 pr >/dev/null 2>&1 &
           nohup python tool/tmp_capture/serve.py 8765 main >/dev/null 2>&1 &
           sleep 3
-      - name: Profile PR head, twice
+      - name: Ablate FX pieces on the PR head (each set twice)
         continue-on-error: true
         run: |
-          python tool/tmp_capture/profile_stall.py --base http://127.0.0.1:8766 --slugs vorath-souls,prism-runner-2049,chrono-blade-2049 --out out/pr_run1
-          python tool/tmp_capture/profile_stall.py --base http://127.0.0.1:8766 --slugs vorath-souls,prism-runner-2049,chrono-blade-2049 --out out/pr_run2
-      - name: Profile main
-        continue-on-error: true
-        run: python tool/tmp_capture/profile_stall.py --base http://127.0.0.1:8765 --slugs vorath-souls,prism-runner-2049,chrono-blade-2049 --out out/main
+          SETS="none;particles;light;rays;vignette;motes,floaters,rings;eye,cover;particles,light,rays,vignette,motes,floaters,rings,eye,cover"
+          for r in 1 2; do python tool/tmp_capture/profile_stall.py --base http://127.0.0.1:8766 --slugs chrono-blade-2049,prism-runner-2049,vorath-souls --out out/ablate_$r --ablate "$SETS"; done
       - uses: actions/upload-artifact@v4
         if: always()
         with:

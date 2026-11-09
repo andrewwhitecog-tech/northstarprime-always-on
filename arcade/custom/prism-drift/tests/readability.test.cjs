@@ -1,0 +1,14 @@
+'use strict';
+// Controlled UI fixtures exercise the actual source functions; these are not native race evidence.
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const vm=require('node:vm');
+const fs=require('node:fs');
+const path=require('node:path');
+const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
+function fn(name,next){const start=html.indexOf('    function '+name+'('),end=html.indexOf(next,start);assert(start>=0&&end>start);return html.slice(start,end);}
+function ui(){const els={overlayTitle:{},overlayText:{},overlayBtn:{}};const kicker={};const titleCover={hidden:false};const state={mode:'pause',pausedFrom:'race'};const scope={els,state,titleCover,document:{getElementById:()=>kicker},cfg:()=>({label:'Neon Spine',target:44}),sfx(){},AUDIO:{music(){}},startAudio(){},updateUi(){},clamp:(v,a,b)=>Math.max(a,Math.min(b,v))};vm.createContext(scope);vm.runInContext(fn('showOverlay','    function showRaceInfo')+fn('showRaceInfo','    function pause')+fn('pause','    function controlInput')+fn('ordinal','    // Rivals:'),scope);return {...scope,kicker};}
+test('every actual inline script compiles',()=>{let count=0;for(const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)){if(/type=["']application\/ld\+json/.test(match[1])){JSON.parse(match[2]);continue;}new vm.Script(match[2]);count++;}assert(count>3);});
+test('paused and resumed UI uses visible page action and leaves race data intact',()=>{const u=ui();u.state.mode='race';u.state.time=17.2;u.state.score=982;u.pause();assert.equal(u.state.mode,'pause');assert.equal(u.els.overlayTitle.textContent,'Paused');assert.equal(u.els.overlayBtn.textContent,'Resume');assert.equal(u.els.overlayBtn.hidden,false);assert.equal(u.titleCover.hidden,true);u.pause();assert.equal(u.state.mode,'race');assert.equal(u.els.overlayBtn.hidden,true);assert.equal(u.state.time,17.2);assert.equal(u.state.score,982);});
+test('real result formatter retains actual place, finish time and score',()=>{const u=ui();Object.assign(u.state,{mode:'finished',finishPos:3,finishTime:58.46,cleanGates:16,gateCount:35,crashes:2,overtakes:1,score:12031});u.showResults();assert.equal(u.els.overlayTitle.textContent,'3rd Place');assert.match(u.els.overlayText.textContent,/58\.5s against the 44s par/);assert.match(u.els.overlayText.textContent,/score 12031\./);assert.equal(u.els.overlayBtn.textContent,'Restart');assert.equal(u.titleCover.hidden,true);});
+test('reset idle keeps the existing painted cover separate from page text',()=>{const u=ui();u.state.mode='idle';u.showOverlay('Prism Drift','Three laps','Start Trial');assert.equal(u.titleCover.hidden,false);assert.equal(u.els.overlayBtn.hidden,false);assert(html.indexOf('id="overlay"')>html.indexOf('id="resetBtn"'));assert(!/id="titleCover"[^>]*>[^<]*[A-Za-z]/.test(html));});

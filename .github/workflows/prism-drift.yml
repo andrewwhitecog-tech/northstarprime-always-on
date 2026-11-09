@@ -1,0 +1,39 @@
+name: Prism Drift readable pause and results
+on:
+  pull_request:
+    paths: ['arcade/custom/prism-drift/**', '.github/workflows/prism-drift.yml']
+permissions:
+  contents: read
+concurrency:
+  group: prism-drift-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  readable-race:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 23
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          sparse-checkout: arcade/custom/prism-drift
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Test actual inline syntax and controlled UI formatting
+        run: node --test arcade/custom/prism-drift/tests/readability.test.cjs
+      - name: Install pinned isolated test browser
+        run: |
+          npm install --prefix "$RUNNER_TEMP/prism-browser" --no-save --package-lock=false --ignore-scripts playwright@1.55.1
+          "$RUNNER_TEMP/prism-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Drive genuine desktop and390px touch races through pause finish and retry
+        env:
+          NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/prism-browser/node_modules/playwright
+          NSP_PLAYTEST_OUT: ${{ runner.temp }}/prism-readability
+        run: node arcade/custom/prism-drift/tests/browser_readability.cjs
+      - name: Retain actual result and frames
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: prism-readability
+          path: ${{ runner.temp }}/prism-readability/
+          retention-days: 14

@@ -1042,7 +1042,7 @@
         state.echoes.push({
           text: `FLASH PARRY x${state.tribunalDirector.flashParryStreak}!`,
           x: defender.x,
-          y: calloutBand().head - 6,
+          y: echoSpawnY(defender.x),
           vy: -2.2,
           life: 55,
           max: 55,
@@ -1082,7 +1082,7 @@
       state.echoes.push({
         text: blocked ? "GUARD" : `-${damage}`,
         x: defender.x,
-        y: calloutBand().head - 6,
+        y: echoSpawnY(defender.x),
         vy: -1.8,
         life: 42,
         max: 42,
@@ -1959,6 +1959,13 @@
       return { top, head, mid: (top + head) / 2, room: Math.max(28, head - top) };
     }
     const fitH = (want, room, k) => Math.min(want, room / (k || 1));
+    // A new floating callout starts above any still-fresh one near it, so two never print on top of each other.
+    function echoSpawnY(x) {
+      const B = calloutBand(), step = Math.min(view.h * 0.075, B.room * 0.8) * 1.15;
+      const near = state.echoes.filter(o => Math.abs(o.x - x) < 220 && o.life > 8);
+      const top = near.length ? Math.min(...near.map(o => Math.min(o.y, B.head - 4))) : B.head - 6 + step;
+      return Math.max(B.top + step, Math.min(B.head - 6, top - step));
+    }
 
     function drawEchoes() {
       for (const e of state.echoes) {

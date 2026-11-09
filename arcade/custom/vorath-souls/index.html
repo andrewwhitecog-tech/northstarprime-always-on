@@ -73,6 +73,7 @@
   <div class="footer-status"><span id="status" role="status">The Bone Gate awaits</span><span id="debug">4 enemies</span></div>
   <button id="newJourneyButton" type="button">New journey</button><button id="pauseButton" type="button" disabled>Pause</button><button id="retryButton" type="button">Retry</button><a class="arcade-return" href="/arcade/">Arcade</a>
 </footer>
+<script src="./atlas.js"></script>
 <script src="./combat.js"></script>
 <script src="./input.js"></script>
 <script src="./journey.js"></script>
@@ -89,6 +90,15 @@
   const art = { exile: new Image(), maw: new Image(), thralls: {} };
   art.exile.src = "./assets/vorath_exile_atlas.png";
   art.maw.src = "./assets/maw_guard_atlas_candidate.png";
+  // These six candidate strips use a virtual ground/root projection, not a jump or planted-foot claim.
+  const thrallContracts = {};
+  for(const role of ['pursuer','flanker','charger','hexer','bulwark','reaver']) {
+    const source='./assets/thrall_'+role+'_strip_v03.png';
+    thrallContracts[role]=window.VorathAtlas?.declare?.({version:1,source,imageWidth:2048,imageHeight:512,
+      grid:{columns:4,rows:1},frames:[0,1,2,3].map(column=>({column,row:0,pivotX:256,pivotY:420}))})||null;
+    const image=new Image();image.src=source;art.thralls[role]=image;
+  }
+
   const overlay = document.getElementById("overlay");
   const hpFill = document.getElementById("hp");
   const staminaFill = document.getElementById("stamina");
@@ -896,14 +906,21 @@
     ctx.restore();
   }
 
-  function drawAtlasActor(image, x, y, pose, width, height, baseline, mirror, alpha = 1) {
-    if (!image.complete || image.naturalWidth === 0 || image.naturalWidth % 4 !== 0) return false;
-    ctx.save(); ctx.translate(x, y); ctx.globalAlpha = alpha;
-    ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.beginPath(); ctx.ellipse(0, 3, width * .2, 7, 0, 0, Math.PI * 2); ctx.fill();
-    if (mirror) ctx.scale(-1, 1);
-    const cell = image.naturalWidth / 4;
-    ctx.drawImage(image, cell * pose, 0, cell, image.naturalHeight, -width / 2, -height * baseline, width, height);
-    ctx.restore(); return true;
+  function drawAtlasActor(image, x, y, pose, width, height, baseline, mirror, alpha = 1, contract = null) {
+    const atlas=window.VorathAtlas;
+    let frame;
+    if(contract!==null)frame=atlas?.frame?.(image,contract,pose,width,height);
+    else if(typeof atlas?.keeperFrame==='function')frame=atlas.keeperFrame(image,pose,width,height,baseline);
+    else if(image?.complete&&image.naturalWidth===2172&&image.naturalHeight===724&&Number.isInteger(pose)&&pose>=0&&pose<4&&Number.isFinite(width)&&width>0&&Number.isFinite(height)&&height>0&&Number.isFinite(baseline)&&baseline>=0&&baseline<=1) {
+      // Preserve the exact accepted keeper rectangles even when the optional adapter fails to load.
+      frame={sx:543*pose,sy:0,sw:543,sh:724,dx:-width/2,dy:-height*baseline,dw:width,dh:height};
+    }
+    if(!frame)return false;
+    ctx.save();ctx.translate(x,y);ctx.globalAlpha=alpha;
+    ctx.fillStyle="rgba(0,0,0,0.5)";ctx.beginPath();ctx.ellipse(0,3,width*.2,7,0,0,Math.PI*2);ctx.fill();
+    if(mirror)ctx.scale(-1,1);
+    ctx.drawImage(image,frame.sx,frame.sy,frame.sw,frame.sh,frame.dx,frame.dy,frame.dw,frame.dh);
+    ctx.restore();return true;
   }
 
   function drawPlayer(p) {
@@ -1041,20 +1058,7 @@
     if(e.role==="flanker"||e.role==="reaver"){for(let i=0;i<2;i++){ctx.beginPath();ctx.arc(0,0,27+i*8,angle+1,angle+2.5);ctx.stroke();}}
     ctx.restore();
   }
-  function drawEnemy(e) {
-    ctx.save();
-    ctx.translate(e.x, e.y);
-    const stunned = isFinishable(e);
-    drawRoleTell(e);
-    if(art.thralls?.[e.role]&&drawAtlasActor(art.thralls[e.role],0,0,e.dead||stunned?3:e.state==="windup"?1:["strike","charge"].includes(e.state)?2:0,e.elite?110:85,e.elite?145:112,.82,e.faceX<0,e.dead?e.hitFlash/.4:1)){drawEnemyBars(e);ctx.restore();return;}
-    if(e.elite)ctx.scale(1.18,1.18);
-    const pose = e.dead || stunned ? 3 : ["windup","awakening"].includes(e.state) ? 1 : ["strike","charge"].includes(e.state) ? 2 : 0;
-    if (e.type === "guard" && drawAtlasActor(art.maw, 0, 0, pose, 174, 232, 574 / 724, e.faceX < 0, e.dead ? e.hitFlash / 0.4 : 1)) {
-      if (stunned) { ctx.strokeStyle = "#b5f5ff"; ctx.lineWidth = 4; ctx.setLineDash([5,6]); ctx.beginPath();ctx.arc(0,0,e.r+18,-Math.PI/2,-Math.PI/2+Math.PI*2*e.staggerT/e.staggerMax);ctx.stroke();ctx.setLineDash([]); }
-      if (e.state === "windup" && !e.dead) { const reach=e.windupKind === "slam" ? 92 : 82;ctx.strokeStyle="#edc46b";ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,reach,0,Math.PI*2);ctx.stroke(); }
-      drawEnemyBars(e); ctx.restore(); return;
-    }
-    const hue = stunned ? 188 : threats.ROLES[e.role].hue;
+  function drawEnemyFeedback(e,stunned) {
     if (stunned) {
       ctx.save();
       ctx.strokeStyle = "#f6efd6";
@@ -1067,6 +1071,41 @@
       ctx.beginPath(); ctx.arc(0, 0, e.r + 20, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * e.staggerT / e.staggerMax); ctx.stroke();
       ctx.restore();
     }
+    if (e.state === "windup") {
+      ctx.strokeStyle = "rgba(245,158,11,0.55)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, e.type === "guard" ? 86 : 54, 0, Math.PI * 2);
+      ctx.stroke();
+      for (let i = 0; i < 8; i++) {
+        const a = i * Math.PI * 2 / 8 + game.time * 2;
+        drawFacetGem(Math.cos(a) * (e.type === "guard" ? 80 : 48), Math.sin(a) * (e.type === "guard" ? 80 : 48), 4, 32 + i * 16, a, 0.8);
+      }
+    }
+  }
+
+  function drawEnemy(e) {
+    ctx.save();
+    ctx.translate(e.x, e.y);
+    const stunned = isFinishable(e);
+    const spriteHeight=e.elite?145:112;
+    if(thrallContracts[e.role]?.valid&&art.thralls[e.role]) {
+      ctx.save();
+      if(!e.dead&&e.hitFlash>0)ctx.filter='brightness('+(1+1.5*clamp(e.hitFlash/.12,0,1))+')';
+      const painted=drawAtlasActor(art.thralls[e.role],0,0,e.dead||stunned?3:e.state==='windup'?1:['strike','charge'].includes(e.state)?2:0,e.elite?110:85,spriteHeight,.82,e.faceX<0,e.dead?e.hitFlash/.4:1,thrallContracts[e.role]);
+      ctx.restore();
+      if(painted){drawRoleTell(e);drawEnemyFeedback(e,stunned);drawEnemyBars(e,spriteHeight);ctx.restore();return;}
+    }
+    drawRoleTell(e);
+    if(e.elite)ctx.scale(1.18,1.18);
+    const pose = e.dead || stunned ? 3 : ["windup","awakening"].includes(e.state) ? 1 : ["strike","charge"].includes(e.state) ? 2 : 0;
+    if (e.type === "guard" && drawAtlasActor(art.maw, 0, 0, pose, 174, 232, 574 / 724, e.faceX < 0, e.dead ? e.hitFlash / 0.4 : 1)) {
+      if (stunned) { ctx.strokeStyle = "#b5f5ff"; ctx.lineWidth = 4; ctx.setLineDash([5,6]); ctx.beginPath();ctx.arc(0,0,e.r+18,-Math.PI/2,-Math.PI/2+Math.PI*2*e.staggerT/e.staggerMax);ctx.stroke();ctx.setLineDash([]); }
+      if (e.state === "windup" && !e.dead) { const reach=e.windupKind === "slam" ? 92 : 82;ctx.strokeStyle="#edc46b";ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,reach,0,Math.PI*2);ctx.stroke(); }
+      drawEnemyBars(e); ctx.restore(); return;
+    }
+    const hue = stunned ? 188 : threats.ROLES[e.role].hue;
+
     ctx.shadowColor = stunned ? "#22d3ee" : e.state === "windup" ? "#f59e0b" : "#ec4899";
     ctx.shadowBlur = e.type === "guard" ? 24 : 15;
     const body = ctx.createLinearGradient(-42, -42, 42, 42);
@@ -1191,25 +1230,15 @@
       drawFacetGem(-4, 0, 6, hue, game.time * 1.4, 1);
       drawFacetGem(10, -6, 3.5, 52, -game.time * 1.5, 0.85);
     }
-    if (e.state === "windup") {
-      ctx.strokeStyle = "rgba(245,158,11,0.55)";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(0, 0, e.type === "guard" ? 86 : 54, 0, Math.PI * 2);
-      ctx.stroke();
-      for (let i = 0; i < 8; i++) {
-        const a = i * Math.PI * 2 / 8 + game.time * 2;
-        drawFacetGem(Math.cos(a) * (e.type === "guard" ? 80 : 48), Math.sin(a) * (e.type === "guard" ? 80 : 48), 4, 32 + i * 16, a, 0.8);
-      }
-    }
+    drawEnemyFeedback(e,stunned);
     ctx.shadowBlur = 0;
     drawEnemyBars(e);
     ctx.restore();
   }
 
-  function drawEnemyBars(e) {
+  function drawEnemyBars(e, spriteHeight=0) {
     const w = e.type === "guard" ? 82 : 46;
-    const y = e.type === "guard" ? (art.maw.naturalWidth > 0 ? 23 : -58) : -34;
+    const y = spriteHeight ? -spriteHeight*(420/512)-18 : e.type === "guard" ? (art.maw.naturalWidth > 0 ? 23 : -58) : -34;
     ctx.fillStyle = "rgba(0,0,0,0.6)";
     ctx.fillRect(-w / 2, y, w, 5);
     ctx.fillStyle = "#ef4444";

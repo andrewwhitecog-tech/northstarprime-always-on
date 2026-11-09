@@ -1,0 +1,74 @@
+name: Chrono genuine gameplay showcase
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: chrono-gameplay-showcase
+  cancel-in-progress: false
+jobs:
+  capture:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts/chrono-gameplay-showcase.cjs
+            .github/scripts/chrono-gameplay-source-pin.json
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.14.0'
+      - name: Require the independently accepted enemy release pin
+        id: pin
+        run: |
+          node - <<'NODE'
+          const fs=require('node:fs'), assert=require('node:assert/strict');
+          const pin=JSON.parse(fs.readFileSync('.github/scripts/chrono-gameplay-source-pin.json'));
+          assert.equal(pin.captureAuthorizedAfterEnemyAcceptance,true,'Enemy release handoff is pending');
+          assert.match(pin.acceptedSourceCommit||'',/^[0-9a-f]{40}$/);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,'game_commit='+pin.acceptedSourceCommit+'\n');
+          NODE
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ steps.pin.outputs.game_commit }}
+          path: capture-source
+          persist-credentials: false
+          sparse-checkout: |
+            arcade/custom/northstar-chrono-defender
+      - name: Install pinned isolated browser and system capture tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg pulseaudio xvfb
+          npm install --prefix "$RUNNER_TEMP/chrono-browser" --no-save --package-lock=false --ignore-scripts playwright@1.55.1
+          "$RUNNER_TEMP/chrono-browser/node_modules/.bin/playwright" install --with-deps chromium
+          mkdir -p "$RUNNER_TEMP/chrono-capture"
+          {
+            node --version
+            "$RUNNER_TEMP/chrono-browser/node_modules/.bin/playwright" --version
+            ffmpeg -version
+            dpkg-query -W ffmpeg pulseaudio xvfb
+          } > "$RUNNER_TEMP/chrono-capture/DEPENDENCIES_ACTUAL.txt"
+      - name: Record one actual native-input sortie and its native sound
+        env:
+          NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/chrono-browser/node_modules/playwright
+          CHRONO_GAME_ROOT: ${{ github.workspace }}/capture-source
+          CHRONO_CAPTURE_OUT: ${{ runner.temp }}/chrono-capture
+        run: |
+          set -euo pipefail
+          pulseaudio --start --exit-idle-time=-1 --log-target=file:"$CHRONO_CAPTURE_OUT/pulse.log"
+          pactl load-module module-null-sink sink_name=nsp_capture > "$CHRONO_CAPTURE_OUT/pulse-module.txt"
+          pactl set-default-sink nsp_capture
+          pactl list short sinks > "$CHRONO_CAPTURE_OUT/pulse-sinks.txt"
+          trap 'pulseaudio --kill || true' EXIT
+          xvfb-run --auto-servernum --server-args="-screen 0 1600x1000x24 -nolisten tcp" \
+            timeout --signal=TERM --kill-after=10s 150s node .github/scripts/chrono-gameplay-showcase.cjs
+      - name: Retain actual media, frames, source pins and failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: chrono-gameplay-showcase-${{ github.run_id }}
+          path: ${{ runner.temp }}/chrono-capture/
+          if-no-files-found: warn
+          retention-days: 14

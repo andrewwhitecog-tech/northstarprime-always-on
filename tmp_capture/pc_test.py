@@ -59,6 +59,9 @@ async def main():
         await page.screenshot(path=str(out / "02_dashboard.png"))
         mh = await page.evaluate("() => { const r = document.querySelector('.map-wrap').getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height), Math.round(r.top)]; }")
         check("the district map is on screen (measured, not just loaded)", mh[1] >= 150 and mh[2] < 720, mh)
+        vis = await page.evaluate("""() => { const b = document.querySelector('.case-body').getBoundingClientRect(), t = document.getElementById('caseTitle').getBoundingClientRect(),
+          d = document.getElementById('dispatchBtn').getBoundingClientRect(); return {titleTop: Math.round(t.top), titleBottom: Math.round(t.bottom), bodyBottom: Math.round(b.bottom), dispatchBottom: Math.round(d.bottom), vh: innerHeight}; }""")
+        check("desktop: the call title and Dispatch are on screen without scrolling", vis["titleBottom"] <= vis["bodyBottom"] and vis["dispatchBottom"] <= vis["vh"], vis)
         por = await page.evaluate(IMG_OK, "img.portrait, img.adviser, .map-wrap img.map")
         check("map, officer portraits (Friendly, Tank, Badge) and advisers (Mags, Derek) load", len(por) == 6 and all(ok for _, ok in por), por)
         p0 = await page.evaluate("() => document.querySelectorAll('#pins .pin').length")
@@ -67,7 +70,7 @@ async def main():
         await page.screenshot(path=str(out / "03_shift_end.png"))
         end = await page.evaluate("""() => { const c = document.getElementById('mapCallout'), e = document.getElementById('shiftEnd');
           return {callout: c.getAttribute('src'), on: c.classList.contains('on'), loaded: c.complete && c.naturalWidth > 0,
-                  title: (e.querySelector('h2') || {}).textContent, button: !!e.querySelector('#modalBtn'), modalShown: getComputedStyle(document.getElementById('modal')).display,
+                  title: (e.querySelector('h2') || {}).textContent, button: (() => { const b = document.getElementById('modalBtn').getBoundingClientRect(); return b.width > 0 && b.bottom <= innerHeight; })(), modalShown: getComputedStyle(document.getElementById('modal')).display,
                   calloutBox: (() => { const a = c.getBoundingClientRect(), m = document.querySelector('.map-wrap').getBoundingClientRect();
                     return a.width > 100 && a.left >= m.left - 1 && a.right <= m.right + 1 && a.top >= m.top - 1 && a.bottom <= m.bottom + 1; })(),
                   callTitleHidden: getComputedStyle(document.getElementById('caseTitle')).display === 'none'}; }""")
@@ -75,6 +78,10 @@ async def main():
         check("shift end: SHIFT CLEARED or SHIFT LOST lettering over the map, the sentence and Continue in the page, no result box",
               end["on"] and end["loaded"] and ("shift_cleared" in (end["callout"] or "") or "shift_lost" in (end["callout"] or "")) and end["button"] and end["modalShown"] == "none"
               and end["calloutBox"] and end["callTitleHidden"], end)
+        await page.click("#modalBtn"); await page.wait_for_timeout(400)
+        nxt = await page.evaluate("""() => ({ended: document.querySelector('.case-panel').classList.contains('ended'), callout: document.getElementById('mapCallout').classList.contains('on'),
+          continueInRow: !!document.querySelector('.case-actions #modalBtn'), dispatchShown: getComputedStyle(document.getElementById('dispatchBtn')).display !== 'none', call: document.getElementById('caseCount').textContent})""")
+        check("Continue starts the next shift: the result clears and Hold/Dispatch return", not nxt["ended"] and not nxt["callout"] and not nxt["continueInRow"] and nxt["dispatchShown"], nxt)
         box = await page.evaluate(BOXES)
         check("no box, panel or strip behind words (rule 30(a))",
               all(r[1] in (None, "rgba(0, 0, 0, 0)") and r[2] == "none" for r in box if r[1] is not None), box)

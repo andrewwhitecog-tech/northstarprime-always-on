@@ -20,6 +20,7 @@
       --cyan: #00f0ff;
       --magenta: #ff007f;
       --gold: #ffbe3b;
+      --xbox-green: #107c10;
       --text: #e2e8f0;
       --text-dim: #7987a1;
       --font-mono: 'Consolas', 'Courier New', monospace;
@@ -52,11 +53,13 @@
       gap: 12px;
     }
     .xbox-badge {
-      color: var(--gold);
+      background: var(--xbox-green);
+      color: #fff;
       font-weight: 900;
+      padding: 4px 10px;
+      border-radius: 4px;
       font-size: 0.85rem;
-      letter-spacing: 3px;
-      text-shadow: 0 0 10px rgba(255, 190, 59, 0.85), 0 0 22px rgba(255, 0, 127, 0.45);
+      letter-spacing: 1px;
     }
     .title-group h1 {
       font-size: 1.4rem;
@@ -227,10 +230,8 @@
       color: #fff;
     }
     .achieve-icon {
-      font-size: 0.9rem;
-      color: #3a4660;
+      font-size: 1rem;
     }
-    .achieve-item.unlocked .achieve-icon { color: var(--gold); text-shadow: 0 0 10px var(--gold); }
   </style>
 </head>
 <body>
@@ -267,10 +268,6 @@
         <span class="hud-val" id="val-shield">3 / 3</span>
       </div>
       <div class="hud-stat">
-        <span class="hud-label">HULL</span>
-        <span class="hud-val" id="val-hull" style="color:#ff5a7a;">◆◆◆◆◆</span>
-      </div>
-      <div class="hud-stat">
         <span class="hud-label">WAVE</span>
         <span class="hud-val" id="val-wave">1</span>
       </div>
@@ -303,48 +300,17 @@
     <div class="dossier-card">
       <h3>ACHIEVEMENTS ARCHIVE</h3>
       <ul class="achieve-list" id="achievementsArchive">
-        <li class="achieve-item" id="ach-first-blood"><span class="achieve-icon">◆</span> First Tachyon Blade Strike</li>
-        <li class="achieve-item" id="ach-wave-5"><span class="achieve-icon">◆</span> Wave 5 Temporal Survivor</li>
-        <li class="achieve-item" id="ach-boss-down"><span class="achieve-icon">◆</span> Overlord Decoherence</li>
-        <li class="achieve-item" id="ach-score-100k"><span class="achieve-icon">◆</span> Centurion: 100,000 Points</li>
+        <li class="achieve-item" id="ach-first-blood"><span class="achieve-icon">⚔️</span> First Tachyon Blade Strike (10G)</li>
+        <li class="achieve-item" id="ach-wave-5"><span class="achieve-icon">🛡️</span> Wave 5 Temporal Survivor (25G)</li>
+        <li class="achieve-item" id="ach-boss-down"><span class="achieve-icon">👑</span> Overlord Decoherence (50G)</li>
+        <li class="achieve-item" id="ach-score-100k"><span class="achieve-icon">🏆</span> Centurion: 100,000 Points (50G)</li>
       </ul>
     </div>
   </div>
 
-  <script src="/static/games/nsp_fx_v1.js"></script>
   <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-    const CW = 1000, CH = 600;
-    // NorthStar arcade FX kit: hero art, lights, sparks, rings, numbers
-    const HERO = NSPFX.loadImage('/static/games/og/chrono-blade-2049_og_1200x630.jpg');
-    const fxP = new NSPFX.Particles(800), fxR = new NSPFX.Rings(), fxF = new NSPFX.Floaters(), fxI = new NSPFX.Impact();
-    const motes = new NSPFX.Motes(44, CW, CH, ['#7fe9ff', '#ff4fa8', '#ffbe3b']);
-    const BREACH = { x: 860, y: 250 };
-    let gameState = 'title';
-    let hull = 5, hurtT = 0, overT = 0;
-    window.__nspGameState = () => gameState;
-    let cityFar = null, cityNear = null;
-    function buildCity(h, seed, colors, lit) {
-      const c = document.createElement('canvas'); c.width = 1400; c.height = CH;
-      const g = c.getContext('2d');
-      let r = seed;
-      const rnd = () => ((r = (r * 9301 + 49297) % 233280) / 233280);
-      let x = 0;
-      while (x < 1400) {
-        const w = 40 + rnd() * 70, bh = h * (0.35 + rnd() * 0.65);
-        const grad = g.createLinearGradient(0, CH - bh, 0, CH);
-        grad.addColorStop(0, colors[0]); grad.addColorStop(1, colors[1]);
-        g.fillStyle = grad;
-        g.fillRect(x, CH - bh, w - 4, bh);
-        for (let wy = CH - bh + 8; wy < CH - 8; wy += 9) for (let wx = x + 5; wx < x + w - 10; wx += 8) {
-          if (rnd() < lit) { g.fillStyle = rnd() < 0.5 ? 'rgba(0,240,255,0.55)' : 'rgba(255,0,127,0.5)'; g.fillRect(wx, wy, 3, 4); }
-        }
-        g.fillStyle = 'rgba(255,190,59,0.6)'; g.fillRect(x + w / 2 - 6, CH - bh - 2, 8, 2);
-        x += w;
-      }
-      return c;
-    }
     
     // Web Audio Synthesizer
     let audioCtx = null;
@@ -420,13 +386,8 @@
     // Game state
     const keys = {};
     window.addEventListener('keydown', e => {
-      if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
       initAudio();
       keys[e.code] = true;
-      if (gameState !== 'playing') {
-        if (['Enter', 'Space'].includes(e.code) && (gameState === 'title' || overT <= 0)) startRun();
-        return;
-      }
       if (['Space', 'KeyZ'].includes(e.code)) playerSlash();
       if (['KeyX'].includes(e.code)) playerLaser();
       if (['KeyC'].includes(e.code)) playerShield();
@@ -455,20 +416,6 @@
     const enemies = [];
     const slashEffects = [];
 
-    function startRun() {
-      score = 0; wave = 1; shields = 3; energy = 100; hull = 5; frame = 0; hurtT = 0;
-      player.x = 120; player.y = 300; player.shieldActive = false; player.slashTimer = 0;
-      enemies.length = 0; bullets.length = 0; slashEffects.length = 0; particles.length = 0;
-      fxP.clear();
-      document.getElementById('val-score').innerText = '000000';
-      document.getElementById('val-shield').innerText = '3 / 3';
-      document.getElementById('val-wave').innerText = '1';
-      document.getElementById('val-hull').innerText = '◆◆◆◆◆';
-      gameState = 'playing';
-      fxR.add(player.x, player.y, { radius: 160, color: '#7fe9ff', width: 5, life: 0.6 });
-    }
-    canvas.addEventListener('pointerdown', () => { initAudio(); if (gameState === 'title' || (gameState === 'over' && overT <= 0)) startRun(); });
-
     function playerSlash() {
       if (player.slashTimer > 0) return;
       player.slashTimer = 14;
@@ -478,15 +425,10 @@
         radius: 75, angle: 0, life: 14
       });
       // Check blade collision
-      fxP.burst(player.x + 40, player.y, { count: 10, color: ['#bff9ff', '#00f0ff'], speed: 260, angle: 0, spread: 1.6, life: 0.3, size: 1.8 });
       enemies.forEach(en => {
         const d = Math.hypot(en.x - (player.x + 35), en.y - player.y);
         if (d < 85) {
           en.hp -= 4;
-          en.hitT = 0.12;
-          fxF.add(en.x, en.y - en.size - 10, '4', '#7fe9ff', 18);
-          fxR.add(en.x, en.y, { radius: en.size * 2.2, color: '#9ff4ff', width: 3, life: 0.25 });
-          fxI.hit(0.12, 0, '#7fe9ff', 0.03);
           createSparks(en.x, en.y, '#00f0ff');
           rumble(0.4, 80);
           playSfx('hit');
@@ -509,7 +451,6 @@
     function playerShield() {
       if (shields <= 0 || player.shieldActive) return;
       shields--;
-      fxR.add(player.x, player.y, { radius: 90, color: '#00f0ff', width: 5, life: 0.4 });
       player.shieldActive = true;
       player.shieldTimer = 180; // 3 seconds at 60fps
       playSfx('shield');
@@ -517,8 +458,6 @@
     }
 
     function createSparks(x, y, color) {
-      fxP.burst(x, y, { count: 16, color: [color, '#ffffff', color], speed: 320, life: 0.55, size: 2.4, drag: 3 });
-      return;
       for (let i = 0; i < 12; i++) {
         const ang = Math.random() * Math.PI * 2;
         const spd = Math.random() * 5 + 2;
@@ -583,11 +522,7 @@
       if (edge(1)) { initAudio(); playerShield(); }
     }
     function update() {
-      fxP.update(1 / 60); fxR.update(1 / 60); fxF.update(1 / 60); fxI.update(1 / 60); motes.update(1 / 60);
-      if (overT > 0) overT -= 1 / 60;
-      if (gameState !== 'playing') return;
       frame++;
-      if (hurtT > 0) hurtT -= 1 / 60;
       pollGamepad();
       
       // Energy regen
@@ -621,8 +556,6 @@
           const en = enemies[j];
           if (Math.hypot(b.x - en.x, b.y - en.y) < en.size + b.radius) {
             en.hp -= 2;
-            en.hitT = 0.1;
-            fxF.add(en.x, en.y - en.size - 10, '2', '#ff4fa8', 16);
             createSparks(b.x, b.y, b.color);
             bullets.splice(i, 1);
             playSfx('hit');
@@ -640,13 +573,8 @@
         en.y += en.vy;
         if (en.y < 30 || en.y > 570) en.vy *= -1;
         
-        if (en.hitT) en.hitT = Math.max(0, en.hitT - 1 / 60);
         if (en.hp <= 0) {
           createSparks(en.x, en.y, '#ffbe3b');
-          fxP.burst(en.x, en.y, { count: en.type === 'carrier' ? 50 : 26, color: ['#ffbe3b', '#ffffff', en.type === 'interceptor' ? '#ff007f' : '#a855f7'], speed: 460, life: 0.8, size: 2.8 });
-          fxR.add(en.x, en.y, { radius: en.size * 4, color: '#ffbe3b', width: 5, life: 0.45 });
-          fxF.add(en.x, en.y - 20, '+' + en.maxHp * 100, '#ffbe3b', en.type === 'carrier' ? 26 : 20);
-          fxI.hit(en.type === 'carrier' ? 0.4 : 0.18, en.type === 'carrier' ? 0.2 : 0.06, '#ffbe3b');
           score += en.maxHp * 100;
           document.getElementById('val-score').innerText = score.toString().padStart(6, '0');
           if (score > highScore) {
@@ -662,20 +590,10 @@
         if (en.x < -50) { enemies.splice(i, 1); continue; }
         
         // Player collision
-        if (!player.shieldActive && hurtT <= 0 && Math.hypot(player.x - en.x, player.y - en.y) < player.size + en.size) {
+        if (!player.shieldActive && Math.hypot(player.x - en.x, player.y - en.y) < player.size + en.size) {
           createSparks(player.x, player.y, '#ff0055');
           rumble(1.0, 220);
           player.x -= 30;
-          hull -= 1; hurtT = 1.0;
-          document.getElementById('val-hull').innerText = '◆'.repeat(Math.max(0, hull)) + '◇'.repeat(5 - Math.max(0, hull));
-          fxI.hit(0.7, 0.45, '#ff2a55', 0.05);
-          fxR.add(player.x, player.y, { radius: 130, color: '#ff4466', width: 6, life: 0.45 });
-          fxF.add(player.x, player.y - 40, '-1 HULL', '#ff4466', 22);
-          if (hull <= 0) {
-            gameState = 'over'; overT = 1.2;
-            fxP.burst(player.x, player.y, { count: 120, color: ['#ff2a55', '#ffbe3b', '#00f0ff', '#ffffff'], speed: 600, life: 1.2, size: 3 });
-            fxR.add(player.x, player.y, { radius: 380, color: '#ff4fa8', width: 9, life: 0.9 });
-          }
           score = Math.max(0, score - 500);
           document.getElementById('val-score').innerText = score.toString().padStart(6, '0');
         }
@@ -707,171 +625,119 @@
       }
     }
 
-    function drawWorld(t) {
-      // far sky: the temporal breach the incursion pours out of
-      const sky = ctx.createLinearGradient(0, 0, 0, CH);
-      sky.addColorStop(0, '#04030f'); sky.addColorStop(0.55, '#140827'); sky.addColorStop(1, '#2a0b33');
-      ctx.fillStyle = sky; ctx.fillRect(0, 0, CW, CH);
-      NSPFX.light(ctx, BREACH.x, BREACH.y, 330, '#ff2fa0', 0.28 + 0.06 * Math.sin(t * 1.7), 0);
-      NSPFX.light(ctx, BREACH.x, BREACH.y, 180, '#00e0ff', 0.25, 0);
-      NSPFX.rays(ctx, BREACH.x, BREACH.y, 900, t, '#ffd0f0', 12, 0.05);
-      ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      for (let k = 0; k < 3; k++) {
-        ctx.strokeStyle = `rgba(${k === 1 ? '255,190,59' : '0,240,255'},${0.5 - k * 0.12})`;
-        ctx.lineWidth = 3 - k * 0.6;
-        ctx.beginPath(); ctx.arc(BREACH.x, BREACH.y, 92 + k * 26 + Math.sin(t * 2 + k) * 4, t * (0.4 + k * 0.2), t * (0.4 + k * 0.2) + Math.PI * 1.6); ctx.stroke();
-      }
-      ctx.restore();
-      NSPFX.eye(ctx, BREACH.x, BREACH.y, 58, t, { hue: 320, open: 0.6 + 0.3 * Math.sin(t * 0.8), look: { x: (player.x - BREACH.x) / 500, y: (player.y - BREACH.y) / 300 } });
-      if (!cityFar) { cityFar = buildCity(330, 11, ['#1a0f3a', '#0a0618'], 0.12); cityNear = buildCity(230, 29, ['#120a26', '#05030c'], 0.22); }
-      const sp = gameState === 'playing' ? frame : t * 60;
-      const fo = (sp * 0.6) % 1400, no = (sp * 1.6) % 1400;
-      ctx.globalAlpha = 0.9; ctx.drawImage(cityFar, -fo, 0); ctx.drawImage(cityFar, 1400 - fo, 0); ctx.globalAlpha = 1;
-      ctx.drawImage(cityNear, -no, 40); ctx.drawImage(cityNear, 1400 - no, 40);
-      // synthwave floor
-      ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      const hy = 470;
-      for (let i = 0; i < 9; i++) {
-        const y = hy + Math.pow(((i + (sp * 0.05) % 1) / 9), 2) * (CH - hy);
-        ctx.strokeStyle = `rgba(255,0,127,${0.1 + i * 0.03})`; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(CW, y); ctx.stroke();
-      }
-      for (let x = -800; x < CW + 800; x += 80) {
-        ctx.strokeStyle = 'rgba(0,240,255,0.12)';
-        ctx.beginPath(); ctx.moveTo(CW / 2 + (x - CW / 2) * 0.15, hy); ctx.lineTo(x, CH); ctx.stroke();
-      }
-      ctx.restore();
-      motes.draw(ctx);
-    }
-
-    function drawEnemy(en, t) {
-      const col = en.type === 'carrier' ? '#ffbe3b' : (en.type === 'interceptor' ? '#ff007f' : '#a855f7');
-      NSPFX.light(ctx, en.x, en.y, en.size * 3, col, 0.45, 0.05);
-      ctx.save(); ctx.translate(en.x, en.y);
-      if (en.type === 'carrier') {
-        ctx.rotate(t * 0.6);
-        const g = ctx.createLinearGradient(-en.size, -en.size, en.size, en.size);
-        g.addColorStop(0, '#fff2c4'); g.addColorStop(0.4, '#c98a1e'); g.addColorStop(1, '#2a1404');
-        ctx.fillStyle = g; ctx.strokeStyle = '#ffe08a'; ctx.lineWidth = 2;
-        ctx.beginPath();
-        for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3; ctx.lineTo(Math.cos(a) * en.size, Math.sin(a) * en.size); }
-        ctx.closePath(); ctx.fill(); ctx.stroke();
-      } else if (en.type === 'interceptor') {
-        const g = ctx.createLinearGradient(-en.size, 0, en.size, 0);
-        g.addColorStop(0, '#ffd0ea'); g.addColorStop(0.5, '#ff007f'); g.addColorStop(1, '#3a0018');
-        ctx.fillStyle = g; ctx.strokeStyle = '#ffb3d9'; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(-en.size * 1.3, 0); ctx.lineTo(en.size, -en.size * 0.7); ctx.lineTo(en.size * 0.5, 0); ctx.lineTo(en.size, en.size * 0.7); ctx.closePath();
-        ctx.fill(); ctx.stroke();
-      } else {
-        const g = ctx.createRadialGradient(-en.size * 0.3, -en.size * 0.3, 2, 0, 0, en.size);
-        g.addColorStop(0, '#f3e1ff'); g.addColorStop(0.5, '#a855f7'); g.addColorStop(1, '#1d0636');
-        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, en.size, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = 'rgba(0,240,255,0.7)'; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.ellipse(0, 0, en.size * 1.5, en.size * 0.45, t * 2, 0, Math.PI * 2); ctx.stroke();
-      }
-      ctx.restore();
-      NSPFX.light(ctx, en.x - (en.type === 'interceptor' ? 4 : 0), en.y, en.size * 0.7, '#ffffff', 0.6, 0.4);
-      if (en.hitT) NSPFX.light(ctx, en.x, en.y, en.size * 2.2, '#ffffff', en.hitT * 7, 0.3);
-      if (en.hp < en.maxHp) {
-        ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fillRect(en.x - 20, en.y - en.size - 10, 40, 2);
-        ctx.fillStyle = '#00f0ff'; ctx.fillRect(en.x - 20, en.y - en.size - 10, 40 * (en.hp / en.maxHp), 2);
-      }
-    }
-
-    function drawPlayer(t) {
-      const blink = hurtT > 0 && Math.floor(t * 16) % 2;
-      NSPFX.light(ctx, player.x - player.size - 10, player.y, 46 + Math.random() * 10, '#00f0ff', 0.7, 0.3);
-      NSPFX.light(ctx, player.x, player.y, 90, '#3fd8ff', 0.25, 0);
-      if (blink) return;
-      ctx.save(); ctx.translate(player.x, player.y);
-      ctx.fillStyle = '#00f0ff';
-      ctx.beginPath(); ctx.moveTo(-player.size, -6); ctx.lineTo(-player.size - (Math.random() * 18 + 14), 0); ctx.lineTo(-player.size, 6); ctx.fill();
-      const g = ctx.createLinearGradient(-player.size, -player.size, player.size, player.size);
-      g.addColorStop(0, '#e8fbff'); g.addColorStop(0.45, '#2a3f66'); g.addColorStop(1, '#070b16');
-      ctx.fillStyle = g; ctx.strokeStyle = '#7fe9ff'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(player.size, 0); ctx.lineTo(-player.size, -player.size * 0.6); ctx.lineTo(-player.size * 0.5, 0); ctx.lineTo(-player.size, player.size * 0.6); ctx.closePath();
-      ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#ff007f'; ctx.beginPath(); ctx.ellipse(0, 0, 8, 4, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.restore();
-      NSPFX.light(ctx, player.x, player.y, 14, '#ff4fa8', 0.9, 0.4);
-    }
-
-    function drawTitle(t) {
-      ctx.fillStyle = '#04030f'; ctx.fillRect(0, 0, CW, CH);
-      const m = HERO.ready ? NSPFX.cover(ctx, HERO.img, CW, CH, 0.5, 0.5) : null;
-      const c = m ? m.map(0.5, 0.48) : { x: CW / 2, y: CH / 2 };
-      NSPFX.vignette(ctx, CW, CH, 0.55, '4,2,14');
-      NSPFX.light(ctx, c.x, c.y, 260, '#ff9a2e', 0.3 + 0.12 * Math.sin(t * 2.2), 0);
-      NSPFX.rays(ctx, c.x, c.y, 760, t, '#ffd28a', 12, 0.07);
-      motes.draw(ctx);
-      NSPFX.drawCachedText(ctx, 'CHRONO BLADE 2049', CW / 2, 46, { font: "900 58px 'Segoe UI', Arial, sans-serif", size: 58, fill: ['#ffffff', '#9ff4ff', '#00b8ff'], glow: '#ff007f', blur: 20, blur2: 44, spacing: 6, stroke: 'rgba(4,8,30,.9)', strokeWidth: 3 });
-      NSPFX.drawCachedText(ctx, 'TIME DEFENDER', CW / 2, 88, { font: "700 18px 'Segoe UI', Arial, sans-serif", size: 18, fill: '#ffe2a0', glow: '#ff7a1a', blur: 14, spacing: 12 });
-      NSPFX.prompt(ctx, 'PRESS ENTER OR CLICK  ·  DEFEND THE TIMELINE', CW / 2, CH - 34, t, { glow: '#00f0ff', spacing: 4 });
-    }
-
     function render() {
-      const t = performance.now() / 1000;
-      NSPFX.probe(performance.now());
-      if (gameState === 'title') {
-        drawTitle(t);
-      } else {
-        ctx.save();
-        const kick = fxI.offset(14);
-        ctx.translate(kick.x, kick.y);
-        drawWorld(t);
-        ctx.save(); ctx.globalCompositeOperation = 'lighter';
-        bullets.forEach(b => {
-          NSPFX.light(ctx, b.x, b.y, 22, b.color, 0.9, 0.3);
-          ctx.strokeStyle = '#ffd0ea'; ctx.lineWidth = 3;
-          ctx.beginPath(); ctx.moveTo(b.x - 18, b.y); ctx.lineTo(b.x + 4, b.y); ctx.stroke();
-        });
-        ctx.restore();
-        enemies.forEach(en => drawEnemy(en, t));
-        if (gameState === 'playing') drawPlayer(t);
-        if (player.shieldActive) {
-          NSPFX.light(ctx, player.x, player.y, player.size + 50, '#00f0ff', 0.35, 0);
-          ctx.save(); ctx.globalCompositeOperation = 'lighter';
-          ctx.strokeStyle = 'rgba(0,240,255,0.85)'; ctx.lineWidth = 3;
-          ctx.beginPath(); ctx.arc(player.x, player.y, player.size + 18, 0, Math.PI * 2); ctx.stroke();
-          ctx.strokeStyle = 'rgba(255,190,59,0.5)'; ctx.lineWidth = 1;
-          for (let k = 0; k < 6; k++) { const a = t * 2 + k * Math.PI / 3; ctx.beginPath(); ctx.arc(player.x, player.y, player.size + 18, a, a + 0.35); ctx.stroke(); }
-          ctx.restore();
-        }
-        slashEffects.forEach(sl => {
-          const k = sl.life / 14;
-          ctx.save(); ctx.globalCompositeOperation = 'lighter';
-          const g = ctx.createRadialGradient(sl.x, sl.y, sl.radius * 0.6, sl.x, sl.y, sl.radius * 1.15);
-          g.addColorStop(0, 'rgba(0,240,255,0)'); g.addColorStop(0.7, `rgba(180,250,255,${0.9 * k})`); g.addColorStop(1, 'rgba(0,240,255,0)');
-          ctx.fillStyle = g;
-          ctx.beginPath(); ctx.arc(sl.x, sl.y, sl.radius * 1.15, -Math.PI * 0.45, Math.PI * 0.45); ctx.arc(sl.x, sl.y, sl.radius * 0.6, Math.PI * 0.45, -Math.PI * 0.45, true); ctx.closePath(); ctx.fill();
-          ctx.strokeStyle = `rgba(255,255,255,${k})`; ctx.lineWidth = 2;
-          ctx.beginPath(); ctx.arc(sl.x, sl.y, sl.radius, -Math.PI * 0.4, Math.PI * 0.4); ctx.stroke();
-          ctx.restore();
-          NSPFX.light(ctx, sl.x + sl.radius * 0.8, sl.y, 60, '#7fe9ff', 0.5 * k, 0.1);
-        });
-        fxR.draw(ctx);
-        fxP.draw(ctx);
-        fxF.draw(ctx);
-        ctx.restore();
-        fxI.drawFlash(ctx, CW, CH);
-        NSPFX.vignette(ctx, CW, CH, 0.5, '2,1,10');
-        if (gameState === 'over') {
-          NSPFX.vignette(ctx, CW, CH, 0.92, '4,0,10');
-          NSPFX.glowText(ctx, 'TIMELINE DECOHERED', CW / 2, CH * 0.42, { font: "900 50px 'Segoe UI', Arial, sans-serif", size: 50, fill: ['#ffffff', '#ffb3d9', '#ff007f'], glow: '#ff007f', blur: 24, spacing: 5, stroke: 'rgba(20,0,10,.9)', strokeWidth: 3 });
-          NSPFX.glowText(ctx, `SCORE ${String(score).padStart(6, '0')}  ·  WAVE ${wave}`, CW / 2, CH * 0.42 + 54, { font: "700 20px 'Segoe UI', Arial, sans-serif", fill: '#ffe2a0', glow: 'rgba(0,0,0,.95)', blur: 8, spacing: 3 });
-          if (overT <= 0) NSPFX.prompt(ctx, 'PRESS ENTER OR CLICK  ·  REWIND', CW / 2, CH * 0.42 + 100, t, { glow: '#00f0ff', spacing: 4 });
-        }
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Starfield / Grid Background
+      ctx.strokeStyle = 'rgba(0, 240, 255, 0.08)';
+      ctx.lineWidth = 1;
+      const gridOffset = (frame * 3) % 40;
+      for (let x = -gridOffset; x < canvas.width; x += 40) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height);
+        ctx.stroke();
       }
-    }
-
-    let simAcc = 0, simLast = performance.now();
-    function loop(now) {
-      simAcc += Math.min(0.1, (now - simLast) / 1000);
-      simLast = now;
-      let steps = 0;
-      while (simAcc >= 1 / 60 && steps < 4) { update(); simAcc -= 1 / 60; steps++; }
-      render();
-      requestAnimationFrame(loop);
+      for (let y = 0; y < canvas.height; y += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, y); ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+      
+      // Particles
+      particles.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, Math.max(1, p.life * 0.15), 0, Math.PI * 2);
+        ctx.fill();
+      });
+      
+      // Bullets
+      bullets.forEach(b => {
+        ctx.fillStyle = b.color;
+        ctx.shadowColor = b.color;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.shadowBlur = 0;
+      
+      // Enemies
+      enemies.forEach(en => {
+        ctx.fillStyle = en.type === 'carrier' ? '#ffbe3b' : (en.type === 'interceptor' ? '#ff007f' : '#a855f7');
+        ctx.beginPath();
+        if (en.type === 'carrier') {
+          ctx.rect(en.x - en.size/2, en.y - en.size/2, en.size, en.size);
+        } else {
+          ctx.arc(en.x, en.y, en.size, 0, Math.PI * 2);
+        }
+        ctx.fill();
+        // HP bar
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.fillRect(en.x - 20, en.y - en.size - 8, 40, 4);
+        ctx.fillStyle = '#00f0ff';
+        ctx.fillRect(en.x - 20, en.y - en.size - 8, 40 * (en.hp / en.maxHp), 4);
+      });
+      
+      // Player Cyber Warrior
+      ctx.save();
+      ctx.translate(player.x, player.y);
+      // Thruster flame
+      ctx.fillStyle = '#00f0ff';
+      ctx.beginPath();
+      ctx.moveTo(-player.size, -6);
+      ctx.lineTo(-player.size - (Math.random() * 15 + 10), 0);
+      ctx.lineTo(-player.size, 6);
+      ctx.fill();
+      
+      // Body ship
+      ctx.fillStyle = '#1e293b';
+      ctx.strokeStyle = '#00f0ff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(player.size, 0);
+      ctx.lineTo(-player.size, -player.size * 0.6);
+      ctx.lineTo(-player.size * 0.5, 0);
+      ctx.lineTo(-player.size, player.size * 0.6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      
+      // Visor cockpit
+      ctx.fillStyle = '#ff007f';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 8, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      
+      // Shield
+      if (player.shieldActive) {
+        ctx.strokeStyle = '#00f0ff';
+        ctx.shadowColor = '#00f0ff';
+        ctx.shadowBlur = 15;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, player.size + 18, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+      
+      // Slash effects
+      slashEffects.forEach(s => {
+        ctx.strokeStyle = '#00f0ff';
+        ctx.shadowColor = '#00f0ff';
+        ctx.shadowBlur = 20;
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.radius, -Math.PI * 0.4, Math.PI * 0.4);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      });
+      
+      requestAnimationFrame(() => {
+        update();
+        render();
+      });
     }
 
     // Toggle controls
@@ -886,7 +752,7 @@
       if (audioEnabled) initAudio();
     });
 
-    requestAnimationFrame(loop);
+    render();
   </script>
 <nav id="nsp-related" aria-label="More games" style="font:13px sans-serif;padding:10px;background:#080c16;color:#ccc">More games: <a href="/arcade/custom/good-news-drive/" style="color:#9cf;margin-right:12px">GOOD NEWS // ETERNAL DRIVE</a><a href="/arcade/custom/hypernova-swarm/" style="color:#9cf;margin-right:12px">Hypernova Swarm</a><a href="/arcade/custom/idr-tracker-cabinet/" style="color:#9cf;margin-right:12px">IDR Tracker Cabinet</a><a href="/arcade/" style="color:#9cf;margin-right:12px">All arcade games</a><a href="/store/" style="color:#fc6">Store</a></nav>
 </body>

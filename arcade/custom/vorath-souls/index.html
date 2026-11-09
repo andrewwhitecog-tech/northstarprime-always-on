@@ -96,6 +96,9 @@
   const art = { exile: new Image(), maw: new Image(), thralls: {} };
   art.exile.src = "./assets/vorath_exile_atlas.png";
   art.maw.src = "./assets/maw_guard_atlas_candidate.png";
+  // Floor-only candidate; all pillars, gate signals and combat remain live.
+  art.innerRing = new Image();
+  art.innerRing.src = "./assets/inner_ring_clean_floor_v05.png";
   // These six candidate strips use a virtual ground/root projection, not a jump or planted-foot claim.
   const thrallContracts = {};
   for(const role of ['pursuer','flanker','charger','hexer','bulwark','reaver']) {
@@ -701,15 +704,18 @@
     }
   }
 
-  // Only the unchanged floor and bone silhouettes are rasterized. Runes, lights,
+  // Only the floor and bone silhouettes are rasterized. Runes, lights,
   // portal, moving gems, actors, projectiles and combat telegraphs stay live.
   const arenaCache={key:null,layers:{},builds:0,lastBuildMs:0,bypassed:false,failed:false};
+  function hasInnerRingFloor() {
+    return journey.arena===1&&art.innerRing.complete&&art.innerRing.naturalWidth===1280&&art.innerRing.naturalHeight===720;
+  }
   function paintArenaLayer(name,paint) {
     const dpr=Math.min(window.devicePixelRatio||1,2);
     const cacheWidth=world.follow?Math.ceil(world.w*world.scale*dpr):canvas.width,cacheHeight=world.follow?Math.ceil(world.h*world.scale*dpr):canvas.height;
     if(cacheWidth*cacheHeight>4194304){for(const layer of Object.values(arenaCache.layers)){layer.canvas.width=0;layer.canvas.height=0;}arenaCache.layers={};arenaCache.key=null;arenaCache.bypassed=true;paint(ctx);return;}
     arenaCache.bypassed=false;
-    const key=[world.follow,cacheWidth,cacheHeight,world.scale,world.follow?0:world.ox,world.follow?0:world.oy,dpr,journey.arena].join(':');
+    const key=[world.follow,cacheWidth,cacheHeight,world.scale,world.follow?0:world.ox,world.follow?0:world.oy,dpr,journey.arena,hasInnerRingFloor()].join(':');
     if(arenaCache.key!==key){for(const layer of Object.values(arenaCache.layers)){layer.canvas.width=0;layer.canvas.height=0;}arenaCache.key=key;arenaCache.layers={};arenaCache.bypassed=false;arenaCache.failed=false;}
     if(arenaCache.failed){paint(ctx);return;}
     let layer=arenaCache.layers[name];
@@ -723,6 +729,7 @@
     ctx.save();ctx.setTransform(1,0,0,1,transform.e-(world.follow?0:world.ox*dpr),transform.f-(world.follow?0:world.oy*dpr));ctx.drawImage(layer.canvas,0,0);ctx.restore();
   }
   function drawArenaGround(target) {
+    if(hasInnerRingFloor()){target.drawImage(art.innerRing,0,0,1280,720);return;}
     target.fillStyle = "#05070a";
     target.fillRect(0, 0, world.w, world.h);
     const cx = 640;
@@ -792,7 +799,7 @@
       drawRunedChip(cx + Math.cos(a) * 368, cy + Math.sin(a) * 192, 20 + (i % 3) * 7, 14 + (i % 4) * 5, a + game.time * 0.04, 36 + i * 19, 0.4);
     }
     ctx.restore();
-    paintArenaLayer("bones",drawArenaBones);
+    if(!hasInnerRingFloor())paintArenaLayer("bones",drawArenaBones);
     ctx.save();
     ctx.globalCompositeOperation = "screen";
     for (let i = 0; i < 20; i++) {

@@ -5,7 +5,7 @@ const {chromium}=require(process.env.NSP_PLAYWRIGHT_PATH||'playwright');
 const gameRoot=path.resolve(__dirname,'..');const out=path.resolve(process.env.NSP_PLAYTEST_OUT||path.join(gameRoot,'playtest-artifacts'));
 fs.mkdirSync(out,{recursive:true});
 const report={startedUtc:new Date().toISOString(),scope:'Real Chromium; ordinary keyboard/mouse inputs; read-only observer; no game-state mutation',checks:[],pageErrors:[],consoleErrors:[],failedRequests:[]};
-const observe=String.raw`  window.__soulsObserve = () => ({mode:game.mode,time:game.time,hitStop:game.hitStop,gateOpen:game.gateOpen,player:{...game.player},enemies:game.enemies.map(e=>({...e,hitBy:undefined})),attacks:game.attacks.map(a=>({x:a.x,y:a.y,kind:a.kind})),world:{...world}} );`;
+const observe=String.raw`  window.__soulsObserve = () => ({mode:game.mode,time:game.time,hitStop:game.hitStop,gateOpen:game.gateOpen,assets:{exile:{loaded:art.exile.complete&&art.exile.naturalWidth>0,width:art.exile.naturalWidth,height:art.exile.naturalHeight}},player:{...game.player},enemies:game.enemies.map(e=>({...e,hitBy:undefined})),attacks:game.attacks.map(a=>({x:a.x,y:a.y,kind:a.kind})),world:{...world,rect:{left:canvas.getBoundingClientRect().left,top:canvas.getBoundingClientRect().top}}} );`;
 const source=fs.readFileSync(path.join(gameRoot,'index.html'),'utf8');
 const end='  requestAnimationFrame(frame);\n})();';assert.ok(source.includes(end),'read-only observer anchor must match actual export');
 const instrumented=source.replace(end,observe+'\n'+end);
@@ -21,11 +21,11 @@ async function mark(name,fn){await fn();report.checks.push({name,passed:true,atU
  browser=await chromium.launch({headless:true,args:['--disable-gpu','--disable-dev-shm-usage','--no-sandbox']});
  page=await browser.newPage({viewport:{width:1280,height:720},reducedMotion:'reduce'});
  page.on('pageerror',error=>report.pageErrors.push(error.message));page.on('console',message=>{if(message.type()==='error')report.consoleErrors.push(message.text());});page.on('response',r=>{if(r.status()>=400)report.failedRequests.push({url:r.url(),status:r.status()});});
- await page.goto('http://127.0.0.1:'+port+'/index.html');await page.waitForFunction(()=>typeof window.__soulsObserve==='function');
- await mark('actual title loads with a visible canvas',async()=>{assert.equal((await snapshot()).mode,'title');assert.equal(await page.locator('canvas').isVisible(),true);await screenshot('01-title');});
+ await page.goto('http://127.0.0.1:'+port+'/index.html');await page.waitForFunction(()=>typeof window.__soulsObserve==='function');await page.waitForFunction(()=>window.__soulsObserve().assets.exile.loaded);
+ await mark('actual title loads with a visible canvas',async()=>{assert.equal((await snapshot()).mode,'title');assert.equal(await page.locator('canvas').isVisible(),true);assert.equal((await snapshot()).assets.exile.width,2172);assert.equal(await page.locator('.panel').count(),0);await screenshot('01-title');});
  await page.keyboard.press('Enter');await until(async()=>(await snapshot()).mode==='playing','Enter starts');
  await mark('keyboard-only movement and attack face the intended direction',async()=>{const start=await snapshot();await keys(['d']);await page.waitForTimeout(160);await keys([]);const moved=await snapshot();assert.ok(moved.player.x>start.player.x+10);await page.keyboard.press('j');await until(async()=>(await snapshot()).attacks.length>0,'keyboard attack');const a=await snapshot();assert.ok(a.attacks[0].x>a.player.x,'untouched mouse must not redirect keyboard attack to (0,0)');});
- await mark('pause freezes the encounter and resumes by keyboard',async()=>{await page.keyboard.press('Escape');const paused=await snapshot();assert.equal(paused.mode,'paused');await page.waitForTimeout(220);assert.equal((await snapshot()).time,paused.time);await page.keyboard.press('Escape');await until(async()=>(await snapshot()).mode==='playing','resume');});
+ await mark('pause freezes the encounter and resumes by keyboard',async()=>{await page.keyboard.press('Escape');await until(async()=>(await snapshot()).mode==='paused','pause');const paused=await snapshot();assert.equal(paused.mode,'paused');await page.waitForTimeout(220);assert.equal((await snapshot()).time,paused.time);await page.keyboard.press('Escape');await until(async()=>(await snapshot()).mode==='playing','resume');});
  await page.keyboard.press('r');
  await mark('a lost fight reaches death and R starts a fresh encounter',async()=>{await keys([]);await until(async()=>(await snapshot()).mode==='dead','real enemy damage causes death',25000);await screenshot('02-defeat');await page.keyboard.press('r');await until(async()=>(await snapshot()).mode==='playing','retry');assert.equal((await snapshot()).player.hp,100);});
  let staggerObserved=false;const deadline=Date.now()+100000;
@@ -39,7 +39,7 @@ async function mark(name,fn){await fn();report.checks.push({name,passed:true,atU
   let dx=target.x-p.x,dy=target.y-p.y,distance=Math.hypot(dx,dy);let move=[];
   const ideal=vulnerable?72:118;const direction=distance>ideal+10?1:distance<ideal-15?-1:0;
   if(direction){if(Math.abs(dx)>distance*.2)move.push(dx*direction>0?'d':'a');if(Math.abs(dy)>distance*.2)move.push(dy*direction>0?'s':'w');}
-  await keys(move);await page.mouse.move(target.x,target.y);
+  await keys(move);await page.mouse.move(state.world.rect.left+state.world.ox+target.x*state.world.scale,state.world.rect.top+state.world.oy+target.y*state.world.scale);
   if(target.type==='guard'&&target.staggerT>0&&!staggerObserved){staggerObserved=true;await keys([]);const before=target.staggerT;await page.waitForTimeout(220);const after=(await snapshot()).enemies.find(e=>e.type==='guard');assert.ok(after&&after.staggerT>0&&after.staggerT<before,'actual guard stays finishable beyond a single frame');await screenshot('03-maw-stagger-window');report.checks.push({name:'real Maw Guard stagger remains available after 220ms',passed:true});}
   else if(vulnerable&&distance<90)await page.keyboard.press('e');
   else {

@@ -1,4 +1,4 @@
-/* HQ audio player for the NorthStar arcade (Claude, 2026-10-16; static-site copy 2026-11-09 with crossOrigin music).
+/* HQ audio player for the NorthStar arcade (Claude, 2026-10-16).
    Source: F:\NORTHSTAR_OS\Projects\ITCH_RELEASES\shared\hq_audio.js (the itch.io builds of VORATH Delve and Prism Drift),
    with three additions for the site: a per-game `base` folder, a pause while the tab is hidden, and play counts in status().
    Plays audio FILES only: ElevenLabs sound effects and one Suno music track per game, kept in /static/games/hq/<game>/.
@@ -9,12 +9,12 @@
             loops: {key: true} (looped beds), music: 'music' (streams music.mp3), tracks: [names setMusic may load],
             musicVol: 0.4, master: 0.8,
             muteKey: 'localStorage key' }
-   API: unlock, play(key, {rate, vol, limit, pan}), stop(key), loop, music(on), rewindMusic, stopMusic, setMusic(name, vol, resume), hasTrack(name), setLevels({sfx, music}),
+   API: unlock, pause, resume, play(key, {rate, vol, limit, pan}), stop(key), loop, music(on), rewindMusic, stopMusic, setMusic(name, vol, resume), hasTrack(name), setLevels({sfx, music}),
         toggle (mute), isMuted, isPlayingMusic, status. */
 function HQAudio(opts) {
   const base = opts.base || 'audio/';
   const loopKeys = opts.loops || {};
-  let ctx = null, master = null, limiter = null, muted = false;
+  let ctx = null, master = null, limiter = null, muted = false, paused = false;
   let musicEl = null, musicGain = null, musicFilter = null, musicWanted = false, loadedName = null, switching = false, noWebAudio = false;
   try { muted = localStorage.getItem(opts.muteKey) === '1'; } catch (e) {}
   const buf = {}, last = {}, loops = {}, played = {}, positions = {};
@@ -53,7 +53,7 @@ function HQAudio(opts) {
         buf[name] = b; const k = keyOf(name);
         if (loops[k] && loops[k].level > 0) loop(k, loops[k].level, loops[k].rate);
         // A cue asked for while its file was still decoding (the first gesture unlocks AND plays) sounds now, if still fresh.
-        const p = pending[k]; if (p) { delete pending[k]; if (performance.now() - p.t < 800 && !document.hidden) voice(k, b, p.o); }
+        const p = pending[k]; if (p) { delete pending[k]; if (performance.now() - p.t < 800 && !document.hidden && !paused) voice(k, b, p.o); }
       })
       .catch(() => { buf[name] = false; });
   }
@@ -67,7 +67,7 @@ function HQAudio(opts) {
   function play(key, o) {
     o = o || {};
     if (!ctx || !master) return;
-    if (document.hidden) return;   // review 2026-10-17: cues started in a suspended context all sound at once on return
+    if (document.hidden || paused) return;   // do not queue cues while the game or tab is paused
     if (o.limit && !limit(key, o.limit)) return;
     const name = pick(key), b = name && buf[name];
     if (!b) {   // still loading: keep the latest request; a take of this cue that finishes decoding plays it
@@ -77,6 +77,7 @@ function HQAudio(opts) {
     voice(key, b, o);
   }
   function voice(key, b, o) {
+    if (paused || document.hidden) return;
     const s = ctx.createBufferSource(); s.buffer = b;
     if (o.rate) s.playbackRate.value = o.rate;
     const g = ctx.createGain();
@@ -92,6 +93,11 @@ function HQAudio(opts) {
     played[key] = (played[key] || 0) + 1;
   }
   const voices = {};
+  // Lifecycle boundary: a late decode or a resumed context must not replay an old hit.
+  function clearPendingAndVoices() {
+    for (const k in pending) delete pending[k];
+    for (const k in voices) { voices[k].forEach(v => { try { v.s.stop(); } catch (e) {} v.s.disconnect(); v.g.disconnect(); }); voices[k].clear(); }
+  }
   // Cut a cue that is still sounding (e.g. a long charge-up when the run ends): a 60 ms fade to silence, then stop.
   function stop(key) {
     delete pending[key];   // a cut cue must not sound later when its file finishes loading
@@ -107,7 +113,7 @@ function HQAudio(opts) {
   function loop(key, level, rate) {
     let L = loops[key] || (loops[key] = { level: 0, rate: 1, src: null, gain: null });
     L.level = level; L.rate = rate || 1;
-    if (!ctx || !master) return;
+    if (!ctx || !master || paused || document.hidden) return;
     if (!L.src) {
       if (!(level > 0)) return;   // nothing to turn down yet: don't start a silent source
       const name = pick(key), b = name && buf[name];
@@ -140,10 +146,12 @@ function HQAudio(opts) {
   document.addEventListener('visibilitychange', () => {
     if (!ctx && !musicEl) return;   // nothing started yet (without Web Audio, the plain music element still pauses)
     if (document.hidden) {
+      clearPendingAndVoices();
       hiddenPausedMusic = !!(musicEl && !musicEl.paused);
       if (hiddenPausedMusic) musicEl.pause();
       if (ctx) ctx.suspend().catch(() => {});
     } else {
+      if (paused) { hiddenPausedMusic = false; return; }
       if (ctx) ctx.resume().catch(() => {});
       if (hiddenPausedMusic && musicWanted && musicEl) { const p = musicEl.play(); if (p && p.catch) p.catch(() => {}); }
       hiddenPausedMusic = false;
@@ -152,6 +160,7 @@ function HQAudio(opts) {
 
   const api = {
     unlock() {
+      if (paused || document.hidden) return;
       if (ctx) {
         if (document.hidden) return;
         if (ctx.state !== 'running' && ctx.state !== 'closed') ctx.resume().catch(() => {});   // 'suspended', or iOS 'interrupted'
@@ -176,10 +185,21 @@ function HQAudio(opts) {
       if (musicWanted && musicEl) { const p = musicEl.play(); if (p && p.catch) p.catch(() => {}); }   // asked for before unlock
     },
     play, loop, stop,
+    pause() {
+      paused = true; clearPendingAndVoices();
+      for (const k in loops) { const L = loops[k]; if (L.src) { try { L.src.stop(); } catch (e) {} L.src.disconnect(); L.gain.disconnect(); L.src = null; L.gain = null; } }
+      if (musicEl) musicEl.pause();
+      if (ctx && ctx.state !== "closed") ctx.suspend().catch(() => {});
+    },
+    resume() {
+      if (document.hidden) return;
+      paused = false; api.unlock();
+      for (const k in loops) if (loops[k].level > 0) loop(k, loops[k].level, loops[k].rate);
+    },
     music(on) {
       musicWanted = !!on;
       ensureMusic(); if (!musicEl) return;
-      if (on) { const p = musicEl.play(); if (p && p.catch) p.catch(() => {}); } else musicEl.pause();
+      if (on && !paused && !document.hidden) { const p = musicEl.play(); if (p && p.catch) p.catch(() => {}); } else musicEl.pause();
     },
     rewindMusic() { if (musicEl && !switching) { try { musicEl.currentTime = 0; } catch (e) {} } },   // a pending switch starts from the top
     stopMusic() { api.music(false); api.rewindMusic(); },
@@ -203,7 +223,7 @@ function HQAudio(opts) {
         if (musicGain && ctx) { musicGain.gain.cancelScheduledValues(ctx.currentTime); musicGain.gain.setValueAtTime(0, ctx.currentTime);
                                 musicGain.gain.setTargetAtTime(musicVol * musicLevel, ctx.currentTime, 0.12); }
         else musicEl.volume = musicVol * musicLevel;
-        if (wasOn) { const p = musicEl.play(); if (p && p.catch) p.catch(() => {}); }
+        if (wasOn && !paused && !document.hidden) { const p = musicEl.play(); if (p && p.catch) p.catch(() => {}); }
       };
       if (musicGain && ctx && !musicEl.paused) { switching = true; musicGain.gain.setTargetAtTime(0, ctx.currentTime, 0.06); setTimeout(swap, 260); }
       else swap();
@@ -231,7 +251,7 @@ function HQAudio(opts) {
     isPlayingMusic() { return !!(musicEl && !musicEl.paused); },
     hasTrack(name) { return !opts.tracks || opts.tracks.indexOf(name) >= 0; },   // was this state's track made?
     status() {   // for play-testers: what is decoded and what is actually sounding
-      return { context: ctx ? ctx.state : 'none', decoded: Object.keys(buf).filter(n => buf[n]),
+      return { context: ctx ? ctx.state : 'none', paused, activeVoices: Object.values(voices).reduce((n, set) => n + set.size, 0), pendingCues: Object.keys(pending), decoded: Object.keys(buf).filter(n => buf[n]),
                loading: Object.keys(buf).filter(n => buf[n] === null), failed: Object.keys(buf).filter(n => buf[n] === false),
                limiter: !!limiter, loopsPlaying: Object.keys(loops).filter(k => loops[k].src && loops[k].level > 0),
                loopLevels: Object.fromEntries(Object.keys(loops).map(k => [k, Math.round(loops[k].level * 100) / 100])),

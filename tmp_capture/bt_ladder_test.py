@@ -30,7 +30,7 @@ PROBE = """(() => { const p = window.__fp = {d: [], last: 0};
   // Rule 30(g) proof: which lettering cells were drawn (by source x,y), and any typed canvas text.
   const lt = window.__lt = {cells: {}, typed: {}};
   const C2 = CanvasRenderingContext2D.prototype, di = C2.drawImage;
-  C2.drawImage = function (img, sx, sy) { if (img && img.src && img.src.indexOf('lettering_v04') >= 0 && arguments.length >= 9) { const k = sx + ',' + sy; lt.cells[k] = (lt.cells[k] || 0) + 1; lt.maxBottom = Math.max(lt.maxBottom || 0, arguments[6] + arguments[8]); } return di.apply(this, arguments); };
+  C2.drawImage = function (img, sx, sy) { if (img && img.src && img.src.indexOf('lettering_v04') >= 0 && arguments.length >= 9) { const k = sx + ',' + sy; lt.cells[k] = (lt.cells[k] || 0) + 1; lt.maxBottom = Math.max(lt.maxBottom || 0, arguments[6] + arguments[8]); } if (img && img.src) { for (const n of ['justiciar_ronin', 'justiciar_veilcutter', 'justiciar_seraph', 'justiciar_duelist', 'arena_high_chancel_eye', 'arena_high_chancel_colonnade', 'arena_reliquary_court_stelae', 'arena_reliquary_court_far']) if (img.src.indexOf(n) >= 0) { lt.drawn = lt.drawn || {}; lt.drawn[n] = (lt.drawn[n] || 0) + 1; } } return di.apply(this, arguments); };
   for (const n of ['fillText', 'strokeText']) { const f = C2[n]; C2[n] = function (t) { const k = String(t).slice(0, 40); lt.typed[k] = (lt.typed[k] || 0) + 1; return f.apply(this, arguments); }; } })();"""
 CELLS = json.loads((Path(__file__).resolve().parent / "cells.json").read_text(encoding="utf-8"))["cells"]
 BY_XY = {f"{v[0]},{v[1]}": k for k, v in CELLS.items()}
@@ -116,7 +116,7 @@ async def main():
         await page.goto(a.base + URL, wait_until="load")
         await page.wait_for_timeout(3000)
         l0 = await L(page)
-        check("atlases loaded, two bouts open", l0["open"] == ["ruby", "duelist"], l0["open"])
+        check("atlases loaded, five bouts open", l0["open"] == ["ruby", "duelist", "ronin", "veilcutter", "seraph"], l0["open"])
         check("accepted lettering atlas loaded", await page.evaluate("() => letteringReady === true"), "lettering_v04_d438.webp")
         box = await page.evaluate("""() => ['#callout', '.meter', '.panel', '.arena-wrap'].map(q => { const e = document.querySelector(q); if (!e) return [q, null];
           const c = getComputedStyle(e); return [q, c.backgroundColor, c.backgroundImage.slice(0, 20), c.borderTopWidth + ' ' + c.borderTopStyle]; })""")
@@ -163,18 +163,53 @@ async def main():
             check("player lost bout 2 to the Duelist (allowed)", True, l4["result"])
         else:
             await finish_bout(page)
-            ok = await wait_until(page, "() => window.__bladeTribunalDebug.ladder().result === 'cleared'", 30)
             l5 = await L(page)
-            check("ladder cleared, Thorn blade unlocked and saved", ok and "thorn" in l5["save"]["blades"] and l5["save"]["clears"] >= 1, l5["save"])
+            check("Thorn blade earned after bout 2 and saved", "thorn" in l5["save"]["blades"], l5["save"])
+            # Bouts 3 to 5: each Justiciar's own move must happen in real play, on its own painted arena.
+            plans = [
+                ("Justiciar Ronin", "justiciar_ronin", "arena_high_chancel_colonnade", "dashCuts", [("KeyA", 700), ("KeyL", 300), ("KeyA", 500), ("KeyJ", 110)], "07_bout3_ronin.png"),
+                ("Justiciar Veilcutter", "justiciar_veilcutter", "arena_reliquary_court_stelae", "swaps", [("KeyD", 300), ("KeyJ", 110), ("KeyL", 400), ("KeyD", 200)], "08_bout4_veilcutter.png"),
+                ("Justiciar Seraph", "justiciar_seraph", "arena_reliquary_court_far", "overheads", [("KeyA", 600), ("KeyL", 700), ("KeyA", 400), ("KeyL", 500)], "09_bout5_seraph.png"),
+            ]
+            for name, atlas, arena, sig, pattern, shot in plans:
+                ok = await wait_until(page, f"() => window.__bladeTribunalDebug.ladder().enemy === '{name}' && window.__bladeTribunalDebug.ladder().running", 90)
+                if not ok:
+                    lx = await L(page)
+                    check(f"{name}: bout starts", False, {k: lx[k] for k in ("bout", "enemy", "running", "result", "open")})
+                    break
+                await page.evaluate("() => { window.__lt.maxBottom = 0; }")
+                a0 = (await L(page))["ai"]
+                for _ in range(6):
+                    await play(page, 8, pattern)
+                    lx = await L(page)
+                    if lx["ai"][sig] - a0[sig] > 0 or not lx["running"]:
+                        break
+                await page.screenshot(path=str(out / shot))
+                lx = await L(page)
+                drawn = (await page.evaluate("() => window.__lt.drawn || {}"))
+                band = await page.evaluate("() => ({maxBottom: Math.round(window.__lt.maxBottom || 0), head: Math.round(calloutBand().head)})")
+                check(f"{name}: its own sheet and painted arena are drawn", drawn.get(atlas, 0) > 0 and drawn.get(arena, 0) > 0 and lx["arenaReady"], {"drawn": {atlas: drawn.get(atlas, 0), arena: drawn.get(arena, 0)}, "arena": lx["arena"]})
+                check(f"{name}: its signature move happened in play ({sig})", lx["ai"][sig] - a0[sig] > 0, {k: lx["ai"][k] - a0[k] for k in a0})
+                check(f"{name}: callouts stay above the fighters' heads", band["maxBottom"] <= band["head"] + 2, band)
+                if not lx["running"] and lx["result"] == "fallen":
+                    check(f"player fell to {name} (allowed)", True, lx["result"])
+                    break
+                await finish_bout(page)
+                if name == "Justiciar Veilcutter":
+                    lv = await L(page)
+                    check("Verdict blade earned after bout 4 and saved", "verdict" in lv["save"]["blades"], lv["save"]["blades"])
+            ok = await wait_until(page, "() => window.__bladeTribunalDebug.ladder().result === 'cleared'", 60)
+            l5 = await L(page)
+            check("five-bout ladder cleared and saved", ok and l5["save"]["clears"] >= 1 and l5["save"]["bestBout"] >= 5, l5["save"])
             await wait_until(page, "() => !(state.koBanner > 0)", 30)
             await page.wait_for_timeout(600)
             await page.screenshot(path=str(out / "06_cleared.png"))
             await page.keyboard.press("b")
             await page.wait_for_timeout(200)
             l6 = await L(page)
-            check("B changes to the Thorn blade", l6["blade"] == "thorn", l6["blade"])
+            check("B changes blade after the clear", l6["blade"] in ("thorn", "verdict"), l6["blade"])
             stored = await page.evaluate("() => localStorage.getItem('nsp.bladeTribunal.v2')")
-            check("save written to localStorage", bool(stored) and "thorn" in stored, (stored or "")[:120])
+            check("save written to localStorage", bool(stored) and "verdict" in stored, (stored or "")[:120])
         seen, typed = await art_seen(page)
         need = {"bout", "round", "fight", "ko", "minus"}
         check("art callouts drawn from the accepted sheet: BOUT, ROUND, FIGHT, K.O., damage numbers (+ CLEARED/FALLEN, GUARD, FLASH PARRY when reached)",

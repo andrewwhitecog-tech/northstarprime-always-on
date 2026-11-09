@@ -39,6 +39,7 @@
   @media(any-pointer:coarse) and (min-width:621px) and (max-height:500px){.game-footer{grid-row:4;display:grid;grid-template-columns:1fr auto auto auto;padding:6px 14px;gap:6px 14px}.controls{grid-column:1/-1;min-width:0;margin:0}.footer-status{grid-column:1}.resource label,.objective,.controls,.footer-status,button,.arcade-return,.touch-action small,.touch-caption,.eyebrow{font-size:14px}.modal p,.prompt,.prompt button{font-size:14px}}
   body[data-mode="checkpoint"]{display:flex;overflow:auto}body[data-mode="checkpoint"] #touchControls,body[data-mode="paused"] #touchControls{display:none}body[data-mode="checkpoint"] #playfield{display:block;flex:1;height:auto;min-height:140px}body[data-mode="checkpoint"] .center{flex:none}body[data-mode="checkpoint"] .modal p,body[data-mode="checkpoint"] .prompt,body[data-mode="checkpoint"] .prompt button{font-size:14px}body[data-mode="paused"] #playfield{grid-column:1/-1}
   @media(max-width:620px) and (min-height:700px){body[data-mode="playing"] #playfield,body[data-mode="paused"] #playfield,body[data-mode="dead"] #playfield,body[data-mode="victory"] #playfield{flex:1;aspect-ratio:auto;min-height:260px}body[data-mode="playing"] .touch-controls,body[data-mode="dead"] .touch-controls,body[data-mode="victory"] .touch-controls{flex:none;min-height:198px;padding:12px 14px 24px}.game-header{padding-top:8px;padding-bottom:8px}.identity h1{font-size:1.25rem}.eyebrow{margin-bottom:2px}.objective{line-height:1.35}.game-footer{padding-top:7px;padding-bottom:7px}}
+.earned-story{flex-basis:100%;grid-column:1/-1;margin:0;font-size:14px;line-height:1.4}.earned-story[hidden]{display:none}.earned-story a{color:var(--cyan);margin-right:.5em}
 </style>
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "VideoGame", "name": "Vorath Souls", "url": "https://northstarprime.net/arcade/custom/vorath-souls/", "gamePlatform": "Web browser", "applicationCategory": "Game", "operatingSystem": "Any", "isAccessibleForFree": true, "publisher": {"@type": "Organization", "name": "NorthStar Prime", "url": "https://northstarprime.net/"}, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "description": "Play Vorath Souls - The Bone Gate free in your browser in the NorthStar Prime IDG Arcade, an original game from the Vorath universe.", "image": "https://northstarprime.net/static/games/og/vorath-souls_og_1200x630.jpg"}</script>
 </head>
@@ -72,11 +73,16 @@
   <p id="gamepadGuide" class="controls" hidden>Controller: left stick move · right stick aim · A light · X heavy · B dodge · LB parry · Y finish · Menu pause · View retry</p>
   <div class="footer-status"><span id="status" role="status">The Bone Gate awaits</span><span id="debug">4 enemies</span></div>
   <button id="newJourneyButton" type="button">New journey</button><button id="pauseButton" type="button" disabled>Pause</button><button id="retryButton" type="button">Retry</button><a class="arcade-return" href="/arcade/">Arcade</a>
+  <p id="earnedStory" class="controls earned-story" hidden aria-label="Optional fiction">
+    <a id="earnedStoryLink" target="_blank" rel="noopener noreferrer"></a>
+    <span id="earnedStoryDisclosure"></span>
+  </p>
 </footer>
 <script src="./atlas.js"></script>
 <script src="./combat.js"></script>
 <script src="./input.js"></script>
 <script src="./journey.js"></script>
+<script src="./earned-story.js"></script>
 <script src="./threats.js"></script>
 <script src="./camera.js"></script>
 <script>
@@ -646,7 +652,19 @@
     game.mode="dead";clearInputState();pauseButton.disabled=true;setOverlay("YOU FELL",journey.arena===0?"The Threshold holds. Read the locked charge and dodge the hexer's sigil.":"Your checkpoint holds at "+progress.ARENAS[journey.bank.arena].name+". Banked upgrades remain; unbanked soul charge will be lost.","Press R to return to your checkpoint");
   }
 
+  function updateEarnedStory() {
+    const region=document.getElementById("earnedStory");
+    const link=document.getElementById("earnedStoryLink");
+    const disclosure=document.getElementById("earnedStoryDisclosure");
+    if(!region||!link||!disclosure)return;
+    const signal=window.VorathEarnedStory?.signal?.(journey);
+    region.hidden=!signal;
+    if(!signal){link.removeAttribute("href");link.textContent="";disclosure.textContent="";return;}
+    link.href=signal.href;link.textContent=signal.label;disclosure.textContent=signal.disclosure;
+  }
+
   function updateUi() {
+    updateEarnedStory();
     const p=game.player;if(!p)return;hpFill.style.width=clamp(p.hp/p.maxHp*100,0,100)+"%";staminaFill.style.width=clamp(p.stamina/p.maxStamina*100,0,100)+"%";rageFill.style.width=clamp(p.rage,0,100)+"%";hpFill.setAttribute("aria-valuemax",p.maxHp);hpFill.setAttribute("aria-valuenow",Math.round(Math.max(0,p.hp)));staminaFill.setAttribute("aria-valuemax",p.maxStamina);staminaFill.setAttribute("aria-valuenow",Math.round(p.stamina));rageFill.setAttribute("aria-valuenow",Math.round(p.rage));document.getElementById("souls").textContent=journey.charges;debugEl.textContent=(journey.arena+1)+"/3 · "+game.enemies.filter(e=>!e.dead).length+" enemies";const maw=game.enemies.find(e=>e.type==="guard"&&!e.dead);statusEl.textContent=game.persistenceWarning?"Checkpoint kept for this visit · browser storage unavailable":game.mode==="checkpoint"?"Soul charge banked":game.mode==="victory"?"Three seals broken":game.gateOpen?"Passage exposed":maw?"Maw Guard · phase "+(maw.phase===2?"II":"I"):"Read the roles · claim the passage";
   }
 
@@ -1392,6 +1410,7 @@
   game.player = newPlayer();
   game.enemies = spawnEnemies();
   if(savedCheckpoint){overlay.querySelector("button").textContent="Continue checkpoint · "+progress.ARENAS[journey.arena].name;}
+  updateEarnedStory();
   if (new URLSearchParams(location.search).get("playtest") === "1") {
     setTimeout(reset, 50);
   }

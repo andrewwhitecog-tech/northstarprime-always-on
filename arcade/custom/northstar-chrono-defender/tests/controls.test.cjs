@@ -98,3 +98,11 @@ test('a real new-sortie reset clears discovery and restores first-wave state',()
  const g=game();g.read('audio.init=()=>{audio.ctx={resume:()=>Promise.resolve(),suspend:()=>Promise.resolve()}};spawnWave(2);startGame()');
  assert.equal(g.read('portalDiscovered'),false);assert.equal(g.read('wave'),1);assert.equal(g.read("document.getElementById('chronoThread').hidden"),true);assert.equal(g.read('player.bombs'),3);
 });
+
+test('fresh-sortie neutral aim and first shot point up before any new device intent',()=>{
+ const g=game();g.read('audio.init=()=>{audio.ctx={resume:()=>Promise.resolve(),suspend:()=>Promise.resolve()}};mouse.x=W/2;mouse.y=H/2;startGame()');
+ g.pad([0,0,0,0]);g.frame();near(g.read('player.angle'),-Math.PI/2,'window-centered stale mouse must not replace fresh-sortie up bearing');
+ g.pad([1,0,0,0]);g.frame();g.frame();near(g.read('player.angle'),-Math.PI/2,'neutral aim retains initial up bearing while strafing');
+ g.read('audio.ctx=null;firePlayerWeapon()');assert.ok(g.read('bullets[0].vy')<0);near(g.read('bullets[0].vx'),0,'neutral first shot must go up');
+ g.pad([0,0,1,0]);g.frame();g.read('startGame()');g.pad([0,0,0,0]);g.frame();near(g.read('player.angle'),-Math.PI/2,'new sortie resets previous device bearing only at restart');
+});

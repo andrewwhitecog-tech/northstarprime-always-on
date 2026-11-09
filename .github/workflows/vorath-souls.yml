@@ -27,11 +27,12 @@ jobs:
         run: |
           npm install --prefix "$RUNNER_TEMP/vorath-browser" --no-save --package-lock=false --ignore-scripts playwright@1.55.1
           "$RUNNER_TEMP/vorath-browser/node_modules/.bin/playwright" install --with-deps chromium
-      - name: Play the actual encounter through keyboard and mouse
+      - name: Play the actual encounter with native focus in an isolated virtual display
         env:
           NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/vorath-browser/node_modules/playwright
           NSP_PLAYTEST_OUT: ${{ runner.temp }}/vorath-souls-playtest
-        run: node arcade/custom/vorath-souls/tests/browser_playtest.cjs
+          NSP_VIRTUAL_DISPLAY: '1'
+        run: xvfb-run --auto-servernum node arcade/custom/vorath-souls/tests/browser_playtest.cjs
       - name: Independently read the pinned Chromatic copy at phone and desktop widths
         if: always()
         env:

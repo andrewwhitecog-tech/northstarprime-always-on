@@ -6,7 +6,6 @@ const crypto = require('node:crypto');
 const assert = require('node:assert/strict');
 const {spawn, execFileSync} = require('node:child_process');
 const out = path.resolve(process.env.CHRONO_CAPTURE_OUT || 'chrono-capture');
-fs.mkdirSync(out, {recursive: true});
 const receipt = {startedUtc: new Date().toISOString(), status: 'started', accepted: false,
   audioProvenance: 'Actual ChronoAudio procedural BGM/SFX emitted by the original game; not a recorded OST.',
   inputs: [], observations: [], errors: []};
@@ -16,6 +15,12 @@ function engine(html) {
   const match = html.match(/<script>\s*'use strict';([\s\S]*?)<\/script>/);
   assert.ok(match, 'Actual original inline engine missing');
   return match[1].replace(/\r\n/g, '\n');
+}
+function assertRecordedImagePresence(records) {
+  assert.ok(Array.isArray(records), 'Actual image response records must be an array');
+  for (const asset of ['far-environment-v01.png','interceptor-v02.png','hostiles-v02.png'])
+    assert.ok(records.some(record => record && typeof record.url==='string' && record.url.endsWith('/'+asset) && record.status===200),
+      'Missing actual successful image response: '+asset);
 }
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const ownChildren = new Set();
@@ -79,6 +84,7 @@ async function verifySource(pin, root) {
   write('SOURCE_VERIFIED.json', receipt.source);
 }
 async function main() {
+  fs.mkdirSync(out, {recursive:true});
   assert.equal(process.platform, 'linux', 'This workflow uses an isolated Linux virtual display');
   const pin = JSON.parse(fs.readFileSync(path.join(__dirname, 'chrono-gameplay-source-pin.json')));
   const root = path.resolve(process.env.CHRONO_GAME_ROOT);
@@ -130,8 +136,7 @@ async function main() {
   });
   assert.deepEqual(decoded, {far:{state:'ready',width:1774,height:887},
     ship:{state:'ready',width:1536,height:1024},enemy:{state:'ready',width:1536,height:1024}});
-  for (const asset of ['far-environment-v01.png','interceptor-v02.png','hostiles-v02.png'])
-    assert.ok(assetResponses.some(response => response.url().endsWith('/'+asset) && response.status===200), 'Missing actual successful image response: '+asset);
+  assertRecordedImagePresence(assetResponses);
   receipt.decodedImages = decoded;
   receipt.assetResponses = assetResponses;
   const windowFacts = await page.evaluate(() => ({innerWidth, innerHeight, outerWidth, outerHeight,
@@ -265,6 +270,7 @@ async function main() {
   receipt.status = 'captured-awaiting-personal-visual-and-auditory-QC';
   // Loudness is measured, not silently normalized or accepted here.
 }
+if (require.main===module) {
 (async () => {
   try {await main();}
   catch (e) {receipt.status = 'failed'; receipt.errors.push(e.stack || String(e)); process.exitCode = 1;}
@@ -278,3 +284,5 @@ async function main() {
       errorCount: receipt.errors.length}, null, 2));
   }
 })();
+}
+module.exports = {assertRecordedImagePresence};

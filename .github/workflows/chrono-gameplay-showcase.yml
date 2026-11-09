@@ -1,13 +1,40 @@
 name: Chrono genuine gameplay showcase
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/scripts/chrono-gameplay-showcase.cjs
+      - .github/scripts/chrono-gameplay-showcase.test.cjs
+      - .github/scripts/fixtures/chrono-public-responses-42580744580.json
+      - .github/workflows/chrono-gameplay-showcase.yml
 permissions:
   contents: read
 concurrency:
   group: chrono-gameplay-showcase
   cancel-in-progress: false
 jobs:
+  guard-validation:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            .github/scripts/chrono-gameplay-showcase.cjs
+            .github/scripts/chrono-gameplay-showcase.test.cjs
+            .github/scripts/fixtures/chrono-public-responses-42580744580.json
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.14.0'
+      - name: Validate production guard source and execute retained-record regressions only
+        run: |
+          node --check .github/scripts/chrono-gameplay-showcase.cjs
+          node --test .github/scripts/chrono-gameplay-showcase.test.cjs
   capture:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
@@ -18,9 +45,13 @@ jobs:
           sparse-checkout: |
             .github/scripts/chrono-gameplay-showcase.cjs
             .github/scripts/chrono-gameplay-source-pin.json
+            .github/scripts/chrono-gameplay-showcase.test.cjs
+            .github/scripts/fixtures/chrono-public-responses-42580744580.json
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22.14.0'
+      - name: Verify production asset-record guard against genuine retained records and explicit faults
+        run: node --test .github/scripts/chrono-gameplay-showcase.test.cjs
       - name: Require the independently accepted enemy release pin
         id: pin
         run: |

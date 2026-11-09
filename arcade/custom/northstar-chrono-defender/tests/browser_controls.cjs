@@ -157,5 +157,58 @@ async function touch(client,type,points){await client.send('Input.dispatchTouchE
  });}
  for(const fault of ['module','image'])await phase('weapon-fallback-'+fault,async()=>{const context=phaseContext=await browser.newContext({viewport:{width:1280,height:720}}),page=await context.newPage();lastPage=page;watch(page);await context.route(fault==='module'?'**/weapon_atlas.js':'**/assets/weapons-v01.png',r=>r.abort());await page.goto(base+'/index.html');await page.locator('#startBtn').press('Enter');const arena=await page.locator('canvas').boundingBox();await page.mouse.move(arena.x+arena.width-50,arena.y+arena.height/2);await page.mouse.down();await page.waitForFunction(()=>window.__chronoRead().bullets.length>0);await page.mouse.up();const observed=await state(page);assert.equal(observed.state,'PLAYING');assert.equal(observed.weaponArt.ready,false);assert.equal(observed.weaponArt.draws.length,0);if(fault==='module')assert.equal(observed.weaponArt.module,false);await page.screenshot({path:path.join(out,'weapon-fallback-'+fault+'.png'),fullPage:true});report.weapons.push({fault,observed});report.checks.push('actual unavailable weapon '+fault+' keeps genuine primitive firing playable');});
  for(const ground of ['dark','light'])await phase('weapon-atlas-'+ground,async()=>{const context=phaseContext=await browser.newContext({viewport:{width:1000,height:850}}),page=await context.newPage();lastPage=page;watch(page);await page.goto(base+'/__weapon?ground='+ground);await page.waitForFunction(()=>window.previewReady?.width===1536&&window.previewReady?.height===1024);await page.screenshot({path:path.join(out,'weapon-native32-'+ground+'.png'),fullPage:true});report.weapons.push({ground,samples:await page.evaluate(()=>window.samples)});});
+
+ // New independent phase: ordinary native Start + brief strafe, then neutral
+ // controls. The page-side observer only reads actual engine state; its IDs,
+ // samples and timing are evidence bookkeeping, never game-state assignments.
+ await phase('contact-recovery',async()=>{
+  const context=phaseContext=await browser.newContext({viewport:{width:1280,height:720}});
+  const page=await context.newPage();lastPage=page;watch(page);
+  await page.goto(base+'/index.html');
+  await page.waitForFunction(()=>window.__chronoRead().hostiles.state==='ready');
+  await page.locator('#startBtn').press('Enter');
+  await page.keyboard.down('a');await page.waitForTimeout(80);await page.keyboard.up('a');
+  const observed=await page.evaluate(()=>new Promise(resolve=>{
+   const started=performance.now(),ids=new WeakMap(),trace=[],hits=[];
+   let nextId=1,previous=null,retainedOverlap=null;
+   function observe(){
+    const elapsedMs=performance.now()-started;
+    const snapshot={elapsedMs,state:gameState,shield:player.shield,hull:player.hull,
+     contactCd:player.contactCd,invulnerable:player.isInvulnerable,score,wave,
+     bullets:bullets.length,bombs:player.bombs,
+     overlaps:enemies.filter(e=>e.hp>0&&Math.hypot(player.x-e.x,player.y-e.y)<26).map(e=>{
+      if(!ids.has(e))ids.set(e,nextId++);
+      return{id:ids.get(e),hp:e.hp,type:e.type};
+     })};
+    if(previous&&snapshot.contactCd>previous.contactCd+1)hits.push(snapshot);
+    if(previous&&snapshot.contactCd>0&&previous.contactCd>0&&snapshot.score===previous.score){
+     for(const current of snapshot.overlaps){const prior=previous.overlaps.find(e=>e.id===current.id&&e.hp===current.hp);
+      if(prior&&!retainedOverlap)retainedOverlap={before:previous,after:snapshot,enemy:current};
+     }
+    }
+    trace.push(snapshot);previous=snapshot;
+    if((hits.length>=2&&retainedOverlap)||snapshot.state!=='PLAYING'||elapsedMs>=16000){
+     resolve({input:'Native Enter Start; native A held80ms/released; neutral controls thereafter; no firing/bombs/dodge',
+      observerScope:'Read-only engine snapshots and observer-owned WeakMap IDs; no game-state mutation, clock rewrite or random seed',
+      hits,retainedOverlap,trace,finishedReason:hits.length>=2&&retainedOverlap?'two actual contacts plus retained live overlap':snapshot.state!=='PLAYING'?'actual sortie ended':'16-second observation bound'});
+    }else requestAnimationFrame(observe);
+   }
+   requestAnimationFrame(observe);
+  }));
+  report.contactRecovery=observed;
+  assert.ok(observed.hits.length>=2,'ordinary unarmed sortie must produce two actual contact hits within16seconds');
+  assert.ok(observed.retainedOverlap,'a living overlapping enemy must remain healthy and unscored across real recovery frames');
+  const intervals=observed.hits.slice(1).map((hit,i)=>hit.elapsedMs-observed.hits[i].elapsedMs);
+  report.contactRecovery.intervalsMs=intervals;
+  assert.ok(intervals.every(ms=>ms>=450),'actual contact hit intervals must respect recovery (450ms lower tolerance for nominal500ms simulation cadence)');
+  assert.ok(observed.trace.every(s=>s.bullets===0&&s.bombs===3&&!s.invulnerable),'proof must not substitute firing, bombs or dodge immunity');
+  assert.ok(observed.hits.every(s=>s.contactCd===30),'observed hits must be actual shared-contact cooldown resets');
+  assert.equal(observed.retainedOverlap.before.score,observed.retainedOverlap.after.score);
+  await page.keyboard.press('Escape');await page.waitForFunction(()=>window.__chronoRead().state==='PAUSED');
+  await page.screenshot({path:path.join(out,'contact-recovery-real-overlap.png'),fullPage:true});
+  report.contactRecovery.paused=await state(page);
+  report.checks.push('ordinary native Start/strafe yields real spaced contact hits and living unscored recovery overlap');
+ });
+
  assert.deepEqual(report.pageErrors,[]);assert.deepEqual(report.failedResponses,[]);report.passed=report.phases.every(p=>p.passed);if(!report.passed)process.exitCode=1;
 }catch(error){report.passed=false;report.error=error.stack;if(lastPage){report.lastObserved=await state(lastPage).catch(()=>null);await lastPage.screenshot({path:path.join(out,'failure.png'),fullPage:true}).catch(()=>{});}console.error(error.stack);process.exitCode=1;}finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));report.finishedUtc=new Date().toISOString();fs.writeFileSync(path.join(out,'CONTROLS_ACTUAL.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));}})();

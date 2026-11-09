@@ -112,8 +112,10 @@ async def main():
         check("HQ audio: recorded files fetched and decoded, no oscillators", au["osc"] == 0 and au["decode"] > 0 and len(fetched) > 0,
               {"probe": au, "fetched": fetched[:8]})
         await finish_bout(page)
-        ok = await wait_until(page, "() => window.__bladeTribunalDebug.ladder().enemy === 'Justiciar Duelist' && window.__bladeTribunalDebug.ladder().running", 10)
+        # The between-bout pause runs in game time; on a slow software-GL runner it takes far longer than 3.5 s.
+        ok = await wait_until(page, "() => window.__bladeTribunalDebug.ladder().enemy === 'Justiciar Duelist' && window.__bladeTribunalDebug.ladder().running", 60)
         l2 = await L(page)
+        ai0 = l2["ai"]
         check("bout 2 is Justiciar Duelist after winning bout 1", ok, {k: l2[k] for k in ("bout", "enemy", "enemyMax", "running")})
         await page.wait_for_timeout(400)
         await page.screenshot(path=str(out / "04_bout2_intro.png"))
@@ -121,11 +123,13 @@ async def main():
         await play(page, 14, [("KeyD", 180), ("KeyJ", 110), ("KeyJ", 110), ("KeyJ", 110), ("KeyD", 120), ("KeyJ", 110)])
         await page.screenshot(path=str(out / "05_bout2_fight.png"))
         l3 = await L(page)
-        check("AI read the slash spam (parries or punishes > 0)", l3["ai"]["parries"] + l3["ai"]["punishes"] > 0, l3["ai"])
+        d3 = {k: l3["ai"][k] - ai0[k] for k in ai0}
+        check("Duelist read the slash spam in bout 2 (parries or punishes > 0)", d3["parries"] + d3["punishes"] > 0, d3)
         check("player history recorded", len(l3["reads"]) >= 5 and l3["reads"].count("slash") >= 4, l3["reads"])
         await play(page, 8, [("KeyL", 900), ("KeyA", 200), ("KeyL", 900), ("KeyK", 120)])
         l4 = await L(page)
-        check("AI feints or punishes against a guarding player", l4["ai"]["feints"] + l4["ai"]["punishes"] >= 1, l4["ai"])
+        d4 = {k: l4["ai"][k] - l3["ai"][k] for k in ai0}
+        check("Duelist feints, punishes or parries against a guarding player", sum(d4.values()) >= 1, d4)
         if not l4["running"]:
             check("player lost bout 2 to the Duelist (allowed)", True, l4["result"])
         else:

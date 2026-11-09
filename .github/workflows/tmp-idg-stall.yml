@@ -1,0 +1,66 @@
+name: TMP IDG stall hunt (PR 206, delete branch after)
+
+# Throwaway branch only. Profiles the long frames in Vorath Souls, Prism Runner
+# 2049 and Chrono Blade 2049 (PR 206 head vs main) with the V8 sampling
+# profiler in a muted headless Chromium. Nothing here deploys.
+on:
+  push:
+    branches: [claude/tmp-idg-stall-20261109]
+
+permissions:
+  contents: read
+
+jobs:
+  stall:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: tool, show-progress: false, sparse-checkout: tmp_capture }
+      - uses: actions/checkout@v4
+        with:
+          ref: 9dea24d4e68e3b95bee3328a9b79fe9981009274
+          path: pr
+          show-progress: false
+          sparse-checkout: |
+            arcade/custom/vorath-souls
+            arcade/custom/prism-runner-2049
+            arcade/custom/chrono-blade-2049
+            static/games
+            static/art/games
+      - uses: actions/checkout@v4
+        with:
+          ref: f9888033f6815b5526af5b8359ac53542cfe48fc
+          path: main
+          show-progress: false
+          sparse-checkout: |
+            arcade/custom/vorath-souls
+            arcade/custom/prism-runner-2049
+            arcade/custom/chrono-blade-2049
+            static/games
+            static/art/games
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: Install Playwright Chromium
+        run: |
+          pip install playwright==1.58.0
+          python -m playwright install --with-deps chromium
+      - name: Serve PR head (8766) and main (8765)
+        run: |
+          nohup python tool/tmp_capture/serve.py 8766 pr >/dev/null 2>&1 &
+          nohup python tool/tmp_capture/serve.py 8765 main >/dev/null 2>&1 &
+          sleep 3
+      - name: Profile PR head, twice
+        continue-on-error: true
+        run: |
+          python tool/tmp_capture/profile_stall.py --base http://127.0.0.1:8766 --slugs vorath-souls,prism-runner-2049,chrono-blade-2049 --out out/pr_run1
+          python tool/tmp_capture/profile_stall.py --base http://127.0.0.1:8766 --slugs vorath-souls,prism-runner-2049,chrono-blade-2049 --out out/pr_run2
+      - name: Profile main
+        continue-on-error: true
+        run: python tool/tmp_capture/profile_stall.py --base http://127.0.0.1:8765 --slugs vorath-souls,prism-runner-2049,chrono-blade-2049 --out out/main
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: idg-stall
+          path: out
+          retention-days: 5

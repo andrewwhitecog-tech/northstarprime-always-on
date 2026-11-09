@@ -102,7 +102,7 @@ async def main():
         s7 = await page.evaluate(snap)
         check("three shards open the eye-door", s7["fragments"] == 3, {"fragments": s7["fragments"], "running": s7["running"]})
         if s7["running"]:
-            await page.evaluate("() => { player.x = room.exit[0]; player.y = room.exit[1]; }")
+            await page.evaluate("() => window.__darkBelowWave20.toExit()")
             for _ in range(40):
                 if (await page.evaluate(snap))["won"]:
                     break

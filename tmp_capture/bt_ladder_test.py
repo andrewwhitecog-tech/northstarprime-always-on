@@ -68,11 +68,16 @@ async def play(page, secs, pattern):
         i += 1
 
 
-async def finish_bout(page):
-    for _ in range(2):
-        await wait_until(page, "() => { const l = window.__bladeTribunalDebug.ladder(); return l.running && l.enemyHp > 0; }", 8)
+async def finish_bout(page, secs=120):
+    # Round transitions run in game time; on a slow runner they take many seconds.
+    # koEnemy() is ignored between rounds, so keep calling it until the match is over.
+    start = await page.evaluate("() => { const l = window.__bladeTribunalDebug.ladder(); return [l.bout, l.result]; }")
+    for _ in range(int(secs * 2)):
+        l = await page.evaluate("() => window.__bladeTribunalDebug.ladder()")
+        if l["result"] or l["bout"] != start[0] or (not l["running"] and l["between"] > 0):
+            return
         await page.evaluate("() => window.__bladeTribunalDebug.koEnemy()")
-        await page.wait_for_timeout(2600)
+        await page.wait_for_timeout(500)
 
 
 async def main():
@@ -134,7 +139,7 @@ async def main():
             check("player lost bout 2 to the Duelist (allowed)", True, l4["result"])
         else:
             await finish_bout(page)
-            ok = await wait_until(page, "() => window.__bladeTribunalDebug.ladder().result === 'cleared'", 8)
+            ok = await wait_until(page, "() => window.__bladeTribunalDebug.ladder().result === 'cleared'", 30)
             l5 = await L(page)
             check("ladder cleared, Thorn blade unlocked and saved", ok and "thorn" in l5["save"]["blades"] and l5["save"]["clears"] >= 1, l5["save"])
             await page.screenshot(path=str(out / "06_cleared.png"))

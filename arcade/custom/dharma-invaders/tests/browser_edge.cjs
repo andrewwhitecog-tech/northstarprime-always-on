@@ -1,9 +1,79 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict'),cp=require('node:child_process');
 const {chromium}=require(process.env.NSP_PLAYWRIGHT_PATH||'playwright');
-const root=path.resolve(__dirname,'../../../..'),out=process.env.NSP_PLAYTEST_OUT;if(!out)throw Error('output required');fs.mkdirSync(out,{recursive:true});
-const result={passed:false,sourceHead:cp.execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),scope:'Native edge movement and actual dash lifecycle; read-only snapshots, no state/clock mutation. Completion bounds only; transient travel is measured separately.',cases:[],errors:[]};
+const root=path.resolve(__dirname,'../../../..'),out=process.env.NSP_PLAYTEST_OUT;
+if(!out)throw Error('output required');fs.mkdirSync(out,{recursive:true});
+const result={passed:false,sourceHead:cp.execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),scope:'Native edge movement, trusted Parry click, active/paused/completed dash lifecycle. Read-only observations; no game-state/clock writes.',cases:[],errors:[]};
 const base='https://raw.githubusercontent.com/andrewwhitecog-tech/northstarprime-always-on/'+result.sourceHead;
 const server=http.createServer(async(req,res)=>{try{const u=new URL(req.url,'http://localhost');let p=path.resolve(root,'.'+decodeURIComponent(u.pathname));if(!p.startsWith(root+path.sep))throw Error('containment');if(u.pathname.endsWith('/'))p=path.join(p,'index.html');let b;if(fs.existsSync(p)&&fs.statSync(p).isFile())b=fs.readFileSync(p);else if(u.pathname.startsWith('/static/')){const r=await fetch(base+u.pathname,{signal:AbortSignal.timeout(20000)});if(!r.ok){res.writeHead(r.status);return res.end();}b=Buffer.from(await r.arrayBuffer());}else{res.writeHead(404);return res.end();}res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.png':'image/png','.webp':'image/webp','.mp3':'audio/mpeg','.ogg':'audio/ogg'})[path.extname(p)]||'application/octet-stream');res.end(b);}catch(e){res.writeHead(500);res.end(String(e));}});
 
-(async()=>{let browser;try{await new Promise(r=>server.listen(0,'127.0.0.1',r));browser=await chromium.launch({headless:!process.env.NSP_VIRTUAL_DISPLAY,args:['--disable-dev-shm-usage']});for(const phone of [false,true])for(const side of ['left','right']){const viewport=phone?{width:390,height:844}:{width:1280,height:1000},entry={phone,side,viewport,passed:false,errors:[]};result.cases.push(entry);const context=await browser.newContext({viewport,hasTouch:phone,isMobile:phone}),page=await context.newPage();let touch;try{page.on('pageerror',e=>entry.errors.push(String(e)));page.on('response',r=>{if(r.status()>=400)entry.errors.push(r.status()+' '+r.url());});await page.goto('http://127.0.0.1:'+server.address().port+'/arcade/custom/dharma-invaders/');await page.bringToFront();await page.waitForFunction(()=>__COMMENTARY_DEBUG__.atlas().ready);const click=s=>phone?page.locator(s).tap():page.locator(s).click();await click('#start');if(phone){touch=await context.newCDPSession(page);const r=await page.locator('#c').boundingBox();await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:r.x+r.width*(side==='left'?.01:.99),y:r.y+r.height*.85}]});}else await page.keyboard.down(side==='left'?'ArrowLeft':'ArrowRight');await page.waitForFunction(side=>side==='left'?__COMMENTARY_DEBUG__.snapshot().sentinel.x<=43:__COMMENTARY_DEBUG__.snapshot().sentinel.x>=757,side,{timeout:5000});if(touch)await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});else await page.keyboard.up(side==='left'?'ArrowLeft':'ArrowRight');entry.before=await page.evaluate(()=>__COMMENTARY_DEBUG__.snapshot());const recording=page.evaluate(()=>new Promise(resolve=>{const records=[],start=performance.now();function sample(){records.push({at:performance.now(),...__COMMENTARY_DEBUG__.snapshot().sentinel});if(performance.now()-start<650)requestAnimationFrame(sample);else resolve(records);}sample();}));await click('#parry');entry.trace=await recording;entry.after=await page.evaluate(()=>__COMMENTARY_DEBUG__.snapshot());entry.activeSamples=entry.trace.filter(r=>r.isDashing).length;entry.activeMinX=Math.min(...entry.trace.filter(r=>r.isDashing).map(r=>r.x));entry.activeMaxX=Math.max(...entry.trace.filter(r=>r.isDashing).map(r=>r.x));entry.transientOutside=entry.trace.some(r=>r.isDashing&&(r.x<42||r.x>758));await page.screenshot({path:path.join(out,'dash-complete-'+(phone?'phone':'desktop')+'-'+side+'.png'),fullPage:true});assert.ok(entry.activeSamples>0,'native Parry produced real active dash samples');assert.equal(entry.after.sentinel.isDashing,false);assert.ok(entry.after.sentinel.dashTimer<=0);assert.ok(entry.after.sentinel.x>=42&&entry.after.sentinel.x<=758,'actual completed native dash returns to existing court bounds');assert.deepEqual(entry.errors,[]);entry.passed=true;}catch(e){entry.failure=e.stack;await page.screenshot({path:path.join(out,'dash-failure-'+(phone?'phone':'desktop')+'-'+side+'.png'),fullPage:true}).catch(()=>{});}finally{if(touch)await touch.detach().catch(()=>{});await context.close();}}result.passed=result.cases.length===4&&result.cases.every(c=>c.passed);if(!result.passed)process.exitCode=1;}catch(e){result.errors.push(e.stack);process.exitCode=1;}finally{if(browser)await browser.close();await new Promise(r=>server.close(r));fs.writeFileSync(path.join(out,'DASH_EDGE_ACTUAL.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));}})();
+async function bounded(promise,label){let timer;try{return await Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error(label+' exceeded5000ms')),5000);})]);}finally{clearTimeout(timer);}}
+(async()=>{let browser;try{
+  await new Promise(r=>server.listen(0,'127.0.0.1',r));
+  browser=await chromium.launch({headless:!process.env.NSP_VIRTUAL_DISPLAY,args:['--disable-dev-shm-usage']});
+  for(const phone of [false,true])for(const side of ['left','right']){
+    const viewport=phone?{width:390,height:844}:{width:1280,height:1000};
+    const entry={phone,side,viewport,passed:false,trace:[],errors:[]};result.cases.push(entry);
+    const context=await browser.newContext({viewport,hasTouch:phone,isMobile:phone}),page=await context.newPage();let touch;
+    try{
+      page.on('pageerror',e=>entry.errors.push(String(e)));
+      page.on('response',r=>{if(r.status()>=400)entry.errors.push(r.status()+' '+r.url());});
+      await page.goto('http://127.0.0.1:'+server.address().port+'/arcade/custom/dharma-invaders/');
+      await page.bringToFront();await page.waitForFunction(()=>__COMMENTARY_DEBUG__.atlas().ready);
+      if(phone)touch=await context.newCDPSession(page);
+      // Real browser input at observed button coordinates; no DOM.click/dispatchEvent.
+      const click=async selector=>{const r=await page.locator(selector).boundingBox();assert.ok(r);const x=r.x+r.width/2,y=r.y+r.height/2;
+        if(phone){await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});}
+        else await page.mouse.click(x,y);
+      };
+      await click('#start');
+      if(phone){const r=await page.locator('#c').boundingBox();await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:r.x+r.width*(side==='left'?.01:.99),y:r.y+r.height*.85}]});}
+      else await page.keyboard.down(side==='left'?'ArrowLeft':'ArrowRight');
+      await page.waitForFunction(side=>side==='left'?__COMMENTARY_DEBUG__.snapshot().sentinel.x<=43:__COMMENTARY_DEBUG__.snapshot().sentinel.x>=757,side,{timeout:5000});
+      if(phone)await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+      else await page.keyboard.up(side==='left'?'ArrowLeft':'ArrowRight');
+      entry.before=await page.evaluate(()=>__COMMENTARY_DEBUG__.snapshot());
+      let activeResolve,doneResolve;
+      const active=new Promise(r=>{activeResolve=r;}),done=new Promise(r=>{doneResolve=r;});
+      await page.exposeBinding('edgeSample',(_,sample)=>{entry.trace.push(sample);if(sample.isDashing)activeResolve(sample);});
+      await page.exposeBinding('edgeEvent',(_,event)=>{entry.parryEvent=event;});
+      await page.exposeBinding('edgeDone',(_,value)=>doneResolve(value));
+      // Arm immediately and start the observer ONLY on the actual trusted native click.
+      // The existing game listener runs first and owns every state change.
+      await page.evaluate(()=>document.querySelector('#parry').addEventListener('click',event=>{
+        window.edgeEvent({trusted:event.isTrusted,detail:event.detail,pointerType:event.pointerType||''});
+        const start=performance.now();let seenActive=false;
+        function sample(){const state=__COMMENTARY_DEBUG__.snapshot(),row={at:performance.now(),paused:state.paused,...state.sentinel};
+          window.edgeSample(row);if(row.isDashing)seenActive=true;
+          if(seenActive&&!row.isDashing){window.edgeDone({completed:true});return;}
+          if(performance.now()-start>4000){window.edgeDone({completed:false,timeout:true});return;}
+          requestAnimationFrame(sample);
+        }sample();
+      },{once:true}));
+      await click('#parry');entry.firstActive=await bounded(active,'actual active dash');
+      await click('#pause');entry.paused=await page.evaluate(()=>__COMMENTARY_DEBUG__.snapshot());
+      assert.equal(entry.paused.paused,true);assert.equal(entry.paused.sentinel.isDashing,true,'native Pause occurred during an actual active dash');
+      assert.ok(entry.paused.sentinel.dashTimer>0);
+      assert.ok(entry.paused.sentinel.x>=42&&entry.paused.sentinel.x<=758);
+      await page.waitForTimeout(150);
+      assert.deepEqual(await page.evaluate(()=>__COMMENTARY_DEBUG__.snapshot().sentinel),entry.paused.sentinel,'paused dash timer and legal position remain frozen');
+      await page.screenshot({path:path.join(out,'dash-paused-'+(phone?'phone':'desktop')+'-'+side+'.png'),fullPage:true});
+      await click('#pause');entry.observer=await bounded(done,'actual dash completion');
+      entry.after=await page.evaluate(()=>__COMMENTARY_DEBUG__.snapshot());
+      entry.activeSamples=entry.trace.filter(r=>r.isDashing&&!r.paused).length;
+      entry.pausedSamples=entry.trace.filter(r=>r.isDashing&&r.paused).length;
+      entry.activeMinX=Math.min(...entry.trace.filter(r=>r.isDashing).map(r=>r.x));
+      entry.activeMaxX=Math.max(...entry.trace.filter(r=>r.isDashing).map(r=>r.x));
+      entry.transientOutside=entry.trace.some(r=>r.x<42||r.x>758);
+      await page.screenshot({path:path.join(out,'dash-complete-'+(phone?'phone':'desktop')+'-'+side+'.png'),fullPage:true});
+      assert.equal(entry.parryEvent.trusted,true);assert.ok(entry.activeSamples>0,'real active dash samples are required');
+      assert.equal(entry.observer.completed,true);assert.equal(entry.transientOutside,false,'all actual active/paused/completed samples stay in existing court');
+      assert.equal(entry.after.sentinel.isDashing,false);assert.ok(entry.after.sentinel.dashTimer<=0);
+      assert.ok(entry.after.sentinel.x>=42&&entry.after.sentinel.x<=758);assert.deepEqual(entry.errors,[]);entry.passed=true;
+    }catch(e){entry.failure=e.stack;await page.screenshot({path:path.join(out,'dash-failure-'+(phone?'phone':'desktop')+'-'+side+'.png'),fullPage:true}).catch(()=>{});}
+    finally{if(touch)await touch.detach().catch(()=>{});await context.close();}
+  }
+  result.passed=result.cases.length===4&&result.cases.every(c=>c.passed);if(!result.passed)process.exitCode=1;
+}catch(e){result.errors.push(e.stack);process.exitCode=1;}
+finally{if(browser)await browser.close();await new Promise(r=>server.close(r));fs.writeFileSync(path.join(out,'DASH_EDGE_ACTUAL.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));}
+})();

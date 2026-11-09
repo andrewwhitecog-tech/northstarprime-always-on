@@ -5,7 +5,7 @@ const {chromium}=require(process.env.NSP_PLAYWRIGHT_PATH||'playwright');
 const gameRoot=path.resolve(__dirname,'..');const out=path.resolve(process.env.NSP_PLAYTEST_OUT||path.join(gameRoot,'playtest-artifacts'));
 fs.mkdirSync(out,{recursive:true});
 const report={startedUtc:new Date().toISOString(),scope:'Real Chromium on isolated hosted virtual display; ordinary keyboard/mouse/touch inputs; read-only observer; no game-state mutation',checks:[],pageErrors:[],consoleErrors:[],failedRequests:[]};
-const observe=String.raw`  window.__soulsObserve = () => ({input:{touch:{...input.touch},stickPointer},mode:game.mode,time:game.time,hitStop:game.hitStop,gateOpen:game.gateOpen,assets:{exile:{loaded:art.exile.complete&&art.exile.naturalWidth>0,width:art.exile.naturalWidth,height:art.exile.naturalHeight},maw:{loaded:art.maw.complete&&art.maw.naturalWidth>0,width:art.maw.naturalWidth,height:art.maw.naturalHeight}},player:{...game.player},enemies:game.enemies.map(e=>({...e,hitBy:undefined})),attacks:game.attacks.map(a=>({x:a.x,y:a.y,kind:a.kind})),world:{...world,rect:{left:canvas.getBoundingClientRect().left,top:canvas.getBoundingClientRect().top}}} );`;
+const observe=String.raw`  window.__soulsObserve = () => ({journey:{arena:journey.arena,phase:journey.phase,charges:journey.charges,upgrades:{...journey.upgrades},bank:JSON.parse(JSON.stringify(journey.bank)),cleared:journey.cleared},metrics:JSON.parse(JSON.stringify(game.metrics)),projectiles:game.projectiles.map(b=>({x:b.x,y:b.y,vx:b.vx,vy:b.vy})),waves:game.waves.map(w=>({...w})),obstacles:arenaObstacles(),input:{touch:{...input.touch},stickPointer},mode:game.mode,time:game.time,hitStop:game.hitStop,gateOpen:game.gateOpen,assets:{exile:{loaded:art.exile.complete&&art.exile.naturalWidth>0,width:art.exile.naturalWidth,height:art.exile.naturalHeight},maw:{loaded:art.maw.complete&&art.maw.naturalWidth>0,width:art.maw.naturalWidth,height:art.maw.naturalHeight}},player:{...game.player},enemies:game.enemies.map(e=>({...e,hitBy:undefined})),attacks:game.attacks.map(a=>({x:a.x,y:a.y,kind:a.kind})),world:{...world,rect:{left:canvas.getBoundingClientRect().left,top:canvas.getBoundingClientRect().top}}} );`;
 const source=fs.readFileSync(path.join(gameRoot,'index.html'),'utf8');
 const end='  requestAnimationFrame(frame);\n})();';assert.ok(source.includes(end),'read-only observer anchor must match actual export');
 const instrumented=source.replace(end,observe+'\n'+end);
@@ -33,29 +33,42 @@ async function phase(name,fn){try{await fn();}catch(error){(report.phaseFailures
  await mark('held Escape repeats never auto-resume the paused encounter',async()=>{await page.keyboard.down('Escape');await until(async()=>(await snapshot()).mode==='paused','pause');const paused=await snapshot();await page.keyboard.down('Escape');await page.waitForTimeout(100);await page.keyboard.down('Escape');await page.waitForTimeout(120);assert.equal((await snapshot()).mode,'paused');assert.equal((await snapshot()).time,paused.time);const repeats=await page.evaluate(()=>window.__keyEventEvidence.filter(e=>e.code==='Escape'&&e.repeat));assert.ok(repeats.length>0,'browser must actually deliver native repeated keydown events');report.escapeRepeatEvidence=repeats;await page.keyboard.up('Escape');await page.keyboard.press('Escape');await until(async()=>(await snapshot()).mode==='playing','fresh keypress resumes');});
  await page.keyboard.press('r');
  await mark('a lost fight reaches death and R starts a fresh encounter',async()=>{await keys([]);await until(async()=>(await snapshot()).mode==='dead','real enemy damage causes death',25000);await screenshot('02-defeat');await page.keyboard.press('r');await until(async()=>(await snapshot()).mode==='playing','retry');assert.equal((await snapshot()).player.hp,100);});
- let staggerObserved=false;const deadline=Date.now()+100000;
+ let staggerObserved=false,checkpointRecovery=false,shieldProbe=false;const deadline=Date.now()+180000;
  while(Date.now()<deadline){
-  const state=await snapshot();if(state.mode==='dead')throw Error('Natural-input victory attempt died');if(state.mode==='victory')break;
-  const p=state.player;const living=state.enemies.filter(e=>!e.dead);
+  const state=await snapshot();if(state.mode==='dead')throw Error('Natural-input journey died outside the deliberate checkpoint test');if(state.mode==='victory')break;
+  if(state.mode==='checkpoint'){
+   await keys([]);await screenshot('checkpoint-'+state.journey.arena);
+   if(state.journey.arena===1&&!checkpointRecovery){
+    const charge=state.journey.charges;assert.ok(charge>=3,'real kills must earn an upgrade');await page.keyboard.press('Digit2');const bought=await snapshot();assert.equal(bought.journey.upgrades.vitality,1);assert.equal(bought.journey.charges,charge-3);await page.keyboard.press('Enter');await until(async()=>(await snapshot()).mode==='playing','enter second arena');assert.equal((await snapshot()).player.maxHp,120,'paid upgrade must affect actual player stats');
+    await page.reload();await page.waitForFunction(()=>typeof window.__soulsObserve==='function');assert.equal((await snapshot()).mode,'title');assert.equal((await snapshot()).journey.arena,1,'native reload loads the banked checkpoint');await page.keyboard.press('Enter');await until(async()=>(await snapshot()).mode==='playing','continue saved checkpoint');const banked=(await snapshot()).journey.bank;await until(async()=>(await snapshot()).mode==='dead','real second-arena enemies cause checkpoint death',30000);await screenshot('checkpoint-death');await page.keyboard.press('r');await until(async()=>(await snapshot()).mode==='playing','retry saved checkpoint');const restored=await snapshot();assert.equal(restored.journey.arena,1);assert.equal(restored.player.maxHp,120);assert.equal(restored.journey.charges,banked.charges);assert.deepEqual(restored.journey.upgrades,banked.upgrades);checkpointRecovery=true;report.checks.push({name:'earned upgrade, native reload and genuine death/retry preserve the correct bank',passed:true});
+   }else{if(state.journey.charges>=3)await page.keyboard.press('Digit1');await page.keyboard.press('Enter');await until(async()=>(await snapshot()).mode==='playing','advance through real arena checkpoint');}
+   continue;
+  }
+  const p=state.player,living=state.enemies.filter(e=>!e.dead);
   if(state.gateOpen){const dx=1080-p.x,dy=360-p.y;const move=[];if(Math.abs(dx)>22)move.push(dx>0?'d':'a');if(Math.abs(dy)>22)move.push(dy>0?'s':'w');await keys(move);if(Math.hypot(dx,dy)<115)await page.keyboard.press('e');await page.waitForTimeout(60);continue;}
-  const vulnerable=living.filter(e=>e.staggerT>0).sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0];
-  const target=vulnerable||living.sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0];
-  if(!target){await page.waitForTimeout(60);continue;}
-  let dx=target.x-p.x,dy=target.y-p.y,distance=Math.hypot(dx,dy);let move=[];
-  const ideal=vulnerable?72:118;const direction=distance>ideal+10?1:distance<ideal-15?-1:0;
+  const vulnerable=living.filter(e=>e.staggerT>0&&(e.type!=='guard'||e.phase===2)).sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0];
+  const target=vulnerable||living.sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0];if(!target){await page.waitForTimeout(60);continue;}
+  const dx=target.x-p.x,dy=target.y-p.y,distance=Math.hypot(dx,dy);let move=[];
+  const waitingForMaw=target.type==='guard'&&target.phase===2&&state.metrics.mawPhase2Attacks<2;
+  const ideal=vulnerable?72:target.role==='bulwark'&&!shieldProbe?78:waitingForMaw?220:118;const direction=distance>ideal+10?1:distance<ideal-15?-1:0;
   if(direction){if(Math.abs(dx)>distance*.2)move.push(dx*direction>0?'d':'a');if(Math.abs(dy)>distance*.2)move.push(dy*direction>0?'s':'w');}
+  for(const o of state.obstacles){const ox=o.x-p.x,oy=o.y-p.y;if(Math.hypot(ox,oy)<o.r+90&&move.includes(ox>0?'d':'a')&&Math.abs(oy)<o.r+p.r+14)move=[oy>0?'w':'s'];}
   await keys(move);await page.mouse.move(state.world.rect.left+state.world.ox+target.x*state.world.scale,state.world.rect.top+state.world.oy+target.y*state.world.scale);
-  if(target.type==='guard'&&target.staggerT>0&&!staggerObserved){staggerObserved=true;await keys([]);const before=target.staggerT;await page.waitForTimeout(220);const after=(await snapshot()).enemies.find(e=>e.type==='guard');assert.ok(after&&after.staggerT>0&&after.staggerT<before,'actual guard stays finishable beyond a single frame');await screenshot('03-maw-stagger-window');report.checks.push({name:'real Maw Guard stagger remains available after 220ms',passed:true});}
-  else if(vulnerable&&distance<90)await page.keyboard.press('e');
-  else {
-   const threat=living.find(e=>e.state==='windup'&&e.stateT<.18&&Math.hypot(e.x-p.x,e.y-p.y)<105);
-   if(threat&&p.parryCooldown<=0)await page.keyboard.press('l');
-   if(distance<165&&p.attackCooldown<=0&&p.dodge<=0&&p.finisherT<=0&&p.stamina>=28)await page.keyboard.press('k');
+  const ring=state.waves.find(w=>{const gap=Math.hypot(p.x-w.x,p.y-w.y)-w.r;return gap<38&&gap>-15;});
+  const rush=living.find(e=>e.state==='charge'&&Math.hypot(e.x-p.x,e.y-p.y)<135);
+  const closeWindup=living.find(e=>e.state==='windup'&&e.windupKind==='swipe'&&e.stateT<.15&&Math.hypot(e.x-p.x,e.y-p.y)<110);
+  const bolt=state.projectiles.find(b=>Math.hypot(b.x-p.x,b.y-p.y)<58);
+  if(ring&&p.dodge<=0&&p.stamina>=22)await page.keyboard.press('Space');else if((rush||closeWindup||bolt)&&p.parryCooldown<=0)await page.keyboard.press('l');
+  if(target.type==='guard'&&target.phase===2&&target.staggerT>0&&!staggerObserved){staggerObserved=true;await keys([]);const before=target.staggerT;await page.waitForTimeout(220);const after=(await snapshot()).enemies.find(e=>e.type==='guard');assert.ok(after&&after.staggerT>0&&after.staggerT<before,'actual phase-two guard stays finishable beyond a single frame');await screenshot('03-maw-phase-two-stagger');report.checks.push({name:'real phase-two Maw stagger remains available after220ms',passed:true});}
+  else if(vulnerable&&distance<90&&!waitingForMaw)await page.keyboard.press('e');
+  else if(!waitingForMaw&&distance<165&&p.attackCooldown<=0&&p.dodge<=0&&p.finisherT<=0){
+   if(target.role==='bulwark'&&!shieldProbe&&['idle','windup'].includes(target.state)&&target.stateT>.2&&p.stamina>=12){await page.keyboard.press('j');shieldProbe=true;}
+   else if(p.stamina>=28)await page.keyboard.press('k');
   }
   await page.waitForTimeout(60);
  }
- await keys([]);const final=await snapshot();assert.equal(final.mode,'victory','ordinary inputs must complete the real encounter and gate interaction');assert.ok(staggerObserved,'Maw Guard actual stagger must be observed');assert.equal(final.enemies.length,0,'defeated bodies must finish fading rather than remain forever');await screenshot('04-gate-broken');report.checks.push({name:'natural-input combat, Maw Guard finisher and Bone Gate objective complete',passed:true});report.final=final;
- await page.keyboard.press('r');await until(async()=>(await snapshot()).mode==='playing','victory retry');assert.equal((await snapshot()).enemies.filter(e=>!e.dead).length,4);report.checks.push({name:'victory retry restores the complete encounter',passed:true});
+ await keys([]);const final=await snapshot();assert.equal(final.mode,'victory','ordinary inputs must finish all three actual arenas');assert.ok(checkpointRecovery,'real bank/reload/death/retry route must complete');assert.ok(staggerObserved,'actual phase-two stagger must be observed');assert.equal(final.journey.cleared,3);assert.equal(final.enemies.length,0);assert.equal(final.metrics.phase2,1);assert.ok(final.metrics.mawPhase2Attacks>=2,'actual phase two attacks must execute');assert.ok(final.metrics.bolts>0&&final.metrics.rings>0,'real dodgeable threats must exist');assert.ok(final.metrics.shieldBlocks>0,'a real front light attack must exercise the elite guard');assert.ok(final.journey.upgrades.vitality>=1&&final.journey.upgrades.blade>=1);await screenshot('04-three-seals-broken');report.checks.push({name:'natural-input three-arena journey, earned upgrades, Maw phase two and final finisher complete',passed:true});report.final=final;
+ await page.keyboard.press('r');await until(async()=>(await snapshot()).mode==='playing','victory new journey');assert.equal((await snapshot()).journey.arena,0);assert.equal((await snapshot()).enemies.filter(e=>!e.dead).length,4);report.checks.push({name:'victory retry starts a fresh complete journey',passed:true});
  const timing=await page.evaluate(()=>({frames:window.__frameIntervals,longTasks:window.__longTasks}));const sorted=timing.frames.slice(10).sort((a,b)=>a-b);const percentile=p=>sorted[Math.floor((sorted.length-1)*p)]||0;report.frameTiming={scope:'Hosted software Chromium, actual desktop encounter including screenshots/pause',sampleCount:sorted.length,p50Ms:percentile(.5),p95Ms:percentile(.95),p99Ms:percentile(.99),maxMs:Math.max(...sorted),over33ms:sorted.filter(x=>x>33.34).length,longTasks:timing.longTasks};
 
 

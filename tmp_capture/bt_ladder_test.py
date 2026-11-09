@@ -30,7 +30,7 @@ PROBE = """(() => { const p = window.__fp = {d: [], last: 0};
   // Rule 30(g) proof: which lettering cells were drawn (by source x,y), and any typed canvas text.
   const lt = window.__lt = {cells: {}, typed: {}};
   const C2 = CanvasRenderingContext2D.prototype, di = C2.drawImage;
-  C2.drawImage = function (img, sx, sy) { if (img && img.src && img.src.indexOf('lettering_v04') >= 0 && arguments.length >= 9) { const k = sx + ',' + sy; lt.cells[k] = (lt.cells[k] || 0) + 1; } return di.apply(this, arguments); };
+  C2.drawImage = function (img, sx, sy) { if (img && img.src && img.src.indexOf('lettering_v04') >= 0 && arguments.length >= 9) { const k = sx + ',' + sy; lt.cells[k] = (lt.cells[k] || 0) + 1; lt.maxBottom = Math.max(lt.maxBottom || 0, arguments[6] + arguments[8]); } return di.apply(this, arguments); };
   for (const n of ['fillText', 'strokeText']) { const f = C2[n]; C2[n] = function (t) { const k = String(t).slice(0, 40); lt.typed[k] = (lt.typed[k] || 0) + 1; return f.apply(this, arguments); }; } })();"""
 CELLS = json.loads((Path(__file__).resolve().parent / "cells.json").read_text(encoding="utf-8"))["cells"]
 BY_XY = {f"{v[0]},{v[1]}": k for k, v in CELLS.items()}
@@ -180,11 +180,14 @@ async def main():
         check("art callouts drawn from the accepted sheet: BOUT, ROUND, FIGHT, K.O., damage numbers (+ CLEARED/FALLEN, GUARD, FLASH PARRY when reached)",
               need <= set(seen) and any(d in seen for d in "0123456789"), seen)
         check("no typed text on the arena (fillText/strokeText)", not typed, typed)
+        geo = await page.evaluate("() => ({maxBottom: Math.round(window.__lt.maxBottom || 0), head: Math.round(calloutBand().head), floor: Math.round(view.floor), viewH: Math.round(view.h)})")
+        check("desktop: every lettering callout sits above the fighters' heads (rule 30(c))", 0 < geo["maxBottom"] <= geo["head"] + 2, geo)
         fp = await page.evaluate("() => { const d = window.__fp.d.slice(60).sort((a,b)=>a-b); return {n: d.length, med: d[d.length>>1], p95: d[Math.floor(d.length*0.95)], max: d[d.length-1]}; }")
         check("frame times on this runner (software GL; not the PC measure)", True, fp)
         await ctx.close()
 
         ctx = await b.new_context(viewport={"width": 390, "height": 844}, device_scale_factor=2, is_mobile=True, has_touch=True)
+        await ctx.add_init_script(PROBE)
         page = await ctx.new_page()
         page.on("pageerror", lambda e: errors.append("phone: " + str(e)[:200]))
         await page.goto(a.base + URL, wait_until="load")
@@ -193,7 +196,9 @@ async def main():
         btn = await page.query_selector("#startBtn")
         if btn:
             await btn.tap()
-        await page.wait_for_timeout(1500)
+        await page.wait_for_timeout(600)
+        await page.screenshot(path=str(out / "07b_phone_bout.png"), timeout=90000)
+        await page.wait_for_timeout(900)
         for sel in ("#rightBtn", "#slashBtn", "#heavyBtn", "#guardBtn", "#slashBtn"):
             el = await page.query_selector(sel)
             if el:
@@ -212,6 +217,13 @@ async def main():
         one = all(0 <= geo[k][0] and geo[k][1] <= vh for k in ("canvas", "slash", "dodge", "left"))
         check("phone: fighters and controls on one screen without scrolling", one and geo["scrollY"] == 0, geo)
         check("phone: arena keeps its shape (620:560), not squashed", abs(c[2] / max(1, c[3]) - 620 / 560) < 0.03, c)
+        await page.evaluate("() => window.__bladeTribunalDebug.koEnemy()")
+        await page.wait_for_timeout(500)
+        await page.screenshot(path=str(out / "08b_phone_ko.png"), timeout=90000)
+        pg = await page.evaluate("() => ({maxBottom: Math.round(window.__lt.maxBottom || 0), head: Math.round(calloutBand().head), cells: Object.keys(window.__lt.cells).length})")
+        check("phone: BOUT and K.O. art drawn, all above the fighters' heads (rule 30(c))", pg["cells"] > 0 and 0 < pg["maxBottom"] <= pg["head"] + 2, pg)
+        tb = await page.evaluate("() => { const h = document.querySelector('h1').getBoundingClientRect(); let bar = 0; for (const el of document.querySelectorAll('body *')) { const st = getComputedStyle(el); if (st.position === 'fixed' && el.getBoundingClientRect().top < 5 && el.getBoundingClientRect().height < 120 && el.getBoundingClientRect().width > 100) bar = Math.max(bar, el.getBoundingClientRect().bottom); } return {h1Top: Math.round(h.top), barBottom: Math.round(bar)}; }")
+        check("phone: page title clear of the shared arcade bar", tb["h1Top"] >= tb["barBottom"] - 1, tb)
         check("phone: no sideways scroll at 390 px", sw <= 392, sw)
         await ctx.close()
         await b.close()

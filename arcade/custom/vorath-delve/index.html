@@ -98,6 +98,40 @@
   .recipe{ width:40px; height:40px; margin:2px; display:inline-block; cursor:pointer; opacity:0.02; }
   .recipe .ico{ width:40px; height:40px; }
   .recipe.no{ pointer-events:none; }
+
+  /* ---------- Rule 30(g) pass 2026-11-09: no words on the play field ----------
+     The world sits between a top strip (return link, callouts, depth, menu) and a bottom strip (hotbar).
+     Nothing in either strip has a box behind it. fit() sets --strip-top / --strip-bot. */
+  #wrap{top:var(--strip-top,40px); bottom:var(--strip-bot,70px); overflow:hidden;}
+  #topbar{top:0; left:0; right:12px; height:var(--strip-top,40px); align-items:center; justify-content:flex-end;}
+  #topbar .badge{background:none; border:0; padding:0 4px; backdrop-filter:none; border-radius:0;}
+  #title, #seed{display:none;}
+  #depth{font-size:15px;}
+  #menuBtn{font-size:22px; line-height:1;}
+  .nsp-return{position:fixed; top:0; left:12px; height:var(--strip-top,40px); display:flex; align-items:center; z-index:30;}
+  .nsp-return a{color:#9cf; text-decoration:none; font:13px "Trebuchet MS",sans-serif; letter-spacing:1px;}
+  #callout{position:fixed; top:0; left:50%; transform:translateX(-50%); height:var(--strip-top,40px); max-width:calc(100vw - 230px);
+    display:flex; align-items:center; gap:10px; white-space:nowrap; overflow:hidden; z-index:12; pointer-events:none; opacity:0; transition:opacity .3s;}
+  #callout.on{opacity:1;}
+  #callout b{font:bold 18px "Trebuchet MS",sans-serif; letter-spacing:2px;}
+  #callout span{font:13px "Trebuchet MS",sans-serif; color:#cdc3ef;}
+  #hotbar{bottom:calc((var(--strip-bot,70px) - 46px) / 2); background:none; border:0; backdrop-filter:none; padding:0;}
+  .slot{border:0; background:transparent;}
+  .slot.sel{box-shadow:none;}
+  .slot.sel .sw{outline:2px solid #ffd86b; outline-offset:2px; filter:drop-shadow(0 0 8px rgba(255,216,107,.7));}
+  #overlay{padding:var(--strip-top,40px) 0 var(--strip-bot,70px); background-color:#05040a; background-size:contain;
+    background-origin:content-box; background-clip:border-box;}
+  #overlay .go{opacity:1; bottom:calc((var(--strip-bot,70px) - 18px) / 2); color:#e9e3ff; font-size:14px; letter-spacing:3px; white-space:nowrap;}
+  @media (max-width:520px){
+    #callout{max-width:calc(100vw - 150px);}
+    #callout b{font-size:14px;} #callout span{display:none;}
+    .slot{width:38px; height:38px;} .slot .sw{width:24px; height:24px;}
+    #hotbar{gap:3px;}
+    #overlay .go{font-size:11px; letter-spacing:1px;}
+  }
+  @media (pointer: coarse) and (orientation: portrait){
+    #touchUI{bottom:calc(10px + env(safe-area-inset-bottom));}
+  }
 </style>
 </head>
 <body>
@@ -108,13 +142,14 @@
   <div class="tact"><button id="tBuild" aria-label="Dig or build" aria-pressed="false">&#9935;</button><button data-k="KeyF" aria-label="Strike">&#9876;</button><button data-k="KeyQ" aria-label="Prism pulse">&#10022;</button><button data-k="KeyE" aria-label="Craft">&#9879;</button><button data-k="KeyG" aria-label="Recruit">&#9737;</button></div>
 </div>
 
+<div id="callout" aria-live="polite"><b></b><span></span></div>
 <div id="hud">
   <div id="topbar">
     <div class="badge" id="title">VORATH <small>· DELVE</small></div>
     <div style="display:flex; gap:8px;">
       <div class="badge" id="seed">SEED —</div>
-      <div class="badge" id="depth">DEPTH <b>0m</b></div>
-      <div class="badge" id="menuBtn" style="cursor:pointer;pointer-events:auto" title="Menu (Esc)">☰ MENU</div>
+      <div class="badge" id="depth" title="Depth">▼ <b>0m</b></div>
+      <div class="badge" id="menuBtn" role="button" aria-label="Menu" style="cursor:pointer;pointer-events:auto" title="Menu (Esc)">☰</div>
     </div>
   </div>
   <div id="hint">LMB dig · RMB build · [1–9] tile · WASD move · [F] strike · [Q] prism pulse · [E] craft · [G] recruit Reveler · [L] aura · [M] sound · [Esc] menu</div>
@@ -673,8 +708,15 @@ function kickShake(mag, frames){ camShake.t=Math.max(camShake.t, frames|0); camS
 const REDLINE = 4.0, RMAX = 5.0;   // riding [4,5] is the greed zone; crossing 5 = OVERLOAD
 const gear = { prismPick:false, coolCloak:false, bonk:false }; // crafted upgrades
 let fracture = null;               // active Fracture-Table roll state
+let HUD_INSET_X = 0;               // game px cropped off each side in a portrait phone (fit)
 let msg = null;                    // transient center-screen banner {text,sub,t,col}
-function banner(text,sub,col){ msg={text,sub:sub||'',t:0,col:col||'#ffd86b'}; }
+let calloutTimer=0;
+function banner(text,sub,col){ msg={text,sub:sub||'',t:0,col:col||'#ffd86b'};
+  // Rule 30(g): callouts print in the strip above the world, never on it.
+  const el=document.getElementById('callout'); if(!el) return;
+  el.querySelector('b').textContent=text; el.querySelector('b').style.color=col||'#ffd86b';
+  el.querySelector('span').textContent=sub||''; el.classList.add('on');
+  clearTimeout(calloutTimer); calloutTimer=setTimeout(()=>el.classList.remove('on'),2500); }
 function spawnPlayer(){
   const cx = Math.floor(MAP_W/2);
   player.x = cx*TS + 2;
@@ -1263,12 +1305,12 @@ function renderRefractionHUD(){
     ctx.restore();
   }
   // --- the vertical prism R-gauge (left side) ---
-  const gx=22, gy=90, gw=26, gh=300;
-  ctx.fillStyle='rgba(8,4,16,0.78)'; ctx.fillRect(gx-6,gy-24,gw+12,gh+52);
-  ctx.strokeStyle='rgba(150,100,255,0.5)'; ctx.lineWidth=1; ctx.strokeRect(gx-6,gy-24,gw+12,gh+52);
-  // label
-  ctx.fillStyle='#c9a8ff'; ctx.font='bold 13px Trebuchet MS'; ctx.textAlign='center';
-  ctx.fillText('R', gx+gw/2, gy-9);
+  const gx=22+HUD_INSET_X, gy=90, gw=26, gh=300;
+  // the gauge's mark: a drawn prism (no letters on the play field, rule 30(g))
+  { const px=gx+gw/2, py=gy-13; ctx.save(); ctx.fillStyle='#c9a8ff'; ctx.shadowColor='#c56bff'; ctx.shadowBlur=8;
+    ctx.beginPath(); ctx.moveTo(px,py-8); ctx.lineTo(px+6,py); ctx.lineTo(px,py+8); ctx.lineTo(px-6,py); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.7)'; ctx.beginPath(); ctx.moveTo(px,py-8); ctx.lineTo(px+2,py); ctx.lineTo(px,py+8); ctx.closePath(); ctx.fill(); ctx.restore(); }
+  ctx.textAlign='center';
   // redline zone (top 20% of the gauge)
   const redH=gh*(1-REDLINE/RMAX);
   ctx.fillStyle='rgba(255,40,90,0.28)'; ctx.fillRect(gx,gy,gw,redH);
@@ -1292,14 +1334,14 @@ function renderRefractionHUD(){
   else if(r>=REDLINE){ tag='REDLINE'; tcol='#ff466d'; }
   else if(player.vulnerable){ tag='PREY'; tcol='#6f6fd0'; }
   else if(refractBoons().beam){ tag='R5 BEAM'; tcol='#c9a8ff'; }
-  if(tag){ ctx.fillStyle=tcol; ctx.font='bold 10px Trebuchet MS'; ctx.fillText(tag, gx+gw/2, gy+gh+34); }
+  if(tag){ ctx.save(); ctx.fillStyle=tcol; ctx.shadowColor=tcol; ctx.shadowBlur=10; ctx.beginPath(); ctx.arc(gx+gw/2, gy+gh+30, 5, 0, 7); ctx.fill(); ctx.restore(); }
   ctx.textAlign='left';
   // small HP pip under the gauge (understated — R is the real tension axis)
-  ctx.fillStyle='rgba(8,4,16,0.7)'; ctx.fillRect(gx-6,gy+gh+42,gw+12,7);
-  ctx.fillStyle='#ff6a8a'; ctx.fillRect(gx-4,gy+gh+43,(gw+8)*Math.max(0,player.hp/player.maxhp),5);
+  ctx.fillStyle='rgba(8,4,16,0.7)'; ctx.fillRect(gx-6,gy+gh+40,gw+12,7);
+  ctx.fillStyle='#ff6a8a'; ctx.fillRect(gx-4,gy+gh+41,(gw+8)*Math.max(0,player.hp/player.maxhp),5);
   if(gear.prismPick||gear.coolCloak||gear.bonk||player.ascended){
     ctx.font='10px Trebuchet MS'; ctx.textAlign='center';
-    let gi=0; const gtag=(s,c)=>{ctx.fillStyle=c; ctx.fillText(s,gx+gw/2,gy+gh+64+gi*13); gi++;};
+    let gi=0; const gtag=(s,c)=>{ const px=gx+gw/2, py=gy+gh+62+gi*14; ctx.fillStyle=c; ctx.beginPath(); ctx.moveTo(px,py-5); ctx.lineTo(px+5,py); ctx.lineTo(px,py+5); ctx.lineTo(px-5,py); ctx.closePath(); ctx.fill(); gi++; };   // gear as coloured diamonds
     if(gear.prismPick) gtag('◆ PICK','#c56bff');
     if(gear.coolCloak) gtag('◆ CLOAK','#5aa8ff');
     if(gear.bonk) gtag('◆ BONK','#ff4d6d');
@@ -1314,13 +1356,7 @@ function renderRefractionHUD(){
     ctx.fillStyle='rgba(255,'+(80+player.shatterFlash*3)+',120,'+(player.shatterFlash/60)+')'; ctx.fillRect(0,0,VIEW_W,VIEW_H); }
   // Fracture die is drawn diegetically in the world (drawFractureDie) — no CSS/canvas text box
   // --- transient banner ---
-  if(msg){
-    const a=msg.t<20? msg.t/20 : (msg.t>120? (150-msg.t)/30 : 1);
-    ctx.globalAlpha=Math.max(0,a); ctx.textAlign='center';
-    ctx.fillStyle=msg.col; ctx.font='bold 30px Trebuchet MS'; ctx.fillText(msg.text, VIEW_W/2, 150);
-    ctx.fillStyle='#cdc3ef'; ctx.font='14px Trebuchet MS'; ctx.fillText(msg.sub, VIEW_W/2, 176);
-    ctx.globalAlpha=1; ctx.textAlign='left';
-  }
+  // (banner text prints in the strip above the world: rule 30(g))
 }
 function mix(a,b,t){
   const pa=parseInt(a.slice(1),16), pb=parseInt(b.slice(1),16);
@@ -1868,8 +1904,8 @@ function renderBoss(){
   ctx.fillStyle='rgba(10,4,16,0.8)'; ctx.fillRect(bx-2,by-2,bw+4,14);
   ctx.fillStyle='#3a0a1a'; ctx.fillRect(bx,by,bw,10);
   ctx.fillStyle='#ff3d6d'; ctx.fillRect(bx,by,bw*(boss.hp/boss.maxhp),10);
-  ctx.fillStyle='#ffd0dd'; ctx.font='bold 11px Trebuchet MS'; ctx.textAlign='center';
-  ctx.fillText('ABYSSAL OUROBOROS  ·  PHASE '+['I','II','III'][boss.phase-1], VIEW_W/2, by-6); ctx.textAlign='left';
+  for(let i=0;i<3;i++){ const px=bx+bw+16+i*15, py=by+5; ctx.fillStyle=i<boss.phase?'#ff3d6d':'rgba(255,61,109,.25)';
+    ctx.beginPath(); ctx.moveTo(px,py-6); ctx.lineTo(px+5,py); ctx.lineTo(px,py+6); ctx.lineTo(px-5,py); ctx.closePath(); ctx.fill(); }   // phase pips (rule 30(g))
 }
 
 // ==================================================================
@@ -2173,7 +2209,7 @@ function update(){
   updateCam();
   // HUD depth (meters below surface)
   const depthM = Math.max(0, Math.floor((player.y/TS - 46)));
-  document.getElementById('depth').innerHTML = 'DEPTH <b>'+depthM+'m</b>';
+  document.getElementById('depth').innerHTML = '▼ <b>'+depthM+'m</b>';
 }
 function frame(t){
   requestAnimationFrame(frame);
@@ -2443,8 +2479,23 @@ if(location.hash==='#play'){ dismissOverlay(); }
 
 // Fit canvas to window (letterboxed by CSS max-width/height)
 function fit(){
-  const s=Math.min(innerWidth/VIEW_W, innerHeight/VIEW_H);
+  // Strips above and below the world hold every word (rule 30(g)). In a portrait phone the world is drawn
+  // taller than its width allows and cropped at the sides (the camera centres the player), with the hotbar and
+  // the touch pad below it rather than on it.
+  const root=document.documentElement.style, top=40;
+  const portrait = innerHeight > innerWidth*1.2;
+  let s, bot;
+  if(portrait){
+    const worldH=Math.round(Math.min(innerHeight*0.58, innerWidth*1.45));
+    bot=innerHeight-top-worldH; s=worldH/VIEW_H;
+  } else {
+    bot=70; s=Math.min(innerWidth/VIEW_W, (innerHeight-top-bot)/VIEW_H);
+  }
+  root.setProperty('--strip-top', top+'px'); root.setProperty('--strip-bot', bot+'px');
   canvas.style.width=(VIEW_W*s)+'px'; canvas.style.height=(VIEW_H*s)+'px';
+  HUD_INSET_X = Math.max(0, (VIEW_W*s - innerWidth)/2) / s;   // game px cropped off each side
+  const hb=document.getElementById('hotbar');
+  if(hb) hb.style.bottom = portrait ? (bot-52)+'px' : '';
 }
 addEventListener('resize',fit); fit();
 

@@ -1,0 +1,23 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),http=require('node:http');
+const {chromium}=require(process.env.NSP_PLAYWRIGHT_PATH||'playwright');
+const gameRoot=path.resolve(__dirname,'..'),out=process.env.NSP_PLAYTEST_OUT||path.join(gameRoot,'playtest-artifacts');fs.mkdirSync(out,{recursive:true});
+const source=fs.readFileSync(path.join(gameRoot,'index.html'),'utf8');
+const anchor='requestAnimationFrame(gameLoop);\n</script>';
+assert.equal(source.split(anchor).length,2,'actual engine observer anchor must be unique');
+const served=source.replace(anchor,'window.__chronoRead=()=>({state:gameState,angle:player.angle,x:player.x,y:player.y,bullets:bullets.map(b=>({vx:b.vx,vy:b.vy}))});\n'+anchor);
+const report={scope:'Real muted Chromium engine, emulated standard Gamepad API inputs, real start click and mouse events; not physical-controller acceptance',checks:[],pageErrors:[],failedResponses:[]};
+const server=http.createServer((req,res)=>{try{const u=new URL(req.url,'http://local');if(u.pathname==='/favicon.ico'){res.writeHead(204);return res.end();}const file=path.resolve(gameRoot,'.'+u.pathname);if(!file.startsWith(gameRoot+path.sep))throw Error('outside root');if(u.pathname==='/index.html'){res.setHeader('Content-Type','text/html');return res.end(served);}res.setHeader('Content-Type',file.endsWith('.jpg')?'image/jpeg':file.endsWith('.webp')?'image/webp':'application/octet-stream');res.end(fs.readFileSync(file));}catch(e){res.writeHead(404);res.end('Not found');}});
+let browser;
+(async()=>{try{
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));browser=await chromium.launch({headless:true,args:['--mute-audio','--disable-gpu','--no-sandbox']});
+ const page=await browser.newPage({viewport:{width:1280,height:720}});page.on('pageerror',e=>report.pageErrors.push(e.message));page.on('response',r=>{if(r.status()>=400)report.failedResponses.push({url:r.url(),status:r.status()});});
+ await page.addInitScript(()=>{window.__controllerInput={axes:[0,0,0,0],fire:false};Object.defineProperty(navigator,'getGamepads',{value:()=>[{index:0,id:'automated standard-controller fixture',connected:true,mapping:'standard',axes:window.__controllerInput.axes,buttons:Array.from({length:8},(_,i)=>({pressed:i===7&&window.__controllerInput.fire,value:i===7&&window.__controllerInput.fire?1:0}))}]});});
+ await page.goto('http://127.0.0.1:'+server.address().port+'/index.html');await page.locator('#startBtn').click();await page.waitForFunction(()=>window.__chronoRead().state==='PLAYING');await page.mouse.move(100,360);
+ await page.evaluate(()=>window.__controllerInput.axes=[0,0,0,-1]);await page.waitForFunction(()=>Math.abs(window.__chronoRead().angle+Math.PI/2)<1e-6);report.checks.push('real frame retains up-facing controller aim despite stale mouse');
+ await page.evaluate(()=>{window.__controllerInput.axes=[0,0,0,0];window.__controllerInput.fire=true;});await page.waitForFunction(()=>window.__chronoRead().bullets.some(b=>b.vy<0&&Math.abs(b.vx)<1e-6));report.checks.push('centering stick then trigger keeps last bearing');
+ await page.evaluate(()=>window.__controllerInput.fire=false);await page.mouse.move(120,360);await page.waitForFunction(()=>Math.abs(window.__chronoRead().angle-Math.PI)<1e-6);report.checks.push('real mouse movement regains aim');
+ await page.evaluate(()=>window.__controllerInput.axes=[0,0,1,0]);await page.waitForFunction(()=>Math.abs(window.__chronoRead().angle)<1e-6);report.checks.push('right stick can take over again');
+ await page.screenshot({path:path.join(out,'desktop-1280x720.png')});await page.setViewportSize({width:390,height:844});await page.waitForTimeout(100);await page.screenshot({path:path.join(out,'phone-390x844.png'),fullPage:true});report.layoutEvidence={desktop:'1280x720 actual encounter',phone:'390x844 layout evidence only; this repair does not implement or accept touch play'};
+ assert.deepEqual(report.pageErrors,[]);assert.deepEqual(report.failedResponses,[]);report.passed=true;
+}catch(error){report.passed=false;report.error=error.stack;console.error(error.stack);process.exitCode=1;}finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));report.finishedUtc=new Date().toISOString();fs.writeFileSync(path.join(out,'CONTROLS_ACTUAL.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));}})();

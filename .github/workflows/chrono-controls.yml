@@ -1,0 +1,39 @@
+name: Chrono Defender control regression
+on:
+  pull_request:
+    paths: ['arcade/custom/northstar-chrono-defender/**', '.github/workflows/chrono-controls.yml']
+permissions:
+  contents: read
+concurrency:
+  group: chrono-controls-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  controls:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          sparse-checkout: arcade/custom/northstar-chrono-defender
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Test the actual engine controller and mouse ownership
+        run: node --test arcade/custom/northstar-chrono-defender/tests/controls.test.cjs
+      - name: Install isolated pinned test browser
+        run: |
+          npm install --prefix "$RUNNER_TEMP/chrono-browser" --no-save --package-lock=false --ignore-scripts playwright@1.55.1
+          "$RUNNER_TEMP/chrono-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Check actual browser frames with emulated controller input
+        env:
+          NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/chrono-browser/node_modules/playwright
+          NSP_PLAYTEST_OUT: ${{ runner.temp }}/chrono-controls
+        run: node arcade/custom/northstar-chrono-defender/tests/browser_controls.cjs
+      - name: Retain actual result
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: chrono-controls
+          path: ${{ runner.temp }}/chrono-controls/
+          retention-days: 14

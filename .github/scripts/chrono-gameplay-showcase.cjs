@@ -139,10 +139,22 @@ async function main() {
   assertRecordedImagePresence(assetResponses);
   receipt.decodedImages = decoded;
   receipt.assetResponses = assetResponses;
+  const nativeWindow = await context.newCDPSession(page);
+  receipt.nativeWindowBefore = await nativeWindow.send('Browser.getWindowForTarget');
+  let fullscreenError;
+  try {
+    await nativeWindow.send('Browser.setWindowBounds', {windowId:receipt.nativeWindowBefore.windowId,bounds:{windowState:'fullscreen'}});
+    await page.waitForFunction(() => innerWidth===1324 && innerHeight===900, undefined, {timeout:5000});
+  } catch (error) {fullscreenError=error;}
+  receipt.nativeWindowAfter = await nativeWindow.send('Browser.getWindowForTarget');
+  receipt.browserVersion = await browser.version();
+  await page.screenshot({path:path.join(out,'native-window-before-geometry-guard.png')});
   const windowFacts = await page.evaluate(() => ({innerWidth, innerHeight, outerWidth, outerHeight,
     screenX, screenY, devicePixelRatio, focused: document.hasFocus(), visibility: document.visibilityState,
     imageReadiness: 'Actual canvas image objects decoded and source-sized above'}));
   receipt.window = windowFacts;
+  if(fullscreenError) throw fullscreenError;
+  assert.equal(receipt.nativeWindowAfter.bounds.windowState,'fullscreen','Require actual native browser fullscreen state');
   assert.deepEqual([windowFacts.screenX, windowFacts.screenY, windowFacts.innerWidth, windowFacts.innerHeight],
     [0, 0, 1324, 900], 'Kiosk geometry differs; do not guess screen-to-canvas alignment');
   assert.equal(windowFacts.devicePixelRatio, 1, 'Verify native pixel ratio rather than setting incompatible null-viewport scale');
@@ -155,6 +167,13 @@ async function main() {
   assert.deepEqual([crop.width, crop.height], [1024, 576], 'Preserve the reviewed native 16:9 canvas geometry; never scale a different layout');
   receipt.captureGeometry = crop;
   await page.screenshot({path: path.join(out, 'before-native-input.png')});
+  if(process.argv.includes('--preflight-only')) {
+    receipt.preflight = await page.evaluate(() => ({mode:document.body.dataset.mode,audioInitialized:audio.ctx!==null}));
+    assert.equal(receipt.preflight.mode,'TITLE');
+    assert.equal(receipt.preflight.audioInitialized,false);
+    receipt.status='preflight-native-geometry-verified-no-gameplay-or-recording';
+    return;
+  }
   await page.locator('#startBtn').click();
   await page.waitForFunction(() => document.body.dataset.mode === 'PLAYING');
   assert.equal(await page.locator('#titleScreen').isVisible(), false);

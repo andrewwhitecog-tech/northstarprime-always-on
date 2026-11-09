@@ -5,6 +5,8 @@ set -euo pipefail
 version=0.24.2
 sha256=1f4e0ef7f6554a6ed33dd7ac144fb2e1bbed98598e7af973042fc5cd43951c9a
 url="https://github.com/lycheeverse/lychee/releases/download/lychee-v${version}/lychee-x86_64-unknown-linux-gnu.tar.gz"
+# Same immutable upstream release asset, independently SHA-verified below.
+api_url="https://api.github.com/repos/lycheeverse/lychee/releases/assets/409959156"
 if [[ "$(uname -s)" != Linux || "$(uname -m)" != x86_64 ]]; then
   echo "::error::Pinned Lychee installer requires Linux x86_64." >&2
   exit 1
@@ -15,12 +17,20 @@ archive="$work/lychee.tar.gz"
 bin_dir="${RUNNER_TEMP%/}/nsp-lychee-${version}/bin"
 downloaded=false
 for attempt in 1 2 3 4; do
+  source_url="$url"
+  route=direct
+  headers=()
+  if [[ "$attempt" -ge 3 ]]; then
+    source_url="$api_url"
+    route=official-asset-api
+    headers=(-H 'Accept: application/octet-stream' -H 'X-GitHub-Api-Version: 2022-11-28')
+  fi
   curl_exit=0
   http_status="$(curl --location --silent --show-error --fail \
     --connect-timeout 15 --max-time 60 --retry 0 \
-    --output "$archive" --write-out '%{http_code}' "$url")" || curl_exit=$?
-  printf 'Lychee %s download attempt %s/4: HTTP %s, curl exit %s\n' \
-    "$version" "$attempt" "${http_status:-000}" "$curl_exit"
+    "${headers[@]}" --output "$archive" --write-out '%{http_code}' "$source_url")" || curl_exit=$?
+  printf 'Lychee %s download attempt %s/4 via %s: HTTP %s, curl exit %s\n' \
+    "$version" "$attempt" "$route" "${http_status:-000}" "$curl_exit"
   if [[ "$curl_exit" -eq 0 && "$http_status" == 200 ]]; then
     downloaded=true
     break
@@ -28,7 +38,7 @@ for attempt in 1 2 3 4; do
   if [[ "$attempt" -lt 4 ]]; then sleep "$((2 ** attempt))"; fi
 done
 if [[ "$downloaded" != true ]]; then
-  echo "::error::Lychee download failed after four bounded attempts; checker was not run." >&2
+  echo "::error::Lychee download failed after two direct and two official-asset API attempts; checker was not run." >&2
   exit 1
 fi
 printf '%s  %s\n' "$sha256" "$archive" | sha256sum --check --strict -

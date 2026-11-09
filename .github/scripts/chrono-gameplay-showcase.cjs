@@ -16,11 +16,21 @@ function engine(html) {
   assert.ok(match, 'Actual original inline engine missing');
   return match[1].replace(/\r\n/g, '\n');
 }
-function assertRecordedImagePresence(records) {
+function assertRecordedImagePresence(records,required=['far-environment-v01.png','interceptor-v02.png','hostiles-v02.png']) {
   assert.ok(Array.isArray(records), 'Actual image response records must be an array');
-  for (const asset of ['far-environment-v01.png','interceptor-v02.png','hostiles-v02.png'])
+  for (const asset of required)
     assert.ok(records.some(record => record && typeof record.url==='string' && record.url.endsWith('/'+asset) && record.status===200),
       'Missing actual successful image response: '+asset);
+}
+function parseLiveInputClock(log) {
+  const starts=[...log.matchAll(/Duration: N\/A, start: ([\d.]+)/g)].map(match=>Number(match[1]));
+  assert.ok(starts.length>=2&&starts.slice(0,2).every(Number.isFinite),'Actual X11/Pulse input-start timestamps required');
+  assert.ok(starts[0]>1e9&&Math.abs(starts[1]-starts[0])<10,'Live inputs must report a plausible shared epoch clock');
+  return {x11EpochSeconds:starts[0],pulseEpochSeconds:starts[1],inputStartGapSeconds:starts[1]-starts[0]};
+}
+function nativeDirectionAt(elapsedMs) {
+  assert.ok(Number.isFinite(elapsedMs)&&elapsedMs>=0);
+  return ['d','s','a','w'][Math.floor(elapsedMs/250)%4];
 }
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const ownChildren = new Set(), childStates = new WeakMap();
@@ -174,7 +184,7 @@ async function main() {
   receipt.assetResponses = assetResponses;
   page.on('response', response => {
     const parsed = new URL(response.url());
-    if (parsed.origin === pin.publicOrigin.replace(/\/$/, '') && parsed.pathname.startsWith(pin.gameRoute + 'assets/')) {
+    if (parsed.origin === pin.publicOrigin.replace(/\/$/, '') && (parsed.pathname.startsWith(pin.gameRoute + 'assets/') || pin.files.some(entry=>'/'+entry.path===parsed.pathname && !entry.path.endsWith('/index.html')))) {
       assetBodies.push((async () => {
         const body = await response.body();
         const observation = {url:response.url(),status:response.status(),bytes:body.length,sha256:hash(body)};
@@ -199,14 +209,17 @@ async function main() {
   await page.bringToFront();
   await sleep(750);
   const decoded = await page.evaluate(async () => {
-    await Promise.all([farEnvironment.decode(), shipAtlas.decode(), enemyAtlas.decode()]);
+    await Promise.all([farEnvironment.decode(),shipAtlas.decode(),enemyAtlas.decode(),weaponAtlasImage.decode()]);
     return {far: {state: farEnvironmentState, width: farEnvironment.naturalWidth, height: farEnvironment.naturalHeight},
       ship: {state: shipAtlasState, width: shipAtlas.naturalWidth, height: shipAtlas.naturalHeight},
-      enemy: {state: enemyAtlasState, width: enemyAtlas.naturalWidth, height: enemyAtlas.naturalHeight}};
+      enemy: {state: enemyAtlasState, width: enemyAtlas.naturalWidth, height: enemyAtlas.naturalHeight},
+      weapon:{state:weaponArt?.ready()?'ready':'invalid',width:weaponAtlasImage.naturalWidth,height:weaponAtlasImage.naturalHeight}};
   });
   assert.deepEqual(decoded, {far:{state:'ready',width:1774,height:887},
-    ship:{state:'ready',width:1536,height:1024},enemy:{state:'ready',width:1536,height:1024}});
-  assertRecordedImagePresence(assetResponses);
+    ship:{state:'ready',width:1536,height:1024},enemy:{state:'ready',width:1536,height:1024},weapon:{state:'ready',width:1536,height:1024}});
+  assertRecordedImagePresence(assetResponses,pin.files.filter(entry=>entry.path.endsWith('.png')).map(entry=>path.basename(entry.path)));
+  for(const entry of pin.files.filter(entry=>!entry.path.endsWith('/index.html')))
+    assert.ok(assetResponses.some(record=>new URL(record.url).pathname==='/'+entry.path&&record.sha256===entry.sha256),'Actual pinned resource not verified: '+entry.path);
   receipt.decodedImages = decoded;
   receipt.assetResponses = assetResponses;
   const nativeWindow = await context.newCDPSession(page);
@@ -245,26 +258,21 @@ async function main() {
     receipt.status='preflight-native-geometry-verified-no-gameplay-or-recording';
     return;
   }
-  await page.locator('#startBtn').click();
-  await page.waitForFunction(() => document.body.dataset.mode === 'PLAYING');
-  assert.equal(await page.locator('#titleScreen').isVisible(), false);
-  assert.equal(await page.locator('#gameOverScreen').isVisible(), false);
-  await page.mouse.move(bounds.x + bounds.width * .8, bounds.y + bounds.height * .5);
-  await page.mouse.down();
-  receipt.beforeCaptureMode = await page.locator('body').getAttribute('data-mode');
-  receipt.preCaptureNativeInputs = ['trusted Start click', 'native canvas aim', 'native left mouse down'];
-  const raw = path.join(out, 'chrono-gameplay-native.mp4');
+  assert.equal(await page.locator('body').getAttribute('data-mode'),'TITLE');
+  receipt.encoderWarmup={mode:'TITLE',startedEpochMs:Date.now()};
+  const raw = path.join(out,'chrono-gameplay-raw-preroll.mp4');
+  const final = path.join(out,'chrono-gameplay-native.mp4');
   const display = (process.env.DISPLAY || ':99').replace(/\.\d+$/, '') + '.0';
   const args = ['-hide_banner', '-y', '-thread_queue_size', '512',
     '-use_wallclock_as_timestamps', '1', '-f', 'x11grab', '-draw_mouse', '0',
     '-framerate', '30', '-video_size', crop.width + 'x' + crop.height,
     '-i', display + '+' + crop.x + ',' + crop.y,
     '-thread_queue_size', '512', '-use_wallclock_as_timestamps', '1',
-    '-f', 'pulse', '-i', 'nsp_capture.monitor',
+    '-isync','0','-f', 'pulse', '-i', 'nsp_capture.monitor',
     '-map', '0:v:0', '-map', '1:a:0', '-af', 'aresample=async=1:first_pts=0',
     '-c:v', 'libx264', '-preset', 'fast', '-crf', '18', '-threads', '2',
-    '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k',
-    '-t', '22', '-movflags', '+faststart', raw];
+    '-pix_fmt', 'yuv420p','-fps_mode','passthrough', '-c:a', 'aac', '-b:a', '192k',
+    '-t', '40', '-movflags', '+faststart', raw];
   receipt.ffmpegArgs = args;
   recorder = launch('ffmpeg', args, 'capture.ffmpeg.log');
   recorderDone = closed(recorder);
@@ -276,47 +284,52 @@ async function main() {
     }),
     sleep(10000).then(() => {throw Error('Capture did not become ready within 10 seconds');})
   ]);
-  const started = performance.now();
-  const input = async (kind, key) => {
-    receipt.inputs.push({elapsedMs: Math.round(performance.now() - started), kind, key});
-    if (kind === 'press') await page.keyboard.press(key);
-    else if (kind === 'down') await page.keyboard.down(key);
+  receipt.encoderWarmup.readyEpochMs=Date.now();
+  receipt.rawInputClock=parseLiveInputClock(fs.readFileSync(path.join(out,'capture.ffmpeg.log'),'utf8'));
+  receipt.nativeStart={commandBeforeEpochMs:Date.now()};
+  await page.locator('#startBtn').click();
+  await page.waitForFunction(()=>document.body.dataset.mode==='PLAYING');
+  receipt.nativeStart.verified=await page.evaluate(()=>({mode:document.body.dataset.mode,epochMs:Date.now()}));
+  receipt.nativeStart.verifiedNodeEpochMs=Date.now();
+  assert.equal(receipt.nativeStart.verified.mode,'PLAYING');
+  assert.ok(Math.abs(receipt.nativeStart.verifiedNodeEpochMs-receipt.nativeStart.verified.epochMs)<50,'Native control and capture clocks differ');
+  assert.equal(await page.locator('#titleScreen').isVisible(),false);
+  assert.equal(await page.locator('#gameOverScreen').isVisible(),false);
+  const started=performance.now();
+  const input=async(kind,key)=>{
+    receipt.inputs.push({elapsedMs:Math.round(performance.now()-started),epochMs:Date.now(),kind,key});
+    if(kind==='press')await page.keyboard.press(key);
+    else if(kind==='down')await page.keyboard.down(key);
     else await page.keyboard.up(key);
   };
-  assert.equal(await page.locator('body').getAttribute('data-mode'), 'PLAYING', 'Sortie ended while encoder started');
-  // One native sortie: no game globals, seeded randomness, fake actors, scores or time rewrites.
-  const movement = ['d', 's', 'a', 'w', 'd', 's', 'a', 'w'];
-  let elapsedSeconds = 0;
-  for (let segment = 0; segment < movement.length; segment++) {
-    const observed = await page.evaluate(() => ({mode: document.body.dataset.mode,
-      score: document.querySelector('#scoreVal')?.textContent,
-      wave: document.querySelector('#waveVal')?.textContent,
-      enemies: document.querySelector('#enemyCount')?.textContent,
-      portalThreadVisible: !document.querySelector('#chronoThread')?.hidden}));
-    receipt.observations.push({elapsedSeconds, ...observed});
-    assert.equal(observed.mode, 'PLAYING', 'Actual sortie left PLAYING; capture is failed, never accepted');
-    if (segment === 2) await input('press', '2');
-    if (segment === 3) await input('press', 'c');
-    if (segment === 5) await input('press', '3');
-    if (segment === 6) await input('press', 'Space');
-    if (segment === 7) await input('press', 'Shift');
-    await input('down', movement[segment]);
-    const stopAt = performance.now() + 2500;
-    while (performance.now() < stopAt) {
-      const mode = await page.locator('body').getAttribute('data-mode');
-      receipt.modeObservations = receipt.modeObservations || [];
-      receipt.modeObservations.push({elapsedMs:Math.round(performance.now()-started),mode});
-      assert.equal(mode, 'PLAYING', 'Actual sortie left PLAYING during capture; no completed showcase');
-      const angle = (performance.now() - started) / 1900;
-      await page.mouse.move(bounds.x + bounds.width * (.5 + .42 * Math.cos(angle)),
-        bounds.y + bounds.height * (.5 + .42 * Math.sin(angle)));
-      await sleep(100);
+  let held='d';await input('down',held);
+  await page.mouse.move(bounds.x+bounds.width*.8,bounds.y+bounds.height*.5);
+  await page.mouse.down();
+  const actions=[{ms:200,key:'c'},{ms:800,key:'Space'},{ms:3000,key:'2'},{ms:7000,key:'c'},{ms:7200,key:'Space'},
+    {ms:10000,key:'3'},{ms:14000,key:'c'},{ms:14400,key:'Space'}];
+  let nextAction=0,nextDodge=1200,nextObservation=0;
+  while(performance.now()-started<20500){
+    const elapsed=performance.now()-started;
+    const mode=await page.locator('body').getAttribute('data-mode');
+    (receipt.modeObservations ||= []).push({elapsedMs:Math.round(elapsed),mode});
+    assert.equal(mode,'PLAYING','Actual sortie left PLAYING during capture; no completed showcase');
+    const direction=nativeDirectionAt(elapsed);
+    if(direction!==held){await input('up',held);held=direction;await input('down',held);}
+    while(nextAction<actions.length&&elapsed>=actions[nextAction].ms)await input('press',actions[nextAction++].key);
+    if(elapsed>=nextDodge){await input('press','Shift');nextDodge+=1000;}
+    const angle=elapsed/1900;
+    await page.mouse.move(bounds.x+bounds.width*(.5+.42*Math.cos(angle)),bounds.y+bounds.height*(.5+.42*Math.sin(angle)));
+    if(elapsed>=nextObservation){
+      receipt.observations.push(await page.evaluate(()=>({epochMs:Date.now(),mode:document.body.dataset.mode,
+        score:document.querySelector('#scoreVal')?.textContent,wave:document.querySelector('#waveVal')?.textContent,
+        enemies:document.querySelector('#enemyCount')?.textContent})));
+      nextObservation+=2500;
     }
-    await input('up', movement[segment]);
-    elapsedSeconds = (performance.now() - started) / 1000;
+    await sleep(50);
   }
+  await input('up',held);
   assert.equal(await page.locator('body').getAttribute('data-mode'), 'PLAYING');
-  receipt.requestedRecorderStop = 'Completed 20-second native PLAYING target';
+  receipt.requestedRecorderStop = 'Completed at least20seconds of observed native PLAYING; raw pre-roll retained';
   receipt.recorderStop = {pid:recorder.pid,exitCodeBeforeSignal:recorder.exitCode,
     signalCodeBeforeSignal:recorder.signalCode,stillRunning:recorder.exitCode===null && recorder.signalCode===null,
     signal:'SIGINT',signalSent:false};
@@ -333,30 +346,42 @@ async function main() {
   recorder = null;
   assert.ok(receipt.actualInputDurationSeconds >= 20, 'Sortie ended before the 20-second PLAYING target');
   assert.equal(receipt.errors.length, 0, 'Browser errors during capture');
-  const probe = JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-show_streams', '-show_format', '-of', 'json', raw], {encoding: 'utf8'}));
-  write('ffprobe.json', probe);
-  const duration = Number(probe.format.duration);
-  assert.ok(duration >= 19 && duration <= 22, 'Preserve honest actual duration of the 20-second capture target');
-  assert.ok(probe.streams.some(s => s.codec_type === 'audio'), 'Actual game sound was not captured');
-  await command('ffmpeg', ['-v', 'error', '-i', raw, '-f', 'null', '-'], 'full-decode.log');
+  const rawProbe=JSON.parse(execFileSync('ffprobe',['-v','error','-show_streams','-show_format','-of','json',raw],{encoding:'utf8',timeout:15000}));
+  write('raw-ffprobe.json',rawProbe);
+  const video=rawProbe.streams.find(stream=>stream.codec_type==='video');
+  assert.ok(Math.abs(Number(rawProbe.format.start_time))<.05&&Math.abs(Number(video.start_time))<.05,'Raw media zero must match X11 clock origin before native trim');
+  const trimStart=receipt.nativeStart.verified.epochMs/1000-receipt.rawInputClock.x11EpochSeconds+.1;
+  assert.ok(trimStart>0&&trimStart<12,'Actual native Start must map inside retained raw pre-roll');
+  assert.ok(Number(video.duration)>=trimStart+20,'Raw native video does not cover20seconds after verified Start');
+  receipt.rawOutput={file:path.basename(raw),bytes:fs.statSync(raw).size,sha256:hash(fs.readFileSync(raw)),
+    duration:Number(rawProbe.format.duration),trimStartSeconds:trimStart,inputClock:receipt.rawInputClock};
+  await command('ffmpeg',['-hide_banner','-y','-ss',String(trimStart),'-i',raw,'-t','20','-map','0:v:0','-map','0:a:0',
+    '-c:v','libx264','-preset','fast','-crf','18','-threads','2','-pix_fmt','yuv420p','-fps_mode','passthrough',
+    '-c:a','aac','-b:a','192k','-movflags','+faststart',final],'final-trim.log');
+  const probe=JSON.parse(execFileSync('ffprobe',['-v','error','-show_streams','-show_format','-of','json',final],{encoding:'utf8',timeout:15000}));
+  write('ffprobe.json',probe);
+  const duration=Number(probe.format.duration);
+  assert.ok(duration>=19.95&&duration<=20.1,'Final duration must contain the verified20second native interval');
+  assert.ok(probe.streams.some(stream=>stream.codec_type==='audio'),'Actual game audio missing');
+  await command('ffmpeg', ['-v', 'error', '-i', final, '-f', 'null', '-'], 'full-decode.log');
   for (const [index, fraction] of [0, .25, .5, .75, 1].entries()) {
     const seconds = Math.max(0, Math.min(duration - .15, duration * fraction));
-    await command('ffmpeg', ['-v', 'error', '-y', '-ss', String(seconds), '-i', raw,
+    await command('ffmpeg', ['-v', 'error', '-y', '-ss', String(seconds), '-i', final,
       '-frames:v', '1', path.join(out, 'frame-' + index + '.png')], 'frame-' + index + '.log');
   }
-  await command('ffmpeg', ['-hide_banner', '-i', raw, '-filter_complex',
+  await command('ffmpeg', ['-hide_banner', '-i', final, '-filter_complex',
     'ebur128=peak=true', '-f', 'null', '-'], 'audio-loudness.log');
-  await command('ffmpeg', ['-hide_banner', '-i', raw, '-af', 'volumedetect', '-f', 'null', '-'], 'audio-volume.log');
+  await command('ffmpeg', ['-hide_banner', '-i', final, '-af', 'volumedetect', '-f', 'null', '-'], 'audio-volume.log');
   const volumeLog = fs.readFileSync(path.join(out, 'audio-volume.log'), 'utf8');
   const peakMatch = volumeLog.match(/max_volume:\s*(-?[\d.]+) dB/);
   receipt.nativeAudio = {audible: !!peakMatch && Number(peakMatch[1]) > -60,
     measuredMaxDb: peakMatch ? Number(peakMatch[1]) : null,
     missingSoundtrack: !peakMatch || Number(peakMatch[1]) <= -60,
     scope: 'Native game audio monitor only; no replacement soundtrack'};
-  await command('ffmpeg', ['-v', 'error', '-y', '-i', raw, '-filter_complex',
+  await command('ffmpeg', ['-v', 'error', '-y', '-i', final, '-filter_complex',
     'showwavespic=s=1200x240:colors=gold', '-frames:v', '1', path.join(out, 'actual-audio-waveform.png')], 'waveform.log');
-  receipt.output = {file: 'chrono-gameplay-native.mp4', bytes: fs.statSync(raw).size,
-    sha256: hash(fs.readFileSync(raw)), duration};
+  receipt.output = {file: 'chrono-gameplay-native.mp4', bytes: fs.statSync(final).size,
+    sha256: hash(fs.readFileSync(final)), duration};
   receipt.status = 'captured-awaiting-personal-visual-and-auditory-QC';
   // Loudness is measured, not silently normalized or accepted here.
 }
@@ -380,4 +405,4 @@ if (require.main===module) {
     }
   })();
 }
-module.exports={assertRecordedImagePresence,trackOwnedChild,stopOwnedChild};
+module.exports={assertRecordedImagePresence,trackOwnedChild,stopOwnedChild,parseLiveInputClock,nativeDirectionAt};

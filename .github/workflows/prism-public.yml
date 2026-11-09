@@ -1,0 +1,129 @@
+name: Prism Drift public release smoke
+on:
+  pull_request:
+    paths: ['.github/scripts/prism-public-smoke.cjs', '.github/scripts/prism-public-export.py', '.github/workflows/prism-public.yml']
+  workflow_run:
+    workflows: ['Deploy curated NorthStar Pages']
+    types: [completed]
+permissions:
+  contents: read
+concurrency:
+  group: prism-public-${{ github.event_name }}-${{ github.event.workflow_run.head_sha || github.ref }}
+  cancel-in-progress: true
+jobs:
+  source-preflight:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts
+            arcade/custom/prism-drift
+            static/games/nsp-return.js
+            tools
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
+        with:
+          version: '0.13.7'
+          enable-cache: 'false'
+          download-from-astral-mirror: 'false'
+      - name: Validate the exact public checker source syntax
+        env:
+          PYTHONUTF8: '1'
+          PYTHONIOENCODING: utf-8
+          UV_PYTHON_DOWNLOADS: never
+        run: |
+          node --check .github/scripts/prism-public-smoke.cjs
+          uv run --offline --no-project --no-managed-python --no-python-downloads --python /usr/bin/python3 -m py_compile .github/scripts/prism-public-export.py
+      - name: Exercise actual owning per-file export derivation without public traffic
+        env:
+          NSP_PLAYTEST_OUT: ${{ runner.temp }}/prism-export-preflight
+          NSP_SOURCE_PROOF_DIR: ${{ runner.temp }}/prism-export-proof
+          NSP_TARGET_RELEASE_SHA: ${{ github.sha }}
+          NSP_SYSTEM_PYTHON: /usr/bin/python3
+          PYTHONUTF8: '1'
+          PYTHONIOENCODING: utf-8
+          UV_PYTHON_DOWNLOADS: never
+        run: node .github/scripts/prism-public-smoke.cjs fingerprint
+      - name: Retain actual source-only export derivation
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: prism-export-preflight
+          path: ${{ runner.temp }}/prism-export-preflight/expected.json
+          retention-days: 14
+  public-release:
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 9
+    env:
+      NSP_TARGET_RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+      NSP_SYSTEM_PYTHON: /usr/bin/python3
+      PYTHONUTF8: '1'
+      PYTHONIOENCODING: utf-8
+      UV_PYTHON_DOWNLOADS: never
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.workflow_run.head_sha }}
+          sparse-checkout: |
+            arcade/custom/prism-drift
+            static/games/nsp-return.js
+            tools
+            .github/scripts
+      - name: Initialize isolated proof paths on this runner
+        run: |
+          echo "NSP_PLAYTEST_OUT=$RUNNER_TEMP/prism-public" >> "$GITHUB_ENV"
+          echo "NSP_SOURCE_PROOF_DIR=$RUNNER_TEMP/prism-public-proof" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
+        with:
+          version: '0.13.7'
+          enable-cache: 'false'
+          download-from-astral-mirror: 'false'
+      - name: Derive exact runtime export bytes with the owning Pages transforms
+        id: source
+        run: node .github/scripts/prism-public-smoke.cjs fingerprint
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          key: ${{ steps.source.outputs.key }}
+          path: ${{ env.NSP_SOURCE_PROOF_DIR }}/accepted.json
+      - name: Require a new native check unless exact earlier source proof exists
+        id: gate
+        run: node .github/scripts/prism-public-smoke.cjs plan
+      - name: Check current delivery against exact retained native proof
+        if: steps.gate.outputs.needs-native == 'false'
+        run: node .github/scripts/prism-public-smoke.cjs delivery
+      - name: Install pinned isolated browser for changed runtime bytes
+        if: steps.gate.outputs.needs-native == 'true'
+        run: |
+          npm install --prefix "$RUNNER_TEMP/prism-browser" --no-save --package-lock=false --ignore-scripts playwright@1.55.1
+          "$RUNNER_TEMP/prism-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Verify actual public bytes and native desktop and phone Start movement pause
+        id: native
+        if: steps.gate.outputs.needs-native == 'true'
+        env:
+          NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/prism-browser/node_modules/playwright
+        run: node .github/scripts/prism-public-smoke.cjs native
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        if: steps.native.outcome == 'success'
+        with:
+          key: ${{ steps.source.outputs.key }}
+          path: ${{ env.NSP_SOURCE_PROOF_DIR }}/accepted.json
+      - name: Retain actual public evidence or explicit reused native proof
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: prism-public
+          path: |
+            ${{ env.NSP_PLAYTEST_OUT }}/*.json
+            ${{ env.NSP_PLAYTEST_OUT }}/*.png
+          retention-days: 14

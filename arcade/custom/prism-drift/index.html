@@ -428,54 +428,45 @@
     .stage-wrap { min-height: 0; height: 100%; width: auto; max-width: 100%; aspect-ratio: 3 / 2; justify-self: center; }
     .controls { gap: 6px; }
     .controls button, .controls select { padding: 6px 8px; font-size: 13px; }
-    /* ---- Rule 30 / Audit Item 2: Full-bleed painted cover title screen, zero dark box or plain text over art ---- */
-    .overlay {
-      padding: 0;
-      background: #02060a url("art/title_cover.jpg") center / cover no-repeat;
-      backdrop-filter: none;
-      z-index: 10;
-    }
-    .modal {
-      width: 100%;
-      height: 100%;
-      max-width: none;
-      border: none;
-      border-radius: 0;
-      padding: 0;
-      background: transparent;
-      box-shadow: none;
-      position: relative;
-    }
-    #overlayKicker, #overlayTitle, #overlayText {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border: 0;
+    /* Status and actions belong to the page; the painted cover stays inside the playfield. */
+    html, body { height: 100%; overflow: hidden; }
+    body { display: flex; flex-direction: column; }
+    .nsp-return { flex: none; min-height: 30px; padding: 5px 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .nsp-return .chip { min-height: 0; padding: 0; border: 0; background: transparent; font-size: 14px; line-height: 20px; color: var(--muted); }
+    .nsp-return a { color: var(--paper); font-size: 14px; text-decoration-color: var(--brass); text-underline-offset: 4px; }
+    .shell { flex: 1; height: auto; min-height: 0; }
+    .game-panel { grid-template-rows: auto minmax(0, 1fr) auto auto; }
+    .title-cover { position: absolute; inset: 0; background: #02060a url("art/title_cover.jpg") center / cover no-repeat; z-index: 10; }
+    .title-cover[hidden] { display: none; }
+    .race-message { block-size: 116px; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 4px 6px; overflow: auto; background: transparent; border: 0; }
+    .race-message-copy { display: grid; gap: 5px; min-width: 0; }
+    .race-message .kicker { font-size: 14px; }
+    .race-message h2 { color: var(--paper); font-size: 24px; line-height: 1.1; }
+    .race-message p { color: var(--muted); font-size: 15px; line-height: 1.35; }
+    .controls button, .controls select { font-size: 14px; }
+    .metric small { font-size: 14px; line-height: 1.05; }
+    @media (max-width: 720px) {
+      .hud { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+      .metric { min-height: 54px; height: 54px; padding: 2px 4px; }
+      .metric small { font-size: 14px; }
+      .controls { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .controls button, .controls select { padding: 5px 4px; min-width: 0; }
+      .race-message { block-size: 208px; grid-template-columns: minmax(0, 1fr); gap: 6px; align-content: center; }
+      .race-message h2 { font-size: 22px; }
+      .race-message p { font-size: 14px; }
+      .race-message button { justify-self: start; min-width: 130px; }
     }
     /* Rule 30(a), arcade build 2026-11-09: no card or box behind the HUD words; the numbers read on the page, above the stage. */
     .metric { border: 0; background: transparent; padding: 2px 6px; }
     .game-panel { border: 0; background: transparent; box-shadow: none; }
     /* Export Receipt was a developer tool. */
     #receiptBtn { display: none; }
-    #overlayBtn {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      opacity: 0;
-      background: transparent;
-      border: none;
-      cursor: pointer;
-    }
+    #overlayBtn { position: static; width: auto; height: auto; opacity: 1; min-height: 44px; }
+    #overlayBtn[hidden] { display: none; }
   </style>
 </head>
 <body>
-<nav class="nsp-return" aria-label="Return navigation"><a href="/arcade/">&larr; Arcade</a></nav>
+<nav class="nsp-return" aria-label="Return navigation"><a href="/arcade/">&larr; Arcade</a><span class="chip" id="bestChip">Best 0</span></nav>
   <main class="shell">
     <header class="topbar">
       <div class="brand">
@@ -483,7 +474,6 @@
         <h1>Prism Drift</h1>
       </div>
       <div class="chips">
-        <span class="chip" id="bestChip">Best 0</span>
         <span class="chip" id="targetChip">Target 90s</span>
       </div>
     </header>
@@ -588,14 +578,7 @@
 
 </script>
 <script>addEventListener("DOMContentLoaded",function(){if(window.Juice){var c=document.getElementById("game");if(c)Juice.attachFX(c,{vignette:0.5,scanlines:0.035,glow:0.06});}});</script>
-          <div class="overlay" id="overlay">
-            <section class="modal">
-              <div class="kicker" id="overlayKicker">Circuit ready</div>
-              <h2 id="overlayTitle">Prism Drift</h2>
-              <p id="overlayText">Race three glass rivals over three laps. Thread the prism gates, drift for points, and boost without overheating the drive. Touch a rail too long and the car shatters.</p>
-              <button class="primary" id="overlayBtn" type="button">Start Trial</button>
-            </section>
-          </div>
+          <div class="title-cover" id="titleCover" aria-hidden="true"></div>
         </div>
 
         <div class="controls">
@@ -610,6 +593,14 @@
           </select>
           <button id="resetBtn" type="button">Reset</button>
         </div>
+        <section class="race-message" id="overlay" aria-label="Race status and actions">
+          <div class="race-message-copy" role="status" aria-live="polite" aria-atomic="true">
+            <div class="kicker" id="overlayKicker">Circuit ready</div>
+            <h2 id="overlayTitle">Prism Drift</h2>
+            <p id="overlayText">Race three glass rivals over three laps. Thread the prism gates, drift for points, and boost without overheating the drive. Touch a rail too long and the car shatters.</p>
+          </div>
+          <button class="primary" id="overlayBtn" type="button">Start Trial</button>
+        </section>
       </article>
 
       <aside class="side-panel">
@@ -821,6 +812,7 @@ function HQAudio(opts) {
 
     const wrap = document.querySelector("#stageWrap");
     const overlay = document.querySelector("#overlay");
+    const titleCover = document.querySelector("#titleCover");
     const els = {
       score: document.querySelector("#score"),
       lap: document.querySelector("#lap"),
@@ -1194,7 +1186,7 @@ function HQAudio(opts) {
       state.mode = "countdown";
       state.circuit = selected;
       setupTrack();
-      overlay.hidden = true;
+      showRaceInfo();
       logRows = [];
       log("START // " + cfg().label + ": three rivals on the grid.");
       try { AUDIO.rewindMusic(); } catch (e) {}
@@ -1219,19 +1211,28 @@ function HQAudio(opts) {
       { const k = document.getElementById("overlayKicker"); if (k) k.textContent = title === "Paused" ? "Hold" : / Place$/.test(title) ? "Race result" : "Circuit ready"; }
       els.overlayText.textContent = text;
       els.overlayBtn.textContent = buttonText || "Start Trial";
-      overlay.hidden = false;
+      els.overlayBtn.hidden = false;
+      titleCover.hidden = state.mode !== "idle";
+    }
+
+    function showRaceInfo() {
+      titleCover.hidden = true;
+      document.getElementById("overlayKicker").textContent = "Race controls";
+      els.overlayTitle.textContent = cfg().label + " · three laps";
+      els.overlayText.textContent = "Hold ↑ / W to accelerate, ← / → or A / D to steer. On touch, hold the track to drive. P pauses; Shift or Boost surges.";
+      els.overlayBtn.hidden = true;
     }
 
     function pause() {
       if (state.mode === "race" || state.mode === "countdown") {
         state.pausedFrom = state.mode;
         state.mode = "pause";
-        showOverlay("Paused", "Prism telemetry held in local memory.", "Resume");
+        showOverlay("Paused", "Time and car positions are held. Resume returns to this race.", "Resume");
         sfx("blip");
         try { AUDIO.music(false); } catch (e) {}
       } else if (state.mode === "pause") {
         state.mode = state.pausedFrom || "race";
-        overlay.hidden = true;
+        showRaceInfo();
         startAudio();
         sfx("blip");
       }
@@ -1831,6 +1832,9 @@ function HQAudio(opts) {
       const now = performance.now();
       if (!force && now - uiT < 100) return;
       uiT = now;
+      const pauseButton = document.querySelector("#pauseBtn");
+      pauseButton.textContent = state.mode === "pause" ? "Resume" : "Pause";
+      pauseButton.disabled = !["race", "countdown", "pause"].includes(state.mode);
       els.score.textContent = state.score;
       els.lap.textContent = Math.min(state.lap, state.totalLaps) + "/" + state.totalLaps;
       if (els.pos) els.pos.textContent = (state.mode === "idle" ? 4 : state.position) + "/" + (state.rivals.length + 1);
@@ -1843,7 +1847,7 @@ function HQAudio(opts) {
       { const th = document.getElementById("timeHud"), tl = document.getElementById("timeLabel"), sl = document.getElementById("scoreLabel");
         if (th) th.textContent = state.time.toFixed(1);
         if (tl) tl.textContent = "Time / par " + cfg().target + "s";
-        if (sl) sl.textContent = "Score / best " + (best >= 10000 ? (best / 1000).toFixed(1) + "k" : best); }
+        if (sl) sl.textContent = "Score"; }
       els.stateLine.textContent = state.mode === "race" ? cfg().label + " live" : state.mode;
       renderContracts();
     }

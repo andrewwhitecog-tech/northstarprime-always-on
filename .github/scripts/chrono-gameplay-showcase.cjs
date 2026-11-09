@@ -57,7 +57,10 @@ async function verifySource(pin, root) {
   assert.match(pin.acceptedSourceCommit || '', /^[0-9a-f]{40}$/);
   const head = execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], {encoding: 'utf8'}).trim();
   assert.equal(head, pin.acceptedSourceCommit, 'Source checkout is not the accepted enemy commit');
+  assert.equal(pin.publicOrigin, 'https://northstarprime.net/');
   assert.ok(pin.files.length >= 4, 'Pin page, FAR, player and enemy assets');
+  const pagePin = pin.files.find(entry => entry.path === pin.gameRoute.slice(1) + 'index.html');
+  assert.match(pagePin?.releasedSha256 || '', /^[0-9a-f]{64}$/, 'Exact deployed page hash is still pending');
   const facts = [];
   for (const entry of pin.files) {
     assert.match(entry.sha256, /^[0-9a-f]{64}$/);
@@ -208,6 +211,13 @@ async function main() {
   }
   await command('ffmpeg', ['-hide_banner', '-i', raw, '-filter_complex',
     'ebur128=peak=true', '-f', 'null', '-'], 'audio-loudness.log');
+  await command('ffmpeg', ['-hide_banner', '-i', raw, '-af', 'volumedetect', '-f', 'null', '-'], 'audio-volume.log');
+  const volumeLog = fs.readFileSync(path.join(out, 'audio-volume.log'), 'utf8');
+  const peakMatch = volumeLog.match(/max_volume:\s*(-?[\d.]+) dB/);
+  receipt.nativeAudio = {audible: !!peakMatch && Number(peakMatch[1]) > -60,
+    measuredMaxDb: peakMatch ? Number(peakMatch[1]) : null,
+    missingSoundtrack: !peakMatch || Number(peakMatch[1]) <= -60,
+    scope: 'Native game audio monitor only; no replacement soundtrack'};
   await command('ffmpeg', ['-v', 'error', '-y', '-i', raw, '-filter_complex',
     'showwavespic=s=1200x240:colors=gold', '-frames:v', '1', path.join(out, 'actual-audio-waveform.png')], 'waveform.log');
   receipt.output = {file: 'chrono-gameplay-native.mp4', bytes: fs.statSync(raw).size,

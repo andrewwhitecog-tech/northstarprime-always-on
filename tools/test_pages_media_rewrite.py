@@ -322,4 +322,55 @@ class SigilForwardingRelease(unittest.TestCase):
   self.assertTrue((ROOT.parent/'forge/index.html').is_file())
   self.assertTrue((ROOT.parent/'sigil-forge/tarot.html').is_file())
 
+
+class ImmutableBrowserRelease(unittest.TestCase):
+ def test_dynamic_separator_and_root_are_not_media_prefixes(self):
+  source="""oracleDetail=running+'/'+clients.length; count=running+"/"+clients.length; const root='/' + file; const dot='./' + file;"""
+  self.assertEqual(m.rewrite_release_media_refs(source,Path("chronosphere/index.html"),{"mature/song.mp3"},commit),source)
+ def test_actual_chronosphere_source_exports_byte_identically(self):
+  import tempfile,hashlib
+  source=ROOT.parent/"chronosphere/index.html"
+  manifest=json.loads((ROOT.parent/"CHRONOSPHERE_RELEASE_MANIFEST.json").read_text(encoding="utf-8"))
+  pinned=next(row for row in manifest["browser_files"] if row["path"]=="chronosphere/index.html")
+  with tempfile.TemporaryDirectory() as temporary:
+   target=Path(temporary)/"index.html"
+   m.copy_artifact_source(source,Path(pinned["path"]),target,{"mature/song.mp3"},commit,frozenset({pinned["path"]}))
+   self.assertEqual(target.read_bytes(),source.read_bytes())
+   self.assertEqual(hashlib.sha256(target.read_bytes()).hexdigest(),pinned["sha256"])
+ def test_preserved_chronosphere_inline_javascript_has_native_syntax(self):
+  import tempfile
+  source=ROOT.parent/"chronosphere/index.html"
+  with tempfile.TemporaryDirectory() as temporary:
+   target=Path(temporary)/"index.html"
+   m.copy_artifact_source(source,Path("chronosphere/index.html"),target,{"mature/song.mp3"},commit,frozenset({"chronosphere/index.html"}))
+   scripts=re.findall(r"<script>(.*?)</script>",target.read_text(encoding="utf-8"),re.S)
+   self.assertTrue(scripts)
+   for script in scripts:
+    result=subprocess.run(["node","--check"],input=script,text=True,encoding="utf-8",capture_output=True)
+    self.assertEqual(result.returncode,0,result.stderr)
+ def test_other_html_still_rewrites_media_and_gets_analytics(self):
+  import tempfile
+  with tempfile.TemporaryDirectory() as temporary:
+   source=Path(temporary)/"source.html";target=Path(temporary)/"export.html"
+   source.write_text('<html><head></head><body><audio src="/mature/song.mp3"></audio></body></html>',encoding="utf-8")
+   m.copy_artifact_source(source,Path("ordinary/index.html"),target,{"mature/song.mp3"},commit,frozenset({"chronosphere/index.html"}))
+   result=target.read_text(encoding="utf-8")
+   self.assertIn(base+"mature/song.mp3",result)
+   self.assertIn("static.cloudflareinsights.com/beacon.min.js",result)
+ def test_manifest_paths_and_source_identity_fail_closed(self):
+  import tempfile,hashlib
+  with tempfile.TemporaryDirectory() as temporary:
+   root=Path(temporary);release=root/"chronosphere";release.mkdir()
+   payload=b"\xef\xbb\xbfimmutable\r\n";(release/"index.html").write_bytes(payload)
+   row={"path":"chronosphere/index.html","bytes":len(payload),"sha256":hashlib.sha256(payload).hexdigest()}
+   manifest=root/"CHRONOSPHERE_RELEASE_MANIFEST.json"
+   def save():manifest.write_text(json.dumps({"browser_files":[row]}),encoding="utf-8")
+   save();self.assertEqual(m.immutable_release_files(root),frozenset({"chronosphere/index.html"}))
+   out=root/"export.html";m.copy_artifact_source(release/"index.html",Path(row["path"]),out,set(),commit,m.immutable_release_files(root))
+   self.assertEqual(out.read_bytes(),payload)
+   (release/"index.html").write_bytes(payload+b"changed")
+   with self.assertRaisesRegex(ValueError,"source identity mismatch"):m.immutable_release_files(root)
+   row["path"]="../escape.html";save()
+   with self.assertRaisesRegex(ValueError,"Invalid immutable release path"):m.immutable_release_files(root)
+
 if __name__=="__main__":unittest.main()

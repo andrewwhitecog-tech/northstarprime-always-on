@@ -410,6 +410,7 @@
     const p = game.player;
     if (!isFinishable(target)) return false;
     p.finisherT = 0.65;
+    p.invuln = Math.max(p.invuln, p.finisherT + 0.1);
     p.rage = clamp(p.rage + 25, 0, 100);
     p.hp = clamp(p.hp + 14, 0, p.maxHp);
     target.hp = 0;
@@ -1299,7 +1300,7 @@
   for (const event of ["pointerup","pointercancel","lostpointercapture"]) stick.addEventListener(event, releaseStick);
   for (const button of document.querySelectorAll(".touch-action")) {
     button.addEventListener("pointerdown", event => { event.preventDefault(); dispatchAction(button.dataset.action); });
-    button.addEventListener("click", event => { if (event.detail === 0) dispatchAction(button.dataset.action); });
+    button.addEventListener("click", event => { if (event.detail === 0 && !event.pointerType && !event.sourceCapabilities?.firesTouchEvents) dispatchAction(button.dataset.action); });
   }
 
   overlay.addEventListener("click", event => {

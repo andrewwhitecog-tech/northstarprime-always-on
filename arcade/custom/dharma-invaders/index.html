@@ -428,7 +428,10 @@ function update(dt){
   if(sentinel.dashTimer>0){
     sentinel.dashTimer-=dt;
     sentinel.x+=sentinel.dashDir*12;
-    if(sentinel.dashTimer<=0)sentinel.isDashing=false;
+    if(sentinel.dashTimer<=0){
+      sentinel.isDashing=false;
+      sentinel.x=clamp(sentinel.x,42,W-42);
+    }
   }
   if(sentinel.parryWindow>0)sentinel.parryWindow-=dt;
 
@@ -762,7 +765,7 @@ window.__COMMENTARY_DEBUG__={
   atlas:()=>({ready:atlasReady,error:atlasError,width:atlas.naturalWidth,height:atlas.naturalHeight}),
   snapshot:()=>({
     state,paused,folio,annotations,chain,bestChain,integrity,
-    sentinel:{x:sentinel.x,state:sentinel.charge>0?'firing':'neutral'},
+    sentinel:{x:sentinel.x,state:sentinel.charge>0?'firing':'neutral',dashTimer:sentinel.dashTimer,isDashing:sentinel.isDashing},
     forms:[...new Set(redactions.filter(e=>e.alive).map(e=>e.name))],
     scripts:[...new Set(redactions.filter(e=>e.alive).map(e=>e.script))],
     wardHp:wards.map(w=>w.hp),bolts:bolts.length,

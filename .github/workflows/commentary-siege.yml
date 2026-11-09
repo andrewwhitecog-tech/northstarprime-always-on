@@ -37,7 +37,14 @@ jobs:
           NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/commentary-browser/node_modules/playwright
           NSP_PLAYTEST_OUT: ${{ runner.temp }}/commentary-playtest
           NSP_VIRTUAL_DISPLAY: '1'
-        run: xvfb-run --auto-servernum node arcade/custom/dharma-invaders/tests/browser_ui.cjs
+        run: |
+          set +e
+          xvfb-run --auto-servernum node arcade/custom/dharma-invaders/tests/browser_ui.cjs
+          ui_status=$?
+          xvfb-run --auto-servernum node arcade/custom/dharma-invaders/tests/browser_edge.cjs
+          edge_status=$?
+          echo "Actual UI exit: $ui_status; actual edge exit: $edge_status"
+          test "$ui_status" -eq 0 && test "$edge_status" -eq 0
       - name: Retain actual screenshots, failures and result
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

@@ -6,15 +6,16 @@ const script=html.match(/<script>\s*'use strict';([\s\S]*?)<\/script>/);
 assert.ok(script,'actual inline game engine must be found');
 function game(){
  const handlers={};const elements=new Map();const gradient={addColorStop(){}};
- const ctx=new Proxy({}, {get:(o,k)=>o[k]||(()=>gradient),set:(o,k,v)=>(o[k]=v,true)});
- const element=id=>{if(!elements.has(id))elements.set(id,{style:{},classList:{add(){},remove(){},toggle(){}},addEventListener(){},getContext:()=>ctx});return elements.get(id);};
+ const drawing=[];const ctx=new Proxy({}, {get:(o,k)=>o[k]||((...args)=>{if(k==='fillRect'||k==='drawImage')drawing.push({method:k,args});return gradient;}),set:(o,k,v)=>(o[k]=v,true)});
+ const element=id=>{if(!elements.has(id)){const captured=new Set();elements.set(id,{style:{},dataset:{},classList:{add(){},remove(){},toggle(){}},closest:()=>null,focus(){},getBoundingClientRect:()=>({left:0,top:0,width:id.endsWith('Stick')?100:1280,height:id.endsWith('Stick')?100:720}),setPointerCapture:i=>captured.add(i),hasPointerCapture:i=>captured.has(i),releasePointerCapture:i=>captured.delete(i),addEventListener:(name,fn)=>handlers[id+':'+name]=fn,getContext:()=>ctx});}return elements.get(id);};
  let pads=[];const sandbox={console,performance:{now:()=>0},requestAnimationFrame(){},setTimeout(){},setInterval(){},Math,
- document:{getElementById:element},window:{innerWidth:1280,innerHeight:720,addEventListener:(name,fn)=>handlers[name]=fn},navigator:{getGamepads:()=>pads}};
+ ResizeObserver:class{observe(){}},document:{createElement:()=>({width:0,height:0,getContext:()=>ctx}),getElementById:element,documentElement:{classList:{toggle(){}}},body:{dataset:{}},querySelectorAll:selector=>selector==='[data-action]'?['bomb','chrono','dodge','weapon'].map(action=>{const e=element('action-'+action);e.dataset.action=action;return e;}):[],addEventListener:(name,fn)=>handlers['document:'+name]=fn},window:{innerWidth:1280,innerHeight:720,matchMedia:()=>({matches:false}),addEventListener:(name,fn)=>handlers[name]=fn},navigator:{maxTouchPoints:0,getGamepads:()=>pads}};
  vm.createContext(sandbox);vm.runInContext("'use strict';"+script[1],sandbox);
  const evalGame=code=>vm.runInContext(code,sandbox);
  evalGame("gameState='PLAYING'; mouse.x=100; mouse.y=360;");
- const pad=(axes=[0,0,0,0],fire=false)=>({connected:true,mapping:'standard',index:0,axes,buttons:Array.from({length:8},(_,i)=>({pressed:fire&&i===7,value:fire&&i===7?1:0}))});
- return{read:evalGame,frame:()=>evalGame('gameLoop(16.666)'),pad:(axes,fire=false)=>pads=[pad(axes,fire)],mouse:(x,y)=>handlers.mousemove({clientX:x,clientY:y})};
+ const pad=(axes=[0,0,0,0],buttons=[])=>({connected:true,mapping:'standard',index:0,id:'fixture',axes,buttons:Array.from({length:10},(_,i)=>({pressed:buttons.includes(i),value:buttons.includes(i)?1:0}))});
+ const pointer=(id,type,pointerId,x=50,y=50)=>handlers[id+':'+type]({pointerId,clientX:x,clientY:y,preventDefault(){}});
+ return{drawing,tap:id=>{handlers[id+':pointerdown']?.({pointerId:11,preventDefault(){}});handlers[id+':click']?.({detail:0,pointerType:'touch'});},read:evalGame,frame:()=>evalGame('gameLoop(16.666)'),pad:(axes,fire=false)=>pads=[pad(axes,fire?[7]:[])],buttons:(buttons,axes=[0,0,0,0])=>pads=[pad(axes,buttons)],mouse:(x,y)=>handlers['gameCanvas:mousemove']({clientX:x,clientY:y}),pointer,key:(key,repeat=false)=>handlers.keydown({key,repeat,preventDefault(){}})};
 }
 function near(actual,expected,message){assert.ok(Math.abs(actual-expected)<1e-9,message+'; actual='+actual);}
 test('right stick facing survives the real frame mouse-aim stage',()=>{const g=game();g.pad([0,0,0,-1]);g.frame();near(g.read('player.angle'),-Math.PI/2,'right stick must point up despite stale mouse on left');});
@@ -23,3 +24,21 @@ test('real mouse movement can deliberately take aim ownership back',()=>{const g
 test('new right stick aim takes ownership after mouse movement',()=>{const g=game();g.mouse(100,360);g.frame();g.pad([0,0,1,0]);g.frame();near(g.read('player.angle'),0,'right stick must take over again');});
 test('a connected neutral controller does not steal active mouse aim',()=>{const g=game();g.pad([0,0,.1,.1]);g.mouse(640,0);g.frame();near(g.read('player.angle'),-Math.PI/2,'deadzone movement must not steal mouse');});
 test('keyboard and mouse aiming still follows the pointer without a controller',()=>{const g=game();g.mouse(640,0);g.frame();near(g.read('player.angle'),-Math.PI/2,'mouse aim remains unchanged');});
+
+test('touch movement and aim own separate simultaneous pointers',()=>{const g=game();g.pointer('moveStick','pointerdown',1,90,50);g.pointer('aimStick','pointerdown',2,50,10);assert.equal(g.read('stickOwners.move'),1);assert.equal(g.read('stickOwners.aim'),2);g.frame();assert.ok(g.read('player.vx')>0);assert.ok(g.read('bullets[0].vy')<0);});
+test('touch cancellation releases ownership and movement',()=>{const g=game();g.pointer('moveStick','pointerdown',1,90,50);g.pointer('moveStick','pointercancel',1);assert.equal(g.read('touch.move.x'),0);assert.equal(g.read('stickOwners.move'),null);assert.equal(g.read('captures.size'),0);});
+test('lost capture stops continuous firing',()=>{const g=game();g.pointer('aimStick','pointerdown',2,50,10);assert.equal(g.read('touch.aimFire'),true);g.pointer('aimStick','lostpointercapture',2);assert.equal(g.read('touch.aimFire'),false);assert.equal(g.read('stickOwners.aim'),null);});
+test('pause clears gesture ownership and a stale move cannot restore it',()=>{const g=game();g.pointer('moveStick','pointerdown',1,90,50);g.read('pauseGame()');g.pointer('moveStick','pointermove',1,90,50);assert.equal(g.read('touch.move.x'),0);assert.equal(g.read('stickOwners.move'),null);g.read('resumeGame()');g.pointer('moveStick','pointerdown',3,90,50);assert.ok(g.read('touch.move.x')>0);});
+test('holding Escape cannot automatically resume pause',()=>{const g=game();g.key('Escape');assert.equal(g.read('gameState'),'PAUSED');g.key('Escape',true);assert.equal(g.read('gameState'),'PAUSED');});
+test('keyboard bomb autorepeat consumes only one bomb',()=>{const g=game();g.key(' ');g.key(' ',true);assert.equal(g.read('player.bombs'),2);});
+test('documented Shift key invokes the real dodge',()=>{const g=game();g.key('Shift');assert.equal(g.read('player.dodgeCd'),50);assert.equal(g.read('player.isInvulnerable'),true);});
+test('controller cannot fire or spend bombs on the title screen',()=>{const g=game();g.read("gameState='TITLE'");g.buttons([0,7]);g.frame();assert.equal(g.read('player.bombs'),3);assert.equal(g.read('bullets.length'),0);});
+test('canvas-relative pointer coordinates preserve desktop aiming',()=>{const g=game();g.mouse(640,0);g.frame();near(g.read('player.angle'),-Math.PI/2,'canvas geometry must map correctly');});
+test('first mouse shot uses the freshly selected bearing',()=>{const g=game();g.mouse(640,0);g.read('mouse.down=true');g.frame();assert.ok(g.read('bullets[0].vy')<0);near(g.read('bullets[0].vx'),0,'new pointer aim must precede firing');});
+test('one native touch tap spends one bomb even when click detail is zero',()=>{const g=game();g.tap('action-bomb');assert.equal(g.read('player.bombs'),2);});
+test('one native touch pause tap cannot immediately resume itself',()=>{const g=game();g.tap('pauseBtn');assert.equal(g.read('gameState'),'PAUSED');});
+test('a secondary touch press pauses before its unavailable compatibility click',()=>{const g=game();g.pointer('pauseBtn','pointerdown',12);assert.equal(g.read('gameState'),'PAUSED');});
+test('keyboard and touch click discrimination preserves accessible activation',()=>{const g=game();assert.equal(g.read('isKeyboardActivation({detail:0})'),true);assert.equal(g.read('isKeyboardActivation({detail:0,pointerType:"touch"})'),false);assert.equal(g.read('isKeyboardActivation({detail:0,sourceCapabilities:{firesTouchEvents:true}})'),false);});
+
+test('pause preserves the actual last rendered arena instead of clearing combat art',()=>{const g=game();g.frame();const before=g.drawing.length;g.read("gameState='PAUSED'");g.frame();assert.equal(g.drawing.length,before,'paused frames must not clear the arena');});
+test('resize retains the paused frame at the new arena dimensions',()=>{const g=game();g.frame();g.read("gameState='PAUSED';canvas.getBoundingClientRect=()=>({width:640,height:360});resizeArena()");assert.equal(g.read('W'),640);assert.equal(g.read('H'),360);assert.ok(g.drawing.some(x=>x.method==='drawImage'&&x.args.length===5&&x.args[3]===640&&x.args[4]===360),'existing frame must be scaled into resized arena');});

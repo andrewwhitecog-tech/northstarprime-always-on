@@ -18,7 +18,7 @@ const expectedHostile=sha(fs.readFileSync(path.join(gameRoot,'assets/hostiles-v0
 assert.equal(expectedHostile,'240c47ecb3e45ecc6ce84eff95e1d5e831cb412e302439344d6740ac3ff87345');
 const report={scope:'Actual public release, muted Chromium and native CDP gestures; automated QA visits, not organic traffic. No game-state mutation or physical-hardware claim.',publicURL,expectedEngine,expectedAsset,expectedFar,expectedHostile,polls:[],views:[],pageErrors:[]};
 let browser;
-async function read(p){return p.evaluate(()=>({state:gameState,x:player.x,y:player.y,angle:player.angle,shipState:shipAtlasState,farState:farEnvironmentState,hostileState:enemyAtlasState,hostileWidth:enemyAtlas.naturalWidth,hostileHeight:enemyAtlas.naturalHeight,farWidth:farEnvironment.naturalWidth,farHeight:farEnvironment.naturalHeight,portalDiscovered,pose:chooseShipPose(),width:shipAtlas.naturalWidth,height:shipAtlas.naturalHeight,bullets:bullets.length,owners:{...stickOwners},aimFire:touch.aimFire}));}
+async function read(p){return p.evaluate(()=>({state:gameState,x:player.x,y:player.y,angle:player.angle,shipState:shipAtlasState,farState:farEnvironmentState,device:{caption:document.querySelector("#gpText").textContent,maxTouchPoints:navigator.maxTouchPoints,coarse:matchMedia("(any-pointer:coarse)").matches},arena:document.querySelector("canvas").getBoundingClientRect().toJSON(),hostileState:enemyAtlasState,hostileWidth:enemyAtlas.naturalWidth,hostileHeight:enemyAtlas.naturalHeight,farWidth:farEnvironment.naturalWidth,farHeight:farEnvironment.naturalHeight,portalDiscovered,pose:chooseShipPose(),width:shipAtlas.naturalWidth,height:shipAtlas.naturalHeight,bullets:bullets.length,owners:{...stickOwners},aimFire:touch.aimFire}));}
 async function point(p,id,dx=0,dy=0){const r=await p.locator(id).boundingBox();assert.ok(r,id+' visible');return{x:r.x+r.width/2+dx*r.width,y:r.y+r.height/2+dy*r.height};}
 (async()=>{try{
  const deadline=Date.now()+480000;let ready=false;
@@ -53,11 +53,11 @@ async function point(p,id,dx=0,dy=0){const r=await p.locator(id).boundingBox();a
     await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...move,id:1},{...aim,id:2}]});
     await p.waitForFunction(x=>player.x>x+2&&touch.aimFire&&bullets.length>0,before.x);
     await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
-    await p.waitForFunction(()=>stickOwners.move===null&&stickOwners.aim===null&&!touch.aimFire);await client.detach();
+    await p.waitForFunction(()=>stickOwners.move===null&&stickOwners.aim===null&&!touch.aimFire);await client.detach();await p.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));assert.match((await read(p)).device.caption,/Touch controls/);
    }else{await p.keyboard.down('d');await p.waitForFunction(x=>player.x>x+2,before.x);await p.keyboard.up('d');}
    const layout=await p.evaluate(()=>({viewport:[innerWidth,innerHeight],document:[document.documentElement.scrollWidth,document.documentElement.scrollHeight]}));
    assert.deepEqual(layout.document,layout.viewport,'live release must fit exact viewport');
-   report.views.push({label,layout,observed:await read(p)});await p.screenshot({path:path.join(out,'live-'+label+'.png'),fullPage:true});
+   if(viewport.width===390)assert.ok((await read(p)).arena.height>=320,'portrait release arena must be at least320px tall');report.views.push({label,layout,observed:await read(p)});await p.screenshot({path:path.join(out,'live-'+label+'.png'),fullPage:true});
   }finally{await context.close();}
  }
  assert.deepEqual(report.pageErrors,[]);report.passed=true;

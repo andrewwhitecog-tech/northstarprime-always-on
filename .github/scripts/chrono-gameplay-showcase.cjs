@@ -23,23 +23,83 @@ function assertRecordedImagePresence(records) {
       'Missing actual successful image response: '+asset);
 }
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-const ownChildren = new Set();
-let browser, recorder, recorderDone;
+const ownChildren = new Set(), childStates = new WeakMap();
+let browser, recorder, recorderDone, cleanupPromise, cleaningUp=false;
+function bounded(promise,ms,label) {
+  let timer;
+  return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error(label+' exceeded '+ms+'ms')),ms);})])
+    .finally(()=>clearTimeout(timer));
+}
+function trackOwnedChild(child,label) {
+  assert.ok(Number.isInteger(child.pid)&&child.pid>0,'Owned child needs an actual PID');
+  const state={pid:child.pid,label,startedUtc:new Date().toISOString(),closed:false};
+  const done=new Promise(resolve=>{
+    child.once('error',error=>{state.error=String(error);});
+    child.once('close',(code,signal)=>{
+      Object.assign(state,{closed:true,code,signal,closedUtc:new Date().toISOString()});
+      ownChildren.delete(child);resolve(state);
+    });
+  });
+  childStates.set(child,{state,done});ownChildren.add(child);
+  (receipt.childProcesses ||= []).push(state);
+  return done;
+}
 function launch(binary, args, stderrName) {
-  const log = fs.openSync(path.join(out, stderrName), 'w');
-  const child = spawn(binary, args, {stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true});
-  if (!Number.isInteger(child.pid) || child.pid <= 0) {fs.closeSync(log); throw Error('Spawn failed: ' + binary);}
-  ownChildren.add(child);
-  child.stderr.on('data', chunk => fs.writeSync(log, chunk));
-  child.once('close', () => {ownChildren.delete(child); fs.closeSync(log);});
-  child.once('error', e => {receipt.errors.push(String(e));});
+  assert.equal(cleaningUp,false,'Refuse a new child during cleanup');
+  const log=fs.openSync(path.join(out,stderrName),'w');
+  const child=spawn(binary,args,{stdio:['ignore','ignore','pipe'],windowsHide:true});
+  child.once('error',error=>receipt.errors.push(String(error)));
+  if(!Number.isInteger(child.pid)||child.pid<=0){fs.closeSync(log);throw Error('Spawn failed: '+binary);}
+  trackOwnedChild(child,binary);
+  child.stderr.on('data',chunk=>fs.writeSync(log,chunk));
+  child.once('close',()=>fs.closeSync(log));
   return child;
 }
 function closed(child) {
-  return new Promise((resolve, reject) => {
-    child.once('error', reject);
-    child.once('close', (code, signal) => resolve({code, signal}));
-  });
+  assert.ok(childStates.has(child),'Only await an owned registered child');
+  return childStates.get(child).done;
+}
+async function stopOwnedChild(child,{softSignal='SIGTERM',graceMs=1500,killMs=1500}={}) {
+  assert.ok(childStates.has(child),'Refuse to stop an unregistered child');
+  const {state,done}=childStates.get(child),started=Date.now();
+  const result={pid:child.pid,softSignal,softSignalSent:false,escalated:false,closedConfirmed:state.closed};
+  if(!state.closed) {
+    if(child.exitCode===null&&child.signalCode===null) result.softSignalSent=child.kill(softSignal);
+    try {await bounded(done,graceMs,'Owned soft-signal close');}
+    catch(error) {
+      result.softWaitError=String(error);
+      if(!state.closed&&child.exitCode===null&&child.signalCode===null) {
+        result.escalated=true;result.killSignal='SIGKILL';result.killSignalSent=child.kill('SIGKILL');
+      }
+      try {await bounded(done,killMs,'Owned forced close');}catch(error){result.closeError=String(error);}
+    }
+  }
+  result.closedConfirmed=state.closed;
+  if(state.closed) result.actualExit={code:state.code,signal:state.signal,closedUtc:state.closedUtc};
+  result.elapsedMs=Date.now()-started;
+  return result;
+}
+function cleanupOwned(reason) {
+  if(cleanupPromise) return cleanupPromise;
+  cleaningUp=true;
+  cleanupPromise=(async()=>{
+    const result=receipt.cleanup={reason,startedUtc:new Date().toISOString(),children:[]};
+    if(recorder&&ownChildren.has(recorder)) result.children.push(await stopOwnedChild(recorder,{softSignal:'SIGINT'}).catch(error=>({closedConfirmed:false,error:String(error)})));
+    const remaining=[...ownChildren];
+    const browserClose=browser
+      ? bounded(browser.close(),3000,'Browser close').then(()=>({closed:true}),error=>({closed:false,error:String(error)}))
+      : Promise.resolve({notStarted:true});
+    const [childResults,browserResult]=await Promise.all([
+      Promise.allSettled(remaining.map(child=>stopOwnedChild(child))),browserClose
+    ]);
+    for(const item of childResults) result.children.push(item.status==='fulfilled'?item.value:{closedConfirmed:false,error:String(item.reason)});
+    result.browser=browserResult;result.finishedUtc=new Date().toISOString();
+    if(result.children.some(child=>!child.closedConfirmed)||browserResult.closed===false) {
+      receipt.status='failed';receipt.errors.push('Owned cleanup did not confirm every exit; inspect cleanup receipt');process.exitCode ||= 1;
+    }
+    return result;
+  })();
+  return cleanupPromise;
 }
 function command(binary, args, name) {
   const child = launch(binary, args, name);
@@ -266,7 +326,7 @@ async function main() {
   await page.mouse.up();
   await page.screenshot({path: path.join(out, 'after-native-input.png')});
   receipt.actualInputDurationSeconds = (performance.now() - started) / 1000;
-  const rec = await recorderDone;
+  const rec = await bounded(recorderDone,4000,'Requested FFmpeg SIGINT close');
   assert.ok(rec.code===0 || (rec.code===255 && receipt.recorderStop.stillRunning && receipt.recorderStop.signalSent),
     'Actual capture failed or exited before our requested SIGINT; inspect capture.ffmpeg.log');
   receipt.recorderExit = rec;
@@ -301,18 +361,23 @@ async function main() {
   // Loudness is measured, not silently normalized or accepted here.
 }
 if (require.main===module) {
-(async () => {
-  try {await main();}
-  catch (e) {receipt.status = 'failed'; receipt.errors.push(e.stack || String(e)); process.exitCode = 1;}
-  finally {
-    if (recorder && recorder.exitCode === null) {recorder.kill('SIGINT'); await recorderDone?.catch(e => receipt.errors.push(String(e)));}
-    await browser?.close().catch(e => receipt.errors.push(String(e)));
-    for (const child of ownChildren) if (child.exitCode === null) child.kill('SIGTERM');
-    receipt.finishedUtc = new Date().toISOString();
-    write('CAPTURE_ACTUAL.json', receipt);
-    console.log(JSON.stringify({status: receipt.status, accepted: false, output: receipt.output,
-      errorCount: receipt.errors.length}, null, 2));
-  }
-})();
+  const onTermination=signal=>{
+    if(receipt.terminationSignal)return;
+    receipt.terminationSignal=signal;receipt.status='failed';receipt.errors.push('Process received '+signal);
+    const code=signal==='SIGTERM'?143:130;process.exitCode=code;
+    const finish=()=>{receipt.finishedUtc=new Date().toISOString();write('CAPTURE_ACTUAL.json',receipt);process.exit(code);};
+    cleanupOwned(signal).then(finish,error=>{receipt.errors.push(String(error));finish();});
+  };
+  process.on('SIGTERM',()=>onTermination('SIGTERM'));
+  process.on('SIGINT',()=>onTermination('SIGINT'));
+  (async()=>{
+    try {await main();}
+    catch(error){receipt.status='failed';receipt.errors.push(error.stack||String(error));process.exitCode ||= 1;}
+    finally {
+      await cleanupOwned('finally');
+      receipt.finishedUtc=new Date().toISOString();write('CAPTURE_ACTUAL.json',receipt);
+      console.log(JSON.stringify({status:receipt.status,accepted:false,output:receipt.output,errorCount:receipt.errors.length},null,2));
+    }
+  })();
 }
-module.exports = {assertRecordedImagePresence};
+module.exports={assertRecordedImagePresence,trackOwnedChild,stopOwnedChild};

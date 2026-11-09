@@ -1158,8 +1158,7 @@
         burst(defender.x, defender.y - 120, 24, "#ffd75e", 8);
         state.echoes.push({
           text: `FLASH PARRY x${state.tribunalDirector.flashParryStreak}!`,
-          x: defender.x,
-          y: echoSpawnY(defender.x),
+          ...echoSpawn(defender.x),
           vy: -2.2,
           life: 55,
           max: 55,
@@ -1200,8 +1199,7 @@
       }
       state.echoes.push({
         text: blocked ? "GUARD" : `-${damage}`,
-        x: defender.x,
-        y: echoSpawnY(defender.x),
+        ...echoSpawn(defender.x),
         vy: -1.8,
         life: 42,
         max: 42,
@@ -2102,6 +2100,17 @@
       const near = state.echoes.filter(o => Math.abs(o.x - x) < 220 && o.life > 8);
       const top = near.length ? Math.min(...near.map(o => Math.min(o.y, B.head - 4))) : B.head - 6 + step;
       return Math.max(B.top + step, Math.min(B.head - 6, top - step));
+    }
+    // Where a new floating callout starts: above a fresh one near it if the band has room, else beside it
+    // (a tall fighter like Two Verdicts leaves room for one line only).
+    function echoSpawn(x) {
+      const B = calloutBand(), step = Math.min(view.h * 0.075, B.room * 0.8) * 1.15;
+      const near = state.echoes.filter(o => Math.abs(o.x - x) < 220 && o.life > 8);
+      if (!near.length) return { x, y: B.head - 6 };
+      const top = Math.min(...near.map(o => Math.min(o.y, B.head - 4)));
+      if (top - step >= B.top + step * 0.5) return { x, y: top - step };
+      const side = (near.length % 2 ? 1 : -1) * (x < view.w / 2 ? 1 : -1);
+      return { x: Math.max(90, Math.min(view.w - 90, x + side * 230)), y: B.head - 6 };
     }
 
     function drawEchoes() {

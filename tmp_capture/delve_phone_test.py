@@ -145,6 +145,8 @@ async def main():
         await ctx.add_init_script(INIT)
         page = await ctx.new_page()
         page.on("pageerror", lambda e: errors.append("desktop: " + str(e)[:200]))
+        wavs = []
+        page.on("response", lambda r: wavs.append((r.url.rsplit("/", 1)[-1], r.status)) if r.url.endswith(".wav") else None)
         await page.goto(a.base + URL, wait_until="load")
         await page.wait_for_timeout(2500)
         await page.screenshot(path=str(out / "desktop_01_cover.png"), timeout=90000)
@@ -158,6 +160,8 @@ async def main():
         co = await page.evaluate("() => { const e = document.getElementById('callout'), c = canvas.getBoundingClientRect(), r = e.getBoundingClientRect(); return {on: e.classList.contains('on'), text: e.textContent.trim(), calloutBottom: Math.round(r.bottom), canvasTop: Math.round(c.top)}; }")
         await page.screenshot(path=str(out / "desktop_03_callout.png"), timeout=90000)
         check("desktop: a callout prints in the strip above the world, not on it", co["on"] and co["text"] and co["calloutBottom"] <= co["canvasTop"] + 1, co)
+        await page.wait_for_timeout(2500)
+        check("desktop: ambience beds load on demand (1 or 2 at the surface, not all 5), each 200", 1 <= len(wavs) <= 2 and all(st == 200 for _, st in wavs), wavs)
         await page.evaluate("() => { try { summonBoss(Math.floor((player.x+player.w/2)/TS)+6, Math.floor(player.y/TS)-2); } catch (e) { window.__bossErr = String(e); } }")
         await page.wait_for_timeout(2500)
         bs = await page.evaluate("() => ({boss: !!(boss && boss.active), phase: boss && boss.phase, err: window.__bossErr || null})")

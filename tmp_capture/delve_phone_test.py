@@ -13,6 +13,27 @@ from playwright.async_api import async_playwright
 ARGS = ["--mute-audio", "--autoplay-policy=no-user-gesture-required", "--disable-background-timer-throttling",
         "--disable-renderer-backgrounding", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"]
 URL = "/arcade/custom/vorath-delve/"
+INIT = """(() => { const t = window.__typed = {}; const C2 = CanvasRenderingContext2D.prototype;
+  for (const n of ['fillText', 'strokeText']) { const f = C2[n]; C2[n] = function (s) { const k = String(s).slice(0, 40); t[k] = (t[k] || 0) + 1; return f.apply(this, arguments); }; } })();"""
+# Screen point (CSS px) of a world tile's centre.
+TILE_XY = "([tx, ty]) => { const r = canvas.getBoundingClientRect(); return [(tx*TS+8-cam.x)/VIEW_W*r.width+r.left, (ty*TS+8-cam.y)/VIEW_H*r.height+r.top]; }"
+# A diggable solid tile and an empty tile beside the delver, both within reach and on screen.
+PICK = """() => { const cx = Math.floor((player.x+player.w/2)/TS), fy = Math.floor((player.y+player.h)/TS); const r = canvas.getBoundingClientRect();
+  const on = (tx, ty) => { const x = (tx*TS+8-cam.x)/VIEW_W*r.width+r.left, y = (ty*TS+8-cam.y)/VIEW_H*r.height+r.top; return x > 8 && x < innerWidth-8 && y > r.top+8 && y < r.bottom-8; };
+  let dig = null, air = null;
+  for (const dy of [0, 1, -1, 2]) for (const dx of [2, -2, 1, -1, 3, -3]) { const tx = cx+dx, ty = fy+dy, t = getT(tx, ty);
+    if (!dig && t !== T.AIR && t !== T.BEDROCK && TILES[t].solid && withinReach(tx, ty) && on(tx, ty)) dig = [tx, ty, t]; }
+  for (const dy of [-1, -2]) for (const dx of [3, -3, 2, -2]) { const tx = cx+dx, ty = fy+dy;
+    if (!air && getT(tx, ty) === T.AIR && withinReach(tx, ty) && on(tx, ty)) air = [tx, ty]; }
+  return {dig, air}; }"""
+WORDS_OVER_PLAY = """() => { const c = canvas.getBoundingClientRect(); const out = [];
+  for (const el of document.querySelectorAll('body *')) { if (['SCRIPT','STYLE','CANVAS'].includes(el.tagName)) continue;
+    const own = [...el.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent.trim()).join(' ').trim(); if (!/[A-Za-z]/.test(own)) continue;
+    const st = getComputedStyle(el); if (st.display === 'none' || st.visibility === 'hidden' || +st.opacity < 0.05) continue;
+    const b = el.getBoundingClientRect(); if (b.width < 2 || b.height < 2) continue;
+    const ix = Math.max(0, Math.min(b.right, c.right, innerWidth) - Math.max(b.left, c.left, 0)), iy = Math.max(0, Math.min(b.bottom, c.bottom) - Math.max(b.top, c.top));
+    if (ix * iy > 0.3 * b.width * b.height) out.push(own.slice(0, 40)); }
+  return out; }"""
 
 
 async def touch_hold(cdp, x, y, ms, page):
@@ -38,6 +59,7 @@ async def main():
         b = await pw.chromium.launch(headless=True, args=ARGS)
         for vw, vh, tag in ((390, 844, "portrait"), (844, 390, "landscape")):
             ctx = await b.new_context(viewport={"width": vw, "height": vh}, device_scale_factor=2, is_mobile=True, has_touch=True)
+            await ctx.add_init_script(INIT)
             page = await ctx.new_page()
             page.on("pageerror", lambda e: errors.append(f"{tag}: " + str(e)[:200]))
             await page.goto(a.base + URL, wait_until="load")
@@ -48,6 +70,8 @@ async def main():
             links = await page.evaluate("() => !!document.querySelector('#overlay #nsp-related')")
             check(f"{tag}: no More-games text over the cover", not links, links)
             await page.screenshot(path=str(out / f"{tag}_01_title.png"), timeout=90000)
+            cov = await page.evaluate("() => { const o = getComputedStyle(document.getElementById('overlay')); const g = document.querySelector('#overlay .go'); return {size: o.backgroundSize, go: getComputedStyle(g).opacity, goText: g.textContent.trim().slice(0, 40)}; }")
+            check(f"{tag}: the cover is shown whole (contain) and its start line is visible below it", cov["size"] == "contain" and float(cov["go"]) > 0.9, cov)
             await touch_hold(cdp, vw / 2, vh / 2, 120, page)  # start
             await page.wait_for_timeout(1500)
             x0 = await page.evaluate("() => player.x")
@@ -68,6 +92,39 @@ async def main():
             await cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
             check(f"{tag}: touching the world digs, and builds with the toggle on", dig == {"down": True, "btn": 0} and build == {"down": True, "btn": 2}, {"dig": dig, "build": build})
             await page.screenshot(path=str(out / f"{tag}_02_play.png"), timeout=90000)
+            # Real outcomes: a held touch digs a tile out; with build on, a touch puts a block into an empty tile.
+            await page.evaluate("() => { touchBuild.on = false; }")
+            pk = await page.evaluate(PICK)
+            dug = placed = None
+            if pk["dig"]:
+                tx, ty, t0 = pk["dig"]
+                x, y = await page.evaluate(TILE_XY, [tx, ty])
+                await cdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [{"x": x, "y": y}]})
+                for _ in range(24):
+                    await page.wait_for_timeout(250)
+                    if await page.evaluate(f"() => getT({tx}, {ty}) === T.AIR"):
+                        break
+                await cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
+                dug = {"tile": [tx, ty], "before": t0, "after": await page.evaluate(f"() => getT({tx}, {ty})"), "count": await page.evaluate(f"() => counts[{t0}] || 0")}
+                if dug["after"] == 0:
+                    await page.evaluate(f"() => {{ const i = HOT.indexOf({t0}); if (i >= 0) {{ selSlot = i; refreshCounts(); }} touchBuild.on = true; }}")
+                    pk2 = await page.evaluate(PICK)
+                    if pk2["air"]:
+                        bx, by = pk2["air"]
+                        x, y = await page.evaluate(TILE_XY, [bx, by])
+                        await touch_hold(cdp, x, y, 400, page)
+                        placed = {"tile": [bx, by], "after": await page.evaluate(f"() => getT({bx}, {by})"), "slotTile": await page.evaluate("() => HOT[selSlot]")}
+                    await page.evaluate("() => { touchBuild.on = false; }")
+            check(f"{tag}: a held touch digs a tile out (tile becomes air, inventory +1)", dug and dug["after"] == 0 and dug["count"] >= 1, dug)
+            check(f"{tag}: with build on, a touch places that block into an empty tile", placed and placed["after"] != 0, placed)
+            await page.screenshot(path=str(out / f"{tag}_03_after_dig_build.png"), timeout=90000)
+            typed = await page.evaluate("() => window.__typed")
+            check(f"{tag}: the only typed canvas text is numbers (the R reading)", all(k.replace(".", "").isdigit() for k in typed), typed)
+            words = await page.evaluate(WORDS_OVER_PLAY)
+            check(f"{tag}: no words over the play field", not words, words)
+            geo = await page.evaluate("() => { const r = canvas.getBoundingClientRect(), h = document.getElementById('hotbar').getBoundingClientRect(); return {canvas: [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)], hotbarTop: Math.round(h.top), hotbarBottom: Math.round(h.bottom), inset: HUD_INSET_X}; }")
+            if tag == "portrait":
+                check("portrait: the world is at least 450 px tall and the hotbar sits below it", geo["canvas"][3] >= 450 and geo["hotbarTop"] >= geo["canvas"][1] + geo["canvas"][3] - 1 and geo["hotbarBottom"] <= vh, geo)
             sw = await page.evaluate("() => (document.scrollingElement || document.documentElement).scrollWidth")
             check(f"{tag}: no sideways scroll", sw <= vw + 2, sw)
             await ctx.close()

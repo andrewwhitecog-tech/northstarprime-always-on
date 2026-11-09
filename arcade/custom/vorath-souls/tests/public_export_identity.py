@@ -8,7 +8,7 @@ relative=Path('arcade/custom/vorath-souls')
 out=Path(os.environ.get('NSP_PLAYTEST_OUT',ROOT/'scratch'/'souls-public-export'))/'derived-export'
 out.mkdir(parents=True,exist_ok=True)
 roles=('pursuer','flanker','charger','hexer','bulwark','reaver')
-files=['index.html','earned-story.js','atlas.js','combat.js','input.js','journey.js','threats.js','camera.js','assets/vorath_exile_atlas.png','assets/maw_guard_atlas_candidate.png','assets/inner_ring_clean_floor_v05.png','assets/threshold_floor_v08.png']+[f'assets/thrall_{r}_strip_v03.png' for r in roles]
+files=['index.html','earned-story.js','atlas.js','combat.js','input.js','journey.js','threats.js','camera.js','assets/vorath_exile_atlas.png','assets/maw_guard_atlas_candidate.png','assets/inner_ring_clean_floor_v05.png','assets/threshold_floor_v08.png','assets/bone_gate_floor_v02.png']+[f'assets/thrall_{r}_strip_v03.png' for r in roles]
 subprocess.run(['git','diff','--quiet','HEAD','--'],cwd=ROOT,check=True)
 selected=builder.release_media_index();commit=builder.source_commit();rows=[]
 for name in files:

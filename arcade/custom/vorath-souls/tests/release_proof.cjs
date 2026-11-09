@@ -3,7 +3,7 @@
 const fs=require('node:fs'),path=require('node:path'),cp=require('node:child_process'),crypto=require('node:crypto'),assert=require('node:assert/strict');
 const ROOT=path.resolve(__dirname,'../../../..');
 const BINDING_PATHS=['arcade/custom/vorath-souls','tools/build_pages_artifact.py','tools/pages_art_quality.py','tools/public_art_quality_20261019.json','.github/scripts/native-browser-focus.cjs','.github/workflows/vorath-souls.yml'];
-const FILES=['index.html','earned-story.js','atlas.js','combat.js','input.js','journey.js','threats.js','camera.js','assets/vorath_exile_atlas.png','assets/maw_guard_atlas_candidate.png','assets/inner_ring_clean_floor_v05.png','assets/threshold_floor_v08.png',...['pursuer','flanker','charger','hexer','bulwark','reaver'].map(r=>'assets/thrall_'+r+'_strip_v03.png')];
+const FILES=['index.html','earned-story.js','atlas.js','combat.js','input.js','journey.js','threats.js','camera.js','assets/vorath_exile_atlas.png','assets/maw_guard_atlas_candidate.png','assets/inner_ring_clean_floor_v05.png','assets/threshold_floor_v08.png','assets/bone_gate_floor_v02.png',...['pursuer','flanker','charger','hexer','bulwark','reaver'].map(r=>'assets/thrall_'+r+'_strip_v03.png')];
 function fingerprint(root=ROOT,ref='HEAD'){
  assert.match(ref,/^(HEAD|[a-f0-9]{7,40})$/i);
  const bindings=Object.fromEntries(BINDING_PATHS.map(p=>{const blob=cp.execFileSync(process.env.NSP_GIT||(process.platform==='win32'?'C:/Program Files/Git/cmd/git.exe':'/usr/bin/git'),['-C',root,'rev-parse',ref+':'+p],{encoding:'utf8',windowsHide:true,timeout:10000}).trim();assert.match(blob,/^[a-f0-9]{40}$/);return[p,blob];}));
@@ -14,7 +14,7 @@ function validatePublic(report){
  const expected=report.exportDerivation.files;assert.ok(Array.isArray(expected));assert.equal(expected.length,FILES.length);assert.deepEqual(expected.map(r=>r.name).sort(),[...FILES].sort());assert.ok(Array.isArray(report.identities));assert.equal(report.identities.length,FILES.length);
  for(const row of expected){assert.match(row.sha256,/^[a-f0-9]{64}$/);assert.ok(Number.isInteger(row.bytes)&&row.bytes>0);const actual=report.identities.filter(a=>a.name===row.name);assert.equal(actual.length,1);assert.equal(actual[0].http,200);assert.equal(actual[0].bytes,row.bytes);assert.equal(actual[0].sha256,row.sha256);}
  assert.ok(Array.isArray(report.checks)&&report.checks.length===4);for(const check of report.checks)assert.equal(check.passed,true);
- assert.ok(report.checks.some(c=>c.name==='All18 actual exported engine/helper/adapter/module/keeper/six-role/two-floor identities match the release'));
+ assert.ok(report.checks.some(c=>c.name==='All19 actual exported engine/helper/adapter/module/keeper/six-role/three-floor identities match the release'));
  for(const[width,height]of[[1280,720],[390,844],[844,390]]){const c=report.checks.find(c=>c.name==='public native Start/move/pause '+width+'x'+height);assert.ok(c,'all three real native layouts are required');assert.equal(c.layout?.width,width);assert.equal(c.layout.height,height);assert.equal(c.layout.mode,'paused');assert.ok(c.layout.events.some(e=>e.trusted===true));assert.ok(Number.isFinite(c.before?.x)&&Number.isFinite(c.moved?.x)&&c.moved.x>c.before.x+15,'actual movement evidence required');assert.ok(Number.isFinite(c.paused?.x)&&Number.isFinite(c.paused?.y));}
  return report;
 }

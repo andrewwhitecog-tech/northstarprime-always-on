@@ -35,7 +35,8 @@ END = """() => { const c = document.getElementById('mapCallout'), e = document.g
     title: (e.querySelector('h2') || {}).textContent || '', body: (e.querySelector('p') || {}).textContent || '', shown: e.classList.contains('on'),
     face: f ? {src: f.getAttribute('src'), loaded: f.complete && f.naturalWidth > 0, w: Math.round(fr.width), h: Math.round(fr.height)} : null,
     button: b.textContent, buttonInRow: !!document.querySelector('.case-actions #modalBtn'), buttonW: Math.round(b.getBoundingClientRect().width),
-    pins: document.querySelectorAll('#pins .pin').length, sw: (document.scrollingElement || document.documentElement).scrollWidth}; }"""
+    pins: document.querySelectorAll('#pins .pin').length, sw: (document.scrollingElement || document.documentElement).scrollWidth,
+    endBottom: Math.round(e.getBoundingClientRect().bottom), bodyBottom: Math.round(document.querySelector('.case-body').getBoundingClientRect().bottom)}; }"""
 BOXES = """() => ['.panel', '.memory-note', '#shiftEnd', '#shiftEnd .end-row', '.officer', '.forecast-item', '.director', '.tag', '.chip'].map(q => {
   const e = document.querySelector(q); if (!e) return [q, null]; const c = getComputedStyle(e);
   return [q, c.backgroundColor, c.backgroundImage.slice(0, 12)]; })"""
@@ -121,7 +122,8 @@ async def main():
         for shift in range(1, 5):
             await play_shift(page, ["best"], log=log)
             e = await page.evaluate(END); s = await page.evaluate(SNAP)
-            breaks_seen.append({"shift": shift, "title": e["title"], "button": e["button"], "pins": e["pins"], "callout": e["callout"], "on": e["on"], "inMap": e["inMap"], "onBreak": s["onBreak"]})
+            breaks_seen.append({"shift": shift, "title": e["title"], "button": e["button"], "pins": e["pins"], "callout": e["callout"], "on": e["on"], "inMap": e["inMap"], "onBreak": s["onBreak"],
+                                "endBottom": e["endBottom"], "bodyBottom": e["bodyBottom"]})
             if shift in (1, 3, 4):
                 await page.screenshot(path=str(out / f"A0{shift + 1}_break_{shift}.png"))
             if shift == 4:
@@ -154,6 +156,9 @@ async def main():
               s["finished"] and not s["onBreak"] and s["breaks"] >= 3 and e["on"] and "shift_cleared" in e["callout"] and e["title"] == NAMES[lead] + " booked"
               and e["face"] and e["face"]["src"] == ART[lead] and e["button"] == "Start Night Shift+" and e["buttonInRow"] and "Takeover calls broken: " in e["body"],
               {"snap": s, "end": e})
+        check("A: desktop 1280x720: every shift report and the ending fit inside the call panel, no line under its edge (read by eye: the last line was cut)",
+              all(x["endBottom"] <= x["bodyBottom"] + 1 for x in breaks_seen) and e["endBottom"] <= e["bodyBottom"] + 1,
+              {"breaks": [[x["endBottom"], x["bodyBottom"]] for x in breaks_seen], "ending": [e["endBottom"], e["bodyBottom"]]})
         check("A: the result is in city memory (campaigns[0] booked, the leader's heat down to 30 or less, defeats up)",
               mem and mem.get("campaigns") and mem["campaigns"][0]["leader"] == lead and mem["campaigns"][0]["result"] == "booked"
               and next(r for r in mem["rivals"] if r["id"] == lead)["heat"] <= 30, {"campaigns": mem and mem.get("campaigns"), "leader": next((r for r in (mem or {}).get("rivals", []) if r["id"] == lead), None)})
@@ -193,6 +198,7 @@ async def main():
         await play_shift(page, ["worst"], log=logb)
         e = await page.evaluate(END); s = await page.evaluate(SNAP); mem = await page.evaluate(MEM)
         await page.screenshot(path=str(out / "B02_ending_owns.png"))
+        check("B: the OWNS ending fits the desktop call panel", e["endBottom"] <= e["bodyBottom"] + 1, [e["endBottom"], e["bodyBottom"]])
         check("B: the worst pick on every takeover call: the rival OWNS Buckman, SHIFT LOST lettering, the rival's portrait, New Shift only",
               s["finished"] and s["breaks"] <= 1 and "shift_lost" in e["callout"] and e["on"] and e["title"] == "Buckman runs Kernel Pique's feed"
               and e["face"] and e["face"]["src"] == ART["kernel"] and e["button"] == "New Shift", {"snap": s, "end": e})
@@ -223,6 +229,7 @@ async def main():
         await page.screenshot(path=str(out / "C02_ending_slipped.png"))
         check("C: the rematch: Tessa Vale leads again and the takeover call says how the last one ended",
               s["leader"] == "tessa" and "Last takeover: Tessa Vale took Buckman" in hook, {"leader": s["leader"], "hook": hook[:300]})
+        check("C: the SLIPPED ending fits the desktop call panel", e["endBottom"] <= e["bodyBottom"] + 1, [e["endBottom"], e["bodyBottom"]])
         check("C: two of four takeover calls broken: Tessa Vale SLIPS away (SHIFT CLEARED lettering, Start Night Shift+)",
               s["breaks"] == 2 and e["title"] == "Tessa Vale pivoted" and "shift_cleared" in e["callout"] and e["button"] == "Start Night Shift+", {"snap": s, "end": e})
         await ctx.close()

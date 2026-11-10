@@ -1374,8 +1374,9 @@
     els.log.innerHTML = state.log.map(row => `<div class="log-entry">${row}</div>`).join("");
   }
 
-  // Portraits drawn by Antigravity; Officer Logic and Captain Process wait for redraws.
-  const PORTRAIT = { friendly: "art/officer_friendly_v01.webp", tank: "art/officer_tank_v02.webp", badge: "art/officer_badge_v02.webp" };
+  // Portraits drawn by Antigravity (robot sheet v05; Logic and Process are the redraws).
+  const PORTRAIT = { friendly: "art/officer_friendly_v01.webp", tank: "art/officer_tank_v02.webp", badge: "art/officer_badge_v02.webp",
+    logic: "art/officer_logic_v02.webp", process: "art/officer_process_v02.webp" };
   // The district map: one pin per call, placed from the call's title so it is the same place every shift.
   const mapState = { done: [], chaosShown: false, calloutTimer: 0 };
   function pinSpot(title) {
@@ -1622,6 +1623,12 @@
       const panel = document.querySelector(".case-panel"); if (panel) panel.classList.add("ended");
     }
   }
+  // The end of a shift: what the visible Continue button does (pad A and Enter use it too).
+  function continueAfterEnd() {
+    if (!state.finished) return false;
+    if (state.canContinue) startNightShift(); else reset();
+    return true;
+  }
   function clearShiftEnd() {
     const end = document.getElementById("shiftEnd"); if (end) end.classList.remove("on");
     const panel = document.querySelector(".case-panel"); if (panel) panel.classList.remove("ended");
@@ -1791,9 +1798,8 @@
 
     // (A) Dispatch or dismiss modal
     if (btnA && !priorPad.a) {
-      if (els.modal.classList.contains("active")) {
-        if (state.canContinue) startNightShift();
-        else reset();
+      if (state.finished) {
+        continueAfterEnd();
         SoundFX.select();
         rumble(0.2, 0.4, 100);
       } else if (!els.dispatchBtn.disabled) {
@@ -1868,8 +1874,13 @@
   els.overrideBtn.addEventListener("click", derekOverride);
   els.resetBtn.addEventListener("click", reset);
   if (els.crtToggleBtn) els.crtToggleBtn.addEventListener("click", toggleCrt);
-  els.modalBtn.addEventListener("click", () => state.canContinue ? startNightShift() : reset());
+  els.modalBtn.addEventListener("click", continueAfterEnd);
   addEventListener("keydown", event => {
+    if (event.key === "Enter" && state.finished) {
+      const cover = document.getElementById("titleCover");
+      if (!(event.target && event.target.tagName === "BUTTON") && !(cover && !cover.classList.contains("gone"))) continueAfterEnd();
+      return;
+    }
     if (event.key === "Enter" && !els.dispatchBtn.disabled) dispatch();
     if (event.key === "r" || event.key === "R") reset();
     if (event.key === "c" || event.key === "C") toggleCrt();

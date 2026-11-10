@@ -30,9 +30,13 @@ FACE = """() => { const i = document.querySelector('#cityHook img.rival-face'); 
   const h = document.getElementById('cityHook').getBoundingClientRect(), b = document.querySelector('.case-body').getBoundingClientRect(), d = document.getElementById('dispatchBtn').getBoundingClientRect();
   return {src: i.getAttribute('src'), loaded: i.complete && i.naturalWidth > 0, w: Math.round(r.width), h: Math.round(r.height), alt: i.alt, hook: document.getElementById('cityHook').textContent.slice(0, 160),
     inPanel: r.top >= b.top - 1 && r.bottom <= b.bottom + 1 && h.bottom <= b.bottom + 1, hookBottom: Math.round(h.bottom), bodyBottom: Math.round(b.bottom), dispatchOn: d.bottom <= innerHeight && d.height > 0}; }"""
-OPAQUE = """async (srcs) => { const out = {}; for (const s of srcs) { const im = new Image(); im.src = s; await im.decode(); const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;
-  const g = c.getContext('2d'); g.drawImage(im, 0, 0); const x0 = Math.round(c.width * 0.3), y0 = Math.round(c.height * 0.12), w = Math.round(c.width * 0.4), h = Math.round(c.height * 0.5);
-  const d = g.getImageData(x0, y0, w, h).data; let min = 255, low = 0; for (let k = 3; k < d.length; k += 4) { if (d[k] < min) min = d[k]; if (d[k] < 250) low++; } out[s] = {minAlpha: min, below250: low}; } return out; }"""
+OPAQUE = """async (srcs) => { const out = {}; for (const s of srcs) { const im = new Image(); im.src = s; await im.decode(); const W = im.naturalWidth, H = im.naturalHeight;
+  const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'); g.drawImage(im, 0, 0); const d = g.getImageData(0, 0, W, H).data;
+  const clear = new Uint8Array(W * H); for (let k = 0; k < W * H; k++) clear[k] = d[k * 4 + 3] < 128 ? 1 : 0;
+  const seen = new Uint8Array(W * H), q = []; const push = k => { if (clear[k] && !seen[k]) { seen[k] = 1; q.push(k); } };
+  for (let x = 0; x < W; x++) { push(x); push((H - 1) * W + x); } for (let y = 0; y < H; y++) { push(y * W); push(y * W + W - 1); }
+  while (q.length) { const k = q.pop(), x = k % W, y = (k / W) | 0; if (x > 0) push(k - 1); if (x < W - 1) push(k + 1); if (y > 0) push(k - W); if (y < H - 1) push(k + W); }
+  let holes = 0; for (let k = 0; k < W * H; k++) if (clear[k] && !seen[k]) holes++; out[s] = {w: W, h: H, enclosedTransparentPx: holes}; } return out; }"""
 END = """() => { const c = document.getElementById('mapCallout'), e = document.getElementById('shiftEnd'), m = document.querySelector('.map-wrap').getBoundingClientRect();
   const a = c.getBoundingClientRect(), f = e.querySelector('img.rival-face'), fr = f ? f.getBoundingClientRect() : null, b = document.getElementById('modalBtn');
   return {callout: c.getAttribute('src'), on: c.classList.contains('on'), loaded: c.complete && c.naturalWidth > 0,
@@ -129,8 +133,8 @@ async def main():
         check("A: at 1280x720 the whole city-memory line and its portrait sit inside the call panel, with Dispatch on screen (Antigravity 23:49Z: the face was cut by the panel's edge)",
               f1 and f1["inPanel"] and f1["dispatchOn"], f1)
         op = await page.evaluate(OPAQUE, list(ART.values()))
-        check("A: the rivals' heads are solid: the central head region of each portrait is fully opaque (Grok/Antigravity 23:40Z/23:49Z: holes through hair and eyes)",
-              all(v["minAlpha"] >= 250 for v in op.values()), op)
+        check("A: the rival portraits have no holes: 0 transparent pixels enclosed by the figure (Grok/Antigravity 23:40Z/23:49Z: holes through hair and eyes; v01 had up to 770)",
+              all(v["enclosedTransparentPx"] == 0 for v in op.values()), op)
         log, breaks_seen = [], []
         for shift in range(1, 5):
             await play_shift(page, ["best"], log=log)

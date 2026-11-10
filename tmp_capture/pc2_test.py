@@ -20,14 +20,19 @@ from playwright.async_api import async_playwright
 ARGS = ["--mute-audio", "--autoplay-policy=no-user-gesture-required", "--disable-background-timer-throttling",
         "--disable-renderer-backgrounding", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"]
 URL = "/arcade/custom/precinct-404/"
-ART = {"vanta": "art/rival_vanta_v01.webp", "kernel": "art/rival_kernel_v01.webp", "tessa": "art/rival_tessa_v01.webp"}
+ART = {"vanta": "art/rival_vanta_v02.webp", "kernel": "art/rival_kernel_v02.webp", "tessa": "art/rival_tessa_v02.webp"}
 NAMES = {"vanta": "Vanta Luxe", "kernel": "Kernel Pique", "tessa": "Tessa Vale"}
 PICK = """(mode) => { const btns = [...document.querySelectorAll('button.officer:not([disabled])')];
   if (!btns.length) return null; const val = b => Number((b.querySelector('.chip') || {}).textContent || 0);
   btns.sort((a, b) => mode === 'worst' ? val(a) - val(b) : val(b) - val(a)); return btns[0].dataset.id; }"""
 SNAP = "() => window.__precinctDebug.snapshot()"
 FACE = """() => { const i = document.querySelector('#cityHook img.rival-face'); if (!i) return null; const r = i.getBoundingClientRect();
-  return {src: i.getAttribute('src'), loaded: i.complete && i.naturalWidth > 0, w: Math.round(r.width), h: Math.round(r.height), alt: i.alt, hook: document.getElementById('cityHook').textContent.slice(0, 160)}; }"""
+  const h = document.getElementById('cityHook').getBoundingClientRect(), b = document.querySelector('.case-body').getBoundingClientRect(), d = document.getElementById('dispatchBtn').getBoundingClientRect();
+  return {src: i.getAttribute('src'), loaded: i.complete && i.naturalWidth > 0, w: Math.round(r.width), h: Math.round(r.height), alt: i.alt, hook: document.getElementById('cityHook').textContent.slice(0, 160),
+    inPanel: r.top >= b.top - 1 && r.bottom <= b.bottom + 1 && h.bottom <= b.bottom + 1, hookBottom: Math.round(h.bottom), bodyBottom: Math.round(b.bottom), dispatchOn: d.bottom <= innerHeight && d.height > 0}; }"""
+OPAQUE = """async (srcs) => { const out = {}; for (const s of srcs) { const im = new Image(); im.src = s; await im.decode(); const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;
+  const g = c.getContext('2d'); g.drawImage(im, 0, 0); const x0 = Math.round(c.width * 0.3), y0 = Math.round(c.height * 0.12), w = Math.round(c.width * 0.4), h = Math.round(c.height * 0.5);
+  const d = g.getImageData(x0, y0, w, h).data; let min = 255, low = 0; for (let k = 3; k < d.length; k += 4) { if (d[k] < min) min = d[k]; if (d[k] < 250) low++; } out[s] = {minAlpha: min, below250: low}; } return out; }"""
 END = """() => { const c = document.getElementById('mapCallout'), e = document.getElementById('shiftEnd'), m = document.querySelector('.map-wrap').getBoundingClientRect();
   const a = c.getBoundingClientRect(), f = e.querySelector('img.rival-face'), fr = f ? f.getBoundingClientRect() : null, b = document.getElementById('modalBtn');
   return {callout: c.getAttribute('src'), on: c.classList.contains('on'), loaded: c.complete && c.naturalWidth > 0,
@@ -121,6 +126,11 @@ async def main():
         await page.screenshot(path=str(out / "A01_call1_rival_face.png"))
         check("A: call 1 shows its rival's portrait beside the city-memory line (Vanta Luxe), loaded and drawn",
               f1 and f1["src"] == ART["vanta"] and f1["loaded"] and f1["w"] >= 40 and f1["h"] >= 40 and f1["alt"] == "Vanta Luxe", f1)
+        check("A: at 1280x720 the whole city-memory line and its portrait sit inside the call panel, with Dispatch on screen (Antigravity 23:49Z: the face was cut by the panel's edge)",
+              f1 and f1["inPanel"] and f1["dispatchOn"], f1)
+        op = await page.evaluate(OPAQUE, list(ART.values()))
+        check("A: the rivals' heads are solid: the central head region of each portrait is fully opaque (Grok/Antigravity 23:40Z/23:49Z: holes through hair and eyes)",
+              all(v["minAlpha"] >= 250 for v in op.values()), op)
         log, breaks_seen = [], []
         for shift in range(1, 5):
             await play_shift(page, ["best"], log=log)
@@ -197,6 +207,9 @@ async def main():
         for shift in range(1, 5):
             await play_shift(page, ["best"], log=logb); await page.click("#modalBtn"); await page.wait_for_timeout(350)
         s = await page.evaluate(SNAP); read = s["readOfficer"]
+        fb = await page.evaluate(FACE)
+        check("B: on the first takeover call at 1280x720 the city-memory line and the leader's portrait are inside the call panel (was below the fold)",
+              fb and fb["inPanel"] and fb["dispatchOn"] and fb["src"] == ART["kernel"], fb)
         cards = await page.evaluate("() => [...document.querySelectorAll('button.officer')].map(b => [b.dataset.id, (b.querySelector('.read') || {}).textContent || '', Number(b.querySelector('.chip').textContent)])")
         await page.screenshot(path=str(out / "B01_takeover_call1.png"))
         check("B: the takeover leader comes from the old save's heat (Kernel Pique was hot), and the officer used most against the leader is marked 'read' on its card",

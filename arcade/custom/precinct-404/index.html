@@ -600,6 +600,13 @@
   #shiftEnd .end-row > div { min-width: 0; }
   .officer .read { color: #ec4899; }
   @media (max-width: 980px) { .rival-face.large { width: 84px; height: 84px; } }
+  @media (min-width: 981px) {
+    .case-panel.ended .map-wrap { height: clamp(96px, 15vh, 200px); }
+    .case-panel.ended .case-body { gap: 6px; padding-top: 8px; padding-bottom: 8px; }
+    .case-panel.ended #shiftEnd .case-title { margin: 0 0 4px; }
+    .case-panel.ended #shiftEnd .case-copy { margin: 0; }
+    .rival-face.large { width: 96px; height: 96px; }
+  }
   @media (max-width: 980px) {
     main > * { min-width: 0; }
     header { flex-wrap: wrap; gap: 8px; }
@@ -1176,8 +1183,9 @@
       faction.heat = clamp(faction.heat + 8);
       faction.leverage = clamp(faction.leverage + 7);
       rival.memory = officer.name + " became part of the rival playbook.";
+      const rankBefore = rival.rank;
       promoteRival(rival);
-      note = rival.name + " promotes to " + rival.rank + " after exploiting the call.";
+      note = rival.rank !== rankBefore ? rival.name + " promotes to " + rival.rank + " after exploiting the call." : rival.name + " exploits the call.";
     }
     cityMemory.turn += 1;
     cityMemory.lastEvent = note;
@@ -1808,11 +1816,10 @@
       state.readOfficer = read && (read.memory || {})[leader.id] ? read.id : null;
       face = RIVAL_ART[leader.id];
       const prior = lastTakeover(leader.id);
-      body = leader.name + " has the most heat in Buckman (" + leader.heat + "). Tomorrow night the takeover comes for the precinct: four calls, all from " + leader.name + ". Break three of them and " + leader.name + " is booked."
+      body = leader.name + " has the most heat left in Buckman. Tomorrow night the takeover comes for the precinct: four calls, all from " + leader.name + ". Break three of them and " + leader.name + " is booked."
         + (state.readOfficer ? " " + leader.name + " has studied " + officerById(state.readOfficer).name + "'s file." : "")
         + (prior ? " " + lastTakeoverText(leader.id) : "");
     }
-    body += " Trust " + clamp(state.trust) + ", chaos " + clamp(state.chaos) + ", budget " + clamp(state.budget) + ".";
     addLog("Shift " + done + " cleared.");
     showEnd("shift_cleared", "Shift " + done + " cleared", body, face, "Start Shift " + (done + 1));
     render();

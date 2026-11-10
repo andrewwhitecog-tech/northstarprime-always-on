@@ -98,9 +98,12 @@ async def main():
                 return n
             call = s["call"]
             face = await page.evaluate(FACE)
+            tface = await page.evaluate("""() => { const i = document.querySelector('#caseTitle img.title-face'); if (!i) return null; const r = i.getBoundingClientRect(),
+              b = document.querySelector('.case-body').getBoundingClientRect(); return {src: i.getAttribute('src'), loaded: i.complete && i.naturalWidth > 0, w: Math.round(r.width),
+              onScreen: r.top >= b.top - 1 && r.bottom <= b.bottom + 1 && r.bottom <= innerHeight}; }""")
             if log is not None:
                 log.append({"index": s["index"], "type": call["type"], "title": call["title"], "rival": call["rivalId"], "top": call["top"],
-                            "face": face and face["src"], "faceW": face and face["w"], "hook": face and face["hook"][:90]})
+                            "face": face and face["src"], "faceW": face and face["w"], "hook": face and face["hook"][:90], "tface": tface})
             await dispatch_one(page, modes[min(n, len(modes) - 1)], tap)
             n += 1
             if n > 6:
@@ -150,6 +153,9 @@ async def main():
               and [x["rival"] for x in week[:3]] == ["vanta", "kernel", "tessa"], week)
         check("A: the takeover = four Takeover calls from the leader, each with the leader's portrait and 'Takeover call n of 4'",
               len(tk) == 4 and all(x["type"] == "Takeover" and x["rival"] == s["leader"] and x["face"] == ART[s["leader"]] and x["hook"].startswith(f"Takeover call {i + 1} of 4") for i, x in enumerate(tk)), tk)
+        check("A: on rival-plot and takeover calls the rival's face also sits beside the call title, on screen without scrolling at 1280x720; pilot calls have none",
+              all(x["tface"] and x["tface"]["src"] == ART[x["rival"]] and x["tface"]["loaded"] and x["tface"]["w"] >= 36 and x["tface"]["onScreen"] for x in week + tk)
+              and all(x["tface"] is None for x in log if x["index"] < 12), [[x["index"], x["tface"]] for x in week + tk])
         check("A: the whole campaign is 20 dispatches (12 pilot + 4 rival week + 4 takeover)", len(log) == 20, len(log))
         lead = s["leader"]
         check("A: the top number on every takeover call breaks it: BOOKED ending, SHIFT CLEARED lettering, the leader's portrait, Start Night Shift+",

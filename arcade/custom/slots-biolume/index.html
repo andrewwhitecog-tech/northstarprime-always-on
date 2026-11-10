@@ -328,8 +328,8 @@ header.topbar{
 // - jackpot:    audio/jackpot.mp3    (ElevenLabs mythic Kraken surge fanfare)
 // - scatter:    audio/scatter.mp3    (ElevenLabs Eye of the Deep portal pulse)
 // - bet_step:   audio/bet_step.mp3   (ElevenLabs token step)
-// - music_main: /arcade/custom/audio/idg_cues/pinball_bed.mp3 (Suno biolume synthwave)
-// - music_boss: /arcade/custom/audio/idg_cues/skillshot.mp3   (Suno Kraken boss)
+// - music_main: ../audio/idg_cues/pinball_bed.mp3 (Suno biolume synthwave)
+// - music_boss: ../audio/idg_cues/skillshot.mp3   (Suno Kraken boss)
 const AUDIO = (() => {
   const sfxFiles = {
     spin_start: 'audio/spin_start.mp3',
@@ -345,9 +345,9 @@ const AUDIO = (() => {
   let unlocked = false;
   try { muted = localStorage.getItem('nsp_slots_biolume_mute') === '1'; } catch(e){}
 
-  const musicMain = new Audio('/arcade/custom/audio/idg_cues/pinball_bed.mp3');
+  const musicMain = new Audio('../audio/idg_cues/pinball_bed.mp3');
   musicMain.loop = true; musicMain.volume = 0.36;
-  const musicBoss = new Audio('/arcade/custom/audio/idg_cues/skillshot.mp3');
+  const musicBoss = new Audio('../audio/idg_cues/skillshot.mp3');
   musicBoss.loop = true; musicBoss.volume = 0.42;
   let activeMusic = musicMain;
 
@@ -456,7 +456,9 @@ let freeSpins = 0;
 let krakenMaxHp = 2500, krakenHp = 2500, krakenDefeated = false;
 let jackpot = 25000;
 let heldReels = [false, false, false, false, false];
-let nudgeAvailable = true;
+let nudgeAvailable = false;
+let currentSpinIsFree = false, hasPendingSpinFlag = false;
+let spinSettlement = null, autoSpinTimer = null;
 let spinning = false, autoSpin = false;
 let stats = { spins: 0, wins: 0, biggest: 0, bestBank: 5000 };
 
@@ -919,8 +921,14 @@ function toggleAuto() {
 function spin() {
   AUDIO.unlock();
   if (spinning) return;
+  if (autoSpinTimer) { clearTimeout(autoSpinTimer); autoSpinTimer = null; }
 
-  if (freeSpins <= 0) {
+  const isFree = freeSpins > 0;
+  currentSpinIsFree = isFree;
+  hasPendingSpinFlag = true;
+  spinSettlement = null;
+
+  if (!isFree) {
     if (tokens < totalBet) {
       tokens = 1000;
       setVerdict('ABYSSAL RESERVE RECHARGED (+1,000 TOKENS)', true);
@@ -932,7 +940,7 @@ function spin() {
   }
 
   spinning = true;
-  nudgeAvailable = true;
+  nudgeAvailable = false;
   winHighlights = [];
   winningPaylines = [];
   stats.spins++;
@@ -981,11 +989,33 @@ function evaluateLine(syms) {
   return base.pays[count] || 0;
 }
 
-function evaluateSpin() {
+function evaluateSpin(isNudge = false) {
+  const nudgePass = isNudge === true;
   spinning = false;
   document.getElementById('spin-btn').disabled = false;
-  // Release holds after one locked spin so player can re-choose
-  heldReels = [false, false, false, false, false];
+  if (!nudgePass) {
+    // Release holds after one locked spin so player can re-choose
+    heldReels = [false, false, false, false, false];
+    const spinWasFree = hasPendingSpinFlag ? currentSpinIsFree : (freeSpins > 0);
+    hasPendingSpinFlag = false;
+    nudgeAvailable = true;
+    const spinMult = ZONES[currentZone].mult * (spinWasFree ? 2 : 1) * (krakenDefeated ? 1.25 : 1);
+    spinSettlement = {
+      mult: spinMult,
+      baseWins: stats.wins,
+      baseBiggest: stats.biggest,
+      baseKrakenHp: krakenHp,
+      baseKrakenDefeated: krakenDefeated,
+      baseJackpot: jackpot,
+      totalCredited: 0,
+      totalWin: 0,
+      addedFs: 0,
+      dmg: 0,
+      defeatedNow: false
+    };
+  } else if (!spinSettlement) {
+    return;
+  }
 
   let rawWin = 0;
   winHighlights = [];
@@ -1014,53 +1044,88 @@ function evaluateSpin() {
       }
     }
   }
+  let addedFs = 0;
   if (scatters >= 3) {
     const scPay = SYMBOLS[8].pays[Math.min(5, scatters)] * totalBet;
     rawWin += scPay;
-    const addedFs = scatters === 3 ? 6 : scatters === 4 ? 10 : 16;
-    freeSpins += addedFs;
-    AUDIO.play('scatter', 0.95);
-    spawnFloating(`EYE OF THE DEEP! +${addedFs} FREE SPINS!`, '#4effb5', 430, 95);
+    addedFs = scatters === 3 ? 6 : scatters === 4 ? 10 : 16;
   }
 
-  const mult = ZONES[currentZone].mult * (freeSpins > 0 ? 2 : 1) * (krakenDefeated ? 1.25 : 1);
+  const fsDelta = addedFs - spinSettlement.addedFs;
+  if (fsDelta !== 0) {
+    freeSpins = Math.max(0, freeSpins + fsDelta);
+    if (fsDelta > 0) {
+      AUDIO.play('scatter', 0.95);
+      spawnFloating(`EYE OF THE DEEP! +${fsDelta} FREE SPINS!`, '#4effb5', 430, 95);
+    }
+  }
+
+  const mult = spinSettlement.mult;
   const totalWin = Math.floor(rawWin * mult);
 
-  if (totalWin > 0) {
-    tokens += totalWin;
-    stats.wins++;
-    if (totalWin > stats.biggest) stats.biggest = totalWin;
+  let dmg = 0;
+  let defeatedNow = false;
+  if (!spinSettlement.baseKrakenDefeated && totalWin > 0) {
+    dmg = Math.max(85, Math.min(750, Math.floor(totalWin * 1.5)));
+    krakenHp = Math.max(0, spinSettlement.baseKrakenHp - dmg);
+    defeatedNow = (krakenHp === 0);
+  } else if (!spinSettlement.baseKrakenDefeated) {
+    krakenHp = spinSettlement.baseKrakenHp;
+  }
+  krakenDefeated = spinSettlement.baseKrakenDefeated || defeatedNow;
+  jackpot = defeatedNow ? 25000 : spinSettlement.baseJackpot;
 
-    // Damage the Abyssal Kraken Boss on every winning spin!
-    if (!krakenDefeated) {
-      const dmg = Math.max(85, Math.min(750, Math.floor(totalWin * 1.5)));
-      krakenHp = Math.max(0, krakenHp - dmg);
-      spawnFloating(`-${dmg} KRAKEN HP!`, '#f472b6', 430, 55);
-      if (krakenHp === 0) {
-        krakenDefeated = true;
-        tokens += jackpot;
-        hitStopFrames = 8;
-        triggerShake();
-        AUDIO.play('jackpot', 1.0);
-        spawnParticles(430, 120, '#fde047', 70);
-        setVerdict(`ABYSSAL KRAKEN DEFEATED! GRAND JACKPOT +${jackpot.toLocaleString()} TOKENS!`, true);
-        jackpot = 25000;
-      }
+  const totalCredited = totalWin + (defeatedNow ? spinSettlement.baseJackpot : 0);
+  const creditDelta = totalCredited - spinSettlement.totalCredited;
+  tokens += creditDelta;
+
+  stats.wins = spinSettlement.baseWins + (totalWin > 0 ? 1 : 0);
+  stats.biggest = Math.max(spinSettlement.baseBiggest, totalWin);
+
+  const dmgDelta = dmg - spinSettlement.dmg;
+  const newlyDefeated = defeatedNow && !spinSettlement.defeatedNow;
+
+  spinSettlement.totalCredited = totalCredited;
+  spinSettlement.totalWin = totalWin;
+  spinSettlement.addedFs = addedFs;
+  spinSettlement.dmg = dmg;
+  spinSettlement.defeatedNow = defeatedNow;
+
+  if (creditDelta > 0) {
+    if (dmgDelta > 0) {
+      spawnFloating(`-${dmgDelta} KRAKEN HP!`, '#f472b6', 430, 55);
     }
-
-    if (!krakenDefeated || krakenHp > 0) {
-      if (totalWin >= totalBet * 8) {
-        hitStopFrames = 5;
-        triggerShake();
-        AUDIO.play('bigwin', 0.95);
-        setVerdict(`ABYSSAL MEGA PAYOUT! +${totalWin.toLocaleString()} TOKENS (${winningPaylines.length} LINES)!`, true);
-      } else {
-        AUDIO.play('win', 0.85);
-        setVerdict(`BIOLUME WIN: +${totalWin.toLocaleString()} TOKENS (${winningPaylines.length} PAYLINES)`);
-      }
+    if (newlyDefeated) {
+      hitStopFrames = 8;
+      triggerShake();
+      AUDIO.play('jackpot', 1.0);
+      spawnParticles(430, 120, '#fde047', 70);
+      setVerdict(`ABYSSAL KRAKEN DEFEATED! GRAND JACKPOT +${spinSettlement.baseJackpot.toLocaleString()} TOKENS!`, true);
+    } else if (creditDelta >= totalBet * 8) {
+      hitStopFrames = 5;
+      triggerShake();
+      AUDIO.play('bigwin', 0.95);
+      setVerdict(nudgePass
+        ? `NUDGE MEGA UPGRADE! +${creditDelta.toLocaleString()} TOKENS (SPIN TOTAL +${totalWin.toLocaleString()})!`
+        : `ABYSSAL MEGA PAYOUT! +${totalWin.toLocaleString()} TOKENS (${winningPaylines.length} LINES)!`, true);
+    } else {
+      AUDIO.play('win', 0.85);
+      setVerdict(nudgePass
+        ? `NUDGE UPGRADE: +${creditDelta.toLocaleString()} TOKENS (SPIN TOTAL +${totalWin.toLocaleString()})`
+        : `BIOLUME WIN: +${totalWin.toLocaleString()} TOKENS (${winningPaylines.length} PAYLINES)`);
     }
     spawnParticles(430, 140, '#22d3ee', 34);
-    spawnFloating(`+${totalWin.toLocaleString()}`, '#fde047', 430, 145);
+    spawnFloating(`+${creditDelta.toLocaleString()}`, '#fde047', 430, 145);
+  } else if (nudgePass) {
+    if (creditDelta === 0 && fsDelta === 0) {
+      setVerdict(totalWin > 0
+        ? `NUDGE SETTLED: +0 EXTRA TOKENS (SPIN TOTAL +${totalWin.toLocaleString()})`
+        : 'NUDGE COMPLETE — SPIN AGAIN');
+    } else if (creditDelta < 0) {
+      setVerdict(totalWin > 0
+        ? `NUDGE ADJUSTED PAYLINES: SPIN TOTAL +${totalWin.toLocaleString()} TOKENS`
+        : 'NUDGE SHIFTED OFF PAYLINE — 0 TOKENS');
+    }
   } else {
     setVerdict('TAP ANY REEL TO LOCK FOR NEXT SPIN OR NUDGE REEL 3 [N]');
   }
@@ -1069,20 +1134,21 @@ function evaluateSpin() {
   updateUI();
 
   if (autoSpin) {
-    setTimeout(() => { if (autoSpin && !spinning) spin(); }, 950);
+    if (autoSpinTimer) clearTimeout(autoSpinTimer);
+    autoSpinTimer = setTimeout(() => { autoSpinTimer = null; if (autoSpin && !spinning) spin(); }, 950);
   }
 }
 
 function nudgeCenterReel() {
   AUDIO.unlock();
-  if (spinning || !nudgeAvailable) return;
+  if (spinning || !nudgeAvailable || !spinSettlement) return;
   nudgeAvailable = false;
-  // Shift Reel 2 (center reel) down by 1 symbol and re-evaluate!
+  // Shift Reel 2 (center reel) down by 1 symbol and settle only the delta!
   grid[2].pop();
   grid[2].unshift(randomSym(2));
   AUDIO.play('reel_stop', 0.9);
   spawnParticles(430, 135, '#f472b6', 18);
-  evaluateSpin();
+  evaluateSpin(true);
 }
 
 // Touch / Click directly on Reels Canvas: tap column to Hold, swipe down to Spin

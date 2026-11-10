@@ -1,0 +1,123 @@
+name: Commentary Siege public release proof
+on:
+  pull_request:
+    paths: ['.github/scripts/commentary-public-*', '.github/workflows/commentary-public.yml']
+  workflow_run:
+    workflows: ['Deploy curated NorthStar Pages']
+    types: [completed]
+permissions:
+  contents: read
+concurrency:
+  group: commentary-public-${{ github.event_name }}-${{ github.event.workflow_run.head_sha || github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  source-contract:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            arcade/custom/dharma-invaders
+            static/games/chiptune.js
+            static/art/games/vorath_overhaul_v01/commentary_siege
+            tools
+            .github/scripts
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
+        with:
+          version: '0.13.7'
+          enable-cache: 'false'
+          download-from-astral-mirror: 'false'
+      - name: Compile public sources and run the actual owning per-file transform
+        env:
+          NSP_PLAYTEST_OUT: ${{ runner.temp }}/commentary-public-prepared
+          PYTHONUTF8: '1'
+          PYTHONIOENCODING: utf-8
+          UV_PYTHON_DOWNLOADS: never
+        run: |
+          node --check .github/scripts/commentary-public-smoke.cjs
+          uv run --offline --no-project --no-managed-python --no-python-downloads --python /usr/bin/python3 -m py_compile .github/scripts/commentary-public-export.py
+          uv run --offline --no-project --no-managed-python --no-python-downloads --python /usr/bin/python3 .github/scripts/commentary-public-export.py
+  public-release:
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      NSP_TARGET_RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+      NSP_SYSTEM_PYTHON: /usr/bin/python3
+      PYTHONUTF8: '1'
+      PYTHONIOENCODING: utf-8
+      UV_PYTHON_DOWNLOADS: never
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.workflow_run.head_sha }}
+          sparse-checkout: |
+            arcade/custom/dharma-invaders
+            static/games/chiptune.js
+            static/art/games/vorath_overhaul_v01/commentary_siege
+            tools
+            .github/scripts
+            .github/scripts/native-browser-focus.cjs
+      - name: Initialize isolated proof paths on assigned runner
+        run: |
+          echo "NSP_PLAYTEST_OUT=$RUNNER_TEMP/commentary-public" >> "$GITHUB_ENV"
+          echo "NSP_SOURCE_PROOF_DIR=$RUNNER_TEMP/commentary-public-proof" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
+        with:
+          version: '0.13.7'
+          enable-cache: 'false'
+          download-from-astral-mirror: 'false'
+      - name: Derive exact current owning export identities
+        id: source
+        run: node .github/scripts/commentary-public-smoke.cjs fingerprint
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          key: ${{ steps.source.outputs.key }}
+          path: ${{ env.NSP_SOURCE_PROOF_DIR }}/accepted.json
+      - name: Reuse only exact earlier successful source-native proof
+        id: gate
+        run: node .github/scripts/commentary-public-smoke.cjs plan
+      - name: Verify current delivery with explicitly retained native acceptance
+        if: steps.gate.outputs.needs-native == 'false'
+        run: node .github/scripts/commentary-public-smoke.cjs delivery
+      - name: Install pinned isolated native browser when actual source changed
+        if: steps.gate.outputs.needs-native == 'true'
+        run: |
+          npm install --prefix "$RUNNER_TEMP/commentary-browser" --no-save --package-lock=false --ignore-scripts playwright@1.55.1
+          "$RUNNER_TEMP/commentary-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Remove only pinned focus emulation for native public input
+        if: steps.gate.outputs.needs-native == 'true'
+        env:
+          NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/commentary-browser/node_modules/playwright
+        run: node .github/scripts/native-browser-focus.cjs
+      - name: Verify current public bytes and native Start move action pause
+        id: native
+        if: steps.gate.outputs.needs-native == 'true'
+        env:
+          NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/commentary-browser/node_modules/playwright
+          NSP_VIRTUAL_DISPLAY: '1'
+        run: xvfb-run --auto-servernum node .github/scripts/commentary-public-smoke.cjs native
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        if: steps.native.outcome == 'success'
+        with:
+          key: ${{ steps.source.outputs.key }}
+          path: ${{ env.NSP_SOURCE_PROOF_DIR }}/accepted.json
+      - name: Retain actual public evidence or explicitly reused earlier native proof
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: commentary-public
+          path: |
+            ${{ env.NSP_PLAYTEST_OUT }}/*.json
+            ${{ env.NSP_PLAYTEST_OUT }}/*.png
+          retention-days: 14

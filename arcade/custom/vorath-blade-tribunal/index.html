@@ -103,13 +103,8 @@
       align-items: stretch;
     }
 
-    .arena-wrap,
-    .panel {
-      border: 1px solid var(--line);
-      background: linear-gradient(180deg, rgba(8,10,22,0.84), rgba(6,4,13,0.95));
-      box-shadow: 0 0 42px rgba(56,233,255,0.12), inset 0 0 44px rgba(255,46,109,0.11);
-      border-radius: 8px;
-    }
+    /* Rule 30(a): no panel, card or strip behind any words; only the arena picture has a glow. */
+    .arena-wrap canvas { box-shadow: 0 0 42px rgba(56,233,255,0.14); border-radius: 6px; }
 
     .arena-wrap {
       position: relative;
@@ -141,14 +136,9 @@
 
     .meter,
     .controls,
-    .move-list,
+    .move-list { padding: 4px 2px; }
     .log,
-    .note {
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 8px;
-      background: rgba(3,5,12,0.66);
-      padding: 10px;
-    }
+    .note { display: none; }
 
     .label {
       color: var(--muted);
@@ -229,11 +219,22 @@
     }
 
     @media (max-width: 620px) {
-      .shell { width: min(100vw - 14px, 1460px); padding-top: 8px; }
-      .meters { grid-template-columns: 1fr; }
-      .controls { grid-template-columns: 1fr 1fr; }
-      canvas { height: 590px; min-height: 560px; }
+      .shell { width: min(100vw - 14px, 1460px); padding-top: 58px; }   /* clear of the shared arcade bar */
+      header { padding-bottom: 8px; gap: 6px; }
+      .subtitle { margin-top: 6px; font-size: 0.86rem; line-height: 1.3; }
+      .layout { display: flex; flex-direction: column; gap: 8px; }
+      .arena-wrap { min-height: 0; order: 1; }
+      canvas { height: auto; min-height: 0; aspect-ratio: 620 / 560; }
+      .panel { display: contents; }
+      .controls { order: 2; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 0; }
+      .controls button { min-height: 46px; font-size: 0.8rem; padding: 2px; }
+      .controls .wide { grid-column: span 4; min-height: 40px; }
+      .meters { order: 3; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+      .move-list { order: 4; }
+      .key-hint { display: none; }
     }
+    #callout { min-height: 28px; text-align: center; font: 700 18px/28px Georgia, "Times New Roman", serif;
+      letter-spacing: 0.08em; color: #ffe7a6; text-shadow: 0 0 12px rgba(255, 46, 109, 0.55); }
   </style>
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "VideoGame", "name": "Vorath Blade Tribunal", "url": "https://northstarprime.net/arcade/custom/vorath-blade-tribunal/", "gamePlatform": "Web browser", "applicationCategory": "Game", "operatingSystem": "Any", "isAccessibleForFree": true, "publisher": {"@type": "Organization", "name": "NorthStar Prime", "url": "https://northstarprime.net/"}, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "description": "Play Vorath Blade Tribunal free in your browser in the NorthStar Prime IDG Arcade, an original game from the Vorath universe.", "image": "https://northstarprime.net/static/games/og/vorath-blade-tribunal_og_1200x630.jpg"}</script>
 </head>
@@ -242,15 +243,16 @@
     <header>
       <div>
         <h1>Vorath Blade Tribunal</h1>
-        <p class="subtitle">An original VORATH weapon-duel cabinet with crystal blade hitboxes, guard pressure, stamina, enemy AI, round judgment, aurora slash trails, jeweled armor, and local receipts.</p>
+        <p class="subtitle">Duel the Tribunal's champions with a crystal blade. Read their habits, parry on the flash, and clear the ladder to earn a second blade.</p>
       </div>
-      <button id="exportTop">Export Receipt</button>
     </header>
 
     <section class="layout" aria-label="Vorath Blade Tribunal playable cabinet">
       <div class="arena-wrap">
+        <div id="callout" aria-live="polite"></div>
         <canvas id="game" width="1280" height="760"></canvas>
 <script src="/static/games/juice.js"></script>
+<script src="/static/games/hq_audio.js"></script>
 <script>addEventListener("DOMContentLoaded",function(){if(window.Juice){var c=document.getElementById("game");if(c)Juice.attachFX(c,{vignette:0.5,scanlines:0.04,glow:0.07});}});</script>
       </div>
 
@@ -261,7 +263,7 @@
             <div class="value" id="playerHp">100</div>
           </div>
           <div class="meter">
-            <div class="label">Enemy HP</div>
+            <div class="label" id="enemyLabel">Enemy HP</div>
             <div class="value" id="enemyHp">100</div>
           </div>
           <div class="meter">
@@ -283,15 +285,14 @@
         </div>
 
         <div class="controls" aria-label="Blade Tribunal controls">
-          <button id="startBtn" class="wide">Start Duel [Start / Enter]</button>
-          <button id="leftBtn">Left [A / ◀]</button>
-          <button id="rightBtn">Right [D / ▶]</button>
-          <button id="slashBtn">Slash [J / Ⓐ]</button>
-          <button id="heavyBtn">Heavy [K / Ⓧ]</button>
-          <button id="guardBtn">Guard [L / LT]</button>
-          <button id="parryBtn" style="border-color:#38e9ff;color:#38e9ff;background:rgba(56,233,255,0.12);">Parry [E / Ⓨ]</button>
-          <button id="dodgeBtn">Dodge [Space / Ⓑ]</button>
-          <button id="exportBtn" class="wide">Export Receipt</button>
+          <button id="startBtn" class="wide">Start Duel <span class="key-hint">[Start / Enter]</span></button>
+          <button id="leftBtn">Left <span class="key-hint">[A / ◀]</span></button>
+          <button id="rightBtn">Right <span class="key-hint">[D / ▶]</span></button>
+          <button id="slashBtn">Slash <span class="key-hint">[J / Ⓐ]</span></button>
+          <button id="heavyBtn">Heavy <span class="key-hint">[K / Ⓧ]</span></button>
+          <button id="guardBtn">Guard <span class="key-hint">[L / LT]</span></button>
+          <button id="parryBtn" style="border-color:#38e9ff;color:#38e9ff;background:rgba(56,233,255,0.12);">Parry <span class="key-hint">[E / Ⓨ]</span></button>
+          <button id="dodgeBtn">Dodge <span class="key-hint">[Space / Ⓑ]</span></button>
         </div>
 
         <div class="move-list">
@@ -348,12 +349,12 @@
       guardBtn: document.querySelector("#guardBtn"),
       parryBtn: document.querySelector("#parryBtn"),
       dodgeBtn: document.querySelector("#dodgeBtn"),
-      exportBtn: document.querySelector("#exportBtn"),
-      exportTop: document.querySelector("#exportTop")
+      exportBtn: null,
+      exportTop: null
     };
 
     const keys = new Set();
-    const view = { w: 1120, h: 700, dpr: 1, floor: 520 };
+    const view = { w: 1120, h: 700, dpr: 1, s: 1, floor: 520 };
     const state = {
       running: false,
       round: 1,
@@ -396,21 +397,71 @@
 
     const BLADE_ATLAS_SRC = {
       emerald: "/static/art/games/vorath_overhaul_v01/blade_tribunal/emerald_votary_atlas_v01.png",
-      ruby: "/static/art/games/vorath_overhaul_v01/blade_tribunal/ruby_mantis_regent_atlas_v01.png"
+      ruby: "/static/art/games/vorath_overhaul_v01/blade_tribunal/ruby_mantis_regent_atlas_v01.png",
+      duelist: "/static/art/games/vorath_overhaul_v01/blade_tribunal/justiciar_duelist_atlas_v02.webp",
+      ronin: "/static/art/games/vorath_overhaul_v01/blade_tribunal/justiciar_ronin_atlas_v01.webp",
+      veilcutter: "/static/art/games/vorath_overhaul_v01/blade_tribunal/justiciar_veilcutter_atlas_v01.webp",
+      seraph: "/static/art/games/vorath_overhaul_v01/blade_tribunal/justiciar_seraph_atlas_v01.webp",
+      verdicts1: "/static/art/games/vorath_overhaul_v01/blade_tribunal/justiciar_two_verdicts_p1_atlas_v01.webp",
+      verdicts2: "/static/art/games/vorath_overhaul_v01/blade_tribunal/justiciar_two_verdicts_p2_atlas_v01.webp"
     };
-    const BLADE_ATLAS = { emerald: new Image(), ruby: new Image() };
-    const BLADE_ATLAS_READY = { emerald: false, ruby: false };
-    for (const who of ["emerald", "ruby"]) {
+    // Each atlas: grid, on-screen height of one cell, and which cells play each pose.
+    // Four-pose atlases fall back: guard/dodge/step -> idle, heavy/charged -> strike, ko -> hurt, parry -> windup.
+    const FOUR_POSE = { idle: [0], windup: [1], strike: [2], hurt: [3] };
+    const ATLAS_GRID = {
+      emerald: { cols: 2, cw: 512, ch: 768, drawH: 330, poses: FOUR_POSE },
+      ruby: { cols: 2, cw: 512, ch: 768, drawH: 330, poses: FOUR_POSE },
+      duelist: { cols: 4, cw: 512, ch: 512, drawH: 340, idleFps: 3, poses: {
+        idle: [0, 1, 2, 3], step: [4, 5], windup: [5], strike: [8], heavyWindup: [11], heavy: [10], charged: [9],
+        dodge: [6], guard: [13], parry: [12], hurt: [14], ko: [15], feint: [11] } },
+      // Cell maps read by eye from Antigravity's 05:42Z sheets (DESIGN.md).
+      ronin: { cols: 4, cw: 512, ch: 512, drawH: 340, idleFps: 3, poses: {
+        idle: [0, 1, 2, 3], step: [4, 5], dodge: [6], windup: [11], strike: [8], heavyWindup: [9], heavy: [10], charged: [10],
+        feint: [11], parry: [12], guard: [13], hurt: [14], ko: [15] } },
+      veilcutter: { cols: 4, cw: 512, ch: 512, drawH: 330, idleFps: 3, poses: {
+        idle: [0, 1, 2, 3], step: [4, 5], dodge: [6], windup: [9], strike: [8], heavyWindup: [9], heavy: [10], charged: [11],
+        feint: [9], parry: [12], guard: [13], hurt: [14], ko: [15] } },
+      seraph: { cols: 4, cw: 512, ch: 512, drawH: 372, idleFps: 3, poses: {
+        idle: [0, 1, 2, 3], step: [4], dodge: [5], windup: [8], strike: [11], heavyWindup: [8], heavy: [10], charged: [9],
+        feint: [8], parry: [13], guard: [12], hurt: [14], ko: [15] } },
+      verdicts1: { cols: 4, cw: 512, ch: 512, drawH: 384, idleFps: 2, poses: {
+        idle: [0, 1], step: [1, 2], dodge: [6], windup: [3], strike: [4], heavyWindup: [12], heavy: [5], charged: [11],
+        feint: [3], parry: [15], guard: [7], hurt: [8], ko: [14] } },
+      verdicts2: { cols: 4, cw: 512, ch: 512, drawH: 384, idleFps: 3, poses: {
+        idle: [0, 8], step: [10], dodge: [14], windup: [13], strike: [12], heavyWindup: [5], heavy: [3], charged: [15],
+        feint: [13], parry: [7], guard: [11], hurt: [9], ko: [9] } }
+    };
+    const POSE_FALLBACK = { guard: "idle", dodge: "idle", step: "idle", heavy: "strike", charged: "strike",
+      heavyWindup: "windup", feint: "windup", ko: "hurt", parry: "windup" };
+    const BLADE_ATLAS = {};
+    const BLADE_ATLAS_READY = {};
+    for (const who of Object.keys(BLADE_ATLAS_SRC)) {
+      BLADE_ATLAS[who] = new Image();
+      BLADE_ATLAS_READY[who] = false;
       BLADE_ATLAS[who].decoding = "async";
       BLADE_ATLAS[who].addEventListener("load", () => { BLADE_ATLAS_READY[who] = true; });
       BLADE_ATLAS[who].src = BLADE_ATLAS_SRC[who];
     }
-    const BLADE_POSE_INDEX = { idle: 0, windup: 1, strike: 2, hurt: 3 };
-    function drawBladeAtlasPose(atlas, pose, x, y, width, height) {
-      const index = BLADE_POSE_INDEX[pose] ?? 0;
-      const sourceX = (index % 2) * 512;
-      const sourceY = Math.floor(index / 2) * 768;
-      ctx.drawImage(atlas, sourceX, sourceY, 512, 768, x, y, width, height);
+    function atlasCell(who, pose) {
+      if (who === "verdicts2" && (state.phaseBeat || 0) > 0) return 9;   // the rage burst while the phase changes
+      const g = ATLAS_GRID[who] || ATLAS_GRID.ruby;
+      let list = g.poses[pose];
+      if (!list) list = g.poses[POSE_FALLBACK[pose]] || g.poses.idle;
+      if (list.length === 1) return list[0];
+      const fps = pose === "idle" ? (g.idleFps || 3) : 8;
+      return list[Math.floor(performance.now() / 1000 * fps) % list.length];
+    }
+    function drawBladeAtlasPose(who, pose, x, y, width, height) {
+      const g = ATLAS_GRID[who] || ATLAS_GRID.ruby;
+      const index = atlasCell(who, pose);
+      const sourceX = (index % g.cols) * g.cw;
+      const sourceY = Math.floor(index / g.cols) * g.ch;
+      ctx.drawImage(BLADE_ATLAS[who], sourceX, sourceY, g.cw, g.ch, x, y, width, height);
+    }
+    function atlasSize(who, breathe, lunge) {
+      const g = ATLAS_GRID[who] || ATLAS_GRID.ruby;
+      const sh = g.drawH * breathe * lunge;
+      return { sh, sw: sh * g.cw / g.ch };
     }
 
     // Seamless parallax arena backdrop (mirror-tiled, no hard seam).
@@ -426,44 +477,31 @@
     Object.values(voRound).forEach(a => { a.volume = 0.85; });
     // Procedural music bed (low drone + pentatonic arpeggio). Starts on duel, stops on match end.
     let _music = null;
-    function startMusic(){ const a = AC(); if(!a || _music) return;
-      const master = a.createGain(); master.gain.value = 0.0001; master.connect(a.destination);
-      master.gain.exponentialRampToValueAtTime(0.085, a.currentTime + 2.5);
-      const lp = a.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 520; lp.connect(master);
-      const d1 = a.createOscillator(), d2 = a.createOscillator(), dg = a.createGain();
-      d1.type = "sawtooth"; d2.type = "sawtooth"; d1.frequency.value = 55; d2.frequency.value = 55.4; dg.gain.value = 0.5;
-      d1.connect(dg); d2.connect(dg); dg.connect(lp); d1.start(); d2.start();
-      const scale = [220, 261.63, 293.66, 349.23, 392, 523.25]; let step = 0;
-      const timer = setInterval(() => { const t = a.currentTime; const f = scale[step % scale.length] * (step % 12 < 6 ? 1 : 0.5); step++;
-        const o = a.createOscillator(), g = a.createGain(); o.type = "triangle"; o.frequency.value = f; o.connect(g); g.connect(master);
-        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
-        o.start(t); o.stop(t + 0.55); }, 340);
-      _music = { master, nodes: [d1, d2], timer };
-    }
-    function stopMusic(){ if(!_music) return; const a = AC(); try { _music.master.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + 1.2); } catch(e){}
-      clearInterval(_music.timer); const m = _music; _music = null; setTimeout(() => { try { m.nodes.forEach(n => n.stop()); } catch(e){} }, 1400);
-    }
+    // HQ audio (ElevenLabs SFX, Suno track) from the app host; CORS opened for northstarprime.net.
+    // One absolute URL (same origin on the app host, CORS from northstarprime.net): the arcade verifier checks bare
+    // /static/ paths against this repo, and these files live on the app host.
+    const HQ_BASE = "https://app.northstarprime.net/static/games/hq/vorath_blade_tribunal/";
+    const AUDIO = (typeof HQAudio === "function") ? HQAudio({
+      base: HQ_BASE, muteKey: "nsp_vorath_blade_tribunal_muted", master: 0.8, music: "music", musicVol: 0.35, tracks: ["music"],
+      files: { whoosh: ["whoosh"], hit: ["hit"], block: ["block"], duel_bed: ["duel_bed"], sound_on: ["sound_on"] },
+      loops: { duel_bed: true },
+      vol: { whoosh: 0.65, hit: 0.65, block: 0.65, duel_bed: 0.3, sound_on: 0.65 }
+    }) : null;
+    function HQ(k, o) { try { if (AUDIO) AUDIO.play(k, o || { limit: 70 }); } catch (e) {} }
+    function hqUnlock() { try { if (AUDIO) AUDIO.unlock(); } catch (e) {} }
+    ["pointerdown", "keydown"].forEach(ev => window.addEventListener(ev, hqUnlock));
+    window.addEventListener("keydown", e => {
+      if ((e.key === "m" || e.key === "M") && !e.repeat && AUDIO) { try { if (!AUDIO.toggle()) HQ("sound_on"); } catch (err) {} }
+    });
+    function startMusic(){ if (_music) return; try { if (AUDIO) { AUDIO.loop("duel_bed", 0.45); AUDIO.music(true); } } catch (e) {} _music = true; }
+    function stopMusic(){ if (!_music) return; try { if (AUDIO) AUDIO.loop("duel_bed", 0); } catch (e) {} _music = null; }
     // Screen-shake accumulator.
     let shakeAmt = 0;
-    // Procedural WebAudio combat SFX (reliable, no asset deps).
-    let _actx = null;
-    function AC(){ if(!_actx){ try{ _actx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } return _actx; }
-    function sfx(kind){ const a = AC(); if(!a) return; const t = a.currentTime;
-      const o = a.createOscillator(), g = a.createGain(); o.connect(g); g.connect(a.destination);
-      if(kind==="whoosh"){ o.type="sawtooth"; o.frequency.setValueAtTime(340,t); o.frequency.exponentialRampToValueAtTime(90,t+0.16);
-        g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.15,t+0.03); g.gain.exponentialRampToValueAtTime(0.0001,t+0.2); o.start(t); o.stop(t+0.22); }
-      else if(kind==="hit"){ o.type="square"; o.frequency.setValueAtTime(190,t); o.frequency.exponentialRampToValueAtTime(55,t+0.13);
-        g.gain.setValueAtTime(0.3,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.16); o.start(t); o.stop(t+0.18);
-        const n=a.createBuffer(1,(a.sampleRate*0.12)|0,a.sampleRate), d=n.getChannelData(0);
-        for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2);
-        const ns=a.createBufferSource(), ng=a.createGain(); ns.buffer=n; ng.gain.value=0.24; ns.connect(ng); ng.connect(a.destination); ns.start(t); }
-      else if(kind==="block"){ o.type="triangle"; o.frequency.setValueAtTime(900,t); o.frequency.exponentialRampToValueAtTime(320,t+0.1);
-        g.gain.setValueAtTime(0.2,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.14); o.start(t); o.stop(t+0.16); }
-      else if(kind==="parry"){ o.type="sine"; o.frequency.setValueAtTime(659.25,t); o.frequency.exponentialRampToValueAtTime(1318.5,t+0.16);
-        g.gain.setValueAtTime(0.35,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.35); o.start(t); o.stop(t+0.36); }
-      else if(kind==="stagger"){ o.type="sawtooth"; o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(45,t+0.25);
-        g.gain.setValueAtTime(0.3,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.28); o.start(t); o.stop(t+0.3); }
-    }
+    // Combat sounds: recorded files (parry and stagger reuse block and hit at another pitch).
+    function AC(){ hqUnlock(); return null; }
+    const SFX_MAP = { whoosh: ["whoosh", { limit: 60 }], hit: ["hit", { limit: 50 }], block: ["block", { limit: 50 }],
+      parry: ["block", { rate: 1.35, limit: 40 }], stagger: ["hit", { rate: 0.72, limit: 60 }] };
+    function sfx(kind){ const m = SFX_MAP[kind]; if (m) HQ(m[0], m[1]); }
 
     const player = {
       id: "player",
@@ -504,24 +542,131 @@
       rounds: 0,
       color: "#ff2e6d",
       blade: "#ffd75e",
-      core: "#b760ff"
+      core: "#b760ff",
+      atlas: "ruby",
+      ai: null,
+      mods: {}
     };
+    player.atlas = "emerald";
+    player.mods = {};
+    function setOpponent(d) {
+      enemy.name = d.name; enemy.atlas = d.key; enemy.color = d.color; enemy.blade = d.blade; enemy.core = d.core;
+      enemy.maxHp = d.hp; enemy.ai = d.ai; enemy.mods = buildMods(d.mods); enemy.comboLeft = 0;
+      enemy.arenaKey = d.arena || "";
+      enemy.boss = d.phase2 ? d : null; enemy.phase2On = false;
+      loadArena(d.arena);
+      const i = ROSTER.indexOf(d); if (i >= 0 && ROSTER[i + 1]) loadArena(ROSTER[i + 1].arena);
+    }
+    function setBlade(key) {
+      if (!BLADES[key]) key = "votary";
+      ladder.save.blade = key;
+      player.mods = buildMods(BLADES[key].mods);
+      updateStartLabel();
+    }
+    function updateStartLabel() {
+      if (!els.startBtn) return;
+      const b = BLADES[ladder.save.blade] || BLADES.votary;
+      const more = ladder.save.blades.length > 1 ? " · B: change blade" : "";
+      els.startBtn.textContent = ladder.active ? "Duel in progress" : `Enter the Tribunal · ${b.name}${more} [Start / Enter]`;
+    }
 
     const attacks = {
       slash: { cost: 12, damage: 10, reach: 96, activeStart: 5, activeEnd: 12, cooldown: 24, push: 42, label: "prism slash" },
       heavy: { cost: 25, damage: 22, reach: 138, activeStart: 10, activeEnd: 20, cooldown: 44, push: 78, label: "crystal cleave" },
-      charged: { cost: 42, damage: 34, reach: 160, activeStart: 8, activeEnd: 18, cooldown: 52, push: 110, label: "soul-charge verdict" }
+      charged: { cost: 42, damage: 34, reach: 160, activeStart: 8, activeEnd: 18, cooldown: 52, push: 110, label: "soul-charge verdict" },
+      feint: { cost: 6, damage: 0, reach: 0, activeStart: 999, activeEnd: 999, cooldown: 20, push: 0, label: "feint" }
     };
+    // A fighter's own move set: the shared table, with its blade's or its style's overrides.
+    function specOf(fighter, type) {
+      const base = attacks[type];
+      if (!base || !fighter || !fighter.mods || !fighter.mods[type]) return base;
+      return fighter.mods[type];
+    }
+    function buildMods(over) {
+      const mods = {};
+      for (const k of Object.keys(over || {})) mods[k] = Object.assign({}, attacks[k], over[k]);
+      return mods;
+    }
+
+    // The tribunal ladder. Each duelist plays differently (canon names only:
+    // Ruby Mantis Regent is in the game; Justiciar Duelist is in CAST_BIBLE_DRAFT.md).
+    // A bout is offered only once its art has loaded, so no code-drawn stand-in goes live.
+    const ROSTER = [
+      { key: "ruby", name: "Ruby Mantis Regent", title: "patient striker", color: "#ff2e6d", blade: "#ffd75e", core: "#b760ff", hp: 100,
+        mods: { heavy: { activeStart: 13 } },
+        ai: { think: [18, 40], aggression: 0.5, guard: 0.32, parry: 0.08, dodge: 0.14, feint: 0.0, read: 0.25,
+              whiffPunish: 0.25, punishFrames: 16, combo: 1, range: 150, heavyBias: 0.45, riposte: "slash" } },
+      { key: "duelist", name: "Justiciar Duelist", title: "punishes every miss", color: "#f4f0ff", blade: "#ff4fd8", core: "#ffd75e", hp: 110,
+        mods: { slash: { cooldown: 21, activeStart: 4 } },
+        ai: { think: [12, 26], aggression: 0.62, guard: 0.26, parry: 0.3, dodge: 0.2, feint: 0.12, read: 0.65,
+              whiffPunish: 0.85, punishFrames: 11, combo: 2, range: 118, heavyBias: 0.25, riposte: "charged" }, arena: "eye" },
+      { key: "ronin", name: "Justiciar Ronin", title: "cuts from range", color: "#7fe9ff", blade: "#5ef0ff", core: "#ffd75e", hp: 115,
+        arena: "colonnade", mods: { slash: { cooldown: 19, activeStart: 4, reach: 104 } },
+        ai: { think: [10, 22], aggression: 0.7, guard: 0.14, parry: 0.16, dodge: 0.24, feint: 0.08, read: 0.5,
+              whiffPunish: 0.6, punishFrames: 12, combo: 3, range: 210, heavyBias: 0.2, riposte: "slash", sig: "dashcut" } },
+      { key: "veilcutter", name: "Justiciar Veilcutter", title: "feints and slips behind you", color: "#b760ff", blade: "#c58bff", core: "#38e9ff", hp: 115,
+        arena: "stelae", mods: { slash: { cooldown: 18, activeStart: 4 } },
+        ai: { think: [10, 22], aggression: 0.55, guard: 0.2, parry: 0.22, dodge: 0.3, feint: 0.42, read: 0.6,
+              whiffPunish: 0.7, punishFrames: 11, combo: 2, range: 130, heavyBias: 0.3, riposte: "slash", sig: "swap" } },
+      { key: "seraph", name: "Justiciar Seraph", title: "strikes from above, breaks guards", color: "#f6f1ff", blade: "#bfe9ff", core: "#ffd75e", hp: 125,
+        arena: "reliquary", mods: { heavy: { reach: 200, activeStart: 14, damage: 26 } },
+        ai: { think: [14, 28], aggression: 0.55, guard: 0.3, parry: 0.24, dodge: 0.12, feint: 0.1, read: 0.6,
+              whiffPunish: 0.6, punishFrames: 13, combo: 1, range: 190, heavyBias: 0.6, riposte: "heavy", sig: "overhead", guardBreak: 2.2 } },
+      { key: "verdicts1", name: "Justiciar Two Verdicts", title: "the twin-blade arbiter", color: "#c98a4b", blade: "#ff3b3b", core: "#ffd75e", hp: 170,
+        arena: "crucible", mods: { heavy: { reach: 170, damage: 26 }, slash: { cooldown: 22 } },
+        ai: { think: [16, 30], aggression: 0.42, guard: 0.4, parry: 0.38, dodge: 0.08, feint: 0.1, read: 0.85,
+              whiffPunish: 0.95, punishFrames: 10, combo: 1, range: 150, heavyBias: 0.45, riposte: "charged" },
+        // Below half health: Wrath. Faster plans, four-hit twin-blade chains and a lunge.
+        phase2: { atlas: "verdicts2", mods: { slash: { cooldown: 15, activeStart: 4, damage: 12 }, heavy: { reach: 180, damage: 30, cooldown: 36 } },
+          ai: { think: [8, 16], aggression: 0.85, guard: 0.15, parry: 0.2, dodge: 0.1, feint: 0.2, read: 0.7,
+                whiffPunish: 0.9, punishFrames: 9, combo: 4, range: 160, heavyBias: 0.4, riposte: "charged", sig: "dashcut" } } }
+    ];
+    // Painted backdrops per bout (Antigravity's arena plates; each is a whole picture, DESIGN.md "Arenas").
+    const ARENA_ART = {
+      eye: "/static/art/games/vorath_overhaul_v01/blade_tribunal/arena_high_chancel_eye_v01.webp",
+      colonnade: "/static/art/games/vorath_overhaul_v01/blade_tribunal/arena_high_chancel_colonnade_v01.webp",
+      stelae: "/static/art/games/vorath_overhaul_v01/blade_tribunal/arena_reliquary_court_stelae_v01.webp",
+      reliquary: "/static/art/games/vorath_overhaul_v01/blade_tribunal/arena_reliquary_court_far_v01.webp",
+      crucible: "/static/art/games/vorath_overhaul_v01/blade_tribunal/arena_split_scales_crucible_v01.webp"
+    };
+    const ARENA_IMG = {};
+    function loadArena(key) {
+      if (!key || ARENA_IMG[key] || !ARENA_ART[key]) return;
+      const im = new Image(); im.decoding = "async"; im.src = ARENA_ART[key]; ARENA_IMG[key] = im;
+    }
+    const BLADES = {
+      votary: { name: "Votary blade", note: "balanced", mods: {} },
+      thorn: { name: "Thorn blade", note: "fast, short", mods: {
+        slash: { cost: 9, damage: 8, reach: 86, cooldown: 17, activeStart: 4, activeEnd: 10 },
+        heavy: { cost: 20, damage: 18, reach: 120, cooldown: 36, activeStart: 8 } } },
+      verdict: { name: "Verdict blade", note: "slow, long, heavy", mods: {
+        slash: { cost: 14, damage: 12, reach: 112, cooldown: 28 },
+        heavy: { cost: 28, damage: 28, reach: 158, cooldown: 52, activeStart: 12 } } }
+    };
+    const SAVE_KEY = "nsp.bladeTribunal.v2";
+    function loadSave() {
+      try { return Object.assign({ bestBout: 0, clears: 0, blades: ["votary"], blade: "votary", bestMs: {} }, JSON.parse(localStorage.getItem(SAVE_KEY) || "{}")); }
+      catch (e) { return { bestBout: 0, clears: 0, blades: ["votary"], blade: "votary", bestMs: {} }; }
+    }
+    function writeSave() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(ladder.save)); } catch (e) {} }
+    const ladder = { active: false, bout: 0, between: 0, result: "", boutStart: 0, intro: 0, save: loadSave(), unlocked: "" };
+    function openBouts() { const o = ROSTER.filter(d => BLADE_ATLAS_READY[d.key]); return o.length ? o : [ROSTER[0]]; }
+    // What the opponent has seen the player do (last 10 choices).
+    const reads = { hist: [], guardFrames: 0, frames: 0 };
+    function recordPlayer(type) { reads.hist.push(type); if (reads.hist.length > 10) reads.hist.shift(); }
+    function readRate(type) { return reads.hist.length ? reads.hist.filter(t => t === type).length / reads.hist.length : 0; }
 
     function resize() {
       const rect = canvas.getBoundingClientRect();
       view.dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-      view.w = Math.max(620, rect.width);
-      view.h = Math.max(540, rect.height);
+      // Narrower than the 620 px arena (a phone): draw the whole arena scaled down at its own shape.
+      view.s = rect.width > 0 && rect.width < 620 ? rect.width / 620 : 1;
+      view.w = Math.max(620, rect.width / view.s);
+      view.h = Math.max(540, rect.height / view.s);
       view.floor = view.h * 0.76;
-      canvas.width = Math.floor(view.w * view.dpr);
-      canvas.height = Math.floor(view.h * view.dpr);
-      ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+      canvas.width = Math.floor(view.w * view.s * view.dpr);
+      canvas.height = Math.floor(view.h * view.s * view.dpr);
+      ctx.setTransform(view.dpr * view.s, 0, 0, view.dpr * view.s, 0, 0);
       player.y = view.floor;
       enemy.y = view.floor;
       clampFighter(player);
@@ -536,6 +681,18 @@
     }
 
     function startDuel() {
+      if (state.running || ladder.between > 0) return;
+      const bouts = openBouts();
+      if (!ladder.active) {
+        ladder.active = true; ladder.bout = 0; ladder.result = ""; ladder.unlocked = "";
+        reads.hist.length = 0;
+        setBlade(ladder.save.blade);
+      }
+      const d = bouts[Math.min(ladder.bout, bouts.length - 1)] || ROSTER[0];
+      setOpponent(d);
+      ladder.boutStart = performance.now();
+      ladder.intro = 150;
+      updateStartLabel();
       state.running = true;
       try { const a = AC(); if (a && a.state === "suspended") a.resume(); } catch(e){}
       try { announcer.currentTime = 0; announcer.play().catch(()=>{}); } catch(e){}
@@ -547,7 +704,7 @@
       player.rounds = 0;
       enemy.rounds = 0;
       resetRound("First bell.");
-      addLog("Duel started. Emerald blade is yours.");
+      addLog(`Bout ${ladder.bout + 1} of ${bouts.length}: ${enemy.name}, ${d.title}.`);
     }
 
     function resetRound(reason) {
@@ -556,7 +713,7 @@
       for (const fighter of [player, enemy]) {
         fighter.y = view.floor;
         fighter.vx = 0;
-        fighter.hp = 100;
+        fighter.hp = fighter.maxHp || 100;
         fighter.stamina = 100;
         fighter.charge = 0;
         fighter.action = "idle";
@@ -573,13 +730,23 @@
       state.ghosts.length = 0;
       state.koFlash = 0;
       state.koBanner = 0;
+      state.roundCall = 120;
+      state.phaseBeat = 0;
+      leavePhase2();
       state.fadeIn = Math.max(state.fadeIn, 0.85);
       state.judgment = "FIGHT";
       addLog(reason);
     }
 
     function beginAction(fighter, type) {
-      if (!state.running || state.roundDelay > 0) return false;
+      const ok = beginActionCore(fighter, type);
+      if (ok && fighter === player) recordPlayer(type);
+      return ok;
+    }
+    // No blow starts while BOUT n or ROUND n is on screen: the call is the referee, and a hit there would print on it.
+    function callHolding() { return ladder.intro > 70 || (state.roundCall || 0) > 50 || (state.phaseBeat || 0) > 0; }
+    function beginActionCore(fighter, type) {
+      if (!state.running || state.roundDelay > 0 || callHolding()) return false;
       if (fighter.cooldown > 0 || fighter.action !== "idle") return false;
       if (type === "dodge") {
         if (fighter.stamina < 18) return false;
@@ -592,15 +759,14 @@
         addSlash(fighter, "rgba(56,233,255,0.58)", 58, 0.72);
         return true;
       }
-      const spec = attacks[type];
+      const spec = specOf(fighter, type);
       if (!spec || fighter.stamina < spec.cost) return false;
       fighter.action = type;
       fighter.frame = 0;
       fighter.cooldown = spec.cooldown;
       fighter.hitDone = false;
       fighter.stamina -= spec.cost;
-      addSlash(fighter, fighter.blade, spec.reach, type === "heavy" ? 1.1 : 0.72);
-      sfx("whoosh");
+      if (type !== "feint") { addSlash(fighter, fighter.blade, spec.reach, type === "heavy" ? 1.1 : 0.72); sfx("whoosh"); }
       return true;
     }
 
@@ -721,35 +887,200 @@
       }
     }
 
+    // Two Verdicts: Mercy above half health, Wrath below; the beat between is about 1.5 s with no blows.
+    function checkPhase(f) {
+      if (f !== enemy || !enemy.boss || enemy.phase2On || enemy.hp <= 0 || enemy.hp > (enemy.maxHp || 100) * 0.5) return;
+      const ph = enemy.boss.phase2;
+      enemy.phase2On = true;
+      enemy.atlas = ph.atlas; enemy.ai = ph.ai; enemy.mods = buildMods(ph.mods);
+      enemy.action = "idle"; enemy.frame = 0; enemy.cooldown = 0; state.aiQueue = null;
+      state.phaseBeat = 90; state.phaseChanges = (state.phaseChanges || 0) + 1;
+      shakeAmt = Math.max(shakeAmt, 24); state.hitStop = Math.max(state.hitStop || 0, 8);
+      burst(enemy.x, enemy.y - 150, 60, "#ff3b3b", 12); burst(enemy.x, enemy.y - 150, 30, "#ffd75e", 9);
+      rumble(0.8, 1.0, 420); sfx("stagger");
+    }
+    function leavePhase2() {
+      if (!enemy.boss) return;
+      enemy.phase2On = false; enemy.atlas = enemy.boss.key; enemy.ai = enemy.boss.ai; enemy.mods = buildMods(enemy.boss.mods);
+    }
+
+    // Each Justiciar's own move (DESIGN.md). Counted so the real-play test can show it happened.
+    function trySignature(ai, dist, toward) {
+      const slashReach = (specOf(enemy, "slash") || attacks.slash).reach;
+      if (ai.sig === "dashcut" && dist > slashReach + 30 && dist < 340 && Math.random() < 0.5) {
+        enemy.dashT = 14; enemy.dashDir = toward;
+        state.aiQueue = { action: "slash", wait: 12 };
+        enemy.dashCuts = (enemy.dashCuts || 0) + 1;
+        burst(enemy.x, enemy.y - 110, 14, enemy.blade, 7);
+        return true;
+      }
+      if (ai.sig === "swap" && dist < 180 && Math.random() < 0.35) {
+        const side = enemy.x > player.x ? -1 : 1;   // the side of the player it is not on now
+        burst(enemy.x, enemy.y - 120, 20, enemy.blade, 7);
+        enemy.x = Math.max(60, Math.min(view.w - 60, player.x + side * 96));
+        burst(enemy.x, enemy.y - 120, 20, enemy.core, 7);
+        state.aiQueue = { action: "slash", wait: 10 };
+        enemy.swaps = (enemy.swaps || 0) + 1;
+        return true;
+      }
+      if (ai.sig === "overhead") {
+        const heavyReach = (specOf(enemy, "heavy") || attacks.heavy).reach;
+        if (dist > slashReach && dist < heavyReach + 30 && Math.random() < 0.45 && beginAction(enemy, "heavy")) {
+          enemy.overheads = (enemy.overheads || 0) + 1;
+          return true;
+        }
+      }
+      return false;
+    }
+
     function enemyAI(dt) {
-      if (!state.running || state.roundDelay > 0) return;
-      state.aiTimer -= dt;
+      if (!state.running || state.roundDelay > 0 || callHolding()) return;
+      const ai = enemy.ai || ROSTER[0].ai;
+      const td = state.tribunalDirector || { aggression: 1 };
       const dist = Math.abs(enemy.x - player.x);
+      const toward = enemy.x > player.x ? -1 : 1;
       enemy.guard = false;
+      // How much the player has been guarding lately (about the last 1.5 s).
+      reads.guardAvg = (reads.guardAvg || 0) + ((player.guard ? 1 : 0) - (reads.guardAvg || 0)) * Math.min(1, dt / 90);
+      const playerTurtles = reads.guardAvg > 0.45;
+      // A queued follow-up (riposte after a parry, the next hit of a chain).
+      if (state.aiQueue) {
+        if ((enemy.dashT || 0) > 0) { enemy.dashT -= dt; enemy.vx = enemy.dashDir * 560; }   // Ronin's dash carries into the cut
+        state.aiQueue.wait -= dt;
+        if (state.aiQueue.wait <= 0 && enemy.action === "idle") {
+          const q = state.aiQueue; state.aiQueue = null;
+          if (dist < (specOf(enemy, q.action) || attacks.slash).reach + 40) beginAction(enemy, enemy.charge >= 100 ? "charged" : q.action);
+        }
+        return;
+      }
+      if (enemy.action !== "idle") return;
+      // 1. Punish a miss: the player is recovering from a whiff.
+      if (player.whiff > 0 && player.action !== "idle" && dist < 175) {
+        if (!enemy.punishRolled) {
+          enemy.punishRolled = true;
+          if (Math.random() < ai.whiffPunish) {
+            enemy.punishes = (enemy.punishes || 0) + 1;
+            enemy.vx = toward * 260;
+            state.aiQueue = { action: dist < 110 ? "slash" : "heavy", wait: Math.max(2, ai.punishFrames - 8) };
+            return;
+          }
+        }
+      } else enemy.punishRolled = false;
+      // 2. React to the player's wind-up: parry, guard or step out.
+      const ps = specOf(player, player.action);
+      if (ps && player.action !== "feint" && player.frame < ps.activeStart && dist < ps.reach + 30) {
+        if (!enemy.reactRolled) {
+          enemy.reactRolled = true;
+          // The more the player leans on one attack, the better the opponent reads it.
+          const lean = Math.max(readRate("slash"), readRate("heavy"));
+          const pParry = ai.parry * (1 + ai.read * lean * 1.6);
+          const r = Math.random();
+          if (r < pParry) { enemy.guardJustPressed = 0.22; enemy.guard = true; enemy.reactMode = "parry"; }
+          else if (r < pParry + ai.guard) { enemy.reactMode = "guard"; }
+          else if (r < pParry + ai.guard + ai.dodge && enemy.stamina > 30) { beginAction(enemy, "dodge"); return; }
+          else enemy.reactMode = "";
+        }
+        if (enemy.reactMode === "guard" || enemy.reactMode === "parry") {
+          enemy.guard = true;
+          enemy.stamina = Math.max(0, enemy.stamina - 0.24 * dt);
+          return;
+        }
+      } else enemy.reactRolled = false;
+      // 3. Plan.
+      state.aiTimer -= dt * (td.aggression || 1);
       if (state.aiTimer <= 0) {
-        if (enemy.hp < 34 && Math.random() < 0.22) state.aiIntent = "guard";
-        else if (dist > 230) state.aiIntent = "approach";
-        else if (dist < 92 && Math.random() < 0.3) state.aiIntent = "dodge";
-        else state.aiIntent = Math.random() < 0.64 ? "slash" : "heavy";
-        state.aiTimer = 16 + Math.random() * 26;
+        const [lo, hi] = ai.think;
+        state.aiTimer = lo + Math.random() * (hi - lo);
+        if (ai.sig && trySignature(ai, dist, toward)) { state.aiIntent = "measure"; return; }
+        const r = Math.random();
+        if (dist > ai.range + 70) state.aiIntent = "approach";
+        else if (dist < ai.range * 0.55 && Math.random() < 0.35) state.aiIntent = "space";
+        else if (playerTurtles && r < 0.6) { state.aiIntent = Math.random() < ai.feint + 0.25 ? "feint" : "heavy"; enemy.turtleBreaks = (enemy.turtleBreaks || 0) + 1; }
+        else if (r < ai.feint) state.aiIntent = "feint";
+        else if (r < ai.feint + ai.aggression) state.aiIntent = Math.random() < ai.heavyBias ? "heavy" : "slash";
+        else if (enemy.hp < (enemy.maxHp || 100) * 0.3 && Math.random() < 0.4) state.aiIntent = "guard";
+        else state.aiIntent = "measure";
+        enemy.comboLeft = ai.combo - 1;
       }
       enemy.vx = 0;
-      if (enemy.action !== "idle") return;
-      if (state.aiIntent === "approach") {
-        enemy.vx = enemy.x > player.x ? -215 : 215;
-      } else if (state.aiIntent === "guard") {
-        enemy.guard = true;
-        enemy.stamina = Math.max(0, enemy.stamina - 0.24);
-      } else if (state.aiIntent === "dodge") {
-        beginAction(enemy, "dodge");
-      } else if (state.aiIntent === "slash" && dist < 170) {
-        beginAction(enemy, enemy.charge >= 100 ? "charged" : "slash");
-      } else if (state.aiIntent === "heavy" && dist < 210) {
-        beginAction(enemy, "heavy");
-      } else {
-        enemy.vx = enemy.x > player.x ? -180 : 180;
+      switch (state.aiIntent) {
+        case "approach": enemy.vx = toward * 215; break;
+        case "space": enemy.vx = -toward * 190; break;
+        case "measure":
+          enemy.vx = (dist > ai.range ? toward : -toward) * 90 * Math.sin(performance.now() * 0.004);
+          break;
+        case "guard":
+          enemy.guard = true; enemy.stamina = Math.max(0, enemy.stamina - 0.24 * dt); break;
+        case "feint":
+          if (dist < ai.range + 60 && beginAction(enemy, "feint")) {
+            enemy.feints = (enemy.feints || 0) + 1;
+            state.aiQueue = { action: "heavy", wait: 16 + Math.random() * 10 };
+            state.aiIntent = "measure";
+          } else enemy.vx = toward * 180;
+          break;
+        case "slash":
+        case "heavy": {
+          const sp = specOf(enemy, state.aiIntent);
+          if (dist < sp.reach + 30) {
+            const kind = enemy.charge >= 100 ? "charged" : state.aiIntent;
+            if (beginAction(enemy, kind)) {
+              if (enemy.comboLeft > 0 && kind === "slash") { enemy.comboLeft -= 1; state.aiQueue = { action: "slash", wait: sp.cooldown * 0.75 }; }
+              state.aiIntent = "measure";
+            }
+          } else enemy.vx = toward * 200;
+          break;
+        }
       }
-      if (!enemy.guard) enemy.stamina = Math.min(100, enemy.stamina + 0.23);
+      if (!enemy.guard) enemy.stamina = Math.min(100, enemy.stamina + 0.23 * dt);
+    }
+
+    // Ladder flow: between bouts, results, unlocks, save.
+    function ladderMatchEnd(playerWon) {
+      const bouts = openBouts();
+      const took = Math.round(performance.now() - ladder.boutStart);
+      if (playerWon) {
+        const k = enemy.atlas;
+        if (!ladder.save.bestMs[k] || took < ladder.save.bestMs[k]) ladder.save.bestMs[k] = took;
+        ladder.save.bestBout = Math.max(ladder.save.bestBout, ladder.bout + 1);
+        // Blades are earned on the way: Thorn after bout 2, Verdict after bout 4.
+        const earn = { 1: "thorn", 3: "verdict" }[ladder.bout];
+        ladder.unlocked = "";
+        if (earn && !ladder.save.blades.includes(earn)) { ladder.save.blades.push(earn); ladder.unlocked = BLADES[earn].name; }
+        if (ladder.bout + 1 >= bouts.length) {
+          ladder.active = false;
+          ladder.result = "cleared";
+          ladder.save.clears += 1;
+          addLog(`The tribunal is cleared.${ladder.unlocked ? " " + ladder.unlocked + " unlocked." : ""}`);
+        } else {
+          ladder.bout += 1;
+          ladder.between = 210;
+          addLog(`Bout won. Next: ${bouts[ladder.bout].name}.`);
+        }
+      } else {
+        ladder.active = false;
+        ladder.result = "fallen";
+        addLog(`Fallen at bout ${ladder.bout + 1}. Press Start to try the tribunal again.`);
+      }
+      ladder.resultAt = performance.now();
+      writeSave();
+      updateStartLabel();
+    }
+    function ladderTick(dt) {
+      if (ladder.intro > 0) ladder.intro -= dt;
+      if ((state.roundCall || 0) > 0 && !(ladder.intro > 70)) state.roundCall = Math.max(0, state.roundCall - dt);
+      if ((state.phaseBeat || 0) > 0) state.phaseBeat = Math.max(0, state.phaseBeat - dt);
+      if (ladder.between > 0) {
+        ladder.between -= dt;
+        if (ladder.between <= 0) { ladder.between = 0; startDuel(); }
+      }
+    }
+    function cycleBlade() {
+      if (state.running || ladder.active) return;
+      const owned = ladder.save.blades;
+      const i = owned.indexOf(ladder.save.blade);
+      setBlade(owned[(i + 1) % owned.length]);
+      writeSave();
+      addLog(`${BLADES[ladder.save.blade].name}: ${BLADES[ladder.save.blade].note}.`);
     }
 
     function updateFighter(fighter, opponent, dt) {
@@ -757,17 +1088,19 @@
       fighter.invuln = Math.max(0, fighter.invuln - dt);
       fighter.hurtTime = Math.max(0, (fighter.hurtTime || 0) - dt);
       fighter.cooldown = Math.max(0, fighter.cooldown - dt);
+      fighter.whiff = Math.max(0, (fighter.whiff || 0) - dt);
+      fighter.parryFlash = Math.max(0, (fighter.parryFlash || 0) - dt);
       if (fighter.guardJustPressed > 0) fighter.guardJustPressed = Math.max(0, fighter.guardJustPressed - dt / 60);
       if (fighter.action !== "idle") {
         fighter.frame += dt;
         // Ghost afterimage trail on strike/dodge frames (drawn additively behind fighters).
         fighter.ghostGap = (fighter.ghostGap || 0) - dt;
-        if (fighter.ghostGap <= 0 && (fighter.action === "dodge" || fighter.frame >= (attacks[fighter.action] ? attacks[fighter.action].activeStart * 0.6 : 0))) {
-          state.ghosts.push({ who: fighter.id === "player" ? "emerald" : "ruby", action: fighter.action, frame: fighter.frame, x: fighter.x, y: fighter.y, facing: fighter.facing, life: 11, max: 11, color: fighter.blade });
+        if (fighter.ghostGap <= 0 && (fighter.action === "dodge" || fighter.frame >= (specOf(fighter, fighter.action) ? specOf(fighter, fighter.action).activeStart * 0.6 : 0))) {
+          state.ghosts.push({ who: fighter.atlas, action: fighter.action, frame: fighter.frame, x: fighter.x, y: fighter.y, facing: fighter.facing, life: 11, max: 11, color: fighter.blade });
           if (state.ghosts.length > 14) state.ghosts.splice(0, state.ghosts.length - 14);
           fighter.ghostGap = 2.4;
         }
-        const spec = attacks[fighter.action];
+        const spec = specOf(fighter, fighter.action);
         if (spec && fighter.frame >= spec.activeStart && fighter.frame <= spec.activeEnd && !fighter.hitDone) {
           resolveHit(fighter, opponent, spec);
           fighter.hitDone = true;
@@ -801,7 +1134,7 @@
       const dx = defender.x - attacker.x;
       const inFront = Math.sign(dx || attacker.facing) === attacker.facing;
       const distance = Math.abs(dx);
-      if (!inFront || distance > reach) return;
+      if (!inFront || distance > reach) { attacker.whiff = 24; return; }
       let damage = spec.damage;
       let blocked = false;
       const isFlashParry = (defender.guardJustPressed > 0 || (defender.id === "player" && state.tribunalDirector.parryWindow > 0)) && Math.sign(attacker.x - defender.x) === defender.facing;
@@ -809,6 +1142,8 @@
         state.tribunalDirector.flashParryStreak++;
         state.tribunalDirector.tension = Math.min(100, state.tribunalDirector.tension + 15);
         state.tribunalDirector.parryWindow = 0;
+        defender.parryFlash = 14;
+        if (defender === enemy && enemy.ai) { state.aiQueue = { action: enemy.ai.riposte || "slash", wait: 5 }; enemy.parries = (enemy.parries || 0) + 1; }
         defender.stamina = Math.min(100, defender.stamina + 25);
         defender.charge = Math.min(100, defender.charge + 35);
         attacker.cooldown = 46;
@@ -823,10 +1158,12 @@
         burst(defender.x, defender.y - 120, 24, "#ffd75e", 8);
         state.echoes.push({
           text: `FLASH PARRY x${state.tribunalDirector.flashParryStreak}!`,
-          x: defender.x,
-          y: defender.y - 170,
+          ...echoSpawn(defender.x),
           vy: -2.2,
           life: 55,
+          max: 55,
+          art: "flash",
+          n: state.tribunalDirector.flashParryStreak,
           color: "#38e9ff"
         });
         addLog(`FLASH PARRY! ${defender.name} deflected ${spec.label} perfectly!`);
@@ -835,7 +1172,8 @@
       if (defender.guard && defender.stamina > 8 && Math.sign(attacker.x - defender.x) === defender.facing) {
         blocked = true;
         damage = Math.ceil(damage * 0.22);
-        defender.stamina = Math.max(0, defender.stamina - spec.damage * 1.2);
+        defender.stamina = Math.max(0, defender.stamina - spec.damage * 1.2 * ((attacker.ai && attacker.ai.guardBreak) || 1));
+        if (defender.stamina <= 0 && attacker === enemy) enemy.guardBreaks = (enemy.guardBreaks || 0) + 1;
         attacker.charge = Math.min(100, attacker.charge + 8);
         addLog(`${defender.name} guarded ${spec.label}.`);
         burst(defender.x, defender.y - 118, 18, "#3dffad", 6);
@@ -844,6 +1182,7 @@
         rumble(0.35, 0.55, 120);
       } else {
         defender.hp = Math.max(0, defender.hp - damage);
+        checkPhase(defender);
         defender.vx += attacker.facing * spec.push;
         defender.hurtTime = 16;
         attacker.charge = Math.min(100, attacker.charge + 18);
@@ -860,10 +1199,13 @@
       }
       state.echoes.push({
         text: blocked ? "GUARD" : `-${damage}`,
-        x: defender.x,
-        y: defender.y - 160,
+        ...echoSpawn(defender.x),
         vy: -1.8,
         life: 42,
+        max: 42,
+        art: blocked ? "guard" : "num",
+        num: blocked ? "" : `-${damage}`,
+        big: !blocked && damage >= 20,
         color: blocked ? "#3dffad" : attacker.blade
       });
       addSlash(attacker, attacker.blade, reach, attacker.action === "heavy" || attacker.action === "charged" ? 1.2 : 0.82);
@@ -876,6 +1218,7 @@
       shakeAmt = 30;
       state.koFlash = 1;
       state.koBanner = 82;
+      if (loser === enemy && enemy.phase2On) enemy.atlas = enemy.boss.key;
       burst(loser.x, loser.y - 120, 60, loser.blade, 13);
       burst(loser.x, loser.y - 120, 40, "#ffffff", 9);
       rumble(0.6, 1.0, 450);
@@ -902,9 +1245,9 @@
       }
       if (player.rounds >= 2 || enemy.rounds >= 2) {
         state.running = false;
-        state.judgment = player.rounds >= 2 ? "VOTARY" : "REGENT";
-        addLog(`${state.judgment} wins the match. Export the receipt.`);
+        state.judgment = player.rounds >= 2 ? "VOTARY" : enemy.name.toUpperCase();
         stopMusic();
+        ladderMatchEnd(player.rounds >= 2);
       }
     }
 
@@ -983,6 +1326,7 @@
       if ((state.koFlash || 0) > 0) state.koFlash = Math.max(0, state.koFlash - 0.05);
 
       updateTribunalDirector(dt);
+      ladderTick(dt);
       fighterInput();
       enemyAI(dt);
       if (state.running && state.roundDelay <= 0) {
@@ -1035,8 +1379,21 @@
       els.enemyHp.textContent = `${Math.ceil(hudShown.ehp)} / ${enemy.rounds}`;
       els.stamina.textContent = Math.ceil(hudShown.sta);
       els.charge.textContent = Math.ceil(hudShown.chg);
-      els.round.textContent = String(state.round);
-      els.judgment.textContent = state.judgment;
+      const nB = openBouts().length || 1;
+      els.round.textContent = ladder.active || state.running ? `Bout ${ladder.bout + 1}/${nB} · R${state.round}` : String(state.round);
+      const lastEcho = state.echoes.length ? state.echoes[state.echoes.length - 1].text : "";
+      let j = state.judgment;
+      if ((state.koBanner || 0) > 0) j = enemy.hp <= 0 ? enemy.name + " falls" : "Votary falls";
+      else if (lastEcho && !/^(-\d+|GUARD|FLASH PARRY)/.test(lastEcho)) j = lastEcho;
+      else if (ladder.intro > 0 && state.running) j = enemy.name;
+      else if (!state.running && ladder.between > 0) j = (ladder.unlocked ? ladder.unlocked + " earned · " : "") + "Next: " + ((openBouts()[ladder.bout] || {}).name || "");
+      else if (!state.running && ladder.result === "cleared") j = ladder.unlocked ? "Cleared · " + ladder.unlocked : "Tribunal cleared";
+      else if (!state.running && ladder.result === "fallen") j = "Fallen at bout " + (ladder.bout + 1);
+      els.judgment.textContent = j;
+      const co = document.getElementById("callout");
+      if (co && co.textContent !== j) co.textContent = j;
+      const el = document.getElementById("enemyLabel");
+      if (el && el.textContent !== enemy.name) el.textContent = enemy.name;
     }
 
     function draw() {
@@ -1051,7 +1408,7 @@
       drawEchoes();
       drawRoundText();
       drawFade();
-      drawTribunalDirectorHud();
+      // (The AI director's state and latency readout no longer prints over the arena.)
     }
 
     // Additive sprite afterimages behind the fighters (strike/dodge trails).
@@ -1064,16 +1421,16 @@
         let pose = "idle";
         if (g.action === "slash" || g.action === "heavy" || g.action === "charged") {
           const sp = attacks[g.action];
-          pose = (sp && g.frame < sp.activeStart) ? "windup" : "strike";
-        }
+          pose = (sp && g.frame < sp.activeStart) ? (g.action === "heavy" ? "heavyWindup" : "windup") : (g.action === "slash" ? "strike" : g.action);
+        } else if (g.action === "dodge") pose = "dodge";
         const t = Math.max(0, g.life / g.max);
         ctx.globalAlpha = t * 0.22;
         ctx.save();
         ctx.translate(g.x, g.y);
         ctx.scale(g.facing * scale, scale);
         if (BLADE_ATLAS_READY[g.who]) {
-          const sh = 330, sw = sh * (512 / 768);
-          drawBladeAtlasPose(BLADE_ATLAS[g.who], pose, -sw / 2, 16 - sh, sw, sh);
+          const { sh, sw } = atlasSize(g.who, 1, 1);
+          drawBladeAtlasPose(g.who, pose, -sw / 2, 16 - sh, sw, sh);
         } else {
           const spr = SPR[g.who + "_" + pose] || SPR[g.who + "_idle"] || SPR[g.who];
           if (spr) {
@@ -1110,57 +1467,48 @@
       }
     }
 
-    function drawTribunalDirectorHud() {
-      const td = state.tribunalDirector;
-      if (!td) return;
-      ctx.save();
-      const cx = view.w / 2;
-      const cy = 24;
-      const tensionColor = td.tension > 70 ? "#ff2e6d" : (td.tension > 40 ? "#ffd75e" : "#3dffad");
-      ctx.font = "800 10px ui-sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillStyle = tensionColor;
-      ctx.shadowColor = tensionColor;
-      ctx.shadowBlur = 8;
-      ctx.fillText(`AI DIRECTOR [${td.state}] ${Math.round(td.tension)}% · ${td.decisionLatencyUs.toFixed(3)}µs`, cx, cy);
-
-      // Tension gauge
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = "rgba(255,255,255,0.16)";
-      ctx.fillRect(cx - 70, cy + 5, 140, 4);
-      ctx.fillStyle = tensionColor;
-      ctx.fillRect(cx - 70, cy + 5, 140 * (td.tension / 100), 4);
-
-      // Flash parry counter
-      ctx.fillStyle = td.flashParryStreak > 0 ? "#38e9ff" : "rgba(255,255,255,0.48)";
-      ctx.fillText(`FLASH PARRY: x${td.flashParryStreak} (FEINT ${Math.round(td.feintFrequency * 100)}%)`, cx, cy + 22);
-      ctx.restore();
-    }
+    // (the AI director's readout is no longer drawn; removed, rule 30)
 
     function drawArena() {
       if (shakeAmt > 0.3) { canvas.style.transform = "translate(" + ((Math.random()-0.5)*shakeAmt).toFixed(1) + "px," + ((Math.random()-0.5)*shakeAmt).toFixed(1) + "px)"; shakeAmt *= 0.85; }
       else if (shakeAmt !== 0) { shakeAmt = 0; canvas.style.transform = ""; }
 
-      ctx.drawImage(bgStatic, 0, 0, view.w, view.h);
+      // Backdrop: the bout's painted arena, else the classic arena. It shifts with the fighters' midpoint only
+      // (no timed drift on a still picture, rule 30(d)).
+      const painted = enemy.arenaKey && ARENA_IMG[enemy.arenaKey];
+      const paintedOk = painted && painted.complete && painted.naturalWidth > 0;
       const _useRuby = (state.round % 2 === 0) && ARENA_RUBY_OK;
-      const _bg = _useRuby ? ARENA_RUBY : ARENA;
-      const _bgOk = _useRuby ? ARENA_RUBY_OK : ARENA_OK;
+      const _bg = paintedOk ? painted : (_useRuby ? ARENA_RUBY : ARENA);
+      const _bgOk = paintedOk || (_useRuby ? ARENA_RUBY_OK : ARENA_OK);
+      if (!paintedOk) ctx.drawImage(bgStatic, 0, 0, view.w, view.h);
       if (_bgOk) {
-        // Seamless scroll: an [image][mirrored image] pair tiles with no hard seam (shared edge pixels).
-        const iw = _bg.width, ih = _bg.height, sc = Math.max(view.w / iw, (view.h * 0.94) / ih);
-        const dw = iw * sc, dh = ih * sc, yb = view.h - dh + 8, period = 2 * dw;
-        const scroll = (performance.now() * 0.012) % period;
-        ctx.save(); ctx.globalAlpha = 0.92;
-        for (let base = -scroll; base < view.w; base += period) {
-          ctx.drawImage(_bg, base, yb, dw, dh);
-          ctx.save(); ctx.translate(base + 2 * dw, 0); ctx.scale(-1, 1); ctx.drawImage(_bg, 0, yb, dw, dh); ctx.restore();
-        }
+        const iw = _bg.naturalWidth || _bg.width, ih = _bg.naturalHeight || _bg.height;
+        const sc = Math.max(view.w / iw, view.h / ih) * 1.06;
+        const dw = iw * sc, dh = ih * sc;
+        const mid = (player.x + enemy.x) / 2;
+        const shift = Math.max(-1, Math.min(1, (mid - view.w / 2) / (view.w / 2))) * (dw - view.w) / 2;
+        ctx.save(); ctx.globalAlpha = paintedOk ? 1 : 0.92;
+        ctx.drawImage(_bg, (view.w - dw) / 2 - shift, view.h - dh, dw, dh);
         ctx.restore();
       } else if (motionPlateReady && motionPlate.readyState >= 2) {
         const vw = motionPlate.videoWidth, vh = motionPlate.videoHeight;
         if (vw && vh) { const sc = Math.max(view.w / vw, view.h / vh);
           ctx.save(); ctx.globalAlpha = 0.42;
           ctx.drawImage(motionPlate, (view.w - vw * sc) / 2, (view.h - vh * sc) / 2, vw * sc, vh * sc); ctx.restore(); }
+      }
+      if (paintedOk && enemy.phase2On) {
+        // Wrath: the crucible's light turns red, strongest during the phase beat.
+        const beat = Math.min(1, (state.phaseBeat || 0) / 90);
+        ctx.save(); ctx.globalCompositeOperation = "multiply"; ctx.globalAlpha = 0.45 + 0.35 * beat;
+        ctx.fillStyle = "rgb(255, 60, 50)";
+        ctx.fillRect(0, 0, view.w, view.h); ctx.restore();
+      }
+      if (paintedOk) {
+        // A painted arena carries its own floor and light; only a soft floor shadow line under the fighters.
+        const g = ctx.createLinearGradient(0, view.floor - 8, 0, view.h);
+        g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,0.35)");
+        ctx.fillStyle = g; ctx.fillRect(0, view.floor - 8, view.w, view.h - view.floor + 8);
+        return;
       }
       drawCausticField(0, 0, view.w, view.h, performance.now() * 0.00042);
 
@@ -1296,22 +1644,13 @@
     }
 
     function drawBars() {
-      // Glass plates behind each gauge cluster (flat fills, no per-frame gradients).
-      ctx.save();
-      ctx.fillStyle = "rgba(4,7,16,0.52)";
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = "rgba(61,255,173,0.4)";
-      roundRect(20, 12, view.w * 0.36 + 24, 66, 10); ctx.fill(); ctx.stroke();
-      ctx.strokeStyle = "rgba(255,46,109,0.4)";
-      roundRect(view.w - view.w * 0.36 - 44, 12, view.w * 0.36 + 24, 66, 10); ctx.fill(); ctx.stroke();
-      ctx.restore();
-      drawGauge(32, 24, view.w * 0.36, 16, player.hp / 100, "#3dffad", "EMERALD VOTARY");
-      drawGauge(view.w - view.w * 0.36 - 32, 24, view.w * 0.36, 16, enemy.hp / 100, "#ff2e6d", "RUBY MANTIS REGENT");
+      drawGauge(32, 24, view.w * 0.36, 16, player.hp / (player.maxHp || 100), "#3dffad", "EMERALD VOTARY", "left");
+      drawGauge(view.w - view.w * 0.36 - 32, 24, view.w * 0.36, 16, enemy.hp / (enemy.maxHp || 100), enemy.color || "#ff2e6d", enemy.name.toUpperCase(), "right");
       drawGauge(32, 48, view.w * 0.27, 9, player.stamina / 100, "#38e9ff", "STAMINA");
       drawGauge(view.w - view.w * 0.27 - 32, 48, view.w * 0.27, 9, enemy.stamina / 100, "#ffd75e", "AI STAMINA");
     }
 
-    function drawGauge(x, y, w, h, pct, color, label) {
+    function drawGauge(x, y, w, h, pct, color, label, above) {
       ctx.save();
       ctx.fillStyle = "rgba(0,0,0,0.44)";
       roundRect(x, y, w, h, h / 2);
@@ -1326,9 +1665,9 @@
       ctx.stroke();
       ctx.fillStyle = "rgba(248,251,255,0.8)";
       ctx.font = "800 10px ui-sans-serif";
-      ctx.textAlign = "left";
+      ctx.textAlign = above === "right" ? "right" : "left";
       if ("letterSpacing" in ctx) ctx.letterSpacing = "1.5px";
-      ctx.fillText(label, x, y + h + 13);
+      // (gauge names read in the panel beside the arena, rule 30)
       if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
       ctx.restore();
     }
@@ -1375,30 +1714,37 @@
 
       // AI-art fighter sprite (falls back to the procedural crystal figure if not loaded yet)
       // Pose from state: hurt > windup/strike (by attack phase) > idle. Procedural breathe + lunge sell the motion.
-      const _who = fighter.id === "player" ? "emerald" : "ruby";
+      const _who = fighter.atlas || (fighter.id === "player" ? "emerald" : "ruby");
       let _pose = "idle";
-      if ((fighter.hurtTime || 0) > 0) _pose = "hurt";
+      if (fighter.hp <= 0) _pose = "ko";
+      else if ((fighter.hurtTime || 0) > 0) _pose = "hurt";
+      else if ((fighter.parryFlash || 0) > 0) _pose = "parry";
       else if (fighter.action === "slash" || fighter.action === "heavy" || fighter.action === "charged") {
-        const _sp = attacks[fighter.action];
-        _pose = (_sp && fighter.frame < _sp.activeStart) ? "windup" : "strike";
+        const _sp = specOf(fighter, fighter.action);
+        const wind = _sp && fighter.frame < _sp.activeStart;
+        _pose = wind ? (fighter.action === "heavy" ? "heavyWindup" : "windup") : (fighter.action === "slash" ? "strike" : fighter.action);
       }
+      else if (fighter.action === "feint") _pose = "feint";
+      else if (fighter.action === "dodge") _pose = "dodge";
+      else if (fighter.guard) _pose = "guard";
+      else if (Math.abs(fighter.vx) > 60) _pose = "step";
       if (BLADE_ATLAS_READY[_who]) {
         ctx.shadowBlur = 0;
         const breathe = 1 + Math.sin(performance.now() * 0.003 + (fighter.id === "player" ? 0 : 1.6)) * 0.015;
         const lunge = _pose === "strike" ? 1.07 : 1;
-        const sh = 330 * breathe * lunge, sw = sh * (512 / 768);
+        const { sh, sw } = atlasSize(_who, breathe, lunge);
         const yOff = _pose === "hurt" ? -6 : 0;
-        drawBladeAtlasPose(BLADE_ATLAS[_who], _pose, -sw / 2, 16 - sh + yOff, sw, sh);
+        drawBladeAtlasPose(_who, _pose, -sw / 2, 16 - sh + yOff, sw, sh);
         if ((fighter.hurtTime || 0) > 0) {
           ctx.globalAlpha = Math.min(0.75, fighter.hurtTime / 16 * 0.75);
           ctx.globalCompositeOperation = "lighter";
-          drawBladeAtlasPose(BLADE_ATLAS[_who], _pose, -sw / 2, 16 - sh + yOff, sw, sh);
+          drawBladeAtlasPose(_who, _pose, -sw / 2, 16 - sh + yOff, sw, sh);
           ctx.globalAlpha = 1;
           ctx.globalCompositeOperation = "source-over";
         } else if (fighter.invuln > 0) {
           ctx.globalAlpha = 0.5;
           ctx.globalCompositeOperation = "lighter";
-          drawBladeAtlasPose(BLADE_ATLAS[_who], _pose, -sw / 2, 16 - sh, sw, sh);
+          drawBladeAtlasPose(_who, _pose, -sw / 2, 16 - sh, sw, sh);
           ctx.globalAlpha = 1;
           ctx.globalCompositeOperation = "source-over";
         }
@@ -1709,45 +2055,131 @@
       }
     }
 
+    // Rule 30(g): callouts over play are the accepted lettering art (frozen v04 sheet, sha256 4b630878...).
+    const LETTERING = new Image();
+    let letteringReady = false;
+    LETTERING.onload = () => { letteringReady = true; };
+    LETTERING.src = "/static/art/games/vorath_overhaul_v01/blade_tribunal/lettering_v04_d438.webp";
+    const LCELL = {"ko":[473,6,464,164],"flash":[128,186,1153,164],"guard":[318,366,773,164],"bout":[392,546,625,164],"round":[401,726,607,164],"fight":[449,906,511,164],"cleared":[303,1086,804,163],"fallen":[337,1266,734,164],"0":[6,1454,117,248],"1":[283,1454,76,248],"2":[524,1454,106,248],"3":[780,1454,106,248],"4":[1030,1454,117,248],"5":[1291,1454,107,248],"6":[13,1734,104,248],"7":[268,1734,106,248],"8":[524,1734,106,248],"9":[780,1734,106,248],"minus":[995,1835,188,46],"x":[1281,1754,129,208]};
+    // Draw one cell centred on (cx, cy), h logical px tall. Returns its drawn width.
+    function drawCell(key, cx, cy, h, alpha) {
+      const c = LCELL[key]; if (!c || !letteringReady) return 0;
+      const w = c[2] * h / c[3];
+      ctx.save(); ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+      ctx.drawImage(LETTERING, c[0], c[1], c[2], c[3], cx - w / 2, cy - h / 2, w, h);
+      ctx.restore();
+      return w;
+    }
+    // A row of glyphs ("-22", "x3", "2") on one centre line; the minus sits at numeral mid-height.
+    function drawGlyphs(str, cx, cy, h, alpha) {
+      if (!letteringReady) return;
+      const keys = [...String(str)].map(ch => ch === "-" ? "minus" : ch.toLowerCase()).filter(k => LCELL[k]);
+      const gap = h * 0.04;
+      const ws = keys.map(k => k === "minus" ? h * 0.62 : k === "x" ? LCELL.x[2] * (h * 0.8) / LCELL.x[3] : LCELL[k][2] * h / LCELL[k][3]);
+      let x = cx - (ws.reduce((a, b) => a + b, 0) + gap * (keys.length - 1)) / 2;
+      keys.forEach((k, i) => {
+        const w = ws[i];
+        if (k === "minus") drawCell(k, x + w / 2, cy, w * LCELL.minus[3] / LCELL.minus[2], alpha);
+        else drawCell(k, x + w / 2, cy + (k === "x" ? h * 0.1 : 0), k === "x" ? h * 0.8 : h, alpha);
+        x += w + gap;
+      });
+    }
+    // A word with a punch-in: starts 15% larger and settles over the first frames of its life.
+    function punch(age) { return 1 + 0.15 * Math.max(0, 1 - age / 9); }
+    // Rule 30(c): callouts live in the band between the HP bars and the fighters' head tops, never on a fighter.
+    function calloutBand() {
+      const scale = Math.max(0.88, Math.min(1.12, view.w / 1120));
+      const tallest = Math.max((ATLAS_GRID[player.atlas] || {}).drawH || 340, (ATLAS_GRID[enemy.atlas] || {}).drawH || 340);
+      const top = 66, head = view.floor - (tallest + 14) * scale;
+      return { top, head, mid: (top + head) / 2, room: Math.max(28, head - top) };
+    }
+    const fitH = (want, room, k) => Math.min(want, room / (k || 1));
+    // A new floating callout starts above any still-fresh one near it, so two never print on top of each other.
+    function echoSpawnY(x) {
+      const B = calloutBand(), step = Math.min(view.h * 0.075, B.room * 0.8) * 1.15;
+      const near = state.echoes.filter(o => Math.abs(o.x - x) < 220 && o.life > 8);
+      const top = near.length ? Math.min(...near.map(o => Math.min(o.y, B.head - 4))) : B.head - 6 + step;
+      return Math.max(B.top + step, Math.min(B.head - 6, top - step));
+    }
+    // Where a new floating callout starts: above a fresh one near it if the band has room, else beside it
+    // (a tall fighter like Two Verdicts leaves room for one line only).
+    function echoSpawn(x) {
+      const B = calloutBand(), step = Math.min(view.h * 0.075, B.room * 0.8) * 1.15;
+      const near = state.echoes.filter(o => Math.abs(o.x - x) < 220 && o.life > 8);
+      if (!near.length) return { x, y: B.head - 6 };
+      const top = Math.min(...near.map(o => Math.min(o.y, B.head - 4)));
+      if (top - step >= B.top + step * 0.5) return { x, y: top - step };
+      const side = (near.length % 2 ? 1 : -1) * (x < view.w / 2 ? 1 : -1);
+      return { x: Math.max(90, Math.min(view.w - 90, x + side * 230)), y: B.head - 6 };
+    }
+
     function drawEchoes() {
       for (const e of state.echoes) {
-        ctx.save();
-        ctx.globalAlpha = Math.max(0, e.life / 42);
-        ctx.fillStyle = e.color;
-        ctx.shadowBlur = 16;
-        ctx.shadowColor = e.color;
-        ctx.font = "900 24px ui-sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText(e.text, e.x, e.y);
-        ctx.restore();
+        if (!e.art) continue;
+        const max = e.max || e.life || 1;
+        const age = max - e.life;
+        const a = Math.min(1, e.life / 14) * Math.min(1, age / 3 + 0.4);
+        const k = punch(age);
+        const B = calloutBand();
+        const y = Math.min(e.y, B.head - 4);   // floats upward from above the head; never sinks onto it
+        if (e.art === "flash") {
+          const h = fitH(view.h * 0.075, B.room * 0.8) * k;
+          const n = e.n > 1 ? "x" + Math.min(e.n, 9) : "";
+          const fw = LCELL.flash[2] * h / LCELL.flash[3], gw = n ? h * 1.05 : 0;
+          const x0 = Math.max(fw / 2 + 8, Math.min(view.w - fw / 2 - gw - 8, e.x - gw / 2));
+          drawCell("flash", x0, y - h / 2, h, a);
+          if (n) drawGlyphs(n, x0 + fw / 2 + gw / 2 + h * 0.08, y - h / 2, h * 0.9, a);
+        } else if (e.art === "guard") {
+          const h = fitH(view.h * 0.06, B.room * 0.7) * k;
+          drawCell("guard", e.x, y - h / 2, h, a);
+        } else if (e.art === "num") {
+          const h = fitH(view.h * (e.big ? 0.085 : 0.065), B.room * 0.7) * k;
+          drawGlyphs(e.num, e.x, y - h / 2, h, a);
+        }
       }
     }
 
     function drawRoundText() {
-      // KO white flash overlay (fades via state.koFlash)
       if ((state.koFlash || 0) > 0) {
         ctx.save(); ctx.globalAlpha = Math.min(0.7, state.koFlash * 0.7); ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, view.w, view.h); ctx.restore();
       }
-      ctx.save();
-      ctx.fillStyle = "rgba(248,251,255,0.84)";
-      ctx.shadowBlur = 18;
-      ctx.shadowColor = "#b760ff";
-      ctx.font = `900 ${Math.max(18, view.w * 0.026)}px ui-sans-serif`;
-      ctx.textAlign = "center";
-      const label = state.running ? `ROUND ${state.round} - ${state.judgment}` : "PRESS START DUEL";
-      ctx.fillText(label, view.w / 2, view.h - 34);
-      ctx.restore();
-      // Big pulsing K.O. during the slow-mo dwell
+      const B = calloutBand(), cx = view.w / 2, cy = B.mid;   // between the HP bars and the heads (rule 30(c))
       if ((state.koBanner || 0) > 0) {
-        ctx.save();
-        ctx.textAlign = "center";
-        const pulse = 1 + Math.sin(performance.now() * 0.014) * 0.07;
-        ctx.font = `900 ${Math.max(64, view.w * 0.14) * pulse}px ui-sans-serif`;
-        ctx.fillStyle = "#fff4d8";
-        ctx.shadowBlur = 42; ctx.shadowColor = "#ff2e6d";
-        ctx.fillText("K.O.", view.w / 2, view.h * 0.46);
-        ctx.restore();
+        const age = 82 - state.koBanner;
+        drawCell("ko", cx, cy, Math.min(view.h * 0.17 * punch(age * 0.6), B.room * 0.95), Math.min(1, state.koBanner / 12));
+        return;
+      }
+      if (state.running && ladder.intro > 70) {
+        const age = 150 - ladder.intro, a = Math.min(1, age / 8, (ladder.intro - 70) / 10);
+        const h = fitH(view.h * 0.1, B.room * 0.92, 1.35 * 1.15);
+        const bw = LCELL.bout[2] * h / LCELL.bout[3];
+        const nw = LCELL[String(Math.min(ladder.bout + 1, 9))][2] * h * 1.35 / LCELL["1"][3];
+        const x0 = cx - (bw + h * 0.25 + nw) / 2;
+        drawCell("bout", x0 + bw / 2, cy, h * punch(age), a);
+        drawGlyphs(String(Math.min(ladder.bout + 1, 9)), x0 + bw + h * 0.25 + nw / 2, cy, h * 1.35 * punch(age), a);
+        return;
+      }
+      if (state.running && (state.roundCall || 0) > 0 && !(ladder.intro > 70)) {
+        const t = state.roundCall;
+        if (t > 50) {
+          const age = 120 - t, a = Math.min(1, age / 6, (t - 50) / 8);
+          const h = fitH(view.h * 0.09, B.room * 0.92, 1.35 * 1.15);
+          const rw = LCELL.round[2] * h / LCELL.round[3];
+          const n = String(Math.min(state.round, 9));
+          const nw = LCELL[n][2] * h * 1.35 / LCELL[n][3];
+          const x0 = cx - (rw + h * 0.25 + nw) / 2;
+          drawCell("round", x0 + rw / 2, cy, h * punch(age), a);
+          drawGlyphs(n, x0 + rw + h * 0.25 + nw / 2, cy, h * 1.35 * punch(age), a);
+        } else {
+          const age = 50 - t;
+          drawCell("fight", cx, cy, fitH(view.h * 0.13, B.room * 0.8) * punch(age), Math.min(1, t / 10));
+        }
+        return;
+      }
+      if (!state.running && ladder.between <= 0 && (ladder.result === "cleared" || ladder.result === "fallen")) {
+        const age = (performance.now() - (ladder.resultAt || 0)) / 16.7;
+        drawCell(ladder.result, cx, cy, fitH(view.h * 0.12, B.room * 0.8) * punch(age), Math.min(1, age / 10));
       }
     }
 
@@ -1924,6 +2356,8 @@
 
     window.addEventListener("keydown", event => {
       const key = event.key.toLowerCase();
+      if (key === "b" && !event.repeat) cycleBlade();
+      if (key === "enter" && !event.repeat && !state.running) startDuel();
       if ([" ", "arrowleft", "arrowright"].includes(key)) event.preventDefault();
       keys.add(key);
     });
@@ -1933,8 +2367,8 @@
     });
 
     els.startBtn.addEventListener("click", startDuel);
-    els.exportBtn.addEventListener("click", exportReceipt);
-    els.exportTop.addEventListener("click", exportReceipt);
+    setBlade(ladder.save.blade);
+    // (Export Receipt was a developer tool; it left the page in the rule 30(g) pass.)
     if (els.parryBtn) {
       els.parryBtn.addEventListener("click", triggerFlashParry);
     }
@@ -1962,7 +2396,18 @@
       payload: bladeTribunalPayload,
       triggerParry: triggerFlashParry,
       setTension: (val) => { if (state.tribunalDirector) state.tribunalDirector.tension = val; },
-      startDuel: () => { startDuel(); return bladeTribunalPayload(); }
+      startDuel: () => { startDuel(); return bladeTribunalPayload(); },
+      ladder: () => ({ active: ladder.active, bout: ladder.bout, between: Math.round(ladder.between), result: ladder.result,
+        open: openBouts().map(d => d.key), enemy: enemy.name, enemyAtlas: enemy.atlas, enemyHp: enemy.hp, enemyMax: enemy.maxHp || 100,
+        running: state.running, round: state.round, save: JSON.parse(JSON.stringify(ladder.save)), reads: reads.hist.slice(),
+        ai: { parries: enemy.parries || 0, punishes: enemy.punishes || 0, feints: enemy.feints || 0, turtleBreaks: enemy.turtleBreaks || 0,
+              dashCuts: enemy.dashCuts || 0, swaps: enemy.swaps || 0, overheads: enemy.overheads || 0, guardBreaks: enemy.guardBreaks || 0 },
+        boss: { phase2: !!enemy.phase2On, phaseChanges: state.phaseChanges || 0, beat: Math.round(state.phaseBeat || 0) },
+        arena: enemy.arenaKey || "", arenaReady: !!(enemy.arenaKey && ARENA_IMG[enemy.arenaKey] && ARENA_IMG[enemy.arenaKey].complete && ARENA_IMG[enemy.arenaKey].naturalWidth),
+        blade: ladder.save.blade }),
+      damageEnemy: (n) => { if (state.running && state.roundDelay <= 0) { enemy.hp = Math.max(1, enemy.hp - n); checkPhase(enemy); } return enemy.hp; },
+      koEnemy: () => { if (state.running && state.roundDelay <= 0) { enemy.hp = 0; checkRoundEnd(); } return enemy.hp; },
+      cycleBlade
     };
 
     resize();

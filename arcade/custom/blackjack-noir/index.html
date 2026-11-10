@@ -409,8 +409,8 @@ header.topbar{
 // - lose:        audio/lose.mp3      (ElevenLabs dark velvet bust thud)
 // - tier_unlock: audio/tier_unlock.mp3 (ElevenLabs salon seal unlock)
 // - ui_click:    audio/ui_click.mp3  (ElevenLabs brass switch)
-// - music_main:  /arcade/custom/audio/idg_cues/cabinet.mp3 (Suno noir lounge)
-// - music_boss:  /arcade/custom/audio/idg_cues/skillshot.mp3 (Suno high-stakes boss)
+// - music_main:  ../audio/idg_cues/cabinet.mp3 (Suno noir lounge)
+// - music_boss:  ../audio/idg_cues/skillshot.mp3 (Suno high-stakes boss)
 const AUDIO = (() => {
   const sfxFiles = {
     card_deal: 'audio/card_deal.mp3',
@@ -427,9 +427,9 @@ const AUDIO = (() => {
   let unlocked = false;
   try { muted = localStorage.getItem('nsp_bj_noir_mute') === '1'; } catch(e){}
 
-  const musicMain = new Audio('/arcade/custom/audio/idg_cues/cabinet.mp3');
+  const musicMain = new Audio('../audio/idg_cues/cabinet.mp3');
   musicMain.loop = true; musicMain.volume = 0.36;
-  const musicBoss = new Audio('/arcade/custom/audio/idg_cues/skillshot.mp3');
+  const musicBoss = new Audio('../audio/idg_cues/skillshot.mp3');
   musicBoss.loop = true; musicBoss.volume = 0.42;
   let activeMusic = musicMain;
 
@@ -747,7 +747,7 @@ const STAGES = [
 
 const NUM_DECKS = 6;
 let shoe = [], runningCount = 0, cardsDealt = 0;
-let tokens = 1500, bet = 0, lastBet = 25, insuranceBet = 0;
+let tokens = 1500, bet = 0, mainStake = 0, splitStake = 0, lastBet = 25, insuranceBet = 0;
 let sideBetPairs = false, sideBetRummy = false;
 let currentStage = 0, maxUnlockedStage = 0;
 let bossMaxHp = 1500, bossHp = 1500, bossDefeated = false;
@@ -1023,6 +1023,7 @@ function deal() {
   }
 
   gameActive = true; splitActive = false; playingSplit = false; insured = false; insuranceBet = 0;
+  mainStake = bet; splitStake = 0;
   $('split-area').style.display = 'none';
   $('betting-rack').style.display = 'none';
   $('pre-deal-actions').style.display = 'none';
@@ -1071,6 +1072,7 @@ function hit() {
   if (hv > 21) {
     if (playingSplit) {
       playingSplit = false;
+      $('double-btn').disabled = !(playerHand.length === 2 && tokens >= mainStake);
       setVerdict('SPLIT HAND BUSTS — NOW PLAYING MAIN HAND', 'lose');
       return;
     }
@@ -1085,6 +1087,7 @@ function stand() {
   AUDIO.play('ui_click', 0.75);
   if (splitActive && playingSplit) {
     playingSplit = false;
+    $('double-btn').disabled = !(playerHand.length === 2 && tokens >= mainStake);
     setVerdict('PLAYING MAIN HAND');
     return;
   }
@@ -1092,18 +1095,22 @@ function stand() {
 }
 
 function doubleDown() {
-  if (!gameActive || tokens < bet) return;
-  tokens -= bet;
-  bet *= 2;
+  const onSplit = splitActive && playingSplit;
+  const hand = onSplit ? splitHand : playerHand;
+  const stake = onSplit ? splitStake : mainStake;
+  if (!gameActive || hand.length !== 2 || stake <= 0 || tokens < stake) return;
+  tokens -= stake;
+  if (onSplit) { splitStake *= 2; }
+  else { mainStake *= 2; bet = mainStake; }
   AUDIO.play('chip_bet', 0.9);
-  const hand = playingSplit ? splitHand : playerHand;
   hand.push(drawCard());
   setDealerPose(1, 40);
   AUDIO.play('card_flip', 0.9);
-  renderHand(playingSplit ? 'split-cards' : 'player-cards', hand, false);
+  renderHand(onSplit ? 'split-cards' : 'player-cards', hand, false);
   updateUI();
-  if (splitActive && playingSplit) {
+  if (onSplit) {
     playingSplit = false;
+    $('double-btn').disabled = !(playerHand.length === 2 && tokens >= mainStake);
     setVerdict('PLAYING MAIN HAND');
     return;
   }
@@ -1111,8 +1118,9 @@ function doubleDown() {
 }
 
 function split() {
-  if (!gameActive || cardValue(playerHand[0]) !== cardValue(playerHand[1]) || tokens < bet) return;
-  tokens -= bet;
+  if (!gameActive || cardValue(playerHand[0]) !== cardValue(playerHand[1]) || tokens < mainStake) return;
+  tokens -= mainStake;
+  splitStake = mainStake;
   splitActive = true;
   playingSplit = true;
   splitHand = [playerHand.pop()];
@@ -1125,17 +1133,18 @@ function split() {
   renderHand('split-cards', splitHand, false);
   $('split-btn').disabled = true;
   $('surrender-btn').disabled = true;
+  $('double-btn').disabled = tokens < splitStake;
   updateUI();
   setVerdict('PLAYING SPLIT HAND FIRST');
 }
 
 function surrender() {
   if (!gameActive || playerHand.length !== 2 || splitActive) return;
-  const refund = Math.floor(bet / 2);
+  const refund = Math.floor(mainStake / 2);
   tokens += refund;
   AUDIO.play('lose', 0.7);
   setDealerPose(3, 80);
-  finishRound(-bet + refund, 'SURRENDERED — HALF WAGER RETURNED');
+  finishRound(-mainStake + refund, 'SURRENDERED — HALF WAGER RETURNED');
 }
 
 function takeInsurance() {
@@ -1201,13 +1210,13 @@ function resolveHands() {
     parts.push('INSURANCE PAYS');
   }
 
-  const m = scoreSingleHand(playerHand, bet, dv);
+  const m = scoreSingleHand(playerHand, mainStake, dv);
   totalReturn += m.returnTokens;
   netPL += m.net;
   parts.push(m.label);
 
   if (splitActive) {
-    const s = scoreSingleHand(splitHand, bet, dv);
+    const s = scoreSingleHand(splitHand, splitStake, dv);
     totalReturn += s.returnTokens;
     netPL += s.net;
     parts.push('SPLIT: ' + s.label);
@@ -1290,7 +1299,7 @@ function finishRound(netPL, msg) {
     setVerdict(msg, '');
   }
 
-  bet = 0;
+  bet = 0; mainStake = 0; splitStake = 0;
   saveState();
   updateUI();
 }

@@ -174,6 +174,7 @@ function makeSkater(){
   modelContainer.add(model);avatarMixer=new THREE.AnimationMixer(model);
   ['idle','jump','run'].forEach((kind,index)=>{const clips=animated[index].animations;const clip=clips.find(c=>c.name.toLowerCase().endsWith('|'+kind))||clips.find(c=>c.name.toLowerCase().includes(kind)&&!c.name.toLowerCase().includes('targeting'));
    if(!clip)throw Error('Creator '+kind+' animation missing');avatarActions[kind]=avatarMixer.clipAction(clip);avatarMetrics.animations.push(clip.name);});
+  city.installResidents(model,skin,avatarActions.idle.getClip());
   riderDress=dressRider(body,model,skinColors);avatarMetrics.accessories=riderDress.count;avatarMetrics.accessoriesFollowBones=riderDress.boneBound;
   fallback.visible=false;modelLoaded=true;avatarMetrics.modelLoaded=true;playAvatar('idle');
  }).catch(error=>{modelError=String(error?.message||error);loadErrors.push('creator-rig: '+modelError);message('The creator rider rig could not load. This build is not visually ready; reload when the asset connection is restored.');});

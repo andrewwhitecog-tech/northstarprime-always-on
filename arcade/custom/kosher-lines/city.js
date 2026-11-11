@@ -9,7 +9,7 @@ export function wovenTexture(){
  const t=new THREE.CanvasTexture(canvas);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
 }
 export function buildCity(scene,chapter,{mosaic=null}={}){
- let geometryCount=0,occupiedResidents=0;const animated=[],beaconMeshes=[],publicLights=[],markerMeshes=[],materials=[];
+ let geometryCount=0,occupiedResidents=0;const animated=[],beaconMeshes=[],publicLights=[],markerMeshes=[],materials=[],residentRecords=[],npcErrors=[],detailMotion=[],repairCells=[],courierSignals=[],archiveDisplays=[];let residentRigInstallCount=0;
  const material=(color,extra={})=>{const m=new THREE.MeshStandardMaterial({color,roughness:.58,metalness:.25,...extra});materials.push(m);return m;};
  const ink=material(0x101b2a,{metalness:.5,roughness:.3}),stone=material(0x48566a),gold=material(0xd9a955,{metalness:.85,roughness:.26}),soil=material(0x182b2c),wood=material(0x82533c),leaf=material(0x1a795f),cloth=material(0xffffff,{map:wovenTexture(),roughness:.9});
  const jewel=new THREE.MeshPhysicalMaterial({color:0x1587a0,metalness:.65,roughness:.23,iridescence:1,iridescenceIOR:1.5,iridescenceThicknessRange:[180,420],clearcoat:.8});materials.push(jewel);
@@ -48,7 +48,17 @@ export function buildCity(scene,chapter,{mosaic=null}={}){
   if(b.kind==='tree'){trunks.push([b.x,b.h/2,b.z,b.w/2,b.h,b.d/2]);for(let i=0;i<9;i++){const a=i*2.399;leaves.push([b.x+Math.sin(a)*1.05,3.5+(i%3)*.55,b.z+Math.cos(a)*1.05,.7,.75,.7]);}continue;}
   if(b.kind==='garden'){cube(b.w,b.h,b.d,b.x,b.h/2,b.z,stone);cube(b.w-.18,.06,b.d-.18,b.x,b.h+.01,b.z,soil);for(let i=0;i<10;i++)leaves.push([b.x+Math.sin(i*3.7)*.6,b.h+.3+(i%3)*.1,b.z+Math.cos(i*2.2)*1.4,.3,.45,.3]);continue;}
   if(b.kind==='bench'){cube(b.w,b.h,b.d,b.x,b.h/2,b.z,wood);for(let i=0;i<4;i++)cube(b.w,.035,.025,b.x,b.h+.02,b.z-.4+i*.27,gold);continue;}
-  cube(b.w,b.h,b.d,b.x,b.h/2,b.z,b.kind==='kiosk'?jewel:ink);
+  if(b.kind==='kiosk'){
+   // A glazed parcel counter, locked by its grille; its envelope is the unchanged kiosk collider.
+   cube(.18,b.h,1.9,b.x-1.4,b.h/2,b.z,ink);cube(2.9,b.h,.12,b.x,b.h/2,b.z-.94,ink);cube(2.9,b.h,.12,b.x,b.h/2,b.z+.94,ink);
+   cube(3,.16,2,b.x,b.h-.08,b.z,jewel);cube(.3,.9,1.85,b.x+1.35,.45,b.z,wood);
+   for(const y of [.95,1.7,2.3])cube(2.4,.065,1.65,b.x+.05,y,b.z,gold);
+   for(let i=0;i<5;i++){const z=b.z-.68+i*.34;rod(new THREE.Vector3(b.x+1.49,.95,z),new THREE.Vector3(b.x+1.49,2.25,z),.018,gold);}
+   for(let i=0;i<8;i++){const parcel=cube(.42,.3,.31,b.x+.8,.17+Math.floor(i/4)*.82,b.z-.56+(i%4)*.37,i%3===0?cloth:i%3===1?wood:stone);cube(.025,.32,.33,parcel.position.x+.02,parcel.position.y,parcel.position.z,gold);}
+   for(let i=0;i<3;i++){const signal=add(new THREE.SphereGeometry(.055,8,6),neon[i].clone(),b.x+1.51,2.4,b.z-.4+i*.4);courierSignals.push(signal);}
+   continue;
+  }
+  cube(b.w,b.h,b.d,b.x,b.h/2,b.z,ink);
   cube(b.w+.04,.05,b.d+.04,b.x,b.h+.025,b.z,gold);
  }
  instances(new THREE.BoxGeometry(1,1,1),material(0x358091,{emissive:0x205b70,emissiveIntensity:.45,metalness:.6}),panes);
@@ -61,7 +71,10 @@ export function buildCity(scene,chapter,{mosaic=null}={}){
  instances(new THREE.BoxGeometry(1,1,1),jewel,tiles);
  // Canopy shelter with real woven ribs, open entrances and a lit circuit that becomes repaired.
  for(let j=0;j<9;j++){const z=7.5+j*.25;rod(new THREE.Vector3(6.9,3.3,z),new THREE.Vector3(11.1,3.3,z),.035,gold);}
- cube(4.4,.08,2.9,9,3.42,8.5,cloth);for(let i=0;i<5;i++){const light=add(new THREE.SphereGeometry(.09,8,6),neon[i%4].clone(),7.3+i*.85,3.15,7.2);publicLights.push(light);}
+ const roofProfile=new THREE.Shape();roofProfile.moveTo(-2.2,0);roofProfile.quadraticCurveTo(0,1.05,2.2,0);roofProfile.lineTo(2.2,-.09);roofProfile.quadraticCurveTo(0,.92,-2.2,-.09);roofProfile.closePath();
+ const canopyRoof=add(new THREE.ExtrudeGeometry(roofProfile,{depth:2.9,bevelEnabled:false,curveSegments:20}),cloth,9,3.42,7.05);
+ for(const z of [7.04,8.5,9.98]){const ribs=[];for(let i=0;i<=16;i++){const x=-2.2+i*4.4/16;ribs.push([9+x,3.43+.525*(1-Math.pow(x/2.2,2)),z]);}tube(ribs,.027,gold);}
+ for(let i=0;i<5;i++){const light=add(new THREE.SphereGeometry(.09,8,6),neon[i%4].clone(),7.3+i*.85,3.15,7.2);publicLights.push(light);}
  const canopyLight=new THREE.PointLight(0xffc066,0,9,2);canopyLight.position.set(9,2.7,7.5);scene.add(canopyLight);
  // Archive alcove: ribbed fan, rotating physical Loomwheel and notched prism shelves.
  for(let i=0;i<9;i++){const a=i/8*Math.PI;rod(new THREE.Vector3(12.6,1.1,-30),new THREE.Vector3(12.6+Math.cos(a)*2.8,1.1+Math.sin(a)*3,-30),.06,gold);}
@@ -86,6 +99,7 @@ export function buildCity(scene,chapter,{mosaic=null}={}){
   if(index===0){const brim=add(new THREE.CylinderGeometry(.22,.22,.055,10),gold,0,1.77,0,group);cube(.22,.15,.18,0,1.8,.02,ink,group);}
   if(index===1){cube(.35,.4,.18,0,1.22,.2,cloth,group);rod(new THREE.Vector3(-.22,1.4,.12),new THREE.Vector3(.2,.9,-.13),.025,gold,group);}
   if(index===2){add(new THREE.TorusGeometry(.19,.04,6,16),jewel,0,1.65,-.08,group);cube(.27,.04,.3,.25,1,-.2,gold,group);}
+  const fallbackMeshes=group.children.slice();residentRecords.push({id:resident.id,index,group,fallbackMeshes,actor:null,mixer:null,costume:null,bones:0,skinnedMeshes:0,vertices:0});
   const marker=add(new THREE.OctahedronGeometry(.14),neon[index].clone(),0,2.16,0,group);markerMeshes.push({id:resident.id,mesh:marker});animated.push({type:'resident',group,head,baseY:1.62,index});occupiedResidents++;
  };
  RESIDENTS.forEach(person);
@@ -112,17 +126,138 @@ export function buildCity(scene,chapter,{mosaic=null}={}){
   tube([[-23,8,z],[-12,6.2,z],[0,5.7,z],[12,6.2,z],[23,8,z]],.018,ink);
   for(let i=0;i<11;i++){const x=-20+i*4,y=5.7+Math.pow(x/23,2)*2.3;const gem=add(new THREE.OctahedronGeometry(.11),neon[i%4],x,y-.2,z);gem.castShadow=false;}
  }
+
+ // Hand-laid material changes give the three resident places distinct ground, without new obstacles.
+ const ceramic=material(0xffffff,{vertexColors:true,roughness:.82,metalness:.05});
+ const pave=(x0,x1,z0,z1,colors)=>{
+  const pos=[],col=[],stepX=.64,stepZ=.46;
+  for(let row=0,z=z0;z<z1;row++,z+=stepZ)for(let column=0,x=x0;x<x1;column++,x+=stepX){
+   const xx=x+(row%2)*.13,xa=Math.min(xx+.025,x1),xb=Math.min(xx+stepX-.025,x1),za=z+.023,zb=Math.min(z+stepZ-.023,z1);if(xb<=xa||zb<=za)continue;
+   const color=new THREE.Color(colors[(row*7+column*3)%colors.length]);const y=.003+(row%3)*.0005;
+   for(const p of [[xa,y,za],[xa,y,zb],[xb,y,za],[xb,y,za],[xa,y,zb],[xb,y,zb]]){pos.push(...p);col.push(color.r,color.g,color.b);}
+  }
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));g.computeVertexNormals();const o=add(g,ceramic);o.castShadow=false;
+ };
+ pave(5.25,12.7,4.9,11.5,[0x286866,0x9a7042,0x36485a,0x704c59,0x314450]);
+ pave(-18.4,-13.3,-9.4,-2.6,[0x32535e,0x274747,0x755345,0x3a5271,0x223c43]);
+ pave(9,15.4,-31.7,-26.3,[0x4a3d60,0x736556,0x244c56,0x49364e,0x2b3548]);
+ const drainSlats=[];for(const [x,z]of [[6,5.3],[-13.6,-8.7],[9.4,-26.6]]){for(let i=0;i<12;i++)drainSlats.push([x+i*.09,.012,z,.035,.02,.42]);}instances(new THREE.BoxGeometry(1,1,1),gold,drainSlats);
+ // Repair bench: inset fan enamels, a copper cable reel, and a visibly broken/restored lamp.
+ const enamel=[material(0x177b83),material(0x6f3f89),material(0xb85955),material(0x29614e)];
+ for(let i=0;i<9;i++){
+  const x=7.7+i*.31,profile=new THREE.Shape();profile.moveTo(-.13,-.25);profile.quadraticCurveTo(0,.2,.13,-.25);profile.lineTo(0,.28);profile.closePath();
+  const fan=add(new THREE.ExtrudeGeometry(profile,{depth:.025,bevelEnabled:true,bevelSegments:1,bevelSize:.015,bevelThickness:.008,curveSegments:8}),enamel[i%4],x,.49,8.178);fan.rotation.x=Math.PI;
+ }
+ const reel=new THREE.Group();reel.position.set(10.05,1.02,8.8);scene.add(reel);
+ for(const z of [-.13,.13]){const flange=add(new THREE.CylinderGeometry(.2,.2,.035,16),wood,0,.18,z,reel);flange.rotation.x=Math.PI/2;}
+ const wire=add(new THREE.CylinderGeometry(.145,.145,.25,16),gold,0,.18,0,reel);wire.rotation.x=Math.PI/2;
+ tube([[10.05,1.17,8.67],[9.7,1.02,8.4],[9.2,1.01,8.65]],.018,gold);
+ const repairLamp=new THREE.Group();repairLamp.position.set(8.4,1.04,8.8);scene.add(repairLamp);
+ add(new THREE.CylinderGeometry(.21,.26,.06,12),gold,0,0,0,repairLamp);
+ for(const x of [-.15,.15])rod(new THREE.Vector3(x,0,0),new THREE.Vector3(x,.48,0),.02,gold,repairLamp);
+ const lampLoop=add(new THREE.TorusGeometry(.2,.025,6,24),gold,0,.48,0,repairLamp);lampLoop.rotation.x=Math.PI/2;
+ const cell=add(new THREE.OctahedronGeometry(.12),neon[3].clone(),0,.26,0,repairLamp);repairCells.push(cell);
+ const repairTools=new THREE.Group();repairTools.position.set(9.15,1.015,8.55);scene.add(repairTools);
+ for(let i=0;i<4;i++){rod(new THREE.Vector3(-.3+i*.16,0,0),new THREE.Vector3(-.3+i*.16,.02,.34),.018,ink,repairTools);add(new THREE.SphereGeometry(.045,7,5),gold,-.3+i*.16,.02,.34,repairTools);}
+ // Hemmed canvas edges and cloth pennants move locally; no extra lights or transmissive passes.
+ for(let i=0;i<5;i++){
+  const hem=new THREE.Shape();hem.moveTo(-.38,0);hem.lineTo(.38,0);hem.quadraticCurveTo(.24,-.4,0,-.33);hem.quadraticCurveTo(-.24,-.4,-.38,0);
+  add(new THREE.ShapeGeometry(hem,12),cloth,7.35+i*.82,3.42,7.03);
+ }
+ for(const [x,z]of [[7.12,9.2],[10.9,9.2],[-17,-6]]){
+  const pennant=new THREE.Group();pennant.position.set(x,3.05,z);scene.add(pennant);const shape=new THREE.Shape();shape.moveTo(0,0);shape.lineTo(.7,-.12);shape.lineTo(.55,-.7);shape.lineTo(0,-.62);shape.closePath();add(new THREE.ShapeGeometry(shape),cloth,0,0,0,pennant);detailMotion.push({type:'cloth',group:pennant,phase:x});
+ }
+ // Archive display: eight spooled memories in brass recesses, not unfulfilled text rewards.
+ for(let i=0;i<8;i++){
+  const x=11.1+i*.42;cube(.32,.14,.62,x,1.08,-29.4,wood);const spool=add(new THREE.TorusGeometry(.1,.035,6,16),i%2?jewel:gold,x,1.24,-29.4);spool.rotation.x=Math.PI/2;archiveDisplays.push(spool);
+ }
+ // The southern station closes the previously empty view. It lies beyond the existing skate boundary.
+ const sandstone=material(0x797776,{roughness:.88}),copper=material(0x8b503f,{metalness:.65,roughness:.39}),rose=material(0x6a4a65),glaze=material(0x246975,{metalness:.45,roughness:.3,emissive:0x10353b,emissiveIntensity:.3});
+ const southWindows=[],southTrim=[],southShutters=[];
+ for(const side of [-1,1]){
+  const cx=side*12.1;cube(18,8.2,6.5,cx,4.1,20.1,sandstone);cube(18.6,.34,7,cx,8.3,20.1,copper);
+  cube(18.4,.22,6.8,cx,3.7,20.1,gold);
+  for(let bay=0;bay<4;bay++){
+   const x=cx-6.7+bay*4.35;cube(.42,7.7,.65,x-1.75,3.85,16.6,stone);cube(3.2,.18,1.1,x,3.1,16.3,copper);
+   const arch=[];for(let j=0;j<=12;j++){const a=j/12*Math.PI;arch.push([x+Math.cos(a)*1.45,2+Math.sin(a)*1.2,16.54]);}tube(arch,.09,gold);
+   cube(2.65,2.4,.1,x,1.3,16.82,ink);for(let shelf=0;shelf<3;shelf++)cube(2.45,.055,.26,x,.5+shelf*.53,16.64,wood);
+   for(let j=0;j<5;j++)southShutters.push([x-1.03+j*.515,1.33,16.54,.035,2.25,.06]);
+   for(let floor=0;floor<2;floor++){southWindows.push([x,4.9+floor*2,16.8,2.2,1.2,.08]);southTrim.push([x,4.2+floor*2,16.6,2.55,.12,.18]);for(let j=0;j<4;j++)southTrim.push([x-1.1+j*.73,4.65+floor*2,16.54,.045,1.35,.08]);}
+   for(let object=0;object<4;object++){const bowl=add(new THREE.LatheGeometry([new THREE.Vector2(.02,0),new THREE.Vector2(.13,.03),new THREE.Vector2(.17,.16)],9),bay%2?glaze:rose,x-.8+object*.53,.58+(object%2)*.53,16.55);bowl.castShadow=false;}
+  }
+  // A roof greenhouse and copper ventilators give the station its own skyline silhouette.
+  cube(9,.8,4.6,cx,8.85,20.1,stone);
+  const roof=new THREE.CylinderGeometry(2.35,2.35,9,3,1,true,0,Math.PI);roof.rotateZ(Math.PI/2);add(roof,glaze,cx,9.25,20.1);
+  for(let i=0;i<4;i++){add(new THREE.CylinderGeometry(.18,.3,1.15,10),copper,cx-3+i*2,9.3,20.1);add(new THREE.ConeGeometry(.36,.24,10),gold,cx-3+i*2,9.95,20.1);}
+ }
+ instances(new THREE.BoxGeometry(1,1,1),glaze,southWindows);instances(new THREE.BoxGeometry(1,1,1),gold,southTrim);instances(new THREE.BoxGeometry(1,1,1),copper,southShutters);
+ // Open masonry arch, closed grille: the station is scenery rather than an unimplemented playable exit.
+ for(const side of [-1,1]){cube(.8,5.2,2,side*2.7,2.6,17.4,stone);cube(1.1,.25,2.3,side*2.7,5.15,17.4,gold);}
+ const stationArch=[];for(let i=0;i<=24;i++){const a=i/24*Math.PI;stationArch.push([Math.cos(a)*2.7,5.2+Math.sin(a)*1.7,17.35]);}tube(stationArch,.28,stone);tube(stationArch.map(p=>[p[0],p[1],p[2]-.31]),.045,gold);
+ for(let i=0;i<13;i++)rod(new THREE.Vector3(-2.4+i*.4,0,17.38),new THREE.Vector3(-2.4+i*.4,4.4,17.38),.028,copper);
+ const clockFace=new THREE.Group();clockFace.position.set(0,6,17.02);scene.add(clockFace);for(let i=0;i<3;i++)add(new THREE.TorusGeometry(.35+i*.18,.032,6,36),i%2?jewel:gold,0,0,i*.025,clockFace);detailMotion.push({type:'clock',group:clockFace,phase:0});
+ // Rooftops to the south continue the city through camera orbits instead of ending in a blue void.
+ const southFar=[];for(let i=0;i<7;i++){const x=-30+i*10,h=11+(i*5%14);cube(5.5,h,5,x,h/2,37+(i%2)*4,i%2?stone:ink);const cap=add(new THREE.ConeGeometry(4,3,6),copper,x,h+1.5,37+(i%2)*4);for(let row=0;row<Math.floor(h/2);row++)for(let col=0;col<2;col++)southFar.push([x-1+col*2,row*1.8+1.3,34.4+(i%2)*4,.55,.75,.06]);}instances(new THREE.BoxGeometry(1,1,1),glaze,southFar);
+
  // A public-return constellation and a personal mirror are alternative, visible chapter consequences.
  const returnStuds=[];for(let i=0;i<32;i++){const z=10-i*1.17,x=6+Math.sin(i*.22)*.18;const stud=add(new THREE.SphereGeometry(.045,6,4),neon[0],x,.035,z);returnStuds.push(stud);}
  const finalBars=[];
  const finalGroup=new THREE.Group();finalGroup.position.set(0,5.8,-33.8);scene.add(finalGroup);
  for(let i=0;i<12;i++){const a=i*Math.PI/6;finalBars.push(rod(new THREE.Vector3(Math.cos(a)*3.4,Math.sin(a)*1.8,0),new THREE.Vector3(Math.cos(a+Math.PI/3)*3.4,Math.sin(a+Math.PI/3)*1.8,0),.025,gold,finalGroup));}
  const mirror=add(new THREE.OctahedronGeometry(.55),jewel,0,0,.2,finalGroup);
- return {metrics:{authoredGeometry:geometryCount,residents:occupiedResidents,interactiveResidents:RESIDENTS.length,colliders:CITY_COLLIDERS.length,instancedWindows:panes.length+skylineWindows.length,originalWovenPattern:true},
-  snapshot(){return {canopyIntensity:canopyLight.intensity,lanternEmission:publicLights.map(o=>o.material.emissiveIntensity),constellationVisible:finalGroup.visible,mirrorVisible:mirror.visible,publicReturnStudsVisible:returnStuds.filter(o=>o.visible).length,constellationBarsVisible:finalBars.filter(o=>o.visible).length,relays:beaconMeshes.map(b=>({id:b.id,emission:b.core.material.emissiveIntensity,rotation:b.core.rotation.y})),markers:markerMeshes.map(r=>({id:r.id,emission:r.mesh.material.emissiveIntensity,x:r.mesh.parent.position.x,z:r.mesh.parent.position.z}))};},
+
+ function cloneResidentRig(template){
+  const clone=template.clone(true),mapping=new Map();
+  const pair=(source,copy)=>{mapping.set(source,copy);source.children.forEach((child,i)=>pair(child,copy.children[i]));};pair(template,clone);
+  template.traverse(source=>{if(!source.isSkinnedMesh)return;const copy=mapping.get(source),bones=source.skeleton.bones.map(b=>mapping.get(b));if(bones.some(b=>!b))throw Error('Resident skeleton escaped the creator rig');
+   copy.skeleton=new THREE.Skeleton(bones,source.skeleton.boneInverses.map(matrix=>matrix.clone()));copy.bindMatrix.copy(source.bindMatrix);copy.bindMatrixInverse.copy(source.bindMatrixInverse);
+  });return clone;
+ }
+ function residentOutfit(record,actor){
+  const parent=record.group,index=record.index,bones=[];actor.traverse(o=>{if(o.isBone)bones.push(o);});
+  const boneNamed=name=>bones.find(b=>b.name.toLowerCase()===name.toLowerCase())||bones.find(b=>b.name.toLowerCase().endsWith('|'+name.toLowerCase()));
+  const chest=boneNamed('Chest'),head=boneNamed('Head'),left=boneNamed('LeftHand'),right=boneNamed('RightHand');if(!chest||!head||!left||!right)throw Error('Resident creator rig is missing Chest/Head/hand attachment bones');
+  const coatMaterial=index===0?cloth:index===1?material(0x20504b,{roughness:.8}):material(0x493856,{roughness:.9});
+  const lapel=material(index===0?0xb57447:index===1?0x2c6880:0x8c675b,{roughness:.65,metalness:.2});
+  const torso=new THREE.Group();parent.add(torso);const outline=[new THREE.Vector2(.22,-.31),new THREE.Vector2(.26,-.26),new THREE.Vector2(.235,.13),new THREE.Vector2(.25,.23),new THREE.Vector2(.18,.27)];
+  const coat=add(new THREE.LatheGeometry(outline,14),coatMaterial,0,0,0,torso);coat.scale.z=.65;
+  for(const sign of [-1,1]){const flap=cube(.1,.48,.025,sign*.08,0,.158,lapel,torso);flap.rotation.z=sign*.17;}
+  const hem=add(new THREE.TorusGeometry(.235,.014,5,28),gold,0,-.29,0,torso);hem.rotation.x=Math.PI/2;hem.scale.y=.65;
+  const collar=add(new THREE.TorusGeometry(.15,.025,6,24),lapel,0,.26,0,torso);collar.rotation.x=Math.PI/2;
+  const headwear=new THREE.Group();parent.add(headwear);
+  if(index===0){add(new THREE.CylinderGeometry(.2,.21,.07,12),copper,0,.14,0,headwear);const brim=add(new THREE.CylinderGeometry(.24,.24,.025,14),gold,0,.1,0,headwear);add(new THREE.SphereGeometry(.18,12,8,0,Math.PI*2,0,Math.PI*.5),cloth,0,.16,0,headwear);add(new THREE.OctahedronGeometry(.035),neon[3],0,.19,.175,headwear);}
+  if(index===1){const band=add(new THREE.TorusGeometry(.16,.035,6,24),cloth,0,.05,0,headwear);band.rotation.x=Math.PI/2;const pouch=cube(.25,.32,.1,.18,-.04,.175,wood,torso);pouch.rotation.z=-.12;rod(new THREE.Vector3(-.21,.22,.15),new THREE.Vector3(.2,-.15,.17),.02,gold,torso);}
+  if(index===2){for(const x of [-.065,.065]){const lens=add(new THREE.TorusGeometry(.045,.01,5,16),gold,x,.035,.15,headwear);}rod(new THREE.Vector3(-.02,.035,.15),new THREE.Vector3(.02,.035,.15),.008,gold,headwear);const cowl=add(new THREE.TorusGeometry(.19,.06,6,24),lapel,0,-.12,0,headwear);cowl.rotation.x=Math.PI/2;}
+  const leftProp=new THREE.Group(),rightProp=new THREE.Group();parent.add(leftProp,rightProp);
+  if(index===0){const ring=add(new THREE.TorusGeometry(.12,.024,6,24),copper,0,.04,.04,leftProp);ring.rotation.y=Math.PI/2;rod(new THREE.Vector3(0,-.1,0),new THREE.Vector3(0,.16,0),.018,gold,rightProp);tube([[0,.16,0],[-.055,.21,0],[-.06,.25,0],[0,.2,0],[.06,.25,0],[.055,.21,0],[0,.16,0]],.012,gold,rightProp);}
+  if(index===1){cube(.28,.2,.19,0,0,0,wood,leftProp);cube(.025,.22,.21,0,0,0,gold,leftProp);const paper=cube(.2,.014,.26,0,.01,0,stone,rightProp);paper.rotation.z=.2;}
+  if(index===2){const cover=cube(.26,.035,.32,0,0,0,lapel,leftProp);cube(.23,.055,.29,0,.035,0,stone,leftProp);const pages=cube(.24,.015,.29,0,.075,0,cloth,leftProp);pages.rotation.z=.15;add(new THREE.CylinderGeometry(.018,.018,.24,6),gold,0,.02,0,rightProp);}
+  const bindings=[{bone:chest,node:torso,offset:new THREE.Vector3(0,0,0)},{bone:head,node:headwear,offset:new THREE.Vector3(0,.015,0)},{bone:left,node:leftProp,offset:new THREE.Vector3(0,-.02,.025)},{bone:right,node:rightProp,offset:new THREE.Vector3(0,-.02,.025)}];
+  parent.updateMatrixWorld(true);const q=new THREE.Quaternion(),local=new THREE.Quaternion(),position=new THREE.Vector3();parent.getWorldQuaternion(q);q.invert();bindings.forEach(binding=>{binding.inverseRest=q.clone().multiply(binding.bone.getWorldQuaternion(new THREE.Quaternion())).invert();});
+  return {bindings:bindings.length,update(){parent.updateMatrixWorld(true);parent.getWorldQuaternion(q);q.invert();for(const binding of bindings){binding.bone.getWorldPosition(position);parent.worldToLocal(position);binding.node.position.copy(position).add(binding.offset);binding.bone.getWorldQuaternion(local);binding.node.quaternion.copy(q).multiply(local).multiply(binding.inverseRest);}}};
+ }
+ function installResidents(template,skin,idleClip){
+  if(residentRecords.every(record=>record.actor))return;
+  if(!template?.isObject3D||!skin?.isTexture||!idleClip?.tracks?.length){const error='Resident installation needs the actual loaded creator model, skin Texture and named idle clip';npcErrors.push(error);throw Error(error);}
+  for(const record of residentRecords){if(record.actor)continue;
+   try{const actor=cloneResidentRig(template);actor.scale.multiplyScalar(1.08);actor.position.multiplyScalar(1.08);actor.rotation.y+=Math.PI;
+    let bones=0,skins=0,vertices=0;actor.traverse(o=>{if(o.isBone)bones++;if(o.isSkinnedMesh){skins++;vertices+=o.geometry.attributes.position.count;}if(o.isMesh){o.material=new THREE.MeshStandardMaterial({map:skin,roughness:.78,metalness:0});o.castShadow=o.receiveShadow=true;}});
+    if(bones<20||skins<1)throw Error('Cloned creator resident lost its skeleton or skinned mesh');
+    record.group.add(actor);const mixer=new THREE.AnimationMixer(actor),idle=mixer.clipAction(idleClip);idle.play();mixer.update(.18*record.index);const costume=residentOutfit(record,actor);
+    record.actor=actor;record.mixer=mixer;record.costume=costume;record.bones=bones;record.skinnedMeshes=skins;record.vertices=vertices;record.idle=idle.getClip().name;record.fallbackMeshes.forEach(mesh=>{mesh.visible=false;});residentRigInstallCount++;
+   }catch(error){const detail=record.id+': '+String(error?.message||error);npcErrors.push(detail);throw Error(detail);}
+  }
+ }
+
+ return {installResidents,metrics:{get authoredGeometry(){return geometryCount;},residents:occupiedResidents,interactiveResidents:RESIDENTS.length,colliders:CITY_COLLIDERS.length,instancedWindows:panes.length+skylineWindows.length,originalWovenPattern:true},
+  snapshot(){return {npcRigs:{loaded:residentRecords.every(r=>r.actor&&r.skinnedMeshes>0),count:residentRecords.filter(r=>r.actor).length,errors:[...npcErrors],installations:residentRigInstallCount,residents:residentRecords.map(r=>({role:r.id,loaded:Boolean(r.actor),bones:r.bones,skinnedMeshes:r.skinnedMeshes,vertices:r.vertices,idleClip:r.idle||null,skinTextures:r.actor?[...new Set((()=>{const ids=[];r.actor.traverse(o=>{if(o.isSkinnedMesh&&o.material.map)ids.push(o.material.map.uuid);});return ids;})())]:[],costumeBindings:r.costume?.bindings||0}))},repairCellEmission:repairCells.map(o=>o.material.emissiveIntensity),courierSignalEmission:courierSignals.map(o=>o.material.emissiveIntensity),canopyIntensity:canopyLight.intensity,lanternEmission:publicLights.map(o=>o.material.emissiveIntensity),constellationVisible:finalGroup.visible,mirrorVisible:mirror.visible,publicReturnStudsVisible:returnStuds.filter(o=>o.visible).length,constellationBarsVisible:finalBars.filter(o=>o.visible).length,relays:beaconMeshes.map(b=>({id:b.id,emission:b.core.material.emissiveIntensity,rotation:b.core.rotation.y})),markers:markerMeshes.map(r=>({id:r.id,emission:r.mesh.material.emissiveIntensity,x:r.mesh.parent.position.x,z:r.mesh.parent.position.z}))};},
   update(dt,time,sim){
    const state=chapter.state,active=state.active?RESIDENTS[state.completed]?.id:null;
    canopyLight.intensity=state.completed>0?24:2;
+   repairCells.forEach(o=>{o.material.emissiveIntensity=state.completed>0?2:.06;});courierSignals.forEach(o=>{o.material.emissiveIntensity=state.completed>=2?1.8:.12;});
+   for(const record of residentRecords){if(record.mixer)record.mixer.update(Math.min(dt,.05)*.65);record.costume?.update();}
+   for(const item of detailMotion){if(item.type==='cloth')item.group.rotation.z=Math.sin(time*.0007+item.phase)*.045;else item.group.rotation.z=Math.sin(time*.0002)*.08;}
+   archiveDisplays.forEach((o,i)=>{o.rotation.z=state.completed>=2?Math.sin(time*.00025+i)*.1:0;});
    publicLights.forEach((o,i)=>{o.material.emissiveIntensity=state.completed>0?1.7:.12;});
    for(const item of markerMeshes){item.mesh.material.emissiveIntensity=item.id===active?2.4:.5;item.mesh.position.y=2.16+Math.sin(time*.0017)*.06;item.mesh.rotation.y=time*.0007;}
    for(const item of beaconMeshes){const visited=state.completed>=2||state.progress.visited.includes(item.id);item.core.material.emissiveIntensity=visited?2.8:.22;item.core.rotation.y=time*.0006;}

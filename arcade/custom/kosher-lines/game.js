@@ -12,6 +12,7 @@ import { cameraOutsideSolids } from './camera-rig.mjs';
 import { CourierTrial, parseCourierRecord, defaultCourierRecord, COURIER_ROUTE } from './courier-trial.mjs';
 import { buildCourierCourse } from './courier-course.js';
 import { createActionMode } from './action-mode.js';
+import { PEACOCK_KIOSK, PEACOCK_KIOSK_COLLIDER } from './peacock-signature.mjs';
 const actionArt=await fetch('./fan-art.json').then(r=>{if(!r.ok)throw Error('Fan-art manifest HTTP '+r.status);return r.json();});
 const readActionSave=key=>{try{return localStorage.getItem(key);}catch{return null;}};
 let actionMode=null,selectedRide='arcade',actionSaveClock=0;
@@ -30,9 +31,10 @@ const held=new Set(), touchHeld=new Set(), touchTricks=new Map();
 let queuedOllieTrick=null;
 let presses=[], releases=[], lastEvent=0, accumulator=0, lastTime=0, orbit=0, cameraTilt=.38, dragging=false, lastPointer=null;
 let reflectionTarget=null;
+let peacockKiosk=null;
 let renderer, scene, camera, disposed=false, firstFrame=false, modelLoaded=false, modelError=null;
 let pausedByVisibility=false, frameCount=0, elapsedFrames=0, measuredFps=0, quality='high';
-const assetState={}, loadErrors=[], shaders={lost:false}, keysOwned=['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyW','KeyS','KeyA','KeyD','KeyF','KeyG','KeyH','KeyJ','KeyK','KeyU','KeyM','ShiftLeft','ShiftRight','KeyR','KeyP','KeyE','KeyT','KeyB','KeyL','KeyQ','Escape'];
+const assetState={}, loadErrors=[], shaders={lost:false}, keysOwned=['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyW','KeyS','KeyA','KeyD','KeyF','KeyG','KeyH','KeyJ','KeyK','KeyU','KeyC','KeyM','ShiftLeft','ShiftRight','KeyR','KeyP','KeyE','KeyT','KeyB','KeyL','KeyQ','Escape'];
 const motion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const surfaces=[], lamps=[], portalRings=[], routeLights=[], sparkParticles=[];
 const skinColors=[0x39efb3,0xd674ff,0xffb34b];
@@ -166,6 +168,17 @@ function makeWorld(muralTexture){
  const pupil=mesh(new THREE.TorusGeometry(.65,.07,10,64),mat(0xb77cff,{emissive:0x9b2ddd,emissiveIntensity:1.2}),0,0,.08,portal);portalRings.push(pupil);
  for(let x of [-3.1,3.1]){rod(new THREE.Vector3(x,0,-34.2),new THREE.Vector3(x,6,-34.2),.08,gold);box(.5,.25,.6,x,.1,-34.2,black);}
  const eyeLight=new THREE.PointLight(0xa75cff,25,18,2);eyeLight.position.set(0,5,-31.5);scene.add(eyeLight);
+ // An actual playable eye kiosk anchors the lyric-grounded Peacock clip zone.
+ peacockKiosk=new THREE.Group();peacockKiosk.name='Peacock-switch-line-kiosk';peacockKiosk.position.set(PEACOCK_KIOSK_COLLIDER.x,0,PEACOCK_KIOSK_COLLIDER.z);scene.add(peacockKiosk);
+ const kioskShell=mat(0x151b23,{metalness:.58,roughness:.4}),kioskTrim=mat(0xc7a454,{metalness:.85,roughness:.25});
+ mesh(new RoundedBoxGeometry(.8,1.6,.65,3,.035),kioskShell,0,.8,0,peacockKiosk);
+ mesh(new THREE.BoxGeometry(.68,.55,.055),kioskTrim,0,1.17,-.35,peacockKiosk);
+ const kioskScreen=mesh(new THREE.PlaneGeometry(.57,.43),mat(0xffffff,{map:muralTexture,emissiveMap:muralTexture,emissive:0x75e2c8,emissiveIntensity:.85,roughness:.22}),0,1.17,-.381,peacockKiosk);kioskScreen.rotation.y=Math.PI;
+ mesh(new RoundedBoxGeometry(.7,.08,.28,2,.02),kioskTrim,0,.79,-.4,peacockKiosk);
+ const stick=mesh(new THREE.CylinderGeometry(.012,.012,.1,8),kioskShell,-.17,.88,-.43,peacockKiosk);mesh(new THREE.SphereGeometry(.035,10,8),mat(0xff36aa,{emissive:0xa31670,emissiveIntensity:.8}),-.17,.94,-.43,peacockKiosk);
+ for(const x of [.10,.22])mesh(new THREE.CylinderGeometry(.034,.034,.012,12),mat(x<.2?0x38f5df:0xf1b743,{emissive:x<.2?0x16a89a:0x946617,emissiveIntensity:.7}),x,.84,-.43,peacockKiosk);
+ const kioskGlow=new THREE.PointLight(0x42ffd9,18,6,2);kioskGlow.position.set(0,1.2,-.75);peacockKiosk.add(kioskGlow);
+ cameraSolids.push({id:'peacock-kiosk',minX:12.6,maxX:13.4,minY:0,maxY:1.6,minZ:9.075,maxZ:9.725});
  // Sparse stars, distant tower silhouettes and real neon reflections support depth.
  const points=[];for(let i=0;i<130;i++){const a=i*2.399963,r=40+(i%9)*3;points.push(Math.sin(a)*r,15+(i*7%31),Math.cos(a)*r-10);}
  const starGeo=new THREE.BufferGeometry();starGeo.setAttribute('position',new THREE.Float32BufferAttribute(points,3));
@@ -242,6 +255,7 @@ function input(){
   const mapping={1:'KeyF',2:'KeyH',3:'KeyK',4:'KeyU'};
   for(const [button,code]of Object.entries(mapping)){const down=pad.buttons[button]?.pressed;if(down&&!input['p'+button]){trick=code;presses.push(code);}input['p'+button]=down;}
  }
+ if(pad){const p=Boolean(pad.buttons[13]?.pressed);if(p&&!input.padPeacock)trick='KeyC';input.padPeacock=p;}
  return {steer,push,brake,ollieHeld,olliePressed,ollieReleased,manual,trick,grind:true,gamepadName,fire:held.has('KeyB')||touchHeld.has('fire')||Boolean(pad?.buttons[10]?.pressed),reload:presses.includes('KeyL')||Boolean(pad?.buttons[12]?.pressed)};
 }
 function updateUI(){
@@ -272,6 +286,7 @@ function processEvents(){
 }
 function renderAction(){
  if(!actionMode||selectedRide!=='rival')return;const s=actionMode.snapshot(),c=s.combat,r=s.rival;
+ $('peacock-stance').textContent=sim.stance===1?'Switch · Peacock ready':'Regular · land a 180';$('peacock-special').disabled=sim.stance!==1;
  $('action-health').textContent=Math.ceil(c.health);$('action-ammo').textContent=c.reloading?'Reloading…':c.ammo+' / '+c.reserve;$('action-stars').textContent=c.tokenCount+' / 16';$('art-score').textContent=String(r.score);$('heat-clock').textContent=r.finished?(r.result.winner==='Draw'?'Draw':r.result.winner+' wins'):(Math.ceil(r.remaining)+' s');$('aim-lock').setAttribute('aria-pressed',String(s.aimAssist));$('aim-state').textContent=s.aimAssist?'Aim assist: face a sentry to lock':'Free aim: shoot where the camera faces';
  const list=$('clip-objectives');for(const objective of s.clips.challenges){let li=list.querySelector('[data-clip="'+objective.id+'"]');if(!li){li=document.createElement('li');li.dataset.clip=objective.id;list.append(li);}li.textContent=(objective.completed?'✓ ':objective.pending?'Bank it · ':'')+objective.title;li.title=objective.objective;}
  const key=s.clips.unlockedBoards.join('|')+'|'+s.selectedBoard;if($('cover-rack').dataset.key!==key){$('cover-rack').dataset.key=key;const rack=$('cover-rack');rack.replaceChildren();for(const record of [{id:'original',title:'Original',url:ASSETS+'deck.jpg'},...actionArt.boards]){const button=document.createElement('button');button.dataset.cover=record.id;button.disabled=record.id!=='original'&&!s.clips.unlockedBoards.includes(record.id);button.setAttribute('aria-pressed',String(record.id===s.selectedBoard));button.title=record.title+(button.disabled?' · collect stars or finish clips':' · equip');const image=document.createElement('img');image.src=record.url;image.alt=record.title;button.append(image);rack.append(button);}}
@@ -334,7 +349,7 @@ function frame(time){
   skater.body.rotation.set(0,sim.stance*Math.PI,sim.mode==='bail'?Math.sin(sim.bailTime*8)*.5:0);
   const t=sim.trick?clamp(sim.trickTime/sim.trick.duration,0,1):0;
   skater.board.rotation.set(sim.mode==='manual'?-.15:0,sim.trick?Math.PI*2*sim.trick.spin*t:0,sim.trick?Math.PI*2*sim.trick.flip*t:0);
-  if(sim.trick?.id==='180')skater.body.rotation.y+=Math.PI*t;
+  if(sim.trick?.bodySpin)skater.body.rotation.y+=Math.PI*2*sim.trick.bodySpin*t;
   skater.root.rotation.z+=sim.mode==='bail'?.65:0;
   playAvatar(sim.mode==='air'?'jump':sim.charge>.03||sim.mode==='manual'?'crouch':'idle');skatePushRig?.reset();if(avatarMixer)avatarMixer.update(sim.paused?0:delta);skatePushRig?.update(sim.paused?0:delta,control.push&&sim.grounded&&sim.mode!=='manual'&&sim.charge<=.03&&sim.speed>.2,{...sim.snapshot(),steer:control.steer,aim:actionMode?.poseAim()});if(riderHeadBone&&riderHeadBindScale)riderHeadBone.scale.copy(riderHeadBindScale);if(riderDress)riderDress.update(chapter.state.completed,profile.theme,chapter.state.choice);if(city)city.update(sim.paused?0:delta,time,sim);if(streetAtmosphere)streetAtmosphere.update(sim.paused?0:delta,time*.001);if(courierCourse)courierCourse.update(time);courierWheelJewels.forEach(j=>{j.visible=chapter.state.completed>=2;});
   if(sim.mode==='grind'&&frameCount%4===0)burst(sim.x,sim.y,sim.z,0xffc46a,2);
@@ -354,7 +369,7 @@ function frame(time){
   if(Math.floor(time/100)%2===0){updateUI();renderChapter();renderCourierTrial();renderAction();}
  }
 }
-function loadControlAtlas(){for(const [key,file]of [['ui-skate-atlas','vorath-skate-controls-v6.png'],['ui-atlas','vorath-controls-v1.png'],['ui-title','kosher-lines-title-v4.png'],['ui-objectives','kosher-objectives-v4.png']]){const image=new Image();assetState[key]='loading';image.onload=()=>{assetState[key]='loaded';};image.onerror=()=>{assetState[key]='failed';loadErrors.push(key);};image.src=ASSETS+file;}}
+function loadControlAtlas(){for(const [key,file]of [['ui-skate-atlas','vorath-skate-controls-v6.png'],['ui-atlas','vorath-controls-v1.png'],['ui-title','kosher-lines-title-v4.png'],['ui-objectives','kosher-objectives-v4.png'],['ui-peacock','peacock-switch-control-v1.png']]){const image=new Image();assetState[key]='loading';image.onload=()=>{assetState[key]='loaded';};image.onerror=()=>{assetState[key]='failed';loadErrors.push(key);};image.src=ASSETS+file;}}
 function installInput(){
  const clear=()=>{held.clear();touchHeld.clear();touchTricks.clear();queuedOllieTrick=null;presses=[];releases=[];document.querySelectorAll('.touch-controls .pressed').forEach(button=>button.classList.remove('pressed'));};
  window.addEventListener('keydown',e=>{
@@ -425,7 +440,7 @@ try{
  requestAnimationFrame(frame);updateUI();renderChapter();renderCourierTrial();save();
 }catch(error){loadErrors.push(String(error));$('graphics-error').hidden=false;$('graphics-error').textContent='The 3D plaza could not start on this graphics context. '+String(error.message||error);}
 window.__KOSHER_LINES__=Object.freeze({
- snapshot:()=>({...sim.snapshot(),selectedRide,action:actionMode?.snapshot()||null,career:chapter.snapshot(),courierTrial:courierTrial.snapshot(sim),graphics:graphicsSnapshot(),renderer:{firstFrame,modelLoaded,modelError,avatar:{...avatarMetrics,pose:{activeClip:avatarCurrent,skatePush:skatePushRig?.snapshot()||null,bodyScaleY:skater?.body.scale.y,modelY:skater?.modelContainer.position.y},animations:[...avatarMetrics.animations],headScale:riderHeadBone?{x:riderHeadBone.scale.x,y:riderHeadBone.scale.y,z:riderHeadBone.scale.z}:null},assets:{...assetState},texturesLoaded:Object.keys(assetState).filter(name=>/\.(jpg|png|webp)$/.test(name)&&assetState[name]==='loaded').length+Number(avatarMetrics.skinLoaded),errors:[...loadErrors],contextLost:shaders.lost,fps:Math.round(measuredFps),quality,courierCourse:courierCourse?.snapshot()||null,wardrobe:riderDress?.snapshot()||null,wheelJewelsVisible:courierWheelJewels.filter(j=>j.visible).length,reflections:{capturedFaceSize:64,textureWidth:reflectionTarget?.width||0,textureHeight:reflectionTarget?.height||0,environmentAssigned:scene?.environment===reflectionTarget?.texture},city:city?{...city.metrics,...city.snapshot()}:null,streetscape:streetAtmosphere?.stats()||null,drawCalls:renderer?.info.render.calls||0},camera:camera?{x:camera.position.x,y:camera.position.y,z:camera.position.z,occlusion:{...cameraOcclusion}}:null,storageAvailable:saveAvailable}),
+ snapshot:()=>({...sim.snapshot(),selectedRide,action:actionMode?.snapshot()||null,career:chapter.snapshot(),courierTrial:courierTrial.snapshot(sim),graphics:graphicsSnapshot(),renderer:{firstFrame,modelLoaded,modelError,peacockKiosk:{built:peacockKiosk?.parent===scene,position:peacockKiosk?{x:peacockKiosk.position.x,z:peacockKiosk.position.z}:null,clipZone:{...PEACOCK_KIOSK}},avatar:{...avatarMetrics,pose:{activeClip:avatarCurrent,skatePush:skatePushRig?.snapshot()||null,bodyScaleY:skater?.body.scale.y,bodyYaw:skater?.body.rotation.y,boardYaw:skater?.board.rotation.y,modelY:skater?.modelContainer.position.y},animations:[...avatarMetrics.animations],headScale:riderHeadBone?{x:riderHeadBone.scale.x,y:riderHeadBone.scale.y,z:riderHeadBone.scale.z}:null},assets:{...assetState},texturesLoaded:Object.keys(assetState).filter(name=>/\.(jpg|png|webp)$/.test(name)&&assetState[name]==='loaded').length+Number(avatarMetrics.skinLoaded),errors:[...loadErrors],contextLost:shaders.lost,fps:Math.round(measuredFps),quality,courierCourse:courierCourse?.snapshot()||null,wardrobe:riderDress?.snapshot()||null,wheelJewelsVisible:courierWheelJewels.filter(j=>j.visible).length,reflections:{capturedFaceSize:64,textureWidth:reflectionTarget?.width||0,textureHeight:reflectionTarget?.height||0,environmentAssigned:scene?.environment===reflectionTarget?.texture},city:city?{...city.metrics,...city.snapshot()}:null,streetscape:streetAtmosphere?.stats()||null,drawCalls:renderer?.info.render.calls||0},camera:camera?{x:camera.position.x,y:camera.position.y,z:camera.position.z,occlusion:{...cameraOcclusion}}:null,storageAvailable:saveAvailable}),
  provenance:'Reconstructed missing simulation and rendering from retained Grok source fragments. Original art retained; no exact full-source restoration claimed.'
 });
 window.render_game_to_text=()=>JSON.stringify(window.__KOSHER_LINES__.snapshot());

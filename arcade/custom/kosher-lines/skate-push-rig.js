@@ -29,7 +29,7 @@ export function createSkatePushRig(THREE,{model,body,deckY=.112}){
   else {const foot=body.worldToLocal(leg.foot.getWorldPosition(V()));const sole=V().set(foot.x,deckY,foot.z-.08);footRefs[side].sole=leg.foot.worldToLocal(body.localToWorld(sole));}
  }
  let originals=null,phase=0,lastActive=false,plantError=null,pushError=null,compression=0,landing=0,lastGrounded=true,armErrors=[null,null],soleErrors=[null,null],lastState='roll',reachDrop=0;
- let ankleTargets=[null,null],soleTargets=[null,null],lastAim=false,flipLift=0;
+ let ankleTargets=[null,null],soleTargets=[null,null],lastAim=false,flipLift=0,lastStance=0;
  const smooth=t=>{t=clamp(t,0,1);return t*t*(3-2*t);};
  function reset(){if(originals)for(const p of originals){p.bone.position.copy(p.p);p.bone.quaternion.copy(p.q);p.bone.scale.copy(p.s);}originals=null;}
  function restoreBind(b){if(!b)return;const s=bind.get(b);b.position.copy(s.p);b.quaternion.copy(s.q);b.scale.copy(s.s);}
@@ -68,10 +68,10 @@ export function createSkatePushRig(THREE,{model,body,deckY=.112}){
   body.updateWorldMatrix(true,true);
   const trickId=typeof state.trick==='string'?state.trick:state.trick?.id,flipDuration={kickflip:.42,heelflip:.42,shuv:.48,'180':.5,tre:.72,nac:.7}[trickId];
   flipLift=mode==='air'&&flipDuration&&Number.isFinite(state.trickTime)?Math.sin(Math.PI*clamp(state.trickTime/flipDuration,0,1))*.14:0;
-  const solves=[];
+  const solves=[],pushIndex=state.stance===1?0:1,pushSign=pushIndex===1?1:-1;
   for(let i=0;i<2;i++){
    const l=legs[i],ref=footRefs[i],sole=V().set(i===0?-.005:.005,deckY+flipLift,i===0?-.215:.215);
-   if(i===1&&active){sole.x+=.255*out;sole.y-=.102*contact;sole.y+=.09*Math.sin(Math.PI*clamp((phase-.58)/.42,0,1));sole.z+=phase<.58?.28*smooth(phase/.58):.28*(1-smooth((phase-.58)/.42));}
+   if(i===pushIndex&&active){sole.x+=pushSign*.255*out;sole.y-=.102*contact;sole.y+=.09*Math.sin(Math.PI*clamp((phase-.58)/.42,0,1));sole.z+=pushSign*(phase<.58?.28*smooth(phase/.58):.28*(1-smooth((phase-.58)/.42)));}
    const worldQ=body.getWorldQuaternion(Q()).multiply(rotate).multiply(ref.q),worldSole=body.localToWorld(sole.clone());
    const offset=ref.sole.clone().multiply(l.foot.getWorldScale(V())).applyQuaternion(worldQ);
    const target=worldSole.clone().sub(offset),pole=body.localToWorld(V().set(.8,.55,i===0?-.22:.22));
@@ -91,8 +91,8 @@ export function createSkatePushRig(THREE,{model,body,deckY=.112}){
    if(i===1&&lastAim){const direction=V().set(d.x,d.y,d.z).normalize(),shoulder=arm.hip.getWorldPosition(V());target=shoulder.addScaledVector(direction,.45);target.y-=.055;handQ=Q().setFromUnitVectors(new THREE.Vector3(0,1,0),direction);}
    armErrors[i]=solve(arm,target,body.localToWorld(V().set(-.35,.98,i===0?-.55:.55)),handQ);
   }
-  body.updateWorldMatrix(true,true);lastState=mode;
+  body.updateWorldMatrix(true,true);lastState=mode;lastStance=state.stance===1?1:0;
  }
  const vector=p=>p?{x:p.x,y:p.y,z:p.z}:null;
- return {reset,update,snapshot:()=>({source:'original-board-bound-two-foot-skate-IK',active:lastActive,phase,leftPlantError:plantError,rightTargetError:pushError,leftSoleError:soleErrors[0],rightSoleError:soleErrors[1],compression,reachDrop,flipLift,landing,mode:lastState,aiming:Boolean(lastAim),armTargetErrors:[...armErrors],calibratedFromSneakers:footRefs.map(r=>r.calibrated),anchors:soleTargets.map(vector),ankleTargets:ankleTargets.map(vector),weaponContract:{hand:'hand_r',barrelAxis:[0,0,-1],fingerAxis:[0,1,0],position:[0,.07,-.018],rotation:[Math.PI/2,0,0]}})};
+ return {reset,update,snapshot:()=>({source:'original-board-bound-two-foot-skate-IK',stance:lastStance,pushingFoot:lastStance===1?'left':'right',active:lastActive,phase,leftPlantError:plantError,rightTargetError:pushError,leftSoleError:soleErrors[0],rightSoleError:soleErrors[1],compression,reachDrop,flipLift,landing,mode:lastState,aiming:Boolean(lastAim),armTargetErrors:[...armErrors],calibratedFromSneakers:footRefs.map(r=>r.calibrated),anchors:soleTargets.map(vector),ankleTargets:ankleTargets.map(vector),weaponContract:{hand:'hand_r',barrelAxis:[0,0,-1],fingerAxis:[0,1,0],position:[0,.07,-.018],rotation:[Math.PI/2,0,0]}})};
 }

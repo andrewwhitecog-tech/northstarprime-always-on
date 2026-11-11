@@ -36,7 +36,7 @@ export function defaultChapter(){return {version:1,completed:0,active:false,prog
 export function parseChapter(raw){
  try{const p=JSON.parse(raw);if(!p||p.version!==1)return defaultChapter();const out=defaultChapter();
  out.completed=Math.max(0,Math.min(3,Number.isInteger(p.completed)?p.completed:0));out.active=out.completed<3&&p.active===true;
- const q=p.progress||{};out.progress={tricks:[...new Set((Array.isArray(q.tricks)?q.tricks:[]).filter(x=>['kickflip','heelflip','shuv','180','tre','nac'].includes(x)))],banked:Math.max(0,Math.min(1e7,Number(q.banked)||0)),grind:Math.max(0,Math.min(30,Number(q.grind)||0)),manual:Math.max(0,Math.min(30,Number(q.manual)||0)),visited:[...new Set((Array.isArray(q.visited)?q.visited:[]).filter(x=>BEACONS.some(b=>b.id===x)))]};
+ const q=p.progress||{};out.progress={tricks:[...new Set((Array.isArray(q.tricks)?q.tricks:[]).filter(x=>['kickflip','heelflip','shuv','180','tre','nac','switch-bs360'].includes(x)))],banked:Math.max(0,Math.min(1e7,Number(q.banked)||0)),grind:Math.max(0,Math.min(30,Number(q.grind)||0)),manual:Math.max(0,Math.min(30,Number(q.manual)||0)),visited:[...new Set((Array.isArray(q.visited)?q.visited:[]).filter(x=>BEACONS.some(b=>b.id===x)))]};
  out.choice=out.completed===3&&['public','personal'].includes(p.choice)?p.choice:null;
  out.interactions=Math.max(0,Math.min(1e6,Number(p.interactions)||0));return out;
  }catch{return defaultChapter();}

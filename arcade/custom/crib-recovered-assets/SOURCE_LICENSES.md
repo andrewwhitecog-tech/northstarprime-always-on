@@ -46,3 +46,7 @@ kosher-story-props-v1.glb is original Antigravity/NorthStar work: power-cell cra
 
 ## v06 action and skating controls
 Original NorthStar generated painted control atlases `vorath-skate-controls-v6.png` and `vorath-action-controls-v6.png`, produced with the owner-covered image generator, then inspected on disk. No third-party cover/poster originals are in this public asset tree. Named fan-rider and album/tour artwork packs are private and are not represented as licensed public releases.
+
+
+## Peacock signature control
+`peacock-switch-control-v1.png` is an original transparent sculpted control emblem generated for NorthStar with the built-in image tool. It depicts a skateboard and full-turn arrow, contains no artist likeness or third-party album art, and is not a gameplay screenshot. Peacock is an original game-feature label referencing the Brian Peacock/switch-back-3 passage; no claim that he invented a trick by this name is made.

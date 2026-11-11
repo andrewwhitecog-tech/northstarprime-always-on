@@ -1,13 +1,15 @@
 // Reconstructed from retained Grok fragments; missing implementation is new code.
 import { CITY_COLLIDERS } from './chapter.mjs';
+import { PEACOCK_TRICK, PEACOCK_KIOSK_COLLIDER } from './peacock-signature.mjs';
 export const LINE = Object.freeze(['DROP IN','LEDGE','FUNBOX','STAIR','QUARTER']);
 export const TRICKS = Object.freeze({
   KeyF:{id:'kickflip',name:'Kickflip',duration:.42,points:120,flip:1,spin:0},
   KeyG:{id:'heelflip',name:'Heelflip',duration:.42,points:120,flip:-1,spin:0},
   KeyH:{id:'shuv',name:'Pop shove-it',duration:.48,points:150,flip:0,spin:1},
-  KeyJ:{id:'180',name:'180',duration:.5,points:180,flip:0,spin:.5},
+  KeyJ:{id:'180',name:'180',duration:.5,points:180,flip:0,spin:.5,bodySpin:.5},
   KeyK:{id:'tre',name:'Tre flip',duration:.72,points:400,flip:1,spin:1},
-  KeyU:{id:'nac',name:'Nac flip',duration:.7,points:750,flip:2,spin:.5}
+  KeyU:{id:'nac',name:'Nac flip',duration:.7,points:750,flip:2,spin:.5},
+  KeyC:PEACOCK_TRICK
 });
 export const RAILS = Object.freeze([
   {id:'ledge',name:'LEDGE',x0:-2.55,z0:2.2,x1:-2.55,z1:-4.2,y0:.5,y1:.5},
@@ -30,6 +32,7 @@ export function terrain(x,z){
   return 0;
 }
 export const COLLIDERS=Object.freeze([
+ PEACOCK_KIOSK_COLLIDER,
  {x:-14,z:1,w:5,d:1.8,h:.65},{x:13,z:-7,w:4.5,d:1.7,h:.65},
  {x:-17,z:-12,w:3,d:3,h:1.1},{x:17,z:-24,w:3,d:3,h:1.1},
  ...CITY_COLLIDERS
@@ -87,6 +90,7 @@ export class KosherSim{
  }
  tryTrick(code){
   if(this.grounded||this.bailTime>0||this.trick||!TRICKS[code])return false;
+  if(TRICKS[code].requiredStance!==undefined&&this.stance!==TRICKS[code].requiredStance)return false;
   this.trick=TRICKS[code];this.trickTime=0;this.event('trick-start',{id:this.trick.id});return true;
  }
  bail(reason){
@@ -98,7 +102,7 @@ export class KosherSim{
  }
  land(height){
   if(this.trick&&this.trickTime<this.trick.duration*.84){this.bail('Catch the board before landing');return;}
-  if(this.trick){this.add(this.trick.points,this.trick.name);this.stats.tricks++;this.event('landed-trick',{id:this.trick.id,x:this.x,z:this.z});if(this.trick.id==='180')this.stance=1-this.stance;}
+  if(this.trick){this.add(this.trick.points,this.trick.name);this.stats.tricks++;this.event('landed-trick',{id:this.trick.id,x:this.x,z:this.z,stance:this.stance});if(this.trick.id==='180')this.stance=1-this.stance;}
   if(this.flags.funbox){this.add(120,'Funbox');this.advanceLine('FUNBOX');}
   if(this.flags.stair&&this.z< -17.3){this.add(250,'Stair gap');this.advanceLine('STAIR');}
   if(this.flags.quarter&&height<1.2){this.add(300,'Quarter return');this.advanceLine('QUARTER');}
@@ -190,5 +194,5 @@ export class KosherSim{
   }
   if(this.line===0&&this.speed>4&&this.z<2)this.advanceLine('DROP IN');
  }
- snapshot(){return {sessionMode:this.sessionMode,x:this.x,y:this.y,z:this.z,yaw:this.yaw,speed:this.speed,vx:this.vx,vz:this.vz,vy:this.vy,grounded:this.grounded,mode:this.mode,charge:this.charge,trick:this.trick?.id||null,trickTime:this.trickTime,balance:this.balance,rail:this.grinding?.id||null,grindTime:this.grindTime,score:this.score,pending:Math.round(this.unbanked),multiplier:this.multiplier,line:this.line,next:LINE[this.line],completedLines:this.completedLines,bails:this.bails,timeLeft:this.timeLeft,elapsed:this.elapsed,running:this.running,paused:this.paused,ended:this.ended,stats:{...this.stats},profile:{...this.profile},events:this.events.map(e=>({...e}))};}
+ snapshot(){return {sessionMode:this.sessionMode,stance:this.stance,x:this.x,y:this.y,z:this.z,yaw:this.yaw,speed:this.speed,vx:this.vx,vz:this.vz,vy:this.vy,grounded:this.grounded,mode:this.mode,charge:this.charge,trick:this.trick?.id||null,trickTime:this.trickTime,balance:this.balance,rail:this.grinding?.id||null,grindTime:this.grindTime,score:this.score,pending:Math.round(this.unbanked),multiplier:this.multiplier,line:this.line,next:LINE[this.line],completedLines:this.completedLines,bails:this.bails,timeLeft:this.timeLeft,elapsed:this.elapsed,running:this.running,paused:this.paused,ended:this.ended,stats:{...this.stats},profile:{...this.profile},events:this.events.map(e=>({...e}))};}
 }

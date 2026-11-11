@@ -9,6 +9,7 @@ export const BEACONS=Object.freeze([
  {id:'east',name:'East garden relay',x:8,z:-27.8,color:0xf17ebd},
  {id:'return',name:'Return stone',x:0,z:10.5,color:0xffc15a}
 ]);
+export const AMBIENT_CITIZENS=Object.freeze(Array.from({length:6},(_,i)=>({x:(i%2?-1:1)*(18.7+(i%3)*.4),z:1-Math.floor(i/2)*12})));
 export const CITY_COLLIDERS=Object.freeze([
  {kind:'counter',x:9,z:8.8,w:3,d:1.2,h:.95},
  {kind:'post',x:7.1,z:9.2,w:.2,d:.2,h:3.3}, {kind:'post',x:10.9,z:9.2,w:.2,d:.2,h:3.3},
@@ -20,8 +21,8 @@ export const CITY_COLLIDERS=Object.freeze([
  ...RESIDENTS.map(r=>({kind:'resident',x:r.x,z:r.z,w:.55,d:.55,h:1.8})),
  ...BEACONS.map(b=>({kind:'beacon',x:b.x,z:b.z,w:.48,d:.48,h:.8})),
  ...[-1,1].flatMap(side=>Array.from({length:7},(_,bay)=>[2.65,-2.65].map(offset=>({kind:'column',x:side*21.6,z:10-bay*6.1+offset,w:.9,d:.5,h:5.7+(bay%3)*1.15}))).flat()),
- ...[-1,1].flatMap(side=>Array.from({length:7},(_,bay)=>({kind:'bay-wall',x:side*21.73,z:10-bay*6.1,w:.25,d:4.4,h:2.8}))),
- ...Array.from({length:6},(_,i)=>({kind:'citizen',x:(i%2?-1:1)*(18.7+(i%3)*.4),z:8-Math.floor(i/2)*12-.1,w:.6,d:.8,h:1.6}))
+ ...[-1,1].flatMap(side=>Array.from({length:7},(_,bay)=>({kind:'bay-wall',x:side*20.5,z:10-bay*6.1,w:.5,d:6.1,h:2.8}))),
+ ...AMBIENT_CITIZENS.map(({x,z})=>({kind:'citizen',x,z,w:.6,d:.8,h:1.6}))
 ]);
 export const CONTRACTS=Object.freeze([
  {id:'borrowed-light',resident:'keeper',title:'Borrowed light',brief:'The keeper has one power cell left. Two different landed tricks and 300 banked points will prove the plaza is worth keeping open.',reward:'A restored woven rider jacket and a lit public canopy.'},

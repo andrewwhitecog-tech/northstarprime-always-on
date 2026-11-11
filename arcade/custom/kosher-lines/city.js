@@ -2,7 +2,7 @@ import { configureWovenMaterial } from './woven-material.js';
 import * as THREE from '/static/vendor/three/0.160.0/build/three.module.js';
 import { GLTFLoader } from '/static/vendor/three/0.160.0/examples/jsm/loaders/GLTFLoader.js';
 import { installStreetBays } from './street-bays.js';
-import { RESIDENTS, BEACONS, CITY_COLLIDERS } from './chapter.mjs';
+import { RESIDENTS, BEACONS, CITY_COLLIDERS, AMBIENT_CITIZENS } from './chapter.mjs';
 // Original geometry and textile patterns; no third-party logos or image lettering.
 export function wovenTexture(){
  const canvas=document.createElement('canvas');canvas.width=canvas.height=256;const c=canvas.getContext('2d');
@@ -102,7 +102,7 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
  RESIDENTS.forEach(person);
  // Warm human detail: reading and resting residents beside public seating, in alcoves beyond the course.
  for(let i=0;i<6;i++){
-  const x=(i%2?-1:1)*(18.7+(i%3)*.4),z=1-Math.floor(i/2)*12;
+  const {x,z}=AMBIENT_CITIZENS[i];
   const group=new THREE.Group();group.position.set(x,0,z);group.rotation.y=x>0?Math.PI/2:-Math.PI/2;scene.add(group);
   cube(.42,.62,.28,0,.9,0,i%2?cloth:jewel,group);add(new THREE.SphereGeometry(.15,8,6),material(i%2?0x8b5b48:0xbf9276),0,1.38,0,group);
   for(const sign of [-1,1]){rod(new THREE.Vector3(sign*.1,.6,0),new THREE.Vector3(sign*.1,.3,-.3),.075,ink,group);cube(.18,.1,.3,sign*.1,.1,-.3,ink,group);}cube(.55,.08,.45,0,.77,-.3,wood,group);

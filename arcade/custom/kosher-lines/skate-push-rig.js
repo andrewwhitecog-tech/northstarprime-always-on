@@ -20,6 +20,10 @@ export function createSkatePushRig(THREE,{model,body,deckY=.112}){
  const pelvisBind=body.worldToLocal(pelvis.getWorldPosition(V())),pelvisQ=invBodyQ.clone().multiply(pelvis.getWorldQuaternion(Q()));
  const bodyScale=body.getWorldScale(V());
  const rotate=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),-Math.PI*.45);
+ // Calibrate torso facing from the actual shoulder line after the coasting turn.
+ // The armature's authored axes are not the board's forward axis.
+ const shoulderAcross=arms.every(a=>a.hip)?body.worldToLocal(arms[1].hip.getWorldPosition(V())).sub(body.worldToLocal(arms[0].hip.getWorldPosition(V()))):V().set(-1,0,0);
+ shoulderAcross.applyQuaternion(rotate);const coastFacing=V().set(shoulderAcross.z,0,-shoulderAcross.x).normalize();
  const footRefs=legs.map(l=>({q:invBodyQ.clone().multiply(l.foot.getWorldQuaternion(Q())),sole:null,calibrated:false}));
  // Calibrate ankle-to-sole offsets from actual weighted sneaker vertices, not the idle clip.
  const sneakerMeshes=[];model.traverse(o=>{if(o.isSkinnedMesh&&/sneaker/i.test(o.name))sneakerMeshes.push(o);});
@@ -75,6 +79,9 @@ export function createSkatePushRig(THREE,{model,body,deckY=.112}){
    lastActive=active;if(grounded&&!lastGrounded)landing=1;else landing=Math.max(0,landing-step*3.8);lastGrounded=grounded;
   }
   const out=active?Math.sin(Math.PI*phase):0;
+  // Weight reaches the supporting leg before the foot plants, then unwinds
+  // during recovery so the end of a short kick returns to a calm coast.
+  const pushWeight=active?smooth(phase/.18)*(1-smooth((phase-.45)/.40)):0;
   const contact=active?smooth(phase/.22)*(1-smooth((phase-.44)/.12)):0;
   body.updateWorldMatrix(true,false);const bodyPosition=body.getWorldPosition(V()),travel=bodyPosition.clone().sub(lastBodyPosition);travel.y=0;if(live)lastBodyPosition.copy(bodyPosition);
   let pushForward=travel.clone();
@@ -82,14 +89,24 @@ export function createSkatePushRig(THREE,{model,body,deckY=.112}){
   pushForward.y=0;pushForward.normalize();const localForward=pushForward.clone().applyQuaternion(body.getWorldQuaternion(Q()).invert());localForward.y=0;localForward.normalize();
   const charge=Number.isFinite(state.charge)?clamp(state.charge/.45,0,1):0;
   const {trick,progress}=skateTrickProgress(state),signatureTuck=mode==='air'&&trick?.id==='switch-bs360'?Math.sin(Math.PI*progress)*.12:0;
-  const wanted=.085+signatureTuck+.22*charge+(mode==='manual'?.075:0)+(mode==='air'?.13:0)+landing*.15+contact*.065;
+  const wanted=.085+signatureTuck+.22*charge+(mode==='manual'?.075:0)+(mode==='air'?.13:0)+landing*.15+contact*.065+pushWeight*.035;
   if(live)compression+=(wanted-compression)*(1-Math.exp(-step*18));else if(compression===0)compression=wanted;
   restoreBind(rootBone);restoreBind(pelvis);for(const l of legs){restoreBind(named.get('ball_'+l.side));restoreBind(named.get('ball_leaf_'+l.side));}body.updateWorldMatrix(true,true);
   const pelvisTarget=pelvisBind.clone();pelvisTarget.y-=compression;pelvisTarget.x-=.025+compression*.18+(state.stance===1?-1:1)*out*.035;pelvisTarget.z-=Math.sin(phase*Math.PI*2)*out*.018;
+  pelvisTarget.addScaledVector(localForward,pushWeight*.10);
   pelvis.position.copy(pelvis.parent.worldToLocal(body.localToWorld(pelvisTarget)));
-  worldQuaternion(pelvis,body.getWorldQuaternion(Q()).multiply(rotate).multiply(pelvisQ));
+  const facingError=Math.atan2(coastFacing.clone().cross(localForward).y,coastFacing.dot(localForward)),facingTurn=clamp(facingError,-Math.PI*.55,Math.PI*.55)*pushWeight*.66;
+  const boardUp=V().set(0,1,0),leanAxis=V().crossVectors(boardUp,localForward).normalize(),bodyOrientation=body.getWorldQuaternion(Q());
+  const pelvisPose=bodyOrientation.clone().multiply(Q().setFromAxisAngle(leanAxis,pushWeight*.24)).multiply(Q().setFromAxisAngle(boardUp,facingTurn)).multiply(rotate).multiply(pelvisQ);
+  worldQuaternion(pelvis,pelvisPose);
   const steer=clamp(Number.isFinite(state.steer)?state.steer:0,-1,1);
-  for(const name of ['spine_01','spine_02','spine_03']){const bone=named.get(name);if(!bone)continue;restoreBind(bone);bone.quaternion.multiply(Q().setFromAxisAngle(new THREE.Vector3(0,0,1),compression*.13+steer*.025));}
+  for(const name of ['spine_01','spine_02','spine_03']){
+   const bone=named.get(name);if(!bone)continue;restoreBind(bone);bone.quaternion.multiply(Q().setFromAxisAngle(new THREE.Vector3(0,0,1),compression*.13+steer*.025));
+   if(pushWeight>0){
+    const lean=Q().setFromAxisAngle(leanAxis,pushWeight*.035),lead=Q().setFromAxisAngle(boardUp,Math.sign(facingError)*pushWeight*.025);
+    worldRotation(bone,bodyOrientation.clone().multiply(lean).multiply(lead).multiply(bodyOrientation.clone().invert()));
+   }
+  }
   body.updateWorldMatrix(true,true);
   const trickId=typeof state.trick==='string'?state.trick:state.trick?.id,flipDuration={kickflip:.42,heelflip:.42,shuv:.48,'180':.5,tre:.72,nac:.7}[trickId];
   flipLift=mode==='air'&&flipDuration&&Number.isFinite(state.trickTime)?Math.sin(Math.PI*clamp(state.trickTime/flipDuration,0,1))*.14:0;
@@ -135,7 +152,8 @@ export function createSkatePushRig(THREE,{model,body,deckY=.112}){
    const swing=Math.sin(phase*Math.PI*2)*out*.13,side=i===0?-1:1,shoulder=shoulderPositions[i];
    // The host turns a model through90 degrees. Derive reach from the actual
    // shoulders instead of assuming the source armature faces a fixed axis.
-   const localTarget=shoulder.clone().addScaledVector(lateral,side*(mode==='air'?.14:.08)).addScaledVector(forward,.15+steer*side*.04+(i===pushIndex?-1:1)*swing*.45);
+   const counter=(i===pushIndex?-1:1)*pushWeight*.055;
+   const localTarget=shoulder.clone().addScaledVector(lateral,side*(mode==='air'?.14:.08)).addScaledVector(forward,.15+steer*side*.04+(i===pushIndex?-1:1)*swing*.45+counter);
    localTarget.y-=mode==='air'?.18:.30;localTarget.y+=i===0?swing:-swing;
    let target=body.localToWorld(localTarget);
    let handQ=null;

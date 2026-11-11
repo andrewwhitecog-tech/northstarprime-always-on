@@ -22,8 +22,8 @@ export const CITY_COLLIDERS=Object.freeze([
  {kind:'bench',x:13,z:1,w:3,d:1,h:.6}, {kind:'bench',x:-13,z:8,w:3,d:1,h:.6},
  ...RESIDENTS.map(r=>({kind:'resident',x:r.x,z:r.z,w:.55,d:.55,h:1.8})),
  ...BEACONS.map(b=>({kind:'beacon',x:b.x,z:b.z,w:.48,d:.48,h:.8})),
- ...[-1,1].flatMap(side=>Array.from({length:7},(_,bay)=>[2.65,-2.65].map(offset=>({kind:'column',x:side*21.6,z:10-bay*6.1+offset,w:.9,d:.5,h:5.7+(bay%3)*1.15}))).flat()),
- ...[-1,1].flatMap(side=>Array.from({length:7},(_,bay)=>({kind:'bay-wall',x:side*20.5,z:10-bay*6.1,w:.5,d:6.1,h:2.8}))),
+ ...[1].flatMap(side=>Array.from({length:7},(_,bay)=>[2.65,-2.65].map(offset=>({kind:'column',x:side*21.6,z:10-bay*6.1+offset,w:.9,d:.5,h:5.7+(bay%3)*1.15}))).flat()),
+ ...[1].flatMap(side=>Array.from({length:7},(_,bay)=>({kind:'bay-wall',x:side*20.5,z:10-bay*6.1,w:.5,d:6.1,h:2.8}))),
  ...AMBIENT_CITIZENS.map(({x,z})=>({kind:'citizen',x,z,w:.6,d:.8,h:1.6}))
 ]);
 export const CONTRACTS=Object.freeze([

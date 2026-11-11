@@ -15,7 +15,7 @@ export function wovenTexture(){
 export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=null,onKitStatus=()=>{},bayKitURL=null,onBayStatus=()=>{},storyPropsURL=null,onStoryStatus=()=>{}}={}){
  const cameraBounds=[],repairFallback=[],repairDetails=[],storyPropRecords=[];const storyProps={loaded:false,error:null,groups:0,triangles:0};const keeperKit={loaded:false,error:null,meshes:0,triangles:0,materials:0,bounds:null,corePresent:false};let geometryCount=0,occupiedResidents=0;const animated=[],beaconMeshes=[],publicLights=[],markerMeshes=[],materials=[],residentRecords=[],npcErrors=[],detailMotion=[],repairCells=[],courierSignals=[],archiveDisplays=[];let residentRigInstallCount=0,ambientResidents=null;
  const material=(color,extra={})=>{const m=new THREE.MeshStandardMaterial({color,roughness:.58,metalness:.25,...extra});materials.push(m);return m;};
- const ink=material(0x090c14,{metalness:.72,roughness:.39}),stone=material(0x303742,{roughness:.92,metalness:.07}),gold=material(0xb89158,{metalness:.82,roughness:.34}),soil=material(0x132124),wood=material(0x50362e,{roughness:.9}),leaf=material(0x176b57),cloth=material(0xffffff,{map:wovenTexture(),roughness:.9});
+ const ink=material(0x343b37,{metalness:.54,roughness:.78}),stone=material(0xa49d8d,{roughness:.94,metalness:.02}),gold=material(0x968057,{metalness:.72,roughness:.62}),soil=material(0x343d2e),wood=material(0x695742,{roughness:.94}),leaf=material(0x4d6542),cloth=material(0xffffff,{map:wovenTexture(),roughness:.9});
  // Original material study: fine scratches and scored aggregate affect actual
  // roughness/bump response, rather than a flat screen color grade.
  const wearCanvas=document.createElement('canvas');wearCanvas.width=wearCanvas.height=256;
@@ -24,8 +24,8 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
  for(let i=0;i<31;i++){const x=(i*53)%256,y=(i*97)%256;wear.strokeStyle=i%3?'#c7c7c7':'#626262';wear.lineWidth=.6;wear.beginPath();wear.moveTo(x,y);wear.lineTo(x+9+(i%11),y-2);wear.stroke();}
  const wearMap=new THREE.CanvasTexture(wearCanvas);wearMap.wrapS=wearMap.wrapT=THREE.RepeatWrapping;wearMap.repeat.set(2,2);
  for(const m of [ink,stone,gold,wood]){m.roughnessMap=wearMap;m.bumpMap=wearMap;m.bumpScale=m===stone?.025:.008;}
- const jewel=new THREE.MeshPhysicalMaterial({color:0x1587a0,metalness:.65,roughness:.23,iridescence:1,iridescenceIOR:1.5,iridescenceThicknessRange:[180,420],clearcoat:.8});materials.push(jewel);
- const neonColors=[0x72ff4a,0xff286e,0x8263ff,0x32eaf4];const neon=neonColors.map(color=>material(color,{emissive:color,emissiveIntensity:1.8,roughness:.24}));
+ const jewel=new THREE.MeshPhysicalMaterial({color:0x827960,metalness:.65,roughness:.56,iridescence:.18,iridescenceIOR:1.5,iridescenceThicknessRange:[180,420],clearcoat:.20});materials.push(jewel);
+ const neonColors=[0xe0bc7d,0xead4a5,0xc6af80,0xf0d2a3];const neon=neonColors.map(color=>material(color,{emissive:color,emissiveIntensity:.16,roughness:.48,metalness:.08}));
  const add=(g,m,x=0,y=0,z=0,parent=scene)=>{const a=new THREE.Mesh(g,m);a.position.set(x,y,z);a.castShadow=a.receiveShadow=true;parent.add(a);geometryCount++;return a;};
  const cube=(w,h,d,x,y,z,m=ink,parent=scene)=>{if(parent===scene&&Math.max(w,d)>1.5&&h>2.2)cameraBounds.push({id:'city-solid-'+cameraBounds.length,minX:x-w/2,maxX:x+w/2,minY:y-h/2,maxY:y+h/2,minZ:z-d/2,maxZ:z+d/2});return add(new THREE.BoxGeometry(w,h,d),m,x,y,z,parent);};
  const rod=(a,b,r,m=gold,parent=scene)=>{const d=new THREE.Vector3().subVectors(b,a),o=add(new THREE.CylinderGeometry(r,r,d.length(),7),m,0,0,0,parent);o.position.copy(a).add(b).multiplyScalar(.5);o.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());return o;};
@@ -82,7 +82,9 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
  // Relay pedestals have collision, inset enamel and an unambiguous physical core.
  for(const b of BEACONS){
   cube(.48,.8,.48,b.x,.4,b.z,stone);cube(.55,.05,.55,b.x,.83,b.z,gold);
-  const core=add(new THREE.OctahedronGeometry(.24),neon[BEACONS.indexOf(b)].clone(),b.x,1.15,b.z);beaconMeshes.push({id:b.id,core});
+  const core=add(new THREE.CylinderGeometry(.095,.095,.18,12),neon[BEACONS.indexOf(b)].clone(),b.x,.97,b.z);core.name='Relay '+b.id+' mounted amber lens';beaconMeshes.push({id:b.id,core});
+  add(new THREE.CylinderGeometry(.14,.14,.055,12),gold,b.x,.86,b.z);add(new THREE.CylinderGeometry(.14,.105,.07,12),ink,b.x,1.10,b.z);
+  for(const x of [-.11,.11])rod(new THREE.Vector3(b.x+x,.86,b.z),new THREE.Vector3(b.x+x,1.10,b.z),.012,ink);
   const halo=add(new THREE.TorusGeometry(.85,.018,6,36),jewel,b.x,.024,b.z);halo.rotation.x=-Math.PI/2;
  }
  // Residents are authored local characters, not simulated online players or invented public cast.
@@ -98,7 +100,8 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
   if(index===1){cube(.35,.4,.18,0,1.22,.2,cloth,group);rod(new THREE.Vector3(-.22,1.4,.12),new THREE.Vector3(.2,.9,-.13),.025,gold,group);}
   if(index===2){add(new THREE.TorusGeometry(.19,.04,6,16),jewel,0,1.65,-.08,group);cube(.27,.04,.3,.25,1,-.2,gold,group);}
   const fallbackMeshes=group.children.slice();residentRecords.push({id:resident.id,index,group,fallbackMeshes,actor:null,mixer:null,costume:null,bones:0,skinnedMeshes:0,vertices:0});
-  const marker=add(new THREE.OctahedronGeometry(.14),neon[index].clone(),0,2.16,0,group);markerMeshes.push({id:resident.id,mesh:marker});animated.push({type:'resident',group,head,baseY:1.62,index});occupiedResidents++;
+  const markerPlate=add(new THREE.CylinderGeometry(.075,.075,.018,16),gold,.22,1.38,.255,group);markerPlate.rotation.x=Math.PI/2;
+  const marker=add(new THREE.CylinderGeometry(.048,.048,.021,14),neon[index].clone(),.22,1.38,.272,group);marker.rotation.x=Math.PI/2;marker.name=resident.id+' physical enamel service pin';markerMeshes.push({id:resident.id,mesh:marker});animated.push({type:'resident',group,head,baseY:1.62,index});occupiedResidents++;
  };
  RESIDENTS.forEach(person);
  // The six ambient adults share two genuinely posed, baked versions of the
@@ -120,9 +123,9 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
   }
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));g.computeVertexNormals();const o=add(g,ceramic);o.castShadow=false;
  };
- pave(5.25,12.7,4.9,11.5,[0x286866,0x9a7042,0x36485a,0x704c59,0x314450]);
- pave(-18.4,-13.3,-9.4,-2.6,[0x32535e,0x274747,0x755345,0x3a5271,0x223c43]);
- pave(9,15.4,-31.7,-26.3,[0x4a3d60,0x736556,0x244c56,0x49364e,0x2b3548]);
+ pave(5.25,12.7,4.9,11.5,[0x8a8578,0xaaa18c,0x746f64,0x938474,0x7c8072]);
+ pave(-18.4,-13.3,-9.4,-2.6,[0x8b897c,0x7a8071,0x947d66,0x8f9185,0x747d72]);
+ pave(9,15.4,-31.7,-26.3,[0x888275,0x9f927d,0x737d70,0x8c7e70,0x797e74]);
  const drainSlats=[];for(const [x,z]of [[6,5.3],[-13.6,-8.7],[9.4,-26.6]]){for(let i=0;i<12;i++)drainSlats.push([x+i*.09,.012,z,.035,.02,.42]);}instances(new THREE.BoxGeometry(1,1,1),gold,drainSlats);
  const repairDetailStart=scene.children.length;
  // Repair bench: inset fan enamels, a copper cable reel, and a visibly broken/restored lamp.
@@ -139,7 +142,7 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
  add(new THREE.CylinderGeometry(.21,.26,.06,12),gold,0,0,0,repairLamp);
  for(const x of [-.15,.15])rod(new THREE.Vector3(x,0,0),new THREE.Vector3(x,.48,0),.02,gold,repairLamp);
  const lampLoop=add(new THREE.TorusGeometry(.2,.025,6,24),gold,0,.48,0,repairLamp);lampLoop.rotation.x=Math.PI/2;
- const cell=add(new THREE.OctahedronGeometry(.12),neon[3].clone(),0,.26,0,repairLamp);repairCells.push(cell);
+ const cell=add(new THREE.SphereGeometry(.085,12,8),neon[3].clone(),0,.26,0,repairLamp);repairCells.push(cell);
  const repairTools=new THREE.Group();repairTools.position.set(9.15,1.015,8.55);scene.add(repairTools);
  for(let i=0;i<4;i++){rod(new THREE.Vector3(-.3+i*.16,0,0),new THREE.Vector3(-.3+i*.16,.02,.34),.018,ink,repairTools);add(new THREE.SphereGeometry(.045,7,5),gold,-.3+i*.16,.02,.34,repairTools);}
  repairDetails.push(...scene.children.slice(repairDetailStart));
@@ -155,57 +158,50 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
  for(let i=0;i<8;i++){
   const x=11.1+i*.42;cube(.32,.14,.62,x,1.08,-29.4,wood);const spool=add(new THREE.TorusGeometry(.1,.035,6,16),i%2?jewel:gold,x,1.24,-29.4);spool.rotation.x=Math.PI/2;archiveDisplays.push(spool);
  }
- // The southern station closes the previously empty view. It lies beyond the existing skate boundary.
- const sandstone=material(0x36333b,{roughness:.94}),copper=material(0x844b36,{metalness:.7,roughness:.48}),rose=material(0x4e2558),glaze=material(0x15414b,{metalness:.68,roughness:.24,emissive:0x13505d,emissiveIntensity:.45});
+ // Low coastal service buildings stay beyond the unchanged southern boundary.
+ const sandstone=material(0xb7ab94,{roughness:.95,metalness:.01}),copper=material(0x7b6853,{metalness:.48,roughness:.78}),rose=material(0x756b58),glaze=material(0x58645c,{metalness:.12,roughness:.46,emissive:0x000000,emissiveIntensity:0});
  const southWindows=[],southTrim=[],southShutters=[];
  for(const side of [-1,1]){
-  const cx=side*12.1;cube(18,8.2,6.5,cx,4.1,20.1,sandstone);cube(18.6,.34,7,cx,8.3,20.1,copper);
-  cube(18.4,.22,6.8,cx,3.7,20.1,gold);
+  const cx=side*12.1;cube(18,8.2,6.5,cx,4.1,20.1,sandstone);cube(18.6,.28,7,cx,8.25,20.1,stone);
   for(let bay=0;bay<4;bay++){
-   const x=cx-6.7+bay*4.35;cube(.42,7.7,.65,x-1.75,3.85,16.6,stone);cube(3.2,.18,1.1,x,3.1,16.3,copper);
-   const arch=[];for(let j=0;j<=12;j++){const a=j/12*Math.PI;arch.push([x+Math.cos(a)*1.45,2+Math.sin(a)*1.2,16.54]);}tube(arch,.09,gold);
-   cube(2.65,2.4,.1,x,1.3,16.82,ink);for(let shelf=0;shelf<3;shelf++)cube(2.45,.055,.26,x,.5+shelf*.53,16.64,wood);
-   for(let j=0;j<5;j++)southShutters.push([x-1.03+j*.515,1.33,16.54,.035,2.25,.06]);
-   for(let floor=0;floor<2;floor++){southWindows.push([x,4.9+floor*2,16.8,2.2,1.2,.08]);southTrim.push([x,4.2+floor*2,16.6,2.55,.12,.18]);for(let j=0;j<4;j++)southTrim.push([x-1.1+j*.73,4.65+floor*2,16.54,.045,1.35,.08]);}
-   for(let object=0;object<4;object++){const bowl=add(new THREE.LatheGeometry([new THREE.Vector2(.02,0),new THREE.Vector2(.13,.03),new THREE.Vector2(.17,.16)],9),bay%2?glaze:rose,x-.8+object*.53,.58+(object%2)*.53,16.55);bowl.castShadow=false;}
+   const x=cx-6.7+bay*4.35,kind=(bay+(side>0?1:0))%4;
+   cube(.32,7.7,.35,x-1.75,3.85,16.68,stone);cube(3.25,.17,.55,x,3.05,16.6,ink);
+   if(kind===0){
+    // A closed corrugated repair bay, including a real slat rhythm.
+    cube(2.85,2.55,.09,x,1.40,16.78,ink);for(let i=0;i<17;i++)southShutters.push([x,.20+i*.145,16.70,2.75,.065,.07]);
+    cube(.62,.055,.09,x,1.13,16.64,copper);
+   }else if(kind===1){
+    // Small service counter and a separate staff door, not colored shelf panes.
+    cube(1.72,1.26,.075,x-.45,1.92,16.72,glaze);cube(1.92,.14,.46,x-.45,1.20,16.54,stone);cube(.74,2.47,.09,x+1.05,1.35,16.72,ink);cube(.045,.19,.06,x+1.27,1.30,16.64,copper);
+   }else if(kind===2){
+    cube(2.78,2.58,.10,x,1.42,16.74,copper);cube(.055,2.53,.07,x,1.42,16.66,ink);for(const dx of [-.18,.18])cube(.035,.21,.07,x+dx,1.33,16.59,ink);
+    cube(3.1,.18,.65,x,.11,16.62,stone);
+   }else{
+    cube(.86,2.48,.09,x+.85,1.35,16.72,ink);cube(1.70,1.18,.08,x-.61,1.97,16.73,glaze);for(let i=0;i<3;i++)cube(1.87,.16,.04,x-.61,1.62+i*.31,16.64,wood);
+   }
+   for(let floor=0;floor<2;floor++){
+    const wy=4.72+floor*2.05,ww=kind===2?1.45:2.05;southWindows.push([x,wy,16.78,ww,1.03,.08]);southTrim.push([x,wy-.61,16.65,ww+.22,.095,.20]);
+    for(const dx of [-ww/2,0,ww/2])southTrim.push([x+dx,wy,16.66,.040,1.16,.08]);
+   }
+   if(kind===1||kind===3){cube(.76,.48,.55,x+1.02,5.60,16.43,ink);for(let slat=0;slat<5;slat++)cube(.64,.025,.07,x+1.02,5.43+slat*.075,16.11,copper);rod(new THREE.Vector3(x+1.39,5.6,16.47),new THREE.Vector3(x+1.39,.4,16.47),.024,ink);}
   }
-  // A roof greenhouse and copper ventilators give the station its own skyline silhouette.
-  cube(9,.8,4.6,cx,8.85,20.1,stone);
-  const roof=new THREE.CylinderGeometry(2.35,2.35,9,3,1,true,0,Math.PI);roof.rotateZ(Math.PI/2);add(roof,glaze,cx,9.25,20.1);
-  for(let i=0;i<4;i++){add(new THREE.CylinderGeometry(.18,.3,1.15,10),copper,cx-3+i*2,9.3,20.1);add(new THREE.ConeGeometry(.36,.24,10),gold,cx-3+i*2,9.95,20.1);}
+  // Low air handlers and weathered vents sit behind a concrete parapet.
+  cube(8,.78,3.9,cx,8.75,20.6,ink);for(let i=0;i<3;i++){cube(1.55,.66,1.40,cx-2.4+i*2.4,9.12,20.6,stone);const fan=add(new THREE.CylinderGeometry(.36,.36,.05,12),ink,cx-2.4+i*2.4,9.48,20.6);for(let j=0;j<4;j++)cube(.68,.035,.045,fan.position.x,9.52,fan.position.z-.24+j*.16,copper);}
  }
- instances(new THREE.BoxGeometry(1,1,1),glaze,southWindows);instances(new THREE.BoxGeometry(1,1,1),gold,southTrim);instances(new THREE.BoxGeometry(1,1,1),copper,southShutters);
- // Open masonry arch, closed grille: the station is scenery rather than an unimplemented playable exit.
- for(const side of [-1,1]){cube(.8,5.2,2,side*2.7,2.6,17.4,stone);cube(1.1,.25,2.3,side*2.7,5.15,17.4,gold);}
- const stationArch=[];for(let i=0;i<=24;i++){const a=i/24*Math.PI;stationArch.push([Math.cos(a)*2.7,5.2+Math.sin(a)*1.7,17.35]);}tube(stationArch,.28,stone);tube(stationArch.map(p=>[p[0],p[1],p[2]-.31]),.045,gold);
- for(let i=0;i<13;i++)rod(new THREE.Vector3(-2.4+i*.4,0,17.38),new THREE.Vector3(-2.4+i*.4,4.4,17.38),.028,copper);
- const clockFace=new THREE.Group();clockFace.position.set(0,6,17.02);scene.add(clockFace);for(let i=0;i<3;i++)add(new THREE.TorusGeometry(.35+i*.18,.032,6,36),i%2?jewel:gold,0,0,i*.025,clockFace);detailMotion.push({type:'clock',group:clockFace,phase:0});
- // Rooftops to the south continue the city through camera orbits instead of ending in a blue void.
+ instances(new THREE.BoxGeometry(1,1,1),glaze,southWindows);instances(new THREE.BoxGeometry(1,1,1),ink,southTrim);instances(new THREE.BoxGeometry(1,1,1),copper,southShutters);
+ // A flat-topped steel service gate between masonry piers replaces the fantasy arch.
+ for(const side of [-1,1])cube(.65,4.9,1.4,side*2.7,2.45,17.5,stone);cube(6.0,.30,1.7,0,4.95,17.5,stone);
+ for(let i=0;i<13;i++)rod(new THREE.Vector3(-2.4+i*.4,0,17.38),new THREE.Vector3(-2.4+i*.4,4.55,17.38),.025,ink);
+ const clockFace=new THREE.Group();clockFace.position.set(0,4.25,17.25);scene.add(clockFace);const clock=add(new THREE.CylinderGeometry(.31,.31,.055,28),gold,0,0,0,clockFace);clock.rotation.x=Math.PI/2;rod(new THREE.Vector3(0,0,-.04),new THREE.Vector3(.12,.07,-.04),.012,ink,clockFace);rod(new THREE.Vector3(0,0,-.04),new THREE.Vector3(-.16,.17,-.04),.010,ink,clockFace);
 
-
- // Dimensional aurora curtains beyond the roofline: real curved geometry,
- // original vertex colors, no sky image or extra lighting/render passes.
- const skyMotion=!(typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches);
- const aurora=[];
- for(let layer=0;layer<4;layer++){
-  const vertices=[],colors=[],indices=[],base=[],colorA=new THREE.Color([0x4bf2c5,0xbd67f7,0xffb565,0x3ccbdc][layer]),colorB=new THREE.Color([0x485fda,0xef5fa7,0xab4ae5,0x4ff1ae][layer]);
-  for(let i=0;i<=48;i++){
-   const t=i/48,angle=-Math.PI*.95+t*Math.PI*1.9,radius=85+layer*6;
-   const x=Math.sin(angle)*radius,z=Math.cos(angle)*radius-13,y=18+layer*1.4+Math.sin(t*Math.PI*4+layer)*2.2;
-   const tint=colorA.clone().lerp(colorB,.5+.5*Math.sin(t*Math.PI*3+layer));
-   for(let edge=0;edge<2;edge++){vertices.push(x,y+edge*(3.8+Math.sin(t*8+layer)*1.4),z);base.push(y+edge*(3.8+Math.sin(t*8+layer)*1.4));const fade=edge?.24:1;colors.push(tint.r*fade,tint.g*fade,tint.b*fade);}
-   if(i<48){const n=i*2;indices.push(n,n+2,n+1,n+1,n+2,n+3);}
-  }
-  const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geometry.setIndex(indices);
-  const material=new THREE.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:.42,side:THREE.DoubleSide,depthWrite:false,fog:false,blending:THREE.AdditiveBlending});
-  const curtain=add(geometry,material);curtain.castShadow=curtain.receiveShadow=false;curtain.frustumCulled=false;aurora.push({mesh:curtain,base,layer});
- }
+ // Atmospheric sky belongs to the physical coastal lighting rig, not additive curtains.
+ const skyMotion=false,aurora=[];
  // A glazed eye relief belongs to the station facade, behind a manufactured
  // brass frame. The original image is mapped into architecture, not overlaid.
  if(mosaic){
   const relief=new THREE.Group();relief.position.set(0,8.5,17.01);scene.add(relief);
   const shell=add(new THREE.CylinderGeometry(1.35,1.35,.22,48),stone,0,0,.1,relief);shell.rotation.x=Math.PI/2;
-  const glass=add(new THREE.CircleGeometry(1.22,48),material(0xffffff,{map:mosaic,emissive:0x548cb0,emissiveMap:mosaic,emissiveIntensity:.45,metalness:.3,roughness:.26}),0,0,-.025,relief);glass.rotation.y=Math.PI;
+  const glass=add(new THREE.CircleGeometry(1.22,48),material(0xffffff,{map:mosaic,emissive:0x473e2a,emissiveMap:mosaic,emissiveIntensity:.04,metalness:.3,roughness:.26}),0,0,-.025,relief);glass.rotation.y=Math.PI;
   for(let i=0;i<2;i++)add(new THREE.TorusGeometry(1.24+i*.12,.035,7,48),gold,0,0,-.04,relief);
  }
 
@@ -215,7 +211,7 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
  // service wall. It never replaces the live scene or covers the playfield.
  if(mural){mural.wrapS=mural.wrapT=THREE.ClampToEdgeWrapping;mural.repeat.set(1,1);
   cube(10.5,5.5,.28,0,12.5,-37.25,stone);
-  const painted=add(new THREE.PlaneGeometry(10,5),material(0xffffff,{map:mural,roughness:.88,metalness:.03,emissive:0x334248,emissiveMap:mural,emissiveIntensity:.3}),0,12.5,-37.09);painted.castShadow=false;
+  const painted=add(new THREE.PlaneGeometry(10,5),material(0xffffff,{map:mural,roughness:.88,metalness:.03,emissive:0x25221c,emissiveMap:mural,emissiveIntensity:.025}),0,12.5,-37.09);painted.castShadow=false;
   for(const x of [-5.2,5.2]){cube(.14,15.2,.28,x,7.6,-37.25,ink);for(const y of [9.85,12.5,15.15])add(new THREE.CylinderGeometry(.07,.07,.045,6),gold,x,y,-37.05).rotation.x=Math.PI/2;}
   for(const y of [9.85,15.15])cube(10.5,.12,.4,0,y,-37.25,ink);
  }
@@ -226,7 +222,7 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
    model.traverse(o=>{if(!o.isMesh)return;meshes++;triangles+=(o.geometry.index?o.geometry.index.count:o.geometry.attributes.position.count)/3;for(const m of Array.isArray(o.material)?o.material:[o.material])materials.add(m);o.castShadow=o.receiveShadow=true;if(o.name==='RepairCellCore')core=o;});
    if(size.x>3.001||size.y>.951||size.z>1.201||Math.abs(bounds.min.y)>.01||triangles>20000||materials.size>10||!core)throw Error('Keeper kit exceeded measured envelope/budget or lacks repair core');
    model.rotation.y=0;model.position.set(9,0,8.8);scene.add(model);geometryCount+=meshes;
-   repairFallback.forEach(o=>{o.visible=false;});repairDetails.forEach(o=>{o.visible=false;});repairCells.splice(0,repairCells.length,core);
+   repairFallback.forEach(o=>{o.visible=false;});repairDetails.forEach(o=>{o.visible=false;});core.material=core.material.clone();core.material.color.setHex(0xd8be8b);core.material.emissive.setHex(0xb78c4a);core.material.emissiveIntensity=.04;repairCells.splice(0,repairCells.length,core);
    Object.assign(keeperKit,{loaded:true,meshes,triangles,materials:materials.size,bounds:{width:size.x,height:size.y,depth:size.z,min:bounds.min.toArray(),max:bounds.max.toArray()},corePresent:true});onKitStatus('loaded');
   }catch(error){keeperKit.error=String(error?.message||error);onKitStatus('failed',keeperKit.error);}
  },undefined,error=>{keeperKit.error=String(error?.message||error);onKitStatus('failed',keeperKit.error);});}
@@ -237,11 +233,12 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
  if(storyProps.triangles>6000)throw Error('Story prop triangle budget exceeded');storyProps.groups=storyPropRecords.length;storyProps.loaded=true;onStoryStatus('loaded');
  }catch(error){storyProps.error=String(error.message||error);onStoryStatus('failed',storyProps.error);}},undefined,error=>{storyProps.error=String(error.message||error);onStoryStatus('failed',storyProps.error);});}
  // A public-return constellation and a personal mirror are alternative, visible chapter consequences.
- const returnStuds=[];for(const side of [-1,1])for(let i=0;i<38;i++){const t=i/37,z=10.5-t*37,x=side*6*Math.min(1,t*8);const stud=add(new THREE.SphereGeometry(.045,6,4),neon[0],x,.035,z);returnStuds.push(stud);}
+ const returnStuds=[];for(const side of [-1,1])for(let i=0;i<38;i++){const t=i/37,z=10.5-t*37,x=side*6*Math.min(1,t*8);const stud=add(new THREE.CylinderGeometry(.035,.035,.012,10),neon[0],x,.009,z);returnStuds.push(stud);}
  const finalBars=[];
- const finalGroup=new THREE.Group();finalGroup.position.set(0,5.8,-33.8);scene.add(finalGroup);
- for(let i=0;i<12;i++){const a=i*Math.PI/6;finalBars.push(rod(new THREE.Vector3(Math.cos(a)*3.4,Math.sin(a)*1.8,0),new THREE.Vector3(Math.cos(a+Math.PI/3)*3.4,Math.sin(a+Math.PI/3)*1.8,0),.025,gold,finalGroup));}
- const mirror=add(new THREE.OctahedronGeometry(.55),jewel,0,0,.2,finalGroup);
+ const finalGroup=new THREE.Group();finalGroup.position.set(0,3.15,-34.40);scene.add(finalGroup);
+ cube(.95,.82,.08,0,0,0,ink,finalGroup);rod(new THREE.Vector3(-.32,-3.15,.025),new THREE.Vector3(-.32,-.35,.025),.025,ink,finalGroup);rod(new THREE.Vector3(.32,-3.15,.025),new THREE.Vector3(.32,-.35,.025),.025,ink,finalGroup);
+ for(let i=0;i<12;i++){const a=i*Math.PI/6,reflector=add(new THREE.CylinderGeometry(.030,.030,.016,10),gold,Math.cos(a)*.34,Math.sin(a)*.29,.055,finalGroup);reflector.rotation.x=Math.PI/2;finalBars.push(reflector);}
+ const mirror=add(new THREE.CylinderGeometry(.23,.23,.025,32),jewel,0,0,.065,finalGroup);mirror.rotation.x=Math.PI/2;mirror.name='Personal-route cast metal mirror insert';
 
  function cloneResidentRig(template){
   const clone=template.clone(true),mapping=new Map();
@@ -294,8 +291,8 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
    const state=chapter.state,active=state.active?RESIDENTS[state.completed]?.id:null;
    if(skyMotion)for(const ribbon of aurora){const p=ribbon.mesh.geometry.attributes.position;for(let i=0;i<p.count;i++){const u=Math.floor(i/2)/48;p.setY(i,ribbon.base[i]+Math.sin(time*.00018+u*8+ribbon.layer)*.75);}p.needsUpdate=true;}
 
-   canopyLight.intensity=state.completed>0?24:2;
-   repairCells.forEach(o=>{o.material.emissiveIntensity=state.completed>0?2:.06;});courierSignals.forEach(o=>{o.material.emissiveIntensity=state.completed>=2?1.8:.12;});
+   canopyLight.intensity=state.completed>0?10:.5;
+   repairCells.forEach(o=>{o.material.emissiveIntensity=state.completed>0?.85:.04;});courierSignals.forEach(o=>{o.material.emissiveIntensity=state.completed>=2?.65:.08;});
    for(const record of residentRecords){
     for(const prior of record.previousMotion||[])prior.bone.quaternion.copy(prior.quaternion);
     record.previousMotion=[];if(record.mixer)record.mixer.update(Math.min(dt,.05)*.65);record.motionClock=(record.motionClock||0)+dt;
@@ -312,11 +309,11 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
    }
    for(const item of detailMotion){if(item.type==='cloth')item.group.rotation.z=Math.sin(time*.0007+item.phase)*.045;else item.group.rotation.z=Math.sin(time*.0002)*.08;}
    archiveDisplays.forEach((o,i)=>{o.rotation.z=state.completed>=2?Math.sin(time*.00025+i)*.1:0;});
-   publicLights.forEach((o,i)=>{o.material.emissiveIntensity=state.completed>0?1.7:.12;});
-   for(const item of markerMeshes){item.mesh.material.emissiveIntensity=item.id===active?2.4:.5;item.mesh.position.y=2.16+Math.sin(time*.0017)*.06;item.mesh.rotation.y=time*.0007;}
-   for(const item of beaconMeshes){const visited=relayHasLight(state,item.id);item.core.material.emissiveIntensity=visited?2.8:.22;item.core.rotation.y=time*.0006;}
+   publicLights.forEach(o=>{o.material.emissiveIntensity=state.completed>0?.65:.08;});
+   for(const item of markerMeshes){item.mesh.material.emissiveIntensity=item.id===active?.9:.08;}
+   for(const item of beaconMeshes){const visited=relayHasLight(state,item.id);item.core.material.emissiveIntensity=visited?.9:.12;}
    for(const item of animated){if(item.type==='loom')item.group.rotation.z=time*.00016;else{const dx=sim.x-item.group.position.x,dz=sim.z-item.group.position.z;if(Math.hypot(dx,dz)<7)item.group.rotation.y=Math.atan2(dx,dz);item.head.position.y=item.baseY+Math.sin(time*.0013+item.index)*.008;}}
-   finalGroup.visible=state.completed===3;finalBars.forEach(o=>{o.visible=state.choice==='public';});returnStuds.forEach(o=>{o.visible=state.choice==='public';});mirror.visible=state.choice==='personal';if(state.choice==='public')finalGroup.rotation.z=Math.sin(time*.00015)*.06;
+   finalGroup.visible=state.completed===3;finalBars.forEach(o=>{o.visible=state.choice==='public';});returnStuds.forEach(o=>{o.visible=state.choice==='public';});mirror.visible=state.choice==='personal';finalGroup.rotation.z=0;
   }
  };
 }

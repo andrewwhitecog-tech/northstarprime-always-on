@@ -117,6 +117,8 @@ export class KosherSim{
  }
  land(height){
   if(this.trick&&this.trickTime<this.trick.duration*.84){this.bail('Catch the board before landing');return;}
+  const safe=clearGroundPosition(this.x,this.z);
+  if(safe.x!==this.x||safe.z!==this.z){this.x=safe.x;this.z=safe.z;height=terrain(this.x,this.z);}
   if(this.trick){this.add(this.trick.points,this.trick.name);this.stats.tricks++;this.event('landed-trick',{id:this.trick.id,x:this.x,z:this.z,stance:this.stance});if(this.trick.id==='180')this.stance=1-this.stance;}
   if(this.flags.funbox){this.add(120,'Funbox');this.advanceLine('FUNBOX');}
   if(this.flags.stair&&this.z< -17.3){this.add(250,'Stair gap');this.advanceLine('STAIR');}

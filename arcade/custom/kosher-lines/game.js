@@ -11,6 +11,10 @@ import { buildCity, dressRider } from './city.js';
 import { cameraOutsideSolids } from './camera-rig.mjs';
 import { CourierTrial, parseCourierRecord, defaultCourierRecord, COURIER_ROUTE } from './courier-trial.mjs';
 import { buildCourierCourse } from './courier-course.js';
+import { createActionMode } from './action-mode.js';
+const actionArt=await fetch('./fan-art.json').then(r=>{if(!r.ok)throw Error('Fan-art manifest HTTP '+r.status);return r.json();});
+const readActionSave=key=>{try{return localStorage.getItem(key);}catch{return null;}};
+let actionMode=null,selectedRide='arcade',actionSaveClock=0;
 
 const $=id=>document.getElementById(id), canvas=$('plaza');
 const ASSETS='/arcade/custom/crib-recovered-assets/';
@@ -28,7 +32,7 @@ let presses=[], releases=[], lastEvent=0, accumulator=0, lastTime=0, orbit=0, ca
 let reflectionTarget=null;
 let renderer, scene, camera, disposed=false, firstFrame=false, modelLoaded=false, modelError=null;
 let pausedByVisibility=false, frameCount=0, elapsedFrames=0, measuredFps=0, quality='high';
-const assetState={}, loadErrors=[], shaders={lost:false}, keysOwned=['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyW','KeyS','KeyA','KeyD','KeyF','KeyG','KeyH','KeyJ','KeyK','KeyU','KeyM','ShiftLeft','ShiftRight','KeyR','KeyP','KeyE','KeyT','Escape'];
+const assetState={}, loadErrors=[], shaders={lost:false}, keysOwned=['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyW','KeyS','KeyA','KeyD','KeyF','KeyG','KeyH','KeyJ','KeyK','KeyU','KeyM','ShiftLeft','ShiftRight','KeyR','KeyP','KeyE','KeyT','KeyB','KeyL','KeyQ','Escape'];
 const motion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const surfaces=[], lamps=[], portalRings=[], routeLights=[], sparkParticles=[];
 const skinColors=[0x39efb3,0xd674ff,0xffb34b];
@@ -37,7 +41,7 @@ let riderHeadBone=null,riderHeadBindScale=null;
 let skater,bodyRig,boardRig,skatePushRig=null,avatarMixer=null,avatarActions={},avatarCurrent=null;
 const avatarMetrics={bones:0,skinnedMeshes:0,vertices:0,triangles:0,animations:[],skinLoaded:false,modelLoaded:false};
 const tempV=new THREE.Vector3(), cameraDesired=new THREE.Vector3(), lookDesired=new THREE.Vector3(), lookSmoothed=new THREE.Vector3(0,1,0);
-function save(){try{localStorage.setItem(SAVE,JSON.stringify(profile));localStorage.setItem(SAVE+'.chapter',chapter.serialize());localStorage.setItem(SAVE+'.courier-trial',courierTrial.serialize());saveAvailable=true;}catch{saveAvailable=false;}$('save-state').textContent=saveAvailable?'Progress saved on this device':'Storage unavailable · progress lasts this visit';}
+function save(){try{localStorage.setItem(SAVE,JSON.stringify(profile));localStorage.setItem(SAVE+'.chapter',chapter.serialize());localStorage.setItem(SAVE+'.courier-trial',courierTrial.serialize());if(actionMode){const a=actionMode.serialize();localStorage.setItem(SAVE+'.combat',a.combat);localStorage.setItem(SAVE+'.clips',a.clips);}saveAvailable=true;}catch{saveAvailable=false;}$('save-state').textContent=saveAvailable?'Progress saved on this device':'Storage unavailable · progress lasts this visit';}
 function message(text){$('ride-event').textContent=text;$('journal-event').textContent=text;}
 function mat(color,extra={}){return new THREE.MeshStandardMaterial({color,roughness:.62,metalness:.08,...extra});}
 function mesh(geometry,material,x=0,y=0,z=0,parent=scene){const item=new THREE.Mesh(geometry,material);item.position.set(x,y,z);item.castShadow=true;item.receiveShadow=true;parent.add(item);return item;}
@@ -70,9 +74,10 @@ function makeReflections(){
  const pmrem=new THREE.PMREMGenerator(renderer),target=pmrem.fromCubemap(cube.texture);scene.environment=target.texture;
  if(reflectionTarget)reflectionTarget.dispose();reflectionTarget=target;pmrem.dispose();cube.dispose();set.traverse(o=>{o.geometry?.dispose();o.material?.dispose();});
 }
-function makeWorld(){
+function worldSurfaceUV(geometry){const p=geometry.attributes.position,n=geometry.attributes.normal,u=geometry.attributes.uv;if(!p||!n||!u)throw Error('World material requires position, normal and UV attributes');for(let i=0;i<p.count;i++){const nx=Math.abs(n.getX(i)),ny=Math.abs(n.getY(i)),nz=Math.abs(n.getZ(i));u.setXY(i,(nx>=ny&&nx>=nz?p.getZ(i):p.getX(i))/2,(ny>=nx&&ny>=nz?p.getZ(i):p.getY(i))/2);}u.needsUpdate=true;return geometry;}
+function makeWorld(muralTexture){
  const asphalt=mat(0xc3c7ce,{map:texture('asphalt_01-diffuse-1k.jpg',14,19),normalMap:texture('asphalt_01-nor_gl-1k.jpg',14,19,true),normalScale:new THREE.Vector2(.4,.4),roughnessMap:texture('asphalt_01-rough-1k.jpg',14,19,true),roughness:.89});
- const concrete=mat(0xffffff,{map:texture('vorath-painted-concrete-v5.png'),normalMap:texture('concrete_floor_02-nor_gl-1k.jpg',1,1,true),normalScale:new THREE.Vector2(.32,.32),roughnessMap:texture('concrete_floor_02-rough-1k.jpg',1,1,true),roughness:.9});
+ const concrete=mat(0xb8c0c8,{map:texture('concrete_floor_02-diffuse-1k.jpg'),normalMap:texture('concrete_floor_02-nor_gl-1k.jpg',1,1,true),normalScale:new THREE.Vector2(.32,.32),roughnessMap:texture('concrete_floor_02-rough-1k.jpg',1,1,true),roughness:.9});
  const pale=mat(0x63738b,{roughness:.8}),black=mat(0x11152c),gold=mat(0xe2b75f,{metalness:.8,roughness:.28});
  const brick=mat(0x8b919d,{map:texture('brick_wall_02-diffuse-1k.jpg'),normalMap:texture('brick_wall_02-nor_gl-1k.jpg',1,1,true),normalScale:new THREE.Vector2(.65,.65),roughnessMap:texture('brick_wall_02-rough-1k.jpg',1,1,true),roughness:.92});
  const ground=mesh(new THREE.PlaneGeometry(56,76),asphalt,0,-.035,-10);ground.rotation.x=-Math.PI/2;ground.castShadow=false;
@@ -82,17 +87,17 @@ function makeWorld(){
  surface(-3.35,-1.45,-16.7,-11,concrete,24);
  surface(-3.3,3.3,-27.6,-21.4,concrete,44);
  surface(-3.2,-2,-4.6,2.6,concrete,12);
- const sideGeometry=new THREE.BufferGeometry(),sidePositions=[];
+ const sideGeometry=new THREE.BufferGeometry(),sidePositions=[],sideUVs=[];
  for(const x of [-3.3,3.3])for(let i=0;i<36;i++){
   const z0=-27.6+i*6.2/36,z1=-27.6+(i+1)*6.2/36,h0=terrain(x,z0),h1=terrain(x,z1);
-  sidePositions.push(x,0,z0,x,h0,z0,x,h1,z1,x,0,z0,x,h1,z1,x,0,z1);
+  sidePositions.push(x,0,z0,x,h0,z0,x,h1,z1,x,0,z0,x,h1,z1,x,0,z1);sideUVs.push(z0/2,0,z0/2,h0/2,z1/2,h1/2,z0/2,0,z1/2,h1/2,z1/2,0);
  }
- sideGeometry.setAttribute('position',new THREE.Float32BufferAttribute(sidePositions,3));sideGeometry.computeVertexNormals();
+ sideGeometry.setAttribute('position',new THREE.Float32BufferAttribute(sidePositions,3));sideGeometry.setAttribute('uv',new THREE.Float32BufferAttribute(sideUVs,2));sideGeometry.computeVertexNormals();
  const sideMat=concrete.clone();sideMat.side=THREE.DoubleSide;mesh(sideGeometry,sideMat);
- box(6.6,3.15,.18,0,1.575,-27.66,concrete);
+ worldSurfaceUV(box(6.6,3.15,.18,0,1.575,-27.66,concrete).geometry);
  // Ramps have solid skirts and metal coping, not floating display planes.
- mesh(new RoundedBoxGeometry(3.4,.81,3.6,2,.045),concrete,0,.405,-7.8);
- mesh(new RoundedBoxGeometry(1.2,.31,7.2,2,.035),concrete,-2.6,.155,-1);
+ mesh(worldSurfaceUV(new RoundedBoxGeometry(3.4,.81,3.6,2,.045)),concrete,0,.405,-7.8);
+ mesh(worldSurfaceUV(new RoundedBoxGeometry(1.2,.31,7.2,2,.035)),concrete,-2.6,.155,-1);
  box(.12,.18,6.2,.35,.12,-14.1,gold);box(.12,.18,6.2,3.25,.12,-14.1,gold);
  for(let i=0;i<9;i++){const z=-11.2-i*.66,y=terrain(1.65,z);box(2.7,.12,.16,1.75,y+.012,z,gold);}
  for(const r of RAILS){
@@ -113,6 +118,19 @@ function makeWorld(){
  rod(new THREE.Vector3(-3.3,terrain(-3.3,-27.55)+.025,-27.55),new THREE.Vector3(3.3,terrain(3.3,-27.55)+.025,-27.55),.035,gold);
  // Worn coloured aggregate marks the outer walking/courier lanes without new colliders.
  for(const [x,color]of[[-12,0x398c79],[12,0x6b3c88]]){const lane=asphalt.clone();lane.color.setHex(color);for(const key of ['map','normalMap','roughnessMap']){lane[key]=asphalt[key].clone();lane[key].repeat.set(1,12);lane[key].needsUpdate=true;}const strip=mesh(new THREE.PlaneGeometry(3.6,48),lane,x,-.03,-10);strip.rotation.x=-Math.PI/2;strip.castShadow=false;}
+
+ // Silver coping and black wax sit on real poured-concrete ledge edges.
+ const steel=mat(0x879096,{metalness:.88,roughness:.3}),wax=mat(0x1b1d20,{roughness:.44,metalness:.02});
+ for(const x of [-3.18,-2.02])rod(new THREE.Vector3(x,.345,2.52),new THREE.Vector3(x,.345,-4.52),.026,steel);
+ const waxStrip=mesh(new THREE.PlaneGeometry(.10,5.8),wax,-2.06,.329,-1);waxStrip.rotation.x=-Math.PI/2;waxStrip.castShadow=false;
+ const paint=mat(0xa0aaa6,{map:muralTexture,roughness:.94,metalness:0});
+ const paintedTag=mesh(new THREE.PlaneGeometry(1.35,.38),paint,0,.38,-5.995);paintedTag.castShadow=false;
+ // Actual tyre-scuff ribbons stay flush to the asphalt and outside the course solids.
+ const tracks=[],trackIndices=[];let vertex=0;
+ for(const[x,z,angle,length,bend]of[[-.5,3.6,.28,3.7,.3],[4.7,-1.5,-.17,5.5,-.4],[-4.8,-10,.1,4.4,.2],[6.4,-21,-.2,5,.35]])for(const offset of[-.12,.12]){
+  const width=.034;for(let n=0;n<22;n++){const t=n/21,along=t*length,across=Math.sin(t*Math.PI)*bend+offset,cx=x+Math.sin(angle)*along+Math.cos(angle)*across,cz=z-Math.cos(angle)*along+Math.sin(angle)*across;for(const sign of[-1,1])tracks.push(cx+Math.cos(angle)*width*sign,-.024,cz+Math.sin(angle)*width*sign);if(n){const a=vertex-2;trackIndices.push(a,a+1,a+2,a+1,a+3,a+2);}vertex+=2;}
+ }
+ const scuffsGeometry=new THREE.BufferGeometry();scuffsGeometry.setAttribute('position',new THREE.Float32BufferAttribute(tracks,3));scuffsGeometry.setIndex(trackIndices);scuffsGeometry.computeVertexNormals();const tyreScuffs=mesh(scuffsGeometry,mat(0x0c1014,{roughness:.88,metalness:0}));tyreScuffs.castShadow=false;
  // Five real route lamps encode the ordered line. No lettering is painted over the view.
  const stations=[[-.7,1],[-2.55,-2],[0,-8],[2.15,-14],[0,-26]];
  stations.forEach(([x,z],i)=>{
@@ -181,12 +199,12 @@ function makeSkater(){
  const modelContainer=new THREE.Group();modelContainer.position.y=.114;body.add(modelContainer);
  // Original adult outfit on the licensed Quaternius humanoid rig and real clips.
  assetState['avatar-model']='loading';
- loadAdultRig(THREE,{loader:new GLTFLoader(),url:ASSETS+'vorath-adult-skater-v5.glb',parent:modelContainer,clothMap:texture('vorath-cable-knit-v5.png')}).then(({root:model,mixer,clips,skin,metrics})=>{
+ loadAdultRig(THREE,{loader:new GLTFLoader(),url:actionArt.playerModel||ASSETS+'vorath-adult-skater-v5.glb',parent:modelContainer,clothMap:actionArt.playerModel?null:texture('vorath-cable-knit-v5.png')}).then(({root:model,mixer,clips,skin,metrics})=>{
   model.rotation.y=Math.PI/2;model.updateMatrixWorld(true);Object.assign(avatarMetrics,metrics);
   model.traverse(o=>{if(o.isBone&&o.name.toLowerCase()==='head'){riderHeadBone=o;riderHeadBindScale=o.scale.clone();}});
   avatarMixer=mixer;for(const kind of ['idle','jump','run','crouch'])avatarActions[kind]=mixer.clipAction(clips[kind]);
-  city.installResidents(model,skin,clips.idle,{preserveMaterials:true});
-  riderDress=dressRider(body,model,skinColors,{adult:true});avatarMetrics.accessories=riderDress.count;avatarMetrics.accessoriesFollowBones=riderDress.boneBound;riderDress.update(chapter.state.completed,profile.theme,chapter.state.choice);
+  if(actionArt.playerModel){assetState['resident-template']='loading';loadAdultRig(THREE,{loader:new GLTFLoader(),url:ASSETS+'vorath-adult-skater-v5.glb',parent:new THREE.Group(),clothMap:texture('vorath-cable-knit-v5.png')}).then(npc=>{city.installResidents(npc.root,npc.skin,npc.clips.idle,{preserveMaterials:true});assetState['resident-template']='loaded';}).catch(e=>{assetState['resident-template']='failed';loadErrors.push('resident-template: '+e);});}else city.installResidents(model,skin,clips.idle,{preserveMaterials:true});
+  if(!actionArt.playerModel){riderDress=dressRider(body,model,skinColors,{adult:true});avatarMetrics.accessories=riderDress.count;avatarMetrics.accessoriesFollowBones=riderDress.boneBound;riderDress.update(chapter.state.completed,profile.theme,chapter.state.choice);}avatarMetrics.namedRider=Boolean(actionArt.playerModel);actionMode?.attachRider(model,board);
   assetState['avatar-model']='loaded';assetState['avatar-skin']='loaded';
   for(const kind of ['idle','jump','run','crouch'])assetState['avatar-'+kind]='loaded';
   fallback.visible=false;modelLoaded=true;avatarMetrics.modelLoaded=true;playAvatar('idle');skatePushRig=createSkatePushRig(THREE,{model,body});
@@ -223,17 +241,17 @@ function input(){
   const mapping={1:'KeyF',2:'KeyH',3:'KeyK',4:'KeyU'};
   for(const [button,code]of Object.entries(mapping)){const down=pad.buttons[button]?.pressed;if(down&&!input['p'+button]){trick=code;presses.push(code);}input['p'+button]=down;}
  }
- return {steer,push,brake,ollieHeld,olliePressed,ollieReleased,manual,trick,grind:true,gamepadName};
+ return {steer,push,brake,ollieHeld,olliePressed,ollieReleased,manual,trick,grind:true,gamepadName,fire:held.has('KeyB')||touchHeld.has('fire')||Boolean(pad?.buttons[10]?.pressed),reload:presses.includes('KeyL')||Boolean(pad?.buttons[12]?.pressed)};
 }
 function updateUI(){
  $('score').textContent=String(Math.floor(sim.score)).padStart(4,'0');$('pending').textContent=sim.unbanked>0?String(Math.floor(sim.unbanked)):'';
- $('multiplier').textContent=sim.unbanked>0?'×'+sim.multiplier:'';$('timer').textContent=courierTrial.active?String(Math.ceil(courierTrial.state==='countdown'?courierTrial.countdown:COURIER_ROUTE.limit-courierTrial.elapsed)):sim.sessionMode==='chapter'?'∞':String(Math.ceil(sim.timeLeft));
+ $('multiplier').textContent=sim.unbanked>0?'×'+sim.multiplier:'';$('timer').textContent=selectedRide==='rival'?String(Math.ceil(actionMode?.rival.snapshot().remaining||0)):courierTrial.active?String(Math.ceil(courierTrial.state==='countdown'?courierTrial.countdown:COURIER_ROUTE.limit-courierTrial.elapsed)):sim.sessionMode==='chapter'?'∞':String(Math.ceil(sim.timeLeft));
  $('line-number').textContent=courierTrial.active?courierTrial.next+'/'+COURIER_ROUTE.gates.length:sim.line+'/'+LINE.length;
  $('next-feature-label').textContent=courierTrial.active?(courierTrial.state==='countdown'?'Dispatch · hold the seal':'Courier · '+COURIER_ROUTE.gates[courierTrial.next].name):sim.ended?'Session complete':sim.paused?'Ride paused':sim.running?'Next · '+LINE[sim.line]:'Five features. One clean line.';
  const featureArt=$('next-feature-art'),featureBoxes=['45 65 940 300','100 375 850 315','60 690 940 310','70 995 850 290','20 1280 984 256'];const hideFeature=courierTrial.active||sim.ended||sim.paused;featureArt.toggleAttribute('hidden',hideFeature);featureArt.setAttribute('viewBox',featureBoxes[sim.running?sim.line:0]);$('next-feature-label').classList.toggle('sr-only',!hideFeature);
  $('line-order').querySelectorAll('li').forEach((li,i)=>{li.classList.toggle('done',i<sim.line);li.classList.toggle('current',i===sim.line);});
  $('speed-value').textContent=(sim.speed*3.6).toFixed(1);$('best-score').textContent=profile.best.toLocaleString();$('clean-lines').textContent=String(profile.lines);$('progress').textContent=profile.xp.toLocaleString();
- $('pause').disabled=!sim.running||Boolean(dialogueResident);$('start').disabled=Boolean(dialogueResident);$('ride-mode').disabled=Boolean(dialogueResident);$('pause').textContent=sim.paused?'Resume':'Pause';$('pause').dataset.art=sim.paused?'11':'10';$('pause').title=sim.paused?'Resume':'Pause';
+ $('pause').disabled=!sim.running||Boolean(dialogueResident);$('start').disabled=Boolean(dialogueResident);$('ride-mode').disabled=Boolean(dialogueResident);$('pause').textContent=sim.paused?'Resume':'Pause';$('pause').dataset.art=sim.paused?'11':'10';$('pause').dataset.skateArt=sim.paused?'14':'13';$('pause').title=sim.paused?'Resume':'Pause';
  $('start').textContent=sim.running?'Restart session':sim.ended?'Ride again':'Drop in';
  $('portal-link').hidden=profile.lines<1&&chapter.state.completed<3;$('balance-meter').value=sim.balance;$('balance-zone').hidden=!['grind','manual'].includes(sim.mode);
  for(const button of document.querySelectorAll('[data-theme]')){const index=Number(button.dataset.theme),unlocked=index===0||profile.xp>=(index===1?500:1500);button.disabled=!unlocked;button.setAttribute('aria-pressed',String(profile.theme===index));}
@@ -250,6 +268,12 @@ function processEvents(){
   if(e.type==='line-clear'){message('Line clear. The eye remembers. A new door is open below.');save();burst(sim.x,sim.y+1,sim.z,0xcb6aff,34);}
   if(e.type==='session-end'){message('Session banked · '+sim.score+' points, '+sim.completedLines+' clean lines. Ride again to build your best.');save();}
  }
+}
+function renderAction(){
+ if(!actionMode||selectedRide!=='rival')return;const s=actionMode.snapshot(),c=s.combat,r=s.rival;
+ $('action-health').textContent=Math.ceil(c.health);$('action-ammo').textContent=c.reloading?'Reloading…':c.ammo+' / '+c.reserve;$('action-stars').textContent=c.tokenCount+' / 16';$('art-score').textContent=String(r.score);$('heat-clock').textContent=r.finished?(r.result.winner==='Draw'?'Draw':r.result.winner+' wins'):(Math.ceil(r.remaining)+' s');$('aim-lock').setAttribute('aria-pressed',String(s.aimAssist));$('aim-state').textContent=s.aimAssist?'Aim assist: face a sentry to lock':'Free aim: shoot where the camera faces';
+ const list=$('clip-objectives');for(const objective of s.clips.challenges){let li=list.querySelector('[data-clip="'+objective.id+'"]');if(!li){li=document.createElement('li');li.dataset.clip=objective.id;list.append(li);}li.textContent=(objective.completed?'✓ ':objective.pending?'Bank it · ':'')+objective.title;li.title=objective.objective;}
+ const key=s.clips.unlockedBoards.join('|')+'|'+s.selectedBoard;if($('cover-rack').dataset.key!==key){$('cover-rack').dataset.key=key;const rack=$('cover-rack');rack.replaceChildren();for(const record of [{id:'original',title:'Original',url:ASSETS+'deck.jpg'},...actionArt.boards]){const button=document.createElement('button');button.dataset.cover=record.id;button.disabled=record.id!=='original'&&!s.clips.unlockedBoards.includes(record.id);button.setAttribute('aria-pressed',String(record.id===s.selectedBoard));button.title=record.title+(button.disabled?' · collect stars or finish clips':' · equip');const image=document.createElement('img');image.src=record.url;image.alt=record.title;button.append(image);rack.append(button);}}
 }
 function renderCourierTrial(){
  const s=courierTrial.snapshot(sim),a=s.availability,key=s.revision+'|'+Math.floor(s.remaining*10)+'|'+Math.ceil(s.countdown)+'|'+Math.floor(a.distance)+'|'+a.canStart+'|'+Boolean(dialogueResident);if(key===trialUIKey)return;trialUIKey=key;
@@ -296,8 +320,8 @@ function frame(time){
  const delta=Math.min((time-lastTime)/1000||0,.1);lastTime=time;
  if(!shaders.lost){
   const control=input();accumulator+=delta;let ticks=0;
-  while(accumulator>=1/120&&ticks<12){sim.step(1/120,control);if(control.ollieReleased)queuedOllieTrick=null;chapter.step(1/120,sim);courierTrial.step(sim);presses=[];releases=[];control.olliePressed=false;control.ollieReleased=false;control.trick=null;accumulator-=1/120;ticks++;}
-  if(ticks===12)accumulator=0;
+  while(accumulator>=1/120&&ticks<12){sim.step(1/120,control);if(control.ollieReleased)queuedOllieTrick=null;chapter.step(1/120,sim);courierTrial.step(sim);actionMode?.step(1/120,control,sim.yaw+orbit);control.reload=false;presses=[];releases=[];control.olliePressed=false;control.ollieReleased=false;control.trick=null;accumulator-=1/120;ticks++;}
+  if(ticks===12)accumulator=0;actionSaveClock+=delta;if(selectedRide==='rival'&&actionSaveClock>4){save();actionSaveClock=0;}
   processEvents();
   // Persist newly earned route records before their success/crest renders.
   if(lastTrialSavedRevision!==courierTrial.revision){lastTrialSavedRevision=courierTrial.revision;save();}
@@ -311,39 +335,41 @@ function frame(time){
   skater.board.rotation.set(sim.mode==='manual'?-.15:0,sim.trick?Math.PI*2*sim.trick.spin*t:0,sim.trick?Math.PI*2*sim.trick.flip*t:0);
   if(sim.trick?.id==='180')skater.body.rotation.y+=Math.PI*t;
   skater.root.rotation.z+=sim.mode==='bail'?.65:0;
-  playAvatar(sim.mode==='air'?'jump':sim.charge>.03||sim.mode==='manual'?'crouch':'idle');skatePushRig?.reset();if(avatarMixer)avatarMixer.update(sim.paused?0:delta);skatePushRig?.update(sim.paused?0:delta,control.push&&sim.grounded&&sim.mode!=='manual'&&sim.charge<=.03&&sim.speed>.2);if(riderHeadBone&&riderHeadBindScale)riderHeadBone.scale.copy(riderHeadBindScale);if(riderDress)riderDress.update(chapter.state.completed,profile.theme,chapter.state.choice);if(city)city.update(sim.paused?0:delta,time,sim);if(streetAtmosphere)streetAtmosphere.update(sim.paused?0:delta,time*.001);if(courierCourse)courierCourse.update(time);courierWheelJewels.forEach(j=>{j.visible=chapter.state.completed>=2;});
+  playAvatar(sim.mode==='air'?'jump':sim.charge>.03||sim.mode==='manual'?'crouch':'idle');skatePushRig?.reset();if(avatarMixer)avatarMixer.update(sim.paused?0:delta);skatePushRig?.update(sim.paused?0:delta,control.push&&sim.grounded&&sim.mode!=='manual'&&sim.charge<=.03&&sim.speed>.2,{...sim.snapshot(),steer:control.steer,aim:actionMode?.poseAim()});if(riderHeadBone&&riderHeadBindScale)riderHeadBone.scale.copy(riderHeadBindScale);if(riderDress)riderDress.update(chapter.state.completed,profile.theme,chapter.state.choice);if(city)city.update(sim.paused?0:delta,time,sim);if(streetAtmosphere)streetAtmosphere.update(sim.paused?0:delta,time*.001);if(courierCourse)courierCourse.update(time);courierWheelJewels.forEach(j=>{j.visible=chapter.state.completed>=2;});
   if(sim.mode==='grind'&&frameCount%4===0)burst(sim.x,sim.y,sim.z,0xffc46a,2);
   for(let i=sparkParticles.length-1;i>=0;i--){const p=sparkParticles[i];p.life-=delta;p.vy-=8*delta;p.mesh.position.x+=p.vx*delta;p.mesh.position.y+=p.vy*delta;p.mesh.position.z+=p.vz*delta;p.mesh.scale.setScalar(Math.max(.01,p.life));if(p.life<=0){scene.remove(p.mesh);p.mesh.geometry.dispose();p.mesh.material.dispose();sparkParticles.splice(i,1);}}
-  const heading=sim.yaw+orbit,follow=5.2+(motion?0:sim.speed*.07);
-  cameraDesired.set(sim.x+Math.sin(heading)*follow,sim.y+1.85+cameraTilt*1.5,sim.z+Math.cos(heading)*follow);
-  cameraDesired.y=Math.max(cameraDesired.y,terrain(cameraDesired.x,cameraDesired.z)+1.8);
-  lookDesired.set(sim.x-Math.sin(sim.yaw)*1.5,sim.y+.9,sim.z-Math.cos(sim.yaw)*1.5);
+  const heading=sim.yaw+orbit,follow=3.7+(motion?0:sim.speed*.06);
+  cameraDesired.set(sim.x+Math.sin(heading)*follow,sim.y+1.45+cameraTilt*.9,sim.z+Math.cos(heading)*follow);
+  cameraDesired.y=Math.max(cameraDesired.y,terrain(cameraDesired.x,cameraDesired.z)+1.4);
+  lookDesired.set(sim.x-Math.sin(sim.yaw)*.9,sim.y+.95,sim.z-Math.cos(sim.yaw)*.9);
   cameraAnchor.set(sim.x,sim.y+1.2,sim.z);const safeDesired=cameraOutsideSolids(cameraAnchor,cameraDesired,cameraSolids);cameraDesired.set(safeDesired.x,safeDesired.y,safeDesired.z);
   camera.position.lerp(cameraDesired,1-Math.exp(-delta*5));const safeActual=cameraOutsideSolids(cameraAnchor,camera.position,cameraSolids);camera.position.set(safeActual.x,safeActual.y,safeActual.z);cameraOcclusion={blocked:safeDesired.blocked||safeActual.blocked,obstacle:safeDesired.obstacle||safeActual.obstacle||null,distance:safeActual.distance,solidCount:cameraSolids.length};lookSmoothed.lerp(lookDesired,1-Math.exp(-delta*9));camera.lookAt(lookSmoothed);
   camera.fov=58+(motion?0:Math.min(6,sim.speed*.4));camera.updateProjectionMatrix();
   routeLights.forEach((light,i)=>{light.material.color.set(i<sim.line?0xffc666:i===sim.line?0x63ffe5:0x5d346f);light.material.emissive.copy(light.material.color);});
   portalRings.forEach((ring,i)=>{if(!motion)ring.rotation.z=Math.sin(time*.0002+i)*.08;ring.material.emissiveIntensity=profile.lines>0||chapter.state.completed===3?2.3:1.1;});
   skater.cap.material.color.set(skinColors[profile.theme]);skater.deckMaterial.color.set(skinColors[profile.theme]);
-  renderer.render(scene,camera);firstFrame=true;frameCount++;elapsedFrames+=delta;
+  actionMode?.update(delta);renderer.render(scene,camera);firstFrame=true;frameCount++;elapsedFrames+=delta;
   if(elapsedFrames>1){measuredFps=frameCount/elapsedFrames;frameCount=0;elapsedFrames=0;}
-  if(Math.floor(time/100)%2===0){updateUI();renderChapter();renderCourierTrial();}
+  if(Math.floor(time/100)%2===0){updateUI();renderChapter();renderCourierTrial();renderAction();}
  }
 }
-function loadControlAtlas(){for(const [key,file]of [['ui-atlas','vorath-controls-v1.png'],['ui-title','kosher-lines-title-v4.png'],['ui-objectives','kosher-objectives-v4.png']]){const image=new Image();assetState[key]='loading';image.onload=()=>{assetState[key]='loaded';};image.onerror=()=>{assetState[key]='failed';loadErrors.push(key);};image.src=ASSETS+file;}}
+function loadControlAtlas(){for(const [key,file]of [['ui-skate-atlas','vorath-skate-controls-v6.png'],['ui-atlas','vorath-controls-v1.png'],['ui-title','kosher-lines-title-v4.png'],['ui-objectives','kosher-objectives-v4.png']]){const image=new Image();assetState[key]='loading';image.onload=()=>{assetState[key]='loaded';};image.onerror=()=>{assetState[key]='failed';loadErrors.push(key);};image.src=ASSETS+file;}}
 function installInput(){
  const clear=()=>{held.clear();touchHeld.clear();touchTricks.clear();queuedOllieTrick=null;presses=[];releases=[];document.querySelectorAll('.touch-controls .pressed').forEach(button=>button.classList.remove('pressed'));};
  window.addEventListener('keydown',e=>{
   if(dialogueResident){if(e.code==='Escape'){e.preventDefault();closeConversation();}return;}
   if(!keysOwned.includes(e.code)||e.target.closest?.('input,select,textarea'))return;
-  e.preventDefault();if(!e.repeat){presses.push(e.code);if(e.code==='KeyT'){useCourierTrial();return;}if(e.code==='KeyE'){openConversation();return;}if(e.code==='KeyR'){sim.reset(true);save();}if(e.code==='KeyP'||e.code==='Escape')sim.togglePause();}
+  e.preventDefault();if(!e.repeat){presses.push(e.code);if(e.code==='KeyQ'&&selectedRide==='rival'){actionMode.toggleAim();return;}if(e.code==='KeyT'){useCourierTrial();return;}if(e.code==='KeyE'){openConversation();return;}if(e.code==='KeyR'){sim.reset(true);save();}if(e.code==='KeyP'||e.code==='Escape')sim.togglePause();}
   held.add(e.code);
  });
  window.addEventListener('keyup',e=>{if(keysOwned.includes(e.code)){e.preventDefault();held.delete(e.code);releases.push(e.code);}});
  window.addEventListener('blur',()=>{clear();if(sim.running&&!sim.paused)sim.togglePause();updateUI();});
  document.addEventListener('visibilitychange',()=>{if(document.hidden){clear();pausedByVisibility=sim.running&&!sim.paused;if(pausedByVisibility)sim.togglePause();}lastTime=performance.now();});
- canvas.addEventListener('pointerdown',e=>{dragging=true;lastPointer={x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId);});
+ canvas.addEventListener('contextmenu',e=>{if(selectedRide==='rival')e.preventDefault();});
+ canvas.addEventListener('pointerdown',e=>{if(selectedRide==='rival'&&e.button===0){touchHeld.add('fire');canvas.setPointerCapture(e.pointerId);return;}dragging=true;lastPointer={x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId);});
  canvas.addEventListener('pointermove',e=>{if(dragging&&lastPointer){orbit-=(e.clientX-lastPointer.x)*.005;cameraTilt=clamp(cameraTilt+(e.clientY-lastPointer.y)*.002,-.1,1);lastPointer={x:e.clientX,y:e.clientY};}});
- canvas.addEventListener('pointerup',()=>{dragging=false;lastPointer=null;});canvas.addEventListener('pointercancel',()=>{dragging=false;lastPointer=null;});
+ canvas.addEventListener('pointerup',()=>{touchHeld.delete('fire');dragging=false;lastPointer=null;});canvas.addEventListener('pointercancel',()=>{touchHeld.delete('fire');dragging=false;lastPointer=null;});
+ canvas.addEventListener('lostpointercapture',()=>touchHeld.delete('fire'));
  for(const button of document.querySelectorAll('[data-hold]')){
   const code=button.dataset.hold;
   button.addEventListener('pointerdown',e=>{e.preventDefault();button.setPointerCapture(e.pointerId);touchHeld.add(code);if(code==='ollie'){queuedOllieTrick=null;presses.push('Space');}button.classList.add('pressed');});
@@ -362,7 +388,7 @@ function installInput(){
   button.addEventListener('lostpointercapture',e=>{touchTricks.delete(e.pointerId);button.classList.remove('pressed');});
   button.addEventListener('click',e=>{if(e.detail===0)presses.push(code);});
  }
- $('start').addEventListener('click',()=>{sim.start();clear();orbit=0;cameraTilt=.38;save();message('Drop in. Build speed, then follow the five lamps.');updateUI();canvas.focus();});
+ $('start').addEventListener('click',()=>{sim.start();if(selectedRide==='rival')actionMode.start();clear();orbit=0;cameraTilt=.38;save();message(selectedRide==='rival'?'Three minutes. Outskate Art, shoot the sentries, land the clip.':'Drop in. Build speed, then follow the five lamps.');updateUI();canvas.focus();});
  $('pause').addEventListener('click',()=>{sim.togglePause();clear();updateUI();});
  $('trial-toggle').addEventListener('click',()=>{courierTrial.setEnabled(!courierTrial.enabled);renderCourierTrial();});
  $('trial-start').addEventListener('click',startCourierTrial);
@@ -372,7 +398,9 @@ function installInput(){
  $('contract-accept').addEventListener('click',()=>{if(chapter.accept(dialogueResident)){message(CONTRACTS[chapter.state.completed].title+' accepted.');save();}closeConversation();renderChapter();});
  $('contract-complete').addEventListener('click',()=>{if(chapter.turnIn(dialogueResident)){message(chapter.notifications.at(-1).text);save();}closeConversation();renderChapter();});
  for(const button of document.querySelectorAll('[data-ending]'))button.addEventListener('click',()=>{if(chapter.turnIn(dialogueResident,button.dataset.ending)){message(chapter.notifications.at(-1).text);save();}closeConversation();renderChapter();});
- $('ride-mode').addEventListener('change',()=>{if(dialogueResident)closeConversation();sim.sessionMode=$('ride-mode').value==='chapter'?'chapter':'arcade';$('mode-description').textContent=sim.sessionMode==='chapter'?'Return the Light · no clock · chapter progress saves on this device.':'Two-minute arcade · chapter progress carries across both modes.';sim.reset(true);clear();save();message(sim.sessionMode==='chapter'?'No clock. Meet the keeper, reconnect the gardens, return the light.':'Two minutes. Five features. One clean line.');updateUI();});
+ $('ride-mode').addEventListener('change',()=>{if(dialogueResident)closeConversation();selectedRide=$('ride-mode').value;sim.sessionMode=selectedRide==='arcade'?'arcade':'chapter';actionMode.setEnabled(selectedRide==='rival');$('action-controls').hidden=selectedRide!=='rival';$('action-brief').hidden=selectedRide!=='rival';$('mode-description').textContent=selectedRide==='rival'?'BLP vs Art · three-minute heat, then sandbox · clips and cover decks save locally.':sim.sessionMode==='chapter'?'Return the Light · no clock · chapter progress saves on this device.':'Two-minute arcade · chapter progress carries across both modes.';sim.reset(true);if(selectedRide==='rival')actionMode.start();clear();save();message($('mode-description').textContent);updateUI();renderAction();});
+ $('reload').addEventListener('click',()=>presses.push('KeyL'));$('aim-lock').addEventListener('click',()=>{actionMode.toggleAim();renderAction();});
+ $('cover-rack').addEventListener('click',event=>{const button=event.target.closest('[data-cover]');if(button&&actionMode.selectBoard(button.dataset.cover)){save();renderAction();}});
  $('camera-reset').addEventListener('click',()=>{orbit=0;cameraTilt=.38;});
  $('quality').addEventListener('change',()=>{quality=$('quality').value;$('quality-description').textContent=quality==='low'?'Low power · simpler distant detail':'Shadows + detail';renderer.setPixelRatio(quality==='low'?0.5:Math.min(devicePixelRatio||1,1.5));renderer.shadowMap.enabled=quality!=='low';streetAtmosphere?.setQuality(quality);city?.setQuality(quality);resize();});
  for(const button of document.querySelectorAll('[data-theme]'))button.addEventListener('click',()=>{profile.theme=Number(button.dataset.theme);save();updateUI();});
@@ -386,17 +414,17 @@ try{
  scene.add(new THREE.HemisphereLight(0x8099b8,0x1c1528,1.05));
  const moon=new THREE.DirectionalLight(0xb8cff6,2.5);moon.position.set(-12,24,12);moon.castShadow=true;
  moon.shadow.mapSize.set(1024,1024);Object.assign(moon.shadow.camera,{left:-28,right:28,top:28,bottom:-28,near:1,far:75});moon.shadow.bias=-.0002;scene.add(moon);
- const warm=new THREE.DirectionalLight(0xd65342,.95);warm.position.set(14,10,-20);scene.add(warm);makeReflections();loadControlAtlas();
- makeWorld();streetAtmosphere=createStreetAtmosphere({THREE,scene,quality,reducedMotion:motion});cameraSolids.push(...streetAtmosphere.cameraBounds);const mosaic=texture('vorath-eye-mosaic-v1.png'),mural=texture('vorath-acid-eye-mural-v1.png');city=buildCity(scene,chapter,{mosaic,mural,repairKitURL:ASSETS+'keeper-repair-station-v2.glb',bayKitURL:ASSETS+'kosher-arcade-bay-v1.glb',storyPropsURL:ASSETS+'kosher-story-props-v1.glb',onStoryStatus(status,error){assetState['story-props-model']=status;if(error)loadErrors.push('story-props-model: '+error);},onBayStatus(status,error){assetState['arcade-bay-model']=status;if(error)loadErrors.push('arcade-bay-model: '+error);},onKitStatus(status,error){assetState['keeper-station-model']=status;if(error)loadErrors.push('keeper-station-model: '+error);}});cameraSolids.push(...city.cameraBounds);courierCourse=buildCourierCourse(scene,courierTrial,{reducedMotion:motion});skater=makeSkater();courierCourse.mountPrize(skater.board);bodyRig=skater.body;boardRig=skater.board;installInput();resize();new ResizeObserver(resize).observe(canvas);
+ const warm=new THREE.DirectionalLight(0xffad72,.5);warm.position.set(14,10,-20);scene.add(warm);makeReflections();loadControlAtlas();
+ const mural=texture('vorath-acid-eye-mural-v1.png');makeWorld(mural);streetAtmosphere=createStreetAtmosphere({THREE,scene,quality,reducedMotion:motion});cameraSolids.push(...streetAtmosphere.cameraBounds);const mosaic=texture('vorath-eye-mosaic-v1.png');city=buildCity(scene,chapter,{mosaic,mural,repairKitURL:ASSETS+'keeper-repair-station-v2.glb',bayKitURL:ASSETS+'kosher-arcade-bay-v1.glb',storyPropsURL:ASSETS+'kosher-story-props-v1.glb',onStoryStatus(status,error){assetState['story-props-model']=status;if(error)loadErrors.push('story-props-model: '+error);},onBayStatus(status,error){assetState['arcade-bay-model']=status;if(error)loadErrors.push('arcade-bay-model: '+error);},onKitStatus(status,error){assetState['keeper-station-model']=status;if(error)loadErrors.push('keeper-station-model: '+error);}});cameraSolids.push(...city.cameraBounds);courierCourse=buildCourierCourse(scene,courierTrial,{reducedMotion:motion});actionMode=createActionMode(THREE,{scene,sim,art:actionArt,colliders:[...COLLIDERS,...cameraSolids],readSave:readActionSave,saveKey:SAVE,onStatus:message});skater=makeSkater();courierCourse.mountPrize(skater.board);bodyRig=skater.body;boardRig=skater.board;installInput();resize();new ResizeObserver(resize).observe(canvas);
  canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();shaders.lost=true;if(sim.running&&!sim.paused)sim.togglePause();message('Graphics paused while the context recovers. Saved progress is safe.');});
  canvas.addEventListener('webglcontextrestored',()=>{shaders.lost=false;makeReflections();lastTime=performance.now();accumulator=0;resize();message('Graphics restored. Resume the ride when ready.');});
  window.addEventListener('pagehide',event=>{save();if(!event.persisted){disposed=true;streetAtmosphere?.dispose();reflectionTarget?.dispose();renderer.dispose();}else if(sim.running&&!sim.paused)sim.togglePause();});
  window.addEventListener('pageshow',event=>{if(event.persisted){lastTime=performance.now();accumulator=0;resize();}});
- if(new URLSearchParams(window.location.search).get('mode')==='chapter'){$('ride-mode').value='chapter';$('ride-mode').dispatchEvent(new Event('change',{bubbles:true}));}
+ const requestedMode=new URLSearchParams(window.location.search).get('mode');if(['chapter','rival'].includes(requestedMode)){$('ride-mode').value=requestedMode;$('ride-mode').dispatchEvent(new Event('change',{bubbles:true}));}
  requestAnimationFrame(frame);updateUI();renderChapter();renderCourierTrial();save();
 }catch(error){loadErrors.push(String(error));$('graphics-error').hidden=false;$('graphics-error').textContent='The 3D plaza could not start on this graphics context. '+String(error.message||error);}
 window.__KOSHER_LINES__=Object.freeze({
- snapshot:()=>({...sim.snapshot(),career:chapter.snapshot(),courierTrial:courierTrial.snapshot(sim),graphics:graphicsSnapshot(),renderer:{firstFrame,modelLoaded,modelError,avatar:{...avatarMetrics,pose:{activeClip:avatarCurrent,skatePush:skatePushRig?.snapshot()||null,bodyScaleY:skater?.body.scale.y,modelY:skater?.modelContainer.position.y},animations:[...avatarMetrics.animations],headScale:riderHeadBone?{x:riderHeadBone.scale.x,y:riderHeadBone.scale.y,z:riderHeadBone.scale.z}:null},assets:{...assetState},texturesLoaded:Object.keys(assetState).filter(name=>/\.(jpg|png|webp)$/.test(name)&&assetState[name]==='loaded').length+Number(avatarMetrics.skinLoaded),errors:[...loadErrors],contextLost:shaders.lost,fps:Math.round(measuredFps),quality,courierCourse:courierCourse?.snapshot()||null,wardrobe:riderDress?.snapshot()||null,wheelJewelsVisible:courierWheelJewels.filter(j=>j.visible).length,reflections:{capturedFaceSize:64,textureWidth:reflectionTarget?.width||0,textureHeight:reflectionTarget?.height||0,environmentAssigned:scene?.environment===reflectionTarget?.texture},city:city?{...city.metrics,...city.snapshot()}:null,streetscape:streetAtmosphere?.stats()||null,drawCalls:renderer?.info.render.calls||0},camera:camera?{x:camera.position.x,y:camera.position.y,z:camera.position.z,occlusion:{...cameraOcclusion}}:null,storageAvailable:saveAvailable}),
+ snapshot:()=>({...sim.snapshot(),selectedRide,action:actionMode?.snapshot()||null,career:chapter.snapshot(),courierTrial:courierTrial.snapshot(sim),graphics:graphicsSnapshot(),renderer:{firstFrame,modelLoaded,modelError,avatar:{...avatarMetrics,pose:{activeClip:avatarCurrent,skatePush:skatePushRig?.snapshot()||null,bodyScaleY:skater?.body.scale.y,modelY:skater?.modelContainer.position.y},animations:[...avatarMetrics.animations],headScale:riderHeadBone?{x:riderHeadBone.scale.x,y:riderHeadBone.scale.y,z:riderHeadBone.scale.z}:null},assets:{...assetState},texturesLoaded:Object.keys(assetState).filter(name=>/\.(jpg|png|webp)$/.test(name)&&assetState[name]==='loaded').length+Number(avatarMetrics.skinLoaded),errors:[...loadErrors],contextLost:shaders.lost,fps:Math.round(measuredFps),quality,courierCourse:courierCourse?.snapshot()||null,wardrobe:riderDress?.snapshot()||null,wheelJewelsVisible:courierWheelJewels.filter(j=>j.visible).length,reflections:{capturedFaceSize:64,textureWidth:reflectionTarget?.width||0,textureHeight:reflectionTarget?.height||0,environmentAssigned:scene?.environment===reflectionTarget?.texture},city:city?{...city.metrics,...city.snapshot()}:null,streetscape:streetAtmosphere?.stats()||null,drawCalls:renderer?.info.render.calls||0},camera:camera?{x:camera.position.x,y:camera.position.y,z:camera.position.z,occlusion:{...cameraOcclusion}}:null,storageAvailable:saveAvailable}),
  provenance:'Reconstructed missing simulation and rendering from retained Grok source fragments. Original art retained; no exact full-source restoration claimed.'
 });
 window.render_game_to_text=()=>JSON.stringify(window.__KOSHER_LINES__.snapshot());

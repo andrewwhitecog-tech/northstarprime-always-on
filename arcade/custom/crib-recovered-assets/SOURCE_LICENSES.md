@@ -43,3 +43,6 @@ kosher-lines-title-v4.png and kosher-objectives-v4.png are original sculpted UI 
 vorath-adult-skater-v5.glb retains the Quaternius CC0 body,65-bone rig and four source clips, with NorthStar weighted clothing adjustments. vorath-cable-knit-v5.png and vorath-painted-concrete-v5.png are original materials generated using the built-in OpenAI image tool; no CC0 grant or seamless-tiling claim is asserted. Rest-space triplanar garment mapping and low-detail architecture are original NorthStar code.
 
 kosher-story-props-v1.glb is original Antigravity/NorthStar work: power-cell cradle, carried memory parcel, spectral folio. No external model/texture request at runtime. Three.js r160 RoundedBoxGeometry is retained under the included MIT license.
+
+## v06 action and skating controls
+Original NorthStar generated painted control atlases `vorath-skate-controls-v6.png` and `vorath-action-controls-v6.png`, produced with the owner-covered image generator, then inspected on disk. No third-party cover/poster originals are in this public asset tree. Named fan-rider and album/tour artwork packs are private and are not represented as licensed public releases.

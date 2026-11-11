@@ -1,3 +1,4 @@
+import { configureWovenMaterial } from './woven-material.js';
 import * as THREE from '/static/vendor/three/0.160.0/build/three.module.js';
 import { GLTFLoader } from '/static/vendor/three/0.160.0/examples/jsm/loaders/GLTFLoader.js';
 import { installStreetBays } from './street-bays.js';
@@ -10,8 +11,8 @@ export function wovenTexture(){
  for(let y=0;y<256;y+=4){c.fillStyle=y%8?'#04081850':'#ffe9c125';c.fillRect(0,y,256,1);}for(let x=0;x<256;x+=4){c.fillStyle='#03051435';c.fillRect(x,0,1,256);}
  const t=new THREE.CanvasTexture(canvas);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
 }
-export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=null,onKitStatus=()=>{},bayKitURL=null,onBayStatus=()=>{}}={}){
- const cameraBounds=[],repairFallback=[],repairDetails=[];const keeperKit={loaded:false,error:null,meshes:0,triangles:0,materials:0,bounds:null,corePresent:false};let geometryCount=0,occupiedResidents=0;const animated=[],beaconMeshes=[],publicLights=[],markerMeshes=[],materials=[],residentRecords=[],npcErrors=[],detailMotion=[],repairCells=[],courierSignals=[],archiveDisplays=[];let residentRigInstallCount=0;
+export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=null,onKitStatus=()=>{},bayKitURL=null,onBayStatus=()=>{},storyPropsURL=null,onStoryStatus=()=>{}}={}){
+ const cameraBounds=[],repairFallback=[],repairDetails=[],storyPropRecords=[];const storyProps={loaded:false,error:null,groups:0,triangles:0};const keeperKit={loaded:false,error:null,meshes:0,triangles:0,materials:0,bounds:null,corePresent:false};let geometryCount=0,occupiedResidents=0;const animated=[],beaconMeshes=[],publicLights=[],markerMeshes=[],materials=[],residentRecords=[],npcErrors=[],detailMotion=[],repairCells=[],courierSignals=[],archiveDisplays=[];let residentRigInstallCount=0;
  const material=(color,extra={})=>{const m=new THREE.MeshStandardMaterial({color,roughness:.58,metalness:.25,...extra});materials.push(m);return m;};
  const ink=material(0x090c14,{metalness:.72,roughness:.39}),stone=material(0x303742,{roughness:.92,metalness:.07}),gold=material(0xb89158,{metalness:.82,roughness:.34}),soil=material(0x132124),wood=material(0x50362e,{roughness:.9}),leaf=material(0x176b57),cloth=material(0xffffff,{map:wovenTexture(),roughness:.9});
  // Original material study: fine scratches and scored aggregate affect actual
@@ -101,10 +102,11 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
  RESIDENTS.forEach(person);
  // Warm human detail: reading and resting residents beside public seating, in alcoves beyond the course.
  for(let i=0;i<6;i++){
-  const x=(i%2?-1:1)*(18.7+(i%3)*.4),z=8-Math.floor(i/2)*12;
-  const group=new THREE.Group();group.position.set(x,0,z);group.rotation.y=x>0?-Math.PI/2:Math.PI/2;scene.add(group);
+  const x=(i%2?-1:1)*(18.7+(i%3)*.4),z=1-Math.floor(i/2)*12;
+  const group=new THREE.Group();group.position.set(x,0,z);group.rotation.y=x>0?Math.PI/2:-Math.PI/2;scene.add(group);
   cube(.42,.62,.28,0,.9,0,i%2?cloth:jewel,group);add(new THREE.SphereGeometry(.15,8,6),material(i%2?0x8b5b48:0xbf9276),0,1.38,0,group);
   for(const sign of [-1,1]){rod(new THREE.Vector3(sign*.1,.6,0),new THREE.Vector3(sign*.1,.3,-.3),.075,ink,group);cube(.18,.1,.3,sign*.1,.1,-.3,ink,group);}cube(.55,.08,.45,0,.77,-.3,wood,group);
+  for(const sign of [-1,1])rod(new THREE.Vector3(sign*.23,1.13,0),new THREE.Vector3(sign*.17,.83,-.22),.065,i%2?cloth:jewel,group);cube(.64,.12,.48,0,.54,.04,wood,group);for(const a of [-.24,.24])for(const b of [-.12,.2])cube(.06,.5,.06,a,.25,b,ink,group);
   occupiedResidents++;
  }
  // Street skyline, divided glazing and elevated cables now live in streetscape.js.
@@ -209,32 +211,14 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
  }
 
 
- // Exposed service gantries turn the shop edge into a distinct industrial
- // street silhouette. Every support remains beyond the existing skate wall.
- const braceBolts=[],servicePanels=[];
- for(const side of [-1,1])for(let bay=0;bay<7;bay++){
-  const x=side*22.8,z=10-bay*6.1;
-  for(const offset of [-2.5,2.5]){
-   const a=new THREE.Vector3(x,3.9,z+offset),b=new THREE.Vector3(x-side*1.25,6.6,z+offset);
-   rod(a,b,.085,ink);rod(b,new THREE.Vector3(x,7.4,z+offset),.045,gold);
-   braceBolts.push([a.x-side*.08,a.y,a.z,.07,.07,.07]);braceBolts.push([b.x,b.y,b.z,.07,.07,.07]);
-  }
-  cube(.12,.18,5.2,x-side*1.22,6.6,z,ink);
-  const finShape=new THREE.Shape();finShape.moveTo(0,0);finShape.lineTo(.9,0);finShape.lineTo(.28,1.6);finShape.lineTo(0,1.05);finShape.closePath();
-  const fin=add(new THREE.ExtrudeGeometry(finShape,{depth:.12,bevelEnabled:true,bevelSegments:1,bevelSize:.018,bevelThickness:.018}),bay%2?copper:ink,x-side*.3,7.35,z-.1);fin.rotation.y=side*Math.PI/2;
-  for(let n=0;n<4;n++)servicePanels.push([x-side*.63,4.3+n*.3,z-2.4,.2,.08,.35]);
-  const tubeSide=neon[(bay+1)%4];tube([[x-side*.75,4.1,z+1.7],[x-side*.75,5.8,z+1.7],[x-side*.75,6.1,z+1.25]],.025,tubeSide);
- }
- instances(new THREE.SphereGeometry(1,6,4),gold,braceBolts);instances(new THREE.BoxGeometry(1,1,1),copper,servicePanels);
-
-
+ // The authored kit supplies the shop gantries; duplicate legacy struts removed.
  // The acid-eye painting is a world-mounted street mural on a concrete
  // service wall. It never replaces the live scene or covers the playfield.
  if(mural){mural.wrapS=mural.wrapT=THREE.ClampToEdgeWrapping;mural.repeat.set(1,1);
-  cube(10.5,5.5,.28,0,9.9,-35.1,stone);
-  const painted=add(new THREE.PlaneGeometry(10,5),material(0xffffff,{map:mural,roughness:.88,metalness:.03,emissive:0x334248,emissiveMap:mural,emissiveIntensity:.3}),0,9.9,-34.94);painted.castShadow=false;
-  for(const x of [-5.2,5.2]){cube(.14,12.6,.28,x,6.3,-35.1,ink);for(const y of [7.25,9.9,12.55])add(new THREE.CylinderGeometry(.07,.07,.045,6),gold,x,y,-34.9).rotation.x=Math.PI/2;}
-  for(const y of [7.25,12.55])cube(10.5,.12,.4,0,y,-35.1,ink);
+  cube(10.5,5.5,.28,0,12.5,-37.25,stone);
+  const painted=add(new THREE.PlaneGeometry(10,5),material(0xffffff,{map:mural,roughness:.88,metalness:.03,emissive:0x334248,emissiveMap:mural,emissiveIntensity:.3}),0,12.5,-37.09);painted.castShadow=false;
+  for(const x of [-5.2,5.2]){cube(.14,15.2,.28,x,7.6,-37.25,ink);for(const y of [9.85,12.5,15.15])add(new THREE.CylinderGeometry(.07,.07,.045,6),gold,x,y,-37.05).rotation.x=Math.PI/2;}
+  for(const y of [9.85,15.15])cube(10.5,.12,.4,0,y,-37.25,ink);
  }
 
 
@@ -248,8 +232,13 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
   }catch(error){keeperKit.error=String(error?.message||error);onKitStatus('failed',keeperKit.error);}
  },undefined,error=>{keeperKit.error=String(error?.message||error);onKitStatus('failed',keeperKit.error);});}
 
+ if(storyPropsURL){onStoryStatus('loading');new GLTFLoader().load(storyPropsURL,gltf=>{try{
+ const specs=[['KeeperPowerCellCradle',9.75,.95,8.8,0],['CourierMemoryParcel',-16.7,.89,-6,Math.PI/2],['ArchivistSpectralFolio',12.6,1,-29.4,Math.PI]];
+ for(const[name,x,y,z,rotation]of specs){const model=gltf.scene.getObjectByName(name);if(!model)throw Error('Missing story prop '+name);model.removeFromParent();model.position.set(0,0,0);model.updateMatrixWorld(true);const bounds=new THREE.Box3().setFromObject(model);if(Math.abs(bounds.min.y)>.012)throw Error('Story prop origin drift');model.position.set(x,y,z);model.rotation.y=rotation;scene.add(model);model.traverse(o=>{if(o.isMesh){storyProps.triangles+=(o.geometry.index?o.geometry.index.count:o.geometry.attributes.position.count)/3;o.castShadow=o.receiveShadow=true;}});storyPropRecords.push({name,x,y,z});}
+ if(storyProps.triangles>6000)throw Error('Story prop triangle budget exceeded');storyProps.groups=storyPropRecords.length;storyProps.loaded=true;onStoryStatus('loaded');
+ }catch(error){storyProps.error=String(error.message||error);onStoryStatus('failed',storyProps.error);}},undefined,error=>{storyProps.error=String(error.message||error);onStoryStatus('failed',storyProps.error);});}
  // A public-return constellation and a personal mirror are alternative, visible chapter consequences.
- const returnStuds=[];for(let i=0;i<32;i++){const z=10-i*1.17,x=6+Math.sin(i*.22)*.18;const stud=add(new THREE.SphereGeometry(.045,6,4),neon[0],x,.035,z);returnStuds.push(stud);}
+ const returnStuds=[];for(const side of [-1,1])for(let i=0;i<38;i++){const t=i/37,z=10.5-t*37,x=side*6*Math.min(1,t*8);const stud=add(new THREE.SphereGeometry(.045,6,4),neon[0],x,.035,z);returnStuds.push(stud);}
  const finalBars=[];
  const finalGroup=new THREE.Group();finalGroup.position.set(0,5.8,-33.8);scene.add(finalGroup);
  for(let i=0;i<12;i++){const a=i*Math.PI/6;finalBars.push(rod(new THREE.Vector3(Math.cos(a)*3.4,Math.sin(a)*1.8,0),new THREE.Vector3(Math.cos(a+Math.PI/3)*3.4,Math.sin(a+Math.PI/3)*1.8,0),.025,gold,finalGroup));}
@@ -291,7 +280,7 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
   if(!template?.isObject3D||!skin?.isTexture||!idleClip?.tracks?.length){const error='Resident installation needs the actual loaded creator model, skin Texture and named idle clip';npcErrors.push(error);throw Error(error);}
   for(const record of residentRecords){if(record.actor)continue;
    try{const actor=cloneResidentRig(template);actor.scale.multiplyScalar(preserveMaterials?1:1.08);actor.position.multiplyScalar(preserveMaterials?1:1.08);actor.rotation.y=preserveMaterials?Math.PI:actor.rotation.y+Math.PI;
-    let bones=0,skins=0,vertices=0;actor.traverse(o=>{if(o.isBone)bones++;if(o.isSkinnedMesh){skins++;vertices+=o.geometry.attributes.position.count;}if(o.isMesh){if(!preserveMaterials)o.material=new THREE.MeshStandardMaterial({map:skin,roughness:.78,metalness:0});else {const vary=m=>{const c=m.clone();if(/jacket|cargo|cloth|garment/i.test(c.name))c.color.multiply(new THREE.Color(record.index===0?0xb5c5ca:record.index===1?0xa7d8c7:0xc4b5dc));return c;};o.material=Array.isArray(o.material)?o.material.map(vary):vary(o.material);}o.castShadow=o.receiveShadow=true;}});
+    let bones=0,skins=0,vertices=0;actor.traverse(o=>{if(o.isBone)bones++;if(o.isSkinnedMesh){skins++;vertices+=o.geometry.attributes.position.count;}if(o.isMesh){if(!preserveMaterials)o.material=new THREE.MeshStandardMaterial({map:skin,roughness:.78,metalness:0});else {const vary=m=>{const c=m.clone();configureWovenMaterial(c);if(/jacket|cargo|cloth|garment/i.test(c.name))c.color.multiply(new THREE.Color(record.index===0?0xb5c5ca:record.index===1?0xa7d8c7:0xc4b5dc));return c;};o.material=Array.isArray(o.material)?o.material.map(vary):vary(o.material);}o.castShadow=o.receiveShadow=true;}});
     if(bones<20||skins<1)throw Error('Cloned creator resident lost its skeleton or skinned mesh');
     record.group.add(actor);const mixer=new THREE.AnimationMixer(actor),idle=mixer.clipAction(idleClip);idle.play();mixer.update(.18*record.index);const costume=residentOutfit(record,actor);
     record.actor=actor;record.adult=preserveMaterials;record.headBone=null;actor.traverse(o=>{if(o.isBone&&/^(?:.*\|)?head$/i.test(o.name))record.headBone=o;});record.mixer=mixer;record.costume=costume;record.bones=bones;record.skinnedMeshes=skins;record.vertices=vertices;record.idle=idle.getClip().name;record.fallbackMeshes.forEach(mesh=>{mesh.visible=false;});residentRigInstallCount++;
@@ -299,8 +288,8 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
   }
  }
 
- return {installResidents,cameraBounds,metrics:{get authoredGeometry(){return geometryCount;},consolidatedBaySources,get baySubmissions(){return streetBays?.snapshot().batches||baySubmissions;},get arcadeBays(){return streetBays?.snapshot()||null;},residents:occupiedResidents,interactiveResidents:RESIDENTS.length,colliders:CITY_COLLIDERS.length,instancedWindows:southWindows.length,originalWovenPattern:true,dimensionalAuroraCurtains:aurora.length,auroraMotion:skyMotion},
-  snapshot(){return {keeperKit:{...keeperKit},npcRigs:{loaded:residentRecords.every(r=>r.actor&&r.skinnedMeshes>0),count:residentRecords.filter(r=>r.actor).length,errors:[...npcErrors],installations:residentRigInstallCount,residents:residentRecords.map(r=>({role:r.id,loaded:Boolean(r.actor),bones:r.bones,skinnedMeshes:r.skinnedMeshes,vertices:r.vertices,idleClip:r.idle||null,skinTextures:r.actor?[...new Set((()=>{const ids=[];r.actor.traverse(o=>{if(o.isSkinnedMesh&&o.material.map)ids.push(o.material.map.uuid);});return ids;})())]:[],costumeBindings:r.costume?.bindings||0}))},repairCellEmission:repairCells.map(o=>o.material.emissiveIntensity),courierSignalEmission:courierSignals.map(o=>o.material.emissiveIntensity),canopyIntensity:canopyLight.intensity,lanternEmission:publicLights.map(o=>o.material.emissiveIntensity),constellationVisible:finalGroup.visible,mirrorVisible:mirror.visible,publicReturnStudsVisible:returnStuds.filter(o=>o.visible).length,constellationBarsVisible:finalBars.filter(o=>o.visible).length,relays:beaconMeshes.map(b=>({id:b.id,emission:b.core.material.emissiveIntensity,rotation:b.core.rotation.y})),markers:markerMeshes.map(r=>({id:r.id,emission:r.mesh.material.emissiveIntensity,x:r.mesh.parent.position.x,z:r.mesh.parent.position.z}))};},
+ return {installResidents,setQuality:q=>streetBays?.setQuality(q),cameraBounds,metrics:{get authoredGeometry(){return geometryCount;},consolidatedBaySources,get baySubmissions(){return streetBays?.snapshot().batches||baySubmissions;},get arcadeBays(){return streetBays?.snapshot()||null;},residents:occupiedResidents,interactiveResidents:RESIDENTS.length,colliders:CITY_COLLIDERS.length,instancedWindows:southWindows.length,originalWovenPattern:true,dimensionalAuroraCurtains:aurora.length,auroraMotion:skyMotion},
+  snapshot(){return {storyProps:{...storyProps,placements:storyPropRecords.map(p=>({...p}))},keeperKit:{...keeperKit},npcRigs:{loaded:residentRecords.every(r=>r.actor&&r.skinnedMeshes>0),count:residentRecords.filter(r=>r.actor).length,errors:[...npcErrors],installations:residentRigInstallCount,residents:residentRecords.map(r=>({role:r.id,loaded:Boolean(r.actor),bones:r.bones,skinnedMeshes:r.skinnedMeshes,vertices:r.vertices,idleClip:r.idle||null,skinTextures:r.actor?[...new Set((()=>{const ids=[];r.actor.traverse(o=>{if(o.isSkinnedMesh&&o.material.map)ids.push(o.material.map.uuid);});return ids;})())]:[],costumeBindings:r.costume?.bindings||0}))},repairCellEmission:repairCells.map(o=>o.material.emissiveIntensity),courierSignalEmission:courierSignals.map(o=>o.material.emissiveIntensity),canopyIntensity:canopyLight.intensity,lanternEmission:publicLights.map(o=>o.material.emissiveIntensity),constellationVisible:finalGroup.visible,mirrorVisible:mirror.visible,publicReturnStudsVisible:returnStuds.filter(o=>o.visible).length,constellationBarsVisible:finalBars.filter(o=>o.visible).length,relays:beaconMeshes.map(b=>({id:b.id,emission:b.core.material.emissiveIntensity,rotation:b.core.rotation.y})),markers:markerMeshes.map(r=>({id:r.id,emission:r.mesh.material.emissiveIntensity,x:r.mesh.parent.position.x,z:r.mesh.parent.position.z}))};},
   update(dt,time,sim){
    const state=chapter.state,active=state.active?RESIDENTS[state.completed]?.id:null;
    if(skyMotion)for(const ribbon of aurora){const p=ribbon.mesh.geometry.attributes.position;for(let i=0;i<p.count;i++){const u=Math.floor(i/2)/48;p.setY(i,ribbon.base[i]+Math.sin(time*.00018+u*8+ribbon.layer)*.75);}p.needsUpdate=true;}
@@ -312,7 +301,7 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
    archiveDisplays.forEach((o,i)=>{o.rotation.z=state.completed>=2?Math.sin(time*.00025+i)*.1:0;});
    publicLights.forEach((o,i)=>{o.material.emissiveIntensity=state.completed>0?1.7:.12;});
    for(const item of markerMeshes){item.mesh.material.emissiveIntensity=item.id===active?2.4:.5;item.mesh.position.y=2.16+Math.sin(time*.0017)*.06;item.mesh.rotation.y=time*.0007;}
-   for(const item of beaconMeshes){const visited=state.completed>=2||state.progress.visited.includes(item.id);item.core.material.emissiveIntensity=visited?2.8:.22;item.core.rotation.y=time*.0006;}
+   for(const item of beaconMeshes){const visited=(item.id!=='return'&&state.completed>=2)||state.progress.visited.includes(item.id);item.core.material.emissiveIntensity=visited?2.8:.22;item.core.rotation.y=time*.0006;}
    for(const item of animated){if(item.type==='loom')item.group.rotation.z=time*.00016;else{const dx=sim.x-item.group.position.x,dz=sim.z-item.group.position.z;if(Math.hypot(dx,dz)<7)item.group.rotation.y=Math.atan2(dx,dz);item.head.position.y=item.baseY+Math.sin(time*.0013+item.index)*.008;}}
    finalGroup.visible=state.completed===3;finalBars.forEach(o=>{o.visible=state.choice==='public';});returnStuds.forEach(o=>{o.visible=state.choice==='public';});mirror.visible=state.choice==='personal';if(state.choice==='public')finalGroup.rotation.z=Math.sin(time*.00015)*.06;
   }

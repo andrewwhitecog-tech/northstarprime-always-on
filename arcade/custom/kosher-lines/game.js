@@ -1,3 +1,4 @@
+import { RoundedBoxGeometry } from '/static/vendor/three/0.160.0/examples/jsm/geometries/RoundedBoxGeometry.js';
 import * as THREE from '/static/vendor/three/0.160.0/build/three.module.js';
 import { GLTFLoader } from '/static/vendor/three/0.160.0/examples/jsm/loaders/GLTFLoader.js';
 import { loadAdultRig } from './adult-rig.js';
@@ -37,7 +38,7 @@ let skater,bodyRig,boardRig,skatePushRig=null,avatarMixer=null,avatarActions={},
 const avatarMetrics={bones:0,skinnedMeshes:0,vertices:0,triangles:0,animations:[],skinLoaded:false,modelLoaded:false};
 const tempV=new THREE.Vector3(), cameraDesired=new THREE.Vector3(), lookDesired=new THREE.Vector3(), lookSmoothed=new THREE.Vector3(0,1,0);
 function save(){try{localStorage.setItem(SAVE,JSON.stringify(profile));localStorage.setItem(SAVE+'.chapter',chapter.serialize());localStorage.setItem(SAVE+'.courier-trial',courierTrial.serialize());saveAvailable=true;}catch{saveAvailable=false;}$('save-state').textContent=saveAvailable?'Progress saved on this device':'Storage unavailable · progress lasts this visit';}
-function message(text){$('ride-event').textContent=text;}
+function message(text){$('ride-event').textContent=text;$('journal-event').textContent=text;}
 function mat(color,extra={}){return new THREE.MeshStandardMaterial({color,roughness:.62,metalness:.08,...extra});}
 function mesh(geometry,material,x=0,y=0,z=0,parent=scene){const item=new THREE.Mesh(geometry,material);item.position.set(x,y,z);item.castShadow=true;item.receiveShadow=true;parent.add(item);return item;}
 function box(w,h,d,x,y,z,material,parent=scene){return mesh(new THREE.BoxGeometry(w,h,d),material,x,y,z,parent);}
@@ -71,7 +72,7 @@ function makeReflections(){
 }
 function makeWorld(){
  const asphalt=mat(0xc3c7ce,{map:texture('asphalt_01-diffuse-1k.jpg',14,19),normalMap:texture('asphalt_01-nor_gl-1k.jpg',14,19,true),normalScale:new THREE.Vector2(.4,.4),roughnessMap:texture('asphalt_01-rough-1k.jpg',14,19,true),roughness:.89});
- const concrete=mat(0xb8c0c8,{map:texture('concrete_floor_02-diffuse-1k.jpg'),normalMap:texture('concrete_floor_02-nor_gl-1k.jpg',1,1,true),normalScale:new THREE.Vector2(.32,.32),roughnessMap:texture('concrete_floor_02-rough-1k.jpg',1,1,true),roughness:.9});
+ const concrete=mat(0xffffff,{map:texture('vorath-painted-concrete-v5.png'),normalMap:texture('concrete_floor_02-nor_gl-1k.jpg',1,1,true),normalScale:new THREE.Vector2(.32,.32),roughnessMap:texture('concrete_floor_02-rough-1k.jpg',1,1,true),roughness:.9});
  const pale=mat(0x63738b,{roughness:.8}),black=mat(0x11152c),gold=mat(0xe2b75f,{metalness:.8,roughness:.28});
  const brick=mat(0x8b919d,{map:texture('brick_wall_02-diffuse-1k.jpg'),normalMap:texture('brick_wall_02-nor_gl-1k.jpg',1,1,true),normalScale:new THREE.Vector2(.65,.65),roughnessMap:texture('brick_wall_02-rough-1k.jpg',1,1,true),roughness:.92});
  const ground=mesh(new THREE.PlaneGeometry(56,76),asphalt,0,-.035,-10);ground.rotation.x=-Math.PI/2;ground.castShadow=false;
@@ -90,7 +91,8 @@ function makeWorld(){
  const sideMat=concrete.clone();sideMat.side=THREE.DoubleSide;mesh(sideGeometry,sideMat);
  box(6.6,3.15,.18,0,1.575,-27.66,concrete);
  // Ramps have solid skirts and metal coping, not floating display planes.
- box(3.4,.72,3.6,0,.36,-7.8,black);
+ mesh(new RoundedBoxGeometry(3.4,.81,3.6,2,.045),concrete,0,.405,-7.8);
+ mesh(new RoundedBoxGeometry(1.2,.31,7.2,2,.035),concrete,-2.6,.155,-1);
  box(.12,.18,6.2,.35,.12,-14.1,gold);box(.12,.18,6.2,3.25,.12,-14.1,gold);
  for(let i=0;i<9;i++){const z=-11.2-i*.66,y=terrain(1.65,z);box(2.7,.12,.16,1.75,y+.012,z,gold);}
  for(const r of RAILS){
@@ -107,6 +109,10 @@ function makeWorld(){
  // Thin wet patches catch the authored light field beside, never above, the course.
  const wet=mat(0x172d38,{metalness:.66,roughness:.18,transparent:true,opacity:.76});
  for(const [x,z,rx,rz]of[[-4.2,3.1,.7,.28],[5.5,-4.3,1.1,.32],[-5.7,-19,.8,.35],[8.4,-22.2,1.2,.3]]){const patch=new THREE.Shape();for(let i=0;i<=16;i++){const a=i/16*Math.PI*2,k=1+.15*Math.sin(i*2.3);const px=Math.cos(a)*rx*k,pz=Math.sin(a)*rz*k;if(i===0)patch.moveTo(px,pz);else patch.lineTo(px,pz);}const puddle=mesh(new THREE.ShapeGeometry(patch),wet,x,.003,z);puddle.rotation.x=-Math.PI/2;puddle.castShadow=false;}
+ // Metal quarter coping follows the retained physical crest.
+ rod(new THREE.Vector3(-3.3,terrain(-3.3,-27.55)+.025,-27.55),new THREE.Vector3(3.3,terrain(3.3,-27.55)+.025,-27.55),.035,gold);
+ // Worn coloured aggregate marks the outer walking/courier lanes without new colliders.
+ for(const [x,color]of[[-12,0x398c79],[12,0x6b3c88]]){const lane=asphalt.clone();lane.color.setHex(color);for(const key of ['map','normalMap','roughnessMap']){lane[key]=asphalt[key].clone();lane[key].repeat.set(1,12);lane[key].needsUpdate=true;}const strip=mesh(new THREE.PlaneGeometry(3.6,48),lane,x,-.03,-10);strip.rotation.x=-Math.PI/2;strip.castShadow=false;}
  // Five real route lamps encode the ordered line. No lettering is painted over the view.
  const stations=[[-.7,1],[-2.55,-2],[0,-8],[2.15,-14],[0,-26]];
  stations.forEach(([x,z],i)=>{
@@ -175,7 +181,7 @@ function makeSkater(){
  const modelContainer=new THREE.Group();modelContainer.position.y=.114;body.add(modelContainer);
  // Original adult outfit on the licensed Quaternius humanoid rig and real clips.
  assetState['avatar-model']='loading';
- loadAdultRig(THREE,{loader:new GLTFLoader(),url:ASSETS+'vorath-adult-skater-v4.glb',parent:modelContainer}).then(({root:model,mixer,clips,skin,metrics})=>{
+ loadAdultRig(THREE,{loader:new GLTFLoader(),url:ASSETS+'vorath-adult-skater-v5.glb',parent:modelContainer,clothMap:texture('vorath-cable-knit-v5.png')}).then(({root:model,mixer,clips,skin,metrics})=>{
   model.rotation.y=Math.PI/2;model.updateMatrixWorld(true);Object.assign(avatarMetrics,metrics);
   model.traverse(o=>{if(o.isBone&&o.name.toLowerCase()==='head'){riderHeadBone=o;riderHeadBindScale=o.scale.clone();}});
   avatarMixer=mixer;for(const kind of ['idle','jump','run','crouch'])avatarActions[kind]=mixer.clipAction(clips[kind]);
@@ -227,7 +233,7 @@ function updateUI(){
  const featureArt=$('next-feature-art'),featureBoxes=['45 65 940 300','100 375 850 315','60 690 940 310','70 995 850 290','20 1280 984 256'];const hideFeature=courierTrial.active||sim.ended||sim.paused;featureArt.toggleAttribute('hidden',hideFeature);featureArt.setAttribute('viewBox',featureBoxes[sim.running?sim.line:0]);$('next-feature-label').classList.toggle('sr-only',!hideFeature);
  $('line-order').querySelectorAll('li').forEach((li,i)=>{li.classList.toggle('done',i<sim.line);li.classList.toggle('current',i===sim.line);});
  $('speed-value').textContent=(sim.speed*3.6).toFixed(1);$('best-score').textContent=profile.best.toLocaleString();$('clean-lines').textContent=String(profile.lines);$('progress').textContent=profile.xp.toLocaleString();
- $('pause').disabled=!sim.running||Boolean(dialogueResident);$('start').disabled=Boolean(dialogueResident);$('ride-mode').disabled=Boolean(dialogueResident);$('pause').textContent=sim.paused?'Resume':'Pause';
+ $('pause').disabled=!sim.running||Boolean(dialogueResident);$('start').disabled=Boolean(dialogueResident);$('ride-mode').disabled=Boolean(dialogueResident);$('pause').textContent=sim.paused?'Resume':'Pause';$('pause').dataset.art=sim.paused?'11':'10';$('pause').title=sim.paused?'Resume':'Pause';
  $('start').textContent=sim.running?'Restart session':sim.ended?'Ride again':'Drop in';
  $('portal-link').hidden=profile.lines<1&&chapter.state.completed<3;$('balance-meter').value=sim.balance;$('balance-zone').hidden=!['grind','manual'].includes(sim.mode);
  for(const button of document.querySelectorAll('[data-theme]')){const index=Number(button.dataset.theme),unlocked=index===0||profile.xp>=(index===1?500:1500);button.disabled=!unlocked;button.setAttribute('aria-pressed',String(profile.theme===index));}
@@ -368,7 +374,7 @@ function installInput(){
  for(const button of document.querySelectorAll('[data-ending]'))button.addEventListener('click',()=>{if(chapter.turnIn(dialogueResident,button.dataset.ending)){message(chapter.notifications.at(-1).text);save();}closeConversation();renderChapter();});
  $('ride-mode').addEventListener('change',()=>{if(dialogueResident)closeConversation();sim.sessionMode=$('ride-mode').value==='chapter'?'chapter':'arcade';$('mode-description').textContent=sim.sessionMode==='chapter'?'Return the Light · no clock · chapter progress saves on this device.':'Two-minute arcade · chapter progress carries across both modes.';sim.reset(true);clear();save();message(sim.sessionMode==='chapter'?'No clock. Meet the keeper, reconnect the gardens, return the light.':'Two minutes. Five features. One clean line.');updateUI();});
  $('camera-reset').addEventListener('click',()=>{orbit=0;cameraTilt=.38;});
- $('quality').addEventListener('change',()=>{quality=$('quality').value;$('quality-description').textContent=quality==='low'?'Low power':'Shadows + detail';renderer.setPixelRatio(quality==='low'?0.5:Math.min(devicePixelRatio||1,1.5));renderer.shadowMap.enabled=quality!=='low';streetAtmosphere?.setQuality(quality);resize();});
+ $('quality').addEventListener('change',()=>{quality=$('quality').value;$('quality-description').textContent=quality==='low'?'Low power · simpler distant detail':'Shadows + detail';renderer.setPixelRatio(quality==='low'?0.5:Math.min(devicePixelRatio||1,1.5));renderer.shadowMap.enabled=quality!=='low';streetAtmosphere?.setQuality(quality);city?.setQuality(quality);resize();});
  for(const button of document.querySelectorAll('[data-theme]'))button.addEventListener('click',()=>{profile.theme=Number(button.dataset.theme);save();updateUI();});
 }
 try{
@@ -381,7 +387,7 @@ try{
  const moon=new THREE.DirectionalLight(0xb8cff6,2.5);moon.position.set(-12,24,12);moon.castShadow=true;
  moon.shadow.mapSize.set(1024,1024);Object.assign(moon.shadow.camera,{left:-28,right:28,top:28,bottom:-28,near:1,far:75});moon.shadow.bias=-.0002;scene.add(moon);
  const warm=new THREE.DirectionalLight(0xd65342,.95);warm.position.set(14,10,-20);scene.add(warm);makeReflections();loadControlAtlas();
- makeWorld();streetAtmosphere=createStreetAtmosphere({THREE,scene,quality,reducedMotion:motion});cameraSolids.push(...streetAtmosphere.cameraBounds);const mosaic=texture('vorath-eye-mosaic-v1.png'),mural=texture('vorath-acid-eye-mural-v1.png');city=buildCity(scene,chapter,{mosaic,mural,repairKitURL:ASSETS+'keeper-repair-station-v2.glb',bayKitURL:ASSETS+'kosher-arcade-bay-v1.glb',onBayStatus(status,error){assetState['arcade-bay-model']=status;if(error)loadErrors.push('arcade-bay-model: '+error);},onKitStatus(status,error){assetState['keeper-station-model']=status;if(error)loadErrors.push('keeper-station-model: '+error);}});cameraSolids.push(...city.cameraBounds);courierCourse=buildCourierCourse(scene,courierTrial,{reducedMotion:motion});skater=makeSkater();courierCourse.mountPrize(skater.board);bodyRig=skater.body;boardRig=skater.board;installInput();resize();new ResizeObserver(resize).observe(canvas);
+ makeWorld();streetAtmosphere=createStreetAtmosphere({THREE,scene,quality,reducedMotion:motion});cameraSolids.push(...streetAtmosphere.cameraBounds);const mosaic=texture('vorath-eye-mosaic-v1.png'),mural=texture('vorath-acid-eye-mural-v1.png');city=buildCity(scene,chapter,{mosaic,mural,repairKitURL:ASSETS+'keeper-repair-station-v2.glb',bayKitURL:ASSETS+'kosher-arcade-bay-v1.glb',storyPropsURL:ASSETS+'kosher-story-props-v1.glb',onStoryStatus(status,error){assetState['story-props-model']=status;if(error)loadErrors.push('story-props-model: '+error);},onBayStatus(status,error){assetState['arcade-bay-model']=status;if(error)loadErrors.push('arcade-bay-model: '+error);},onKitStatus(status,error){assetState['keeper-station-model']=status;if(error)loadErrors.push('keeper-station-model: '+error);}});cameraSolids.push(...city.cameraBounds);courierCourse=buildCourierCourse(scene,courierTrial,{reducedMotion:motion});skater=makeSkater();courierCourse.mountPrize(skater.board);bodyRig=skater.body;boardRig=skater.board;installInput();resize();new ResizeObserver(resize).observe(canvas);
  canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();shaders.lost=true;if(sim.running&&!sim.paused)sim.togglePause();message('Graphics paused while the context recovers. Saved progress is safe.');});
  canvas.addEventListener('webglcontextrestored',()=>{shaders.lost=false;makeReflections();lastTime=performance.now();accumulator=0;resize();message('Graphics restored. Resume the ride when ready.');});
  window.addEventListener('pagehide',event=>{save();if(!event.persisted){disposed=true;streetAtmosphere?.dispose();reflectionTarget?.dispose();renderer.dispose();}else if(sim.running&&!sim.paused)sim.togglePause();});

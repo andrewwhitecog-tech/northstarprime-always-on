@@ -135,6 +135,8 @@ def _must_stay_local(relative: Path) -> bool:
         "arcade/custom/crib-recovered-assets/keeper-repair-station-v2.glb",
         "arcade/custom/crib-recovered-assets/vorath-adult-skater-v3.glb",
         "arcade/custom/crib-recovered-assets/vorath-adult-skater-v4.glb",
+        "arcade/custom/crib-recovered-assets/vorath-adult-skater-v5.glb",
+        "arcade/custom/crib-recovered-assets/kosher-story-props-v1.glb",
         "arcade/custom/crib-recovered-assets/kosher-arcade-bay-v1.glb",
     }:
         return True

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministically refresh ARCADE_FREEZE_MANIFEST.json hashes and casino runtime assets."""
+"""Deterministically refresh ARCADE_FREEZE_MANIFEST.json hashes and casino runtime assets while preserving historical source pins."""
 
 from __future__ import annotations
 
@@ -42,19 +42,8 @@ def main() -> None:
     assets: list[dict] = data.get("assets", [])
     by_rel: dict[str, dict] = {row["relative_path"]: row for row in assets}
 
-    # Refresh any existing copy-transform asset present on disk without dropping optimized/redacted source pins
-    for row in assets:
-        if row.get("transform") == "copy":
-            p = ROOT / row["relative_path"]
-            if p.is_file():
-                raw = p.read_bytes()
-                digest = sha256_bytes(raw)
-                row["bytes"] = len(raw)
-                row["sha256"] = digest
-                row["source_bytes"] = len(raw)
-                row["source_sha256"] = digest
-
-    # Ensure all runtime art/*.webp and audio/*.mp3 for blackjack-noir and slots-biolume + shared idg_cues are tracked
+    # Preserve existing historical source_bytes / source_sha256 on all pre-existing rows.
+    # Upsert runtime art/*.webp and audio/*.mp3 for blackjack-noir, slots-biolume, and shared idg_cues.
     game_dirs = [
         ("blackjack-noir", ROOT / "arcade" / "custom" / "blackjack-noir"),
         ("slots-biolume", ROOT / "arcade" / "custom" / "slots-biolume"),
@@ -88,8 +77,10 @@ def main() -> None:
             row = by_rel[rel]
             row["bytes"] = len(raw)
             row["sha256"] = digest
-            row["source_bytes"] = len(raw)
-            row["source_sha256"] = digest
+            # Only initialize source_* if absent; for casino rows created in this repo, keep source=output synchronized
+            if rel.startswith(("arcade/custom/blackjack-noir/", "arcade/custom/slots-biolume/", "arcade/custom/audio/idg_cues/")):
+                row["source_bytes"] = len(raw)
+                row["source_sha256"] = digest
             row["referenced_by"] = sorted(set(row.get("referenced_by", [])) | set(slugs))
             row["references"] = sorted(set(row.get("references", [])) | set(refs))
         else:
@@ -114,7 +105,10 @@ def main() -> None:
     data["source_asset_bytes"] = sum(int(r.get("source_bytes", r["bytes"])) for r in assets)
 
     MANIFEST_PATH.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-    print(f"Updated ARCADE_FREEZE_MANIFEST.json (asset_count={data['asset_count']}, asset_bytes={data['asset_bytes']})")
+    print(
+        f"Updated ARCADE_FREEZE_MANIFEST.json "
+        f"(asset_count={data['asset_count']}, asset_bytes={data['asset_bytes']}, source_asset_bytes={data['source_asset_bytes']})"
+    )
 
 
 if __name__ == "__main__":

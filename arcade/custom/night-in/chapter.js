@@ -59,7 +59,7 @@ export function createChapter({scene,box,cylinder,walnut,gold,black,texture,plas
   // Mail assembly: the folded paper and prism visibly leave the slot on collection.
   B(.5,.26,.11,enamel,-4.45,1.05,3.51);B(.38,.025,.015,black,-4.45,1.08,3.445);
   const letter=B(.26,.16,.012,cream,-4.45,1.06,3.43);letter.rotation.z=.12;mailParts.push(letter);
-  const parcel=mesh(new THREE.OctahedronGeometry(.11),new THREE.MeshPhysicalMaterial({color:0x69e1dc,roughness:.12,metalness:.3,transmission:.2,thickness:.2}),-4.25,.13,3.2);mailParts.push(parcel);
+  const parcel=mesh(new THREE.OctahedronGeometry(.11),new THREE.MeshPhysicalMaterial({color:0x69e1dc,roughness:.12,metalness:.3,clearcoat:1,clearcoatRoughness:.12,iridescence:.7}),-4.25,.13,3.2);mailParts.push(parcel);
   // One physical cell, two exclusive circuits. Choice alters the actual room.
   B(.45,.68,.15,black,5.13,1.45,-.7);B(.37,.59,.045,metal,5.03,1.45,-.7);
   const fuse=C(.045,.045,.22,new THREE.MeshStandardMaterial({color:0x7ce8d3,emissive:0x24876d,emissiveIntensity:.6,roughness:.2}),4.99,1.48,-.7);fuse.rotation.z=Math.PI/2;

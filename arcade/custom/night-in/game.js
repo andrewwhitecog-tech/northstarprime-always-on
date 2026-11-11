@@ -137,10 +137,10 @@ if(activity==='rest'){s.rest=Math.min(12,s.rest+dt);s.vibe=clamp(s.vibe+dt*.7);i
 const moving=Math.hypot(s.x-resident.position.x,s.z-resident.position.z)>.0005;
 if(mixer&&!paused&&!s.over){const action=moving?runAction:idleAction;if(action!==currentAction){currentAction.fadeOut(.2);action.reset().fadeIn(.2).play();currentAction=action;}mixer.update(dt);}
 near=nearest();resident.position.set(s.x,0,s.z);chapter.update(dt,now/1000,s,paused||!!activity,pad);
-const a=Math.PI/4+orbit*Math.PI/2,dist=camera.aspect<1.1?17:13.4;
+const a=Math.PI/4+orbit*Math.PI/2,dist=camera.aspect<1.1?13.6:12.2;
 const tvActive=activity==='ripple'||activity==='munch';
 const storyCamera=!activity?chapter.camera():null;
-const target=tvActive?new THREE.Vector3(2.7,1.95,-1):storyCamera?new THREE.Vector3(...storyCamera.position):new THREE.Vector3(Math.sin(a)*dist,10.5,Math.cos(a)*dist);
+const target=tvActive?new THREE.Vector3(2.7,1.95,-1):storyCamera?new THREE.Vector3(...storyCamera.position):new THREE.Vector3(Math.sin(a)*dist,8.8,Math.cos(a)*dist);
 camera.position.lerp(target,.07);camera.lookAt(tvActive?new THREE.Vector3(1,1.65,-3.24):storyCamera?new THREE.Vector3(...storyCamera.look):aim);
 northWall.visible=camera.position.z>-.2;westWall.visible=camera.position.x>-.2;
 for(const [id,m]of markers){m.material.opacity=near?.id===id ? .9 : .25;m.scale.setScalar(near?.id===id?1.05+Math.sin(now*.004)*.08:1);}

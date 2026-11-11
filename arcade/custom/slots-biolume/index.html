@@ -134,6 +134,7 @@ header.topbar{
   margin-bottom:5px;
 }
 .hud-cartouche{
+  position:relative;
   width:204px;height:63px;
   background:url('art/vorath_hud_cartouche_v01.webp') center/100% 100% no-repeat;
   display:flex;align-items:center;justify-content:space-between;
@@ -149,20 +150,18 @@ header.topbar{
   text-shadow:0 2px 4px #000,0 0 10px rgba(78,255,181,0.65);
 }
 .cart-val.gold{color:#fde047;text-shadow:0 2px 4px #000,0 0 10px rgba(253,224,71,0.75)}
-
-.surge-meter-wrap{
-  display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:900;color:#f472b6;
-  letter-spacing:1.1px;
-}
-.surge-track{
-  width:96px;height:10px;
-  clip-path:polygon(6px 0%,calc(100% - 6px) 0%,100% 50%,calc(100% - 6px) 100%,6px 100%,0% 50%);
-  background:rgba(2,10,20,0.92);
-  border:1.5px solid #f5d76e;overflow:hidden;
+.cart-val.magenta{color:#f472b6;text-shadow:0 2px 4px #000,0 0 10px rgba(244,114,182,0.8)}
+.cart-inner-gauge{
+  position:absolute;left:56px;right:42px;bottom:12px;height:4px;
+  clip-path:polygon(3px 0%,calc(100% - 3px) 0%,100% 50%,calc(100% - 3px) 100%,3px 100%,0% 50%);
+  background:rgba(3,8,22,0.92);border:1px solid rgba(245,215,110,0.55);
+  box-shadow:inset 0 1px 2px rgba(0,0,0,0.85),0 0 6px rgba(34,211,238,0.3);
+  overflow:hidden;pointer-events:none;
 }
 #surge-fill{
   width:0%;height:100%;
   background:linear-gradient(90deg,#22d3ee,#f472b6,#fde047);
+  box-shadow:0 0 8px rgba(244,114,182,0.8);
   transition:width 0.3s;
 }
 
@@ -269,15 +268,14 @@ header.topbar{
   #game-wrap{padding:2px 6px 8px;gap:4px}
   #zone-ribbon{gap:4px}
   .zone-node{width:92px;height:36px;font-size:7.4px;letter-spacing:0.2px;padding:0 16px}
-  #abyss-viewport{height:118px}
-  #machine{padding:8px 8px 10px}
-  .hud-row{gap:4px;margin-bottom:5px}
-  .hud-cartouche{width:122px;height:38px;padding:0 24px 0 35px}
-  .cart-lbl{font-size:7px;letter-spacing:0.2px}
-  .cart-val{font-size:9.5px}
-  .surge-meter-wrap{font-size:9.5px}
-  .surge-track{width:80px;height:8px}
-  #reels-canvas{height:192px}
+  #abyss-viewport{height:112px}
+  #machine{padding:7px 8px 9px}
+  .hud-row{gap:5px;margin-bottom:5px}
+  .hud-cartouche{width:158px;height:49px;padding:0 32px 0 44px}
+  .cart-lbl{font-size:8px;letter-spacing:0.3px}
+  .cart-val{font-size:10.5px}
+  .cart-inner-gauge{left:44px;right:32px;bottom:9px;height:3px}
+  #reels-canvas{height:186px}
   .hold-strip{gap:4px}
   .hold-btn{height:34px}
   #verdict-line{font-size:12.5px;letter-spacing:0.9px;min-height:18px;margin:2px 0}
@@ -332,10 +330,11 @@ header.topbar{
         <span class="cart-lbl">STAKE</span>
         <span class="cart-val" id="bet-amount">20</span>
       </div>
-      <div class="surge-meter-wrap">
-        <span>SURGE <strong id="surge-pct">0%</strong></span>
-        <div class="surge-track"><div id="surge-fill"></div></div>
-        <span id="freespin-badge" style="display:none;color:#4effb5">· DIVES <strong id="freespin-val">0</strong></span>
+      <div class="hud-cartouche" id="surge-cartouche">
+        <span class="cart-lbl" id="surge-lbl">SURGE</span>
+        <span class="cart-val magenta" id="surge-pct">0%</span>
+        <span class="cart-val gold" id="freespin-badge" style="display:none"><strong id="freespin-val">0</strong></span>
+        <div class="cart-inner-gauge"><div id="surge-fill"></div></div>
       </div>
     </div>
 
@@ -736,20 +735,52 @@ function renderLoop(ts) {
     actx.restore();
   }
 
-  const bw = compactA ? Math.min(180, AW - 165) : 340, bh = compactA ? 8 : 10;
-  const bx = cx - bw * 0.5, by = AH - (compactA ? 14 : 18);
-  actx.fillStyle = 'rgba(3,8,20,0.85)';
-  actx.strokeStyle = '#f5d76e';
-  actx.lineWidth = 1.4;
-  actx.fillRect(bx, by, bw, bh);
-  actx.strokeRect(bx, by, bw, bh);
+  // Faceted Vorath Gold-Filigree Spear Relic Boss Gauge
+  const bw = compactA ? Math.min(180, AW - 165) : 320, bh = compactA ? 9 : 11;
+  const bx = cx - bw * 0.5, by = AH - (compactA ? 15 : 19), tip = bh * 0.85;
+  const spearPath = (x, y, w, h, tp) => {
+    actx.beginPath();
+    actx.moveTo(x - tp, y + h * 0.5);
+    actx.lineTo(x + 6, y);
+    actx.lineTo(x + w - 6, y);
+    actx.lineTo(x + w + tp, y + h * 0.5);
+    actx.lineTo(x + w - 6, y + h);
+    actx.lineTo(x + 6, y + h);
+    actx.closePath();
+  };
+  actx.save();
+  spearPath(bx, by, bw, bh, tip);
+  actx.fillStyle = 'rgba(5,3,18,0.92)';
+  actx.fill();
   const hpPct = krakenDefeated ? 1 : Math.max(0, Math.min(1, krakenHp / krakenMaxHp));
-  const barG = actx.createLinearGradient(bx, 0, bx + bw, 0);
-  barG.addColorStop(0, krakenDefeated ? '#4effb5' : '#f43f5e');
-  barG.addColorStop(0.5, '#f472b6');
-  barG.addColorStop(1, '#22d3ee');
-  actx.fillStyle = barG;
-  actx.fillRect(bx + 1, by + 1, (bw - 2) * hpPct, bh - 2);
+  if (hpPct > 0) {
+    actx.save();
+    actx.clip();
+    const barG = actx.createLinearGradient(bx - tip, 0, bx + bw + tip, 0);
+    barG.addColorStop(0, krakenDefeated ? '#4effb5' : '#c026d3');
+    barG.addColorStop(0.5, '#f472b6');
+    barG.addColorStop(1, '#fde047');
+    actx.fillStyle = barG;
+    actx.fillRect(bx - tip, by, (bw + tip * 2) * hpPct, bh);
+    actx.fillStyle = 'rgba(255,255,255,0.26)';
+    actx.fillRect(bx - tip, by + 1, (bw + tip * 2) * hpPct, bh * 0.34);
+    actx.restore();
+  }
+  spearPath(bx, by, bw, bh, tip);
+  actx.strokeStyle = '#f5d76e';
+  actx.lineWidth = 1.6;
+  actx.stroke();
+  for (const fx of [bx - tip - 3, bx + bw + tip + 3]) {
+    actx.fillStyle = '#fde047';
+    actx.beginPath();
+    actx.moveTo(fx, by + bh * 0.5 - 4);
+    actx.lineTo(fx + 4, by + bh * 0.5);
+    actx.lineTo(fx, by + bh * 0.5 + 4);
+    actx.lineTo(fx - 4, by + bh * 0.5);
+    actx.closePath();
+    actx.fill();
+  }
+  actx.restore();
 
   const RW = reelsCanvas.clientWidth || 860, RH = reelsCanvas.clientHeight || 268;
   if (reelsCanvas.width !== Math.round(RW * DPR) || reelsCanvas.height !== Math.round(RH * DPR)) {
@@ -865,15 +896,25 @@ function setVerdict(txt, big = false) {
 function updateUI() {
   document.getElementById('token-count').textContent = tokens.toLocaleString();
   document.getElementById('bet-amount').textContent = totalBet.toLocaleString();
-  document.getElementById('surge-pct').textContent = surge + '%';
+  const surgeLbl = document.getElementById('surge-lbl');
+  const surgePct = document.getElementById('surge-pct');
+  const fsBadge = document.getElementById('freespin-badge');
+  surgePct.textContent = surge + '%';
   document.getElementById('surge-fill').style.width = surge + '%';
   document.getElementById('jackpot-val').textContent = jackpot.toLocaleString();
   document.getElementById('kraken-hp-val').textContent = krakenDefeated
     ? 'VANQUISHED'
     : `${krakenHp.toLocaleString()} / ${krakenMaxHp.toLocaleString()}`;
-  const fsBadge = document.getElementById('freespin-badge');
-  fsBadge.style.display = freeSpins > 0 ? '' : 'none';
   document.getElementById('freespin-val').textContent = `${freeSpins}`;
+  if (freeSpins > 0) {
+    surgeLbl.textContent = 'DIVES';
+    surgePct.style.display = 'none';
+    fsBadge.style.display = '';
+  } else {
+    surgeLbl.textContent = 'SURGE';
+    surgePct.style.display = '';
+    fsBadge.style.display = 'none';
+  }
 
   document.getElementById('stat-spins').textContent = stats.spins;
   document.getElementById('stat-wins').textContent = stats.wins;

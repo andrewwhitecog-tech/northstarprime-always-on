@@ -72,7 +72,11 @@ async function runCase(browser,base,game,phone,journey){RUN_DEADLINE=Date.now()+
 async function uiFrame(page,name){const file=path.join(out,name+'.png');await page.screenshot({path:file,fullPage:true,animations:'allow',caret:'initial',timeout:60000});const bytes=await fsp.readFile(file),pixels=pngPixels(bytes);return{file:path.basename(file),sha256:sha(bytes),width:pixels.width,height:pixels.height,scope:'Actual full-page UI for lead visual review; not an automatic visual-quality acceptance'};}
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
-async function usable(page,selector,phone){const el=page.locator(selector);await el.scrollIntoViewIfNeeded();assert(await el.isVisible(),'Visible chapter control '+selector);assert(await el.isEnabled(),'Enabled chapter control '+selector);if(phone){const b=await el.boundingBox();assert(b&&b.width>=40&&b.height>=40,'Chapter touch target '+selector);}return el;}
+async function usable(page,selector,phone){const el=page.locator(selector);await el.scrollIntoViewIfNeeded();assert(await el.isVisible(),'Visible chapter control '+selector);
+ // Wait for the actual frame to publish interaction availability to the DOM.
+ // Never force-enable a control or replace physical proximity checks.
+ await until(()=>el.isEnabled(),enabled=>enabled,'Actual enabled chapter control '+selector,30000);
+ assert(await el.isEnabled(),'Enabled chapter control '+selector);if(phone){const b=await el.boundingBox();assert(b&&b.width>=40&&b.height>=40,'Chapter touch target '+selector);}return el;}
 async function chapterTap(inp,selector){await inp.release();await usable(inp.page,selector,inp.phone);await inp.tap(selector);}
 async function skatingChapter({page,phone,entry,step,name}){
  const hook='__KOSHER_LINES__',read=()=>snap(page,hook);
@@ -258,7 +262,10 @@ async function apartmentChapter({page,phone,entry,step,name}){
   const pattern=[...traced.story.pattern];assert.equal(pattern.length,3);
   await step('Chapter '+number+': letter and spatial window clue earned',async()=>({snapshot:traced,frame:await shot(page,'#world',name+'-chapter-'+number+'-window')}));
   const stereo=(await read()).stations.find(p=>p.id==='stereo');assert(stereo);await walkTo({x:stereo.x,z:stereo.z+.6},null,'stereo');await until(read,s=>s.near==='stereo','Reach real record player');
-  for(let n=0;n<4&&(await read()).track!==1;n++){if(phone)await chapterTap(inp,'#interact');else{await page.locator('#stage').focus();await page.keyboard.press('e');}await sleep(100);}
+  for(let n=0;n<4&&(await read()).track!==1;n++){if(phone){
+   await until(async()=>{const s=await read();return{near:s.near,paused:s.paused,over:s.over,activity:s.activity,renderFrames:s.renderFrames,enabled:await page.locator('#interact').isEnabled()};},v=>v.near==='stereo'&&!v.paused&&!v.over&&!v.activity&&v.enabled,'Physical stereo proximity and actual Interact readiness',30000);
+   await chapterTap(inp,'#interact');
+  }else{await page.locator('#stage').focus();await page.keyboard.press('e');}await sleep(100);}
   assert.equal((await read()).track,1,'Crib Static chosen through real record controls');
   await station('receiver');await investigate();await usable(page,'#sendSignal',phone);
   // Deliberately send the real wrong combination first: no unearned tune.

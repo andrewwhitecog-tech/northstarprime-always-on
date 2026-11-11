@@ -129,6 +129,10 @@ def _must_stay_local(relative: Path) -> bool:
     parts = relative.parts
     if not parts:
         return False
+    # This small, manifest-pinned model is required by the local game runtime.
+    # Other GLB releases retain the existing raw-delivery and size policies.
+    if relative.as_posix() == "arcade/custom/crib-recovered-assets/keeper-repair-station-v2.glb":
+        return True
     if parts[0] == "chronosphere":
         return True
     if len(parts) >= 2 and (parts[0], parts[1]) == ("static", "vendor"):

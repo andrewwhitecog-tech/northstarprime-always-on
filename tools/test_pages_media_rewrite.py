@@ -7,6 +7,24 @@ commit="a"*40
 base="https://raw.githubusercontent.com/andrewwhitecog-tech/northstarprime-always-on/"+commit+"/"
 selected={"idc/season-4/audio/a.mp3","idc/season-3/audio/excerpts/a.mp3","static/games/sfx/dharma_jump.mp3","static/idc_covers/x.png"}
 class MediaRewrite(unittest.TestCase):
+ def test_keeper_runtime_glb_selected_and_other_models_stay_external(self):
+  relative=Path("arcade/custom/crib-recovered-assets/keeper-repair-station-v2.glb")
+  self.assertFalse(m.external_release_media(relative))
+  self.assertTrue(m.external_release_media(relative.with_name("unreviewed-neighbor.glb")))
+  self.assertTrue(any(rel==relative for _,rel in m.iter_source_files()))
+ def test_actual_keeper_glb_copies_byte_exact_through_export(self):
+  import tempfile
+  relative=Path("arcade/custom/crib-recovered-assets/keeper-repair-station-v2.glb")
+  source=ROOT.parent/relative
+  actual=source.read_bytes()
+  self.assertEqual(actual[:4],b"glTF")
+  self.assertEqual(int.from_bytes(actual[8:12],"little"),len(actual))
+  scratch_parent=ROOT.parent/"output"
+  scratch_parent.mkdir(exist_ok=True)
+  with tempfile.TemporaryDirectory(prefix="keeper-export-",dir=scratch_parent) as tmp:
+   destination=Path(tmp)/"keeper.glb"
+   m.copy_artifact_source(source,relative,destination,set(),commit,frozenset())
+   self.assertEqual(destination.read_bytes(),actual)
  def rewrite(self,text,page="idc/season-4/index.html"):
   return m.rewrite_release_media_refs(text,Path(page),selected,commit)
  def test_literal(self):

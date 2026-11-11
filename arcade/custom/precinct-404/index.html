@@ -573,10 +573,17 @@
   .pin.now { background: #f5c542; box-shadow: 0 0 16px #f5c542; animation: pinPulse 1.1s ease-in-out infinite; }
   .pin.hot { background: #ec4899; box-shadow: 0 0 12px #ec4899; }
   @keyframes pinPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.6); } }
-  .map-callout { position: absolute; left: 50%; top: 50%; width: 72%; height: auto; transform: translate(-50%, -50%);
-    opacity: 0; transition: opacity 0.35s; filter: drop-shadow(0 4px 16px rgba(0,0,0,0.9)); pointer-events: none; }
+  .map-callout-stack { position: absolute; inset: 8px 12px; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 3px; background: transparent; pointer-events: none; }
+  .map-callout { display: block; width: auto; height: auto; max-width: 82%; max-height: 78%;
+    opacity: 0; transition: opacity 0.35s; filter: drop-shadow(0 4px 16px rgba(0,0,0,0.92)); pointer-events: none; object-fit: contain; }
   .map-callout.on { opacity: 1; }
-  .map-callout.small { width: 46%; }
+  .map-callout.small { max-width: 46%; max-height: 54%; }
+  .map-callout-stack.paired .map-callout { max-width: 80%; max-height: 54%; }
+  .map-callout-sub { display: block; width: auto; height: auto; max-width: 60%; max-height: 36%;
+    opacity: 0; transition: opacity 0.35s; filter: drop-shadow(0 3px 12px rgba(0,0,0,0.92)); pointer-events: none; object-fit: contain; }
+  .map-callout-sub.on { opacity: 1; }
+  .map-callout-sub[hidden] { display: none !important; }
   .portrait { width: 56px; height: 56px; object-fit: cover; object-position: top; border-radius: 50%; flex: 0 0 auto; }
   .officer-top { gap: 10px; }
   .adviser { width: 38px; height: 38px; object-fit: cover; object-position: top; border-radius: 50%; }
@@ -602,7 +609,7 @@
   .case-title .title-face { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; object-position: top; vertical-align: middle; margin: -6px 10px 0 0; }
   @media (max-width: 980px) { .rival-face.large { width: 84px; height: 84px; } }
   @media (min-width: 981px) {
-    .case-panel.ended .map-wrap { height: clamp(96px, 15vh, 200px); }
+    .case-panel.ended .map-wrap { height: clamp(108px, 16vh, 200px); }
     .case-panel.ended .case-body { gap: 6px; padding-top: 8px; padding-bottom: 8px; }
     .case-panel.ended #shiftEnd .case-title { margin: 0 0 4px; }
     .case-panel.ended #shiftEnd .case-copy { margin: 0; }
@@ -684,7 +691,10 @@
         <div class="map-wrap" id="mapWrap">
           <img class="map" src="art/buckman_map_v01.webp" alt="Buckman district map">
           <div class="pins" id="pins"></div>
-          <img class="map-callout" id="mapCallout" alt="">
+          <div class="map-callout-stack" id="mapCalloutStack">
+            <img class="map-callout" id="mapCallout" alt="">
+            <img class="map-callout-sub" id="mapCalloutSub" alt="" hidden>
+          </div>
         </div>
         <div id="shiftEnd"></div>
         <div class="case-type" id="caseType">Noise Complaint</div>
@@ -1546,11 +1556,47 @@
     let h = 2166136261; for (const ch of String(title)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
     return [12 + (h % 76), 16 + ((h >>> 8) % 66)];
   }
-  function mapCallout(word, holdMs) {
+  const LETTERING_ART = {
+    shift_cleared: "art/lettering_shift_cleared_v01.webp",
+    shift_lost: "art/lettering_shift_lost_v01.webp",
+    chaos: "art/lettering_chaos_v01.webp",
+    rival_week: "art/lettering_rival_week_v03.webp",
+    takeover: "art/lettering_takeover_v03.webp",
+    booked: "art/lettering_booked_v03.webp",
+    slipped_away: "art/lettering_slipped_away_v03.webp",
+    buckman_falls: "art/lettering_buckman_falls_v03.webp",
+    vanta_luxe: "art/lettering_vanta_luxe_v03.webp",
+    kernel_pique: "art/lettering_kernel_pique_v03.webp",
+    tessa_vale: "art/lettering_tessa_vale_v03.webp"
+  };
+  const RIVAL_CARD_WORD = { vanta: "vanta_luxe", kernel: "kernel_pique", tessa: "tessa_vale" };
+  Object.values(LETTERING_ART).forEach(src => { const pre = new Image(); pre.src = src; });
+  function mapCallout(word, holdMs, subWord) {
     const el = document.getElementById("mapCallout"); if (!el) return;
-    el.src = "art/lettering_" + word + "_v01.webp"; el.classList.toggle("small", word === "chaos"); el.classList.add("on");
+    const sub = document.getElementById("mapCalloutSub");
+    const stack = document.getElementById("mapCalloutStack");
+    el.src = LETTERING_ART[word] || ("art/lettering_" + word + "_v01.webp");
+    el.classList.toggle("small", word === "chaos");
+    el.classList.add("on");
+    if (sub) {
+      if (subWord && LETTERING_ART[subWord]) {
+        sub.src = LETTERING_ART[subWord];
+        sub.hidden = false;
+        sub.classList.add("on");
+      } else {
+        sub.classList.remove("on");
+        sub.hidden = true;
+      }
+    }
+    if (stack) stack.classList.toggle("paired", Boolean(subWord));
     clearTimeout(mapState.calloutTimer);
-    if (holdMs) mapState.calloutTimer = setTimeout(() => el.classList.remove("on"), holdMs);
+    if (holdMs) {
+      mapState.calloutTimer = setTimeout(() => {
+        el.classList.remove("on");
+        if (sub) { sub.classList.remove("on"); sub.hidden = true; }
+        if (stack) stack.classList.remove("paired");
+      }, holdMs);
+    }
   }
   function renderMap(call) {
     const box = document.getElementById("pins"); if (!box) return;
@@ -1780,12 +1826,12 @@
     render();
   }
 
-  function showEnd(word, title, body, face, button) {
+  function showEnd(word, title, body, face, button, subWord) {
     els.modalTitle.textContent = title;
     els.modalBody.textContent = body;
     els.modalBtn.textContent = button;
     // Rule 30: no result box. The verdict is lettering on the map; the words, the face and the button sit in the call panel.
-    mapCallout(word, 0);
+    mapCallout(word, 0, subWord);
     const end = document.getElementById("shiftEnd");
     if (end) {
       end.innerHTML = "";
@@ -1836,14 +1882,19 @@
     }
     addLog("Shift " + done + " cleared.");
     SoundFX.play("shiftend");
-    showEnd("shift_cleared", "Shift " + done + " cleared", body, face, "Start Shift " + (done + 1));
+    const breakWord = done === 4 ? "takeover" : done === 3 ? "rival_week" : "shift_cleared";
+    const breakSub = done === 4 ? RIVAL_CARD_WORD[state.leader] : null;
+    showEnd(breakWord, "Shift " + done + " cleared", body, face, "Start Shift " + (done + 1), breakSub);
     render();
   }
   function startNextShift() {
     state.finished = false; state.onBreak = false; state.selected = null; state.heldThisCall = false;
     clearShiftEnd();
-    addLog(state.index >= CAMPAIGN_CALLS - SHIFT_CALLS ? "Takeover shift: " + rivalById(state.leader).name + " moves on the precinct." : "Shift " + shiftNo() + " begins.");
+    const isTakeover = state.index >= CAMPAIGN_CALLS - SHIFT_CALLS;
+    addLog(isTakeover ? "Takeover shift: " + rivalById(state.leader).name + " moves on the precinct." : "Shift " + shiftNo() + " begins.");
     render();
+    if (isTakeover) mapCallout("takeover", 2600, RIVAL_CARD_WORD[state.leader]);
+    else if (shiftNo() === 4) mapCallout("rival_week", 2600);
     SoundFX.newCall();
   }
   // The end of shift 5: booked, slipped away, or owns Buckman; written into city memory for the next run.
@@ -1872,9 +1923,10 @@
     if (score > best) localStorage.setItem("precinct404Best", String(score));
     const [title, epilogue] = ENDINGS[leader.id][result];
     addLog(title + ".");
-    showEnd(result === "owns" ? "shift_lost" : "shift_cleared", title,
+    const endWord = result === "booked" ? "booked" : result === "slipped" ? "slipped_away" : "buckman_falls";
+    showEnd(endWord, title,
       epilogue + " Final score " + score + ". Trust " + clamp(state.trust) + ", chaos " + clamp(state.chaos) + ", budget " + clamp(state.budget) + ". Takeover calls broken: " + k + " of 4.",
-      RIVAL_ART[leader.id], state.canContinue ? "Start Night Shift+" : "New Shift");
+      RIVAL_ART[leader.id], state.canContinue ? "Start Night Shift+" : "New Shift", RIVAL_CARD_WORD[leader.id]);
     render();
   }
   // The end of a shift: what the visible Continue button does (pad A and Enter use it too).
@@ -1884,10 +1936,13 @@
     return true;
   }
   function clearShiftEnd() {
+    clearTimeout(mapState.calloutTimer);
     const end = document.getElementById("shiftEnd"); if (end) end.classList.remove("on");
     const panel = document.querySelector(".case-panel"); if (panel) panel.classList.remove("ended");
     const home = document.querySelector("#modal .modal"); if (home && els.modalBtn && els.modalBtn.parentNode !== home) home.appendChild(els.modalBtn);
     const el = document.getElementById("mapCallout"); if (el) el.classList.remove("on");
+    const sub = document.getElementById("mapCalloutSub"); if (sub) { sub.classList.remove("on"); sub.hidden = true; }
+    const stack = document.getElementById("mapCalloutStack"); if (stack) stack.classList.remove("paired");
   }
 
   function startNightShift() {

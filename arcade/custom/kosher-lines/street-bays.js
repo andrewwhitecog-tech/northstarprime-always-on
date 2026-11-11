@@ -5,8 +5,10 @@ import { GLTFLoader } from '/static/vendor/three/0.160.0/examples/jsm/loaders/GL
 // These are visual bays outside the playable street, never physics colliders.
 export function installStreetBays(scene,url,onStatus=()=>{}){
  const state={loaded:false,error:null,bays:0,sourceMeshes:0,sourceTriangles:0,batches:0,renderedTriangles:0};
- const positions=[];for(const side of [-1,1])for(let bay=0;bay<7;bay++)positions.push({side,bay,x:side*21.6,z:10-bay*6.1});
- const cameraBounds=positions.map(p=>({id:'authored-bay-'+p.side+'-'+p.bay,minX:p.x-1.35,maxX:p.x+1.35,minY:0,maxY:8.44,minZ:p.z-3.04,maxZ:p.z+3.04}));
+ const positions=[];for(const side of [-1,1])for(let bay=0;bay<7;bay++)positions.push({side,bay,x:side*21.6,z:10-bay*6.1,rotation:side>0?Math.PI/2:-Math.PI/2});
+ // Six end-wall fronts sit wholly beyond z=-34, with a clear central eye portal.
+ for(const side of [-1,1])for(let bay=1;bay<=3;bay++)positions.push({side:0,bay,x:side*bay*6.1,z:-35.55,rotation:Math.PI});
+ const cameraBounds=positions.map((p,i)=>({id:'authored-bay-'+i,minX:p.x-(p.side?1.35:3.04),maxX:p.x+(p.side?1.35:3.04),minY:0,maxY:8.44,minZ:p.z-(p.side?3.04:1.35),maxZ:p.z+(p.side?3.04:1.35)}));
  const group=new THREE.Group();group.name='Manufactured midnight arcade bays';scene.add(group);onStatus('loading');
  const ready=new GLTFLoader().loadAsync(url).then(gltf=>{
   const meshes=[];gltf.scene.updateMatrixWorld(true);gltf.scene.traverse(o=>{if(o.isMesh)meshes.push(o);});
@@ -22,7 +24,7 @@ export function installStreetBays(scene,url,onStatus=()=>{}){
     const items=buckets[bucket],material=mesh.material.clone();
     if(mesh.name==='BayAccentNeon'){material.color.setHex(colors[bucket]);material.emissive.setHex(colors[bucket]);material.emissiveIntensity=1.6;}
     const batch=new THREE.InstancedMesh(geometry,material,items.length);batch.name='Arcade '+mesh.name+' '+bucket;batch.castShadow=batch.receiveShadow=true;
-    items.forEach((p,i)=>{dummy.position.set(p.x,0,p.z);dummy.rotation.set(0,p.side>0?Math.PI/2:-Math.PI/2,0);dummy.scale.set(1,1,1);dummy.updateMatrix();matrix.copy(dummy.matrix);batch.setMatrixAt(i,matrix);});
+    items.forEach((p,i)=>{dummy.position.set(p.x,0,p.z);dummy.rotation.set(0,p.rotation,0);dummy.scale.set(1,1,1);dummy.updateMatrix();matrix.copy(dummy.matrix);batch.setMatrixAt(i,matrix);});
     batch.instanceMatrix.needsUpdate=true;batch.computeBoundingSphere();group.add(batch);state.batches++;state.renderedTriangles+=triangles*items.length;
    }
   }

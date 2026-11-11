@@ -34,6 +34,6 @@ Branching street trees, planters, divided industrial windows, roof silhouettes, 
 
 vorath-adult-skater-v4.glb keeps the licensed Quaternius rig, skin/face and four actual source clips. NorthStar revised the original weighted jacket and cargo outfit: continuous woven textile, matte workwear, a looser torso and fitted cargo hardware. Parent v3 remains retained.
 
-kosher-arcade-bay-v1.glb is original NorthStar geometry/material work authored by Antigravity in Blender5.1: brick and lintels, riveted steel, security shutter, hazard thresholds, bronze hardware, spectral trim, wire glass and manufactured neon. Eight static meshes are instanced across14 bays; no external model request at runtime.
+kosher-arcade-bay-v1.glb is original NorthStar geometry/material work authored by Antigravity in Blender5.1: brick and lintels, riveted steel, security shutter, hazard thresholds, bronze hardware, spectral trim, wire glass and manufactured neon. Eight static meshes are instanced across20 bays; no external model request at runtime.
 
 kosher-lines-title-v4.png and kosher-objectives-v4.png are original sculpted UI lettering generated with the built-in OpenAI image tool. They are transparent interface assets, not gameplay renders, third-party logos or CC0 source assets.

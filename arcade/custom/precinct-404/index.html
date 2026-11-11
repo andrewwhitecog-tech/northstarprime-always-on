@@ -638,6 +638,7 @@
     <div class="header-actions">
       <span id="xbox-pad-badge" class="chip" style="display: none; border-color: #10b981; color: #10b981; font-weight: 700; background: rgba(16, 185, 129, 0.12);">[PAD: CONNECTED]</span>
       <button class="btn" id="crtToggleBtn" title="Toggle CRT Scanline Overlay">CRT: ON</button>
+      <button class="btn" id="soundBtn" title="Sound on or off (M)">Sound: ON</button>
       <img class="adviser" src="art/adviser_mags_v01.webp" alt="Mags"><button class="btn" id="adviceBtn">Ask Mags</button>
       <img class="adviser" src="art/adviser_derek_v01.webp" alt="Derek"><button class="btn" id="overrideBtn">Derek Override</button>
       <button class="btn" id="resetBtn">New Shift</button>
@@ -751,6 +752,7 @@
 })();
 </script>
 
+<script src="/static/games/hq_audio.js"></script>
 <script>
 (() => {
   "use strict";
@@ -1634,14 +1636,14 @@
       budget = call.risk === "Extreme" ? -3 : -1;
       outcome = `${officer.name} handles ${call.title}.`;
     } else if (officer.id === call.secondary || score >= 68) {
-      SoundFX.select();
+      SoundFX.play("workable");
       rumble(0.25, 0.45, 140);
       trust = 4;
       chaos = -4;
       budget = -2;
       outcome = `${officer.name} gets a workable result on ${call.title}.`;
     } else if (score >= 48) {
-      SoundFX.tick();
+      SoundFX.play("messy");
       rumble(0.3, 0.5, 180);
       trust = -2;
       chaos = 7;
@@ -1754,6 +1756,7 @@
       return;
     }
     render();
+    SoundFX.newCall();
   }
 
   function endGame(won) {
@@ -1832,6 +1835,7 @@
         + (prior ? " " + lastTakeoverText(leader.id) : "");
     }
     addLog("Shift " + done + " cleared.");
+    SoundFX.play("shiftend");
     showEnd("shift_cleared", "Shift " + done + " cleared", body, face, "Start Shift " + (done + 1));
     render();
   }
@@ -1840,6 +1844,7 @@
     clearShiftEnd();
     addLog(state.index >= CAMPAIGN_CALLS - SHIFT_CALLS ? "Takeover shift: " + rivalById(state.leader).name + " moves on the precinct." : "Shift " + shiftNo() + " begins.");
     render();
+    SoundFX.newCall();
   }
   // The end of shift 5: booked, slipped away, or owns Buckman; written into city memory for the next run.
   function endCampaign() {
@@ -1861,7 +1866,7 @@
     cityMemory.lastEvent = lastTakeoverText(leader.id);
     saveCityMemory();
     state.finished = true; state.onBreak = false; state.canContinue = result !== "owns";
-    if (result === "owns") { SoundFX.alarm(); rumble(0.85, 1.0, 500); } else { SoundFX.win(); rumble(0.5, 0.75, 400); }
+    if (result === "booked") { SoundFX.win(); rumble(0.5, 0.75, 400); } else { SoundFX.play("owns"); rumble(result === "owns" ? 0.85 : 0.5, result === "owns" ? 1.0 : 0.75, 500); }
     const score = Math.max(0, state.trust + state.budget - state.chaos);
     const best = Number(localStorage.getItem("precinct404Best") || 0);
     if (score > best) localStorage.setItem("precinct404Best", String(score));
@@ -1931,63 +1936,44 @@
     render();
   }
 
-  // --- Web Audio Procedural Sound Engine ---
+  // --- Sound: ElevenLabs effects, a rain-and-scanner bed and a noir track through the shared HQ player. Nothing is synthesized. ---
+  const HQ = typeof HQAudio === "function" ? HQAudio({
+    base: ('audio/' + ''),
+    files: { nav: ["nav"], newcall: ["newcall"], clean: ["clean"], workable: ["workable"], messy: ["messy"], escalate: ["escalate"],
+             hold: ["hold"], mags: ["mags"], override: ["override"], shiftend: ["shiftend"], booked: ["booked"], owns: ["owns"], ambience: ["ambience"] },
+    loops: { ambience: true },
+    vol: { nav: 0.55, newcall: 0.6, ambience: 0.55 },
+    music: "music", musicVol: 0.3, master: 0.85, muteKey: "precinct404Muted"
+  }) : null;
   const SoundFX = {
-    ctx: null,
-    init() {
-      if (this.ctx) return;
-      try {
-        const AC = window.AudioContext || window.webkitAudioContext;
-        if (AC) this.ctx = new AC();
-      } catch (e) {}
+    started: false,
+    play(key, o) { if (HQ) HQ.play(key, o || {}); },
+    start() {
+      if (!HQ) return;
+      HQ.unlock();
+      if (!this.started) { this.started = true; HQ.loop("ambience", 1); HQ.music(true); }
     },
-    resume() {
-      if (this.ctx && this.ctx.state === "suspended") this.ctx.resume();
-    },
-    playTone(freq, dur, type = "sine", gainVal = 0.12, slideTo = null) {
-      this.init();
-      this.resume();
-      if (!this.ctx) return;
-      try {
-        const osc = this.ctx.createOscillator();
-        const g = this.ctx.createGain();
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-        if (slideTo) osc.frequency.exponentialRampToValueAtTime(Math.max(10, slideTo), this.ctx.currentTime + dur);
-        g.gain.setValueAtTime(gainVal, this.ctx.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + dur);
-        osc.connect(g);
-        g.connect(this.ctx.destination);
-        osc.start();
-        osc.stop(this.ctx.currentTime + dur);
-      } catch (e) {}
-    },
-    tick() { this.playTone(520, 0.04, "triangle", 0.08); },
-    select() { this.playTone(660, 0.08, "square", 0.1, 880); },
-    dispatch() {
-      this.playTone(440, 0.12, "triangle", 0.15, 880);
-      setTimeout(() => this.playTone(880, 0.18, "sine", 0.15), 60);
-    },
-    hold() { this.playTone(330, 0.14, "sawtooth", 0.12, 220); },
-    override() {
-      this.playTone(587.33, 0.15, "square", 0.12);
-      setTimeout(() => this.playTone(880, 0.22, "sine", 0.14), 80);
-    },
-    mags() {
-      this.playTone(659.25, 0.12, "sine", 0.14);
-      setTimeout(() => this.playTone(783.99, 0.18, "triangle", 0.14), 70);
-    },
-    alarm() {
-      this.playTone(800, 0.18, "sawtooth", 0.15, 400);
-      setTimeout(() => this.playTone(900, 0.18, "sawtooth", 0.15, 450), 120);
-    },
-    win() {
-      const notes = [523.25, 659.25, 783.99, 1046.50];
-      notes.forEach((freq, idx) => {
-        setTimeout(() => this.playTone(freq, 0.22, "triangle", 0.16), idx * 110);
-      });
-    }
+    tick() { this.play("nav", { limit: 50 }); },
+    select() { this.play("nav", { limit: 50 }); },
+    dispatch() { this.play("clean"); },
+    hold() { this.play("hold"); },
+    mags() { this.play("mags"); },
+    override() { this.play("override"); },
+    alarm() { this.play("escalate"); },
+    win() { this.play("booked"); },
+    newCall() { setTimeout(() => this.play("newcall", { limit: 400 }), 650); }
   };
+  function syncSoundButton() {
+    const b = document.getElementById("soundBtn"); if (b && HQ) b.textContent = HQ.isMuted() ? "Sound: OFF" : "Sound: ON";
+  }
+  function toggleSound() { if (!HQ) return; HQ.toggle(); syncSoundButton(); }
+  {
+    const cover = document.getElementById("titleCover");
+    if (cover) cover.addEventListener("click", () => { SoundFX.start(); SoundFX.newCall(); });
+    addEventListener("keydown", e => { if (cover && !cover.classList.contains("gone") && (e.key === "Enter" || e.key === " ")) { SoundFX.start(); SoundFX.newCall(); } }, true);
+    addEventListener("pointerdown", () => { if (HQ) { HQ.unlock(); if (cover && cover.classList.contains("gone")) SoundFX.start(); } }, true);
+    addEventListener("keydown", () => { if (HQ) HQ.unlock(); }, true);
+  }
 
   // --- Dual-Rumble Haptics ---
   function rumble(weak = 0.3, strong = 0.5, duration = 120) {
@@ -2129,6 +2115,7 @@
   els.overrideBtn.addEventListener("click", derekOverride);
   els.resetBtn.addEventListener("click", reset);
   if (els.crtToggleBtn) els.crtToggleBtn.addEventListener("click", toggleCrt);
+  { const sb = document.getElementById("soundBtn"); if (sb) sb.addEventListener("click", toggleSound); syncSoundButton(); }
   els.modalBtn.addEventListener("click", continueAfterEnd);
   addEventListener("keydown", event => {
     if (event.key === "Enter" && state.finished) {
@@ -2139,10 +2126,11 @@
     if (event.key === "Enter" && !els.dispatchBtn.disabled) dispatch();
     if (event.key === "r" || event.key === "R") reset();
     if (event.key === "c" || event.key === "C") toggleCrt();
+    if (event.key === "m" || event.key === "M") toggleSound();
   });
 
   // Read-only view for tests and curious players.
-  window.__precinctDebug = { snapshot: () => ({ index: state.index, shift: shiftNo(), finished: state.finished, onBreak: state.onBreak, endless: state.endless,
+  window.__precinctDebug = { sound: () => (HQ ? HQ.status() : null), snapshot: () => ({ index: state.index, shift: shiftNo(), finished: state.finished, onBreak: state.onBreak, endless: state.endless,
     leader: state.leader, breaks: state.breaks, readOfficer: state.readOfficer, trust: state.trust, chaos: state.chaos, budget: state.budget,
     call: (() => { const c = currentCase(); return { type: c.type, title: c.title, rivalId: c.rivalId, top: topPick(c).id }; })() }) };
 

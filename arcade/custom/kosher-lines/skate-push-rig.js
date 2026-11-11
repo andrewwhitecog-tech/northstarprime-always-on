@@ -85,13 +85,21 @@ export function createSkatePushRig(THREE,{model,body,deckY=.112}){
   if(reachDrop>0){const pos=body.worldToLocal(pelvis.getWorldPosition(V()));pos.y-=reachDrop;pelvis.position.copy(pelvis.parent.worldToLocal(body.localToWorld(pos)));body.updateWorldMatrix(true,true);}
   for(let i=0;i<solves.length;i++){const s=solves[i],error=solve(s.l,s.target,s.pole,s.worldQ);soleErrors[i]=s.l.foot.localToWorld(s.ref.sole.clone()).distanceTo(s.worldSole);if(i===0)plantError=error;else pushError=error;}
   const aim=state.aim,d=aim?.direction;lastAim=aim?.active!==false&&d&&['x','y','z'].every(k=>Number.isFinite(d[k]))&&Math.hypot(d.x,d.y,d.z)>.01;
+  const shoulderPositions=arms.map(arm=>arm.hip?body.worldToLocal(arm.hip.getWorldPosition(V())):null);
+  const lateral=shoulderPositions.every(Boolean)?shoulderPositions[1].clone().sub(shoulderPositions[0]):V().set(1,0,0);lateral.y=0;lateral.normalize();
+  const forward=V().set(lateral.z,0,-lateral.x);
   for(let i=0;i<2;i++){
    const arm=arms[i];if(!arm.hip)continue;
-   const swing=Math.sin(phase*Math.PI*2)*out*.12;
-   let target=body.localToWorld(V().set(.1+compression*.15,1.20-compression*.5-reachDrop*.7+(i===0?swing:-swing),i===0?-.48-steer*.1:.48-steer*.1));
+   const swing=Math.sin(phase*Math.PI*2)*out*.10,side=i===0?-1:1,shoulder=shoulderPositions[i];
+   // The host turns a model through90 degrees. Derive reach from the actual
+   // shoulders instead of assuming the source armature faces a fixed axis.
+   const localTarget=shoulder.clone().addScaledVector(lateral,side*(mode==='air'?.14:.08)).addScaledVector(forward,.15+steer*side*.04);
+   localTarget.y-=mode==='air'?.18:.30;localTarget.y+=i===0?swing:-swing;
+   let target=body.localToWorld(localTarget);
    let handQ=null;
    if(i===1&&lastAim){const direction=V().set(d.x,d.y,d.z).normalize(),shoulder=arm.hip.getWorldPosition(V());target=shoulder.addScaledVector(direction,.45);target.y-=.055;handQ=Q().setFromUnitVectors(new THREE.Vector3(0,1,0),direction);}
-   armErrors[i]=solve(arm,target,body.localToWorld(V().set(-.35,.98,i===0?-.55:.55)),handQ);
+   const localPole=shoulder.clone().addScaledVector(lateral,side*.4).addScaledVector(forward,-.2);localPole.y-=.15;
+   armErrors[i]=solve(arm,target,body.localToWorld(localPole),handQ);
   }
   body.updateWorldMatrix(true,true);lastState=mode;lastStance=state.stance===1?1:0;
  }

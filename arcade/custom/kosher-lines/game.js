@@ -122,7 +122,7 @@ function makeWorld(){
   else{box(b.w,.7,b.d,b.x,.35,b.z,pale);for(let i=0;i<8;i++){const a=i*2.4;rod(new THREE.Vector3(b.x,.8,b.z),new THREE.Vector3(b.x+Math.sin(a)*.9,2.3+Math.cos(a)*.5,b.z+Math.cos(a)*.9),.06,mat(0x287664));}}
  }
  // Authored facade texture is applied to genuine surrounding architecture.
- const blocks=[[-26,-9,6,10,66],[26,-9,6,13,66],[-12,-38,22,11,6],[12,-38,20,15,6]];
+ const blocks=[[-26,-9,6,10,66],[26,-9,6,13,66],[-12,-40.4,22,11,6],[12,-40.4,20,15,6]];
  blocks.forEach(([x,z,w,h,d],i)=>{
   const mass=box(w,h,d,x,h/2,z,brick);
   // World-scaled face UVs keep real brick courses consistent on each wall.

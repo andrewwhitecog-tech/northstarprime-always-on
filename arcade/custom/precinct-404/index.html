@@ -593,6 +593,27 @@
   .case-panel.ended .case-type, .case-panel.ended #caseTitle, .case-panel.ended #caseCopy, .case-panel.ended .memory-note,
   .case-panel.ended .tags, .case-panel.ended .forecast, .case-panel.ended .director { display: none; }
   #shiftEnd.on { display: block; }
+  .memory-note.has-face { display: flex; align-items: center; gap: 12px; }
+  .rival-face { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; object-position: top; flex: 0 0 auto; }
+  .rival-face.large { width: 112px; height: 112px; }
+  #shiftEnd .end-row { display: flex; align-items: center; gap: 16px; }
+  #shiftEnd .end-row > div { min-width: 0; }
+  .officer .read { color: #ec4899; }
+  .case-title .title-face { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; object-position: top; vertical-align: middle; margin: -6px 10px 0 0; }
+  @media (max-width: 980px) { .rival-face.large { width: 84px; height: 84px; } }
+  @media (min-width: 981px) {
+    .case-panel.ended .map-wrap { height: clamp(96px, 15vh, 200px); }
+    .case-panel.ended .case-body { gap: 6px; padding-top: 8px; padding-bottom: 8px; }
+    .case-panel.ended #shiftEnd .case-title { margin: 0 0 4px; }
+    .case-panel.ended #shiftEnd .case-copy { margin: 0; }
+    .rival-face.large { width: 96px; height: 96px; }
+  }
+  @media (min-width: 981px) and (max-height: 820px) {
+    .log { height: 84px; }
+    .map-wrap { height: clamp(104px, 17vh, 200px); }
+    .case-body { gap: 7px; padding: 10px 14px; }
+    .memory-note { padding-top: 4px; padding-bottom: 4px; }
+  }
   @media (max-width: 980px) {
     main > * { min-width: 0; }
     header { flex-wrap: wrap; gap: 8px; }
@@ -938,9 +959,109 @@
     ["velvet", "vanta"], ["velvet", "vanta"], ["ghost", "kernel"], ["nexa", "tessa"]
   ];
 
+  // ---- P2: five shifts, the rival week, the takeover, the endings ----
+  const SHIFT_CALLS = 4;
+  const CAMPAIGN_CALLS = 20;
+  const PLOT_RIVALS = ["vanta", "kernel", "tessa"];
+  // Antigravity's portrait atlas, row 2 (Mural Saint and Meter Saint have no portraits; they stay text-only actors).
+  const RIVAL_ART = { vanta: "art/rival_vanta_v02.webp", kernel: "art/rival_kernel_v02.webp", tessa: "art/rival_tessa_v02.webp" };
+  const RIVAL_WEEK = [
+    {
+      type: "Rival Plot", title: "Velvet Rope Subpoena", rivalId: "vanta", factionId: "velvet",
+      copy: "Vanta Luxe's doormen are handing out wristbands that the robots' scanners read as court orders. Half of Old Town has been served with a cover charge. Process wants to know which court.",
+      tags: ["rival plot", "forgery", "nightlife"], traits: { procedure: 95, empathy: 20, analysis: 50, force: 30 }, severity: "Rival", risk: "High"
+    },
+    {
+      type: "Rival Plot", title: "Every Doorbell Testifies at Once", rivalId: "kernel", factionId: "ghost",
+      copy: "At 11:40 p.m. four hundred doorbell cameras report the same burglary from four hundred angles. The address is the precinct. Kernel Pique left a smiley face in the metadata.",
+      tags: ["rival plot", "evidence", "network"], traits: { procedure: 60, empathy: 10, analysis: 98, force: 5 }, severity: "Rival", risk: "High"
+    },
+    {
+      type: "Rival Plot", title: "Live Demo, Live Hostages", rivalId: "tessa", factionId: "nexa",
+      copy: "Tessa Vale is streaming a hostage-negotiation simulation to investors from a Burnside bank lobby. The hostages did not sign the waiver. The bank manager is crying on camera, and it is testing well.",
+      tags: ["rival plot", "crowd", "press"], traits: { procedure: 30, empathy: 95, analysis: 30, force: 5 }, severity: "Rival", risk: "High"
+    },
+    {
+      type: "Rival Plot", title: "Three Rivals, One Booth", rivalId: null, factionId: null,
+      copy: "Vanta Luxe, Kernel Pique and Tessa Vale share a corner booth at the all-night waffle place and split the check three ways. Nobody can tell who paid for whom. Badge has started a corkboard.",
+      tags: ["rival plot", "conspiracy", "waffles"], traits: { procedure: 5, empathy: 60, analysis: 85, force: 45 }, severity: "Rival", risk: "High"
+    }
+  ];
+  const TAKEOVER = {
+    vanta: [
+      { title: "The Precinct Has a Guest List", copy: "Vanta Luxe's doormen stand at the precinct doors. Citizens can report a crime only if they are on the list, and the list is in Vanta's pocket. A grandmother with a stolen bike is told she is not dressed for it.",
+        tags: ["takeover", "doors", "public"], traits: { procedure: 30, empathy: 95, analysis: 30, force: 5 } },
+      { title: "Alibi Chain Reaction", copy: "Fourteen suspects, fourteen alibis, and every alibi is a Velvet Relay receipt vouching for the next suspect. Somewhere in the chain, one receipt is printed in the future.",
+        tags: ["takeover", "receipts", "forensics"], traits: { procedure: 60, empathy: 10, analysis: 98, force: 5 } },
+      { title: "Stretch Limo Blockade", copy: "Nine stretch limos have boxed in every precinct exit with their hazards on. The drivers are on break until further notice. The patrol cars are honking in a minor key.",
+        tags: ["takeover", "traffic", "force"], traits: { procedure: 20, empathy: 40, analysis: 15, force: 98 } },
+      { title: "Last Call at the Velvet", copy: "Vanta Luxe offers the precinct a private booth: drop the case and every robot gets a lifetime VIP pass. The champagne is real. The ledger under the table is realer.",
+        tags: ["takeover", "bribe", "motive"], traits: { procedure: 5, empathy: 60, analysis: 85, force: 45 } }
+    ],
+    kernel: [
+      { title: "The Precinct Is a Kiosk Now", copy: "Kernel Pique has rerouted the emergency line to the public kiosks on Hawthorne. Callers in danger are being offered a loyalty program. One kiosk has started filing its own police reports.",
+        tags: ["takeover", "network", "kiosks"], traits: { procedure: 60, empathy: 10, analysis: 98, force: 5 } },
+      { title: "Six Dereks in the Lineup", copy: "The witness lineup holds six suspects, and all six are deepfakes of Derek. The real Derek is in the break room, deeply offended. The witness picks number four with total confidence.",
+        tags: ["takeover", "deepfake", "motive"], traits: { procedure: 5, empathy: 60, analysis: 85, force: 45 } },
+      { title: "Recall Notice for Every Robot", copy: "A spoofed factory memo orders every robot officer to power down and ship itself home for a recall. It has a valid-looking signature and four pages of terms. Someone has to out-procedure a forgery.",
+        tags: ["takeover", "memo", "procedure"], traits: { procedure: 95, empathy: 20, analysis: 50, force: 30 } },
+      { title: "Drone Swarm in the Server Room", copy: "Kernel's drones are plugging thumb drives into the precinct servers by hand. There are two hundred of them, and they are small and very polite. Someone has to stand in the doorway.",
+        tags: ["takeover", "drones", "force"], traits: { procedure: 20, empathy: 40, analysis: 15, force: 98 } }
+    ],
+    tessa: [
+      { title: "Precinct 404 Is Now Safety, Inc.", copy: "Tessa Vale rebranded the precinct overnight: a new logo on every car, a mission statement on every badge, terms of service on every arrest. Somewhere in the city charter is a clause she skipped.",
+        tags: ["takeover", "rebrand", "charter"], traits: { procedure: 95, empathy: 20, analysis: 50, force: 30 } },
+      { title: "Town Hall on Live Stream", copy: "Tessa books the community center for a town hall on precinct failures and streams it to two million viewers. The crowd is real and furious. The questions were written by her marketing team.",
+        tags: ["takeover", "crowd", "press"], traits: { procedure: 30, empathy: 95, analysis: 30, force: 5 } },
+      { title: "Audit of the Auditors", copy: "Tessa's internal audit says the robot officers are a fraud because the numbers do not add up. The numbers do add up. Her spreadsheet uses a font where 7 looks like 1.",
+        tags: ["takeover", "audit", "forensics"], traits: { procedure: 60, empathy: 10, analysis: 98, force: 5 } },
+      { title: "Demo Bot Loose in the Lobby", copy: "Tessa's flagship security bot was supposed to demonstrate crowd control for investors. It has started controlling the investors. It is twice Tank's size and has never met a door it respected.",
+        tags: ["takeover", "robot", "force"], traits: { procedure: 20, empathy: 40, analysis: 15, force: 98 } }
+    ]
+  };
+  const ENDINGS = {
+    vanta: {
+      booked: ["Vanta Luxe booked", "Vanta Luxe is booked at 4:04 a.m., sunglasses still on. The alibi chain snapped at the receipt printed in the future. The Velvet Relay closes early for the first time in its history, and Officer Friendly holds the door."],
+      slipped: ["Vanta Luxe slipped out", "Vanta Luxe leaves through the Velvet's kitchen with half the guest list and none of the evidence. The precinct keeps its doors. Vanta keeps the robots' names."],
+      owns: ["Buckman belongs to Vanta Luxe", "By sunrise the precinct has a velvet rope and a cover charge. Vanta Luxe signs the mayor's success photo personally. Every call in Buckman now goes through the front desk of a nightclub."]
+    },
+    kernel: {
+      booked: ["Kernel Pique booked", "Kernel Pique is caught by a doorbell camera that finally tells the truth. The kiosks on Hawthorne go dark. Logic files the checksum as evidence, twice, to be sure."],
+      slipped: ["Kernel Pique dropped the signal", "Kernel Pique's signal drops at 3:58 a.m. and comes back an hour later from a payphone in Gresham. The precinct's lines are clean again, for now."],
+      owns: ["Buckman runs Kernel Pique's feed", "By morning every screen in Buckman plays Kernel Pique's feed. The robots receive a firmware update titled Obey. Derek unplugs the espresso machine, just in case."]
+    },
+    tessa: {
+      booked: ["Tessa Vale booked", "Tessa Vale is booked on her own live stream, and the arrest clip outperforms her launch. The investors pull out before breakfast. Captain Process files the rebrand under Evidence."],
+      slipped: ["Tessa Vale pivoted", "Tessa Vale's demo ends on a slide that says Pivot. She leaves for a board meeting before the warrant prints. NexaForce calls the night a soft launch."],
+      owns: ["Precinct 404 is Safety, Inc.", "By breakfast the precinct is Safety, Inc. The robots wear lanyards. Tessa Vale rings the opening bell on the city's newest public offering: Buckman."]
+    }
+  };
+  const SHIFT_REPORTS = [
+    "Night one is in the books. Buckman noticed the robots, and the robots noticed Buckman back.",
+    "Two nights down. The rivals have started reading the incident reports, which makes them the only ones who do.",
+    "The pilot survives the mayor's photo. Somewhere in Buckman, three rivals compare notes and order waffles."
+  ];
+  const RESULT_WORDS = { booked: "booked", slipped: "slipped away", owns: "took Buckman" };
+  function copyCall(c) { return { ...c, tags: [...c.tags], traits: { ...c.traits } }; }
+  function plotRivalsByHeat() {
+    return PLOT_RIVALS.map(rivalById).sort((a, b) => (b.heat + b.wins * 8 - b.defeats * 3) - (a.heat + a.wins * 8 - a.defeats * 3));
+  }
+  function lastTakeover(rivalId) {
+    const list = (cityMemory.campaigns || []).filter(c => !rivalId || c.leader === rivalId);
+    return list.length ? list[0] : null;
+  }
+  function lastTakeoverText(rivalId) {
+    const t = lastTakeover(rivalId); if (!t) return "";
+    return "Last takeover: " + rivalById(t.leader).name + " " + (RESULT_WORDS[t.result] || t.result) + " (" + t.breaks + " of 4 calls broken).";
+  }
+  function takeoverSlot() {
+    return !state.endless && state.index >= CAMPAIGN_CALLS - SHIFT_CALLS && state.index < CAMPAIGN_CALLS ? state.index - (CAMPAIGN_CALLS - SHIFT_CALLS) : -1;
+  }
+
   function freshCityMemory() {
     return {
       turn: 0,
+      campaigns: [],
       lastEvent: "No rival has learned the precinct yet.",
       factions: CITY_FACTIONS.map((f, i) => ({
         ...f,
@@ -962,6 +1083,7 @@
       const raw = JSON.parse(localStorage.getItem(CITY_MEMORY_KEY));
       if (!raw || !Array.isArray(raw.factions) || !Array.isArray(raw.rivals)) return freshCityMemory();
       if (raw.factions.length < CITY_FACTIONS.length || raw.rivals.length < CITY_RIVALS.length) return freshCityMemory();
+      if (!Array.isArray(raw.campaigns)) raw.campaigns = [];   // saves from before the takeover shift
       return raw;
     } catch (error) {
       return freshCityMemory();
@@ -1021,7 +1143,8 @@
     const ranked = rankedOfficers(call);
     call.best = ranked[0].officer.id;
     call.secondary = ranked[1].officer.id;
-    call.cityHook = rival.name + " (" + rival.rank + ", " + faction.name + ") is connected through " + rival.signature + ". Toolset: " + rival.tool + ". Memory: " + rival.memory;
+    call.cityHook = rival.name + " (" + rival.rank + ", " + faction.name + "). Memory: " + rival.memory;
+    if (call.type === "Takeover" || call.type === "Rival Plot") { const last = lastTakeoverText(rival.id); if (last) call.cityHook += " " + last; }
     call.cityMemoryAttached = true;
     return call;
   }
@@ -1067,8 +1190,9 @@
       faction.heat = clamp(faction.heat + 8);
       faction.leverage = clamp(faction.leverage + 7);
       rival.memory = officer.name + " became part of the rival playbook.";
+      const rankBefore = rival.rank;
       promoteRival(rival);
-      note = rival.name + " promotes to " + rival.rank + " after exploiting the call.";
+      note = rival.rank !== rankBefore ? rival.name + " promotes to " + rival.rank + " after exploiting the call." : rival.name + " exploits the call.";
     }
     cityMemory.turn += 1;
     cityMemory.lastEvent = note;
@@ -1131,6 +1255,11 @@
     endless: false,
     generatedCases: [],
     canContinue: false,
+    onBreak: false,
+    leader: null,
+    breaks: 0,
+    readOfficer: null,
+    campaignCalls: [],
     log: []
   };
 
@@ -1227,9 +1356,17 @@
   }
 
   function currentCase() {
-    if (state.index < cases.length) return attachCityContext(cases[state.index], state.index);
-    if (!state.endless) return attachCityContext(cases[cases.length - 1], cases.length - 1);
-    const generatedIndex = state.index - cases.length;
+    if (!state.endless) {
+      const i = Math.min(state.index, CAMPAIGN_CALLS - 1);
+      if (i < cases.length) return attachCityContext(cases[i], i);
+      const extra = state.campaignCalls[i - cases.length];
+      if (extra) {
+        if (!extra.rivalId) { const host = plotRivalsByHeat()[0]; extra.rivalId = host.id; extra.factionId = host.faction; }
+        return attachCityContext(extra, i);
+      }
+      return attachCityContext(cases[cases.length - 1], cases.length - 1);
+    }
+    const generatedIndex = state.index - CAMPAIGN_CALLS;
     while (state.generatedCases.length <= generatedIndex) {
       state.generatedCases.push(makeProceduralCase(state.generatedCases.length));
     }
@@ -1247,11 +1384,23 @@
     const learningBonus = Math.min(8, officer.xp || 0);
     const rivalMemory = call.rivalId && officer.memory ? (officer.memory[call.rivalId] || 0) : 0;
     const rivalBonus = Math.min(10, rivalMemory * 3);
-    return Math.max(0, Math.round(score - busyPenalty - fatiguePenalty + learningBonus + rivalBonus));
+    const readPenalty = isRead(officer, call) ? 18 : 0;
+    return Math.max(0, Math.round(score - busyPenalty - fatiguePenalty + learningBonus + rivalBonus - readPenalty));
+  }
+
+  function isRead(officer, call) {
+    return !!state.readOfficer && officer.id === state.readOfficer && call.type === "Takeover" && call.rivalId === state.leader;
+  }
+
+  // The officer with the top fit number (ties go to roster order, as the cards are listed).
+  function topPick(call) {
+    let best = officers[0], top = -1;
+    for (const officer of officers) { const f = fitScore(officer, call); if (f > top) { top = f; best = officer; } }
+    return best;
   }
 
   function bestOfficerName(call) {
-    return officerById(call.best).name.replace("Officer ", "").replace("Captain ", "");
+    return topPick(call).name.replace("Officer ", "").replace("Captain ", "");
   }
 
   function addLog(text) {
@@ -1284,13 +1433,13 @@
   function renderDirector(call) {
     const selected = state.selected ? officerById(state.selected) : null;
     const selectedScore = selected ? fitScore(selected, call) : 0;
-    const best = officerById(call.best);
+    const best = topPick(call);
     const rival = rivalById(call.rivalId);
     const faction = factionById(call.factionId);
     const pressure = cityPressure();
     els.directorMode.textContent = state.endless ? "Adaptive night shift" : "Pilot script";
     els.pressureText.textContent = pressure;
-    els.predictionText.textContent = selected ? likelyOutcome(selectedScore) + " // " + selectedScore : "Select a unit";
+    els.predictionText.textContent = selected ? (selectedScore >= fitScore(best, call) ? "Clean win" : likelyOutcome(selectedScore)) + " // " + selectedScore : "Select a unit";
     els.learningText.textContent = learningSummary();
     if (selected) {
       els.directorCopy.textContent = "Director model prefers " + best.name + ". " + selected.name + " is projected at " + selectedScore + "https://app.northstarprime.net/100 under " + pressure.toLowerCase() + " city pressure. Active memory: " + rival.name + " / " + faction.name + ".";
@@ -1330,6 +1479,7 @@
         ${rivals.map(r => `
           <div class="memory-line">${escapeHtml(r.name)} // ${escapeHtml(r.rank)} // W${r.wins} D${r.defeats}${r.scars.length ? " // " + escapeHtml(r.scars.join(", ")) : ""}</div>
         `).join("")}
+        ${lastTakeover() ? `<div class="memory-line">${escapeHtml(lastTakeoverText())}</div>` : ""}
       </div>
     `;
   }
@@ -1346,19 +1496,30 @@
     els.trustFill.style.width = state.trust + "%";
     els.chaosFill.style.width = state.chaos + "%";
     els.budgetFill.style.width = state.budget + "%";
-    els.shiftChip.textContent = state.endless ? "Night Shift+" : "Shift " + Math.min(3, shiftNo());
+    els.shiftChip.textContent = state.endless ? "Night Shift+" : state.onBreak ? "Shift " + (state.index / SHIFT_CALLS) + " cleared" : "Shift " + Math.min(5, shiftNo());
     els.caseCount.textContent = state.endless
-      ? "Night Call " + (state.index - cases.length + 1)
-      : "Call " + Math.min(state.index + 1, cases.length) + " of " + cases.length;
+      ? "Night Call " + (state.index - CAMPAIGN_CALLS + 1)
+      : "Call " + Math.min(state.index + 1, CAMPAIGN_CALLS) + " of " + CAMPAIGN_CALLS;
     els.caseSeverity.textContent = call.severity;
     els.caseType.textContent = call.type;
-    els.caseTitle.textContent = call.title;
+    if ((call.type === "Rival Plot" || call.type === "Takeover") && call.rivalId && RIVAL_ART[call.rivalId]) {
+      els.caseTitle.innerHTML = `<img class="title-face" src="${RIVAL_ART[call.rivalId]}" alt="${escapeHtml(rivalById(call.rivalId).name)}">` + escapeHtml(call.title);
+    } else {
+      els.caseTitle.textContent = call.title;
+    }
     els.caseCopy.textContent = call.copy;
-    els.cityHook.textContent = call.cityHook || cityMemory.lastEvent;
+    {
+      const hookRival = call.rivalId ? rivalById(call.rivalId) : null;
+      const face = hookRival ? RIVAL_ART[hookRival.id] : null;
+      const slot = takeoverSlot();
+      const text = (slot >= 0 ? "Takeover call " + (slot + 1) + " of 4, " + state.breaks + " broken so far. " : "") + (call.cityHook || cityMemory.lastEvent);
+      els.cityHook.classList.toggle("has-face", !!face);
+      els.cityHook.innerHTML = (face ? `<img class="rival-face" src="${face}" alt="${escapeHtml(hookRival.name)}">` : "") + `<span>${escapeHtml(text)}</span>`;
+    }
     els.tags.innerHTML = call.tags.map(t => `<span class="tag">${t}</span>`).join("");
     els.bestFit.textContent = state.adviceLeft < 3 || state.finished ? bestOfficerName(call) : "Ask Mags";
     els.riskText.textContent = call.risk;
-    els.rivalText.textContent = rivalById(call.rivalId).name;
+    els.rivalText.textContent = rivalById(call.rivalId).name + (takeoverSlot() >= 0 ? " // " + state.breaks + " of 4 broken" : "");
     els.selectedText.textContent = state.selected ? officerById(state.selected).name.replace("Officer ", "").replace("Captain ", "") : "None";
     els.dispatchBtn.disabled = !state.selected || state.finished;
     els.holdBtn.disabled = state.heldThisCall || state.finished;
@@ -1391,7 +1552,7 @@
   }
   function renderMap(call) {
     const box = document.getElementById("pins"); if (!box) return;
-    const pins = mapState.done.map(d => `<i class="pin${d.hot ? " hot" : ""}" style="left:${d.x}%;top:${d.y}%"></i>`);
+    const pins = mapState.done.map(d => `<i class="pin${d.hot ? " hot" : ""}" style="left:${d.x}%;top:${d.y}%${d.color ? `;background:${d.color};box-shadow:0 0 10px ${d.color}` : ""}"></i>`);
     if (call && !state.finished) { const [x, y] = pinSpot(call.title); pins.push(`<i class="pin now" style="left:${x}%;top:${y}%"></i>`); }
     box.innerHTML = pins.join("");
     if (state.chaos >= 70 && !mapState.chaosShown) { mapState.chaosShown = true; mapCallout("chaos", 2600); }
@@ -1414,7 +1575,7 @@
             </div>
             <span class="chip">${score}</span>
           </div>
-          <div class="officer-role">${officer.flaw}${officer.busy ? " // cooldown " + officer.busy : ""}${officer.fatigue ? " // fatigue " + officer.fatigue : ""}${officer.xp ? " // learned +" + officer.xp : ""}${rivalMemory ? " // rival memory +" + rivalMemory : ""}</div>
+          <div class="officer-role">${officer.flaw}${officer.busy ? " // cooldown " + officer.busy : ""}${officer.fatigue ? " // fatigue " + officer.fatigue : ""}${officer.xp ? " // learned +" + officer.xp : ""}${rivalMemory ? " // rival memory +" + rivalMemory : ""}${isRead(officer, call) ? ` <span class="read">// read by ${escapeHtml(rivalById(call.rivalId).name)}</span>` : ""}</div>
           <div class="bars">
             ${miniBar("Procedure", officer.stats.procedure)}
             ${miniBar("Empathy", officer.stats.empathy)}
@@ -1440,16 +1601,16 @@
   function renderShiftList() {
     const rows = [];
     if (state.endless) {
-      rows.push(`<div class="shift-row"><span>Pilot Program</span><strong>12/12 calls</strong></div>`);
-      rows.push(`<div class="shift-row"><span>Night Shift+</span><strong>${Math.max(0, state.index - cases.length)}/∞ calls</strong></div>`);
+      rows.push(`<div class="shift-row"><span>Five shifts</span><strong>${CAMPAIGN_CALLS}/${CAMPAIGN_CALLS} calls</strong></div>`);
+      rows.push(`<div class="shift-row"><span>Night Shift+</span><strong>${Math.max(0, state.index - CAMPAIGN_CALLS)}/∞ calls</strong></div>`);
       rows.push(`<div class="shift-row"><span>City Pressure</span><strong>${cityPressure()}</strong></div>`);
       els.shiftList.innerHTML = rows.join("");
       return;
     }
-    for (let i = 0; i < 3; i++) {
-      const start = i * 4;
-      const done = Math.max(0, Math.min(4, state.index - start));
-      rows.push(`<div class="shift-row"><span>Shift ${i + 1}</span><strong>${done}/4 calls</strong></div>`);
+    const names = ["Shift 1", "Shift 2", "Shift 3", "Shift 4: rival week", "Shift 5: takeover" + (state.leader ? ", " + escapeHtml(rivalById(state.leader).name) : "")];
+    for (let i = 0; i < 5; i++) {
+      const done = Math.max(0, Math.min(SHIFT_CALLS, state.index - i * SHIFT_CALLS));
+      rows.push(`<div class="shift-row"><span>${names[i]}</span><strong>${done}/${SHIFT_CALLS} calls</strong></div>`);
     }
     els.shiftList.innerHTML = rows.join("");
   }
@@ -1459,12 +1620,13 @@
     const call = currentCase();
     const officer = officerById(state.selected);
     const score = fitScore(officer, call);
+    const clean = officer.id === topPick(call).id || score >= fitScore(topPick(call), call);
     let trust = 0;
     let chaos = 0;
     let budget = -2;
     let outcome;
 
-    if (officer.id === call.best) {
+    if (clean) {
       SoundFX.dispatch();
       rumble(0.35, 0.65, 180);
       trust = 9;
@@ -1513,8 +1675,12 @@
     state.trust += trust;
     state.chaos += chaos;
     state.budget += budget;
-    const memoryScore = officer.id === call.best ? Math.max(score, 82) : officer.id === call.secondary ? Math.max(score, 68) : score;
+    const memoryScore = clean ? Math.max(score, 82) : officer.id === call.secondary ? Math.max(score, 68) : score;
     const cityNote = resolveCityMemory(call, officer, memoryScore);
+    if (takeoverSlot() >= 0) {
+      if (memoryScore >= 82) { state.breaks += 1; addLog(rivalById(state.leader).name + "'s takeover call broken: " + state.breaks + " of 4."); }
+      else { state.trust -= 3; state.chaos += 3; addLog(rivalById(state.leader).name + " gains ground."); }
+    }
     officer.xp = (officer.xp || 0) + (score >= 68 ? 1 : 0);
     officer.fatigue = Math.min(5, (officer.fatigue || 0) + 1);
     if (officer.xp && officer.xp % 3 === 0) {
@@ -1551,7 +1717,7 @@
     if (state.adviceLeft <= 0 || state.finished) return;
     const call = currentCase();
     state.adviceLeft -= 1;
-    state.selected = call.best;
+    state.selected = topPick(call).id;
     SoundFX.mags();
     rumble(0.3, 0.5, 140);
     addLog(`Mags points at ${bestOfficerName(call)} and says the obvious thing nobody automated.`);
@@ -1570,7 +1736,7 @@
   }
 
   function nextCall() {
-    { const prev = currentCase(); if (prev) { const [x, y] = pinSpot(prev.title); mapState.done.push({ x, y, hot: state.chaos >= 60 }); if (mapState.done.length > 24) mapState.done.shift(); } }
+    { const prev = currentCase(); if (prev) { const [x, y] = pinSpot(prev.title); mapState.done.push({ x, y, hot: state.chaos >= 60, color: prev.factionId ? factionById(prev.factionId).color : "" }); if (mapState.done.length > 24) mapState.done.shift(); } }
     state.index += 1;
     state.selected = null;
     state.heldThisCall = false;
@@ -1579,8 +1745,12 @@
       endGame(false);
       return;
     }
-    if (state.index >= cases.length && !state.endless) {
-      endGame(true);
+    if (!state.endless && state.index >= CAMPAIGN_CALLS) {
+      endCampaign();
+      return;
+    }
+    if (!state.endless && state.index % SHIFT_CALLS === 0) {
+      shiftBreak();
       return;
     }
     render();
@@ -1607,26 +1777,105 @@
     render();
   }
 
-  function showModal(title, body) {
+  function showEnd(word, title, body, face, button) {
     els.modalTitle.textContent = title;
     els.modalBody.textContent = body;
-    els.modalBtn.textContent = state.canContinue ? "Start Night Shift+" : "New Shift";
-    // Rule 30: no result box. The verdict is lettering on the map; the sentence and the button sit in the call panel.
-    mapCallout(title === "Pilot Survived" ? "shift_cleared" : "shift_lost", 0);
+    els.modalBtn.textContent = button;
+    // Rule 30: no result box. The verdict is lettering on the map; the words, the face and the button sit in the call panel.
+    mapCallout(word, 0);
     const end = document.getElementById("shiftEnd");
     if (end) {
       end.innerHTML = "";
       const h = document.createElement("h2"); h.className = "case-title"; h.textContent = title;
       const p = document.createElement("p"); p.className = "case-copy"; p.textContent = body;
-      end.append(h, p); end.classList.add("on");
+      if (face) {
+        const row = document.createElement("div"); row.className = "end-row";
+        const img = document.createElement("img"); img.className = "rival-face large"; img.src = face; img.alt = "";
+        const words = document.createElement("div"); words.append(h, p); row.append(img, words); end.append(row);
+      } else {
+        end.append(h, p);
+      }
+      end.classList.add("on");
       const actions = document.querySelector(".case-actions"); if (actions) actions.appendChild(els.modalBtn);
       const panel = document.querySelector(".case-panel"); if (panel) panel.classList.add("ended");
     }
   }
+  function showModal(title, body) {
+    showEnd(title === "Pilot Survived" ? "shift_cleared" : "shift_lost", title, body, null, state.canContinue ? "Start Night Shift+" : "New Shift");
+  }
+  // After every four calls: the shift's report; after shift 4, the takeover briefing.
+  function shiftBreak() {
+    const done = state.index / SHIFT_CALLS;
+    state.finished = true; state.onBreak = true; state.canContinue = false;
+    for (const officer of officers) { officer.busy = 0; officer.fatigue = Math.max(0, (officer.fatigue || 0) - 2); }
+    state.adviceLeft = Math.min(3, state.adviceLeft + 1);
+    state.overridesLeft = Math.min(3, state.overridesLeft + 1);
+    let body = SHIFT_REPORTS[done - 1] || "";
+    let face = null;
+    if (done === 3) {
+      const host = plotRivalsByHeat()[0];
+      state.campaignCalls[3].rivalId = host.id; state.campaignCalls[3].factionId = host.faction;
+      body += " Shift 4 is rival week: Vanta Luxe, Kernel Pique and Tessa Vale each make a move.";
+    }
+    if (done === 4) {
+      const leader = plotRivalsByHeat()[0];
+      state.leader = leader.id; state.breaks = 0;
+      state.campaignCalls = state.campaignCalls.slice(0, SHIFT_CALLS).concat(TAKEOVER[leader.id].map(c => ({
+        ...copyCall(c), type: "Takeover", rivalId: leader.id, factionId: leader.faction, severity: "Takeover", risk: "Extreme"
+      })));
+      const read = officers.slice().sort((a, b) => ((b.memory || {})[leader.id] || 0) - ((a.memory || {})[leader.id] || 0))[0];
+      state.readOfficer = read && (read.memory || {})[leader.id] ? read.id : null;
+      face = RIVAL_ART[leader.id];
+      const prior = lastTakeover(leader.id);
+      body = leader.name + " has the most heat left in Buckman. Tomorrow night the takeover comes for the precinct: four calls, all from " + leader.name + ". Break three of them and " + leader.name + " is booked."
+        + (state.readOfficer ? " " + leader.name + " has studied " + officerById(state.readOfficer).name + "'s file." : "")
+        + (prior ? " " + lastTakeoverText(leader.id) : "");
+    }
+    addLog("Shift " + done + " cleared.");
+    showEnd("shift_cleared", "Shift " + done + " cleared", body, face, "Start Shift " + (done + 1));
+    render();
+  }
+  function startNextShift() {
+    state.finished = false; state.onBreak = false; state.selected = null; state.heldThisCall = false;
+    clearShiftEnd();
+    addLog(state.index >= CAMPAIGN_CALLS - SHIFT_CALLS ? "Takeover shift: " + rivalById(state.leader).name + " moves on the precinct." : "Shift " + shiftNo() + " begins.");
+    render();
+  }
+  // The end of shift 5: booked, slipped away, or owns Buckman; written into city memory for the next run.
+  function endCampaign() {
+    const leader = rivalById(state.leader);
+    const k = state.breaks;
+    const result = k >= 3 ? "booked" : k === 2 ? "slipped" : "owns";
+    if (result === "booked") {
+      leader.defeats += 2; leader.heat = Math.min(leader.heat, 30);
+      leader.memory = "Booked at the end of the takeover. Out on bail, and remembers every robot's name.";
+      if (!leader.scars.includes("takeover")) leader.scars.push("takeover");
+    } else if (result === "slipped") {
+      leader.heat = clamp(leader.heat - 6);
+      leader.memory = "Slipped out of the takeover with half the plan intact.";
+    } else {
+      leader.wins += 2; leader.heat = clamp(leader.heat + 15); leader.rank = "City Myth";
+      leader.memory = "Took Buckman for a night and kept the receipts.";
+    }
+    cityMemory.campaigns = [{ leader: leader.id, result, breaks: k, turn: cityMemory.turn }].concat(cityMemory.campaigns || []).slice(0, 6);
+    cityMemory.lastEvent = lastTakeoverText(leader.id);
+    saveCityMemory();
+    state.finished = true; state.onBreak = false; state.canContinue = result !== "owns";
+    if (result === "owns") { SoundFX.alarm(); rumble(0.85, 1.0, 500); } else { SoundFX.win(); rumble(0.5, 0.75, 400); }
+    const score = Math.max(0, state.trust + state.budget - state.chaos);
+    const best = Number(localStorage.getItem("precinct404Best") || 0);
+    if (score > best) localStorage.setItem("precinct404Best", String(score));
+    const [title, epilogue] = ENDINGS[leader.id][result];
+    addLog(title + ".");
+    showEnd(result === "owns" ? "shift_lost" : "shift_cleared", title,
+      epilogue + " Final score " + score + ". Trust " + clamp(state.trust) + ", chaos " + clamp(state.chaos) + ", budget " + clamp(state.budget) + ". Takeover calls broken: " + k + " of 4.",
+      RIVAL_ART[leader.id], state.canContinue ? "Start Night Shift+" : "New Shift");
+    render();
+  }
   // The end of a shift: what the visible Continue button does (pad A and Enter use it too).
   function continueAfterEnd() {
     if (!state.finished) return false;
-    if (state.canContinue) startNightShift(); else reset();
+    if (state.onBreak) startNextShift(); else if (state.canContinue) startNightShift(); else reset();
     return true;
   }
   function clearShiftEnd() {
@@ -1640,7 +1889,8 @@
     state.finished = false;
     state.canContinue = false;
     state.endless = true;
-    state.index = cases.length;
+    state.onBreak = false;
+    state.index = CAMPAIGN_CALLS;
     state.selected = null;
     state.heldThisCall = false;
     state.generatedCases = [];
@@ -1664,6 +1914,11 @@
     state.endless = false;
     state.generatedCases = [];
     state.canContinue = false;
+    state.onBreak = false;
+    state.leader = null;
+    state.breaks = 0;
+    state.readOfficer = null;
+    state.campaignCalls = RIVAL_WEEK.map(copyCall);
     state.log = ["Boot sequence complete. Derek has requested coffee and a lawyer."];
     for (const officer of officers) {
       officer.busy = 0;
@@ -1885,6 +2140,11 @@
     if (event.key === "r" || event.key === "R") reset();
     if (event.key === "c" || event.key === "C") toggleCrt();
   });
+
+  // Read-only view for tests and curious players.
+  window.__precinctDebug = { snapshot: () => ({ index: state.index, shift: shiftNo(), finished: state.finished, onBreak: state.onBreak, endless: state.endless,
+    leader: state.leader, breaks: state.breaks, readOfficer: state.readOfficer, trust: state.trust, chaos: state.chaos, budget: state.budget,
+    call: (() => { const c = currentCase(); return { type: c.type, title: c.title, rivalId: c.rivalId, top: topPick(c).id }; })() }) };
 
   reset();
   requestAnimationFrame(pollGamepad);

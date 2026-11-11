@@ -59,9 +59,11 @@ export class StreetCombat{
   this.time+=dt;this.cooldown=Math.max(0,this.cooldown-dt);
   this.tracers=this.tracers.filter(t=>(t.life-=dt)>0);
   for(const t of this.targets)t.hitFlash=Math.max(0,t.hitFlash-dt);
-  if(this.recoveryLeft>0){this.recoveryLeft=Math.max(0,this.recoveryLeft-dt);if(this.recoveryLeft===0){this.health=100;this.lastDamage=this.time;this.event('recovered');}return this.snapshot();}
-  if(this.reloadLeft>0){this.reloadLeft=Math.max(0,this.reloadLeft-dt);if(this.reloadLeft===0){const n=Math.min(8-this.ammo,this.reserve);this.ammo+=n;this.reserve-=n;this.event('reload-complete',{ammo:this.ammo,reserve:this.reserve});}}
-  if(reload)this.startReload();if(fire&&player.mode!=='bail')this.shoot(player,aim,colliders);
+  const recovering=this.recoveryLeft>0;
+  if(recovering){this.recoveryLeft=Math.max(0,this.recoveryLeft-dt);if(this.recoveryLeft===0){this.health=100;this.lastDamage=this.time;this.event('recovered');}}
+  // Combat immunity does not stop restored skating, collectible pickup or patrols.
+  if(!recovering&&this.reloadLeft>0){this.reloadLeft=Math.max(0,this.reloadLeft-dt);if(this.reloadLeft===0){const n=Math.min(8-this.ammo,this.reserve);this.ammo+=n;this.reserve-=n;this.event('reload-complete',{ammo:this.ammo,reserve:this.reserve});}}
+  if(!recovering){if(reload)this.startReload();if(fire&&player.mode!=='bail')this.shoot(player,aim,colliders);}
   if(player.mode!=='bail')for(const site of TOKEN_SITES){if(!this.tokens.has(site.id)&&Math.hypot(player.x-site.x,player.z-site.z)<.85&&Math.abs(player.y+.65-site.y)<.9){this.tokens.add(site.id);this.reserve=Math.min(64,this.reserve+4);this.event('token-collected',{id:site.id,total:this.tokens.size});}}
   for(const t of this.targets){
    if(t.disabled)continue;
@@ -70,12 +72,12 @@ export class StreetCombat{
    if(!blocked){t.x=nx;t.z=nz;}
    t.fireLeft=Math.max(0,t.fireLeft-dt);
    const head={x:player.x,y:player.y+1,z:player.z},gap=Math.hypot(head.x-t.x,head.y-t.y,head.z-t.z);
-   if(t.fireLeft===0&&gap<COMBAT_RULES.enemyRange&&gap>1&&player.mode!=='bail'){
+   if(!recovering&&t.fireLeft===0&&gap<COMBAT_RULES.enemyRange&&gap>1&&player.mode!=='bail'){
     const d=normalized({x:head.x-t.x,y:head.y-t.y,z:head.z-t.z});
     if(this.obstructed(t,d,gap,colliders)>=gap-.05){t.fireLeft=2.8;this.tracer(t,head,'enemy');this.health=Math.max(0,this.health-COMBAT_RULES.enemyDamage);this.lastDamage=this.time;this.event('player-hit',{source:t.id,damage:COMBAT_RULES.enemyDamage,health:this.health});if(this.health===0){this.recoveryLeft=2.6;this.event('player-downed');break;}}
    }
   }
-  if(this.time-this.lastDamage>COMBAT_RULES.recoveryDelay&&this.health<100)this.health=Math.min(100,this.health+COMBAT_RULES.recoveryRate*dt);
+  if(!recovering&&this.time-this.lastDamage>COMBAT_RULES.recoveryDelay&&this.health<100)this.health=Math.min(100,this.health+COMBAT_RULES.recoveryRate*dt);
   return this.snapshot();
  }
  snapshot(){return {version:1,time:this.time,health:this.health,ammo:this.ammo,reserve:this.reserve,reloading:this.reloadLeft>0,reloadLeft:this.reloadLeft,recoveryLeft:this.recoveryLeft,downed:this.recoveryLeft>0,tokenCount:this.tokens.size,collectedTokens:[...this.tokens],tokens:TOKEN_SITES.map(t=>({...t,collected:this.tokens.has(t.id)})),targets:this.targets.map(t=>({id:t.id,kind:t.kind,x:t.x,y:t.y,z:t.z,radius:t.radius,health:t.health,disabled:t.disabled,hitFlash:t.hitFlash})),tracers:this.tracers.map(t=>({...t,origin:copy(t.origin),end:copy(t.end)})),events:this.events.map(e=>({...e}))};}

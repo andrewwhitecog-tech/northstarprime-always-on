@@ -70,6 +70,7 @@ export class KosherSim{
  reset(start=true){
   this.x=0;this.z=5;this.y=0;this.yaw=0;this.vx=0;this.vz=0;this.vy=0;this.speed=0;
   this.grounded=true;this.mode='roll';this.charge=0;this.charging=false;this.trick=null;this.trickTime=0;
+  this.pushActive=false;this.pushPhase=0;this.pushDuration=1;this.pushStroke=0;this.pushContact=false;
   this.unbanked=0;this.score=0;this.multiplier=1;this.comboLeft=0;this.comboTricks=[];
   this.grinding=null;this.grindDirection=1;this.grindU=0;this.grindTime=0;this.balance=0;this.manualTime=0;
   this.bailTime=0;this.bails=0;this.line=0;this.completedLines=0;this.elapsed=0;this.timeLeft=120;
@@ -78,6 +79,17 @@ export class KosherSim{
   this.event('reset',{started:start});if(start)this.profile.sessions++;
  }
  start(){this.reset(true);}
+ cancelPush(){this.pushActive=false;this.pushContact=false;this.pushPhase=0;}
+ stepPush(dt,input){
+  if(input.brake||this.charging||!this.grounded||this.mode!=='roll'){this.cancelPush();return 0;}
+  if(!this.pushActive&&input.push&&this.speed<11.3){this.pushActive=true;this.pushPhase=0;this.pushDuration=1-.2*clamp(this.speed/8,0,1);this.pushStroke++;this.event('push-start',{stroke:this.pushStroke,duration:this.pushDuration});}
+  if(!this.pushActive)return 0;
+  this.pushPhase=Math.min(1,this.pushPhase+dt/this.pushDuration);
+  this.pushContact=this.pushPhase>=.22&&this.pushPhase<.44;
+  const u=(this.pushPhase-.22)/.22,acceleration=this.pushContact?2.5*Math.PI/(2*.22*this.pushDuration)*Math.sin(Math.PI*u):0;
+  if(this.pushPhase>=1){this.pushActive=false;this.pushContact=false;this.event('push-complete',{stroke:this.pushStroke});}
+  return acceleration;
+ }
  togglePause(){if(this.running&&!this.ended){this.paused=!this.paused;this.event(this.paused?'paused':'resumed');}}
  advanceLine(name){
   if(LINE[this.line]!==name)return;
@@ -99,7 +111,7 @@ export class KosherSim{
  }
  pop(){
   if(this.bailTime>0||(!this.grounded&&!this.grinding))return false;
-  this.grindLock=.42;this.vy=6.2+Math.min(.45,this.charge)*8;this.charge=0;this.charging=false;
+  this.cancelPush();this.grindLock=.42;this.vy=6.2+Math.min(.45,this.charge)*8;this.charge=0;this.charging=false;
   if(this.grinding){const r=this.grinding;this.pendingRail={rail:r.id,duration:this.grindTime};const dx=r.x1-r.x0,dz=r.z1-r.z0,len=Math.hypot(dx,dz);this.vx=dx/len*this.speed*this.grindDirection;this.vz=dz/len*this.speed*this.grindDirection;this.grinding=null;this.balance=0;}
   this.grounded=false;this.mode='air';this.airTime=0;this.airStart={x:this.x,z:this.z};this.stats.ollies++;this.event('ollie');return true;
  }
@@ -110,7 +122,7 @@ export class KosherSim{
  }
  bail(reason){
   if(this.bailTime>0)return;const lost=Math.round(this.unbanked);
-  this.bailTime=1.1;this.bails++;this.mode='bail';this.speed*=.2;this.vx*=.2;this.vz*=.2;this.vy=0;
+  this.cancelPush();this.bailTime=1.1;this.bails++;this.mode='bail';this.speed*=.2;this.vx*=.2;this.vz*=.2;this.vy=0;
   const safe=clearGroundPosition(this.x,this.z);this.x=safe.x;this.z=safe.z;this.y=terrain(this.x,this.z);this.grounded=true;this.grinding=null;this.trick=null;this.trickTime=0;
   this.unbanked=0;this.multiplier=1;this.comboLeft=0;this.comboTricks=[];this.balance=0;this.manualTime=0;
   this.flags={funbox:false,stair:false,quarter:false};this.pendingRail=null;this.manualGardenTime=0;this.line=0;this.event('bail',{reason,lost});
@@ -134,7 +146,7 @@ export class KosherSim{
   if(!found)return false;
   const {r,n}=found,dx=r.x1-r.x0,dz=r.z1-r.z0;
   this.grindDirection=this.vx*dx+this.vz*dz>=0?1:-1;this.grinding=r;this.grindU=n.u;this.grindTime=0;this.balance=0;
-  this.x=n.x;this.z=n.z;this.y=n.y;this.vy=0;this.trick=null;this.mode='grind';this.grounded=false;this.stats.grinds++;
+  this.cancelPush();this.x=n.x;this.z=n.z;this.y=n.y;this.vy=0;this.trick=null;this.mode='grind';this.grounded=false;this.stats.grinds++;
   this.yaw=Math.atan2(-dx*this.grindDirection,-dz*this.grindDirection);this.event('grind-start',{rail:r.id});return true;
  }
  finish(){this.bank();this.running=false;this.ended=true;this.profile.best=Math.max(this.profile.best,this.score);this.event('session-end',{score:this.score,lines:this.completedLines});}
@@ -169,27 +181,30 @@ export class KosherSim{
   this.yaw+=steer*2.35*dt*(.55+.45/(1+this.speed*.12));
   const forwardX=-Math.sin(this.yaw),forwardZ=-Math.cos(this.yaw);
   if(this.grounded){
-    if(input.push)this.speed+=11*dt;else this.speed-=.65*dt;
+    this.speed+=(this.stepPush(dt,input)-.65)*dt;
     if(input.brake)this.speed-=17*dt;
     this.speed=clamp(this.speed,0,11.8);
     const grip=1-Math.exp(-dt*(input.brake?4:10));
     this.vx+=(forwardX*this.speed-this.vx)*grip;this.vz+=(forwardZ*this.speed-this.vz)*grip;
   }else{
-    this.airTime+=dt;this.vy-=18*dt;
+    this.cancelPush();this.airTime+=dt;this.vy-=18*dt;
     this.vx+=forwardX*(input.push?.3:0)*dt;this.vz+=forwardZ*(input.push?.3:0)*dt;
     this.y+=this.vy*dt;
   }
   const nx=this.x+this.vx*dt,nz=this.z+this.vz*dt;
   const blocked=movementBlocked(nx,nz,this.y,this.grounded);
   if(blocked){
-    if(this.speed>7.5){this.bail('Hard impact');return;}
-    // A glancing low-speed contact slides along the free axis. Full-vector
-    // rejection made a diagonal approach stick indefinitely at a prop corner.
-    const slideX=!movementBlocked(nx,this.z,this.y,this.grounded);
-    if(slideX)this.x=nx;else this.vx=0;
-    const slideZ=!movementBlocked(this.x,nz,this.y,this.grounded);
-    if(slideZ)this.z=nz;else this.vz=0;
-    this.speed*=Math.exp(-5*dt);this.vx*=.6;this.vz*=.6;
+    // Resolve the dominant travel axis first. Only velocity INTO a solid
+    // counts as impact; a quick brush keeps tangential momentum.
+    let hitX=false,hitZ=false;
+    const slideX=()=>{if(!movementBlocked(nx,this.z,this.y,this.grounded))this.x=nx;else hitX=true;};
+    const slideZ=()=>{if(!movementBlocked(this.x,nz,this.y,this.grounded))this.z=nz;else hitZ=true;};
+    if(Math.abs(this.vx)>Math.abs(this.vz)){slideX();slideZ();}else{slideZ();slideX();}
+    const impact=Math.hypot(hitX?this.vx:0,hitZ?this.vz:0);
+    if(impact>7.5){this.bail('Hard impact');return;}
+    if(hitX)this.vx=0;if(hitZ)this.vz=0;
+    const scrape=Math.exp(-.45*dt);this.vx*=scrape;this.vz*=scrape;
+    this.speed=hitX&&hitZ?0:this.speed*scrape;
   }else{this.x=nx;this.z=nz;}
   this.stats.distance+=Math.hypot(this.x-oldX,this.z-oldZ);
   const ground=terrain(this.x,this.z);
@@ -215,5 +230,5 @@ export class KosherSim{
   }
   if(this.line===0&&this.speed>4&&this.z<2)this.advanceLine('DROP IN');
  }
- snapshot(){return {sessionMode:this.sessionMode,stance:this.stance,x:this.x,y:this.y,z:this.z,yaw:this.yaw,speed:this.speed,vx:this.vx,vz:this.vz,vy:this.vy,grounded:this.grounded,mode:this.mode,charge:this.charge,trick:this.trick?.id||null,trickTime:this.trickTime,balance:this.balance,rail:this.grinding?.id||null,grindTime:this.grindTime,score:this.score,pending:Math.round(this.unbanked),multiplier:this.multiplier,line:this.line,next:LINE[this.line],completedLines:this.completedLines,bails:this.bails,timeLeft:this.timeLeft,elapsed:this.elapsed,running:this.running,paused:this.paused,ended:this.ended,stats:{...this.stats},profile:{...this.profile},events:this.events.map(e=>({...e}))};}
+ snapshot(){return {sessionMode:this.sessionMode,pushActive:this.pushActive,pushPhase:this.pushPhase,pushDuration:this.pushDuration,pushStroke:this.pushStroke,pushContact:this.pushContact,stance:this.stance,x:this.x,y:this.y,z:this.z,yaw:this.yaw,speed:this.speed,vx:this.vx,vz:this.vz,vy:this.vy,grounded:this.grounded,mode:this.mode,charge:this.charge,trick:this.trick?.id||null,trickTime:this.trickTime,balance:this.balance,rail:this.grinding?.id||null,grindTime:this.grindTime,score:this.score,pending:Math.round(this.unbanked),multiplier:this.multiplier,line:this.line,next:LINE[this.line],completedLines:this.completedLines,bails:this.bails,timeLeft:this.timeLeft,elapsed:this.elapsed,running:this.running,paused:this.paused,ended:this.ended,stats:{...this.stats},profile:{...this.profile},events:this.events.map(e=>({...e}))};}
 }

@@ -64,3 +64,18 @@ test('authentic KosherSim jump, flip, combat hit, clean landing and bank complet
  for(let i=0;i<180;i++){sim.step(.02,{grind:false});combat.step(.02,{player:sim.snapshot()});clips.step(.02,{simulation:sim.snapshot(),combat:combat.snapshot()});}
  assert(sim.events.some(e=>e.type==='bank'));assert(clips.snapshot().completed.includes('flip-shot'));assert(sim.score>0);
 });
+
+test('recovered skating collects real stars while combat immunity and sentry patrol continue',()=>{
+ const c=new StreetCombat(),p=rider({x:0,z:-14});
+ for(let i=0;i<1500&&!c.snapshot().downed;i++)c.step(.02,{player:p});
+ assert(c.snapshot().downed,'actual enemy fire must first down the rider');
+ const downed=c.takeDownedEvent();assert.equal(downed.type,'player-downed');
+ const token=TOKEN_SITES[0];advance(c,1.12,{player:rider({x:token.x,z:token.z,mode:'bail'})});
+ assert(c.snapshot().downed);assert.equal(c.snapshot().tokenCount,0);
+ const before=c.snapshot(),rolling=rider({x:token.x,z:token.z});
+ c.step(.02,{player:rolling,fire:true,aim:aimAt(rolling,c.snapshot().targets[0])});
+ const after=c.snapshot();assert.equal(after.tokenCount,1);assert.equal(after.ammo,before.ammo);assert.equal(after.health,before.health);
+ assert(after.targets.some((t,i)=>Math.hypot(t.x-before.targets[i].x,t.z-before.targets[i].z)>0),'patrol continues during immunity');
+ assert.equal(c.takeDownedEvent(),null);
+ advance(c,1.6,{player:rider({x:22,z:14})});assert.equal(c.snapshot().health,100);assert.equal(c.snapshot().downed,false);
+});

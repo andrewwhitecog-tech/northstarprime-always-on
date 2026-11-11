@@ -7,7 +7,7 @@ import {createCombatScene} from './street-combat-scene.js';
 import {RivalHeat} from './rival-heat.mjs';
 import {terrain} from './simulation.mjs';
 import {applySkateTrickPose,createRivalSkateboard} from './rider-pose.mjs';
-export function createActionMode(THREE,{scene,sim,art,colliders,readSave,saveKey,onStatus=()=>{}}){
+export function createActionMode(THREE,{scene,sim,art,colliders,readSave,saveKey,onStatus=()=>{},rivalLoader=new GLTFLoader()}){
  const combat=new StreetCombat(readSave(saveKey+'.combat')),clips=new ClipChallenges(readSave(saveKey+'.clips')),rival=new RivalHeat();
  const adapter=createCombatScene(THREE,scene,combat),rivalRoot=new THREE.Group(),rivalBody=new THREE.Group(),rivalDeck=new THREE.Group();rivalRoot.name='Art-rival-skater';rivalBody.name='Art-rival-body-pivot';rivalDeck.name='Art-rival-deck-pivot';rivalRoot.add(rivalBody,rivalDeck);scene.add(rivalRoot);
  const reticle=new THREE.Mesh(new THREE.TorusGeometry(.72,.018,4,36),new THREE.MeshBasicMaterial({color:0xff417f,transparent:true,opacity:.9}));reticle.name='actual-target-lock';scene.add(reticle);
@@ -20,7 +20,34 @@ export function createActionMode(THREE,{scene,sim,art,colliders,readSave,saveKey
  function installBoard(board){board.add(boardArt,wheelRims);for(const x of [-.145,.145])for(const z of [-.26,.26]){const rim=new THREE.Mesh(new THREE.TorusGeometry(.036,.009,6,14),rimMaterial);rim.rotation.y=Math.PI/2;rim.position.set(x,.033,z);wheelRims.add(rim);}for(const side of [1,-1])for(const z of [-.255,0,.255]){const m=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.64,metalness:.05,side:THREE.DoubleSide});const panel=new THREE.Mesh(new THREE.PlaneGeometry(.222,.222),m);panel.rotation.x=side>0?-Math.PI/2:Math.PI/2;panel.position.set(0,side>0?.1124:.084,z);boardArt.add(panel);coverMaterials.push(m);}boardArt.visible=false;selectBoard(selected);}
  function selectBoard(id){if(id!=='original'&&!clips.snapshot().unlockedBoards.includes(id))return false;const record=art.boards.find(b=>b.id===id);if(id!=='original'&&!record)return false;selected=id;boardArt.visible=id!=='original';wheelRims.visible=id!=='original';const accent={'cover-1':0xff398b,'cover-2':0xffa83b,'cover-3':0x36ffe2}[id]||0xffffff;rimMaterial.color.setHex(accent);rimMaterial.emissive.setHex(accent);trailMaterial.color.setHex(accent);trailHistory.length=0;if(record)for(const m of coverMaterials){m.map=artTexture(record.url);m.needsUpdate=true;}return true;}
  function attachRider(model,board){weaponHand=null;model.traverse(o=>{if(o.isBone&&o.name.toLowerCase()==='hand_r')weaponHand=o;});if(weaponHand)adapter.attachWeapon(weaponHand,{position:[0,.07,-.018],rotation:[Math.PI/2,0,0],scale:.65});if(!boardArt.parent)installBoard(board);}
- async function loadRival(){if(modelStatus!=='not-requested')return;if(!art.rivalModel){modelStatus='unavailable';onStatus('Art’s named model is not included in this source build.');return;}modelStatus='loading';try{const loaded=await loadAdultRig(THREE,{loader:new GLTFLoader(),url:art.rivalModel,parent:rivalBody});rivalModel=loaded.root;rivalModel.rotation.y=Math.PI/2;rivalMixer=loaded.mixer;for(const [key,clip]of Object.entries(loaded.clips))rivalActions[key]=rivalMixer.clipAction(clip);rivalRig=createSkatePushRig(THREE,{model:rivalModel,body:rivalBody});rivalDeck.add(createRivalSkateboard(THREE));rivalDeckMeshes=0;rivalDeck.traverse(o=>{if(o.isMesh)rivalDeckMeshes++;});modelStatus='loaded';}catch(e){modelStatus='failed';modelError=String(e);onStatus('Art’s rider failed to load: '+modelError);}}
+ function disposeFailedRival(root){
+  const geometries=new Set(),materials=new Set(),textures=new Set(),skeletons=new Set();
+  root?.traverse(o=>{if(o.geometry)geometries.add(o.geometry);if(o.skeleton)skeletons.add(o.skeleton);for(const m of(o.material?(Array.isArray(o.material)?o.material:[o.material]):[])){materials.add(m);for(const value of Object.values(m))if(value?.isTexture)textures.add(value);}});
+  for(const s of skeletons)s.dispose();for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();root?.removeFromParent();root?.clear();
+ }
+ async function loadRival(){
+  if(modelStatus!=='not-requested')return;
+  if(!art.rivalModel){modelStatus='unavailable';onStatus('Art’s named model is not included in this source build.');return;}
+  modelStatus='loading';modelError=null;
+  // Keep world transforms valid for IK calibration, but hide the unvalidated asset.
+  const staging=new THREE.Group();staging.name='Art-rival-loading';staging.visible=false;rivalBody.add(staging);
+  let loaded=null,deck=null;
+  try{
+   loaded=await loadAdultRig(THREE,{loader:rivalLoader,url:art.rivalModel,parent:staging});
+   const model=loaded.root,mixer=loaded.mixer,actions={};model.rotation.y=Math.PI/2;
+   for(const [key,clip]of Object.entries(loaded.clips))actions[key]=mixer.clipAction(clip);
+   const rig=createSkatePushRig(THREE,{model,body:rivalBody});
+   deck=createRivalSkateboard(THREE);let deckMeshes=0;deck.traverse(o=>{if(o.isMesh)deckMeshes++;});
+   // Publish the model, mixer, rig and physical deck together only after success.
+   rivalBody.add(model);staging.removeFromParent();rivalDeck.add(deck);
+   rivalModel=model;rivalMixer=mixer;rivalActions=actions;rivalRig=rig;rivalDeckMeshes=deckMeshes;rivalClip=null;modelStatus='loaded';
+  }catch(e){
+   loaded?.mixer.stopAllAction();if(loaded)loaded.mixer.uncacheRoot(loaded.root);
+   disposeFailedRival(staging);disposeFailedRival(deck);
+   rivalModel=null;rivalMixer=null;rivalRig=null;rivalActions={};rivalClip=null;rivalDeckMeshes=0;
+   modelStatus='failed';modelError=String(e);onStatus('Art’s rider failed to load: '+modelError);
+  }
+ }
  function setEnabled(value){enabled=Boolean(value);adapter.root.visible=enabled;rivalRoot.visible=enabled;reticle.visible=false;adapter.weapon.visible=enabled&&Boolean(weaponHand);for(const p of posters)p.visible=enabled;if(enabled)loadRival();}
  function start(){aimPoseLeft=0;combat.health=100;combat.ammo=8;combat.reserve=64;combat.recoveryLeft=0;combat.reloadLeft=0;for(const target of combat.targets){target.health=100;target.disabled=false;target.fireLeft=2;}rival.start();onStatus('Three minutes. Film your line while Art rides his own. Collect stars to unlock the cover decks.');}
  function getAim(player,heading){const origin={x:player.x,y:player.y+1.12,z:player.z},forward={x:-Math.sin(heading),y:0,z:-Math.cos(heading)};locked=null;if(aimAssist){let nearest=Infinity;for(const t of combat.snapshot().targets){if(t.disabled)continue;const dx=t.x-origin.x,dy=t.y-origin.y,dz=t.z-origin.z,d=Math.hypot(dx,dy,dz);if(d<1||d>35||(dx*forward.x+dz*forward.z)/d<.64)continue;const dir={x:dx/d,y:dy/d,z:dz/d};if(combat.obstructed(origin,dir,d,colliders)<d-.05)continue;if(d<nearest){nearest=d;locked=t;}}}if(locked){const d=Math.hypot(locked.x-origin.x,locked.y-origin.y,locked.z-origin.z);return {origin,direction:{x:(locked.x-origin.x)/d,y:(locked.y-origin.y)/d,z:(locked.z-origin.z)/d}};}return {origin,direction:forward};}
@@ -29,7 +56,7 @@ export function createActionMode(THREE,{scene,sim,art,colliders,readSave,saveKey
  const direction=new THREE.Vector3(),q=new THREE.Quaternion(),parentQ=new THREE.Quaternion();
  function update(dt){adapter.update();adapter.root.visible=enabled;adapter.weapon.visible=enabled&&Boolean(weaponHand);rivalRoot.visible=enabled;equippedTrail.visible=enabled&&selected!=='original';if(!enabled){reticle.visible=false;return;}const last=trailHistory.at(-1);if(!sim.paused)trailAge+=dt;if(last&&Math.hypot(last.x-sim.x,last.z-sim.z)>2)trailHistory.length=0;trailMaterial.opacity=Math.max(0,.6-trailAge*.2);if(selected!=='original'&&sim.grounded&&sim.speed>.5&&(!last||Math.hypot(last.x-sim.x,last.z-sim.z)>.1)){trailAge=0;trailHistory.push({x:sim.x,y:terrain(sim.x,sim.z)+.016,z:sim.z});if(trailHistory.length>120)trailHistory.shift();}for(let i=0;i<trailHistory.length;i++){const p=trailHistory[i];trailPositions.set([p.x,p.y,p.z],i*3);}trailGeometry.attributes.position.needsUpdate=true;trailGeometry.setDrawRange(0,trailHistory.length);if(locked){reticle.visible=true;reticle.position.set(locked.x,locked.y,locked.z);reticle.lookAt(sim.x,sim.y+1.2,sim.z);}else reticle.visible=false;
  if(weaponHand&&aimPoseLeft>0){direction.set(aim.direction.x,aim.direction.y,aim.direction.z);q.setFromUnitVectors(new THREE.Vector3(0,0,-1),direction);weaponHand.getWorldQuaternion(parentQ);adapter.weapon.quaternion.copy(parentQ.invert().multiply(q));}else if(weaponHand)adapter.weapon.rotation.set(Math.PI/2,0,0);
- const s=rival.sim;rivalRoot.position.set(s.x,s.y,s.z);rivalRoot.rotation.y=s.yaw;applySkateTrickPose(rivalBody,rivalDeck,s);if(rivalMixer){const desired=s.mode==='air'?'jump':s.charge>.03?'crouch':'idle';if(desired!==rivalClip){if(rivalClip)rivalActions[rivalClip].fadeOut(.12);rivalActions[desired].reset().fadeIn(.12).play();rivalClip=desired;}rivalRig.reset();rivalMixer.update(sim.paused?0:dt);rivalRig.update(sim.paused?0:dt,Boolean(rival.lastInput.push),{...s.snapshot(),steer:rival.lastInput.steer});}}
+ const s=rival.sim;rivalRoot.position.set(s.x,s.y,s.z);rivalRoot.rotation.y=s.yaw;applySkateTrickPose(rivalBody,rivalDeck,s);if(modelStatus==='loaded'&&rivalMixer&&rivalRig){const desired=s.mode==='air'?'jump':s.charge>.03?'crouch':'idle';if(desired!==rivalClip){if(rivalClip)rivalActions[rivalClip].fadeOut(.12);rivalActions[desired].reset().fadeIn(.12).play();rivalClip=desired;}rivalRig.reset();rivalMixer.update(sim.paused?0:dt);rivalRig.update(sim.paused?0:dt,Boolean(rival.lastInput.push),{...s.snapshot(),steer:rival.lastInput.steer});}}
  function installPosters(){for(const [i,p]of art.posters.entries()){const map=artTexture(p.url),material=new THREE.MeshStandardMaterial({map,roughness:.96,metalness:0,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-2});for(const [j,site]of [{side:1,bay:2},{side:-1,bay:4},{side:1,bay:6}].entries()){const z=10-site.bay*6.1+site.side*.79;const g=new THREE.PlaneGeometry(2.1,2.1/p.aspect,10,6),v=g.attributes.position;for(let k=0;k<v.count;k++){const x=v.getX(k),y=v.getY(k);const edge=Math.max(0,Math.abs(x)-.87);v.setZ(k,.006+Math.sin(k*2.7)*.006+edge*edge*.45);if(k%11===0||k%11===10)v.setY(k,y+Math.sin(k*3.1)*.022);}g.computeVertexNormals();const paper=new THREE.Mesh(g,material);paper.name='historical-wheatpaste-'+i+'-'+j;// Actual corrugated shutter front: local z=.33, center x=-.79 in AG bay GLB.
  paper.position.set(site.side*21.92,1.65,z);paper.rotation.y=-site.side*Math.PI/2;scene.add(paper);posters.push(paper);}}}
  installPosters();setEnabled(false);

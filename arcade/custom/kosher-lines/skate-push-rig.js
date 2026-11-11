@@ -34,6 +34,9 @@ export function createSkatePushRig(THREE,{model,body,deckY=.112}){
  }
  let originals=null,phase=0,lastActive=false,plantError=null,pushError=null,compression=0,landing=0,lastGrounded=true,armErrors=[null,null],soleErrors=[null,null],lastState='roll',reachDrop=0;
  let ankleTargets=[null,null],soleTargets=[null,null],lastAim=false,flipLift=0,lastStance=0;
+ let cycleStroke=null,fallbackStroke=0,cycleDuration=.9,groundPlant=null,plantQuaternion=null,recoverySole=null,recoveryPhase=null,groundContact=false,releaseReason=null;
+ const lastBodyPosition=body.getWorldPosition(V());
+ function beginStroke(stroke,duration){cycleStroke=stroke;cycleDuration=duration;groundPlant=null;plantQuaternion=null;recoverySole=null;recoveryPhase=null;groundContact=false;releaseReason=null;}
  const smooth=t=>{t=clamp(t,0,1);return t*t*(3-2*t);};
  function reset(){if(originals)for(const p of originals){p.bone.position.copy(p.p);p.bone.quaternion.copy(p.q);p.bone.scale.copy(p.s);}originals=null;}
  function restoreBind(b){if(!b)return;const s=bind.get(b);b.position.copy(s.p);b.quaternion.copy(s.q);b.scale.copy(s.s);}
@@ -56,16 +59,33 @@ export function createSkatePushRig(THREE,{model,body,deckY=.112}){
   if(originals)reset();
   originals=touched.map(bone=>({bone,p:bone.position.clone(),q:bone.quaternion.clone(),s:bone.scale.clone()}));
   const step=Number.isFinite(dt)?clamp(dt,0,.05):0,live=step>0&&!state.paused,grounded=state.grounded!==false,mode=state.mode||(grounded?'roll':'air');
-  const active=live?Boolean(requestedActive)&&grounded&&!['manual','bail'].includes(mode)&&!(state.charge>.03):lastActive;
-  if(live){lastActive=active;if(active)phase=(phase+step*1.15)%1;else phase=0;if(grounded&&!lastGrounded)landing=1;else landing=Math.max(0,landing-step*3.8);lastGrounded=grounded;}
-  const out=active?(phase<.18?smooth(phase/.18):phase<.72?1:1-smooth((phase-.72)/.28)):0;
-  const contact=active?(phase<.18?smooth(phase/.18):phase<.58?1:1-smooth((phase-.58)/.19)):0;
+  const canPush=grounded&&!['manual','grind','bail'].includes(mode)&&!(state.charge>.03),hasPushState=typeof state.pushActive==='boolean';
+  let active=lastActive;
+  if(live){
+   if(hasPushState){
+    active=canPush&&state.pushActive;
+    if(active){if(!lastActive||cycleStroke!==state.pushStroke)beginStroke(state.pushStroke,Number.isFinite(state.pushDuration)?state.pushDuration:.9);phase=clamp(Number.isFinite(state.pushPhase)?state.pushPhase:0,0,1);}
+   }else{
+    // Legacy/direct callers also finish a whole kick after a short request.
+    if(!canPush)active=false;
+    else if(!active&&requestedActive){active=true;phase=0;beginStroke('fallback-'+(++fallbackStroke),1-.2*clamp((state.speed||0)/8,0,1));}
+    if(active){phase+=step/cycleDuration;if(phase>=1){if(requestedActive){phase%=1;beginStroke('fallback-'+(++fallbackStroke),1-.2*clamp((state.speed||0)/8,0,1));}else active=false;}}
+   }
+   if(!active){phase=0;groundPlant=null;plantQuaternion=null;recoverySole=null;recoveryPhase=null;groundContact=false;}
+   lastActive=active;if(grounded&&!lastGrounded)landing=1;else landing=Math.max(0,landing-step*3.8);lastGrounded=grounded;
+  }
+  const out=active?Math.sin(Math.PI*phase):0;
+  const contact=active?smooth(phase/.22)*(1-smooth((phase-.44)/.12)):0;
+  body.updateWorldMatrix(true,false);const bodyPosition=body.getWorldPosition(V()),travel=bodyPosition.clone().sub(lastBodyPosition);travel.y=0;if(live)lastBodyPosition.copy(bodyPosition);
+  let pushForward=travel.clone();
+  if(pushForward.lengthSq()<1e-8||pushForward.length()>1){if(Number.isFinite(state.vx)&&Number.isFinite(state.vz)&&Math.hypot(state.vx,state.vz)>.05)pushForward.set(state.vx,0,state.vz);else pushForward.set(0,0,-1).applyQuaternion(body.parent?body.parent.getWorldQuaternion(Q()):body.getWorldQuaternion(Q()));}
+  pushForward.y=0;pushForward.normalize();const localForward=pushForward.clone().applyQuaternion(body.getWorldQuaternion(Q()).invert());localForward.y=0;localForward.normalize();
   const charge=Number.isFinite(state.charge)?clamp(state.charge/.45,0,1):0;
   const {trick,progress}=skateTrickProgress(state),signatureTuck=mode==='air'&&trick?.id==='switch-bs360'?Math.sin(Math.PI*progress)*.12:0;
   const wanted=.085+signatureTuck+.22*charge+(mode==='manual'?.075:0)+(mode==='air'?.13:0)+landing*.15+contact*.065;
   if(live)compression+=(wanted-compression)*(1-Math.exp(-step*18));else if(compression===0)compression=wanted;
   restoreBind(rootBone);restoreBind(pelvis);for(const l of legs){restoreBind(named.get('ball_'+l.side));restoreBind(named.get('ball_leaf_'+l.side));}body.updateWorldMatrix(true,true);
-  const pelvisTarget=pelvisBind.clone();pelvisTarget.y-=compression;pelvisTarget.x-=.025+compression*.18;
+  const pelvisTarget=pelvisBind.clone();pelvisTarget.y-=compression;pelvisTarget.x-=.025+compression*.18+(state.stance===1?-1:1)*out*.035;pelvisTarget.z-=Math.sin(phase*Math.PI*2)*out*.018;
   pelvis.position.copy(pelvis.parent.worldToLocal(body.localToWorld(pelvisTarget)));
   worldQuaternion(pelvis,body.getWorldQuaternion(Q()).multiply(rotate).multiply(pelvisQ));
   const steer=clamp(Number.isFinite(state.steer)?state.steer:0,-1,1);
@@ -73,11 +93,29 @@ export function createSkatePushRig(THREE,{model,body,deckY=.112}){
   body.updateWorldMatrix(true,true);
   const trickId=typeof state.trick==='string'?state.trick:state.trick?.id,flipDuration={kickflip:.42,heelflip:.42,shuv:.48,'180':.5,tre:.72,nac:.7}[trickId];
   flipLift=mode==='air'&&flipDuration&&Number.isFinite(state.trickTime)?Math.sin(Math.PI*clamp(state.trickTime/flipDuration,0,1))*.14:0;
-  const solves=[],pushIndex=state.stance===1?0:1,pushSign=pushIndex===1?1:-1;
+  const solves=[],pushIndex=state.stance===1?0:1,pushSign=pushIndex===1?1:-1;groundContact=false;
   for(let i=0;i<2;i++){
-   const l=legs[i],ref=footRefs[i],sole=V().set(i===0?-.005:.005,deckY+flipLift,i===0?-.215:.215);
-   if(i===pushIndex&&active){sole.x+=pushSign*.255*out;sole.y-=.102*contact;sole.y+=.09*Math.sin(Math.PI*clamp((phase-.58)/.42,0,1));sole.z+=pushSign*(phase<.58?.28*smooth(phase/.58):.28*(1-smooth((phase-.58)/.42)));}
-   const worldQ=body.getWorldQuaternion(Q()).multiply(rotate).multiply(ref.q),worldSole=body.localToWorld(sole.clone());
+   const l=legs[i],ref=footRefs[i],rest=V().set(i===0?-.005:.005,deckY+flipLift,i===0?-.215:.215);
+   let sole=rest.clone(),worldQ=body.getWorldQuaternion(Q()).multiply(rotate).multiply(ref.q),worldSole=null;
+   if(i===pushIndex&&active){
+    const strike=rest.clone().addScaledVector(localForward,.30);strike.x+=pushSign*.255;strike.y=.010;
+    if(phase<.22){const reach=smooth(phase/.22);sole.lerp(strike,reach);sole.y+=.055*Math.sin(Math.PI*reach);}
+    else{
+     if(!groundPlant){groundPlant=body.localToWorld(strike.clone());groundPlant.y=bodyPosition.y+.010;plantQuaternion=worldQ.clone();}
+     const beginRecovery=reason=>{if(recoveryPhase!==null)return;recoveryPhase=Math.min(.60,phase);recoverySole=body.worldToLocal(groundPlant.clone());recoverySole.x=clamp(recoverySole.x,-.36,.36);recoverySole.z=clamp(recoverySole.z,-.55,.55);releaseReason=reason;};
+     if(recoveryPhase===null&&(phase>=.44||hasPushState&&state.pushContact===false))beginRecovery('power-complete');
+     if(recoveryPhase===null){
+      const candidateOffset=ref.sole.clone().multiply(l.foot.getWorldScale(V())).applyQuaternion(plantQuaternion),target=groundPlant.clone().sub(candidateOffset),hip=l.hip.getWorldPosition(V()),knee=l.knee.getWorldPosition(V()),ankle=l.foot.getWorldPosition(V()),length=hip.distanceTo(knee)+knee.distanceTo(ankle)-.012;
+      // Release while this foot is still reachable, anticipating the next board step.
+      const futureHip=hip.clone().add(travel),dx=futureHip.x-target.x,dz=futureHip.z-target.z,dy=Math.max(0,futureHip.y-target.y-.10);
+      if(Math.hypot(dx,dy,dz)>length||travel.length()>1)beginRecovery('reach-limit');
+     }
+     if(recoveryPhase!==null){
+      const recover=clamp((phase-recoveryPhase)/Math.max(.15,.92-recoveryPhase),0,1),blend=smooth(recover);sole.copy(recoverySole).lerp(rest,blend);sole.y+=.13*Math.sin(Math.PI*recover);worldQ=plantQuaternion.clone().slerp(worldQ,blend);
+     }else{worldSole=groundPlant.clone();worldQ=plantQuaternion.clone();groundContact=true;}
+    }
+   }
+   if(!worldSole)worldSole=body.localToWorld(sole.clone());else sole=body.worldToLocal(worldSole.clone());
    const offset=ref.sole.clone().multiply(l.foot.getWorldScale(V())).applyQuaternion(worldQ);
    const target=worldSole.clone().sub(offset),pole=body.localToWorld(V().set(.8,.55,i===0?-.22:.22));
    solves.push({l,ref,target,pole,worldQ,worldSole});ankleTargets[i]=body.worldToLocal(target.clone());soleTargets[i]=sole;
@@ -85,6 +123,7 @@ export function createSkatePushRig(THREE,{model,body,deckY=.112}){
   // Move the pelvis only as far as real segment lengths require. No leg stretching.
   reachDrop=0;
   for(const s of solves){const h=s.l.hip.getWorldPosition(V()),k=s.l.knee.getWorldPosition(V()),a=s.l.foot.getWorldPosition(V()),max=(h.distanceTo(k)+k.distanceTo(a)-.004)/bodyScale.y,hLocal=body.worldToLocal(h),tLocal=body.worldToLocal(s.target.clone()),horizontal=(hLocal.x-tLocal.x)**2+(hLocal.z-tLocal.z)**2,vertical=Math.sqrt(Math.max(.0001,max*max-horizontal));reachDrop=Math.max(reachDrop,hLocal.y-tLocal.y-vertical);}
+  reachDrop=clamp(reachDrop,0,.12);
   if(reachDrop>0){const pos=body.worldToLocal(pelvis.getWorldPosition(V()));pos.y-=reachDrop;pelvis.position.copy(pelvis.parent.worldToLocal(body.localToWorld(pos)));body.updateWorldMatrix(true,true);}
   for(let i=0;i<solves.length;i++){const s=solves[i],error=solve(s.l,s.target,s.pole,s.worldQ);soleErrors[i]=s.l.foot.localToWorld(s.ref.sole.clone()).distanceTo(s.worldSole);if(i===0)plantError=error;else pushError=error;}
   const aim=state.aim,d=aim?.direction;lastAim=aim?.active!==false&&d&&['x','y','z'].every(k=>Number.isFinite(d[k]))&&Math.hypot(d.x,d.y,d.z)>.01;
@@ -93,10 +132,10 @@ export function createSkatePushRig(THREE,{model,body,deckY=.112}){
   const forward=V().set(lateral.z,0,-lateral.x);
   for(let i=0;i<2;i++){
    const arm=arms[i];if(!arm.hip)continue;
-   const swing=Math.sin(phase*Math.PI*2)*out*.10,side=i===0?-1:1,shoulder=shoulderPositions[i];
+   const swing=Math.sin(phase*Math.PI*2)*out*.13,side=i===0?-1:1,shoulder=shoulderPositions[i];
    // The host turns a model through90 degrees. Derive reach from the actual
    // shoulders instead of assuming the source armature faces a fixed axis.
-   const localTarget=shoulder.clone().addScaledVector(lateral,side*(mode==='air'?.14:.08)).addScaledVector(forward,.15+steer*side*.04);
+   const localTarget=shoulder.clone().addScaledVector(lateral,side*(mode==='air'?.14:.08)).addScaledVector(forward,.15+steer*side*.04+(i===pushIndex?-1:1)*swing*.45);
    localTarget.y-=mode==='air'?.18:.30;localTarget.y+=i===0?swing:-swing;
    let target=body.localToWorld(localTarget);
    let handQ=null;
@@ -107,5 +146,5 @@ export function createSkatePushRig(THREE,{model,body,deckY=.112}){
   body.updateWorldMatrix(true,true);lastState=mode;lastStance=state.stance===1?1:0;
  }
  const vector=p=>p?{x:p.x,y:p.y,z:p.z}:null;
- return {reset,update,snapshot:()=>({source:'original-board-bound-two-foot-skate-IK',stance:lastStance,pushingFoot:lastStance===1?'left':'right',active:lastActive,phase,leftPlantError:plantError,rightTargetError:pushError,leftSoleError:soleErrors[0],rightSoleError:soleErrors[1],compression,reachDrop,flipLift,landing,mode:lastState,aiming:Boolean(lastAim),armTargetErrors:[...armErrors],calibratedFromSneakers:footRefs.map(r=>r.calibrated),anchors:soleTargets.map(vector),ankleTargets:ankleTargets.map(vector),weaponContract:{hand:'hand_r',barrelAxis:[0,0,-1],fingerAxis:[0,1,0],position:[0,.07,-.018],rotation:[Math.PI/2,0,0]}})};
+ return {reset,update,snapshot:()=>({source:'original-board-bound-two-foot-skate-IK',stance:lastStance,pushingFoot:lastStance===1?'left':'right',active:lastActive,phase,pushStroke:cycleStroke,groundContact,groundPlant:groundContact?vector(groundPlant):null,releaseReason,leftPlantError:plantError,rightTargetError:pushError,leftSoleError:soleErrors[0],rightSoleError:soleErrors[1],compression,reachDrop,flipLift,landing,mode:lastState,aiming:Boolean(lastAim),armTargetErrors:[...armErrors],calibratedFromSneakers:footRefs.map(r=>r.calibrated),anchors:soleTargets.map(vector),ankleTargets:ankleTargets.map(vector),weaponContract:{hand:'hand_r',barrelAxis:[0,0,-1],fingerAxis:[0,1,0],position:[0,.07,-.018],rotation:[Math.PI/2,0,0]}})};
 }

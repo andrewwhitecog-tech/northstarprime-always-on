@@ -33,7 +33,7 @@ let presses=[], releases=[], lastEvent=0, accumulator=0, lastTime=0, orbit=0, ca
 let reflectionTarget=null;
 let peacockKiosk=null;
 let renderer, scene, camera, disposed=false, firstFrame=false, modelLoaded=false, modelError=null;
-let pausedByVisibility=false, frameCount=0, elapsedFrames=0, measuredFps=0, quality='high';
+let pausedByVisibility=false, frameCount=0, elapsedFrames=0, measuredFps=0, quality='high', lastUIRefresh=-Infinity;
 const assetState={}, loadErrors=[], shaders={lost:false}, keysOwned=['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyW','KeyS','KeyA','KeyD','KeyF','KeyG','KeyH','KeyJ','KeyK','KeyU','KeyC','KeyM','ShiftLeft','ShiftRight','KeyR','KeyP','KeyE','KeyT','KeyB','KeyL','KeyQ','Escape'];
 const motion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const surfaces=[], lamps=[], portalRings=[], routeLights=[], sparkParticles=[];
@@ -284,9 +284,14 @@ function processEvents(){
   if(e.type==='session-end'){message('Session banked · '+sim.score+' points, '+sim.completedLines+' clean lines. Ride again to build your best.');save();}
  }
 }
+// Stance controls reflect the just-stepped simulation, including on slow frames.
+function renderPeacockStance(){
+ const ready=sim.stance===1,button=$('peacock-special'),label=$('peacock-stance'),text=ready?'Switch · Peacock ready':'Regular · land a 180';
+ if(button.disabled!==!ready)button.disabled=!ready;if(label.textContent!==text)label.textContent=text;
+}
 function renderAction(){
  if(!actionMode||selectedRide!=='rival')return;const s=actionMode.snapshot(),c=s.combat,r=s.rival;
- $('peacock-stance').textContent=sim.stance===1?'Switch · Peacock ready':'Regular · land a 180';$('peacock-special').disabled=sim.stance!==1;
+ renderPeacockStance();
  $('action-health').textContent=Math.ceil(c.health);$('action-ammo').textContent=c.reloading?'Reloading…':c.ammo+' / '+c.reserve;$('action-stars').textContent=c.tokenCount+' / 16';$('art-score').textContent=String(r.score);$('heat-clock').textContent=r.finished?(r.result.winner==='Draw'?'Draw':r.result.winner+' wins'):(Math.ceil(r.remaining)+' s');$('aim-lock').setAttribute('aria-pressed',String(s.aimAssist));$('aim-state').textContent=s.aimAssist?'Aim assist: face a sentry to lock':'Free aim: shoot where the camera faces';
  const list=$('clip-objectives');for(const objective of s.clips.challenges){let li=list.querySelector('[data-clip="'+objective.id+'"]');if(!li){li=document.createElement('li');li.dataset.clip=objective.id;list.append(li);}li.textContent=(objective.completed?'✓ ':objective.pending?'Bank it · ':'')+objective.title;li.title=objective.objective;}
  const key=s.clips.unlockedBoards.join('|')+'|'+s.selectedBoard;if($('cover-rack').dataset.key!==key){$('cover-rack').dataset.key=key;const rack=$('cover-rack');rack.replaceChildren();for(const record of [{id:'original',title:'Original',url:ASSETS+'deck.jpg'},...actionArt.boards]){const button=document.createElement('button');button.dataset.cover=record.id;button.disabled=record.id!=='original'&&!s.clips.unlockedBoards.includes(record.id);button.setAttribute('aria-pressed',String(record.id===s.selectedBoard));button.title=record.title+(button.disabled?' · collect stars or finish clips':' · equip');const image=document.createElement('img');image.src=record.url;image.alt=record.title;button.append(image);rack.append(button);}}
@@ -338,7 +343,7 @@ function frame(time){
   const control=input();accumulator+=delta;let ticks=0;
   while(accumulator>=1/120&&ticks<12){sim.step(1/120,control);if(control.ollieReleased)queuedOllieTrick=null;chapter.step(1/120,sim);courierTrial.step(sim);actionMode?.step(1/120,control,sim.yaw+orbit);control.reload=false;presses=[];releases=[];control.olliePressed=false;control.ollieReleased=false;control.trick=null;accumulator-=1/120;ticks++;}
   if(ticks===12)accumulator=0;actionSaveClock+=delta;if(selectedRide==='rival'&&actionSaveClock>4){save();actionSaveClock=0;}
-  processEvents();
+  processEvents();renderPeacockStance();
   // Persist newly earned route records before their success/crest renders.
   if(lastTrialSavedRevision!==courierTrial.revision){lastTrialSavedRevision=courierTrial.revision;save();}
   const lean=sim.mode==='grind'?sim.balance*.2:clamp(control.steer,-1,1)*Math.min(.22,sim.speed*.018);
@@ -366,7 +371,7 @@ function frame(time){
   skater.cap.material.color.set(skinColors[profile.theme]);skater.deckMaterial.color.set(skinColors[profile.theme]);
   actionMode?.update(delta);renderer.render(scene,camera);firstFrame=true;frameCount++;elapsedFrames+=delta;
   if(elapsedFrames>1){measuredFps=frameCount/elapsedFrames;frameCount=0;elapsedFrames=0;}
-  if(Math.floor(time/100)%2===0){updateUI();renderChapter();renderCourierTrial();renderAction();}
+  if(time-lastUIRefresh>=100){lastUIRefresh=time;updateUI();renderChapter();renderCourierTrial();renderAction();}
  }
 }
 function loadControlAtlas(){for(const [key,file]of [['ui-skate-atlas','vorath-skate-controls-v6.png'],['ui-atlas','vorath-controls-v1.png'],['ui-title','kosher-lines-title-v4.png'],['ui-objectives','kosher-objectives-v4.png'],['ui-peacock','peacock-switch-control-v1.png']]){const image=new Image();assetState[key]='loading';image.onload=()=>{assetState[key]='loaded';};image.onerror=()=>{assetState[key]='failed';loadErrors.push(key);};image.src=ASSETS+file;}}

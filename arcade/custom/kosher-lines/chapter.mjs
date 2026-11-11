@@ -9,6 +9,8 @@ export const BEACONS=Object.freeze([
  {id:'east',name:'East garden relay',x:8,z:-27.8,color:0xf17ebd},
  {id:'return',name:'Return stone',x:0,z:10.5,color:0xffc15a}
 ]);
+// Completed contracts persist power even after turnIn clears per-contract visits.
+export function relayHasLight(state,id){return state.completed>=3||state.progress.visited.includes(id)||(id!=='return'&&state.completed>=2);}
 export const AMBIENT_CITIZENS=Object.freeze(Array.from({length:6},(_,i)=>({x:(i%2?-1:1)*(18.7+(i%3)*.4),z:1-Math.floor(i/2)*12})));
 export const CITY_COLLIDERS=Object.freeze([
  {kind:'counter',x:9,z:8.8,w:3,d:1.2,h:.95},

@@ -61,6 +61,13 @@ jobs:
           NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/crib-browser/node_modules/playwright
           NSP_PLAYTEST_OUT: ${{ runner.temp }}/crib-recovery-${{ matrix.game }}-${{ matrix.device }}
         run: node --test tests/crib-avatar-studio.browser.cjs
+      - name: Retain garment frames immediately for lead and independent visual review
+        if: always() && !cancelled() && matrix.game == 'kosher-lines' && matrix.device == 'desktop1280'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: crib-avatar-studio-kosher-lines-desktop1280
+          path: ${{ runner.temp }}/crib-recovery-${{ matrix.game }}-${{ matrix.device }}/avatar-studio/
+          retention-days: 14
       - name: Play actual desktop and390px touch journeys
         env:
           NSP_BROWSER_CASE: '${{ matrix.game }}:${{ matrix.device }}'
@@ -72,5 +79,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: crib-recovery-real-browser-${{ matrix.game }}-${{ matrix.device }}
-          path: ${{ runner.temp }}/crib-recovery-${{ matrix.game }}-${{ matrix.device }}/
+          path: |
+            ${{ runner.temp }}/crib-recovery-${{ matrix.game }}-${{ matrix.device }}/
+            !${{ runner.temp }}/crib-recovery-${{ matrix.game }}-${{ matrix.device }}/avatar-studio/**
           retention-days: 14

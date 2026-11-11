@@ -2,7 +2,7 @@ import { configureWovenMaterial } from './woven-material.js';
 import * as THREE from '/static/vendor/three/0.160.0/build/three.module.js';
 import { GLTFLoader } from '/static/vendor/three/0.160.0/examples/jsm/loaders/GLTFLoader.js';
 import { installStreetBays } from './street-bays.js';
-import { RESIDENTS, BEACONS, CITY_COLLIDERS, AMBIENT_CITIZENS } from './chapter.mjs';
+import { RESIDENTS, BEACONS, CITY_COLLIDERS, AMBIENT_CITIZENS, relayHasLight } from './chapter.mjs';
 // Original geometry and textile patterns; no third-party logos or image lettering.
 export function wovenTexture(){
  const canvas=document.createElement('canvas');canvas.width=canvas.height=256;const c=canvas.getContext('2d');
@@ -301,7 +301,7 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
    archiveDisplays.forEach((o,i)=>{o.rotation.z=state.completed>=2?Math.sin(time*.00025+i)*.1:0;});
    publicLights.forEach((o,i)=>{o.material.emissiveIntensity=state.completed>0?1.7:.12;});
    for(const item of markerMeshes){item.mesh.material.emissiveIntensity=item.id===active?2.4:.5;item.mesh.position.y=2.16+Math.sin(time*.0017)*.06;item.mesh.rotation.y=time*.0007;}
-   for(const item of beaconMeshes){const visited=(item.id!=='return'&&state.completed>=2)||state.progress.visited.includes(item.id);item.core.material.emissiveIntensity=visited?2.8:.22;item.core.rotation.y=time*.0006;}
+   for(const item of beaconMeshes){const visited=relayHasLight(state,item.id);item.core.material.emissiveIntensity=visited?2.8:.22;item.core.rotation.y=time*.0006;}
    for(const item of animated){if(item.type==='loom')item.group.rotation.z=time*.00016;else{const dx=sim.x-item.group.position.x,dz=sim.z-item.group.position.z;if(Math.hypot(dx,dz)<7)item.group.rotation.y=Math.atan2(dx,dz);item.head.position.y=item.baseY+Math.sin(time*.0013+item.index)*.008;}}
    finalGroup.visible=state.completed===3;finalBars.forEach(o=>{o.visible=state.choice==='public';});returnStuds.forEach(o=>{o.visible=state.choice==='public';});mirror.visible=state.choice==='personal';if(state.choice==='public')finalGroup.rotation.z=Math.sin(time*.00015)*.06;
   }

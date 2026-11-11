@@ -258,6 +258,7 @@ function openConversation(){
 function closeConversation(){
  $('chapter-dialog').hidden=true;dialogueResident=null;if(conversationPaused&&sim.running&&sim.paused)sim.togglePause();conversationPaused=false;held.clear();touchHeld.clear();presses=[];releases=[];updateUI();canvas.focus();
 }
+function graphicsSnapshot(){const size=renderer?renderer.getDrawingBufferSize(new THREE.Vector2()):new THREE.Vector2();return {preset:quality,pixelRatio:renderer?.getPixelRatio()??null,shadowMapEnabled:renderer?.shadowMap.enabled??null,drawingBuffer:{width:size.x,height:size.y},css:{width:canvas.clientWidth,height:canvas.clientHeight}};}
 function resize(){if(!renderer)return;const bounds=canvas.getBoundingClientRect();renderer.setSize(Math.max(1,bounds.width),Math.max(1,bounds.height),false);camera.aspect=bounds.width/Math.max(1,bounds.height);camera.updateProjectionMatrix();}
 function frame(time){
  if(disposed)return;requestAnimationFrame(frame);
@@ -324,7 +325,7 @@ function installInput(){
  for(const button of document.querySelectorAll('[data-ending]'))button.addEventListener('click',()=>{if(chapter.turnIn(dialogueResident,button.dataset.ending)){message(chapter.notifications.at(-1).text);save();}closeConversation();renderChapter();});
  $('ride-mode').addEventListener('change',()=>{if(dialogueResident)closeConversation();sim.sessionMode=$('ride-mode').value==='chapter'?'chapter':'arcade';$('mode-description').textContent=sim.sessionMode==='chapter'?'Return the Light · no clock · chapter progress saves on this device.':'Two-minute arcade · chapter progress carries across both modes.';sim.reset(true);clear();save();message(sim.sessionMode==='chapter'?'No clock. Meet the keeper, reconnect the gardens, return the light.':'Two minutes. Five features. One clean line.');updateUI();});
  $('camera-reset').addEventListener('click',()=>{orbit=0;cameraTilt=.38;});
- $('quality').addEventListener('change',()=>{quality=$('quality').value;$('quality-description').textContent=quality==='low'?'Low power':'Shadows + detail';renderer.setPixelRatio(quality==='low'?1:Math.min(devicePixelRatio||1,1.5));renderer.shadowMap.enabled=quality!=='low';resize();});
+ $('quality').addEventListener('change',()=>{quality=$('quality').value;$('quality-description').textContent=quality==='low'?'Low power':'Shadows + detail';renderer.setPixelRatio(quality==='low'?0.5:Math.min(devicePixelRatio||1,1.5));renderer.shadowMap.enabled=quality!=='low';resize();});
  for(const button of document.querySelectorAll('[data-theme]'))button.addEventListener('click',()=>{profile.theme=Number(button.dataset.theme);save();updateUI();});
 }
 try{
@@ -345,7 +346,7 @@ try{
  requestAnimationFrame(frame);updateUI();renderChapter();save();
 }catch(error){loadErrors.push(String(error));$('graphics-error').hidden=false;$('graphics-error').textContent='The 3D plaza could not start on this graphics context. '+String(error.message||error);}
 window.__KOSHER_LINES__=Object.freeze({
- snapshot:()=>({...sim.snapshot(),career:chapter.snapshot(),renderer:{firstFrame,modelLoaded,modelError,avatar:{...avatarMetrics,animations:[...avatarMetrics.animations]},assets:{...assetState},texturesLoaded:Object.keys(assetState).filter(name=>/\.(jpg|png|webp)$/.test(name)&&assetState[name]==='loaded').length+Number(avatarMetrics.skinLoaded),errors:[...loadErrors],contextLost:shaders.lost,fps:Math.round(measuredFps),quality,wardrobe:riderDress?.snapshot()||null,wheelJewelsVisible:courierWheelJewels.filter(j=>j.visible).length,reflections:{capturedFaceSize:64,textureWidth:reflectionTarget?.width||0,textureHeight:reflectionTarget?.height||0,environmentAssigned:scene?.environment===reflectionTarget?.texture},city:city?{...city.metrics,...city.snapshot()}:null,drawCalls:renderer?.info.render.calls||0},camera:camera?{x:camera.position.x,y:camera.position.y,z:camera.position.z}:null,storageAvailable:saveAvailable}),
+ snapshot:()=>({...sim.snapshot(),career:chapter.snapshot(),graphics:graphicsSnapshot(),renderer:{firstFrame,modelLoaded,modelError,avatar:{...avatarMetrics,animations:[...avatarMetrics.animations]},assets:{...assetState},texturesLoaded:Object.keys(assetState).filter(name=>/\.(jpg|png|webp)$/.test(name)&&assetState[name]==='loaded').length+Number(avatarMetrics.skinLoaded),errors:[...loadErrors],contextLost:shaders.lost,fps:Math.round(measuredFps),quality,wardrobe:riderDress?.snapshot()||null,wheelJewelsVisible:courierWheelJewels.filter(j=>j.visible).length,reflections:{capturedFaceSize:64,textureWidth:reflectionTarget?.width||0,textureHeight:reflectionTarget?.height||0,environmentAssigned:scene?.environment===reflectionTarget?.texture},city:city?{...city.metrics,...city.snapshot()}:null,drawCalls:renderer?.info.render.calls||0},camera:camera?{x:camera.position.x,y:camera.position.y,z:camera.position.z}:null,storageAvailable:saveAvailable}),
  provenance:'Reconstructed missing simulation and rendering from retained Grok source fragments. Original art retained; no exact full-source restoration claimed.'
 });
 window.render_game_to_text=()=>JSON.stringify(window.__KOSHER_LINES__.snapshot());

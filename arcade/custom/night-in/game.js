@@ -27,7 +27,8 @@ $('saveStatus').textContent=saved?'Your saved night is back.':'New night. Autosa
 const canvas=$('world'),scene=new THREE.Scene();scene.background=new THREE.Color('#11192b');scene.fog=new THREE.FogExp2('#11192b',.018);
 let renderer;
 try{renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'low-power'});}catch(e){$('loading').textContent='This room needs WebGL. Try a browser with 3D acceleration enabled.';throw e;}
-renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.25;
+let qualityPreset='high',requestedPixelRatio=Math.min(devicePixelRatio||1,1.6);
+renderer.setPixelRatio(requestedPixelRatio);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.25;
 const camera=new THREE.PerspectiveCamera(43,1,.1,80);const aim=new THREE.Vector3(0,.45,0);
 scene.add(new THREE.HemisphereLight('#a4c8e6','#513126',1.05));
 function light(color,power,x,y,z){const a=new THREE.PointLight(color,power,12,2);a.position.set(x,y,z);scene.add(a);return a;}
@@ -96,10 +97,11 @@ Promise.all([fbxPromise('Model/characterMedium.fbx'),skinPromise,fbxPromise('Ani
   const bones=new Set();model.traverse(o=>{if(o.isBone)bones.add(o.uuid);if(o.isMesh){o.castShadow=true;o.receiveShadow=true;o.material=new THREE.MeshStandardMaterial({map:skin,roughness:.85});}if(o.isSkinnedMesh)loadState.actualSkinnedMeshes++;});
   loadState.bones=bones.size;if(!loadState.actualSkinnedMeshes||!bones.size)throw new Error('Character has no skinned mesh or skeleton');
   resident.add(model);character=model;loadState.modelLoaded=true;
-  if(!idle.animations?.length||!run.animations?.length)throw new Error('Missing skeletal animation clips');
-  mixer=new THREE.AnimationMixer(model);idleAction=mixer.clipAction(idle.animations[0]);runAction=mixer.clipAction(run.animations[0]);idleAction.play();currentAction=idleAction;
-  loadState.animationClips=idle.animations.length+run.animations.length;loadState.animationLoaded=true;
-  chapter.installResident(model,skin,idle.animations[0],resident,run.animations[0]);
+  const idleClip=idle.animations?.find(c=>c.name.toLowerCase().endsWith('|idle')),runClip=run.animations?.find(c=>c.name.toLowerCase().endsWith('|run'));
+  if(!idleClip||!runClip)throw new Error('Missing named idle/run skeletal clips; setup pose is not a playable animation');
+  mixer=new THREE.AnimationMixer(model);idleAction=mixer.clipAction(idleClip);runAction=mixer.clipAction(runClip);idleAction.play();currentAction=idleAction;
+  loadState.animationClips=idle.animations.length+run.animations.length;loadState.animationNames={idle:idleClip.name,run:runClip.name};loadState.animationLoaded=true;
+  chapter.installResident(model,skin,idleClip,resident,runClip);
 }).catch(e=>modelError('resident / skin / animation',e));
 const breathRing=new THREE.Mesh(new THREE.TorusGeometry(.48,.025,8,64),new THREE.MeshBasicMaterial({color:'#90f2d9'}));breathRing.position.set(3.5,1.5,1.7);breathRing.visible=false;scene.add(breathRing);
 const solids=[[-4.75,-1.95,-.85,.65],[-1.6,.6,-.36,.96],[-1.3,1.85,-3.3,-2.55],[3.83,4.97,-3.3,-2.38]];
@@ -127,8 +129,10 @@ $('pause').onclick=()=>{paused=!paused;clearInput();$('pause').setAttribute('ari
 $('water').onclick=()=>{if(paused||s.over)return;s.clarity=clamp(s.clarity+3);say('A glass of water. A small ordinary ritual.');note('water','fictional comfort only');};
 $('restart').onclick=()=>{if(!s.over&&!paused){paused=true;$('pause').textContent='Resume';$('pause').setAttribute('aria-pressed','true');$('restart').textContent='Confirm new night';say('Night paused. Press Confirm new night to reset; Resume keeps this night.');return;}const best=s.best;s=fresh();s.best=best;activity=null;mini=null;paused=false;clearInput();$('pause').textContent='Pause';$('pause').setAttribute('aria-pressed','false');$('restart').textContent='New night';say('The apartment is yours again.');save();hud();};
 document.querySelector('.console').addEventListener('click',e=>{if(e.target.closest('button'))$('stage').focus({preventScroll:true});});
-function resize(){const r=canvas.getBoundingClientRect();renderer.setSize(r.width,r.height,false);camera.aspect=r.width/r.height;camera.updateProjectionMatrix();}new ResizeObserver(resize).observe($('stage'));resize();
-const actualSnapshot=()=>JSON.parse(JSON.stringify({build:'night-in-reconstruction-1',revision:'inhabited-apartment-chapter-2',...s,paused,activity,near:near?.id||null,goal,mini,story:chapter.snapshot(),controlArt:controlArt.snapshot(),reflections:{active:scene.environment===reflectionEnvironment.texture,cubeSize:reflectionEnvironment.cubeSize},camera:{position:camera.position.toArray(),direction:camera.getWorldDirection(new THREE.Vector3()).toArray()},collisionBounds:[...solids,...chapter.solids()],assets:loadState,storageOK,stations:spots,events,renderFrames:frame,renderer:renderer.info.render}));
+function resize(){const r=canvas.getBoundingClientRect();requestedPixelRatio=Math.min(devicePixelRatio||1,qualityPreset==='low' ? .5 : 1.6);renderer.setPixelRatio(requestedPixelRatio);renderer.setSize(r.width,r.height,false);camera.aspect=r.width/r.height;camera.updateProjectionMatrix();}new ResizeObserver(resize).observe($('stage'));resize();
+$('quality').addEventListener('change',()=>{qualityPreset=$('quality').value==='low'?'low':'high';renderer.shadowMap.enabled=qualityPreset==='high';renderer.shadowMap.needsUpdate=true;resize();});
+function graphicsSnapshot(){const size=renderer.getDrawingBufferSize(new THREE.Vector2());return {preset:qualityPreset,requestedPixelRatio,pixelRatio:renderer.getPixelRatio(),shadowMapEnabled:renderer.shadowMap.enabled,drawingBuffer:{width:size.x,height:size.y},css:{width:canvas.clientWidth,height:canvas.clientHeight}};}
+const actualSnapshot=()=>JSON.parse(JSON.stringify({build:'night-in-reconstruction-1',revision:'inhabited-apartment-chapter-2',...s,paused,activity,near:near?.id||null,goal,mini,story:chapter.snapshot(),graphics:graphicsSnapshot(),controlArt:controlArt.snapshot(),reflections:{active:scene.environment===reflectionEnvironment.texture,cubeSize:reflectionEnvironment.cubeSize},camera:{position:camera.position.toArray(),direction:camera.getWorldDirection(new THREE.Vector3()).toArray()},collisionBounds:[...solids,...chapter.solids()],assets:loadState,storageOK,stations:spots,events,renderFrames:frame,renderer:renderer.info.render}));
 Object.defineProperty(window,'__NIGHT_IN__',{value:Object.freeze({snapshot:actualSnapshot}),writable:false,configurable:false});
 camera.position.set(9.5,10.5,9.5);camera.lookAt(aim);
 let last=performance.now();function tick(now){requestAnimationFrame(tick);const dt=Math.min((now-last)/1000,.05);last=now;if(hidden)return;const pad=Array.from(navigator.getGamepads?.()||[]).find(p=>p?.connected);if(pad){const a=pad.buttons[0]?.pressed,b=pad.buttons[1]?.pressed,q=pad.buttons[4]?.pressed;if(a&&!gamepadDown){if(activity==='breathe')breathe();else interact();}if(b&&!bDown)leave();if(q&&!shoulderDown)orbit=(orbit+1)%4;gamepadDown=!!a;bDown=!!b;shoulderDown=!!q;}

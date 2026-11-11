@@ -22,8 +22,15 @@ concurrency:
   cancel-in-progress: true
 jobs:
   real-input-journeys:
+    name: Baseline ${{ matrix.game }} ${{ matrix.device }}
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        game: [kosher-lines, night-in]
+        device: [desktop1280, touch390]
     runs-on: ubuntu-24.04
-    timeout-minutes: 18
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -50,18 +57,26 @@ jobs:
           "$RUNNER_TEMP/crib-browser/node_modules/.bin/playwright" install --with-deps chromium
       - name: Play actual desktop and390px touch journeys
         env:
+          NSP_BROWSER_CASE: '${{ matrix.game }}:${{ matrix.device }}'
           NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/crib-browser/node_modules/playwright
-          NSP_PLAYTEST_OUT: ${{ runner.temp }}/crib-recovery
+          NSP_PLAYTEST_OUT: ${{ runner.temp }}/crib-recovery-${{ matrix.game }}-${{ matrix.device }}
         run: node tests/crib-recovery.browser.cjs
       - name: Retain source-bound results, network failures and compositor frames
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: crib-recovery-real-browser
-          path: ${{ runner.temp }}/crib-recovery/
+          name: crib-recovery-real-browser-${{ matrix.game }}-${{ matrix.device }}
+          path: ${{ runner.temp }}/crib-recovery-${{ matrix.game }}-${{ matrix.device }}/
           retention-days: 14
 
   chapter-input-journeys:
+    name: Chapter ${{ matrix.game }} ${{ matrix.device }}
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        game: [kosher-lines, night-in]
+        device: [desktop1280, touch390]
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -90,13 +105,14 @@ jobs:
           "$RUNNER_TEMP/crib-browser/node_modules/.bin/playwright" install --with-deps chromium
       - name: Play real chapter keyboard and390px touch journeys
         env:
+          NSP_BROWSER_CASE: '${{ matrix.game }}:${{ matrix.device }}'
           NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/crib-browser/node_modules/playwright
-          NSP_PLAYTEST_OUT: ${{ runner.temp }}/crib-chapters
+          NSP_PLAYTEST_OUT: ${{ runner.temp }}/crib-chapters-${{ matrix.game }}-${{ matrix.device }}
         run: node tests/crib-chapters.browser.cjs
       - name: Retain source-bound results, network failures and compositor frames
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: crib-chapters-real-browser
-          path: ${{ runner.temp }}/crib-chapters/
+          name: crib-chapters-real-browser-${{ matrix.game }}-${{ matrix.device }}
+          path: ${{ runner.temp }}/crib-chapters-${{ matrix.game }}-${{ matrix.device }}/
           retention-days: 14

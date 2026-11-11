@@ -131,7 +131,10 @@ def _must_stay_local(relative: Path) -> bool:
         return False
     # This small, manifest-pinned model is required by the local game runtime.
     # Other GLB releases retain the existing raw-delivery and size policies.
-    if relative.as_posix() == "arcade/custom/crib-recovered-assets/keeper-repair-station-v2.glb":
+    if relative.as_posix() in {
+        "arcade/custom/crib-recovered-assets/keeper-repair-station-v2.glb",
+        "arcade/custom/crib-recovered-assets/vorath-adult-skater-v3.glb",
+    }:
         return True
     if parts[0] == "chronosphere":
         return True

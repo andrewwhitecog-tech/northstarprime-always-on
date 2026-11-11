@@ -25,6 +25,22 @@ class MediaRewrite(unittest.TestCase):
    destination=Path(tmp)/"keeper.glb"
    m.copy_artifact_source(source,relative,destination,set(),commit,frozenset())
    self.assertEqual(destination.read_bytes(),actual)
+ def test_actual_adult_runtime_glb_stays_local_and_copies_byte_exact(self):
+  import tempfile
+  relative=Path("arcade/custom/crib-recovered-assets/vorath-adult-skater-v3.glb")
+  source=ROOT.parent/relative
+  actual=source.read_bytes()
+  self.assertEqual(actual[:4],b"glTF")
+  self.assertEqual(int.from_bytes(actual[8:12],"little"),len(actual))
+  self.assertFalse(m.external_release_media(relative))
+  self.assertTrue(m.external_release_media(relative.with_name("unreviewed-adult-neighbor.glb")))
+  self.assertTrue(any(rel==relative for _,rel in m.iter_source_files()))
+  scratch_parent=ROOT.parent/"output"
+  scratch_parent.mkdir(exist_ok=True)
+  with tempfile.TemporaryDirectory(prefix="adult-export-",dir=scratch_parent) as tmp:
+   destination=Path(tmp)/"adult.glb"
+   m.copy_artifact_source(source,relative,destination,set(),commit,frozenset())
+   self.assertEqual(destination.read_bytes(),actual)
  def rewrite(self,text,page="idc/season-4/index.html"):
   return m.rewrite_release_media_refs(text,Path(page),selected,commit)
  def test_literal(self):

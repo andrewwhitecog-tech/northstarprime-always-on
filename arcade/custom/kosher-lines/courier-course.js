@@ -34,7 +34,7 @@ export function buildCourierCourse(scene,trial,{reducedMotion=false}={}){
  const parcelFrame=add(new THREE.BoxGeometry(.4,.32,.3),dark,parcel);for(const x of [-.13,.13]){const band=add(new THREE.BoxGeometry(.025,.35,.33),gold,parcel);band.position.x=x;}
  const seal=add(new THREE.OctahedronGeometry(.065),new THREE.MeshBasicMaterial({color:0x60f9d5,toneMapped:false}),parcel);seal.position.z=.2;
  return {
-  mountPrize(board){if(prize)return;prize=new THREE.Group();prize.name='earned-courier-relay-crest';prize.position.set(0,.195,.46);board.add(prize);const rim=add(new THREE.TorusGeometry(.105,.017,6,28),gold,prize);rim.rotation.x=-Math.PI/2;prizeCore=add(new THREE.OctahedronGeometry(.047),gold.clone(),prize);prizeCore.position.y=.045;},
+  mountPrize(board){if(prize)return;prize=new THREE.Group();prize.name='earned-courier-relay-crest';prize.position.set(0,.116,.31);prize.scale.setScalar(.57);board.add(prize);const rim=add(new THREE.TorusGeometry(.105,.017,6,28),gold,prize);rim.rotation.x=-Math.PI/2;prizeCore=add(new THREE.OctahedronGeometry(.047),gold.clone(),prize);prizeCore.position.y=.045;},
   update(time){root.visible=trial.enabled;const active=trial.active,passed=trial.next;
    markers.forEach((m,i)=>{const isStart=i===0,live=isStart?(trial.state==='armed'||trial.state==='failed'||trial.state==='finished'||trial.state==='countdown'):(active&&i===passed+1);const done=!isStart&&i<=passed;const color=trial.state==='failed'?0xe96c68:done?0xc98a43:live?(isStart?0xe5a13c:0xc4ff38):0x213b4a;m.glow.color.setHex(color);if(!reducedMotion)m.floor.material.color.copy(m.glow.color);});
    parcel.visible=trial.state==='finished';if(!reducedMotion){parcel.rotation.y=time*.0006;parcel.position.y=3.55+Math.sin(time*.0017)*.08;}

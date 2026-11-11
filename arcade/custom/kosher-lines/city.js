@@ -1,5 +1,6 @@
 import * as THREE from '/static/vendor/three/0.160.0/build/three.module.js';
 import { GLTFLoader } from '/static/vendor/three/0.160.0/examples/jsm/loaders/GLTFLoader.js';
+import { mergeGeometries } from '/static/vendor/three/0.160.0/examples/jsm/utils/BufferGeometryUtils.js';
 import { RESIDENTS, BEACONS, CITY_COLLIDERS } from './chapter.mjs';
 // Original geometry and textile patterns; no third-party logos or image lettering.
 export function wovenTexture(){
@@ -30,13 +31,16 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
  const instances=(geometry,m,items)=>{const batch=new THREE.InstancedMesh(geometry,m,items.length),dummy=new THREE.Object3D();items.forEach((p,i)=>{dummy.position.set(p[0],p[1],p[2]);dummy.rotation.set(p[6]||0,p[7]||0,p[8]||0);dummy.scale.set(p[3]||1,p[4]||1,p[5]||1);dummy.updateMatrix();batch.setMatrixAt(i,dummy.matrix);});batch.castShadow=batch.receiveShadow=true;scene.add(batch);geometryCount++;return batch;};
  // Deep arcades: pilasters, recessed bays, real arched lintels, awnings and balconies.
  const panes=[],frames=[],tiles=[],leaves=[],trunks=[];
+ const baySceneStart=scene.children.length;let consolidatedBaySources=0,baySubmissions=0;
  for(const side of [-1,1])for(let bay=0;bay<7;bay++){
   const x=side*21.6,z=10-bay*6.1,h=5.7+(bay%3)*1.15,accent=neon[bay%4];
   cube(.9,h,.5,x,h/2,z+2.65,stone);cube(.9,h,.5,x,h/2,z-2.65,stone);
   cube(1.2,.2,.85,x,1.1,z+2.65,gold);cube(1.2,.2,.85,x,h-.15,z-2.65,gold);
-  const arch=[];for(let j=0;j<=14;j++){const a=j/14*Math.PI;arch.push([x-side*.55,3.3+Math.sin(a)*1.75,z+Math.cos(a)*2.3]);}tube(arch,.12,gold);
+  const arch=[[x-side*.55,3.3,z-2.3],[x-side*.55,4.7,z-1.8],[x-side*.55,5.05,z+.85],[x-side*.55,4.15,z+2.3]];
+  for(let j=0;j<arch.length-1;j++)rod(new THREE.Vector3(...arch[j]),new THREE.Vector3(...arch[j+1]),.11,ink);
+  rod(new THREE.Vector3(x-side*.62,4.73,z-1.8),new THREE.Vector3(x-side*.62,5.08,z+.85),.028,accent);
   cube(.25,2.8,4.4,x+side*.13,1.4,z,ink);
-  cube(2,.16,5.1,x-side*.35,3.4,z,jewel); // narrow projecting roof, not a wallpaper box
+  cube(2,.16,5.1,x-side*.35,3.4,z,ink); // narrow projecting roof, not a wallpaper box
   for(let rib=0;rib<5;rib++)cube(1.8,.07,.07,x-side*.45,3.28,z-2+rib, gold);
   for(let level=0;level<3;level++){
    const yy=5+level*2.5;panes.push([side*22.64,yy,z,.08,1.4,3.4]);frames.push([side*22.5,yy-1,z,.18,.12,4.3]);
@@ -51,11 +55,26 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
   // Small parked handcarts and public drinking fountains occupy recesses, outside skating bounds.
   if(bay%2){cube(.7,.7,1.2,side*22.8,.42,z+1,wood);for(const zz of [-.48,.48]){const wheel=add(new THREE.TorusGeometry(.17,.045,5,12),gold,side*22.35,.2,z+1+zz);wheel.rotation.y=Math.PI/2;}}
  }
+ // The bays are static and non-interactive. Merge only this exact new interval,
+ // keeping quest props, characters, imported kits and animated groups independent.
+ const bayGroups=new Map();
+ for(const object of scene.children.slice(baySceneStart)){
+  if(!object.isMesh||object.isSkinnedMesh||object.isInstancedMesh||Array.isArray(object.material))continue;
+  const key=object.material.uuid,group=bayGroups.get(key)||[];group.push(object);bayGroups.set(key,group);
+ }
+ for(const objects of bayGroups.values()){
+  if(objects.length<2){baySubmissions+=objects.length;continue;}
+  const parts=objects.map(object=>{object.updateMatrix();const geometry=object.geometry.index?object.geometry.toNonIndexed():object.geometry.clone();return geometry.applyMatrix4(object.matrix);});
+  const geometry=mergeGeometries(parts,false);parts.forEach(part=>part.dispose());
+  if(!geometry)throw Error('Static street-bay geometry could not be consolidated');
+  const batch=new THREE.Mesh(geometry,objects[0].material);batch.name='Static forged arcade bays';batch.castShadow=batch.receiveShadow=true;scene.add(batch);
+  for(const object of objects){scene.remove(object);object.geometry.dispose();}consolidatedBaySources+=objects.length;baySubmissions++;
+ }
  // All street-level solids below are derived from the very same collider table as physics.
  for(const b of CITY_COLLIDERS){
   if(['resident','beacon','column','citizen','bay-wall'].includes(b.kind))continue;
-  if(b.kind==='tree'){trunks.push([b.x,b.h/2,b.z,b.w/2,b.h,b.d/2]);for(let i=0;i<9;i++){const a=i*2.399;leaves.push([b.x+Math.sin(a)*1.05,3.5+(i%3)*.55,b.z+Math.cos(a)*1.05,.7,.75,.7]);}continue;}
-  if(b.kind==='garden'){cube(b.w,b.h,b.d,b.x,b.h/2,b.z,stone);cube(b.w-.18,.06,b.d-.18,b.x,b.h+.01,b.z,soil);for(let i=0;i<10;i++)leaves.push([b.x+Math.sin(i*3.7)*.6,b.h+.3+(i%3)*.1,b.z+Math.cos(i*2.2)*1.4,.3,.45,.3]);continue;}
+  if(b.kind==='tree')continue;
+  if(b.kind==='garden')continue;
   if(b.kind==='bench'){cube(b.w,b.h,b.d,b.x,b.h/2,b.z,wood);for(let i=0;i<4;i++)cube(b.w,.035,.025,b.x,b.h+.02,b.z-.4+i*.27,gold);continue;}
   if(b.kind==='kiosk'){
    // A glazed parcel counter, locked by its grille; its envelope is the unchanged kiosk collider.
@@ -69,10 +88,7 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
   }
   const solid=cube(b.w,b.h,b.d,b.x,b.h/2,b.z,ink),trim=cube(b.w+.04,.05,b.d+.04,b.x,b.h+.025,b.z,gold);if(b.kind==='counter')repairFallback.push(solid,trim);
  }
- instances(new THREE.BoxGeometry(1,1,1),material(0x358091,{emissive:0x205b70,emissiveIntensity:.45,metalness:.6}),panes);
- instances(new THREE.BoxGeometry(1,1,1),gold,frames);
- instances(new THREE.CylinderGeometry(1,1,1,7),wood,trunks);
- instances(new THREE.IcosahedronGeometry(1,0),leaf,leaves);
+ instances(new THREE.BoxGeometry(1,1,1),ink,frames);
  if(mosaic){mosaic.wrapS=mosaic.wrapT=THREE.ClampToEdgeWrapping;mosaic.repeat.set(1,1);const disc=add(new THREE.CircleGeometry(1.65,64),material(0xffffff,{map:mosaic,metalness:.28,roughness:.43}),0,.025,7.5);disc.rotation.x=-Math.PI/2;const rim=add(new THREE.TorusGeometry(1.68,.045,7,64),gold,0,.04,7.5);rim.rotation.x=-Math.PI/2;}
  // A layered tiled wayfinding braid, laid flush: the player can actually roll over it.
  for(let i=0;i<50;i++){const z=12-i*.87;for(const side of [-1,1])tiles.push([side*(6+Math.sin(i*.28)*.24),.012,z,.16,.025,.42]);}
@@ -127,22 +143,7 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
   for(const sign of [-1,1]){rod(new THREE.Vector3(sign*.1,.6,0),new THREE.Vector3(sign*.1,.3,-.3),.075,ink,group);cube(.18,.1,.3,sign*.1,.1,-.3,ink,group);}cube(.55,.08,.45,0,.77,-.3,wood,group);
   occupiedResidents++;
  }
- // Distant skyline is dimensional: offset crowns, roof machinery, bridges and color-window depth.
- const skylineWindows=[];
- for(let i=0;i<17;i++){
-  const x=-58+i*7.4,z=-49-(i%4)*4,h=10+(i*7%19),w=3.5+(i%3),m=i%2?ink:stone;
-  cube(w,h,4.4,x,h/2,z,m);cube(w*.65,1.6,3,x+.5,h+.8,z,jewel);
-  const crown=add(new THREE.ConeGeometry(w*.55,3.5,4),gold,x,h+3.2,z);crown.rotation.y=Math.PI/4;
-  for(let row=0;row<Math.floor(h/2);row++)for(let col=0;col<3;col++)if((row+col+i)%4)skylineWindows.push([x-w*.3+col*w*.3,1.5+row*1.9,z+2.23,.35,.65,.06]);
-  if(i%3===0)rod(new THREE.Vector3(x,h+4.5,z),new THREE.Vector3(x,h+7,z),.035,gold);
- }
- instances(new THREE.BoxGeometry(1,1,1),neon[2],skylineWindows);
- // Catenary strings and suspended gems give the street a ceiling with true parallax.
- for(const z of [9,-9,-24]){
-  tube([[-23,8,z],[-12,6.2,z],[0,5.7,z],[12,6.2,z],[23,8,z]],.018,ink);
-  for(let i=0;i<11;i++){const x=-20+i*4,y=5.7+Math.pow(x/23,2)*2.3;const gem=add(new THREE.OctahedronGeometry(.11),neon[i%4],x,y-.2,z);gem.castShadow=false;}
- }
-
+ // Street skyline, divided glazing and elevated cables now live in streetscape.js.
  // Hand-laid material changes give the three resident places distinct ground, without new obstacles.
  const ceramic=material(0xffffff,{vertexColors:true,roughness:.82,metalness:.05});
  const pave=(x0,x1,z0,z1,colors)=>{
@@ -215,7 +216,6 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
  for(let i=0;i<13;i++)rod(new THREE.Vector3(-2.4+i*.4,0,17.38),new THREE.Vector3(-2.4+i*.4,4.4,17.38),.028,copper);
  const clockFace=new THREE.Group();clockFace.position.set(0,6,17.02);scene.add(clockFace);for(let i=0;i<3;i++)add(new THREE.TorusGeometry(.35+i*.18,.032,6,36),i%2?jewel:gold,0,0,i*.025,clockFace);detailMotion.push({type:'clock',group:clockFace,phase:0});
  // Rooftops to the south continue the city through camera orbits instead of ending in a blue void.
- const southFar=[];for(let i=0;i<7;i++){const x=-30+i*10,h=11+(i*5%14);cube(5.5,h,5,x,h/2,37+(i%2)*4,i%2?stone:ink);const cap=add(new THREE.ConeGeometry(4,3,6),copper,x,h+1.5,37+(i%2)*4);for(let row=0;row<Math.floor(h/2);row++)for(let col=0;col<2;col++)southFar.push([x-1+col*2,row*1.8+1.3,34.4+(i%2)*4,.55,.75,.06]);}instances(new THREE.BoxGeometry(1,1,1),glaze,southFar);
 
 
  // Dimensional aurora curtains beyond the roofline: real curved geometry,
@@ -300,7 +300,8 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
  }
  function residentOutfit(record,actor){
   const parent=record.group,index=record.index,bones=[];actor.traverse(o=>{if(o.isBone)bones.push(o);});
-  const boneNamed=name=>bones.find(b=>b.name.toLowerCase()===name.toLowerCase())||bones.find(b=>b.name.toLowerCase().endsWith('|'+name.toLowerCase()));
+  const aliases={Chest:'spine_03',LeftHand:'hand_l',RightHand:'hand_r'};
+  const boneNamed=name=>bones.find(b=>b.name.toLowerCase()===name.toLowerCase())||bones.find(b=>b.name.toLowerCase().endsWith('|'+name.toLowerCase()))||bones.find(b=>b.name.toLowerCase()===aliases[name]?.toLowerCase());
   const chest=boneNamed('Chest'),head=boneNamed('Head'),left=boneNamed('LeftHand'),right=boneNamed('RightHand');if(!chest||!head||!left||!right)throw Error('Resident creator rig is missing Chest/Head/hand attachment bones');
   const coatMaterial=material(index===0?0x171a23:index===1?0x10282a:0x241c31,{roughness:.78,metalness:.18});
   const lapel=index===0?cloth:material(index===1?0x377b75:0x8a3a69,{roughness:.56,metalness:.38});
@@ -321,20 +322,20 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
   parent.updateMatrixWorld(true);const q=new THREE.Quaternion(),local=new THREE.Quaternion(),position=new THREE.Vector3();parent.getWorldQuaternion(q);q.invert();bindings.forEach(binding=>{binding.inverseRest=q.clone().multiply(binding.bone.getWorldQuaternion(new THREE.Quaternion())).invert();});
   return {bindings:bindings.length,update(){parent.updateMatrixWorld(true);parent.getWorldQuaternion(q);q.invert();for(const binding of bindings){binding.bone.getWorldPosition(position);parent.worldToLocal(position);binding.node.position.copy(position).add(binding.offset);binding.bone.getWorldQuaternion(local);binding.node.quaternion.copy(q).multiply(local).multiply(binding.inverseRest);}}};
  }
- function installResidents(template,skin,idleClip){
+ function installResidents(template,skin,idleClip,{preserveMaterials=false}={}){
   if(residentRecords.every(record=>record.actor))return;
   if(!template?.isObject3D||!skin?.isTexture||!idleClip?.tracks?.length){const error='Resident installation needs the actual loaded creator model, skin Texture and named idle clip';npcErrors.push(error);throw Error(error);}
   for(const record of residentRecords){if(record.actor)continue;
-   try{const actor=cloneResidentRig(template);actor.scale.multiplyScalar(1.08);actor.position.multiplyScalar(1.08);actor.rotation.y+=Math.PI;
-    let bones=0,skins=0,vertices=0;actor.traverse(o=>{if(o.isBone)bones++;if(o.isSkinnedMesh){skins++;vertices+=o.geometry.attributes.position.count;}if(o.isMesh){o.material=new THREE.MeshStandardMaterial({map:skin,roughness:.78,metalness:0});o.castShadow=o.receiveShadow=true;}});
+   try{const actor=cloneResidentRig(template);actor.scale.multiplyScalar(preserveMaterials?1:1.08);actor.position.multiplyScalar(preserveMaterials?1:1.08);actor.rotation.y=preserveMaterials?Math.PI:actor.rotation.y+Math.PI;
+    let bones=0,skins=0,vertices=0;actor.traverse(o=>{if(o.isBone)bones++;if(o.isSkinnedMesh){skins++;vertices+=o.geometry.attributes.position.count;}if(o.isMesh){if(!preserveMaterials)o.material=new THREE.MeshStandardMaterial({map:skin,roughness:.78,metalness:0});else {const vary=m=>{const c=m.clone();if(/jacket|cargo|cloth|garment/i.test(c.name))c.color.multiply(new THREE.Color(record.index===0?0xb5c5ca:record.index===1?0xa7d8c7:0xc4b5dc));return c;};o.material=Array.isArray(o.material)?o.material.map(vary):vary(o.material);}o.castShadow=o.receiveShadow=true;}});
     if(bones<20||skins<1)throw Error('Cloned creator resident lost its skeleton or skinned mesh');
     record.group.add(actor);const mixer=new THREE.AnimationMixer(actor),idle=mixer.clipAction(idleClip);idle.play();mixer.update(.18*record.index);const costume=residentOutfit(record,actor);
-    record.actor=actor;record.headBone=null;actor.traverse(o=>{if(o.isBone&&/^(?:.*\|)?head$/i.test(o.name))record.headBone=o;});record.mixer=mixer;record.costume=costume;record.bones=bones;record.skinnedMeshes=skins;record.vertices=vertices;record.idle=idle.getClip().name;record.fallbackMeshes.forEach(mesh=>{mesh.visible=false;});residentRigInstallCount++;
+    record.actor=actor;record.adult=preserveMaterials;record.headBone=null;actor.traverse(o=>{if(o.isBone&&/^(?:.*\|)?head$/i.test(o.name))record.headBone=o;});record.mixer=mixer;record.costume=costume;record.bones=bones;record.skinnedMeshes=skins;record.vertices=vertices;record.idle=idle.getClip().name;record.fallbackMeshes.forEach(mesh=>{mesh.visible=false;});residentRigInstallCount++;
    }catch(error){const detail=record.id+': '+String(error?.message||error);npcErrors.push(detail);throw Error(detail);}
   }
  }
 
- return {installResidents,cameraBounds,metrics:{get authoredGeometry(){return geometryCount;},residents:occupiedResidents,interactiveResidents:RESIDENTS.length,colliders:CITY_COLLIDERS.length,instancedWindows:panes.length+skylineWindows.length,originalWovenPattern:true,dimensionalAuroraCurtains:aurora.length,auroraMotion:skyMotion},
+ return {installResidents,cameraBounds,metrics:{get authoredGeometry(){return geometryCount;},consolidatedBaySources,baySubmissions,residents:occupiedResidents,interactiveResidents:RESIDENTS.length,colliders:CITY_COLLIDERS.length,instancedWindows:southWindows.length,originalWovenPattern:true,dimensionalAuroraCurtains:aurora.length,auroraMotion:skyMotion},
   snapshot(){return {keeperKit:{...keeperKit},npcRigs:{loaded:residentRecords.every(r=>r.actor&&r.skinnedMeshes>0),count:residentRecords.filter(r=>r.actor).length,errors:[...npcErrors],installations:residentRigInstallCount,residents:residentRecords.map(r=>({role:r.id,loaded:Boolean(r.actor),bones:r.bones,skinnedMeshes:r.skinnedMeshes,vertices:r.vertices,idleClip:r.idle||null,skinTextures:r.actor?[...new Set((()=>{const ids=[];r.actor.traverse(o=>{if(o.isSkinnedMesh&&o.material.map)ids.push(o.material.map.uuid);});return ids;})())]:[],costumeBindings:r.costume?.bindings||0}))},repairCellEmission:repairCells.map(o=>o.material.emissiveIntensity),courierSignalEmission:courierSignals.map(o=>o.material.emissiveIntensity),canopyIntensity:canopyLight.intensity,lanternEmission:publicLights.map(o=>o.material.emissiveIntensity),constellationVisible:finalGroup.visible,mirrorVisible:mirror.visible,publicReturnStudsVisible:returnStuds.filter(o=>o.visible).length,constellationBarsVisible:finalBars.filter(o=>o.visible).length,relays:beaconMeshes.map(b=>({id:b.id,emission:b.core.material.emissiveIntensity,rotation:b.core.rotation.y})),markers:markerMeshes.map(r=>({id:r.id,emission:r.mesh.material.emissiveIntensity,x:r.mesh.parent.position.x,z:r.mesh.parent.position.z}))};},
   update(dt,time,sim){
    const state=chapter.state,active=state.active?RESIDENTS[state.completed]?.id:null;
@@ -342,7 +343,7 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
 
    canopyLight.intensity=state.completed>0?24:2;
    repairCells.forEach(o=>{o.material.emissiveIntensity=state.completed>0?2:.06;});courierSignals.forEach(o=>{o.material.emissiveIntensity=state.completed>=2?1.8:.12;});
-   for(const record of residentRecords){if(record.mixer)record.mixer.update(Math.min(dt,.05)*.65);if(record.headBone)record.headBone.scale.setScalar(.78);record.costume?.update();}
+   for(const record of residentRecords){if(record.mixer)record.mixer.update(Math.min(dt,.05)*.65);if(record.headBone&&!record.adult)record.headBone.scale.setScalar(.78);record.costume?.update();}
    for(const item of detailMotion){if(item.type==='cloth')item.group.rotation.z=Math.sin(time*.0007+item.phase)*.045;else item.group.rotation.z=Math.sin(time*.0002)*.08;}
    archiveDisplays.forEach((o,i)=>{o.rotation.z=state.completed>=2?Math.sin(time*.00025+i)*.1:0;});
    publicLights.forEach((o,i)=>{o.material.emissiveIntensity=state.completed>0?1.7:.12;});
@@ -355,7 +356,8 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
 }
 
 // Garment geometry follows the actual rig bones after animation; the stock shirt is covered.
-export function dressRider(body,model,themeColors){
+export function dressRider(body,model,themeColors,{adult=false}={}){
+ if(adult)return dressAdultRider(body,model,themeColors);
  const material=new THREE.MeshStandardMaterial({map:wovenTexture(),color:0xffffff,roughness:.82,metalness:.03});
  const edge=new THREE.MeshStandardMaterial({color:0xe4b963,metalness:.8,roughness:.25});
  const iridescent=new THREE.MeshPhysicalMaterial({color:0x549cc3,iridescence:1,metalness:.7,roughness:.25});
@@ -383,4 +385,16 @@ export function dressRider(body,model,themeColors){
   if(head){head.getWorldPosition(p);body.worldToLocal(p);helmet.position.copy(p);helmet.position.y+=.13;}else helmet.position.set(0,1.69,0);
   mirrorCrest.visible=completed>=3&&choice==='personal';material.color.set(completed>0?0xffffff:0xb2a4c5);iridescent.color.set(themeColors[theme]);shoulderJewels.forEach(j=>{j.visible=completed>=2;});eye.material=completed>=3?iridescent:edge;
  }};
+}
+
+function dressAdultRider(body,model,themeColors){
+ const bones=[];let weave=null;model.traverse(o=>{if(o.isBone)bones.push(o);if(o.isMesh)for(const m of (Array.isArray(o.material)?o.material:[o.material]))if(m.name==='VORATH_original_spectral_woven_yoke')weave=m;});
+ const head=bones.find(b=>b.name==='Head'),chest=bones.find(b=>b.name==='spine_03');if(!head||!chest||!weave?.map)throw Error('Adult wardrobe needs actual head/chest bones and authored woven material');
+ const shell=new THREE.MeshPhysicalMaterial({color:0x182226,metalness:.7,roughness:.36,clearcoat:.45,iridescence:1,iridescenceThicknessRange:[180,380]}),edge=new THREE.MeshStandardMaterial({color:0xa48448,metalness:.82,roughness:.3}),gem=new THREE.MeshPhysicalMaterial({color:0x65d8cf,metalness:.62,roughness:.2,iridescence:1,clearcoat:1});
+ const helmet=new THREE.Group();helmet.name='Adult spectral temple clasps';head.add(helmet);
+ for(const x of [-.105,.105]){const temple=new THREE.Mesh(new THREE.BoxGeometry(.011,.024,.039),shell);temple.position.set(x,.04,.018);helmet.add(temple);const inset=new THREE.Mesh(new THREE.BoxGeometry(.012,.004,.019),edge);inset.position.set(x,.045,.025);helmet.add(inset);}
+ const mirrorCrest=new THREE.Mesh(new THREE.OctahedronGeometry(.025),gem);mirrorCrest.name='Personal ending mirrored collar crest';mirrorCrest.position.set(.07,.12,.115);chest.add(mirrorCrest);
+ const shoulderJewels=[];for(const side of [-1,1])for(const i of [0,1]){const j=new THREE.Mesh(new THREE.OctahedronGeometry(.017),gem);j.name='Courier earned shoulder inlay';j.position.set(side*(.155+i*.025),.085-i*.012,.035);chest.add(j);shoulderJewels.push(j);}
+ let count=0;helmet.traverse(o=>{if(o.isMesh){o.castShadow=o.receiveShadow=true;count++;}});count+=shoulderJewels.length+1;
+ return{count,boneBound:true,snapshot(){return{vestVisible:true,vestColor:weave.color.getHexString(),vestPatternTexture:weave.map.uuid,helmetColor:shell.color.getHexString(),shoulderJewelsVisible:shoulderJewels.filter(j=>j.visible).length,mirrorCrestVisible:mirrorCrest.visible,chestBone:chest.name,headBone:head.name,wardrobeSource:'adult-skinned-jacket-temple-clasps-and-earned-collar-crest'};},update(completed,theme,choice){weave.color.setHex(completed>0?0xffffff:0xb2a4c5);shell.color.set(themeColors[theme]).multiplyScalar(.24);shoulderJewels.forEach(j=>{j.visible=completed>=2;});mirrorCrest.visible=completed>=3&&choice==='personal';}};
 }

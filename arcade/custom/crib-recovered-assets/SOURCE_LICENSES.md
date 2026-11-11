@@ -21,3 +21,11 @@ vorath-acid-eye-mural-v1.png is an original AI-generated material produced with 
 ## Original keeper repair station v2
 
 keeper-repair-station-v2.glb is an original NorthStar Prime model authored by Antigravity for this playable pass, with blackened steel, machined hardware, oxidized copper and original VORATH insets. Embedded PBR maps; no external model/texture downloads at runtime. Model budget and actual scene bounds are checked by the running loader. No CC0 grant is asserted for the original model or generated insets.
+
+## Adult street skater and physical streetscape pass
+
+The adult humanoid mesh, original skin/eye/hair maps and source movement clips derive from Quaternius Universal Base Characters and Universal Animation Library, CC0 1.0: https://quaternius.com/packs/universalbasecharacters.html and https://quaternius.com/packs/universalanimationlibrary.html . NorthStar authored the weighted street clothing, textile design, garment repairs, skate-push pose layer, temple clasps and earned collar crest. These are game assets, not concept images.
+
+Nine 1K PBR maps (diffuse, OpenGL normal and roughness) derive from Poly Haven CC0 texture sets: https://polyhaven.com/a/brick_wall_02 , https://polyhaven.com/a/asphalt_01 and https://polyhaven.com/a/concrete_floor_02 .
+
+Branching street trees, planters, divided industrial windows, roof silhouettes, cable spans and small bark/metal/repair DataTextures are original NorthStar geometry and material work. No third-party game meshes or logos were copied.

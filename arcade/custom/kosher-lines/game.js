@@ -1,5 +1,8 @@
 import * as THREE from '/static/vendor/three/0.160.0/build/three.module.js';
-import { FBXLoader } from '/static/vendor/three/0.160.0/examples/jsm/loaders/FBXLoader.js';
+import { GLTFLoader } from '/static/vendor/three/0.160.0/examples/jsm/loaders/GLTFLoader.js';
+import { loadAdultRig } from './adult-rig.js';
+import { createSkatePushRig } from './skate-push-rig.js';
+import { createStreetAtmosphere } from './streetscape.js';
 import { KosherSim, RAILS, LINE, TRICKS, terrain, COLLIDERS, defaultProfile, parseProfile, clamp } from './simulation.mjs';
 
 import { PlazaChapter, parseChapter, defaultChapter, RESIDENTS, BEACONS, CONTRACTS } from './chapter.mjs';
@@ -17,7 +20,7 @@ const sim=new KosherSim(profile);
 let chapterSaved;try{chapterSaved=parseChapter(localStorage.getItem(SAVE+'.chapter'));}catch{chapterSaved=defaultChapter();}
 let courierSaved;try{courierSaved=parseCourierRecord(localStorage.getItem(SAVE+'.courier-trial'));}catch{courierSaved=defaultCourierRecord();}
 const courierTrial=new CourierTrial(courierSaved);let courierCourse=null,trialUIKey='',lastTrialSavedRevision=-1;
-const chapter=new PlazaChapter(chapterSaved);let city=null,riderDress=null,chapterUIKey='',dialogueResident=null,conversationPaused=false,lastChapterRevision=-1;
+const chapter=new PlazaChapter(chapterSaved);let streetAtmosphere=null,city=null,riderDress=null,chapterUIKey='',dialogueResident=null,conversationPaused=false,lastChapterRevision=-1;
 const held=new Set(), touchHeld=new Set(), touchTricks=new Map();
 let queuedOllieTrick=null;
 let presses=[], releases=[], lastEvent=0, accumulator=0, lastTime=0, orbit=0, cameraTilt=.38, dragging=false, lastPointer=null;
@@ -30,7 +33,7 @@ const surfaces=[], lamps=[], portalRings=[], routeLights=[], sparkParticles=[];
 const skinColors=[0x39efb3,0xd674ff,0xffb34b];
 const courierWheelJewels=[],cameraSolids=[];let cameraOcclusion={blocked:false};const cameraAnchor=new THREE.Vector3();
 let riderHeadBone=null,riderHeadBindScale=null;
-let skater,bodyRig,boardRig,avatarMixer=null,avatarActions={},avatarCurrent=null;
+let skater,bodyRig,boardRig,skatePushRig=null,avatarMixer=null,avatarActions={},avatarCurrent=null;
 const avatarMetrics={bones:0,skinnedMeshes:0,vertices:0,triangles:0,animations:[],skinLoaded:false,modelLoaded:false};
 const tempV=new THREE.Vector3(), cameraDesired=new THREE.Vector3(), lookDesired=new THREE.Vector3(), lookSmoothed=new THREE.Vector3(0,1,0);
 function save(){try{localStorage.setItem(SAVE,JSON.stringify(profile));localStorage.setItem(SAVE+'.chapter',chapter.serialize());localStorage.setItem(SAVE+'.courier-trial',courierTrial.serialize());saveAvailable=true;}catch{saveAvailable=false;}$('save-state').textContent=saveAvailable?'Progress saved on this device':'Storage unavailable · progress lasts this visit';}
@@ -42,15 +45,15 @@ function rod(a,b,radius,material,parent=scene){
  const delta=new THREE.Vector3().subVectors(b,a),item=mesh(new THREE.CylinderGeometry(radius,radius,delta.length(),8),material,0,0,0,parent);
  item.position.copy(a).add(b).multiplyScalar(.5);item.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());return item;
 }
-function texture(name,repeatX=1,repeatY=1){
+function texture(name,repeatX=1,repeatY=1,dataMap=false){
  const t=new THREE.TextureLoader().load(ASSETS+name,t=>{assetState[name]='loaded';t.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());},undefined,()=>{assetState[name]='failed';loadErrors.push(name);message('A plaza asset did not load. The ride continues; reload after the connection recovers.');});
- assetState[name]='loading';t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(repeatX,repeatY);return t;
+ assetState[name]='loading';t.colorSpace=dataMap?THREE.NoColorSpace:THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(repeatX,repeatY);return t;
 }
 function surface(minX,maxX,minZ,maxZ,material,segments=20){
  const geometry=new THREE.BufferGeometry(),positions=[],uvs=[],indices=[],nx=segments,nz=segments;
  for(let j=0;j<=nz;j++)for(let i=0;i<=nx;i++){
   const x=minX+(maxX-minX)*i/nx,z=minZ+(maxZ-minZ)*j/nz;
-  positions.push(x,terrain(x,z)+.008,z);uvs.push(i/nx,j/nz);
+  positions.push(x,terrain(x,z)+.008,z);uvs.push(x/2,z/2);
  }
  for(let j=0;j<nz;j++)for(let i=0;i<nx;i++){const a=j*(nx+1)+i,b=a+1,c=a+nx+1,d=c+1;indices.push(a,c,b,b,c,d);}
  geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));geometry.setIndex(indices);geometry.computeVertexNormals();
@@ -67,10 +70,10 @@ function makeReflections(){
  if(reflectionTarget)reflectionTarget.dispose();reflectionTarget=target;pmrem.dispose();cube.dispose();set.traverse(o=>{o.geometry?.dispose();o.material?.dispose();});
 }
 function makeWorld(){
- const asphalt=mat(0xb0b5be,{map:texture('asphalt.jpg',10,12),roughness:.86});
- const concrete=mat(0xa4c5c4,{map:texture('concrete.jpg',2,2),roughness:.68});
+ const asphalt=mat(0xc3c7ce,{map:texture('asphalt_01-diffuse-1k.jpg',14,19),normalMap:texture('asphalt_01-nor_gl-1k.jpg',14,19,true),normalScale:new THREE.Vector2(.4,.4),roughnessMap:texture('asphalt_01-rough-1k.jpg',14,19,true),roughness:.89});
+ const concrete=mat(0xb8c0c8,{map:texture('concrete_floor_02-diffuse-1k.jpg'),normalMap:texture('concrete_floor_02-nor_gl-1k.jpg',1,1,true),normalScale:new THREE.Vector2(.32,.32),roughnessMap:texture('concrete_floor_02-rough-1k.jpg',1,1,true),roughness:.9});
  const pale=mat(0x63738b,{roughness:.8}),black=mat(0x11152c),gold=mat(0xe2b75f,{metalness:.8,roughness:.28});
- const brick=mat(0xccc8c8,{map:texture('facade.jpg',2,2),roughness:.85});
+ const brick=mat(0x8b919d,{map:texture('brick_wall_02-diffuse-1k.jpg'),normalMap:texture('brick_wall_02-nor_gl-1k.jpg',1,1,true),normalScale:new THREE.Vector2(.65,.65),roughnessMap:texture('brick_wall_02-rough-1k.jpg',1,1,true),roughness:.92});
  const ground=mesh(new THREE.PlaneGeometry(56,76),asphalt,0,-.035,-10);ground.rotation.x=-Math.PI/2;ground.castShadow=false;
  // The retained five-feature course is a physical height field inside a wider free-skate plaza.
  surface(-1.7,1.7,-10.4,-5.2,concrete,36);
@@ -104,6 +107,7 @@ function makeWorld(){
  });
  // Seating and planters are actual collision objects.
  for(const b of COLLIDERS.filter(b=>!b.kind)){
+  if(b.h>=1)continue; // Exact tall-planter visuals are authored in streetscape.js.
   box(b.w,b.h*.25,b.d,b.x,b.h*.72,b.z,concrete);
   if(b.h<1){for(const sign of [-1,1])box(.13,b.h*.65,b.d*.75,b.x+sign*b.w*.34,b.h*.3,b.z,black);}
   else{box(b.w,.7,b.d,b.x,.35,b.z,pale);for(let i=0;i<8;i++){const a=i*2.4;rod(new THREE.Vector3(b.x,.8,b.z),new THREE.Vector3(b.x+Math.sin(a)*.9,2.3+Math.cos(a)*.5,b.z+Math.cos(a)*.9),.06,mat(0x287664));}}
@@ -111,22 +115,15 @@ function makeWorld(){
  // Authored facade texture is applied to genuine surrounding architecture.
  const blocks=[[-26,-9,6,10,66],[26,-9,6,13,66],[-12,-38,22,11,6],[12,-38,20,15,6]];
  blocks.forEach(([x,z,w,h,d],i)=>{
-  box(w,h,d,x,h/2,z,brick);
+  const mass=box(w,h,d,x,h/2,z,brick);
+  // World-scaled face UVs keep real brick courses consistent on each wall.
+  const pos=mass.geometry.attributes.position,norm=mass.geometry.attributes.normal,uv=mass.geometry.attributes.uv;
+  for(let v=0;v<pos.count;v++){const nx=Math.abs(norm.getX(v)),ny=Math.abs(norm.getY(v));uv.setXY(v,(nx>.5?pos.getZ(v):pos.getX(v))/2,(ny>.5?pos.getZ(v):pos.getY(v))/2);}uv.needsUpdate=true;
   cameraSolids.push({id:'plaza-building-'+i,minX:x-w/2,maxX:x+w/2,minY:0,maxY:h,minZ:z-d/2,maxZ:z+d/2});
   box(w+.35,.24,d+.35,x,h+.12,z,gold);
   for(let n=0;n<4;n++){const yy=2+n*2.7;box(w+.1,.06,d+.1,x,yy,z,black);}
  });
- for(let side of [-1,1])for(let i=0;i<7;i++){
-  const x=side*23.4,z=12-i*7.2;
-  rod(new THREE.Vector3(x,0,z),new THREE.Vector3(x,5.5,z),.055,black);
-  const hue=i%3===0?0xd552ff:i%3===1?0x38f5d0:0xffba53;
-  const fixture=mat(hue,{emissive:hue,emissiveIntensity:2.2});
-  rod(new THREE.Vector3(x,5.5,z),new THREE.Vector3(x-side*.7,5.5,z),.075,fixture);
-  if(i%2===0){const light=new THREE.PointLight(hue,22,13,2);light.position.set(x-side*.7,4.7,z);scene.add(light);lamps.push(light);}
- }
- // Perimeter curb leaves the skating ground readable and continuous.
- box(48,.3,.25,0,.15,15.4,gold);box(48,.3,.25,0,.15,-34.4,gold);
- box(.25,.3,50,-23.5,.15,-9.5,gold);box(.25,.3,50,23.5,.15,-9.5,gold);
+ // Exterior fixtures, curbs and cables are authored by streetscape.js.
  // An eye made of bent luminous tubes sits over the quarter. It opens only for a clean complete line.
  const portal=new THREE.Group();portal.position.set(0,6,-34.2);scene.add(portal);
  for(let i=0;i<3;i++){
@@ -144,18 +141,19 @@ function makeWorld(){
 function makeSkater(){
  const root=new THREE.Group(),body=new THREE.Group(),board=new THREE.Group();root.add(board,body);scene.add(root);
  const wood=mat(0x926b39,{roughness:.55}),metal=mat(0xd5d4da,{metalness:.85,roughness:.2}),wheel=mat(0xeee3cf,{roughness:.5});
- const shape=new THREE.Shape();shape.moveTo(-.2,-.45);shape.quadraticCurveTo(-.21,-.67,0,-.67);shape.quadraticCurveTo(.21,-.67,.2,-.45);shape.lineTo(.2,.45);shape.quadraticCurveTo(.21,.67,0,.67);shape.quadraticCurveTo(-.21,.67,-.2,.45);shape.closePath();
- const deckGeo=new THREE.ExtrudeGeometry(shape,{depth:.045,bevelEnabled:true,bevelSegments:2,steps:1,bevelSize:.014,bevelThickness:.009,curveSegments:12});deckGeo.rotateX(-Math.PI/2);
- mesh(deckGeo,wood,0,.16,0,board);
+ const shape=new THREE.Shape();shape.moveTo(-.125,-.30);shape.quadraticCurveTo(-.13,-.43,0,-.43);shape.quadraticCurveTo(.13,-.43,.125,-.30);shape.lineTo(.125,.30);shape.quadraticCurveTo(.13,.43,0,.43);shape.quadraticCurveTo(-.13,.43,-.125,.30);shape.closePath();
+ const deckGeo=new THREE.ExtrudeGeometry(shape,{depth:.014,bevelEnabled:true,bevelSegments:2,steps:1,bevelSize:.006,bevelThickness:.004,curveSegments:16});deckGeo.rotateX(-Math.PI/2);
+ mesh(deckGeo,wood,0,.098,0,board);
  const art=texture('deck.jpg');art.repeat.set(.76,.93);art.offset.set(.12,.035);art.wrapS=art.wrapT=THREE.ClampToEdgeWrapping;
  const topGeo=new THREE.ShapeGeometry(shape,18),uv=topGeo.attributes.uv,pos=topGeo.attributes.position;
- for(let i=0;i<pos.count;i++)uv.setXY(i,(pos.getX(i)+.21)/.42,(pos.getY(i)+.67)/1.34);
- topGeo.rotateX(-Math.PI/2);mesh(topGeo,mat(0xffffff,{map:art,roughness:.47}),0,.174,0,board);
- for(const z of [-.38,.38]){
-  box(.48,.055,.09,0,.095,z,metal,board);
-  for(const x of [-.235,.235]){const w=mesh(new THREE.CylinderGeometry(.065,.065,.055,14),wheel,x,.07,z,board);w.rotation.z=Math.PI/2;}
+ for(let i=0;i<pos.count;i++)uv.setXY(i,(pos.getX(i)+.13)/.26,(pos.getY(i)+.43)/.86);
+ topGeo.rotateX(-Math.PI/2);mesh(topGeo,mat(0xffffff,{map:art,roughness:.76}),0,.107,0,board);
+ for(const z of [-.26,.26]){
+  box(.215,.025,.055,0,.061,z,metal,board);
+  for(const x of [-.125,.125]){const w=mesh(new THREE.CylinderGeometry(.033,.033,.025,18),wheel,x,.033,z,board);w.rotation.z=Math.PI/2;}
+  for(const x of [-.05,.05]){const bolt=mesh(new THREE.CylinderGeometry(.004,.004,.003,6),metal,x,.11,z,board);}
  }
- for(const z of [-.38,.38])for(const x of [-.27,.27]){const jewel=mesh(new THREE.OctahedronGeometry(.045),mat(0x65f5d3,{emissive:0x187a61,emissiveIntensity:1,metalness:.7}),x,.07,z,board);courierWheelJewels.push(jewel);}
+ for(const z of [-.26,.26])for(const x of [-.145,.145]){const jewel=mesh(new THREE.OctahedronGeometry(.023),mat(0x65f5d3,{emissive:0x187a61,emissiveIntensity:1,metalness:.7}),x,.033,z,board);courierWheelJewels.push(jewel);}
  const fallback=new THREE.Group();body.add(fallback);
  const coat=mat(0x5b2f9e,{roughness:.6}),pants=mat(0x172238),skin=mat(0xb9835e),gold=mat(0xe1b66b,{metalness:.55});
  function limb(x,y,z,sx,sy,sz,material){const o=mesh(new THREE.SphereGeometry(1,12,8),material,x,y,z,fallback);o.scale.set(sx,sy,sz);return o;}
@@ -165,27 +163,19 @@ function makeSkater(){
  limb(-.12,.27,-.24,.12,.065,.2,pants);limb(.12,.27,.24,.12,.065,.2,pants);
  const armA=limb(-.33,1.04,-.04,.09,.31,.09,coat),armB=limb(.33,1.04,.04,.09,.31,.09,coat);
  armA.rotation.z=-.65;armB.rotation.z=.65;
- const modelContainer=new THREE.Group();modelContainer.position.y=.19;body.add(modelContainer);
- // Creator-sourced CC0 Kenney rig, original skin, and matching real animation clips.
- const base=ASSETS+'kenney-protagonists/';
- const loader=new FBXLoader();
- const loadFBX=(url,key)=>new Promise((resolve,reject)=>{assetState[key]='loading';loader.load(url,obj=>{assetState[key]='loaded';resolve(obj);},undefined,error=>{assetState[key]='failed';reject(error);});});
- const skinPromise=new Promise((resolve,reject)=>{assetState['avatar-skin']='loading';new THREE.TextureLoader().load(base+'Skins/skaterMaleA.png',skin=>{skin.colorSpace=THREE.SRGBColorSpace;avatarMetrics.skinLoaded=true;assetState['avatar-skin']='loaded';resolve(skin);},undefined,error=>{assetState['avatar-skin']='failed';reject(error);});});
- Promise.all([loadFBX(base+'Model/characterMedium.fbx','avatar-model'),skinPromise,...['idle','jump','run'].map(kind=>loadFBX(base+'Animations/'+kind+'.fbx','avatar-'+kind))]).then(([model,skin,...animated])=>{
-  model.traverse(o=>{if(o.isBone){avatarMetrics.bones++;if(o.name==='Head'){riderHeadBone=o;riderHeadBindScale=o.scale.clone();}}if(o.isSkinnedMesh){avatarMetrics.skinnedMeshes++;avatarMetrics.vertices+=o.geometry.attributes.position.count;avatarMetrics.triangles+=(o.geometry.index?o.geometry.index.count:o.geometry.attributes.position.count)/3;}if(o.isMesh){o.castShadow=true;o.receiveShadow=true;o.material=new THREE.MeshStandardMaterial({map:skin,roughness:.72,metalness:0});}});
-  if(avatarMetrics.skinnedMeshes<1||avatarMetrics.bones<20)throw Error('Creator rig missing bones or skinned mesh');
-  model.updateMatrixWorld(true);let bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3());
-  if(size.z>size.y*1.35&&size.z>size.x*1.35)model.rotation.x=-Math.PI/2;
-  model.updateMatrixWorld(true);bounds=new THREE.Box3().setFromObject(model);size=bounds.getSize(new THREE.Vector3());
-  model.scale.multiplyScalar(1.55/Math.max(.01,size.y));model.rotation.y=Math.PI/2;model.updateMatrixWorld(true);bounds=new THREE.Box3().setFromObject(model);
-  const center=bounds.getCenter(new THREE.Vector3());model.position.x-=center.x;model.position.z-=center.z;model.position.y-=bounds.min.y;
-  modelContainer.add(model);avatarMixer=new THREE.AnimationMixer(model);
-  ['idle','jump','run'].forEach((kind,index)=>{const clips=animated[index].animations;const clip=clips.find(c=>c.name.toLowerCase().endsWith('|'+kind))||clips.find(c=>c.name.toLowerCase().includes(kind)&&!c.name.toLowerCase().includes('targeting'));
-   if(!clip)throw Error('Creator '+kind+' animation missing');avatarActions[kind]=avatarMixer.clipAction(clip);avatarMetrics.animations.push(clip.name);});
-  city.installResidents(model,skin,avatarActions.idle.getClip());
-  riderDress=dressRider(body,model,skinColors);avatarMetrics.accessories=riderDress.count;avatarMetrics.accessoriesFollowBones=riderDress.boneBound;
-  fallback.visible=false;modelLoaded=true;avatarMetrics.modelLoaded=true;playAvatar('idle');
- }).catch(error=>{modelError=String(error?.message||error);loadErrors.push('creator-rig: '+modelError);message('The creator rider rig could not load. This build is not visually ready; reload when the asset connection is restored.');});
+ const modelContainer=new THREE.Group();modelContainer.position.y=.114;body.add(modelContainer);
+ // Original adult outfit on the licensed Quaternius humanoid rig and real clips.
+ assetState['avatar-model']='loading';
+ loadAdultRig(THREE,{loader:new GLTFLoader(),url:ASSETS+'vorath-adult-skater-v3.glb',parent:modelContainer}).then(({root:model,mixer,clips,skin,metrics})=>{
+  model.rotation.y=Math.PI/2;model.updateMatrixWorld(true);Object.assign(avatarMetrics,metrics);
+  model.traverse(o=>{if(o.isBone&&o.name.toLowerCase()==='head'){riderHeadBone=o;riderHeadBindScale=o.scale.clone();}});
+  avatarMixer=mixer;for(const kind of ['idle','jump','run','crouch'])avatarActions[kind]=mixer.clipAction(clips[kind]);
+  city.installResidents(model,skin,clips.idle,{preserveMaterials:true});
+  riderDress=dressRider(body,model,skinColors,{adult:true});avatarMetrics.accessories=riderDress.count;avatarMetrics.accessoriesFollowBones=riderDress.boneBound;riderDress.update(chapter.state.completed,profile.theme,chapter.state.choice);
+  assetState['avatar-model']='loaded';assetState['avatar-skin']='loaded';
+  for(const kind of ['idle','jump','run','crouch'])assetState['avatar-'+kind]='loaded';
+  fallback.visible=false;modelLoaded=true;avatarMetrics.modelLoaded=true;playAvatar('idle');skatePushRig=createSkatePushRig(THREE,{model,body});
+ }).catch(error=>{assetState['avatar-model']='failed';modelError=String(error?.message||error);loadErrors.push('adult-rig: '+modelError);message('The adult rider model could not load. This version is not visually ready.');});
  return {root,body,board,modelContainer,cap,fallback,deckMaterial:wood};
 }
 function playAvatar(wanted){
@@ -298,13 +288,14 @@ function frame(time){
   const lean=sim.mode==='grind'?sim.balance*.2:clamp(control.steer,-1,1)*Math.min(.22,sim.speed*.018);
   skater.root.position.set(sim.x,sim.y,sim.z);skater.root.rotation.set(0,sim.yaw,lean);
   const crouch=sim.charging?Math.min(.34,sim.charge*.8):sim.mode==='air'?.18:0;
-  skater.body.position.y=-crouch;skater.body.scale.y=1-crouch*.45;
+  skater.body.position.y=0;skater.body.scale.y=1;
+  skater.modelContainer.position.y=.114-((sim.charge>.03||sim.mode==='manual') ? .038 : 0);
   skater.body.rotation.set(0,sim.stance*Math.PI,sim.mode==='bail'?Math.sin(sim.bailTime*8)*.5:0);
   const t=sim.trick?clamp(sim.trickTime/sim.trick.duration,0,1):0;
   skater.board.rotation.set(sim.mode==='manual'?-.15:0,sim.trick?Math.PI*2*sim.trick.spin*t:0,sim.trick?Math.PI*2*sim.trick.flip*t:0);
   if(sim.trick?.id==='180')skater.body.rotation.y+=Math.PI*t;
   skater.root.rotation.z+=sim.mode==='bail'?.65:0;
-  playAvatar(sim.mode==='air'?'jump':control.push&&sim.speed>1?'run':'idle');if(avatarMixer)avatarMixer.update(sim.paused?0:delta);if(riderHeadBone&&riderHeadBindScale)riderHeadBone.scale.copy(riderHeadBindScale).multiplyScalar(.78);if(riderDress)riderDress.update(chapter.state.completed,profile.theme,chapter.state.choice);if(city)city.update(sim.paused?0:delta,time,sim);if(courierCourse)courierCourse.update(time);courierWheelJewels.forEach(j=>{j.visible=chapter.state.completed>=2;});
+  playAvatar(sim.mode==='air'?'jump':sim.charge>.03||sim.mode==='manual'?'crouch':'idle');skatePushRig?.reset();if(avatarMixer)avatarMixer.update(sim.paused?0:delta);skatePushRig?.update(sim.paused?0:delta,control.push&&sim.grounded&&sim.mode!=='manual'&&sim.charge<=.03&&sim.speed>.2);if(riderHeadBone&&riderHeadBindScale)riderHeadBone.scale.copy(riderHeadBindScale);if(riderDress)riderDress.update(chapter.state.completed,profile.theme,chapter.state.choice);if(city)city.update(sim.paused?0:delta,time,sim);if(streetAtmosphere)streetAtmosphere.update(sim.paused?0:delta,time*.001);if(courierCourse)courierCourse.update(time);courierWheelJewels.forEach(j=>{j.visible=chapter.state.completed>=2;});
   if(sim.mode==='grind'&&frameCount%4===0)burst(sim.x,sim.y,sim.z,0xffc46a,2);
   for(let i=sparkParticles.length-1;i>=0;i--){const p=sparkParticles[i];p.life-=delta;p.vy-=8*delta;p.mesh.position.x+=p.vx*delta;p.mesh.position.y+=p.vy*delta;p.mesh.position.z+=p.vz*delta;p.mesh.scale.setScalar(Math.max(.01,p.life));if(p.life<=0){scene.remove(p.mesh);p.mesh.geometry.dispose();p.mesh.material.dispose();sparkParticles.splice(i,1);}}
   const heading=sim.yaw+orbit,follow=6.2+(motion?0:sim.speed*.07);
@@ -367,7 +358,7 @@ function installInput(){
  for(const button of document.querySelectorAll('[data-ending]'))button.addEventListener('click',()=>{if(chapter.turnIn(dialogueResident,button.dataset.ending)){message(chapter.notifications.at(-1).text);save();}closeConversation();renderChapter();});
  $('ride-mode').addEventListener('change',()=>{if(dialogueResident)closeConversation();sim.sessionMode=$('ride-mode').value==='chapter'?'chapter':'arcade';$('mode-description').textContent=sim.sessionMode==='chapter'?'Return the Light · no clock · chapter progress saves on this device.':'Two-minute arcade · chapter progress carries across both modes.';sim.reset(true);clear();save();message(sim.sessionMode==='chapter'?'No clock. Meet the keeper, reconnect the gardens, return the light.':'Two minutes. Five features. One clean line.');updateUI();});
  $('camera-reset').addEventListener('click',()=>{orbit=0;cameraTilt=.38;});
- $('quality').addEventListener('change',()=>{quality=$('quality').value;$('quality-description').textContent=quality==='low'?'Low power':'Shadows + detail';renderer.setPixelRatio(quality==='low'?0.5:Math.min(devicePixelRatio||1,1.5));renderer.shadowMap.enabled=quality!=='low';resize();});
+ $('quality').addEventListener('change',()=>{quality=$('quality').value;$('quality-description').textContent=quality==='low'?'Low power':'Shadows + detail';renderer.setPixelRatio(quality==='low'?0.5:Math.min(devicePixelRatio||1,1.5));renderer.shadowMap.enabled=quality!=='low';streetAtmosphere?.setQuality(quality);resize();});
  for(const button of document.querySelectorAll('[data-theme]'))button.addEventListener('click',()=>{profile.theme=Number(button.dataset.theme);save();updateUI();});
 }
 try{
@@ -380,16 +371,16 @@ try{
  const moon=new THREE.DirectionalLight(0xb8cff6,2.5);moon.position.set(-12,24,12);moon.castShadow=true;
  moon.shadow.mapSize.set(1024,1024);Object.assign(moon.shadow.camera,{left:-28,right:28,top:28,bottom:-28,near:1,far:75});moon.shadow.bias=-.0002;scene.add(moon);
  const warm=new THREE.DirectionalLight(0xd65342,.95);warm.position.set(14,10,-20);scene.add(warm);makeReflections();loadControlAtlas();
- makeWorld();const mosaic=texture('vorath-eye-mosaic-v1.png'),mural=texture('vorath-acid-eye-mural-v1.png');city=buildCity(scene,chapter,{mosaic,mural,repairKitURL:ASSETS+'keeper-repair-station-v2.glb',onKitStatus(status,error){assetState['keeper-station-model']=status;if(error)loadErrors.push('keeper-station-model: '+error);}});cameraSolids.push(...city.cameraBounds);courierCourse=buildCourierCourse(scene,courierTrial,{reducedMotion:motion});skater=makeSkater();courierCourse.mountPrize(skater.board);bodyRig=skater.body;boardRig=skater.board;installInput();resize();new ResizeObserver(resize).observe(canvas);
+ makeWorld();streetAtmosphere=createStreetAtmosphere({THREE,scene,quality,reducedMotion:motion});cameraSolids.push(...streetAtmosphere.cameraBounds);const mosaic=texture('vorath-eye-mosaic-v1.png'),mural=texture('vorath-acid-eye-mural-v1.png');city=buildCity(scene,chapter,{mosaic,mural,repairKitURL:ASSETS+'keeper-repair-station-v2.glb',onKitStatus(status,error){assetState['keeper-station-model']=status;if(error)loadErrors.push('keeper-station-model: '+error);}});cameraSolids.push(...city.cameraBounds);courierCourse=buildCourierCourse(scene,courierTrial,{reducedMotion:motion});skater=makeSkater();courierCourse.mountPrize(skater.board);bodyRig=skater.body;boardRig=skater.board;installInput();resize();new ResizeObserver(resize).observe(canvas);
  canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();shaders.lost=true;if(sim.running&&!sim.paused)sim.togglePause();message('Graphics paused while the context recovers. Saved progress is safe.');});
  canvas.addEventListener('webglcontextrestored',()=>{shaders.lost=false;makeReflections();lastTime=performance.now();accumulator=0;resize();message('Graphics restored. Resume the ride when ready.');});
- window.addEventListener('pagehide',event=>{save();if(!event.persisted){disposed=true;reflectionTarget?.dispose();renderer.dispose();}else if(sim.running&&!sim.paused)sim.togglePause();});
+ window.addEventListener('pagehide',event=>{save();if(!event.persisted){disposed=true;streetAtmosphere?.dispose();reflectionTarget?.dispose();renderer.dispose();}else if(sim.running&&!sim.paused)sim.togglePause();});
  window.addEventListener('pageshow',event=>{if(event.persisted){lastTime=performance.now();accumulator=0;resize();}});
  if(new URLSearchParams(window.location.search).get('mode')==='chapter'){$('ride-mode').value='chapter';$('ride-mode').dispatchEvent(new Event('change',{bubbles:true}));}
  requestAnimationFrame(frame);updateUI();renderChapter();renderCourierTrial();save();
 }catch(error){loadErrors.push(String(error));$('graphics-error').hidden=false;$('graphics-error').textContent='The 3D plaza could not start on this graphics context. '+String(error.message||error);}
 window.__KOSHER_LINES__=Object.freeze({
- snapshot:()=>({...sim.snapshot(),career:chapter.snapshot(),courierTrial:courierTrial.snapshot(sim),graphics:graphicsSnapshot(),renderer:{firstFrame,modelLoaded,modelError,avatar:{...avatarMetrics,animations:[...avatarMetrics.animations],headScale:riderHeadBone?{x:riderHeadBone.scale.x,y:riderHeadBone.scale.y,z:riderHeadBone.scale.z}:null},assets:{...assetState},texturesLoaded:Object.keys(assetState).filter(name=>/\.(jpg|png|webp)$/.test(name)&&assetState[name]==='loaded').length+Number(avatarMetrics.skinLoaded),errors:[...loadErrors],contextLost:shaders.lost,fps:Math.round(measuredFps),quality,courierCourse:courierCourse?.snapshot()||null,wardrobe:riderDress?.snapshot()||null,wheelJewelsVisible:courierWheelJewels.filter(j=>j.visible).length,reflections:{capturedFaceSize:64,textureWidth:reflectionTarget?.width||0,textureHeight:reflectionTarget?.height||0,environmentAssigned:scene?.environment===reflectionTarget?.texture},city:city?{...city.metrics,...city.snapshot()}:null,drawCalls:renderer?.info.render.calls||0},camera:camera?{x:camera.position.x,y:camera.position.y,z:camera.position.z,occlusion:{...cameraOcclusion}}:null,storageAvailable:saveAvailable}),
+ snapshot:()=>({...sim.snapshot(),career:chapter.snapshot(),courierTrial:courierTrial.snapshot(sim),graphics:graphicsSnapshot(),renderer:{firstFrame,modelLoaded,modelError,avatar:{...avatarMetrics,pose:{activeClip:avatarCurrent,skatePush:skatePushRig?.snapshot()||null,bodyScaleY:skater?.body.scale.y,modelY:skater?.modelContainer.position.y},animations:[...avatarMetrics.animations],headScale:riderHeadBone?{x:riderHeadBone.scale.x,y:riderHeadBone.scale.y,z:riderHeadBone.scale.z}:null},assets:{...assetState},texturesLoaded:Object.keys(assetState).filter(name=>/\.(jpg|png|webp)$/.test(name)&&assetState[name]==='loaded').length+Number(avatarMetrics.skinLoaded),errors:[...loadErrors],contextLost:shaders.lost,fps:Math.round(measuredFps),quality,courierCourse:courierCourse?.snapshot()||null,wardrobe:riderDress?.snapshot()||null,wheelJewelsVisible:courierWheelJewels.filter(j=>j.visible).length,reflections:{capturedFaceSize:64,textureWidth:reflectionTarget?.width||0,textureHeight:reflectionTarget?.height||0,environmentAssigned:scene?.environment===reflectionTarget?.texture},city:city?{...city.metrics,...city.snapshot()}:null,streetscape:streetAtmosphere?.stats()||null,drawCalls:renderer?.info.render.calls||0},camera:camera?{x:camera.position.x,y:camera.position.y,z:camera.position.z,occlusion:{...cameraOcclusion}}:null,storageAvailable:saveAvailable}),
  provenance:'Reconstructed missing simulation and rendering from retained Grok source fragments. Original art retained; no exact full-source restoration claimed.'
 });
 window.render_game_to_text=()=>JSON.stringify(window.__KOSHER_LINES__.snapshot());

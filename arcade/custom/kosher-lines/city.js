@@ -2,6 +2,7 @@ import { configureWovenMaterial } from './woven-material.js';
 import * as THREE from '/static/vendor/three/0.160.0/build/three.module.js';
 import { GLTFLoader } from '/static/vendor/three/0.160.0/examples/jsm/loaders/GLTFLoader.js';
 import { installStreetBays } from './street-bays.js';
+import { createAmbientResidents } from './ambient-residents.js';
 import { RESIDENTS, BEACONS, CITY_COLLIDERS, AMBIENT_CITIZENS, relayHasLight } from './chapter.mjs';
 // Original geometry and textile patterns; no third-party logos or image lettering.
 export function wovenTexture(){
@@ -12,7 +13,7 @@ export function wovenTexture(){
  const t=new THREE.CanvasTexture(canvas);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
 }
 export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=null,onKitStatus=()=>{},bayKitURL=null,onBayStatus=()=>{},storyPropsURL=null,onStoryStatus=()=>{}}={}){
- const cameraBounds=[],repairFallback=[],repairDetails=[],storyPropRecords=[];const storyProps={loaded:false,error:null,groups:0,triangles:0};const keeperKit={loaded:false,error:null,meshes:0,triangles:0,materials:0,bounds:null,corePresent:false};let geometryCount=0,occupiedResidents=0;const animated=[],beaconMeshes=[],publicLights=[],markerMeshes=[],materials=[],residentRecords=[],npcErrors=[],detailMotion=[],repairCells=[],courierSignals=[],archiveDisplays=[];let residentRigInstallCount=0;
+ const cameraBounds=[],repairFallback=[],repairDetails=[],storyPropRecords=[];const storyProps={loaded:false,error:null,groups:0,triangles:0};const keeperKit={loaded:false,error:null,meshes:0,triangles:0,materials:0,bounds:null,corePresent:false};let geometryCount=0,occupiedResidents=0;const animated=[],beaconMeshes=[],publicLights=[],markerMeshes=[],materials=[],residentRecords=[],npcErrors=[],detailMotion=[],repairCells=[],courierSignals=[],archiveDisplays=[];let residentRigInstallCount=0,ambientResidents=null;
  const material=(color,extra={})=>{const m=new THREE.MeshStandardMaterial({color,roughness:.58,metalness:.25,...extra});materials.push(m);return m;};
  const ink=material(0x090c14,{metalness:.72,roughness:.39}),stone=material(0x303742,{roughness:.92,metalness:.07}),gold=material(0xb89158,{metalness:.82,roughness:.34}),soil=material(0x132124),wood=material(0x50362e,{roughness:.9}),leaf=material(0x176b57),cloth=material(0xffffff,{map:wovenTexture(),roughness:.9});
  // Original material study: fine scratches and scored aggregate affect actual
@@ -100,13 +101,11 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
   const marker=add(new THREE.OctahedronGeometry(.14),neon[index].clone(),0,2.16,0,group);markerMeshes.push({id:resident.id,mesh:marker});animated.push({type:'resident',group,head,baseY:1.62,index});occupiedResidents++;
  };
  RESIDENTS.forEach(person);
- // Warm human detail: reading and resting residents beside public seating, in alcoves beyond the course.
- for(let i=0;i<6;i++){
-  const {x,z}=AMBIENT_CITIZENS[i];
+ // The six ambient adults share two genuinely posed, baked versions of the
+ // actual adult template. Keep their benches, with a natural half-metre seat.
+ for(const {x,z} of AMBIENT_CITIZENS){
   const group=new THREE.Group();group.position.set(x,0,z);group.rotation.y=x>0?Math.PI/2:-Math.PI/2;scene.add(group);
-  cube(.42,.62,.28,0,.9,0,i%2?cloth:jewel,group);add(new THREE.SphereGeometry(.15,8,6),material(i%2?0x8b5b48:0xbf9276),0,1.38,0,group);
-  for(const sign of [-1,1]){rod(new THREE.Vector3(sign*.1,.6,0),new THREE.Vector3(sign*.1,.3,-.3),.075,ink,group);cube(.18,.1,.3,sign*.1,.1,-.3,ink,group);}cube(.55,.08,.45,0,.77,-.3,wood,group);
-  for(const sign of [-1,1])rod(new THREE.Vector3(sign*.23,1.13,0),new THREE.Vector3(sign*.17,.83,-.22),.065,i%2?cloth:jewel,group);cube(.64,.12,.48,0,.54,.04,wood,group);for(const a of [-.24,.24])for(const b of [-.12,.2])cube(.06,.5,.06,a,.25,b,ink,group);
+  cube(.64,.12,.48,0,.44,.04,wood,group);for(const a of [-.24,.24])for(const b of [-.12,.2])cube(.06,.4,.06,a,.2,b,ink,group);
   occupiedResidents++;
  }
  // Street skyline, divided glazing and elevated cables now live in streetscape.js.
@@ -286,10 +285,11 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
     record.actor=actor;record.adult=preserveMaterials;record.headBone=null;actor.traverse(o=>{if(o.isBone&&/^(?:.*\|)?head$/i.test(o.name))record.headBone=o;});record.motionClock=record.index*1.7;record.motionBones={};actor.traverse(o=>{if(o.isBone&&['Head','head','upperarm_l','lowerarm_l','upperarm_r','lowerarm_r'].includes(o.name))record.motionBones[o.name]=o;});record.previousMotion=[];record.mixer=mixer;record.costume=costume;record.bones=bones;record.skinnedMeshes=skins;record.vertices=vertices;record.idle=idle.getClip().name;record.fallbackMeshes.forEach(mesh=>{mesh.visible=false;});residentRigInstallCount++;
    }catch(error){const detail=record.id+': '+String(error?.message||error);npcErrors.push(detail);throw Error(detail);}
   }
+  if(!ambientResidents)ambientResidents=createAmbientResidents({THREE,scene,template,idleClip,placements:AMBIENT_CITIZENS,seatY:.5,breathing:false});
  }
 
- return {installResidents,setQuality:q=>streetBays?.setQuality(q),cameraBounds,metrics:{get authoredGeometry(){return geometryCount;},consolidatedBaySources,get baySubmissions(){return streetBays?.snapshot().batches||baySubmissions;},get arcadeBays(){return streetBays?.snapshot()||null;},residents:occupiedResidents,interactiveResidents:RESIDENTS.length,colliders:CITY_COLLIDERS.length,instancedWindows:southWindows.length,originalWovenPattern:true,dimensionalAuroraCurtains:aurora.length,auroraMotion:skyMotion},
-  snapshot(){return {storyProps:{...storyProps,placements:storyPropRecords.map(p=>({...p}))},keeperKit:{...keeperKit},npcRigs:{loaded:residentRecords.every(r=>r.actor&&r.skinnedMeshes>0),count:residentRecords.filter(r=>r.actor).length,errors:[...npcErrors],installations:residentRigInstallCount,residents:residentRecords.map(r=>({role:r.id,loaded:Boolean(r.actor),bones:r.bones,skinnedMeshes:r.skinnedMeshes,vertices:r.vertices,idleClip:r.idle||null,motion:{engaged:Boolean(r.motionEngaged),headYaw:r.headYaw||0,bones:Object.keys(r.motionBones||{}).length},skinTextures:r.actor?[...new Set((()=>{const ids=[];r.actor.traverse(o=>{if(o.isSkinnedMesh&&o.material.map)ids.push(o.material.map.uuid);});return ids;})())]:[],costumeBindings:r.costume?.bindings||0}))},repairCellEmission:repairCells.map(o=>o.material.emissiveIntensity),courierSignalEmission:courierSignals.map(o=>o.material.emissiveIntensity),canopyIntensity:canopyLight.intensity,lanternEmission:publicLights.map(o=>o.material.emissiveIntensity),constellationVisible:finalGroup.visible,mirrorVisible:mirror.visible,publicReturnStudsVisible:returnStuds.filter(o=>o.visible).length,constellationBarsVisible:finalBars.filter(o=>o.visible).length,relays:beaconMeshes.map(b=>({id:b.id,emission:b.core.material.emissiveIntensity,rotation:b.core.rotation.y})),markers:markerMeshes.map(r=>({id:r.id,emission:r.mesh.material.emissiveIntensity,x:r.mesh.parent.position.x,z:r.mesh.parent.position.z}))};},
+ return {installResidents,dispose(){ambientResidents?.dispose();},setQuality:q=>streetBays?.setQuality(q),cameraBounds,metrics:{get authoredGeometry(){return geometryCount;},consolidatedBaySources,get baySubmissions(){return streetBays?.snapshot().batches||baySubmissions;},get arcadeBays(){return streetBays?.snapshot()||null;},residents:occupiedResidents,interactiveResidents:RESIDENTS.length,colliders:CITY_COLLIDERS.length,instancedWindows:southWindows.length,originalWovenPattern:true,dimensionalAuroraCurtains:aurora.length,auroraMotion:skyMotion},
+  snapshot(){return {ambientResidents:ambientResidents?.metrics||null,storyProps:{...storyProps,placements:storyPropRecords.map(p=>({...p}))},keeperKit:{...keeperKit},npcRigs:{loaded:residentRecords.every(r=>r.actor&&r.skinnedMeshes>0),count:residentRecords.filter(r=>r.actor).length,errors:[...npcErrors],installations:residentRigInstallCount,residents:residentRecords.map(r=>({role:r.id,loaded:Boolean(r.actor),bones:r.bones,skinnedMeshes:r.skinnedMeshes,vertices:r.vertices,idleClip:r.idle||null,motion:{engaged:Boolean(r.motionEngaged),headYaw:r.headYaw||0,bones:Object.keys(r.motionBones||{}).length},skinTextures:r.actor?[...new Set((()=>{const ids=[];r.actor.traverse(o=>{if(o.isSkinnedMesh&&o.material.map)ids.push(o.material.map.uuid);});return ids;})())]:[],costumeBindings:r.costume?.bindings||0}))},repairCellEmission:repairCells.map(o=>o.material.emissiveIntensity),courierSignalEmission:courierSignals.map(o=>o.material.emissiveIntensity),canopyIntensity:canopyLight.intensity,lanternEmission:publicLights.map(o=>o.material.emissiveIntensity),constellationVisible:finalGroup.visible,mirrorVisible:mirror.visible,publicReturnStudsVisible:returnStuds.filter(o=>o.visible).length,constellationBarsVisible:finalBars.filter(o=>o.visible).length,relays:beaconMeshes.map(b=>({id:b.id,emission:b.core.material.emissiveIntensity,rotation:b.core.rotation.y})),markers:markerMeshes.map(r=>({id:r.id,emission:r.mesh.material.emissiveIntensity,x:r.mesh.parent.position.x,z:r.mesh.parent.position.z}))};},
   update(dt,time,sim){
    const state=chapter.state,active=state.active?RESIDENTS[state.completed]?.id:null;
    if(skyMotion)for(const ribbon of aurora){const p=ribbon.mesh.geometry.attributes.position;for(let i=0;i<p.count;i++){const u=Math.floor(i/2)/48;p.setY(i,ribbon.base[i]+Math.sin(time*.00018+u*8+ribbon.layer)*.75);}p.needsUpdate=true;}

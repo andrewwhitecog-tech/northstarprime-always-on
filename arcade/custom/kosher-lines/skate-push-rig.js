@@ -11,7 +11,10 @@ export function createSkatePushRig(THREE,{model,body,deckY=.112}){
  const arms=['l','r'].map(s=>({hip:named.get('upperarm_'+s),knee:named.get('lowerarm_'+s),foot:named.get('hand_'+s)}));
  if(!pelvis||legs.some(l=>!l.hip||!l.knee||!l.foot))throw Error('Skate rig needs actual pelvis/thigh/calf/foot bones');
  const touched=[...new Set([rootBone,pelvis,...['spine_01','spine_02','spine_03'].map(n=>named.get(n)),...legs.flatMap(l=>[l.hip,l.knee,l.foot,named.get('ball_'+l.side),named.get('ball_leaf_'+l.side)]),...arms.flatMap(l=>[l.hip,l.knee,l.foot])].filter(Boolean))];
- body.updateWorldMatrix(true,true);
+ // updateWorldMatrix bypasses SkinnedMesh.updateMatrixWorld and can leave
+ // bindMatrixInverse in the previous world position. Refresh the actual
+ // skinned descendants before reading weighted sneaker vertices.
+ body.updateWorldMatrix(true,false);body.updateMatrixWorld(true);
  const bind=new Map(touched.map(b=>[b,{p:b.position.clone(),q:b.quaternion.clone(),s:b.scale.clone()}]));
  const bodyQ=body.getWorldQuaternion(Q()),invBodyQ=bodyQ.clone().invert();
  const pelvisBind=body.worldToLocal(pelvis.getWorldPosition(V())),pelvisQ=invBodyQ.clone().multiply(pelvis.getWorldQuaternion(Q()));

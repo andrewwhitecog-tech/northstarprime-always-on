@@ -3,10 +3,13 @@
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import re
 from pathlib import Path
+import tempfile
+from urllib.parse import unquote, urlsplit
 
 from verify_home_static import (
     ORIGIN, check_asset_manifest, check_identity, check_local_links,
@@ -33,7 +36,7 @@ EXTERNAL_RESOURCE = re.compile(
     r"|url\(\s*['\"]?https?://|@import\s+(?:url\()?\s*['\"]?https?://)", re.I)
 ABSOLUTE_URL = re.compile(r"https?://[^'\"\s<>]+", re.I)
 STATIC_TOKEN = re.compile(r"/static/[A-Za-z0-9_./%+@-]+")
-LOCAL_CUSTOM = re.compile(r"(?<![A-Za-z0-9.])(?P<route>/arcade/custom/(?P<slug>[a-z0-9-]+))")
+LOCAL_CUSTOM = re.compile(r"(?<![A-Za-z0-9.])(?P<route>/arcade/custom/(?P<slug>[a-z0-9-]+)[^'\"\s<>]*)")
 
 
 def verified_manifest_bytes(path: Path, row: dict[str, object]) -> int | None:
@@ -61,6 +64,58 @@ def check_row(row: dict[str, object], label: str) -> Path:
     if path.stat().st_size > MAX_FILE:
         raise SystemExit(f"Git-hosting file limit exceeded: {path.relative_to(ROOT)}")
     return path
+
+
+def check_custom_reference(reference: str, mirrored: set[str], asset_rows: dict[str, dict]) -> None:
+    """A shared asset is allowed only by its complete frozen file identity."""
+    parsed = urlsplit(reference)
+    decoded = unquote(parsed.path)
+    if (parsed.scheme or parsed.netloc or not decoded.startswith("/arcade/custom/")
+            or "\\" in decoded or "\x00" in decoded
+            or re.search(r"%(?:2e|2f|5c|00)", decoded, re.I)
+            or any(part in {".", ".."} for part in decoded.split("/"))):
+        raise SystemExit(f"Unsafe local arcade reference: {reference}")
+    slug = decoded[len("/arcade/custom/"):].split("/", 1)[0].split(".", 1)[0]
+    if slug in mirrored:
+        return  # Existing mirrored routes and their in-game paths retain their gate.
+    relative = decoded.lstrip("/")
+    row = asset_rows.get(relative)
+    if row is None:
+        raise SystemExit(f"Unmirrored local route or unrostered asset: {reference}")
+    check_row(row, f"referenced arcade asset {relative}")
+
+
+def check_recovered_artifact(payload: dict, artifact: Path) -> None:
+    """Compare the actual new release closure with the real curated transforms."""
+    from build_pages_artifact import copy_artifact_source
+
+    release = payload.get("recovered_game_payload", {})
+    paths = release.get("paths", [])
+    if not paths or len(paths) != len(set(paths)):
+        raise SystemExit("Missing or duplicate recovered game payload paths")
+    rows = {row["relative_path"]: row for row in payload["assets"]}
+    rows.update({row["output_relative"]: row for row in payload["games"]})
+    for key in ("landing", "workshop", "catalog"):
+        rows[payload[key]["relative_path"]] = payload[key]
+    built = json.loads((artifact / "nsp-pages-artifact.json").read_text(encoding="utf-8"))
+    commit = built.get("source_commit", "")
+    if not re.fullmatch(r"[0-9a-f]{40}", commit):
+        raise SystemExit("Curated artifact lacks exact source commit")
+    selected = set(built.get("external_release_media", {}).get("paths", []))
+    with tempfile.TemporaryDirectory(prefix="arcade-curated-expected-") as scratch:
+        for relative in paths:
+            if relative not in rows:
+                raise SystemExit(f"Recovered artifact file is not frozen: {relative}")
+            source = check_row(rows[relative], f"recovered source {relative}")
+            target = contained_path(artifact, relative)
+            if not target.is_file():
+                raise SystemExit(f"Recovered payload missing from curated artifact: {relative}")
+            expected = contained_path(Path(scratch), relative)
+            expected.parent.mkdir(parents=True, exist_ok=True)
+            copy_artifact_source(source, Path(relative), expected, selected, commit, frozenset())
+            if target.read_bytes() != expected.read_bytes():
+                raise SystemExit(f"Recovered curated artifact byte mismatch: {relative}")
+    print(f"OK: {len(paths)} recovered release files match actual curated transformations")
 
 
 def assert_static_tokens_resolve(html: str, label: str) -> None:
@@ -106,7 +161,7 @@ def check_workshop_links(links: list[str], games: list[dict], delegated: list[di
             raise SystemExit(f"Workshop disguises delegated route as local: {row['route']}")
 
 
-def main() -> None:
+def main(artifact: Path | None = None) -> None:
     payload = json.loads(MANIFEST.read_text(encoding="utf-8"))
     if payload.get("schema") != SCHEMA:
         raise SystemExit("Unexpected arcade-freeze schema")
@@ -157,8 +212,8 @@ def main() -> None:
             raise SystemExit(f"Remote CDN/resource dependency in {label}")
         assert_static_tokens_resolve(html, label)
         for match in LOCAL_CUSTOM.finditer(ABSOLUTE_URL.sub("", html)):
-            if match.group("slug") not in mirrored:
-                raise SystemExit(f"Unmirrored local route in {label}: {match.group('route')}")
+            check_custom_reference(match.group("route"), mirrored,
+                                   {row["relative_path"]: row for row in assets})
 
     landing_page = read_page(landing_path)
     workshop_page = read_page(workshop_path)
@@ -231,6 +286,9 @@ def main() -> None:
     provenance = (ROOT / "ARCADE_ROUTE_PROVENANCE.md").read_text(encoding="utf-8")
     if LOCAL_LEAK.search(provenance) or LOCALHOST.search(provenance):
         raise SystemExit("Route provenance leaks a local machine path")
+    if artifact is not None:
+        check_recovered_artifact(payload, artifact.resolve())
+
     print(f"OK: {len(games)} mirrored games / {len(delegated)} explicit fallbacks")
     print(f"OK: {len(assets)} hashed assets / {total} bytes")
     print(f"OK: {optimized} local motion optimizations / {optimized_saved} bytes saved")
@@ -241,4 +299,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--artifact", type=Path)
+    main(parser.parse_args().artifact)

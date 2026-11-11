@@ -1,6 +1,6 @@
 import * as THREE from '/static/vendor/three/0.160.0/build/three.module.js';
 import { GLTFLoader } from '/static/vendor/three/0.160.0/examples/jsm/loaders/GLTFLoader.js';
-import { mergeGeometries } from '/static/vendor/three/0.160.0/examples/jsm/utils/BufferGeometryUtils.js';
+import { installStreetBays } from './street-bays.js';
 import { RESIDENTS, BEACONS, CITY_COLLIDERS } from './chapter.mjs';
 // Original geometry and textile patterns; no third-party logos or image lettering.
 export function wovenTexture(){
@@ -10,7 +10,7 @@ export function wovenTexture(){
  for(let y=0;y<256;y+=4){c.fillStyle=y%8?'#04081850':'#ffe9c125';c.fillRect(0,y,256,1);}for(let x=0;x<256;x+=4){c.fillStyle='#03051435';c.fillRect(x,0,1,256);}
  const t=new THREE.CanvasTexture(canvas);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
 }
-export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=null,onKitStatus=()=>{}}={}){
+export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=null,onKitStatus=()=>{},bayKitURL=null,onBayStatus=()=>{}}={}){
  const cameraBounds=[],repairFallback=[],repairDetails=[];const keeperKit={loaded:false,error:null,meshes:0,triangles:0,materials:0,bounds:null,corePresent:false};let geometryCount=0,occupiedResidents=0;const animated=[],beaconMeshes=[],publicLights=[],markerMeshes=[],materials=[],residentRecords=[],npcErrors=[],detailMotion=[],repairCells=[],courierSignals=[],archiveDisplays=[];let residentRigInstallCount=0;
  const material=(color,extra={})=>{const m=new THREE.MeshStandardMaterial({color,roughness:.58,metalness:.25,...extra});materials.push(m);return m;};
  const ink=material(0x090c14,{metalness:.72,roughness:.39}),stone=material(0x303742,{roughness:.92,metalness:.07}),gold=material(0xb89158,{metalness:.82,roughness:.34}),soil=material(0x132124),wood=material(0x50362e,{roughness:.9}),leaf=material(0x176b57),cloth=material(0xffffff,{map:wovenTexture(),roughness:.9});
@@ -29,47 +29,11 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
  const rod=(a,b,r,m=gold,parent=scene)=>{const d=new THREE.Vector3().subVectors(b,a),o=add(new THREE.CylinderGeometry(r,r,d.length(),7),m,0,0,0,parent);o.position.copy(a).add(b).multiplyScalar(.5);o.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());return o;};
  const tube=(points,r,m,parent=scene,closed=false)=>add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)),closed),Math.max(12,points.length*6),r,6,closed),m,0,0,0,parent);
  const instances=(geometry,m,items)=>{const batch=new THREE.InstancedMesh(geometry,m,items.length),dummy=new THREE.Object3D();items.forEach((p,i)=>{dummy.position.set(p[0],p[1],p[2]);dummy.rotation.set(p[6]||0,p[7]||0,p[8]||0);dummy.scale.set(p[3]||1,p[4]||1,p[5]||1);dummy.updateMatrix();batch.setMatrixAt(i,dummy.matrix);});batch.castShadow=batch.receiveShadow=true;scene.add(batch);geometryCount++;return batch;};
- // Deep arcades: pilasters, recessed bays, real arched lintels, awnings and balconies.
+ // Authored industrial bays replace the previous procedural pilasters and signs.
  const panes=[],frames=[],tiles=[],leaves=[],trunks=[];
- const baySceneStart=scene.children.length;let consolidatedBaySources=0,baySubmissions=0;
- for(const side of [-1,1])for(let bay=0;bay<7;bay++){
-  const x=side*21.6,z=10-bay*6.1,h=5.7+(bay%3)*1.15,accent=neon[bay%4];
-  cube(.9,h,.5,x,h/2,z+2.65,stone);cube(.9,h,.5,x,h/2,z-2.65,stone);
-  cube(1.2,.2,.85,x,1.1,z+2.65,gold);cube(1.2,.2,.85,x,h-.15,z-2.65,gold);
-  const arch=[[x-side*.55,3.3,z-2.3],[x-side*.55,4.7,z-1.8],[x-side*.55,5.05,z+.85],[x-side*.55,4.15,z+2.3]];
-  for(let j=0;j<arch.length-1;j++)rod(new THREE.Vector3(...arch[j]),new THREE.Vector3(...arch[j+1]),.11,ink);
-  rod(new THREE.Vector3(x-side*.62,4.73,z-1.8),new THREE.Vector3(x-side*.62,5.08,z+.85),.028,accent);
-  cube(.25,2.8,4.4,x+side*.13,1.4,z,ink);
-  cube(2,.16,5.1,x-side*.35,3.4,z,ink); // narrow projecting roof, not a wallpaper box
-  for(let rib=0;rib<5;rib++)cube(1.8,.07,.07,x-side*.45,3.28,z-2+rib, gold);
-  for(let level=0;level<3;level++){
-   const yy=5+level*2.5;panes.push([side*22.64,yy,z,.08,1.4,3.4]);frames.push([side*22.5,yy-1,z,.18,.12,4.3]);
-   for(let j=0;j<5;j++)frames.push([side*22.38,yy-1.3,z-1.9+j*.95,.12,.7,.07]);
-  }
-  // Bent glass tube sign, black backplate, electrode ends, ceramic supports and cable.
-  const signX=x-side*.85,signZ=z-1.3;cube(.1,1.3,1.45,signX,2.45,signZ,ink);
-  const path=[[signX-side*.08,2.2,signZ-.5],[signX-side*.08,2.65,signZ-.25],[signX-side*.08,2.8,signZ+.2],[signX-side*.08,2.25,signZ+.5]];
-  tube(path,.032,accent);for(const p of [path[0],path[3]]){add(new THREE.SphereGeometry(.055,7,5),gold,...p);rod(new THREE.Vector3(...p),new THREE.Vector3(signX+.1*side,p[1],p[2]),.023,stone);}
-  tube([[signX,2.15,signZ-.5],[signX,1.9,signZ-.7],[x,1.5,signZ-.7]],.018,ink);
-  if(bay%4===0){const pl=new THREE.PointLight(neonColors[bay%4],11,6,2);pl.position.set(signX-side*.2,2.5,signZ);scene.add(pl);}
-  // Small parked handcarts and public drinking fountains occupy recesses, outside skating bounds.
-  if(bay%2){cube(.7,.7,1.2,side*22.8,.42,z+1,wood);for(const zz of [-.48,.48]){const wheel=add(new THREE.TorusGeometry(.17,.045,5,12),gold,side*22.35,.2,z+1+zz);wheel.rotation.y=Math.PI/2;}}
- }
- // The bays are static and non-interactive. Merge only this exact new interval,
- // keeping quest props, characters, imported kits and animated groups independent.
- const bayGroups=new Map();
- for(const object of scene.children.slice(baySceneStart)){
-  if(!object.isMesh||object.isSkinnedMesh||object.isInstancedMesh||Array.isArray(object.material))continue;
-  const key=object.material.uuid,group=bayGroups.get(key)||[];group.push(object);bayGroups.set(key,group);
- }
- for(const objects of bayGroups.values()){
-  if(objects.length<2){baySubmissions+=objects.length;continue;}
-  const parts=objects.map(object=>{object.updateMatrix();const geometry=object.geometry.index?object.geometry.toNonIndexed():object.geometry.clone();return geometry.applyMatrix4(object.matrix);});
-  const geometry=mergeGeometries(parts,false);parts.forEach(part=>part.dispose());
-  if(!geometry)throw Error('Static street-bay geometry could not be consolidated');
-  const batch=new THREE.Mesh(geometry,objects[0].material);batch.name='Static forged arcade bays';batch.castShadow=batch.receiveShadow=true;scene.add(batch);
-  for(const object of objects){scene.remove(object);object.geometry.dispose();}consolidatedBaySources+=objects.length;baySubmissions++;
- }
+ const streetBays=bayKitURL?installStreetBays(scene,bayKitURL,onBayStatus):null;
+ if(streetBays)cameraBounds.push(...streetBays.cameraBounds);
+ const consolidatedBaySources=0;let baySubmissions=0;
  // All street-level solids below are derived from the very same collider table as physics.
  for(const b of CITY_COLLIDERS){
   if(['resident','beacon','column','citizen','bay-wall'].includes(b.kind))continue;
@@ -335,7 +299,7 @@ export function buildCity(scene,chapter,{mosaic=null,mural=null,repairKitURL=nul
   }
  }
 
- return {installResidents,cameraBounds,metrics:{get authoredGeometry(){return geometryCount;},consolidatedBaySources,baySubmissions,residents:occupiedResidents,interactiveResidents:RESIDENTS.length,colliders:CITY_COLLIDERS.length,instancedWindows:southWindows.length,originalWovenPattern:true,dimensionalAuroraCurtains:aurora.length,auroraMotion:skyMotion},
+ return {installResidents,cameraBounds,metrics:{get authoredGeometry(){return geometryCount;},consolidatedBaySources,get baySubmissions(){return streetBays?.snapshot().batches||baySubmissions;},get arcadeBays(){return streetBays?.snapshot()||null;},residents:occupiedResidents,interactiveResidents:RESIDENTS.length,colliders:CITY_COLLIDERS.length,instancedWindows:southWindows.length,originalWovenPattern:true,dimensionalAuroraCurtains:aurora.length,auroraMotion:skyMotion},
   snapshot(){return {keeperKit:{...keeperKit},npcRigs:{loaded:residentRecords.every(r=>r.actor&&r.skinnedMeshes>0),count:residentRecords.filter(r=>r.actor).length,errors:[...npcErrors],installations:residentRigInstallCount,residents:residentRecords.map(r=>({role:r.id,loaded:Boolean(r.actor),bones:r.bones,skinnedMeshes:r.skinnedMeshes,vertices:r.vertices,idleClip:r.idle||null,skinTextures:r.actor?[...new Set((()=>{const ids=[];r.actor.traverse(o=>{if(o.isSkinnedMesh&&o.material.map)ids.push(o.material.map.uuid);});return ids;})())]:[],costumeBindings:r.costume?.bindings||0}))},repairCellEmission:repairCells.map(o=>o.material.emissiveIntensity),courierSignalEmission:courierSignals.map(o=>o.material.emissiveIntensity),canopyIntensity:canopyLight.intensity,lanternEmission:publicLights.map(o=>o.material.emissiveIntensity),constellationVisible:finalGroup.visible,mirrorVisible:mirror.visible,publicReturnStudsVisible:returnStuds.filter(o=>o.visible).length,constellationBarsVisible:finalBars.filter(o=>o.visible).length,relays:beaconMeshes.map(b=>({id:b.id,emission:b.core.material.emissiveIntensity,rotation:b.core.rotation.y})),markers:markerMeshes.map(r=>({id:r.id,emission:r.mesh.material.emissiveIntensity,x:r.mesh.parent.position.x,z:r.mesh.parent.position.z}))};},
   update(dt,time,sim){
    const state=chapter.state,active=state.active?RESIDENTS[state.completed]?.id:null;

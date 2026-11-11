@@ -98,6 +98,15 @@ function makeWorld(){
   rod(a,b,.055,gold);
   for(let i=0;i<=3;i++){const u=i/3,x=r.x0+(r.x1-r.x0)*u,z=r.z0+(r.z1-r.z0)*u,y=r.y0+(r.y1-r.y0)*u;rod(new THREE.Vector3(x,.02,z),new THREE.Vector3(x,y,z),.035,black);}
  }
+ // Cast bronze relief is set into the ledge skirt, below the unchanged ride surface.
+ const reliefShape=new THREE.Shape();reliefShape.moveTo(-.19,0);reliefShape.bezierCurveTo(-.17,.075,-.06,.08,0,.035);reliefShape.bezierCurveTo(.06,.08,.17,.075,.19,0);reliefShape.bezierCurveTo(.12,-.065,.045,-.07,0,-.028);reliefShape.bezierCurveTo(-.045,-.07,-.12,-.065,-.19,0);
+ const reliefGeo=new THREE.ExtrudeGeometry(reliefShape,{depth:.009,bevelEnabled:true,bevelSize:.004,bevelThickness:.003,bevelSegments:1,curveSegments:6});
+ const relief=new THREE.InstancedMesh(reliefGeo,gold,30),reliefDummy=new THREE.Object3D();let reliefIndex=0;
+ for(const side of [-1,1])for(let i=0;i<15;i++){reliefDummy.position.set(side<0?-3.198:-2.002,.155,2.32-i*.46);reliefDummy.rotation.set(0,side<0?-Math.PI/2:Math.PI/2,0);reliefDummy.updateMatrix();relief.setMatrixAt(reliefIndex++,reliefDummy.matrix);}relief.castShadow=false;relief.receiveShadow=true;scene.add(relief);
+ for(const x of [-3.18,-2.02])box(.025,.018,7.1,x,.31,-1,gold);
+ // Thin wet patches catch the authored light field beside, never above, the course.
+ const wet=mat(0x172d38,{metalness:.66,roughness:.18,transparent:true,opacity:.76});
+ for(const [x,z,rx,rz]of[[-4.2,3.1,.7,.28],[5.5,-4.3,1.1,.32],[-5.7,-19,.8,.35],[8.4,-22.2,1.2,.3]]){const patch=new THREE.Shape();for(let i=0;i<=16;i++){const a=i/16*Math.PI*2,k=1+.15*Math.sin(i*2.3);const px=Math.cos(a)*rx*k,pz=Math.sin(a)*rz*k;if(i===0)patch.moveTo(px,pz);else patch.lineTo(px,pz);}const puddle=mesh(new THREE.ShapeGeometry(patch),wet,x,.003,z);puddle.rotation.x=-Math.PI/2;puddle.castShadow=false;}
  // Five real route lamps encode the ordered line. No lettering is painted over the view.
  const stations=[[-.7,1],[-2.55,-2],[0,-8],[2.15,-14],[0,-26]];
  stations.forEach(([x,z],i)=>{
@@ -166,7 +175,7 @@ function makeSkater(){
  const modelContainer=new THREE.Group();modelContainer.position.y=.114;body.add(modelContainer);
  // Original adult outfit on the licensed Quaternius humanoid rig and real clips.
  assetState['avatar-model']='loading';
- loadAdultRig(THREE,{loader:new GLTFLoader(),url:ASSETS+'vorath-adult-skater-v3.glb',parent:modelContainer}).then(({root:model,mixer,clips,skin,metrics})=>{
+ loadAdultRig(THREE,{loader:new GLTFLoader(),url:ASSETS+'vorath-adult-skater-v4.glb',parent:modelContainer}).then(({root:model,mixer,clips,skin,metrics})=>{
   model.rotation.y=Math.PI/2;model.updateMatrixWorld(true);Object.assign(avatarMetrics,metrics);
   model.traverse(o=>{if(o.isBone&&o.name.toLowerCase()==='head'){riderHeadBone=o;riderHeadBindScale=o.scale.clone();}});
   avatarMixer=mixer;for(const kind of ['idle','jump','run','crouch'])avatarActions[kind]=mixer.clipAction(clips[kind]);
@@ -214,7 +223,8 @@ function updateUI(){
  $('score').textContent=String(Math.floor(sim.score)).padStart(4,'0');$('pending').textContent=sim.unbanked>0?String(Math.floor(sim.unbanked)):'';
  $('multiplier').textContent=sim.unbanked>0?'×'+sim.multiplier:'';$('timer').textContent=courierTrial.active?String(Math.ceil(courierTrial.state==='countdown'?courierTrial.countdown:COURIER_ROUTE.limit-courierTrial.elapsed)):sim.sessionMode==='chapter'?'∞':String(Math.ceil(sim.timeLeft));
  $('line-number').textContent=courierTrial.active?courierTrial.next+'/'+COURIER_ROUTE.gates.length:sim.line+'/'+LINE.length;
- $('next-feature').textContent=courierTrial.active?(courierTrial.state==='countdown'?'Dispatch · hold the seal':'Courier · '+COURIER_ROUTE.gates[courierTrial.next].name):sim.ended?'Session complete':sim.paused?'Ride paused':sim.running?'Next · '+LINE[sim.line]:'Five features. One clean line.';
+ $('next-feature-label').textContent=courierTrial.active?(courierTrial.state==='countdown'?'Dispatch · hold the seal':'Courier · '+COURIER_ROUTE.gates[courierTrial.next].name):sim.ended?'Session complete':sim.paused?'Ride paused':sim.running?'Next · '+LINE[sim.line]:'Five features. One clean line.';
+ const featureArt=$('next-feature-art'),featureBoxes=['45 65 940 300','100 375 850 315','60 690 940 310','70 995 850 290','20 1280 984 256'];const hideFeature=courierTrial.active||sim.ended||sim.paused;featureArt.toggleAttribute('hidden',hideFeature);featureArt.setAttribute('viewBox',featureBoxes[sim.running?sim.line:0]);$('next-feature-label').classList.toggle('sr-only',!hideFeature);
  $('line-order').querySelectorAll('li').forEach((li,i)=>{li.classList.toggle('done',i<sim.line);li.classList.toggle('current',i===sim.line);});
  $('speed-value').textContent=(sim.speed*3.6).toFixed(1);$('best-score').textContent=profile.best.toLocaleString();$('clean-lines').textContent=String(profile.lines);$('progress').textContent=profile.xp.toLocaleString();
  $('pause').disabled=!sim.running||Boolean(dialogueResident);$('start').disabled=Boolean(dialogueResident);$('ride-mode').disabled=Boolean(dialogueResident);$('pause').textContent=sim.paused?'Resume':'Pause';
@@ -298,13 +308,13 @@ function frame(time){
   playAvatar(sim.mode==='air'?'jump':sim.charge>.03||sim.mode==='manual'?'crouch':'idle');skatePushRig?.reset();if(avatarMixer)avatarMixer.update(sim.paused?0:delta);skatePushRig?.update(sim.paused?0:delta,control.push&&sim.grounded&&sim.mode!=='manual'&&sim.charge<=.03&&sim.speed>.2);if(riderHeadBone&&riderHeadBindScale)riderHeadBone.scale.copy(riderHeadBindScale);if(riderDress)riderDress.update(chapter.state.completed,profile.theme,chapter.state.choice);if(city)city.update(sim.paused?0:delta,time,sim);if(streetAtmosphere)streetAtmosphere.update(sim.paused?0:delta,time*.001);if(courierCourse)courierCourse.update(time);courierWheelJewels.forEach(j=>{j.visible=chapter.state.completed>=2;});
   if(sim.mode==='grind'&&frameCount%4===0)burst(sim.x,sim.y,sim.z,0xffc46a,2);
   for(let i=sparkParticles.length-1;i>=0;i--){const p=sparkParticles[i];p.life-=delta;p.vy-=8*delta;p.mesh.position.x+=p.vx*delta;p.mesh.position.y+=p.vy*delta;p.mesh.position.z+=p.vz*delta;p.mesh.scale.setScalar(Math.max(.01,p.life));if(p.life<=0){scene.remove(p.mesh);p.mesh.geometry.dispose();p.mesh.material.dispose();sparkParticles.splice(i,1);}}
-  const heading=sim.yaw+orbit,follow=6.2+(motion?0:sim.speed*.07);
-  cameraDesired.set(sim.x+Math.sin(heading)*follow,sim.y+2.8+cameraTilt*2,sim.z+Math.cos(heading)*follow);
-  cameraDesired.y=Math.max(cameraDesired.y,terrain(cameraDesired.x,cameraDesired.z)+2.5);
+  const heading=sim.yaw+orbit,follow=5.2+(motion?0:sim.speed*.07);
+  cameraDesired.set(sim.x+Math.sin(heading)*follow,sim.y+1.85+cameraTilt*1.5,sim.z+Math.cos(heading)*follow);
+  cameraDesired.y=Math.max(cameraDesired.y,terrain(cameraDesired.x,cameraDesired.z)+1.8);
   lookDesired.set(sim.x-Math.sin(sim.yaw)*1.5,sim.y+.9,sim.z-Math.cos(sim.yaw)*1.5);
   cameraAnchor.set(sim.x,sim.y+1.2,sim.z);const safeDesired=cameraOutsideSolids(cameraAnchor,cameraDesired,cameraSolids);cameraDesired.set(safeDesired.x,safeDesired.y,safeDesired.z);
   camera.position.lerp(cameraDesired,1-Math.exp(-delta*5));const safeActual=cameraOutsideSolids(cameraAnchor,camera.position,cameraSolids);camera.position.set(safeActual.x,safeActual.y,safeActual.z);cameraOcclusion={blocked:safeDesired.blocked||safeActual.blocked,obstacle:safeDesired.obstacle||safeActual.obstacle||null,distance:safeActual.distance,solidCount:cameraSolids.length};lookSmoothed.lerp(lookDesired,1-Math.exp(-delta*9));camera.lookAt(lookSmoothed);
-  camera.fov=62+(motion?0:Math.min(6,sim.speed*.4));camera.updateProjectionMatrix();
+  camera.fov=58+(motion?0:Math.min(6,sim.speed*.4));camera.updateProjectionMatrix();
   routeLights.forEach((light,i)=>{light.material.color.set(i<sim.line?0xffc666:i===sim.line?0x63ffe5:0x5d346f);light.material.emissive.copy(light.material.color);});
   portalRings.forEach((ring,i)=>{if(!motion)ring.rotation.z=Math.sin(time*.0002+i)*.08;ring.material.emissiveIntensity=profile.lines>0||chapter.state.completed===3?2.3:1.1;});
   skater.cap.material.color.set(skinColors[profile.theme]);skater.deckMaterial.color.set(skinColors[profile.theme]);
@@ -313,7 +323,7 @@ function frame(time){
   if(Math.floor(time/100)%2===0){updateUI();renderChapter();renderCourierTrial();}
  }
 }
-function loadControlAtlas(){const image=new Image();assetState['ui-atlas']='loading';image.onload=()=>{assetState['ui-atlas']='loaded';};image.onerror=()=>{assetState['ui-atlas']='failed';loadErrors.push('painted-control-atlas');};image.src=ASSETS+'vorath-controls-v1.png';}
+function loadControlAtlas(){for(const [key,file]of [['ui-atlas','vorath-controls-v1.png'],['ui-title','kosher-lines-title-v4.png'],['ui-objectives','kosher-objectives-v4.png']]){const image=new Image();assetState[key]='loading';image.onload=()=>{assetState[key]='loaded';};image.onerror=()=>{assetState[key]='failed';loadErrors.push(key);};image.src=ASSETS+file;}}
 function installInput(){
  const clear=()=>{held.clear();touchHeld.clear();touchTricks.clear();queuedOllieTrick=null;presses=[];releases=[];document.querySelectorAll('.touch-controls .pressed').forEach(button=>button.classList.remove('pressed'));};
  window.addEventListener('keydown',e=>{
@@ -366,12 +376,12 @@ try{
  renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));renderer.outputColorSpace=THREE.SRGBColorSpace;
  renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.25;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
  scene=new THREE.Scene();scene.background=new THREE.Color(0x10152d);scene.fog=new THREE.FogExp2(0x12152e,.012);
- camera=new THREE.PerspectiveCamera(62,1,.08,180);camera.position.set(4,5,13);
+ camera=new THREE.PerspectiveCamera(58,1,.08,180);camera.position.set(4,5,13);
  scene.add(new THREE.HemisphereLight(0x8099b8,0x1c1528,1.05));
  const moon=new THREE.DirectionalLight(0xb8cff6,2.5);moon.position.set(-12,24,12);moon.castShadow=true;
  moon.shadow.mapSize.set(1024,1024);Object.assign(moon.shadow.camera,{left:-28,right:28,top:28,bottom:-28,near:1,far:75});moon.shadow.bias=-.0002;scene.add(moon);
  const warm=new THREE.DirectionalLight(0xd65342,.95);warm.position.set(14,10,-20);scene.add(warm);makeReflections();loadControlAtlas();
- makeWorld();streetAtmosphere=createStreetAtmosphere({THREE,scene,quality,reducedMotion:motion});cameraSolids.push(...streetAtmosphere.cameraBounds);const mosaic=texture('vorath-eye-mosaic-v1.png'),mural=texture('vorath-acid-eye-mural-v1.png');city=buildCity(scene,chapter,{mosaic,mural,repairKitURL:ASSETS+'keeper-repair-station-v2.glb',onKitStatus(status,error){assetState['keeper-station-model']=status;if(error)loadErrors.push('keeper-station-model: '+error);}});cameraSolids.push(...city.cameraBounds);courierCourse=buildCourierCourse(scene,courierTrial,{reducedMotion:motion});skater=makeSkater();courierCourse.mountPrize(skater.board);bodyRig=skater.body;boardRig=skater.board;installInput();resize();new ResizeObserver(resize).observe(canvas);
+ makeWorld();streetAtmosphere=createStreetAtmosphere({THREE,scene,quality,reducedMotion:motion});cameraSolids.push(...streetAtmosphere.cameraBounds);const mosaic=texture('vorath-eye-mosaic-v1.png'),mural=texture('vorath-acid-eye-mural-v1.png');city=buildCity(scene,chapter,{mosaic,mural,repairKitURL:ASSETS+'keeper-repair-station-v2.glb',bayKitURL:ASSETS+'kosher-arcade-bay-v1.glb',onBayStatus(status,error){assetState['arcade-bay-model']=status;if(error)loadErrors.push('arcade-bay-model: '+error);},onKitStatus(status,error){assetState['keeper-station-model']=status;if(error)loadErrors.push('keeper-station-model: '+error);}});cameraSolids.push(...city.cameraBounds);courierCourse=buildCourierCourse(scene,courierTrial,{reducedMotion:motion});skater=makeSkater();courierCourse.mountPrize(skater.board);bodyRig=skater.body;boardRig=skater.board;installInput();resize();new ResizeObserver(resize).observe(canvas);
  canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();shaders.lost=true;if(sim.running&&!sim.paused)sim.togglePause();message('Graphics paused while the context recovers. Saved progress is safe.');});
  canvas.addEventListener('webglcontextrestored',()=>{shaders.lost=false;makeReflections();lastTime=performance.now();accumulator=0;resize();message('Graphics restored. Resume the ride when ready.');});
  window.addEventListener('pagehide',event=>{save();if(!event.persisted){disposed=true;streetAtmosphere?.dispose();reflectionTarget?.dispose();renderer.dispose();}else if(sim.running&&!sim.paused)sim.togglePause();});

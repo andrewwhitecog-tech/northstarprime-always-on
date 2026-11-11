@@ -134,6 +134,8 @@ def _must_stay_local(relative: Path) -> bool:
     if relative.as_posix() in {
         "arcade/custom/crib-recovered-assets/keeper-repair-station-v2.glb",
         "arcade/custom/crib-recovered-assets/vorath-adult-skater-v3.glb",
+        "arcade/custom/crib-recovered-assets/vorath-adult-skater-v4.glb",
+        "arcade/custom/crib-recovered-assets/kosher-arcade-bay-v1.glb",
     }:
         return True
     if parts[0] == "chronosphere":

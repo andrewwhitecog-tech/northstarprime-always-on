@@ -13,7 +13,8 @@ try{profile=parseProfile(localStorage.getItem(SAVE));}catch{profile=defaultProfi
 const sim=new KosherSim(profile);
 let chapterSaved;try{chapterSaved=parseChapter(localStorage.getItem(SAVE+'.chapter'));}catch{chapterSaved=defaultChapter();}
 const chapter=new PlazaChapter(chapterSaved);let city=null,riderDress=null,chapterUIKey='',dialogueResident=null,conversationPaused=false,lastChapterRevision=-1;
-const held=new Set(), touchHeld=new Set();
+const held=new Set(), touchHeld=new Set(), touchTricks=new Map();
+let queuedOllieTrick=null;
 let presses=[], releases=[], lastEvent=0, accumulator=0, lastTime=0, orbit=0, cameraTilt=.38, dragging=false, lastPointer=null;
 let reflectionTarget=null;
 let renderer, scene, camera, disposed=false, firstFrame=false, modelLoaded=false, modelError=null;
@@ -200,7 +201,7 @@ function input(){
  let push=held.has('KeyW')||held.has('ArrowUp')||touchHeld.has('push'),brake=held.has('KeyS')||held.has('ArrowDown')||touchHeld.has('brake');
  let ollieHeld=held.has('Space')||touchHeld.has('ollie'),manual=held.has('KeyM')||touchHeld.has('manual');
  let olliePressed=presses.includes('Space'),ollieReleased=releases.includes('Space');
- let trick=presses.find(k=>TRICKS[k])||null,gamepadName=null;
+ let trick=presses.find(k=>TRICKS[k])||(ollieReleased?queuedOllieTrick:null),gamepadName=null;
  const pad=[...(navigator.getGamepads?.()||[])].find(p=>p?.connected);
  if(pad){
   gamepadName=pad.id;if(pad.buttons[8]?.pressed&&!input.padTalk)openConversation();input.padTalk=pad.buttons[8]?.pressed;const axis=pad.axes[0]||0;if(Math.abs(axis)>.14)steer=-axis;
@@ -252,12 +253,12 @@ function renderChapter(){
 function openConversation(){
  if(dialogueResident)return;const id=chapter.nearby;if(!id){message('Stop near a resident to talk. The keeper waits beside the amber canopy.');return;}
  const dialogue=chapter.interact(id);if(!dialogue)return;dialogueResident=id;conversationPaused=sim.running&&!sim.paused;if(conversationPaused)sim.togglePause();
- held.clear();touchHeld.clear();presses=[];releases=[];$('chapter-dialog').hidden=false;$('speaker').textContent=dialogue.name;$('dialogue-title').textContent=dialogue.title;$('dialogue-text').textContent=dialogue.text;
+ held.clear();touchHeld.clear();touchTricks.clear();queuedOllieTrick=null;presses=[];releases=[];$('chapter-dialog').hidden=false;$('speaker').textContent=dialogue.name;$('dialogue-title').textContent=dialogue.title;$('dialogue-text').textContent=dialogue.text;
  $('contract-accept').hidden=dialogue.action!=='accept';$('contract-complete').hidden=dialogue.action!=='complete';$('ending-choices').hidden=dialogue.action!=='choice';
  $('dialogue-close').focus();renderChapter();updateUI();
 }
 function closeConversation(){
- $('chapter-dialog').hidden=true;dialogueResident=null;if(conversationPaused&&sim.running&&sim.paused)sim.togglePause();conversationPaused=false;held.clear();touchHeld.clear();presses=[];releases=[];updateUI();canvas.focus();
+ $('chapter-dialog').hidden=true;dialogueResident=null;if(conversationPaused&&sim.running&&sim.paused)sim.togglePause();conversationPaused=false;held.clear();touchHeld.clear();touchTricks.clear();queuedOllieTrick=null;presses=[];releases=[];updateUI();canvas.focus();
 }
 function graphicsSnapshot(){const size=renderer?renderer.getDrawingBufferSize(new THREE.Vector2()):new THREE.Vector2();return {preset:quality,pixelRatio:renderer?.getPixelRatio()??null,shadowMapEnabled:renderer?.shadowMap.enabled??null,drawingBuffer:{width:size.x,height:size.y},css:{width:canvas.clientWidth,height:canvas.clientHeight}};}
 function resize(){if(!renderer)return;const bounds=canvas.getBoundingClientRect();renderer.setSize(Math.max(1,bounds.width),Math.max(1,bounds.height),false);camera.aspect=bounds.width/Math.max(1,bounds.height);camera.updateProjectionMatrix();}
@@ -266,7 +267,7 @@ function frame(time){
  const delta=Math.min((time-lastTime)/1000||0,.1);lastTime=time;
  if(!shaders.lost){
   const control=input();accumulator+=delta;let ticks=0;
-  while(accumulator>=1/120&&ticks<12){sim.step(1/120,control);chapter.step(1/120,sim);presses=[];releases=[];control.olliePressed=false;control.ollieReleased=false;control.trick=null;accumulator-=1/120;ticks++;}
+  while(accumulator>=1/120&&ticks<12){sim.step(1/120,control);if(control.ollieReleased)queuedOllieTrick=null;chapter.step(1/120,sim);presses=[];releases=[];control.olliePressed=false;control.ollieReleased=false;control.trick=null;accumulator-=1/120;ticks++;}
   if(ticks===12)accumulator=0;
   processEvents();
   const lean=sim.mode==='grind'?sim.balance*.2:clamp(control.steer,-1,1)*Math.min(.22,sim.speed*.018);
@@ -297,7 +298,7 @@ function frame(time){
 }
 function loadControlAtlas(){const image=new Image();assetState['ui-atlas']='loading';image.onload=()=>{assetState['ui-atlas']='loaded';};image.onerror=()=>{assetState['ui-atlas']='failed';loadErrors.push('painted-control-atlas');};image.src=ASSETS+'vorath-controls-v1.png';}
 function installInput(){
- const clear=()=>{held.clear();touchHeld.clear();presses=[];releases=[];document.querySelectorAll('.touch-controls .pressed').forEach(button=>button.classList.remove('pressed'));};
+ const clear=()=>{held.clear();touchHeld.clear();touchTricks.clear();queuedOllieTrick=null;presses=[];releases=[];document.querySelectorAll('.touch-controls .pressed').forEach(button=>button.classList.remove('pressed'));};
  window.addEventListener('keydown',e=>{
   if(dialogueResident){if(e.code==='Escape'){e.preventDefault();closeConversation();}return;}
   if(!keysOwned.includes(e.code)||e.target.closest?.('input,select,textarea'))return;
@@ -312,11 +313,22 @@ function installInput(){
  canvas.addEventListener('pointerup',()=>{dragging=false;lastPointer=null;});canvas.addEventListener('pointercancel',()=>{dragging=false;lastPointer=null;});
  for(const button of document.querySelectorAll('[data-hold]')){
   const code=button.dataset.hold;
-  button.addEventListener('pointerdown',e=>{e.preventDefault();button.setPointerCapture(e.pointerId);touchHeld.add(code);if(code==='ollie')presses.push('Space');button.classList.add('pressed');});
-  const up=e=>{e.preventDefault();touchHeld.delete(code);if(code==='ollie')releases.push('Space');button.classList.remove('pressed');};
-  button.addEventListener('pointerup',up);button.addEventListener('pointercancel',up);button.addEventListener('lostpointercapture',()=>{if(touchHeld.delete(code)&&code==='ollie')releases.push('Space');button.classList.remove('pressed');});
+  button.addEventListener('pointerdown',e=>{e.preventDefault();button.setPointerCapture(e.pointerId);touchHeld.add(code);if(code==='ollie'){queuedOllieTrick=null;presses.push('Space');}button.classList.add('pressed');});
+  const up=e=>{e.preventDefault();touchHeld.delete(code);if(code==='ollie'){if(e.type==='pointerup')queuedOllieTrick=[...touchTricks.values()].at(-1)||queuedOllieTrick;else queuedOllieTrick=null;releases.push('Space');}button.classList.remove('pressed');};
+  button.addEventListener('pointerup',up);button.addEventListener('pointercancel',up);button.addEventListener('lostpointercapture',()=>{if(touchHeld.delete(code)&&code==='ollie'){queuedOllieTrick=null;releases.push('Space');}button.classList.remove('pressed');});
  }
- for(const button of document.querySelectorAll('[data-trick]'))button.addEventListener('click',()=>presses.push(button.dataset.trick));
+ // Pointer presses act immediately in the air. A physically held trick can
+ // also be combined with a charged ollie: release the two fingers together.
+ // Latch the selection across either pointer-up ordering, then consume it on
+ // the ordinary ollie-release input. Physics, duration and landing rules stay intact.
+ for(const button of document.querySelectorAll('[data-trick]')){
+  const code=button.dataset.trick;
+  button.addEventListener('pointerdown',e=>{if(e.button!==0)return;e.preventDefault();button.setPointerCapture(e.pointerId);touchTricks.set(e.pointerId,code);presses.push(code);button.classList.add('pressed');});
+  button.addEventListener('pointerup',e=>{e.preventDefault();if(touchTricks.has(e.pointerId)&&touchHeld.has('ollie')&&sim.charging)queuedOllieTrick=code;touchTricks.delete(e.pointerId);button.classList.remove('pressed');});
+  button.addEventListener('pointercancel',e=>{touchTricks.delete(e.pointerId);if(queuedOllieTrick===code)queuedOllieTrick=null;button.classList.remove('pressed');});
+  button.addEventListener('lostpointercapture',e=>{touchTricks.delete(e.pointerId);button.classList.remove('pressed');});
+  button.addEventListener('click',e=>{if(e.detail===0)presses.push(code);});
+ }
  $('start').addEventListener('click',()=>{sim.start();clear();orbit=0;cameraTilt=.38;save();message('Drop in. Build speed, then follow the five lamps.');updateUI();canvas.focus();});
  $('pause').addEventListener('click',()=>{sim.togglePause();clear();updateUI();});
  $('talk').addEventListener('click',openConversation);

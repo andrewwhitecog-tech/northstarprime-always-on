@@ -13,3 +13,11 @@ vorath-eye-mosaic-v1.png is an original AI-generated material produced with the 
 ## Original painted control atlas
 
 vorath-controls-v1.png is an original 4x4 RGBA control atlas generated with the built-in OpenAI image tool on 2026-11-11 for NorthStar Prime. Sixteen sculptural gold and jewel icons, no lettering; semantic labels remain in accessible controls. Separate from CC0 assets; no CC0 grant is asserted.
+
+## Original acid-eye wall mural
+
+vorath-acid-eye-mural-v1.png is an original AI-generated material produced with the built-in OpenAI image tool for this November10 Pacific playable pass. It is used as painted artwork on physical scene surfaces, separate from the live geometry and game rendering. Prompt and source provenance retained in the project asset package. No CC0 grant or third-party designer affiliation is asserted.
+
+## Original keeper repair station v2
+
+keeper-repair-station-v2.glb is an original NorthStar Prime model authored by Antigravity for this playable pass, with blackened steel, machined hardware, oxidized copper and original VORATH insets. Embedded PBR maps; no external model/texture downloads at runtime. Model budget and actual scene bounds are checked by the running loader. No CC0 grant is asserted for the original model or generated insets.

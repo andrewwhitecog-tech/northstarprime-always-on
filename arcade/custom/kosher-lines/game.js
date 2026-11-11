@@ -4,6 +4,9 @@ import { KosherSim, RAILS, LINE, TRICKS, terrain, COLLIDERS, defaultProfile, par
 
 import { PlazaChapter, parseChapter, defaultChapter, RESIDENTS, BEACONS, CONTRACTS } from './chapter.mjs';
 import { buildCity, dressRider } from './city.js';
+import { cameraOutsideSolids } from './camera-rig.mjs';
+import { CourierTrial, parseCourierRecord, defaultCourierRecord, COURIER_ROUTE } from './courier-trial.mjs';
+import { buildCourierCourse } from './courier-course.js';
 
 const $=id=>document.getElementById(id), canvas=$('plaza');
 const ASSETS='/arcade/custom/crib-recovered-assets/';
@@ -12,6 +15,8 @@ let profile,saveAvailable=true;
 try{profile=parseProfile(localStorage.getItem(SAVE));}catch{profile=defaultProfile();saveAvailable=false;}
 const sim=new KosherSim(profile);
 let chapterSaved;try{chapterSaved=parseChapter(localStorage.getItem(SAVE+'.chapter'));}catch{chapterSaved=defaultChapter();}
+let courierSaved;try{courierSaved=parseCourierRecord(localStorage.getItem(SAVE+'.courier-trial'));}catch{courierSaved=defaultCourierRecord();}
+const courierTrial=new CourierTrial(courierSaved);let courierCourse=null,trialUIKey='',lastTrialSavedRevision=-1;
 const chapter=new PlazaChapter(chapterSaved);let city=null,riderDress=null,chapterUIKey='',dialogueResident=null,conversationPaused=false,lastChapterRevision=-1;
 const held=new Set(), touchHeld=new Set(), touchTricks=new Map();
 let queuedOllieTrick=null;
@@ -19,15 +24,16 @@ let presses=[], releases=[], lastEvent=0, accumulator=0, lastTime=0, orbit=0, ca
 let reflectionTarget=null;
 let renderer, scene, camera, disposed=false, firstFrame=false, modelLoaded=false, modelError=null;
 let pausedByVisibility=false, frameCount=0, elapsedFrames=0, measuredFps=0, quality='high';
-const assetState={}, loadErrors=[], shaders={lost:false}, keysOwned=['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyW','KeyS','KeyA','KeyD','KeyF','KeyG','KeyH','KeyJ','KeyK','KeyU','KeyM','ShiftLeft','ShiftRight','KeyR','KeyP','KeyE','Escape'];
+const assetState={}, loadErrors=[], shaders={lost:false}, keysOwned=['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyW','KeyS','KeyA','KeyD','KeyF','KeyG','KeyH','KeyJ','KeyK','KeyU','KeyM','ShiftLeft','ShiftRight','KeyR','KeyP','KeyE','KeyT','Escape'];
 const motion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const surfaces=[], lamps=[], portalRings=[], routeLights=[], sparkParticles=[];
 const skinColors=[0x39efb3,0xd674ff,0xffb34b];
-const courierWheelJewels=[];
+const courierWheelJewels=[],cameraSolids=[];let cameraOcclusion={blocked:false};const cameraAnchor=new THREE.Vector3();
+let riderHeadBone=null,riderHeadBindScale=null;
 let skater,bodyRig,boardRig,avatarMixer=null,avatarActions={},avatarCurrent=null;
 const avatarMetrics={bones:0,skinnedMeshes:0,vertices:0,triangles:0,animations:[],skinLoaded:false,modelLoaded:false};
 const tempV=new THREE.Vector3(), cameraDesired=new THREE.Vector3(), lookDesired=new THREE.Vector3(), lookSmoothed=new THREE.Vector3(0,1,0);
-function save(){try{localStorage.setItem(SAVE,JSON.stringify(profile));localStorage.setItem(SAVE+'.chapter',chapter.serialize());saveAvailable=true;}catch{saveAvailable=false;}$('save-state').textContent=saveAvailable?'Progress saved on this device':'Storage unavailable · progress lasts this visit';}
+function save(){try{localStorage.setItem(SAVE,JSON.stringify(profile));localStorage.setItem(SAVE+'.chapter',chapter.serialize());localStorage.setItem(SAVE+'.courier-trial',courierTrial.serialize());saveAvailable=true;}catch{saveAvailable=false;}$('save-state').textContent=saveAvailable?'Progress saved on this device':'Storage unavailable · progress lasts this visit';}
 function message(text){$('ride-event').textContent=text;}
 function mat(color,extra={}){return new THREE.MeshStandardMaterial({color,roughness:.62,metalness:.08,...extra});}
 function mesh(geometry,material,x=0,y=0,z=0,parent=scene){const item=new THREE.Mesh(geometry,material);item.position.set(x,y,z);item.castShadow=true;item.receiveShadow=true;parent.add(item);return item;}
@@ -106,6 +112,7 @@ function makeWorld(){
  const blocks=[[-26,-9,6,10,66],[26,-9,6,13,66],[-12,-38,22,11,6],[12,-38,20,15,6]];
  blocks.forEach(([x,z,w,h,d],i)=>{
   box(w,h,d,x,h/2,z,brick);
+  cameraSolids.push({id:'plaza-building-'+i,minX:x-w/2,maxX:x+w/2,minY:0,maxY:h,minZ:z-d/2,maxZ:z+d/2});
   box(w+.35,.24,d+.35,x,h+.12,z,gold);
   for(let n=0;n<4;n++){const yy=2+n*2.7;box(w+.1,.06,d+.1,x,yy,z,black);}
  });
@@ -165,7 +172,7 @@ function makeSkater(){
  const loadFBX=(url,key)=>new Promise((resolve,reject)=>{assetState[key]='loading';loader.load(url,obj=>{assetState[key]='loaded';resolve(obj);},undefined,error=>{assetState[key]='failed';reject(error);});});
  const skinPromise=new Promise((resolve,reject)=>{assetState['avatar-skin']='loading';new THREE.TextureLoader().load(base+'Skins/skaterMaleA.png',skin=>{skin.colorSpace=THREE.SRGBColorSpace;avatarMetrics.skinLoaded=true;assetState['avatar-skin']='loaded';resolve(skin);},undefined,error=>{assetState['avatar-skin']='failed';reject(error);});});
  Promise.all([loadFBX(base+'Model/characterMedium.fbx','avatar-model'),skinPromise,...['idle','jump','run'].map(kind=>loadFBX(base+'Animations/'+kind+'.fbx','avatar-'+kind))]).then(([model,skin,...animated])=>{
-  model.traverse(o=>{if(o.isBone)avatarMetrics.bones++;if(o.isSkinnedMesh){avatarMetrics.skinnedMeshes++;avatarMetrics.vertices+=o.geometry.attributes.position.count;avatarMetrics.triangles+=(o.geometry.index?o.geometry.index.count:o.geometry.attributes.position.count)/3;}if(o.isMesh){o.castShadow=true;o.receiveShadow=true;o.material=new THREE.MeshStandardMaterial({map:skin,roughness:.72,metalness:0});}});
+  model.traverse(o=>{if(o.isBone){avatarMetrics.bones++;if(o.name==='Head'){riderHeadBone=o;riderHeadBindScale=o.scale.clone();}}if(o.isSkinnedMesh){avatarMetrics.skinnedMeshes++;avatarMetrics.vertices+=o.geometry.attributes.position.count;avatarMetrics.triangles+=(o.geometry.index?o.geometry.index.count:o.geometry.attributes.position.count)/3;}if(o.isMesh){o.castShadow=true;o.receiveShadow=true;o.material=new THREE.MeshStandardMaterial({map:skin,roughness:.72,metalness:0});}});
   if(avatarMetrics.skinnedMeshes<1||avatarMetrics.bones<20)throw Error('Creator rig missing bones or skinned mesh');
   model.updateMatrixWorld(true);let bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3());
   if(size.z>size.y*1.35&&size.z>size.x*1.35)model.rotation.x=-Math.PI/2;
@@ -204,7 +211,7 @@ function input(){
  let trick=presses.find(k=>TRICKS[k])||(ollieReleased?queuedOllieTrick:null),gamepadName=null;
  const pad=[...(navigator.getGamepads?.()||[])].find(p=>p?.connected);
  if(pad){
-  gamepadName=pad.id;if(pad.buttons[8]?.pressed&&!input.padTalk)openConversation();input.padTalk=pad.buttons[8]?.pressed;const axis=pad.axes[0]||0;if(Math.abs(axis)>.14)steer=-axis;
+  gamepadName=pad.id;if(pad.buttons[9]?.pressed&&!input.padTrial)useCourierTrial();input.padTrial=pad.buttons[9]?.pressed;if(pad.buttons[8]?.pressed&&!input.padTalk)openConversation();input.padTalk=pad.buttons[8]?.pressed;const axis=pad.axes[0]||0;if(Math.abs(axis)>.14)steer=-axis;
   push=push||pad.buttons[7]?.value>.15||pad.axes[1]<-.2;brake=brake||pad.buttons[6]?.value>.2||pad.axes[1]>.4;
   const a=pad.buttons[0]?.pressed;if(a&&!input.padA){olliePressed=true;presses.push('Space');}if(!a&&input.padA){ollieReleased=true;releases.push('Space');}input.padA=a;ollieHeld=ollieHeld||a;
   manual=manual||pad.buttons[5]?.pressed;
@@ -215,9 +222,9 @@ function input(){
 }
 function updateUI(){
  $('score').textContent=String(Math.floor(sim.score)).padStart(4,'0');$('pending').textContent=sim.unbanked>0?String(Math.floor(sim.unbanked)):'';
- $('multiplier').textContent=sim.unbanked>0?'×'+sim.multiplier:'';$('timer').textContent=sim.sessionMode==='chapter'?'∞':String(Math.ceil(sim.timeLeft));
- $('line-number').textContent=sim.line+'/'+LINE.length;
- $('next-feature').textContent=sim.ended?'Session complete':sim.paused?'Ride paused':sim.running?'Next · '+LINE[sim.line]:'Five features. One clean line.';
+ $('multiplier').textContent=sim.unbanked>0?'×'+sim.multiplier:'';$('timer').textContent=courierTrial.active?String(Math.ceil(courierTrial.state==='countdown'?courierTrial.countdown:COURIER_ROUTE.limit-courierTrial.elapsed)):sim.sessionMode==='chapter'?'∞':String(Math.ceil(sim.timeLeft));
+ $('line-number').textContent=courierTrial.active?courierTrial.next+'/'+COURIER_ROUTE.gates.length:sim.line+'/'+LINE.length;
+ $('next-feature').textContent=courierTrial.active?(courierTrial.state==='countdown'?'Dispatch · hold the seal':'Courier · '+COURIER_ROUTE.gates[courierTrial.next].name):sim.ended?'Session complete':sim.paused?'Ride paused':sim.running?'Next · '+LINE[sim.line]:'Five features. One clean line.';
  $('line-order').querySelectorAll('li').forEach((li,i)=>{li.classList.toggle('done',i<sim.line);li.classList.toggle('current',i===sim.line);});
  $('speed-value').textContent=(sim.speed*3.6).toFixed(1);$('best-score').textContent=profile.best.toLocaleString();$('clean-lines').textContent=String(profile.lines);$('progress').textContent=profile.xp.toLocaleString();
  $('pause').disabled=!sim.running||Boolean(dialogueResident);$('start').disabled=Boolean(dialogueResident);$('ride-mode').disabled=Boolean(dialogueResident);$('pause').textContent=sim.paused?'Resume':'Pause';
@@ -227,7 +234,7 @@ function updateUI(){
 }
 function processEvents(){
  for(const e of sim.events.filter(e=>e.serial>lastEvent)){
-  lastEvent=e.serial;chapter.consume(e);
+  lastEvent=e.serial;chapter.consume(e);courierTrial.consume(e);
   if(e.type==='score')message(e.label+' · '+e.points+' added to the line');
   if(e.type==='bank'){message(e.value+' banked. Keep the line alive.');save();}
   if(e.type==='bail'){message(e.reason+' · '+e.lost+' unbanked points lost. R to drop back in.');burst(sim.x,sim.y+.3,sim.z,0xff774f,20);}
@@ -238,6 +245,22 @@ function processEvents(){
   if(e.type==='session-end'){message('Session banked · '+sim.score+' points, '+sim.completedLines+' clean lines. Ride again to build your best.');save();}
  }
 }
+function renderCourierTrial(){
+ const s=courierTrial.snapshot(sim),a=s.availability,key=s.revision+'|'+Math.floor(s.remaining*10)+'|'+Math.ceil(s.countdown)+'|'+Math.floor(a.distance)+'|'+a.canStart+'|'+Boolean(dialogueResident);if(key===trialUIKey)return;trialUIKey=key;
+ $('trial-toggle').setAttribute('aria-pressed',String(s.enabled));$('trial-toggle').setAttribute('aria-label',s.enabled?'Put away courier route':'Show courier route');$('trial-start').disabled=!a.canStart||Boolean(dialogueResident);$('trial-abandon').disabled=!s.active;
+ $('trial-course-actions').hidden=!s.enabled;
+ $('trial-best').textContent=s.record.bestMs===null?'No delivery yet':(s.record.bestMs/1000).toFixed(2)+' s · '+s.medal;
+ $('trial-results').textContent=s.record.completions+' clean deliveries · '+s.record.attempts+' attempts';
+ const target=s.route.gates[s.next];
+ $('trial-readout').textContent=!s.enabled?'The courier has a rehearsal route. Open it when you want a different kind of line.':s.state==='countdown'?'Hold the dispatch seal. '+Math.ceil(s.countdown)+'…':s.state==='running'?'Next: '+target.name+' · '+s.passed+' / '+s.total+' relays · '+s.remaining.toFixed(1)+' seconds left':s.state==='failed'?s.reason:s.state==='finished'?'Delivered in '+(s.lastResultMs/1000).toFixed(2)+' seconds. '+(s.newBest?'New personal best. ':'')+'Your relay crest is fitted to the deck. Return to dispatch for another run.':!a.chapterMode?'Choose Return the Light, the no-clock chapter ride, then skate to the dispatch seal.':!a.rideRunning?'Start or resume your chapter ride, then skate to dispatch.':!a.atStart?'Reach the amber dispatch seal in the west court. '+a.distance.toFixed(1)+' metres to the start.':!a.stopped?'Brake inside the dispatch seal to accept the practice parcel.':'Ready at dispatch. Start the three-count, hold still, then follow four numbered light frames.';
+ $('trial-gates').querySelectorAll('li').forEach((item,i)=>{item.classList.toggle('complete',i<s.passed);item.classList.toggle('current',s.state==='running'&&i===s.next);});
+ if(lastTrialSavedRevision!==s.revision){lastTrialSavedRevision=s.revision;save();}
+}
+function startCourierTrial(){
+ if(dialogueResident)return;if(courierTrial.begin(sim)){held.clear();touchHeld.clear();touchTricks.clear();queuedOllieTrick=null;presses=[];releases=[];message('Hold the dispatch seal for the three-count. A clean delivery earns your relay crest.');canvas.focus();}renderCourierTrial();updateUI();
+}
+function useCourierTrial(){if(dialogueResident)return;if(!courierTrial.enabled){courierTrial.setEnabled(true);renderCourierTrial();return;}if(!courierTrial.active)startCourierTrial();}
+
 function renderChapter(){
  const state=chapter.snapshot(),key=state.revision+'|'+state.nearby;if(chapterUIKey===key)return;chapterUIKey=key;
  const near=RESIDENTS.find(r=>r.id===state.nearby);$('talk').disabled=!near;$('talk').setAttribute('aria-label',near?'Talk to '+near.name:'Stop beside a resident to talk');
@@ -267,9 +290,11 @@ function frame(time){
  const delta=Math.min((time-lastTime)/1000||0,.1);lastTime=time;
  if(!shaders.lost){
   const control=input();accumulator+=delta;let ticks=0;
-  while(accumulator>=1/120&&ticks<12){sim.step(1/120,control);if(control.ollieReleased)queuedOllieTrick=null;chapter.step(1/120,sim);presses=[];releases=[];control.olliePressed=false;control.ollieReleased=false;control.trick=null;accumulator-=1/120;ticks++;}
+  while(accumulator>=1/120&&ticks<12){sim.step(1/120,control);if(control.ollieReleased)queuedOllieTrick=null;chapter.step(1/120,sim);courierTrial.step(sim);presses=[];releases=[];control.olliePressed=false;control.ollieReleased=false;control.trick=null;accumulator-=1/120;ticks++;}
   if(ticks===12)accumulator=0;
   processEvents();
+  // Persist newly earned route records before their success/crest renders.
+  if(lastTrialSavedRevision!==courierTrial.revision){lastTrialSavedRevision=courierTrial.revision;save();}
   const lean=sim.mode==='grind'?sim.balance*.2:clamp(control.steer,-1,1)*Math.min(.22,sim.speed*.018);
   skater.root.position.set(sim.x,sim.y,sim.z);skater.root.rotation.set(0,sim.yaw,lean);
   const crouch=sim.charging?Math.min(.34,sim.charge*.8):sim.mode==='air'?.18:0;
@@ -279,21 +304,22 @@ function frame(time){
   skater.board.rotation.set(sim.mode==='manual'?-.15:0,sim.trick?Math.PI*2*sim.trick.spin*t:0,sim.trick?Math.PI*2*sim.trick.flip*t:0);
   if(sim.trick?.id==='180')skater.body.rotation.y+=Math.PI*t;
   skater.root.rotation.z+=sim.mode==='bail'?.65:0;
-  playAvatar(sim.mode==='air'?'jump':control.push&&sim.speed>1?'run':'idle');if(avatarMixer)avatarMixer.update(sim.paused?0:delta);if(riderDress)riderDress.update(chapter.state.completed,profile.theme,chapter.state.choice);if(city)city.update(sim.paused?0:delta,time,sim);courierWheelJewels.forEach(j=>{j.visible=chapter.state.completed>=2;});
+  playAvatar(sim.mode==='air'?'jump':control.push&&sim.speed>1?'run':'idle');if(avatarMixer)avatarMixer.update(sim.paused?0:delta);if(riderHeadBone&&riderHeadBindScale)riderHeadBone.scale.copy(riderHeadBindScale).multiplyScalar(.78);if(riderDress)riderDress.update(chapter.state.completed,profile.theme,chapter.state.choice);if(city)city.update(sim.paused?0:delta,time,sim);if(courierCourse)courierCourse.update(time);courierWheelJewels.forEach(j=>{j.visible=chapter.state.completed>=2;});
   if(sim.mode==='grind'&&frameCount%4===0)burst(sim.x,sim.y,sim.z,0xffc46a,2);
   for(let i=sparkParticles.length-1;i>=0;i--){const p=sparkParticles[i];p.life-=delta;p.vy-=8*delta;p.mesh.position.x+=p.vx*delta;p.mesh.position.y+=p.vy*delta;p.mesh.position.z+=p.vz*delta;p.mesh.scale.setScalar(Math.max(.01,p.life));if(p.life<=0){scene.remove(p.mesh);p.mesh.geometry.dispose();p.mesh.material.dispose();sparkParticles.splice(i,1);}}
   const heading=sim.yaw+orbit,follow=6.2+(motion?0:sim.speed*.07);
   cameraDesired.set(sim.x+Math.sin(heading)*follow,sim.y+2.8+cameraTilt*2,sim.z+Math.cos(heading)*follow);
   cameraDesired.y=Math.max(cameraDesired.y,terrain(cameraDesired.x,cameraDesired.z)+2.5);
   lookDesired.set(sim.x-Math.sin(sim.yaw)*1.5,sim.y+.9,sim.z-Math.cos(sim.yaw)*1.5);
-  camera.position.lerp(cameraDesired,1-Math.exp(-delta*5));lookSmoothed.lerp(lookDesired,1-Math.exp(-delta*9));camera.lookAt(lookSmoothed);
+  cameraAnchor.set(sim.x,sim.y+1.2,sim.z);const safeDesired=cameraOutsideSolids(cameraAnchor,cameraDesired,cameraSolids);cameraDesired.set(safeDesired.x,safeDesired.y,safeDesired.z);
+  camera.position.lerp(cameraDesired,1-Math.exp(-delta*5));const safeActual=cameraOutsideSolids(cameraAnchor,camera.position,cameraSolids);camera.position.set(safeActual.x,safeActual.y,safeActual.z);cameraOcclusion={blocked:safeDesired.blocked||safeActual.blocked,obstacle:safeDesired.obstacle||safeActual.obstacle||null,distance:safeActual.distance,solidCount:cameraSolids.length};lookSmoothed.lerp(lookDesired,1-Math.exp(-delta*9));camera.lookAt(lookSmoothed);
   camera.fov=62+(motion?0:Math.min(6,sim.speed*.4));camera.updateProjectionMatrix();
   routeLights.forEach((light,i)=>{light.material.color.set(i<sim.line?0xffc666:i===sim.line?0x63ffe5:0x5d346f);light.material.emissive.copy(light.material.color);});
   portalRings.forEach((ring,i)=>{if(!motion)ring.rotation.z=Math.sin(time*.0002+i)*.08;ring.material.emissiveIntensity=profile.lines>0||chapter.state.completed===3?2.3:1.1;});
   skater.cap.material.color.set(skinColors[profile.theme]);skater.deckMaterial.color.set(skinColors[profile.theme]);
   renderer.render(scene,camera);firstFrame=true;frameCount++;elapsedFrames+=delta;
   if(elapsedFrames>1){measuredFps=frameCount/elapsedFrames;frameCount=0;elapsedFrames=0;}
-  if(Math.floor(time/100)%2===0){updateUI();renderChapter();}
+  if(Math.floor(time/100)%2===0){updateUI();renderChapter();renderCourierTrial();}
  }
 }
 function loadControlAtlas(){const image=new Image();assetState['ui-atlas']='loading';image.onload=()=>{assetState['ui-atlas']='loaded';};image.onerror=()=>{assetState['ui-atlas']='failed';loadErrors.push('painted-control-atlas');};image.src=ASSETS+'vorath-controls-v1.png';}
@@ -302,7 +328,7 @@ function installInput(){
  window.addEventListener('keydown',e=>{
   if(dialogueResident){if(e.code==='Escape'){e.preventDefault();closeConversation();}return;}
   if(!keysOwned.includes(e.code)||e.target.closest?.('input,select,textarea'))return;
-  e.preventDefault();if(!e.repeat){presses.push(e.code);if(e.code==='KeyE'){openConversation();return;}if(e.code==='KeyR'){sim.reset(true);save();}if(e.code==='KeyP'||e.code==='Escape')sim.togglePause();}
+  e.preventDefault();if(!e.repeat){presses.push(e.code);if(e.code==='KeyT'){useCourierTrial();return;}if(e.code==='KeyE'){openConversation();return;}if(e.code==='KeyR'){sim.reset(true);save();}if(e.code==='KeyP'||e.code==='Escape')sim.togglePause();}
   held.add(e.code);
  });
  window.addEventListener('keyup',e=>{if(keysOwned.includes(e.code)){e.preventDefault();held.delete(e.code);releases.push(e.code);}});
@@ -331,6 +357,9 @@ function installInput(){
  }
  $('start').addEventListener('click',()=>{sim.start();clear();orbit=0;cameraTilt=.38;save();message('Drop in. Build speed, then follow the five lamps.');updateUI();canvas.focus();});
  $('pause').addEventListener('click',()=>{sim.togglePause();clear();updateUI();});
+ $('trial-toggle').addEventListener('click',()=>{courierTrial.setEnabled(!courierTrial.enabled);renderCourierTrial();});
+ $('trial-start').addEventListener('click',startCourierTrial);
+ $('trial-abandon').addEventListener('click',()=>{courierTrial.cancel('The practice parcel was returned. Brake at dispatch to try again.');renderCourierTrial();});
  $('talk').addEventListener('click',openConversation);
  $('dialogue-close').addEventListener('click',closeConversation);
  $('contract-accept').addEventListener('click',()=>{if(chapter.accept(dialogueResident)){message(CONTRACTS[chapter.state.completed].title+' accepted.');save();}closeConversation();renderChapter();});
@@ -347,19 +376,20 @@ try{
  renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.25;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
  scene=new THREE.Scene();scene.background=new THREE.Color(0x10152d);scene.fog=new THREE.FogExp2(0x12152e,.012);
  camera=new THREE.PerspectiveCamera(62,1,.08,180);camera.position.set(4,5,13);
- scene.add(new THREE.HemisphereLight(0x8fbfff,0x26152e,1.8));
- const moon=new THREE.DirectionalLight(0xd5e5ff,2.3);moon.position.set(-12,24,12);moon.castShadow=true;
+ scene.add(new THREE.HemisphereLight(0x8099b8,0x1c1528,1.05));
+ const moon=new THREE.DirectionalLight(0xb8cff6,2.5);moon.position.set(-12,24,12);moon.castShadow=true;
  moon.shadow.mapSize.set(1024,1024);Object.assign(moon.shadow.camera,{left:-28,right:28,top:28,bottom:-28,near:1,far:75});moon.shadow.bias=-.0002;scene.add(moon);
- const warm=new THREE.DirectionalLight(0xfcba61,.8);warm.position.set(14,10,-20);scene.add(warm);makeReflections();loadControlAtlas();
- makeWorld();const mosaic=texture('vorath-eye-mosaic-v1.png');city=buildCity(scene,chapter,{mosaic});skater=makeSkater();bodyRig=skater.body;boardRig=skater.board;installInput();resize();new ResizeObserver(resize).observe(canvas);
+ const warm=new THREE.DirectionalLight(0xd65342,.95);warm.position.set(14,10,-20);scene.add(warm);makeReflections();loadControlAtlas();
+ makeWorld();const mosaic=texture('vorath-eye-mosaic-v1.png'),mural=texture('vorath-acid-eye-mural-v1.png');city=buildCity(scene,chapter,{mosaic,mural,repairKitURL:ASSETS+'keeper-repair-station-v2.glb',onKitStatus(status,error){assetState['keeper-station-model']=status;if(error)loadErrors.push('keeper-station-model: '+error);}});cameraSolids.push(...city.cameraBounds);courierCourse=buildCourierCourse(scene,courierTrial,{reducedMotion:motion});skater=makeSkater();courierCourse.mountPrize(skater.board);bodyRig=skater.body;boardRig=skater.board;installInput();resize();new ResizeObserver(resize).observe(canvas);
  canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();shaders.lost=true;if(sim.running&&!sim.paused)sim.togglePause();message('Graphics paused while the context recovers. Saved progress is safe.');});
  canvas.addEventListener('webglcontextrestored',()=>{shaders.lost=false;makeReflections();lastTime=performance.now();accumulator=0;resize();message('Graphics restored. Resume the ride when ready.');});
  window.addEventListener('pagehide',event=>{save();if(!event.persisted){disposed=true;reflectionTarget?.dispose();renderer.dispose();}else if(sim.running&&!sim.paused)sim.togglePause();});
  window.addEventListener('pageshow',event=>{if(event.persisted){lastTime=performance.now();accumulator=0;resize();}});
- requestAnimationFrame(frame);updateUI();renderChapter();save();
+ if(new URLSearchParams(window.location.search).get('mode')==='chapter'){$('ride-mode').value='chapter';$('ride-mode').dispatchEvent(new Event('change',{bubbles:true}));}
+ requestAnimationFrame(frame);updateUI();renderChapter();renderCourierTrial();save();
 }catch(error){loadErrors.push(String(error));$('graphics-error').hidden=false;$('graphics-error').textContent='The 3D plaza could not start on this graphics context. '+String(error.message||error);}
 window.__KOSHER_LINES__=Object.freeze({
- snapshot:()=>({...sim.snapshot(),career:chapter.snapshot(),graphics:graphicsSnapshot(),renderer:{firstFrame,modelLoaded,modelError,avatar:{...avatarMetrics,animations:[...avatarMetrics.animations]},assets:{...assetState},texturesLoaded:Object.keys(assetState).filter(name=>/\.(jpg|png|webp)$/.test(name)&&assetState[name]==='loaded').length+Number(avatarMetrics.skinLoaded),errors:[...loadErrors],contextLost:shaders.lost,fps:Math.round(measuredFps),quality,wardrobe:riderDress?.snapshot()||null,wheelJewelsVisible:courierWheelJewels.filter(j=>j.visible).length,reflections:{capturedFaceSize:64,textureWidth:reflectionTarget?.width||0,textureHeight:reflectionTarget?.height||0,environmentAssigned:scene?.environment===reflectionTarget?.texture},city:city?{...city.metrics,...city.snapshot()}:null,drawCalls:renderer?.info.render.calls||0},camera:camera?{x:camera.position.x,y:camera.position.y,z:camera.position.z}:null,storageAvailable:saveAvailable}),
+ snapshot:()=>({...sim.snapshot(),career:chapter.snapshot(),courierTrial:courierTrial.snapshot(sim),graphics:graphicsSnapshot(),renderer:{firstFrame,modelLoaded,modelError,avatar:{...avatarMetrics,animations:[...avatarMetrics.animations],headScale:riderHeadBone?{x:riderHeadBone.scale.x,y:riderHeadBone.scale.y,z:riderHeadBone.scale.z}:null},assets:{...assetState},texturesLoaded:Object.keys(assetState).filter(name=>/\.(jpg|png|webp)$/.test(name)&&assetState[name]==='loaded').length+Number(avatarMetrics.skinLoaded),errors:[...loadErrors],contextLost:shaders.lost,fps:Math.round(measuredFps),quality,courierCourse:courierCourse?.snapshot()||null,wardrobe:riderDress?.snapshot()||null,wheelJewelsVisible:courierWheelJewels.filter(j=>j.visible).length,reflections:{capturedFaceSize:64,textureWidth:reflectionTarget?.width||0,textureHeight:reflectionTarget?.height||0,environmentAssigned:scene?.environment===reflectionTarget?.texture},city:city?{...city.metrics,...city.snapshot()}:null,drawCalls:renderer?.info.render.calls||0},camera:camera?{x:camera.position.x,y:camera.position.y,z:camera.position.z,occlusion:{...cameraOcclusion}}:null,storageAvailable:saveAvailable}),
  provenance:'Reconstructed missing simulation and rendering from retained Grok source fragments. Original art retained; no exact full-source restoration claimed.'
 });
 window.render_game_to_text=()=>JSON.stringify(window.__KOSHER_LINES__.snapshot());

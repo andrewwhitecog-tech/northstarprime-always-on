@@ -33,8 +33,9 @@ function raySphere(o,d,c,r,max){const x=o.x-c.x,y=o.y-c.y,z=o.z-c.z,b=x*d.x+y*d.
 function normalized(p){if(!point(p))return null;const n=Math.hypot(p.x,p.y,p.z);return n>1e-6?{x:p.x/n,y:p.y/n,z:p.z/n}:null;}
 const at=(o,d,t)=>({x:o.x+d.x*t,y:o.y+d.y*t,z:o.z+d.z*t});
 export class StreetCombat{
- constructor(saved=null){this.time=0;this.serial=0;this.events=[];this.tracers=[];this.tracerSerial=0;this.health=100;this.ammo=8;this.reserve=64;this.reloadLeft=0;this.cooldown=0;this.lastDamage=-100;this.recoveryLeft=0;this.tokens=new Set();this.targets=CREW_SITES.map((s,i)=>({...s,homeX:s.x,homeZ:s.z,phase:i*1.7,fireLeft:2+i*.6,disabled:false,hitFlash:0}));if(saved)this.restore(saved);}
+ constructor(saved=null){this.time=0;this.serial=0;this.events=[];this.deliveredDownedSerial=0;this.tracers=[];this.tracerSerial=0;this.health=100;this.ammo=8;this.reserve=64;this.reloadLeft=0;this.cooldown=0;this.lastDamage=-100;this.recoveryLeft=0;this.tokens=new Set();this.targets=CREW_SITES.map((s,i)=>({...s,homeX:s.x,homeZ:s.z,phase:i*1.7,fireLeft:2+i*.6,disabled:false,hitFlash:0}));if(saved)this.restore(saved);}
  event(type,detail={}){this.events.push({serial:++this.serial,type,time:this.time,...detail});if(this.events.length>96)this.events.shift();}
+ takeDownedEvent(){const event=this.events.findLast(e=>e.type==='player-downed'&&e.serial>this.deliveredDownedSerial);if(!event)return null;this.deliveredDownedSerial=event.serial;return {...event};}
  startReload(){if(this.reloadLeft>0||this.ammo>=8||this.reserve<=0||this.recoveryLeft>0)return false;this.reloadLeft=COMBAT_RULES.reloadSeconds;this.event('reload-start');return true;}
  obstructed(o,d,max,colliders){let distance=max;for(const c of colliders){const b=colliderBounds(c);if(!b)continue;const t=rayBox(o,d,b,distance);if(t!==null)distance=Math.min(distance,t);}return distance;}
  tracer(o,end,kind){this.tracers.push({id:++this.tracerSerial,origin:copy(o),end:copy(end),kind,life:.105});if(this.tracers.length>32)this.tracers.shift();}

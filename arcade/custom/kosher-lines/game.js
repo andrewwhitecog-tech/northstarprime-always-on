@@ -14,6 +14,7 @@ import { buildCourierCourse } from './courier-course.js';
 import { createActionMode } from './action-mode.js';
 import { PEACOCK_KIOSK, PEACOCK_KIOSK_COLLIDER } from './peacock-signature.mjs';
 import {applySkateTrickPose} from './rider-pose.mjs';
+import {createUnderpassKit} from './underpass-kit.js';
 const actionArt=await fetch('./fan-art.json').then(r=>{if(!r.ok)throw Error('Fan-art manifest HTTP '+r.status);return r.json();});
 const readActionSave=key=>{try{return localStorage.getItem(key);}catch{return null;}};
 let actionMode=null,selectedRide='arcade',actionSaveClock=0;
@@ -27,10 +28,10 @@ const sim=new KosherSim(profile);
 let chapterSaved;try{chapterSaved=parseChapter(localStorage.getItem(SAVE+'.chapter'));}catch{chapterSaved=defaultChapter();}
 let courierSaved;try{courierSaved=parseCourierRecord(localStorage.getItem(SAVE+'.courier-trial'));}catch{courierSaved=defaultCourierRecord();}
 const courierTrial=new CourierTrial(courierSaved);let courierCourse=null,trialUIKey='',lastTrialSavedRevision=-1;
-const chapter=new PlazaChapter(chapterSaved);let streetAtmosphere=null,city=null,riderDress=null,chapterUIKey='',dialogueResident=null,conversationPaused=false,lastChapterRevision=-1;
+const chapter=new PlazaChapter(chapterSaved);let streetAtmosphere=null,underpass=null,city=null,riderDress=null,chapterUIKey='',dialogueResident=null,conversationPaused=false,lastChapterRevision=-1;
 const held=new Set(), touchHeld=new Set(), touchTricks=new Map();
 let queuedOllieTrick=null;
-let presses=[], releases=[], lastEvent=0, accumulator=0, lastTime=0, orbit=0, cameraTilt=.38, dragging=false, lastPointer=null;
+let presses=[], releases=[], lastEvent=0, accumulator=0, lastTime=0, orbit=0, cameraTilt=-.85, dragging=false, lastPointer=null;
 let reflectionTarget=null;
 let peacockKiosk=null;
 let renderer, scene, camera, disposed=false, firstFrame=false, modelLoaded=false, modelError=null;
@@ -184,6 +185,7 @@ function makeWorld(muralTexture){
  const points=[];for(let i=0;i<130;i++){const a=i*2.399963,r=40+(i%9)*3;points.push(Math.sin(a)*r,15+(i*7%31),Math.cos(a)*r-10);}
  const starGeo=new THREE.BufferGeometry();starGeo.setAttribute('position',new THREE.Float32BufferAttribute(points,3));
  scene.add(new THREE.Points(starGeo,new THREE.PointsMaterial({color:0xaec5ff,size:.075,transparent:true,opacity:.75})));
+ return {concrete};
 }
 function makeSkater(){
  const root=new THREE.Group(),body=new THREE.Group(),board=new THREE.Group();root.add(board,body);scene.add(root);
@@ -359,7 +361,7 @@ function frame(time){
   for(let i=sparkParticles.length-1;i>=0;i--){const p=sparkParticles[i];p.life-=delta;p.vy-=8*delta;p.mesh.position.x+=p.vx*delta;p.mesh.position.y+=p.vy*delta;p.mesh.position.z+=p.vz*delta;p.mesh.scale.setScalar(Math.max(.01,p.life));if(p.life<=0){scene.remove(p.mesh);p.mesh.geometry.dispose();p.mesh.material.dispose();sparkParticles.splice(i,1);}}
   const heading=sim.yaw+orbit,follow=3.7+(motion?0:sim.speed*.06);
   cameraDesired.set(sim.x+Math.sin(heading)*follow,sim.y+1.45+cameraTilt*.9,sim.z+Math.cos(heading)*follow);
-  cameraDesired.y=Math.max(cameraDesired.y,terrain(cameraDesired.x,cameraDesired.z)+1.4);
+  cameraDesired.y=Math.max(cameraDesired.y,terrain(cameraDesired.x,cameraDesired.z)+.55);
   lookDesired.set(sim.x-Math.sin(sim.yaw)*.9,sim.y+.95,sim.z-Math.cos(sim.yaw)*.9);
   cameraAnchor.set(sim.x,sim.y+1.2,sim.z);const safeDesired=cameraOutsideSolids(cameraAnchor,cameraDesired,cameraSolids);cameraDesired.set(safeDesired.x,safeDesired.y,safeDesired.z);
   camera.position.lerp(cameraDesired,1-Math.exp(-delta*5));const safeActual=cameraOutsideSolids(cameraAnchor,camera.position,cameraSolids);camera.position.set(safeActual.x,safeActual.y,safeActual.z);cameraOcclusion={blocked:safeDesired.blocked||safeActual.blocked,obstacle:safeDesired.obstacle||safeActual.obstacle||null,distance:safeActual.distance,solidCount:cameraSolids.length};lookSmoothed.lerp(lookDesired,1-Math.exp(-delta*9));camera.lookAt(lookSmoothed);
@@ -386,7 +388,7 @@ function installInput(){
  document.addEventListener('visibilitychange',()=>{if(document.hidden){clear();pausedByVisibility=sim.running&&!sim.paused;if(pausedByVisibility)sim.togglePause();}lastTime=performance.now();});
  canvas.addEventListener('contextmenu',e=>{if(selectedRide==='rival')e.preventDefault();});
  canvas.addEventListener('pointerdown',e=>{if(selectedRide==='rival'&&e.button===0){touchHeld.add('fire');canvas.setPointerCapture(e.pointerId);return;}dragging=true;lastPointer={x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId);});
- canvas.addEventListener('pointermove',e=>{if(dragging&&lastPointer){orbit-=(e.clientX-lastPointer.x)*.005;cameraTilt=clamp(cameraTilt+(e.clientY-lastPointer.y)*.002,-.1,1);lastPointer={x:e.clientX,y:e.clientY};}});
+ canvas.addEventListener('pointermove',e=>{if(dragging&&lastPointer){orbit-=(e.clientX-lastPointer.x)*.005;cameraTilt=clamp(cameraTilt+(e.clientY-lastPointer.y)*.002,-1.1,1.4);lastPointer={x:e.clientX,y:e.clientY};}});
  canvas.addEventListener('pointerup',()=>{touchHeld.delete('fire');dragging=false;lastPointer=null;});canvas.addEventListener('pointercancel',()=>{touchHeld.delete('fire');dragging=false;lastPointer=null;});
  canvas.addEventListener('lostpointercapture',()=>touchHeld.delete('fire'));
  for(const button of document.querySelectorAll('[data-hold]')){
@@ -407,7 +409,7 @@ function installInput(){
   button.addEventListener('lostpointercapture',e=>{touchTricks.delete(e.pointerId);button.classList.remove('pressed');});
   button.addEventListener('click',e=>{if(e.detail===0)presses.push(code);});
  }
- $('start').addEventListener('click',()=>{sim.start();if(selectedRide==='rival')actionMode.start();clear();orbit=0;cameraTilt=.38;save();message(selectedRide==='rival'?'Three minutes. Outskate Art, shoot the sentries, land the clip.':'Drop in. Build speed, then follow the five lamps.');updateUI();canvas.focus();});
+ $('start').addEventListener('click',()=>{sim.start();if(selectedRide==='rival')actionMode.start();clear();orbit=0;cameraTilt=-.85;save();message(selectedRide==='rival'?'Three minutes. Outskate Art, shoot the sentries, land the clip.':'Drop in. Build speed, then follow the five lamps.');updateUI();canvas.focus();});
  $('pause').addEventListener('click',()=>{sim.togglePause();clear();updateUI();});
  $('trial-toggle').addEventListener('click',()=>{courierTrial.setEnabled(!courierTrial.enabled);renderCourierTrial();});
  $('trial-start').addEventListener('click',startCourierTrial);
@@ -420,8 +422,8 @@ function installInput(){
  $('ride-mode').addEventListener('change',()=>{if(dialogueResident)closeConversation();selectedRide=$('ride-mode').value;sim.sessionMode=selectedRide==='arcade'?'arcade':'chapter';actionMode.setEnabled(selectedRide==='rival');$('action-controls').hidden=selectedRide!=='rival';$('action-brief').hidden=selectedRide!=='rival';$('mode-description').textContent=selectedRide==='rival'?'BLP vs Art · three-minute heat, then sandbox · clips and cover decks save locally.':sim.sessionMode==='chapter'?'Return the Light · no clock · chapter progress saves on this device.':'Two-minute arcade · chapter progress carries across both modes.';sim.reset(true);if(selectedRide==='rival')actionMode.start();clear();save();message($('mode-description').textContent);updateUI();renderAction();requestAnimationFrame(resize);});
  $('reload').addEventListener('click',()=>presses.push('KeyL'));$('aim-lock').addEventListener('click',()=>{actionMode.toggleAim();renderAction();});
  $('cover-rack').addEventListener('click',event=>{const button=event.target.closest('[data-cover]');if(button&&actionMode.selectBoard(button.dataset.cover)){save();renderAction();}});
- $('camera-reset').addEventListener('click',()=>{orbit=0;cameraTilt=.38;});
- $('quality').addEventListener('change',()=>{quality=$('quality').value;$('quality-description').textContent=quality==='low'?'Low power · simpler distant detail':'Shadows + detail';renderer.setPixelRatio(quality==='low'?0.5:Math.min(devicePixelRatio||1,1.5));renderer.shadowMap.enabled=quality!=='low';streetAtmosphere?.setQuality(quality);city?.setQuality(quality);resize();});
+ $('camera-reset').addEventListener('click',()=>{orbit=0;cameraTilt=-.85;});
+ $('quality').addEventListener('change',()=>{quality=$('quality').value;$('quality-description').textContent=quality==='low'?'Low power · simpler distant detail':'Shadows + detail';renderer.setPixelRatio(quality==='low'?0.5:Math.min(devicePixelRatio||1,1.5));renderer.shadowMap.enabled=quality!=='low';streetAtmosphere?.setQuality(quality);underpass?.setQuality(quality);city?.setQuality(quality);resize();});
  for(const button of document.querySelectorAll('[data-theme]'))button.addEventListener('click',()=>{profile.theme=Number(button.dataset.theme);save();updateUI();});
 }
 try{
@@ -434,10 +436,10 @@ try{
  const moon=new THREE.DirectionalLight(0xb8cff6,2.5);moon.position.set(-12,24,12);moon.castShadow=true;
  moon.shadow.mapSize.set(1024,1024);Object.assign(moon.shadow.camera,{left:-28,right:28,top:28,bottom:-28,near:1,far:75});moon.shadow.bias=-.0002;scene.add(moon);
  const warm=new THREE.DirectionalLight(0xffad72,.5);warm.position.set(14,10,-20);scene.add(warm);makeReflections();loadControlAtlas();
- const mural=texture('vorath-acid-eye-mural-v1.png');makeWorld(mural);streetAtmosphere=createStreetAtmosphere({THREE,scene,quality,reducedMotion:motion});cameraSolids.push(...streetAtmosphere.cameraBounds);const mosaic=texture('vorath-eye-mosaic-v1.png');city=buildCity(scene,chapter,{mosaic,mural,repairKitURL:ASSETS+'keeper-repair-station-v2.glb',bayKitURL:ASSETS+'kosher-arcade-bay-v1.glb',storyPropsURL:ASSETS+'kosher-story-props-v1.glb',onStoryStatus(status,error){assetState['story-props-model']=status;if(error)loadErrors.push('story-props-model: '+error);},onBayStatus(status,error){assetState['arcade-bay-model']=status;if(error)loadErrors.push('arcade-bay-model: '+error);},onKitStatus(status,error){assetState['keeper-station-model']=status;if(error)loadErrors.push('keeper-station-model: '+error);}});cameraSolids.push(...city.cameraBounds);courierCourse=buildCourierCourse(scene,courierTrial,{reducedMotion:motion});actionMode=createActionMode(THREE,{scene,sim,art:actionArt,colliders:[...COLLIDERS,...cameraSolids],readSave:readActionSave,saveKey:SAVE,onStatus:message});skater=makeSkater();courierCourse.mountPrize(skater.board);bodyRig=skater.body;boardRig=skater.board;installInput();resize();window.addEventListener('resize',resize);new ResizeObserver(resize).observe(canvas);
+ const mural=texture('vorath-acid-eye-mural-v1.png');const world=makeWorld(mural);underpass=createUnderpassKit({THREE,scene,concrete:world.concrete,muralTexture:mural,quality});cameraSolids.push(...underpass.cameraBounds);streetAtmosphere=createStreetAtmosphere({THREE,scene,quality,reducedMotion:motion});cameraSolids.push(...streetAtmosphere.cameraBounds);const mosaic=texture('vorath-eye-mosaic-v1.png');city=buildCity(scene,chapter,{mosaic,mural,repairKitURL:ASSETS+'keeper-repair-station-v2.glb',bayKitURL:ASSETS+'kosher-arcade-bay-v1.glb',storyPropsURL:ASSETS+'kosher-story-props-v1.glb',onStoryStatus(status,error){assetState['story-props-model']=status;if(error)loadErrors.push('story-props-model: '+error);},onBayStatus(status,error){assetState['arcade-bay-model']=status;if(error)loadErrors.push('arcade-bay-model: '+error);},onKitStatus(status,error){assetState['keeper-station-model']=status;if(error)loadErrors.push('keeper-station-model: '+error);}});cameraSolids.push(...city.cameraBounds);courierCourse=buildCourierCourse(scene,courierTrial,{reducedMotion:motion});actionMode=createActionMode(THREE,{scene,sim,art:actionArt,colliders:[...COLLIDERS,...cameraSolids],readSave:readActionSave,saveKey:SAVE,onStatus:message});skater=makeSkater();courierCourse.mountPrize(skater.board);bodyRig=skater.body;boardRig=skater.board;installInput();resize();window.addEventListener('resize',resize);new ResizeObserver(resize).observe(canvas);
  canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();shaders.lost=true;if(sim.running&&!sim.paused)sim.togglePause();message('Graphics paused while the context recovers. Saved progress is safe.');});
  canvas.addEventListener('webglcontextrestored',()=>{shaders.lost=false;makeReflections();lastTime=performance.now();accumulator=0;resize();message('Graphics restored. Resume the ride when ready.');});
- window.addEventListener('pagehide',event=>{save();if(!event.persisted){disposed=true;streetAtmosphere?.dispose();reflectionTarget?.dispose();renderer.dispose();}else if(sim.running&&!sim.paused)sim.togglePause();});
+ window.addEventListener('pagehide',event=>{save();if(!event.persisted){disposed=true;streetAtmosphere?.dispose();underpass?.dispose();reflectionTarget?.dispose();renderer.dispose();}else if(sim.running&&!sim.paused)sim.togglePause();});
  window.addEventListener('pageshow',event=>{if(event.persisted){lastTime=performance.now();accumulator=0;resize();}});
  const requestedMode=new URLSearchParams(window.location.search).get('mode');if(['chapter','rival'].includes(requestedMode)){$('ride-mode').value=requestedMode;$('ride-mode').dispatchEvent(new Event('change',{bubbles:true}));}
  requestAnimationFrame(frame);updateUI();renderChapter();renderCourierTrial();save();
@@ -451,7 +453,7 @@ async function prepareVisuals(){
 }
 window.__KOSHER_LINES__=Object.freeze({
  prepareVisuals,
- snapshot:()=>({...sim.snapshot(),selectedRide,action:actionMode?.snapshot()||null,career:chapter.snapshot(),courierTrial:courierTrial.snapshot(sim),graphics:graphicsSnapshot(),renderer:{firstFrame,modelLoaded,modelError,shaderPreparation:shaderPreparation?{...shaderPreparation}:null,peacockKiosk:{built:peacockKiosk?.parent===scene,position:peacockKiosk?{x:peacockKiosk.position.x,z:peacockKiosk.position.z}:null,clipZone:{...PEACOCK_KIOSK}},avatar:{...avatarMetrics,pose:{activeClip:avatarCurrent,skatePush:skatePushRig?.snapshot()||null,bodyScaleY:skater?.body.scale.y,bodyYaw:skater?.body.rotation.y,boardYaw:skater?.board.rotation.y,modelY:skater?.modelContainer.position.y},animations:[...avatarMetrics.animations],headScale:riderHeadBone?{x:riderHeadBone.scale.x,y:riderHeadBone.scale.y,z:riderHeadBone.scale.z}:null},assets:{...assetState},texturesLoaded:Object.keys(assetState).filter(name=>/\.(jpg|png|webp)$/.test(name)&&assetState[name]==='loaded').length+Number(avatarMetrics.skinLoaded),errors:[...loadErrors],contextLost:shaders.lost,fps:Math.round(measuredFps),quality,courierCourse:courierCourse?.snapshot()||null,wardrobe:riderDress?.snapshot()||null,wheelJewelsVisible:courierWheelJewels.filter(j=>j.visible).length,reflections:{capturedFaceSize:64,textureWidth:reflectionTarget?.width||0,textureHeight:reflectionTarget?.height||0,environmentAssigned:scene?.environment===reflectionTarget?.texture},city:city?{...city.metrics,...city.snapshot()}:null,streetscape:streetAtmosphere?.stats()||null,drawCalls:renderer?.info.render.calls||0},camera:camera?{x:camera.position.x,y:camera.position.y,z:camera.position.z,occlusion:{...cameraOcclusion}}:null,storageAvailable:saveAvailable}),
+ snapshot:()=>({...sim.snapshot(),selectedRide,action:actionMode?.snapshot()||null,career:chapter.snapshot(),courierTrial:courierTrial.snapshot(sim),graphics:graphicsSnapshot(),renderer:{firstFrame,modelLoaded,modelError,shaderPreparation:shaderPreparation?{...shaderPreparation}:null,peacockKiosk:{built:peacockKiosk?.parent===scene,position:peacockKiosk?{x:peacockKiosk.position.x,z:peacockKiosk.position.z}:null,clipZone:{...PEACOCK_KIOSK}},avatar:{...avatarMetrics,pose:{activeClip:avatarCurrent,skatePush:skatePushRig?.snapshot()||null,bodyScaleY:skater?.body.scale.y,bodyYaw:skater?.body.rotation.y,boardYaw:skater?.board.rotation.y,modelY:skater?.modelContainer.position.y},animations:[...avatarMetrics.animations],headScale:riderHeadBone?{x:riderHeadBone.scale.x,y:riderHeadBone.scale.y,z:riderHeadBone.scale.z}:null},assets:{...assetState},texturesLoaded:Object.keys(assetState).filter(name=>/\.(jpg|png|webp)$/.test(name)&&assetState[name]==='loaded').length+Number(avatarMetrics.skinLoaded),errors:[...loadErrors],contextLost:shaders.lost,fps:Math.round(measuredFps),quality,courierCourse:courierCourse?.snapshot()||null,wardrobe:riderDress?.snapshot()||null,wheelJewelsVisible:courierWheelJewels.filter(j=>j.visible).length,reflections:{capturedFaceSize:64,textureWidth:reflectionTarget?.width||0,textureHeight:reflectionTarget?.height||0,environmentAssigned:scene?.environment===reflectionTarget?.texture},city:city?{...city.metrics,...city.snapshot()}:null,streetscape:streetAtmosphere?.stats()||null,underpass:underpass?{...underpass.metrics,current:underpass.stats()}:null,drawCalls:renderer?.info.render.calls||0},camera:camera?{x:camera.position.x,y:camera.position.y,z:camera.position.z,occlusion:{...cameraOcclusion}}:null,storageAvailable:saveAvailable}),
  provenance:'Reconstructed missing simulation and rendering from retained Grok source fragments. Original art retained; no exact full-source restoration claimed.'
 });
 window.render_game_to_text=()=>JSON.stringify(window.__KOSHER_LINES__.snapshot());

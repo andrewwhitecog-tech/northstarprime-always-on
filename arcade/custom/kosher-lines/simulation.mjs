@@ -37,6 +37,21 @@ export const COLLIDERS=Object.freeze([
  {x:-17,z:-12,w:3,d:3,h:1.1},{x:17,z:-24,w:3,d:3,h:1.1},
  ...CITY_COLLIDERS
 ]);
+// A hit can drop an airborne rider directly above a resident or prop. Resolve
+// to the nearest reachable ground point so recovery never traps the controller.
+export function clearGroundPosition(x,z){
+ const origin={x:clamp(x,-23,23),z:clamp(z,-34,15)},queue=[origin],seen=new Set();
+ for(let attempts=0;queue.length&&attempts<256;attempts++){
+  queue.sort((a,b)=>(a.x-x)**2+(a.z-z)**2-((b.x-x)**2+(b.z-z)**2));const p=queue.shift(),key=p.x.toFixed(6)+','+p.z.toFixed(6);if(seen.has(key))continue;seen.add(key);
+  const ground=terrain(p.x,p.z),overlaps=COLLIDERS.filter(b=>Math.abs(p.x-b.x)<b.w/2+.28&&Math.abs(p.z-b.z)<b.d/2+.28&&ground<b.h-.06);
+  if(!overlaps.length)return p;
+  for(const b of overlaps)for(const next of [{x:b.x-b.w/2-.281,z:p.z},{x:b.x+b.w/2+.281,z:p.z},{x:p.x,z:b.z-b.d/2-.281},{x:p.x,z:b.z+b.d/2+.281}])if(Math.abs(next.x)<=23&&next.z>=-34&&next.z<=15&&!seen.has(next.x.toFixed(6)+','+next.z.toFixed(6)))queue.push(next);
+ }
+ return {x:0,z:5};
+}
+function movementBlocked(x,z,y,grounded){
+ return Math.abs(x)>23||z>15||z< -34||(grounded&&terrain(x,z)>y+.34)||COLLIDERS.some(b=>Math.abs(x-b.x)<b.w/2+.28&&Math.abs(z-b.z)<b.d/2+.28&&y<b.h-.06);
+}
 export function defaultProfile(){return {version:1,best:0,lines:0,xp:0,bestCombo:0,sessions:0,theme:0};}
 export function parseProfile(raw){
   try{const p=JSON.parse(raw);if(!p||p.version!==1)return defaultProfile();
@@ -96,7 +111,7 @@ export class KosherSim{
  bail(reason){
   if(this.bailTime>0)return;const lost=Math.round(this.unbanked);
   this.bailTime=1.1;this.bails++;this.mode='bail';this.speed*=.2;this.vx*=.2;this.vz*=.2;this.vy=0;
-  this.y=terrain(this.x,this.z);this.grounded=true;this.grinding=null;this.trick=null;this.trickTime=0;
+  const safe=clearGroundPosition(this.x,this.z);this.x=safe.x;this.z=safe.z;this.y=terrain(this.x,this.z);this.grounded=true;this.grinding=null;this.trick=null;this.trickTime=0;
   this.unbanked=0;this.multiplier=1;this.comboLeft=0;this.comboTricks=[];this.balance=0;this.manualTime=0;
   this.flags={funbox:false,stair:false,quarter:false};this.pendingRail=null;this.manualGardenTime=0;this.line=0;this.event('bail',{reason,lost});
  }
@@ -162,12 +177,16 @@ export class KosherSim{
     this.vx+=forwardX*(input.push?.3:0)*dt;this.vz+=forwardZ*(input.push?.3:0)*dt;
     this.y+=this.vy*dt;
   }
-  const nx=this.x+this.vx*dt,nz=this.z+this.vz*dt,nh=terrain(nx,nz);
-  let blocked=this.grounded&&nh>this.y+.34;
-  for(const b of COLLIDERS)if(Math.abs(nx-b.x)<b.w/2+.28&&Math.abs(nz-b.z)<b.d/2+.28&&this.y<b.h-.06)blocked=true;
-  if(Math.abs(nx)>23||nz>15||nz< -34)blocked=true;
+  const nx=this.x+this.vx*dt,nz=this.z+this.vz*dt;
+  const blocked=movementBlocked(nx,nz,this.y,this.grounded);
   if(blocked){
     if(this.speed>7.5){this.bail('Hard impact');return;}
+    // A glancing low-speed contact slides along the free axis. Full-vector
+    // rejection made a diagonal approach stick indefinitely at a prop corner.
+    const slideX=!movementBlocked(nx,this.z,this.y,this.grounded);
+    if(slideX)this.x=nx;else this.vx=0;
+    const slideZ=!movementBlocked(this.x,nz,this.y,this.grounded);
+    if(slideZ)this.z=nz;else this.vz=0;
     this.speed*=Math.exp(-5*dt);this.vx*=.6;this.vz*=.6;
   }else{this.x=nx;this.z=nz;}
   this.stats.distance+=Math.hypot(this.x-oldX,this.z-oldZ);

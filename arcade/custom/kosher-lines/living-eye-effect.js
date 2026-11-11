@@ -2,13 +2,14 @@
 // eyes: [{center:[u,v],radius:[ru,rv],irisRadius:.42}]. Use transformed map UVs.
 // Gaze values are normalized [-1,1]. First install owns configuration until disposed.
 // enabled:true is required; memorial:true also requires allowMemorial:true.
+// drip.roughness (.08-.8), metalness (0-.9), bump (0-.004 world units) affect ink only.
 // update(dt,{paused,gaze:{x,y}|[{x,y},...]}); no DOM, images, lights or timers.
 const installed=new WeakMap();
-const MAX_EYES=8,VERSION='northstar-living-eye-v1';
+const MAX_EYES=8,VERSION='northstar-living-eye-v2';
 const bounded=(v,min,max)=>Math.max(min,Math.min(max,v));
 const finite=(v,fallback,min,max)=>Number.isFinite(v)?bounded(v,min,max):fallback;
 export function installLivingEyeEffect({THREE,material,eyes=[],enabled=false,memorial=false,allowMemorial=false,gaze=true,blink=false,pulse=false,drip={}}={}){
- if(!THREE?.Vector2||!THREE?.Vector4||!THREE?.Color||!material?.isMeshStandardMaterial)throw new TypeError('Living eye requires Three and an actual MeshStandardMaterial');
+ if(!THREE?.Vector2||!THREE?.Vector3||!THREE?.Vector4||!THREE?.Color||!material?.isMeshStandardMaterial)throw new TypeError('Living eye requires Three and an actual MeshStandardMaterial');
  if(installed.has(material))return installed.get(material);
  if(!Array.isArray(eyes)||eyes.length>MAX_EYES)throw new RangeError('Provide at most eight UV eye ellipses');
  const regions=eyes.map((e,i)=>{const c=e?.center,r=e?.radius;if(!Array.isArray(c)||!Array.isArray(r)||c.length!==2||r.length!==2||![...c,...r].every(Number.isFinite)||r.some(n=>n<=0||n>.25)||c.some((n,k)=>n-r[k]<0||n+r[k]>1))throw new RangeError('Invalid bottom-left UV eye ellipse '+i);return {center:[...c],radius:[...r],irisRadius:finite(e.irisRadius,.42,.15,.75),phase:i*1.731};});
@@ -16,8 +17,9 @@ export function installLivingEyeEffect({THREE,material,eyes=[],enabled=false,mem
  const gazeEnabled=Boolean(gaze),blinkEnabled=Boolean(blink),pulseEnabled=Boolean(pulse);
  const blinkPeriod=finite(blink&&typeof blink==='object'?blink.period:undefined,7,3,30),gazeAmount=finite(gaze&&typeof gaze==='object'?gaze.amount:undefined,.14,0,.24),gazeRate=finite(gaze&&typeof gaze==='object'?gaze.rate:undefined,.18,.03,.5);
  const dripOptions=drip&&typeof drip==='object'?drip:{},dripEnabled=Boolean(dripOptions.enabled),dripLength=finite(dripOptions.length,.075,.005,.18),dripWidth=finite(dripOptions.width,.0018,.0003,.006),dripOpacity=finite(dripOptions.opacity,.62,0,.85);
+ const resinRoughness=finite(dripOptions.roughness,.16,.08,.8),resinMetalness=finite(dripOptions.metalness,.55,0,.9),resinBump=finite(dripOptions.bump,.0012,0,.004);
  const dripColor=new THREE.Color(dripOptions.color??0x8b6632),gazes=regions.map(()=>new THREE.Vector2()),blinks=regions.map(()=>0),pulses=regions.map(()=>1);
- const uniforms={nspLEEnabled:{value:active?1:0},nspLETime:{value:0},nspLERegions:{value:regions.map(e=>new THREE.Vector4(...e.center,...e.radius))},nspLEIris:{value:regions.map(e=>e.irisRadius)},nspLEGaze:{value:gazes},nspLEBlink:{value:blinks},nspLEPulse:{value:pulses},nspLEDrip:{value:new THREE.Vector4(dripEnabled?dripOpacity:0,dripLength,dripWidth,0)},nspLEInk:{value:dripColor}};
+ const uniforms={nspLEEnabled:{value:active?1:0},nspLETime:{value:0},nspLERegions:{value:regions.map(e=>new THREE.Vector4(...e.center,...e.radius))},nspLEIris:{value:regions.map(e=>e.irisRadius)},nspLEGaze:{value:gazes},nspLEBlink:{value:blinks},nspLEPulse:{value:pulses},nspLEDrip:{value:new THREE.Vector4(dripEnabled?dripOpacity:0,dripLength,dripWidth,0)},nspLEInk:{value:dripColor},nspLEResin:{value:new THREE.Vector3(resinRoughness,resinMetalness,resinBump)}};
  let time=0,disposed=false,hookCalls=0,hookPatched=false,hookError=null;
  const previousHook=material.onBeforeCompile,previousKey=material.customProgramCacheKey,baseKey=previousKey.call(material);
  const declarations=hasEyes?`
@@ -27,7 +29,7 @@ export function installLivingEyeEffect({THREE,material,eyes=[],enabled=false,mem
  uniform float nspLEIris[${regions.length}],nspLEBlink[${regions.length}],nspLEPulse[${regions.length}];
  uniform vec2 nspLEGaze[${regions.length}];
  uniform vec4 nspLEDrip;
- uniform vec3 nspLEInk;
+ uniform vec3 nspLEInk,nspLEResin;
  vec2 nspLivingEyeUV(vec2 uv){
   vec2 warped=uv;
   for(int i=0;i<${regions.length};i++){
@@ -64,13 +66,30 @@ export function installLivingEyeEffect({THREE,material,eyes=[],enabled=false,mem
   previousHook.call(this,shader,renderer);
   if(disposed||!hasEyes)return;
   hookCalls++;
-  const common='#include <common>',map='#include <map_fragment>';
-  if(!shader.fragmentShader.includes(common)||!shader.fragmentShader.includes(map)){hookError='Required Three common/map shader chunks unavailable';throw Error(hookError);}
+  const common='#include <common>',map='#include <map_fragment>',rough='#include <roughnessmap_fragment>',metal='#include <metalnessmap_fragment>',normal='#include <normal_fragment_maps>';
+  if(![common,map,rough,metal,normal].every(chunk=>shader.fragmentShader.includes(chunk))){hookError='Required Three common/map/PBR shader chunks unavailable';throw Error(hookError);}
   Object.assign(shader.uniforms,uniforms);
   // Retain r160 video decode and alpha behavior; alter only the diffuse map lookup UV.
   const mapFragment=THREE.ShaderChunk.map_fragment.replace('texture2D( map, vMapUv )','texture2D( map, nspLivingEyeUV(vMapUv) )');
   if(mapFragment===THREE.ShaderChunk.map_fragment){hookError='Unsupported Three map lookup';throw Error(hookError);}
-  shader.fragmentShader=shader.fragmentShader.replace(common,common+declarations).replace(map,mapFragment+'\n#ifdef USE_MAP\n diffuseColor.rgb=mix(diffuseColor.rgb,nspLEInk,nspLivingInk(vMapUv));\n#endif');
+  shader.fragmentShader=shader.fragmentShader.replace(common,common+declarations)
+   .replace(map,mapFragment+'\n#ifdef USE_MAP\n float nspLEInkMask=nspLivingInk(vMapUv);\n float nspLEInkCoverage=clamp(nspLEInkMask/max(nspLEDrip.x,.0001),0.0,1.0);\n diffuseColor.rgb=mix(diffuseColor.rgb,nspLEInk,nspLEInkMask);\n#endif')
+   .replace(rough,rough+'\n#ifdef USE_MAP\n roughnessFactor=mix(roughnessFactor,nspLEResin.x,nspLEInkCoverage);\n#endif')
+   .replace(metal,metal+'\n#ifdef USE_MAP\n metalnessFactor=mix(metalnessFactor,nspLEResin.y,nspLEInkCoverage);\n#endif')
+   .replace(normal,normal+`
+#ifdef USE_MAP
+ // Screen-space height derivatives perturb the already mapped normal, never replace it.
+ if(nspLEResin.z>0.0){
+  float nspLEHeight=nspLEInkCoverage*nspLEResin.z;
+  vec3 nspLEdx=dFdx(-vViewPosition),nspLEdy=dFdy(-vViewPosition);
+  vec3 nspLEr1=cross(nspLEdy,normal),nspLEr2=cross(normal,nspLEdx);
+  float nspLEdet=dot(nspLEdx,nspLEr1);
+  vec3 nspLEslope=(dFdx(nspLEHeight)*nspLEr1+dFdy(nspLEHeight)*nspLEr2)*sign(nspLEdet)/max(abs(nspLEdet),.00000001);
+  nspLEslope*=min(1.0,.18/max(length(nspLEslope),.00000001));
+  normal=normalize(normal-nspLEslope*nspLEInkCoverage);
+ }
+#endif
+`);
   hookPatched=true;
  }
  function cacheKey(){return baseKey+'|'+VERSION+':'+regions.length;}
@@ -86,7 +105,7 @@ export function installLivingEyeEffect({THREE,material,eyes=[],enabled=false,mem
    pulses[i]=pulseEnabled?1+Math.sin(time*.72+e.phase)*.025:1;
   }
  }
- function snapshot(){return {version:VERSION,enabled:active&&!disposed,effective:active&&!disposed&&Boolean(material.map),memorial:Boolean(memorial),memorialOptIn:Boolean(allowMemorial),eyeCount:regions.length,time,disposed,mapPresent:Boolean(material.map),hookCalls,hookPatched,hookError,cacheKey:material.customProgramCacheKey(),gaze:gazes.map(v=>({x:v.x,y:v.y})),blink:[...blinks],pulse:[...pulses],drip:{enabled:active&&dripEnabled&&!disposed,color:dripColor.getHex(),length:dripLength,width:dripWidth,opacity:dripOpacity},nativeShaderAcceptance:'pending'};}
+ function snapshot(){return {version:VERSION,enabled:active&&!disposed,effective:active&&!disposed&&Boolean(material.map),memorial:Boolean(memorial),memorialOptIn:Boolean(allowMemorial),eyeCount:regions.length,time,disposed,mapPresent:Boolean(material.map),hookCalls,hookPatched,hookError,cacheKey:material.customProgramCacheKey(),gaze:gazes.map(v=>({x:v.x,y:v.y})),blink:[...blinks],pulse:[...pulses],drip:{enabled:active&&dripEnabled&&!disposed,color:dripColor.getHex(),length:dripLength,width:dripWidth,opacity:dripOpacity,roughness:resinRoughness,metalness:resinMetalness,bump:resinBump,maxNormalSlope:.18},nativeShaderAcceptance:'pending'};}
  function dispose(){if(disposed)return;disposed=true;uniforms.nspLEEnabled.value=0;if(hasEyes){if(material.onBeforeCompile===compile)material.onBeforeCompile=previousHook;if(material.customProgramCacheKey===cacheKey)material.customProgramCacheKey=previousKey;material.needsUpdate=true;}if(installed.get(material)===api)installed.delete(material);}
  const api={update,snapshot,dispose};installed.set(material,api);
  if(hasEyes){material.onBeforeCompile=compile;material.customProgramCacheKey=cacheKey;material.needsUpdate=true;}

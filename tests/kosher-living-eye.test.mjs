@@ -19,3 +19,22 @@ test('empty metadata is a cheap no-op without dirtying or changing original hook
 test('invalid metadata is rejected and unsupported shader hooks report actual errors',()=>{const m=material();for(const malformed of [[{center:[.02,.5],radius:[.1,.1]}],[{center:[NaN,.5],radius:[.1,.1]}],Array(9).fill(eyes[0])])assert.throws(()=>installLivingEyeEffect({THREE,material:m,eyes:malformed}),RangeError);const e=installLivingEyeEffect({THREE,material:m,eyes,enabled:true});assert.throws(()=>m.onBeforeCompile({fragmentShader:'void main(){}',uniforms:{}},{}),/Required Three/);assert.match(e.snapshot().hookError,/Required Three/);cleanup(m,e);});
 
 test('null optional motion settings remain neutral without throwing',()=>{const m=material(),e=installLivingEyeEffect({THREE,material:m,eyes,enabled:true,gaze:null,blink:null,pulse:null,drip:null});e.update(.1);assert.deepEqual(e.snapshot().gaze,[{x:0,y:0},{x:0,y:0}]);assert.deepEqual(e.snapshot().blink,[0,0]);assert.equal(e.snapshot().drip.enabled,false);cleanup(m,e);});
+
+test('resin PBR factors override only ink coverage after original texture factors',()=>{
+ const m=material(),metalMap=new THREE.Texture();m.metalnessMap=metalMap;m.metalness=.23;const e=installLivingEyeEffect({THREE,material:m,eyes,enabled:true,drip:{enabled:true}}),s=shader();m.onBeforeCompile(s,{});
+ assert.deepEqual(s.uniforms.nspLEResin.value.toArray(),[.16,.55,.0012]);
+ const f=s.fragmentShader;assert(f.includes('float nspLEInkMask=nspLivingInk(vMapUv)'));assert(f.includes('nspLEInkMask/max(nspLEDrip.x,.0001)'));
+ assert(f.indexOf('#include <roughnessmap_fragment>')<f.indexOf('roughnessFactor=mix(roughnessFactor,nspLEResin.x,nspLEInkCoverage)'));
+ assert(f.indexOf('#include <metalnessmap_fragment>')<f.indexOf('metalnessFactor=mix(metalnessFactor,nspLEResin.y,nspLEInkCoverage)'));
+ assert.equal(m.roughness,.73);assert.equal(m.metalness,.23);assert.equal(m.metalnessMap,metalMap);
+ cleanup(m,e);metalMap.dispose();
+});
+test('resin bounds and zero pigment prevent surface response without changing material properties',()=>{
+ const m=material(),e=installLivingEyeEffect({THREE,material:m,eyes,enabled:true,drip:{enabled:true,roughness:-2,metalness:99,bump:99,opacity:0}}),s=shader();m.onBeforeCompile(s,{});assert.deepEqual(s.uniforms.nspLEResin.value.toArray(),[.08,.9,.004]);assert.equal(s.uniforms.nspLEDrip.value.x,0);assert.equal(e.snapshot().drip.maxNormalSlope,.18);assert.equal(e.snapshot().drip.opacity,0);assert.equal(m.roughness,.73);cleanup(m,e);
+ const off=material(),fx=installLivingEyeEffect({THREE,material:off,eyes,enabled:true,drip:{enabled:false,roughness:99,metalness:-2,bump:-2}}),q=shader();off.onBeforeCompile(q,{});assert.deepEqual(q.uniforms.nspLEResin.value.toArray(),[.8,0,0]);assert.equal(q.uniforms.nspLEDrip.value.x,0);cleanup(off,fx);
+});
+test('derivative resin bump follows original mapped normals and has a bounded local slope',()=>{
+ const m=material(),e=installLivingEyeEffect({THREE,material:m,eyes,enabled:true,drip:{enabled:true}}),s=shader();m.onBeforeCompile(s,{});const f=s.fragmentShader;
+ assert(f.indexOf('#include <normal_fragment_maps>')<f.indexOf('float nspLEHeight='));assert(f.includes('dFdx(nspLEHeight)'));assert(f.includes('dFdy(nspLEHeight)'));assert(f.includes('cross(nspLEdy,normal)'));assert(f.includes('.18/max(length(nspLEslope),.00000001)'));assert(f.includes('normal=normalize(normal-nspLEslope*nspLEInkCoverage)'));assert(!f.includes('totalEmissiveRadiance +='));assert.equal(m.normalMap.isTexture,true);
+ cleanup(m,e);
+});

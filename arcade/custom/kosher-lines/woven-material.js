@@ -9,7 +9,7 @@ export function configureWovenMaterial(material){
   if(!shader.vertexShader.includes('#include <begin_vertex>')||!shader.fragmentShader.includes('#include <map_fragment>'))throw Error('Pinned Three.js textile shader anchors missing');
   shader.vertexShader=declaration+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvClothRestPosition = position; vClothRestNormal = normal;');
   shader.fragmentShader=declaration+shader.fragmentShader.replace('#include <map_fragment>',
-   '#ifdef USE_MAP\nvec3 knitWeights = pow(abs(normalize(vClothRestNormal)),vec3(5.0));\nknitWeights /= max(dot(knitWeights,vec3(1.0)),0.0001);\nvec3 knitPosition = vClothRestPosition * 1.3 + vec3(0.5,-1.12,0.5);\nvec4 knitTexel = texture2D(map,knitPosition.yz)*knitWeights.x + texture2D(map,knitPosition.xz)*knitWeights.y + texture2D(map,knitPosition.xy)*knitWeights.z;\ndiffuseColor *= knitTexel;\n#endif');
+   '#ifdef USE_MAP\nvec3 knitWeights = pow(abs(normalize(vClothRestNormal)),vec3(5.0));\nknitWeights /= max(dot(knitWeights,vec3(1.0)),0.0001);\nvec3 knitPosition = vClothRestPosition * 1.3 + vec3(0.5,-1.02,0.5);\nvec4 knitTexel = texture2D(map,knitPosition.yz)*knitWeights.x + texture2D(map,knitPosition.xz)*knitWeights.y + texture2D(map,knitPosition.xy)*knitWeights.z;\ndiffuseColor *= knitTexel;\n#endif');
   material.userData.vorathTextile.compiled=true;
  };
  material.customProgramCacheKey=()=> 'vorath-woven-rest-triplanar-v05';material.needsUpdate=true;return material;

@@ -37,7 +37,7 @@ export function installStreetBays(scene,url,onStatus=()=>{}){
     }
    }
   }
-  for(const [x,z,color,intensity]of[[-20.1,-6,0x36eacb,22],[20.1,7,0xec397d,18]]){const light=new THREE.PointLight(color,intensity,10,2);light.name='Physical blade-sign light pool';light.position.set(x,3.7,z);high.add(light);}
+  // Emissive authored neon shares the existing street-light rig; avoid two additional full-scene light evaluations.
   state.bays=positions.length;state.loaded=true;setQuality(quality);onStatus('loaded');return state;
  }).catch(error=>{state.error=String(error.message||error);onStatus('failed',state.error);return state;});
  return{cameraBounds,ready,setQuality,snapshot:()=>({...state,quality,activeBatches:quality==='low'?state.lowBatches:state.batches,activeTriangles:quality==='low'?state.lowTriangles:state.renderedTriangles})};

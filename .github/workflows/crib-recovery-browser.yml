@@ -13,6 +13,7 @@ on:
       - 'arcade/catalog.json'
       - 'arcade/index.html'
       - 'tests/crib-recovery.*'
+      - 'tests/crib-chapters.*'
       - '.github/workflows/crib-recovery-browser.yml'
 permissions:
   contents: read
@@ -58,4 +59,44 @@ jobs:
         with:
           name: crib-recovery-real-browser
           path: ${{ runner.temp }}/crib-recovery/
+          retention-days: 14
+
+  chapter-input-journeys:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /arcade/custom/kosher-lines/
+            /arcade/custom/night-in/
+            /arcade/custom/crib-recovered-assets/
+            /arcade/catalog.json
+            /arcade/index.html
+            /static/vendor/three/0.160.0/
+            /static/fonts/
+            /static/customer-experience.css
+            /favicon.svg
+            /tests/
+            /favicon.ico
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Install existing pinned isolated Chromium test tooling
+        run: |
+          npm install --prefix "$RUNNER_TEMP/crib-browser" --no-save --package-lock=false --ignore-scripts playwright@1.55.1
+          "$RUNNER_TEMP/crib-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Play real chapter keyboard and390px touch journeys
+        env:
+          NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/crib-browser/node_modules/playwright
+          NSP_PLAYTEST_OUT: ${{ runner.temp }}/crib-chapters
+        run: node tests/crib-chapters.browser.cjs
+      - name: Retain source-bound results, network failures and compositor frames
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: crib-chapters-real-browser
+          path: ${{ runner.temp }}/crib-chapters/
           retention-days: 14

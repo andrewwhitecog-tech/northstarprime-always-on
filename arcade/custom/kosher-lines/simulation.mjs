@@ -1,4 +1,5 @@
 // Reconstructed from retained Grok fragments; missing implementation is new code.
+import { CITY_COLLIDERS } from './chapter.mjs';
 export const LINE = Object.freeze(['DROP IN','LEDGE','FUNBOX','STAIR','QUARTER']);
 export const TRICKS = Object.freeze({
   KeyF:{id:'kickflip',name:'Kickflip',duration:.42,points:120,flip:1,spin:0},
@@ -30,7 +31,8 @@ export function terrain(x,z){
 }
 export const COLLIDERS=Object.freeze([
  {x:-14,z:1,w:5,d:1.8,h:.65},{x:13,z:-7,w:4.5,d:1.7,h:.65},
- {x:-17,z:-12,w:3,d:3,h:1.1},{x:17,z:-24,w:3,d:3,h:1.1}
+ {x:-17,z:-12,w:3,d:3,h:1.1},{x:17,z:-24,w:3,d:3,h:1.1},
+ ...CITY_COLLIDERS
 ]);
 export function defaultProfile(){return {version:1,best:0,lines:0,xp:0,bestCombo:0,sessions:0,theme:0};}
 export function parseProfile(raw){
@@ -45,7 +47,7 @@ function nearestRail(r,x,z){
  return {u,x:r.x0+u*dx,z:r.z0+u*dz,y:r.y0+u*(r.y1-r.y0),distance:Math.hypot(x-(r.x0+u*dx),z-(r.z0+u*dz))};
 }
 export class KosherSim{
- constructor(profile=defaultProfile()){this.profile=profile;this.events=[];this.serial=0;this.reset(false);}
+ constructor(profile=defaultProfile()){this.sessionMode='arcade';this.profile=profile;this.events=[];this.serial=0;this.reset(false);}
  event(type,detail={}){this.events.push({serial:++this.serial,type,time:this.elapsed,...detail});if(this.events.length>48)this.events.shift();}
  reset(start=true){
   this.x=0;this.z=5;this.y=0;this.yaw=0;this.vx=0;this.vz=0;this.vy=0;this.speed=0;
@@ -53,7 +55,7 @@ export class KosherSim{
   this.unbanked=0;this.score=0;this.multiplier=1;this.comboLeft=0;this.comboTricks=[];
   this.grinding=null;this.grindDirection=1;this.grindU=0;this.grindTime=0;this.balance=0;this.manualTime=0;
   this.bailTime=0;this.bails=0;this.line=0;this.completedLines=0;this.elapsed=0;this.timeLeft=120;
-  this.running=start;this.paused=false;this.ended=false;this.stance=0;this.airTime=0;this.airStart=null;
+  this.running=start;this.paused=false;this.ended=false;this.stance=0;this.airTime=0;this.airStart=null;this.pendingRail=null;this.manualGardenTime=0;this.grindLock=0;
   this.flags={funbox:false,stair:false,quarter:false};this.stats={ollies:0,tricks:0,grinds:0,manuals:0,landings:0,distance:0};
   this.event('reset',{started:start});if(start)this.profile.sessions++;
  }
@@ -79,8 +81,8 @@ export class KosherSim{
  }
  pop(){
   if(this.bailTime>0||(!this.grounded&&!this.grinding))return false;
-  this.vy=6.2+Math.min(.45,this.charge)*8;this.charge=0;this.charging=false;
-  if(this.grinding){const r=this.grinding,dx=r.x1-r.x0,dz=r.z1-r.z0,len=Math.hypot(dx,dz);this.vx=dx/len*this.speed*this.grindDirection;this.vz=dz/len*this.speed*this.grindDirection;this.grinding=null;this.balance=0;}
+  this.grindLock=.42;this.vy=6.2+Math.min(.45,this.charge)*8;this.charge=0;this.charging=false;
+  if(this.grinding){const r=this.grinding;this.pendingRail={rail:r.id,duration:this.grindTime};const dx=r.x1-r.x0,dz=r.z1-r.z0,len=Math.hypot(dx,dz);this.vx=dx/len*this.speed*this.grindDirection;this.vz=dz/len*this.speed*this.grindDirection;this.grinding=null;this.balance=0;}
   this.grounded=false;this.mode='air';this.airTime=0;this.airStart={x:this.x,z:this.z};this.stats.ollies++;this.event('ollie');return true;
  }
  tryTrick(code){
@@ -92,19 +94,20 @@ export class KosherSim{
   this.bailTime=1.1;this.bails++;this.mode='bail';this.speed*=.2;this.vx*=.2;this.vz*=.2;this.vy=0;
   this.y=terrain(this.x,this.z);this.grounded=true;this.grinding=null;this.trick=null;this.trickTime=0;
   this.unbanked=0;this.multiplier=1;this.comboLeft=0;this.comboTricks=[];this.balance=0;this.manualTime=0;
-  this.flags={funbox:false,stair:false,quarter:false};this.line=0;this.event('bail',{reason,lost});
+  this.flags={funbox:false,stair:false,quarter:false};this.pendingRail=null;this.manualGardenTime=0;this.line=0;this.event('bail',{reason,lost});
  }
  land(height){
   if(this.trick&&this.trickTime<this.trick.duration*.84){this.bail('Catch the board before landing');return;}
-  if(this.trick){this.add(this.trick.points,this.trick.name);this.stats.tricks++;if(this.trick.id==='180')this.stance=1-this.stance;}
+  if(this.trick){this.add(this.trick.points,this.trick.name);this.stats.tricks++;this.event('landed-trick',{id:this.trick.id,x:this.x,z:this.z});if(this.trick.id==='180')this.stance=1-this.stance;}
   if(this.flags.funbox){this.add(120,'Funbox');this.advanceLine('FUNBOX');}
   if(this.flags.stair&&this.z< -17.3){this.add(250,'Stair gap');this.advanceLine('STAIR');}
   if(this.flags.quarter&&height<1.2){this.add(300,'Quarter return');this.advanceLine('QUARTER');}
+  if(this.pendingRail){this.event('grind-landed',{...this.pendingRail,x:this.x,z:this.z});this.pendingRail=null;}
   this.flags={funbox:false,stair:false,quarter:false};this.trick=null;this.trickTime=0;
   this.y=height;this.vy=0;this.grounded=true;this.mode='roll';this.stats.landings++;this.event('land',{height});
  }
  tryGrind(){
-  if(this.grounded||this.vy>1||this.speed<1.5||this.trick&&this.trickTime<this.trick.duration*.84)return false;
+  if(this.grindLock>0||this.grounded||this.vy>1||this.speed<1.5||this.trick&&this.trickTime<this.trick.duration*.84)return false;
   let found=null;
   for(const r of RAILS){const n=nearestRail(r,this.x,this.z);if(n.distance<.95&&Math.abs(this.y-n.y)<.7&&(!found||n.distance<found.n.distance))found={r,n};}
   if(!found)return false;
@@ -116,7 +119,7 @@ export class KosherSim{
  finish(){this.bank();this.running=false;this.ended=true;this.profile.best=Math.max(this.profile.best,this.score);this.event('session-end',{score:this.score,lines:this.completedLines});}
  step(dt,input={}){
   dt=clamp(dt,0,.025);if(!this.running||this.paused||this.ended)return;
-  this.elapsed+=dt;this.timeLeft=Math.max(0,120-this.elapsed);if(this.timeLeft===0){this.finish();return;}
+  this.grindLock=Math.max(0,this.grindLock-dt);this.elapsed+=dt;this.timeLeft=this.sessionMode==='chapter'?120:Math.max(0,120-this.elapsed);if(this.timeLeft===0){this.finish();return;}
   this.comboLeft=Math.max(0,this.comboLeft-dt);if(this.comboLeft===0&&this.grounded&&this.mode!=='manual')this.bank();
   if(this.bailTime>0){this.bailTime=Math.max(0,this.bailTime-dt);if(!this.bailTime)this.mode='roll';return;}
   const steer=clamp(input.steer||0,-1,1);
@@ -136,7 +139,7 @@ export class KosherSim{
     if(r.name==='LEDGE'&&this.grindTime>.2)this.advanceLine('LEDGE');
     if(Math.abs(this.balance)>1){this.bail('Rail balance lost');return;}
     if(this.grindU<0||this.grindU>1||input.brake){
-      this.add(80,r.name+' grind');const dx=(r.x1-r.x0)/len,dz=(r.z1-r.z0)/len;
+      this.add(80,r.name+' grind');this.pendingRail={rail:r.id,duration:this.grindTime};this.grindLock=.42;const dx=(r.x1-r.x0)/len,dz=(r.z1-r.z0)/len;
       this.vx=dx*this.speed*this.grindDirection;this.vz=dz*this.speed*this.grindDirection;this.grinding=null;this.mode='air';this.vy=1.6;this.airTime=0;this.event('grind-exit');
     }
     return;
@@ -171,12 +174,12 @@ export class KosherSim{
       this.vy=5.6;this.vz=Math.abs(this.vz)*.65;this.vx*=.5;this.yaw=Math.PI;this.grounded=false;this.mode='air';this.flags.quarter=true;this.airTime=0;this.event('quarter-launch');
     }
     if(input.manual&&this.speed>1.4){
-      if(this.mode!=='manual'){this.mode='manual';this.manualTime=0;this.event('manual-start');}
-      this.manualTime+=dt;this.balance+=(Math.sin(this.elapsed*3)*.24+.2+this.balance*.8+steer*1.1)*dt;
+      if(this.mode!=='manual'){this.mode='manual';this.manualTime=0;this.manualGardenTime=0;this.event('manual-start');}
+      this.manualTime+=dt;if(this.x>5&&this.x<16&&this.z< -9&&this.z> -26)this.manualGardenTime+=dt;this.balance+=(Math.sin(this.elapsed*3)*.24+.2+this.balance*.8+steer*1.1)*dt;
       this.unbanked+=15*this.multiplier*dt;this.comboLeft=1.4;
       if(Math.abs(this.balance)>1){this.bail('Manual balance lost');return;}
     }else if(this.mode==='manual'){
-      if(this.manualTime>.35){this.add(Math.round(this.manualTime*35),'Manual');this.stats.manuals++;}
+      if(this.manualTime>.35){this.add(Math.round(this.manualTime*35),'Manual');this.stats.manuals++;this.event('manual-complete',{duration:this.manualTime,gardenDuration:this.manualGardenTime,x:this.x,z:this.z});}
       this.mode='roll';this.balance=0;this.manualTime=0;
     }
   }else{
@@ -187,5 +190,5 @@ export class KosherSim{
   }
   if(this.line===0&&this.speed>4&&this.z<2)this.advanceLine('DROP IN');
  }
- snapshot(){return {x:this.x,y:this.y,z:this.z,yaw:this.yaw,speed:this.speed,vx:this.vx,vz:this.vz,vy:this.vy,grounded:this.grounded,mode:this.mode,charge:this.charge,trick:this.trick?.id||null,trickTime:this.trickTime,balance:this.balance,rail:this.grinding?.id||null,grindTime:this.grindTime,score:this.score,pending:Math.round(this.unbanked),multiplier:this.multiplier,line:this.line,next:LINE[this.line],completedLines:this.completedLines,bails:this.bails,timeLeft:this.timeLeft,elapsed:this.elapsed,running:this.running,paused:this.paused,ended:this.ended,stats:{...this.stats},profile:{...this.profile},events:this.events.map(e=>({...e}))};}
+ snapshot(){return {sessionMode:this.sessionMode,x:this.x,y:this.y,z:this.z,yaw:this.yaw,speed:this.speed,vx:this.vx,vz:this.vz,vy:this.vy,grounded:this.grounded,mode:this.mode,charge:this.charge,trick:this.trick?.id||null,trickTime:this.trickTime,balance:this.balance,rail:this.grinding?.id||null,grindTime:this.grindTime,score:this.score,pending:Math.round(this.unbanked),multiplier:this.multiplier,line:this.line,next:LINE[this.line],completedLines:this.completedLines,bails:this.bails,timeLeft:this.timeLeft,elapsed:this.elapsed,running:this.running,paused:this.paused,ended:this.ended,stats:{...this.stats},profile:{...this.profile},events:this.events.map(e=>({...e}))};}
 }

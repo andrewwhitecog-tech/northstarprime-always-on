@@ -83,7 +83,7 @@ async def main():
         check("A: a whole campaign with the top fit number: a clean-result sound per call, a dispatch alert per new call, a teletype at each of the 4 shift breaks, handcuffs and cell door at BOOKED",
               snap["finished"] and snap["breaks"] >= 3 and played.get("clean", 0) >= 16 and played.get("newcall", 0) >= 15 and played.get("shiftend", 0) == 4 and played.get("booked", 0) == 1,
               {"played": played, "breaks": snap["breaks"]})
-        check("A: the music is still playing at the campaign's end and has looped past its start (the 110.6 s loop)",
+        check("A: the music is still playing at the campaign's end (its 110.6 s loop seam is measured offline, not here)",
               st["music"] == "playing" and st["musicTime"] is not None, {"music": st["music"], "musicTime": st["musicTime"], "loops": st["loopsPlaying"]})
         await page.focus("body"); await page.keyboard.press("m"); await page.wait_for_timeout(300)
         m1 = await page.evaluate("() => ({muted: window.__precinctDebug.sound().muted, button: document.getElementById('soundBtn').textContent, saved: localStorage.getItem('precinct404Muted')})")

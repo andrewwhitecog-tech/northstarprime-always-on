@@ -13,6 +13,7 @@ import { CourierTrial, parseCourierRecord, defaultCourierRecord, COURIER_ROUTE }
 import { buildCourierCourse } from './courier-course.js';
 import { createActionMode } from './action-mode.js';
 import { PEACOCK_KIOSK, PEACOCK_KIOSK_COLLIDER } from './peacock-signature.mjs';
+import {applySkateTrickPose} from './rider-pose.mjs';
 const actionArt=await fetch('./fan-art.json').then(r=>{if(!r.ok)throw Error('Fan-art manifest HTTP '+r.status);return r.json();});
 const readActionSave=key=>{try{return localStorage.getItem(key);}catch{return null;}};
 let actionMode=null,selectedRide='arcade',actionSaveClock=0;
@@ -190,15 +191,15 @@ function makeSkater(){
  const wood=mat(0x926b39,{roughness:.55}),metal=mat(0xd5d4da,{metalness:.85,roughness:.2}),wheel=mat(0xeee3cf,{roughness:.5});
  const shape=new THREE.Shape();shape.moveTo(-.125,-.30);shape.quadraticCurveTo(-.13,-.43,0,-.43);shape.quadraticCurveTo(.13,-.43,.125,-.30);shape.lineTo(.125,.30);shape.quadraticCurveTo(.13,.43,0,.43);shape.quadraticCurveTo(-.13,.43,-.125,.30);shape.closePath();
  const deckGeo=new THREE.ExtrudeGeometry(shape,{depth:.014,bevelEnabled:true,bevelSegments:2,steps:1,bevelSize:.006,bevelThickness:.004,curveSegments:16});deckGeo.rotateX(-Math.PI/2);
- mesh(deckGeo,wood,0,.098,0,board);
+ mesh(deckGeo,wood,0,.093,0,board);
  const art=texture('deck.jpg');art.repeat.set(.76,.93);art.offset.set(.12,.035);art.wrapS=art.wrapT=THREE.ClampToEdgeWrapping;
  const topGeo=new THREE.ShapeGeometry(shape,18),uv=topGeo.attributes.uv,pos=topGeo.attributes.position;
  for(let i=0;i<pos.count;i++)uv.setXY(i,(pos.getX(i)+.13)/.26,(pos.getY(i)+.43)/.86);
- topGeo.rotateX(-Math.PI/2);mesh(topGeo,mat(0xffffff,{map:art,roughness:.76}),0,.107,0,board);
+ topGeo.rotateX(-Math.PI/2);mesh(topGeo,mat(0xffffff,{map:art,roughness:.76}),0,.112,0,board);
  for(const z of [-.26,.26]){
   box(.215,.025,.055,0,.061,z,metal,board);
   for(const x of [-.125,.125]){const w=mesh(new THREE.CylinderGeometry(.033,.033,.025,18),wheel,x,.033,z,board);w.rotation.z=Math.PI/2;}
-  for(const x of [-.05,.05]){const bolt=mesh(new THREE.CylinderGeometry(.004,.004,.003,6),metal,x,.11,z,board);}
+  for(const x of [-.05,.05]){const bolt=mesh(new THREE.CylinderGeometry(.004,.004,.003,6),metal,x,.1125,z,board);}
  }
  for(const z of [-.26,.26])for(const x of [-.145,.145]){const jewel=mesh(new THREE.OctahedronGeometry(.023),mat(0x65f5d3,{emissive:0x187a61,emissiveIntensity:1,metalness:.7}),x,.033,z,board);courierWheelJewels.push(jewel);}
  const fallback=new THREE.Group();body.add(fallback);
@@ -351,10 +352,7 @@ function frame(time){
   const crouch=sim.charging?Math.min(.34,sim.charge*.8):sim.mode==='air'?.18:0;
   skater.body.position.y=0;skater.body.scale.y=1;
   skater.modelContainer.position.y=.114-((sim.charge>.03||sim.mode==='manual') ? .038 : 0);
-  skater.body.rotation.set(0,sim.stance*Math.PI,sim.mode==='bail'?Math.sin(sim.bailTime*8)*.5:0);
-  const t=sim.trick?clamp(sim.trickTime/sim.trick.duration,0,1):0;
-  skater.board.rotation.set(sim.mode==='manual'?-.15:0,sim.trick?Math.PI*2*sim.trick.spin*t:0,sim.trick?Math.PI*2*sim.trick.flip*t:0);
-  if(sim.trick?.bodySpin)skater.body.rotation.y+=Math.PI*2*sim.trick.bodySpin*t;
+  applySkateTrickPose(skater.body,skater.board,sim);
   skater.root.rotation.z+=sim.mode==='bail'?.65:0;
   playAvatar(sim.mode==='air'?'jump':sim.charge>.03||sim.mode==='manual'?'crouch':'idle');skatePushRig?.reset();if(avatarMixer)avatarMixer.update(sim.paused?0:delta);skatePushRig?.update(sim.paused?0:delta,control.push&&sim.grounded&&sim.mode!=='manual'&&sim.charge<=.03&&sim.speed>.2,{...sim.snapshot(),steer:control.steer,aim:actionMode?.poseAim()});if(riderHeadBone&&riderHeadBindScale)riderHeadBone.scale.copy(riderHeadBindScale);if(riderDress)riderDress.update(chapter.state.completed,profile.theme,chapter.state.choice);if(city)city.update(sim.paused?0:delta,time,sim);if(streetAtmosphere)streetAtmosphere.update(sim.paused?0:delta,time*.001);if(courierCourse)courierCourse.update(time);courierWheelJewels.forEach(j=>{j.visible=chapter.state.completed>=2;});
   if(sim.mode==='grind'&&frameCount%4===0)burst(sim.x,sim.y,sim.z,0xffc46a,2);

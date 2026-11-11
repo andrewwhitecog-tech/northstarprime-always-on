@@ -1,3 +1,4 @@
+import {skateTrickProgress} from './rider-pose.mjs';
 // Bone-only skating overlay for the actual Quaternius 65-joint adult rigs.
 // Call reset(), then mixer.update(dt), then update(dt,pushing,state?).
 // state accepts the real simulation grounded/mode/charge/vy/speed/steer/paused/trick/trickTime,
@@ -57,7 +58,8 @@ export function createSkatePushRig(THREE,{model,body,deckY=.112}){
   const out=active?(phase<.18?smooth(phase/.18):phase<.72?1:1-smooth((phase-.72)/.28)):0;
   const contact=active?(phase<.18?smooth(phase/.18):phase<.58?1:1-smooth((phase-.58)/.19)):0;
   const charge=Number.isFinite(state.charge)?clamp(state.charge/.45,0,1):0;
-  const wanted=.085+.22*charge+(mode==='manual'?.075:0)+(mode==='air'?.13:0)+landing*.15+contact*.065;
+  const {trick,progress}=skateTrickProgress(state),signatureTuck=mode==='air'&&trick?.id==='switch-bs360'?Math.sin(Math.PI*progress)*.12:0;
+  const wanted=.085+signatureTuck+.22*charge+(mode==='manual'?.075:0)+(mode==='air'?.13:0)+landing*.15+contact*.065;
   if(live)compression+=(wanted-compression)*(1-Math.exp(-step*18));else if(compression===0)compression=wanted;
   restoreBind(rootBone);restoreBind(pelvis);for(const l of legs){restoreBind(named.get('ball_'+l.side));restoreBind(named.get('ball_leaf_'+l.side));}body.updateWorldMatrix(true,true);
   const pelvisTarget=pelvisBind.clone();pelvisTarget.y-=compression;pelvisTarget.x-=.025+compression*.18;

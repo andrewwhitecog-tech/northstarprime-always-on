@@ -8,7 +8,7 @@ export async function loadAdultRig(THREE,{loader,url,parent,height=1.82,clothMap
  const sourceHeight=size.y;root.scale.multiplyScalar(height/size.y);root.updateMatrixWorld(true);bounds.setFromObject(root);
  const center=bounds.getCenter(new THREE.Vector3());root.position.x-=center.x;root.position.z-=center.z;root.position.y-=bounds.min.y;
  root.traverse(o=>{if(o.isMesh)for(const m of(Array.isArray(o.material)?o.material:[o.material]))if(m.name==='VORATH_original_spectral_woven_yoke'){if(clothMap)m.map=clothMap;configureWovenMaterial(m);}});
- const metrics={source:'original-vorath-adult-skater-v05',sourceHeight,bones:0,skinnedMeshes:0,vertices:0,triangles:0,materials:0,sourceClips:{},animations:[],skinLoaded:false,modelLoaded:false,headScale:1};
+ const metrics={source:url.endsWith('vorath-adult-skater-v5.glb')?'original-vorath-adult-skater-v05':url,sourceURL:url,sourceHeight,bones:0,skinnedMeshes:0,vertices:0,triangles:0,materials:0,sourceClips:{},animations:[],skinLoaded:false,modelLoaded:false,headScale:1};
  const materials=new Set();let skin=null;
  root.traverse(o=>{if(o.isBone)metrics.bones++;if(o.isSkinnedMesh){metrics.skinnedMeshes++;metrics.vertices+=o.geometry.attributes.position.count;metrics.triangles+=(o.geometry.index?o.geometry.index.count:o.geometry.attributes.position.count)/3;}if(o.isMesh){o.castShadow=o.receiveShadow=true;for(const m of (Array.isArray(o.material)?o.material:[o.material])){materials.add(m.uuid);if(m.map){metrics.skinLoaded=true;skin ||= m.map;}}}});
  metrics.materials=materials.size;if(metrics.bones<20||metrics.skinnedMeshes<1||!skin)throw Error('Adult model is missing its actual skeleton, skinned geometry or textures');

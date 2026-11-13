@@ -1,0 +1,64 @@
+import {GLTFLoader} from '/static/vendor/three/0.160.0/examples/jsm/loaders/GLTFLoader.js';
+import {loadAdultRig} from './adult-rig.js';
+import {createSkatePushRig} from './skate-push-rig.js';
+import {StreetCombat} from './street-combat.mjs';
+import {ClipChallenges} from './clip-challenges.mjs';
+import {createCombatScene} from './street-combat-scene.js';
+import {RivalHeat} from './rival-heat.mjs';
+import {terrain} from './simulation.mjs';
+import {applySkateTrickPose,createRivalSkateboard} from './rider-pose.mjs';
+export function createActionMode(THREE,{scene,sim,art,colliders,readSave,saveKey,onStatus=()=>{},rivalLoader=new GLTFLoader()}){
+ const combat=new StreetCombat(readSave(saveKey+'.combat')),clips=new ClipChallenges(readSave(saveKey+'.clips')),rival=new RivalHeat();
+ const adapter=createCombatScene(THREE,scene,combat),rivalRoot=new THREE.Group(),rivalBody=new THREE.Group(),rivalDeck=new THREE.Group();rivalRoot.name='Art-rival-skater';rivalBody.name='Art-rival-body-pivot';rivalDeck.name='Art-rival-deck-pivot';rivalRoot.add(rivalBody,rivalDeck);scene.add(rivalRoot);
+ const reticle=new THREE.Mesh(new THREE.TorusGeometry(.72,.018,4,36),new THREE.MeshBasicMaterial({color:0xff417f,transparent:true,opacity:.9}));reticle.name='actual-target-lock';scene.add(reticle);
+ let aimPoseLeft=0,rivalDeckMeshes=0;
+ let enabled=false,aimAssist=true,locked=null,weaponHand=null,modelStatus='not-requested',modelError=null,rivalModel=null,rivalMixer=null,rivalRig=null,rivalActions={},rivalClip=null,selected=(()=>{try{const s=JSON.parse(readSave(saveKey+'.deck'));return s?.version===1&&typeof s.id==='string'&&(s.id==='original'||clips.snapshot().unlockedBoards.includes(s.id))?s.id:'original';}catch{return 'original';}})(),coverMaterials=[],lastClip=0,lastCombat=0;
+ const boardArt=new THREE.Group();boardArt.name='earned-cover-art';
+ const wheelRims=new THREE.Group(),rimMaterial=new THREE.MeshStandardMaterial({color:0x65fff1,emissive:0x20a898,emissiveIntensity:1.4,metalness:.8,roughness:.24});wheelRims.name='earned-deck-wheel-rims';wheelRims.visible=false;const trailMaterial=new THREE.LineBasicMaterial({color:0x65fff1,transparent:true,opacity:.6}),trailGeometry=new THREE.BufferGeometry(),trailPositions=new Float32Array(120*3);trailGeometry.setAttribute('position',new THREE.BufferAttribute(trailPositions,3));trailGeometry.setDrawRange(0,0);const equippedTrail=new THREE.Line(trailGeometry,trailMaterial);equippedTrail.frustumCulled=false;scene.add(equippedTrail);const trailHistory=[];let trailAge=0;
+ const textures=new Map(),posters=[];const loader=new THREE.TextureLoader();
+ function artTexture(url){if(!textures.has(url)){const t=loader.load(url);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;textures.set(url,t);}return textures.get(url);}
+ function installBoard(board){board.add(boardArt,wheelRims);for(const x of [-.145,.145])for(const z of [-.26,.26]){const rim=new THREE.Mesh(new THREE.TorusGeometry(.036,.009,6,14),rimMaterial);rim.rotation.y=Math.PI/2;rim.position.set(x,.033,z);wheelRims.add(rim);}for(const side of [1,-1])for(const z of [-.255,0,.255]){const m=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.64,metalness:.05,side:THREE.DoubleSide});const panel=new THREE.Mesh(new THREE.PlaneGeometry(.222,.222),m);panel.rotation.x=side>0?-Math.PI/2:Math.PI/2;panel.position.set(0,side>0?.1124:.084,z);boardArt.add(panel);coverMaterials.push(m);}boardArt.visible=false;selectBoard(selected);}
+ function selectBoard(id){if(id!=='original'&&!clips.snapshot().unlockedBoards.includes(id))return false;const record=art.boards.find(b=>b.id===id);if(id!=='original'&&!record)return false;selected=id;boardArt.visible=id!=='original';wheelRims.visible=id!=='original';const accent={'cover-1':0xff398b,'cover-2':0xffa83b,'cover-3':0x36ffe2}[id]||0xffffff;rimMaterial.color.setHex(accent);rimMaterial.emissive.setHex(accent);trailMaterial.color.setHex(accent);trailHistory.length=0;if(record)for(const m of coverMaterials){m.map=artTexture(record.url);m.needsUpdate=true;}return true;}
+ function attachRider(model,board){weaponHand=null;model.traverse(o=>{if(o.isBone&&o.name.toLowerCase()==='hand_r')weaponHand=o;});if(weaponHand)adapter.attachWeapon(weaponHand,{position:[0,.07,-.018],rotation:[Math.PI/2,0,0],scale:.65});if(!boardArt.parent)installBoard(board);}
+ function disposeFailedRival(root){
+  const geometries=new Set(),materials=new Set(),textures=new Set(),skeletons=new Set();
+  root?.traverse(o=>{if(o.geometry)geometries.add(o.geometry);if(o.skeleton)skeletons.add(o.skeleton);for(const m of(o.material?(Array.isArray(o.material)?o.material:[o.material]):[])){materials.add(m);for(const value of Object.values(m))if(value?.isTexture)textures.add(value);}});
+  for(const s of skeletons)s.dispose();for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();root?.removeFromParent();root?.clear();
+ }
+ async function loadRival(){
+  if(modelStatus!=='not-requested')return;
+  if(!art.rivalModel){modelStatus='unavailable';onStatus('Art’s named model is not included in this source build.');return;}
+  modelStatus='loading';modelError=null;
+  // Keep world transforms valid for IK calibration, but hide the unvalidated asset.
+  const staging=new THREE.Group();staging.name='Art-rival-loading';staging.visible=false;rivalBody.add(staging);
+  let loaded=null,deck=null;
+  try{
+   loaded=await loadAdultRig(THREE,{loader:rivalLoader,url:art.rivalModel,parent:staging});
+   const model=loaded.root,mixer=loaded.mixer,actions={};model.rotation.y=Math.PI/2;
+   for(const [key,clip]of Object.entries(loaded.clips))actions[key]=mixer.clipAction(clip);
+   const rig=createSkatePushRig(THREE,{model,body:rivalBody});
+   deck=createRivalSkateboard(THREE);let deckMeshes=0;deck.traverse(o=>{if(o.isMesh)deckMeshes++;});
+   // Publish the model, mixer, rig and physical deck together only after success.
+   rivalBody.add(model);staging.removeFromParent();rivalDeck.add(deck);
+   rivalModel=model;rivalMixer=mixer;rivalActions=actions;rivalRig=rig;rivalDeckMeshes=deckMeshes;rivalClip=null;modelStatus='loaded';
+  }catch(e){
+   loaded?.mixer.stopAllAction();if(loaded)loaded.mixer.uncacheRoot(loaded.root);
+   disposeFailedRival(staging);disposeFailedRival(deck);
+   rivalModel=null;rivalMixer=null;rivalRig=null;rivalActions={};rivalClip=null;rivalDeckMeshes=0;
+   modelStatus='failed';modelError=String(e);onStatus('Art’s rider failed to load: '+modelError);
+  }
+ }
+ function setEnabled(value){enabled=Boolean(value);adapter.root.visible=enabled;rivalRoot.visible=enabled;reticle.visible=false;adapter.weapon.visible=enabled&&Boolean(weaponHand);for(const p of posters)p.visible=enabled;if(enabled)loadRival();}
+ function start(){aimPoseLeft=0;combat.health=100;combat.ammo=8;combat.reserve=64;combat.recoveryLeft=0;combat.reloadLeft=0;for(const target of combat.targets){target.health=100;target.disabled=false;target.fireLeft=2;}rival.start();onStatus('Three minutes. Film your line while Art rides his own. Collect stars to unlock the cover decks.');}
+ function getAim(player,heading){const origin={x:player.x,y:player.y+1.12,z:player.z},forward={x:-Math.sin(heading),y:0,z:-Math.cos(heading)};locked=null;if(aimAssist){let nearest=Infinity;for(const t of combat.snapshot().targets){if(t.disabled)continue;const dx=t.x-origin.x,dy=t.y-origin.y,dz=t.z-origin.z,d=Math.hypot(dx,dy,dz);if(d<1||d>35||(dx*forward.x+dz*forward.z)/d<.64)continue;const dir={x:dx/d,y:dy/d,z:dz/d};if(combat.obstructed(origin,dir,d,colliders)<d-.05)continue;if(d<nearest){nearest=d;locked=t;}}}if(locked){const d=Math.hypot(locked.x-origin.x,locked.y-origin.y,locked.z-origin.z);return {origin,direction:{x:(locked.x-origin.x)/d,y:(locked.y-origin.y)/d,z:(locked.z-origin.z)/d}};}return {origin,direction:forward};}
+ let aim=getAim(sim,0);
+ function step(dt,input,heading){if(!enabled)return;const player=sim.snapshot();if(player.running&&!player.paused&&!player.ended)aimPoseLeft=input.fire ? .35 : Math.max(0,aimPoseLeft-dt);aim=getAim(player,heading);const s=combat.step(dt,{player,aim,fire:input.fire,reload:input.reload,colliders});if(combat.takeDownedEvent()&&sim.mode!=='bail'&&sim.bailTime===0)sim.bail('Sentry hit — clip dropped');rival.step(dt,sim.snapshot(),true);clips.step(dt,{simulation:sim.snapshot(),combat:s,rival:rival.snapshot()});for(const e of s.events)if(e.serial>lastCombat){lastCombat=e.serial;if(e.type==='token-collected')onStatus('Star '+e.total+' / 16 found. Explore both side lanes for the remaining seals.');if(e.type==='target-disabled')onStatus('Sentry down. Land clean, then roll to bank your clip.');}for(const e of clips.snapshot().events)if(e.serial>lastClip){lastClip=e.serial;if(e.type==='clip-complete')onStatus('Clip saved: '+e.id+'. A new deck may be ready at the rack.');}}
+ const direction=new THREE.Vector3(),q=new THREE.Quaternion(),parentQ=new THREE.Quaternion();
+ function update(dt){adapter.update();adapter.root.visible=enabled;adapter.weapon.visible=enabled&&Boolean(weaponHand);rivalRoot.visible=enabled;equippedTrail.visible=enabled&&selected!=='original';if(!enabled){reticle.visible=false;return;}const last=trailHistory.at(-1);if(!sim.paused)trailAge+=dt;if(last&&Math.hypot(last.x-sim.x,last.z-sim.z)>2)trailHistory.length=0;trailMaterial.opacity=Math.max(0,.6-trailAge*.2);if(selected!=='original'&&sim.grounded&&sim.speed>.5&&(!last||Math.hypot(last.x-sim.x,last.z-sim.z)>.1)){trailAge=0;trailHistory.push({x:sim.x,y:terrain(sim.x,sim.z)+.016,z:sim.z});if(trailHistory.length>120)trailHistory.shift();}for(let i=0;i<trailHistory.length;i++){const p=trailHistory[i];trailPositions.set([p.x,p.y,p.z],i*3);}trailGeometry.attributes.position.needsUpdate=true;trailGeometry.setDrawRange(0,trailHistory.length);if(locked){reticle.visible=true;reticle.position.set(locked.x,locked.y,locked.z);reticle.lookAt(sim.x,sim.y+1.2,sim.z);}else reticle.visible=false;
+ if(weaponHand&&aimPoseLeft>0){direction.set(aim.direction.x,aim.direction.y,aim.direction.z);q.setFromUnitVectors(new THREE.Vector3(0,0,-1),direction);weaponHand.getWorldQuaternion(parentQ);adapter.weapon.quaternion.copy(parentQ.invert().multiply(q));}else if(weaponHand)adapter.weapon.rotation.set(Math.PI/2,0,0);
+ const s=rival.sim;rivalRoot.position.set(s.x,s.y,s.z);rivalRoot.rotation.y=s.yaw;applySkateTrickPose(rivalBody,rivalDeck,s);if(modelStatus==='loaded'&&rivalMixer&&rivalRig){const desired=s.mode==='air'?'jump':s.charge>.03?'crouch':'idle';if(desired!==rivalClip){if(rivalClip)rivalActions[rivalClip].fadeOut(.12);rivalActions[desired].reset().fadeIn(.12).play();rivalClip=desired;}rivalRig.reset();rivalMixer.update(sim.paused?0:dt);rivalRig.update(sim.paused?0:dt,Boolean(rival.lastInput.push),{...s.snapshot(),steer:rival.lastInput.steer});}}
+ function installPosters(){for(const [i,p]of art.posters.entries()){const map=artTexture(p.url),material=new THREE.MeshStandardMaterial({map,roughness:.96,metalness:0,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-2});for(const [j,site]of [{side:1,bay:2},{side:-1,bay:4},{side:1,bay:6}].entries()){const z=10-site.bay*6.1+site.side*.79;const g=new THREE.PlaneGeometry(2.1,2.1/p.aspect,10,6),v=g.attributes.position;for(let k=0;k<v.count;k++){const x=v.getX(k),y=v.getY(k);const edge=Math.max(0,Math.abs(x)-.87);v.setZ(k,.006+Math.sin(k*2.7)*.006+edge*edge*.45);if(k%11===0||k%11===10)v.setY(k,y+Math.sin(k*3.1)*.022);}g.computeVertexNormals();const paper=new THREE.Mesh(g,material);paper.name='historical-wheatpaste-'+i+'-'+j;// Actual corrugated shutter front: local z=.33, center x=-.79 in AG bay GLB.
+ paper.position.set(site.side*21.92,1.65,z);paper.rotation.y=-site.side*Math.PI/2;scene.add(paper);posters.push(paper);}}}
+ installPosters();setEnabled(false);
+ return {combat,clips,rival,step,update,poseAim:()=>({active:enabled&&aimPoseLeft>0,direction:{...aim.direction}}),setEnabled,start,attachRider,selectBoard,toggleAim(){aimAssist=!aimAssist;return aimAssist;},serialize:()=>({combat:combat.serialize(),clips:clips.serialize(),deck:JSON.stringify({version:1,id:selected})}),snapshot:()=>({enabled,aimAssist,lockedTarget:locked?.id||null,combat:combat.snapshot(),clips:clips.snapshot(),rival:rival.snapshot(),rivalVisual:{modelLoaded:Boolean(rivalModel?.parent),sourceURL:art.rivalModel||null,bodyYaw:rivalBody.rotation.y,boardYaw:rivalDeck.rotation.y,boardRoll:rivalDeck.rotation.z,actualDeckMeshes:rivalDeckMeshes,stance:rival.sim.stance,pose:rivalRig?.snapshot()||null},modelStatus,modelError,selectedBoard:selected,boardArtPanels:boardArt.children.length,equippedRimsVisible:wheelRims.visible,trailPoints:trailHistory.length,posters:posters.length,privateFanPack:art.privateFanPack,enemyArt:adapter.metrics.temporaryEnemyArt?'temporary-sentry-constructs':'authored-actors'})};
+}

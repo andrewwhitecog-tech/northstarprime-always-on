@@ -1,0 +1,57 @@
+name: Kosher rival action real-input journey
+on:
+  pull_request:
+    paths:
+      - 'arcade/custom/kosher-lines/**'
+      - 'arcade/custom/crib-recovered-assets/**'
+      - 'tests/kosher-*'
+      - '.github/workflows/kosher-action-browser.yml'
+permissions:
+  contents: read
+concurrency:
+  group: kosher-action-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  real-action:
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        device: [desktop, touch]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /arcade/custom/kosher-lines/
+            /arcade/custom/crib-recovered-assets/
+            /static/vendor/three/0.160.0/
+            /static/fonts/
+            /favicon.svg
+            /favicon.ico
+            /tests/
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Execute real source mechanics and deformed-skin checks
+        run: node --test tests/kosher-action.test.mjs tests/kosher-rider-motion.test.mjs tests/kosher-rival.test.mjs tests/kosher-camera.test.mjs tests/kosher-peacock.test.mjs tests/kosher-rider-tricks.test.mjs tests/kosher-recovery.test.mjs tests/kosher-underpass.test.mjs tests/kosher-push-physics.test.mjs tests/kosher-wall-contact.test.mjs tests/kosher-rival-loading.test.mjs tests/kosher-coast.test.mjs tests/kosher-wall-murals.test.mjs tests/kosher-living-eye.test.mjs
+      - name: Install pinned isolated browser tooling
+        run: |
+          npm install --prefix "$RUNNER_TEMP/kosher-action" --no-save --package-lock=false --ignore-scripts playwright@1.55.1
+          "$RUNNER_TEMP/kosher-action/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Earn a flip-shot clip and equip the earned board with real inputs
+        env:
+          NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/kosher-action/node_modules/playwright
+          NSP_PLAYTEST_OUT: ${{ runner.temp }}/kosher-action-${{ matrix.device }}
+          NSP_ACTION_DEVICE: ${{ matrix.device }}
+        run: node tests/kosher-action.browser.cjs
+      - name: Retain actual compositor frames and runner evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: kosher-action-${{ matrix.device }}
+          path: ${{ runner.temp }}/kosher-action-${{ matrix.device }}/
+          retention-days: 14

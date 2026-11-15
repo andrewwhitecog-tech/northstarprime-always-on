@@ -333,14 +333,16 @@
 <script id="puzzle-config" type="application/json">{
   "mode": "studio",
   "presets": [
-    {"shortLabel": "01", "title": "FOUNDRY OF THE LIVING EYE", "src": "./presets/01_mc_foundry_living_eye.jpg", "seed": 409101},
-    {"shortLabel": "02", "title": "IDG #37 · GLYPHBREAKER CROWN", "src": "./presets/02_idg_glyphbreaker_crown.jpg", "seed": 718209},
-    {"shortLabel": "03", "title": "SUNSET BOULEVARD CITADEL", "src": "./presets/03_mc_sunset_citadel.jpg", "seed": 552319},
-    {"shortLabel": "04", "title": "IDG #36 · OSSUARY ORBIT", "src": "./presets/04_idg_ossuary_orbit.jpg", "seed": 931415},
-    {"shortLabel": "05", "title": "TWILIGHT EYE GATEHOUSE", "src": "./presets/05_mc_eye_gatehouse.jpg", "seed": 614887},
-    {"shortLabel": "06", "title": "SOVEREIGN ARCADE SUITE", "src": "./presets/06_idg_sovereign_arcade.jpg", "seed": 824103},
-    {"shortLabel": "07", "title": "VORATH WARBAND · SEVENTH VEIL", "src": "./presets/07_warband_seventh_veil.jpg", "seed": 477707},
-    {"shortLabel": "08", "title": "SAPTARATNA MOSAIC BUDDHA", "src": "./presets/08_saptaratna_mosaic_buddha.jpg", "seed": 588808}
+    {"shortLabel": "01", "slug": "foundry-eye", "title": "FOUNDRY OF THE LIVING EYE", "src": "./presets/01_mc_foundry_living_eye.jpg", "seed": 409101},
+    {"shortLabel": "02", "slug": "glyphbreaker", "title": "IDG #37 · GLYPHBREAKER CROWN", "src": "./presets/02_idg_glyphbreaker_crown.jpg", "seed": 718209},
+    {"shortLabel": "03", "slug": "sunset-citadel", "title": "SUNSET BOULEVARD CITADEL", "src": "./presets/03_mc_sunset_citadel.jpg", "seed": 552319},
+    {"shortLabel": "04", "slug": "ossuary-orbit", "title": "IDG #36 · OSSUARY ORBIT", "src": "./presets/04_idg_ossuary_orbit.jpg", "seed": 931415},
+    {"shortLabel": "05", "slug": "eye-gatehouse", "title": "TWILIGHT EYE GATEHOUSE", "src": "./presets/05_mc_eye_gatehouse.jpg", "seed": 614887},
+    {"shortLabel": "06", "slug": "sovereign-arcade", "title": "SOVEREIGN ARCADE SUITE", "src": "./presets/06_idg_sovereign_arcade.jpg", "seed": 824103},
+    {"shortLabel": "07", "slug": "warband-seventh-veil", "title": "VORATH WARBAND · SEVENTH VEIL", "src": "./presets/07_warband_seventh_veil.jpg", "seed": 477707},
+    {"shortLabel": "08", "slug": "saptaratna-buddha", "title": "SAPTARATNA MOSAIC BUDDHA", "src": "./presets/08_saptaratna_mosaic_buddha.jpg", "seed": 588808},
+    {"shortLabel": "09", "slug": "photonic-lattice", "title": "PHOTONIC LATTICE · DUAL HORIZON", "src": "./presets/09_et_ed_photonic_lattice_dual_horizon.jpg", "seed": 609109},
+    {"shortLabel": "10", "slug": "loomwheel-sanctuary", "title": "LOOMWHEEL CYMATIC SANCTUARY", "src": "./presets/10_vorath_loomwheel_cymatic_sanctuary.jpg", "seed": 710410}
   ]
 }</script>
 <script>
@@ -563,6 +565,31 @@
   }
 
   let audioCtx = null;
+  let lastHoverChimeMs = 0;
+  function playHoverChime(pitchScale, unlock) {
+    try {
+      if (!audioCtx && unlock) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (!audioCtx) return;
+      if (unlock && audioCtx.state === "suspended") audioCtx.resume();
+      if (audioCtx.state !== "running") return;
+      const nowMs = performance.now();
+      if (nowMs - lastHoverChimeMs < 75) return;
+      lastHoverChimeMs = nowMs;
+      const now = audioCtx.currentTime;
+      const base = 783.99 * (pitchScale || 1.0);
+      [base, base * 1.5].forEach((f, idx) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(f, now);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(idx === 0 ? 0.011 : 0.005, now + 0.012);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.13);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(now); osc.stop(now + 0.14);
+      });
+    } catch (_) {}
+  }
   function playLockChord(coherence, isSolve) {
     try {
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -775,18 +802,34 @@
     document.getElementById("btn-export").style.display = "none";
     document.getElementById("btn-commission").style.display = "none";
   }
+  function selectPresetByIndex(idx) {
+    const presets = CONFIG.presets || [];
+    if (idx < 0 || idx >= presets.length) return false;
+    const p = presets[idx];
+    Array.from(presetStrip.children).forEach((el, j) => el.classList.toggle("plaque-active", j === idx));
+    loadPuzzleImage(p.src, p.title, p.seed || (1001 + idx * 7919));
+    return true;
+  }
+
   (CONFIG.presets || []).forEach((p, idx) => {
     if (CONFIG.presets.length <= 1) return;
     const b = document.createElement("button");
     b.type = "button";
     b.className = "vorath-plaque preset-btn" + (idx === 0 ? " plaque-active" : "");
     b.textContent = p.shortLabel || ("0" + (idx + 1));
+    b.dataset.presetSlug = p.slug || String(idx + 1);
     b.title = p.title;
+    b.addEventListener("pointerenter", () => playHoverChime(1.0 + idx * 0.035, false));
     b.addEventListener("click", () => {
-      Array.from(presetStrip.children).forEach((el, j) => el.classList.toggle("plaque-active", j === idx));
-      loadPuzzleImage(p.src, p.title, p.seed || (1001 + idx * 7919));
+      playHoverChime(1.08 + idx * 0.035, true);
+      selectPresetByIndex(idx);
     });
     presetStrip.appendChild(b);
+  });
+
+  document.querySelectorAll("#action-strip .vorath-plaque, .nav-home").forEach((el, idx) => {
+    el.addEventListener("pointerenter", () => playHoverChime(0.94 + idx * 0.04, false));
+    el.addEventListener("pointerdown", () => playHoverChime(1.02 + idx * 0.04, true));
   });
 
   function wrapAngle(a) {
@@ -975,9 +1018,22 @@
   modal.addEventListener("click", (e) => { if (e.target === modal) modal.classList.remove("open"); });
 
   window.__NSP_SHATTER_API__ = {
+    selectPreset: function(idx) {
+      return selectPresetByIndex(idx);
+    },
+    setOrbitOffsetDeg: function(dThetaDeg, dPhiDeg) {
+      sweepActive = false; isSolved = false;
+      camTheta = solTheta + dThetaDeg * Math.PI / 180;
+      camPhi = Math.max(-1.1, Math.min(1.1, solPhi + dPhiDeg * Math.PI / 180));
+      camRad = RADIUS; targetTheta = camTheta; targetPhi = camPhi;
+    },
     snapToSolutionInstant: function() {
       sweepActive = false; camTheta = solTheta; camPhi = solPhi; camRad = RADIUS;
       targetTheta = solTheta; targetPhi = solPhi; isSolved = true; solveFlash = 0.0;
+      document.getElementById("solved-title").textContent = currentTitle;
+      document.getElementById("solved-stats").textContent = shardCount.toLocaleString() + " 3D shards fused · 0.00° error";
+      document.getElementById("solved-banner").classList.add("visible");
+      document.getElementById("reticle").classList.add("locked");
     },
     getMetrics: function() {
       return { shardCount, vertexCount, angularErrorDeg: angularErrorDeg(camTheta, camPhi, camRad), isSolved, title: currentTitle };
@@ -1109,8 +1165,20 @@
   }
 
   if (CONFIG.presets && CONFIG.presets.length > 0) {
-    const p0 = CONFIG.presets[0];
-    loadPuzzleImage(p0.src, p0.title, p0.seed || 409101);
+    let initIdx = 0;
+    try {
+      const q = new URLSearchParams(window.location.search).get("preset");
+      if (q) {
+        const qNorm = q.trim().toLowerCase();
+        const found = CONFIG.presets.findIndex((pr, i) =>
+          (pr.slug && pr.slug.toLowerCase() === qNorm) ||
+          (pr.shortLabel && pr.shortLabel.toLowerCase() === qNorm) ||
+          String(i + 1) === qNorm
+        );
+        if (found >= 0) initIdx = found;
+      }
+    } catch (_) {}
+    selectPresetByIndex(initIdx);
   }
   requestAnimationFrame(render);
 })();

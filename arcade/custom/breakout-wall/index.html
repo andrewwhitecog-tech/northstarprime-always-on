@@ -79,7 +79,7 @@ body{
   width:100%;max-width:1020px;margin:0 auto;
   padding:6px 8px 8px;
   display:flex;flex-direction:column;align-items:center;gap:6px;
-  flex:1;justify-content:space-between;
+  flex:1;
 }
 .sr-only{
   position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;
@@ -125,23 +125,40 @@ header.topbar{
   transition:width 0.18s ease-out;
 }
 
-/* Sanctuary Playfield Viewport */
+/* Sanctuary Playfield Viewport & Sculpted Vorath Cabinet Frame */
 #stage-frame{
-  position:relative;display:flex;align-items:center;justify-content:center;
-  width:100%;
+  position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  width:100%;flex:1;min-height:0;
+  border-radius:0;
+  border:2px solid rgba(245,215,110,0.45);
+  box-shadow:0 0 24px rgba(168,85,247,0.32);
+  padding:0;gap:0;
+  background:#05030a;
+  overflow:hidden;
+}
+.stage-art-panel{
+  display:none;width:100%;flex:1;min-height:60px;
+  background-size:cover;background-position:center;background-repeat:no-repeat;
+  border-radius:0;
+}
+.stage-art-panel.stage-art-top{
+  background-image:url('/static/art/games/vorath_overhaul_v01/blade_tribunal/arena_high_chancel_eye_v01.webp');
+  border-bottom:2px solid rgba(245,215,110,0.45);
+}
+.stage-art-panel.stage-art-bot{
+  background-image:url('/static/art/games/vorath_overhaul_v01/blade_tribunal/arena_split_scales_crucible_v01.webp');
+  border-top:2px solid rgba(245,215,110,0.45);
 }
 canvas#c{
   display:block;
-  width:min(100%,calc((100dvh - 195px) * 800 / 600));
+  width:100%;
   max-width:800px;
   aspect-ratio:800 / 600;
   height:auto;
-  border-radius:14px;
-  border:2px solid transparent;
-  background:
-    linear-gradient(#05030d,#05030d) padding-box,
-    conic-gradient(from 90deg,#f5c95c,#8ff7ff,#a855f7,#f472b6,#5eead4,#f5c95c) border-box;
-  box-shadow:0 0 38px rgba(168,85,247,0.28),0 18px 48px rgba(0,0,0,0.9);
+  border-radius:0;
+  border:none;
+  background:#05030d;
+  box-shadow:0 0 32px rgba(168,85,247,0.25);
   touch-action:none;
 }
 
@@ -168,26 +185,28 @@ canvas#c{
 
 nav#nsp-related{
   width:100%;font:12px/1.4 system-ui,sans-serif;padding:8px 12px;
-  background:#080c16;color:#cbd5e1;text-align:center;
-  border-top:1px solid rgba(245,215,110,0.16);
+  background:linear-gradient(90deg,#130728 0%,#240e48 50%,#130728 100%);
+  color:#cbd5e1;text-align:center;
+  border-top:1px solid rgba(245,215,110,0.35);
 }
 nav#nsp-related a{color:#9cf;margin:0 8px;text-decoration:none}
 
 @media (max-width:760px),(pointer:coarse){
   #touch-controls{display:grid}
   #key-legend{font-size:9px;gap:4px 8px}
+  .stage-art-panel{display:block}
   canvas#c{
     width:100%;
-    max-height:calc(100dvh - 150px);
+    max-height:100%;
   }
 }
 @media (max-width:440px){
-  #cabinet-shell{padding:6px 6px 10px;justify-content:space-between}
+  #cabinet-shell{padding:4px 4px 6px;gap:4px;height:100dvh;justify-content:flex-start}
   .top-plaque{width:72px;height:34px;font-size:8.5px;letter-spacing:0.6px;padding:0 6px}
   .brand-title{font-size:14px;letter-spacing:1.8px}
   .touch-plaque{height:52px;min-height:48px;font-size:9.5px}
   #key-legend{display:none}
-  nav#nsp-related{font-size:10.5px;padding:6px 6px}
+  nav#nsp-related{font-size:10.5px;padding:4px 6px}
 }
 </style>
 </head>
@@ -229,7 +248,9 @@ nav#nsp-related a{color:#9cf;margin:0 8px;text-decoration:none}
   </div>
 
   <div id="stage-frame">
+    <div class="stage-art-panel stage-art-top" aria-hidden="true"></div>
     <canvas id="c" width="800" height="600"></canvas>
+    <div class="stage-art-panel stage-art-bot" aria-hidden="true"></div>
   </div>
 
   <div id="deck-bar">
@@ -299,6 +320,12 @@ LETTERING.decoding = 'async';
 LETTERING.onload = () => { LETTERING_READY = true; };
 LETTERING.src = '/static/art/games/vorath_overhaul_v01/blade_tribunal/lettering_v04_d438.webp';
 
+const CARTOUCHE = new Image();
+let CARTOUCHE_READY = false;
+CARTOUCHE.decoding = 'async';
+CARTOUCHE.onload = () => { CARTOUCHE_READY = true; };
+CARTOUCHE.src = '../blackjack-noir/art/vorath_hud_cartouche_v01.webp';
+
 const LCELL = {
   ko:[473,6,464,164], flash:[128,186,1153,164], guard:[318,366,773,164],
   bout:[392,546,625,164], round:[401,726,607,164], fight:[449,906,511,164],
@@ -309,18 +336,21 @@ const LCELL = {
   "9":[780,1734,106,248], minus:[995,1835,188,46], x:[1281,1754,129,208]
 };
 
-function drawLetterCell(key, cx, cy, h, alpha) {
+function drawLetterCell(key, cx, cy, h, alpha, bright = false) {
   const c = LCELL[key];
   if (!c || !LETTERING_READY || alpha <= 0) return 0;
   const w = c[2] * h / c[3];
   ctx.save();
   ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+  if (bright) {
+    ctx.filter = 'brightness(2.2) contrast(1.25) drop-shadow(0 0 4px rgba(253,224,71,0.85))';
+  }
   ctx.drawImage(LETTERING, c[0], c[1], c[2], c[3], cx - w / 2, cy - h / 2, w, h);
   ctx.restore();
   return w;
 }
 
-function drawLetterGlyphs(str, cx, cy, h, alpha) {
+function drawLetterGlyphs(str, cx, cy, h, alpha, bright = false) {
   if (!LETTERING_READY || alpha <= 0) return;
   const keys = [...String(str)].map(ch => ch === '-' ? 'minus' : ch.toLowerCase()).filter(k => LCELL[k]);
   if (!keys.length) return;
@@ -329,8 +359,8 @@ function drawLetterGlyphs(str, cx, cy, h, alpha) {
   let x = cx - (ws.reduce((a, b) => a + b, 0) + gap * (keys.length - 1)) / 2;
   keys.forEach((k, i) => {
     const w = ws[i];
-    if (k === 'minus') drawLetterCell(k, x + w / 2, cy, w * LCELL.minus[3] / LCELL.minus[2], alpha);
-    else drawLetterCell(k, x + w / 2, cy + (k === 'x' ? h * 0.08 : 0), k === 'x' ? h * 0.8 : h, alpha);
+    if (k === 'minus') drawLetterCell(k, x + w / 2, cy, w * LCELL.minus[3] / LCELL.minus[2], alpha, bright);
+    else drawLetterCell(k, x + w / 2, cy + (k === 'x' ? h * 0.08 : 0), k === 'x' ? h * 0.8 : h, alpha, bright);
     x += w + gap;
   });
 }
@@ -1723,56 +1753,108 @@ function drawBossWarden() {
 function drawPaintedHUD() {
   ctx.save();
   // Sculpted HUD Top-Bar Underlay
-  const gHud = ctx.createLinearGradient(0, 0, 0, 36);
-  gHud.addColorStop(0, 'rgba(4,2,11,0.88)');
-  gHud.addColorStop(0.75, 'rgba(4,2,11,0.65)');
+  const gHud = ctx.createLinearGradient(0, 0, 0, 56);
+  gHud.addColorStop(0, 'rgba(4,2,11,0.96)');
+  gHud.addColorStop(0.85, 'rgba(12,5,28,0.85)');
   gHud.addColorStop(1, 'rgba(4,2,11,0)');
   ctx.fillStyle = gHud;
-  ctx.fillRect(0, 0, W, 40);
+  ctx.fillRect(0, 0, W, 58);
 
   // Subtle gold hairline rail
-  ctx.strokeStyle = 'rgba(245,201,92,0.22)';
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(245,201,92,0.38)';
+  ctx.lineWidth = 1.2;
   ctx.beginPath();
-  ctx.moveTo(14, 38);
-  ctx.lineTo(W - 14, 38);
+  ctx.moveTo(14, 56);
+  ctx.lineTo(W - 14, 56);
   ctx.stroke();
 
-  // 1. Continuities (Lives) — Rail/Heart Gem + Count
-  drawFacetGem(24, 19, 7, 340, 0, 0.95);
-  drawLetterGlyphs(String(Math.max(0, lives)), 52, 19, 18, 0.95);
+  function getLetterGlyphsWidth(str, h) {
+    if (!LETTERING_READY) return String(str).length * (h * 0.45);
+    const keys = [...String(str)].map(ch => ch === '-' ? 'minus' : (ch === '%' ? 'x' : ch.toLowerCase())).filter(k => LCELL[k]);
+    if (!keys.length) return 0;
+    const gap = h * 0.05;
+    const ws = keys.map(k => k === 'minus' ? h * 0.62 : (k === 'x' ? LCELL.x[2] * (h * 0.8) / LCELL.x[3] : LCELL[k][2] * h / LCELL[k][3]));
+    return ws.reduce((a, b) => a + b, 0) + gap * (keys.length - 1);
+  }
 
-  // 2. Resonance (Score) — Cyan Gem + Painted Numerals
-  drawFacetGem(94, 19, 6.5, 188, phase * 2, 0.95);
-  drawLetterGlyphs(String(Math.floor(score)), 144, 19, 20, 0.95);
+  function drawHudPlaque(cx, cy, w, h) {
+    ctx.save();
+    const dx = Math.round(cx - w / 2);
+    const dy = Math.round(cy - h / 2);
+    const dw = Math.round(w);
+    const dh = Math.round(h);
+    if (CARTOUCHE_READY) {
+      const capSrcW = 58;
+      const srcH = 112;
+      const capDstW = Math.round(capSrcW * (dh / srcH));
+      // Dark reliquary backing inside plaque so background stars never clash with digits
+      ctx.fillStyle = 'rgba(8,4,16,0.92)';
+      ctx.fillRect(dx + Math.round(capDstW * 0.35), dy + 3, Math.max(0, dw - Math.round(capDstW * 0.7)), dh - 6);
+      // Left end ornament
+      ctx.drawImage(CARTOUCHE, 43, 0, capSrcW, srcH, dx, dy, capDstW, dh);
+      // Center opening
+      const midDstW = Math.max(0, dw - capDstW * 2);
+      if (midDstW > 0) {
+        ctx.drawImage(CARTOUCHE, 101, 0, 157, srcH, dx + capDstW, dy, midDstW, dh);
+      }
+      // Right end ornament
+      ctx.drawImage(CARTOUCHE, 258, 0, capSrcW, srcH, dx + dw - capDstW, dy, capDstW, dh);
+    } else {
+      ctx.fillStyle = 'rgba(18,8,36,0.92)';
+      ctx.strokeStyle = 'rgba(245,215,110,0.55)';
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(dx, dy, dw, dh);
+      ctx.fillRect(dx, dy, dw, dh);
+    }
+    ctx.restore();
+  }
 
-  // 3. Archive (Hi-Score) — Gold Gem + Painted Numerals
-  drawFacetGem(226, 19, 5.5, 45, 0, 0.82);
-  drawLetterGlyphs(String(Math.max(Math.floor(highScore), Math.floor(score))), 272, 19, 16, 0.72);
+  function drawHudStat(cx, cy, str, digitH = 42, plaqueH = 48, minW = 76) {
+    const textW = getLetterGlyphsWidth(str, digitH);
+    const capDstW = Math.round(58 * (plaqueH / 112));
+    const pw = Math.max(minW, Math.round(textW + capDstW * 2 + 16));
+    drawHudPlaque(cx, cy, pw, plaqueH);
+    drawLetterGlyphs(String(str), cx, cy, digitH, 1.0, true);
+    return pw;
+  }
+
+  const cy = 28;
+
+  // 1. Continuities (Lives) — Gem + Cartouche Plaque with Centered Count
+  drawFacetGem(28, cy, 10, 340, 0, 1.0);
+  drawHudStat(88, cy, String(Math.max(0, lives)), 42, 48, 76);
+
+  // 2. Resonance (Score) — Cyan Gem + Cartouche Plaque with Centered Numerals
+  drawFacetGem(160, cy, 11, 188, phase * 2, 1.0);
+  drawHudStat(240, cy, String(Math.floor(score)), 42, 48, 88);
+
+  // 3. Archive (Hi-Score) — Gold Gem + Cartouche Plaque with Centered Numerals
+  drawFacetGem(338, cy, 9, 45, 0, 0.95);
+  drawHudStat(414, cy, String(Math.max(Math.floor(highScore), Math.floor(score))), 42, 48, 88);
 
   // 4. Seal Layer Progression Icon Medallions (I - IV)
   const layerPips = [
-    { x: 380, label: '1' },
-    { x: 400, label: '2' },
-    { x: 420, label: '3' },
-    { x: 440, label: '4' }
+    { x: 486, label: '1' },
+    { x: 512, label: '2' },
+    { x: 538, label: '3' },
+    { x: 564, label: '4' }
   ];
   for (let s = 1; s <= 4; s++) {
     const pip = layerPips[s - 1];
     const isAct = s === level;
     const isUnl = s <= level;
     ctx.save();
-    ctx.translate(pip.x, 19);
+    ctx.translate(pip.x, cy);
     if (isAct) {
       ctx.shadowColor = s === 4 ? '#f472b6' : '#8ff7ff';
-      ctx.shadowBlur = 10;
+      ctx.shadowBlur = 14;
     }
-    ctx.fillStyle = isAct ? (s === 4 ? '#f472b6' : '#8ff7ff') : (isUnl ? '#f5c95c' : 'rgba(168,85,247,0.22)');
+    ctx.fillStyle = isAct ? (s === 4 ? '#f472b6' : '#8ff7ff') : (isUnl ? '#f5c95c' : 'rgba(168,85,247,0.3)');
     ctx.beginPath();
-    ctx.arc(0, 0, isAct ? 6.5 : 4.5, 0, Math.PI * 2);
+    ctx.arc(0, 0, isAct ? 9.5 : 6.5, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = isAct ? '#fff' : (isUnl ? 'rgba(245,201,92,0.6)' : 'rgba(100,80,140,0.3)');
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = isAct ? '#fff' : (isUnl ? 'rgba(245,201,92,0.85)' : 'rgba(100,80,140,0.4)');
+    ctx.lineWidth = 1.4;
     ctx.stroke();
     ctx.restore();
   }
@@ -1781,21 +1863,21 @@ function drawPaintedHUD() {
   {
     const parryReady = combatVerbs.parryCooldown <= 0;
     ctx.save();
-    ctx.translate(650, 19);
+    ctx.translate(644, cy);
     if (parryReady) {
       ctx.shadowColor = '#34d399';
-      ctx.shadowBlur = 12;
+      ctx.shadowBlur = 16;
     }
-    ctx.fillStyle = parryReady ? '#081c15' : '#080514';
-    ctx.strokeStyle = parryReady ? '#34d399' : 'rgba(168,85,247,0.35)';
-    ctx.lineWidth = 1.2;
+    ctx.fillStyle = parryReady ? '#08231a' : '#080514';
+    ctx.strokeStyle = parryReady ? '#34d399' : 'rgba(168,85,247,0.45)';
+    ctx.lineWidth = 1.6;
     ctx.beginPath();
-    ctx.ellipse(0, 0, 11, 6.5, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, 18, 10, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = parryReady ? '#6ee7b7' : 'rgba(140,110,180,0.4)';
+    ctx.fillStyle = parryReady ? '#6ee7b7' : 'rgba(140,110,180,0.5)';
     ctx.beginPath();
-    ctx.ellipse(0, 0, 2, 5.5, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, 3.5, 8.5, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
@@ -1803,16 +1885,16 @@ function drawPaintedHUD() {
   // 6. EMP Medallion
   {
     const empReady = combatVerbs.empCooldown <= 0;
-    drawFacetGem(690, 19, 7.5, 340, phase * 3, empReady ? 0.95 : 0.35);
+    drawFacetGem(724, cy, 11, 340, phase * 3, empReady ? 1.0 : 0.4);
   }
 
   // 7. Chain Multiplier or Singularity Catch
   {
     const combo = 1 + combatVerbs.comboCount * 0.25;
     if (combatVerbs.comboCount > 0) {
-      drawLetterGlyphs('x' + Math.min(9, Math.floor(combo)), 750, 19, 18, 0.95);
+      drawHudStat(804, cy, 'x' + Math.min(9, Math.floor(combo)), 36, 46, 74);
     } else {
-      drawFacetGem(750, 19, 6.5, 188, 0, combatVerbs.catchCooldown <= 0 ? 0.85 : 0.3);
+      drawFacetGem(804, cy, 10, 188, 0, combatVerbs.catchCooldown <= 0 ? 0.95 : 0.4);
     }
   }
 

@@ -66,6 +66,7 @@ def main() -> None:
         ("arcade/custom/audio/idg_cues/souls_bed.mp3", ["../audio/idg_cues/souls_bed.mp3"], ["asteroids-void"]),
         ("arcade/custom/audio/idg_cues/skillshot.mp3", ["../audio/idg_cues/skillshot.mp3"], ["blackjack-noir", "slots-biolume", "asteroids-void", "breakout-wall"]),
         ("arcade/custom/blackjack-noir/art/vorath_ui_buttons_v01.webp", ["../blackjack-noir/art/vorath_ui_buttons_v01.webp"], ["asteroids-void", "breakout-wall"]),
+        ("arcade/custom/blackjack-noir/art/vorath_hud_cartouche_v01.webp", ["../blackjack-noir/art/vorath_hud_cartouche_v01.webp"], ["asteroids-void", "breakout-wall"]),
         ("static/art/games/vorath_overhaul_v01/ossuary_orbit/ossuary_orbit_atlas_v01.png", ["/static/art/games/vorath_overhaul_v01/ossuary_orbit/ossuary_orbit_atlas_v01.png"], ["asteroids-void"]),
         ("static/art/games/vorath_overhaul_v01/glyphbreaker/glyphbreaker_atlas_v01.png", ["/static/art/games/vorath_overhaul_v01/glyphbreaker/glyphbreaker_atlas_v01.png"], ["breakout-wall"]),
         ("static/art/games/vorath_overhaul_v01/blade_tribunal/lettering_v04_d438.webp", ["/static/art/games/vorath_overhaul_v01/blade_tribunal/lettering_v04_d438.webp"], ["vorath-blade-tribunal", "asteroids-void", "breakout-wall"]),

@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
-"""flat_control_scan.py v02.5 (Grok): sibling of plaque_fit_scan.py.
+"""flat_control_scan.py v02.6 (Grok): sibling of plaque_fit_scan.py.
+v02.6 (Grok 1909Z HOLD seat of PR #322 head 3f6b5473: /links/ 390 sigil plaques were a painted frame around an EMPTY slot yet scored CHIP_PAINTED):
+  E1 interior-content check on CHIP_PAINTED chips (default ON; --no-interior reproduces v02.5 byte-for-byte except version). After the chip pass the
+     tool samples the chip's inner box (inset 30% of min(w,h), never < 4 css px of interior) from the page screenshot. If the interior is near-uniform
+     (luma stddev < --empty-std 6.0 AND < --empty-content 0.005 of pixels differ from the median colour by > 24 in any channel) the chip is
+     CHIP_EMPTY_FRAME (+_LATENT), severity FLAT, exit 1 unless --empty-ok. Rows gain interior {std, content, median, px, inset}; when the frame is a
+     border-image with 'fill' over a background-image the reason says so (fill paints ABOVE the background and hides it: the PR #322 root cause).
+  E2 raster art that fails to load (background-image / border-image / pseudo / child img / svg image: 404, decode error, naturalWidth 0) is not art:
+     it adds no coverage; rows gain broken_art [...]; a chip whose only art is broken is CHIP_FLAT with a 'failed to load' reason.
+  E3 --interior-controls (opt-in, default off so every v02.5 control verdict stays): the same interior check on PAINTED controls -> EMPTY_FRAME /
+     EMPTY_FRAME_LATENT (exit 1 unless --empty-ok). --empty-std / --empty-content tune the thresholds. E4 docstring/VERSION/--version say v02.6.
 v02.5 (PR #320 seat note N7/N8: monogram tiles and episode badges are flat CSS but v02.4 scored the page FLAT 0):
   K1 CHIP pass (third, separate pass; v02.1 control rows and v02.2 input rows untouched). A CHIP is a small visible box
      (h <= 80, w <= 320 CSS px, not a control, not containing a control or input) with its own visible box (border
@@ -85,7 +95,7 @@ Exit: 1 if any FLAT or FLAT_LATENT (or visible FLAT only with --latent-ok), 0 if
 import argparse, asyncio, functools, http.server, json, os, re, socketserver, sys, threading
 from playwright.async_api import async_playwright
 
-VERSION = 'v02.5'
+VERSION = 'v02.6'
 SEL = 'a, button, [role=button], input[type=button], input[type=submit], input[type=reset], input[type=image], summary, select'
 INSEL = ('input[type=checkbox], input[type=radio], input[type=range], input[type=text], input[type=search], input[type=number], '
          'input[type=email], input[type=url], input[type=tel], input[type=password], input[type=file], input:not([type]), textarea')
@@ -424,7 +434,8 @@ async ([INSEL, SEL, ANCMAX]) => {
 }
 """
 CHIPJS = r"""
-async ([INSEL, SEL, COVER]) => {
+async ([INSEL, SEL, COVER, CHK]) => {
+  // v02.6: CHK = interior/broken-art checks on (false = v02.5 behaviour)
   // v02.5 K1 chip pass; runs after INJS (latent details still open)
   const closed = window.__fcsClosed || [];
   const docW = Math.max(document.documentElement.scrollWidth, innerWidth), docH = Math.max(document.documentElement.scrollHeight, innerHeight);
@@ -436,14 +447,18 @@ async ([INSEL, SEL, COVER]) => {
   function isClear(c) { return !c || /transparent|rgba\([^)]*,\s*0(\.0+)?\)|hsla\([^)]*,\s*0(\.0+)?%?\)|\/\s*0(\.0+)?%?\s*\)$/.test(c.trim()); }
   const natCache = {};
   async function natSize(u) { if (u in natCache) return natCache[u]; const im = new Image(); im.src = u; try { await im.decode(); natCache[u] = [im.naturalWidth, im.naturalHeight]; } catch (e) { natCache[u] = null; } return natCache[u]; }
+  let curBroken = [];
+  async function isBroken(u) { const n = await natSize(u); return !n || !n[0] || !n[1]; }
+  async function anyLoaded(list) { let ok = false; for (const u of list) { if (isVector(u)) continue; if (await isBroken(u)) curBroken.push(u.split('/').pop().slice(0, 60)); else ok = true; } return ok; }
   function lenPx(t, box) { if (t.endsWith('%')) return parseFloat(t) / 100 * box; if (t.endsWith('px')) return parseFloat(t); return null; }
   async function selfCoverage(cs, w, h) {
     // H4: max coverage (0..1) of the raster background layers on the element box; border-image raster = 1
-    if (urls(cs.borderImageSource).some(u => !isVector(u))) return 1;
+    if (CHK ? await anyLoaded(urls(cs.borderImageSource)) : urls(cs.borderImageSource).some(u => !isVector(u))) return 1;
     const L = splitTop(cs.backgroundImage || 'none'), S = splitTop(cs.backgroundSize || 'auto'), P = splitTop(cs.backgroundRepeat || 'repeat');
     let best = 0;
     for (let i = 0; i < L.length; i++) {
       const m = /url\(\s*["']?(.*?)["']?\s*\)/.exec(L[i]); if (!m || isVector(m[1])) continue;
+      if (CHK && await isBroken(m[1])) { curBroken.push(m[1].split('/').pop().slice(0, 60)); continue; }
       const sz = (S[i % S.length] || 'auto').trim(), rp = (P[i % P.length] || 'repeat').trim().split(/\s+/);
       const rx = rp[0] === 'repeat-x' || rp[0] === 'repeat' || rp[0] === 'round' || rp[0] === 'space', ry = rp[0] === 'repeat-y' || (rp.length > 1 ? /repeat|round|space/.test(rp[1]) && rp[1] !== 'no-repeat' : (rp[0] === 'repeat' || rp[0] === 'round' || rp[0] === 'space'));
       let lw = null, lh = null;
@@ -473,6 +488,12 @@ async ([INSEL, SEL, COVER]) => {
     return Math.round(best * 1000) / 1000;
   }
   function pseudoArt(el, pseudos) { const r = []; for (const p of pseudos) { let cs; try { cs = getComputedStyle(el, p); } catch (e) { continue; } if (!cs) continue; if (p !== '::file-selector-button' && (!cs.content || cs.content === 'none' || cs.content === 'normal')) continue; if (cs.display === 'none') continue; for (const x of rasterOf(cs)) r.push(p + ' ' + x); for (const u of urls(cs.content)) if (!isVector(u)) r.push(p + ' content ' + u.split('/').pop().slice(0, 60)); } return r; }
+  async function pseudoLoaded(el, pseudos) {
+    let any = false;
+    for (const p of pseudos) { let cs; try { cs = getComputedStyle(el, p); } catch (e) { continue; } if (!cs || cs.display === 'none') continue; if (p !== '::file-selector-button' && (!cs.content || cs.content === 'none' || cs.content === 'normal')) continue;
+      const us = [...urls(cs.backgroundImage), ...urls(cs.borderImageSource), ...urls(cs.content)]; if (us.length && await anyLoaded(us)) any = true; }
+    return any;
+  }
   function hidden(el) {
     for (let e = el; e && e.nodeType === 1; e = e.parentElement) {
       const cs = getComputedStyle(e);
@@ -527,12 +548,15 @@ async ([INSEL, SEL, COVER]) => {
     if (pr.x + pr.w <= 0 || pr.y + pr.h <= 0 || ((pr.x >= docW || pr.y >= docH) && !inScroller)) { ignored.offscreen++; continue; }
     chosen.push(el);
     // coverage: self (v02.4 selfCoverage), pseudo raster, child img / svg image
+    curBroken = [];
     let cov = rasterOf(cs).length ? await selfCoverage(cs, r.w, r.h) : 0, host = cov > 0 ? 'self' : '';
-    const pse = pseudoArt(el, ['::before', '::after']);
+    let pse = pseudoArt(el, ['::before', '::after']);
+    if (CHK && pse.length && !(await pseudoLoaded(el, ['::before', '::after']))) pse = [];
     if (pse.length && cov < COVER) { cov = 1; host = 'pseudo'; }
     for (const im of el.querySelectorAll('img, svg image')) {
       const src = im.tagName.toLowerCase() === 'img' ? (im.currentSrc || im.src || '') : (im.getAttribute('href') || im.getAttribute('xlink:href') || '');
       if (!src || isVector(src)) continue;
+      if (CHK && !(im.tagName.toLowerCase() === 'img' && im.loading === 'lazy' && !im.complete) && (im.tagName.toLowerCase() === 'img' ? (!im.complete || im.naturalWidth === 0) : await isBroken(src))) { curBroken.push(src.split('/').pop().slice(0, 60)); continue; }
       const q = R(im.getBoundingClientRect()); const x0 = Math.max(q.x, r.x), y0 = Math.max(q.y, r.y), x1 = Math.min(q.x + q.w, r.x + r.w), y1 = Math.min(q.y + q.h, r.y + r.h);
       const c = (x1 > x0 && y1 > y0) ? (x1 - x0) * (y1 - y0) / (r.w * r.h) : 0;
       if (c > cov) { cov = Math.round(c * 1000) / 1000; host = 'child'; }
@@ -545,6 +569,7 @@ async ([INSEL, SEL, COVER]) => {
     const latentD = closed.find(d => d.contains(el));
     const reasons = [];
     if (!painted) {
+      if (CHK && curBroken.length) reasons.push('raster art failed to load (404 / decode error / naturalWidth 0): ' + [...new Set(curBroken)].join(', '));
       if (cov > 0) reasons.push(`raster art covers only ${Math.round(cov * 100)}% (< ${Math.round(COVER * 100)}%)`);
       if (bx.bg) reasons.push('css solid background ' + cs.backgroundColor);
       if (bx.bord) reasons.push('css border ' + cs.borderTopWidth + ' ' + cs.borderTopStyle + ' ' + cs.borderTopColor);
@@ -559,13 +584,73 @@ async ([INSEL, SEL, COVER]) => {
     rows.push({ idx: rows.length, id: el.id || el.getAttribute('data-fx') || '', tag: el.tagName.toLowerCase(), selector: cssPath(el), text: text.slice(0, 24),
       rect: [pr.x, pr.y, pr.w, pr.h].map(v => Math.round(v * 10) / 10), verdict: base + (latentD ? '_LATENT' : ''), severity: sev, escalation: esc,
       art_coverage: Math.round(cov * 1000) / 1000, art_host: host, reasons, latent_in: latentD ? (latentD.id ? 'details#' + latentD.id : cssPath(latentD)) : '',
-      in_scroller: inScroller ? cssPath(inScroller) : '', landmark: lm ? lm.tagName.toLowerCase() + (lm.id ? '#' + lm.id : '') : '' });
+      in_scroller: inScroller ? cssPath(inScroller) : '', landmark: lm ? lm.tagName.toLowerCase() + (lm.id ? '#' + lm.id : '') : '',
+      ...(CHK ? { broken_art: [...new Set(curBroken)], bi_fill: /\bfill\b/.test(cs.borderImageSlice || '') && rasterOf(cs).some(x => x.startsWith('backgroundImage')) && urls(cs.borderImageSource).some(u => !isVector(u)), border_px: Math.max(px(cs.borderTopWidth), px(cs.borderRightWidth), px(cs.borderBottomWidth), px(cs.borderLeftWidth)) } : {}) });
   }
   return { rows, ignored };
 }
 """
 CHIPKEYS = ('CHIP_PAINTED', 'CHIP_FLAT', 'CHIP_PAINTED_LATENT', 'CHIP_FLAT_LATENT')
 CHIPSEV = ('CHIP_FLAT_SEV_FLAT', 'CHIP_FLAT_LATENT_SEV_FLAT', 'CHIP_WARN')
+CHIPKEYS6 = CHIPKEYS + ('CHIP_EMPTY_FRAME', 'CHIP_EMPTY_FRAME_LATENT')   # v02.6 E1 (only present when the interior check is on)
+
+def inner_inset(w, h):
+    """v02.6 E1: css-px inset from each edge: 30% of the short side, but the interior never drops below 4 css px."""
+    m = min(w, h); return max(0.0, min(0.30 * m, (m - 4) / 2))
+
+def use_full_capture(doc_h, dpr):
+    """v02.6 E1: one full-page capture is only attempted when the page is <= 16000 device px tall (Chromium/SwiftShader renders tiles past ~16384 px blank: the idc-programming page at 53k px gave flat grey crops)."""
+    return float(doc_h) * float(dpr) <= 16000
+
+def capture_trusted(img_w, img_h, doc_w, doc_h):
+    """v02.6 E1: a full-page capture shorter than the document (scaled by the width ratio) is not trusted."""
+    return img_h >= round(float(doc_h) * img_w / max(1.0, float(doc_w))) - 4
+
+def interior_stats(im, empty_std, empty_content):
+    """v02.6 E1: PIL-only (no numpy). std = luma stddev; content = share of pixels whose max channel differs from the median colour by > 24."""
+    from PIL import Image, ImageChops, ImageStat
+    im = im.convert('RGB'); n = max(1, im.width * im.height)
+    std = ImageStat.Stat(im.convert('L')).stddev[0]; med = []
+    for ch in im.split():
+        c = 0
+        for v, k in enumerate(ch.histogram()):
+            c += k
+            if c * 2 >= n: med.append(v); break
+    r, g, b = ImageChops.difference(im, Image.new('RGB', im.size, tuple(med))).split()
+    content = ImageChops.lighter(ImageChops.lighter(r, g), b).point(lambda v: 255 if v > 24 else 0).histogram()[255] / n
+    return dict(std=round(std, 2), content=round(content, 4), median=med, px=[im.width, im.height], empty=bool(std < empty_std and content < empty_content))
+
+async def interior_check(pg, rows, attr, data, a, verdicts):
+    """v02.6 E1/E3: for rows whose verdict is in `verdicts`, crop the interior and attach row['interior']; returns the rows found empty.
+    Page-flow rows are cropped from ONE full-page screenshot (css coords x scale); rows inside a scroller or any fixed/sticky ancestor use the element screenshot."""
+    from PIL import Image
+    import io
+    todo = [r for r in rows if r['verdict'] in verdicts]
+    if not todo: return []
+    full = None
+    if use_full_capture(data['docH'], a.dpr):  # taller pages use per-row clip shots
+      try: full = Image.open(io.BytesIO(await pg.screenshot(full_page=True, timeout=30000, animations='disabled'))).convert('RGB')
+      except Exception: full = None
+    if full is not None and not capture_trusted(full.width, full.height, data['docW'], data['docH']): full = None  # short capture: do not trust it
+    bad = []
+    for r in todo:
+        x, y, w, h = r['rect']; ins = inner_inset(w, h); crop = None
+        try:
+            if full is not None and not r.get('in_scroller'):
+                k = full.width / max(1.0, float(data['docW'])); crop = full.crop((round((x + ins) * k), round((y + ins) * k), round((x + w - ins) * k), round((y + h - ins) * k)))
+            elif r.get('in_scroller'):
+                el = pg.locator(f"[{attr}='{r['idx']}']")
+                try: await el.scroll_into_view_if_needed(timeout=2000)
+                except Exception: pass
+                im = Image.open(io.BytesIO(await el.screenshot(timeout=10000, animations='disabled'))).convert('RGB'); k = im.width / max(1.0, w)
+                crop = im.crop((round(ins * k), round(ins * k), round((w - ins) * k), round((h - ins) * k)))
+            else:  # tall page / no trusted full capture: clip the interior box directly
+                crop = Image.open(io.BytesIO(await pg.screenshot(clip=dict(x=max(0, x + ins), y=y + ins, width=max(2, w - 2 * ins), height=max(2, h - 2 * ins)), full_page=True, timeout=10000, animations='disabled'))).convert('RGB')
+            if crop.width < 2 or crop.height < 2: raise ValueError('interior crop under 2 px')
+            st = interior_stats(crop, a.empty_std, a.empty_content); st['inset'] = round(ins, 1); r['interior'] = st
+            if st['empty']: bad.append(r)
+        except Exception as e: r['interior'] = dict(error=str(e)[:100], empty=False)
+    return bad
 
 INKEYS = ('NATIVE_PAINTED', 'NATIVE_FLAT', 'NATIVE_PAINTED_LATENT', 'NATIVE_FLAT_LATENT')
 
@@ -664,7 +749,7 @@ async def run(a):
                 res['pages'].append(dict(path=path, http_status=status, errors=errs, counts=dict(PAINTED=0, FLAT=0, PAINTED_LATENT=0, FLAT_LATENT=0), ignored={}, ignored_samples=[], matched=0,
                                          doc=[0, 0], rows=[], contact_sheet=None, screenshot=None, rendered=False, skipped='external landing (--skip-external)', closed_details=0, latent_controls=0, exclusive_details=0, details_restore=None, crop_stats=[], **final,
                                          **({} if a.no_inputs else dict(input_rows=[], input_counts={k: 0 for k in INKEYS}, input_ignored={}, input_matched=0, input_contact_sheet=None, input_crop_stats=[])),
-                                         **({} if a.no_chips else dict(chip_rows=[], chip_counts={k: 0 for k in CHIPKEYS + CHIPSEV}, chip_ignored={}, chip_contact_sheet=None, chip_crop_stats=[]))))
+                                         **({} if a.no_chips else dict(chip_rows=[], chip_counts={k: 0 for k in (CHIPKEYS if a.no_interior else CHIPKEYS6) + CHIPSEV + (() if a.no_interior else ('CHIP_EMPTY_FRAME_SEV_FLAT',))}, chip_ignored={}, chip_contact_sheet=None, chip_crop_stats=[]))))
                 await ctx.close(); continue
             try: await pg.evaluate("document.fonts && document.fonts.ready")
             except Exception: pass
@@ -718,17 +803,28 @@ async def run(a):
                         isheet = os.path.join(a.sheets, slug + '_INPUT_FLAT_contact_sheet.jpg')
                         sheet(icrops, isheet, f"{a.label} {path} NATIVE_FLAT {icnt['NATIVE_FLAT']} +latent {icnt['NATIVE_FLAT_LATENT']} / NATIVE_PAINTED {icnt['NATIVE_PAINTED']}")
                 inextra = dict(input_rows=irows, input_counts=icnt, input_ignored=indata['ignored'], input_matched=indata['total_matched'], input_contact_sheet=isheet, input_crop_stats=icstats)
+            if a.interior_controls and not a.no_interior:  # v02.6 E3 (opt-in)
+                for r in await interior_check(pg, rows, 'data-fcs-idx', data, a, ('PAINTED', 'PAINTED_LATENT')):
+                    r['verdict'] = r['verdict'].replace('PAINTED', 'EMPTY_FRAME'); it_ = r['interior']
+                    r['reasons'] = [f"painted control around an empty interior: inner {it_['px'][0]}x{it_['px'][1]} px stddev {it_['std']} (< {a.empty_std}), {round(it_['content'] * 100, 2)}% of pixels differ from median (< {a.empty_content * 100:g}%)"]
+                cnt = {k: sum(r['verdict'] == k for r in rows) for k in ('PAINTED', 'FLAT', 'PAINTED_LATENT', 'FLAT_LATENT', 'EMPTY_FRAME', 'EMPTY_FRAME_LATENT')}
             if not a.no_chips:  # v02.5 K1
-                cdata = await pg.evaluate(CHIPJS, [INSEL, SEL, a.cover]); crows = cdata['rows']
-                ccnt = {k: sum(r['verdict'] == k for r in crows) for k in CHIPKEYS}
+                cdata = await pg.evaluate(CHIPJS, [INSEL, SEL, a.cover, not a.no_interior]); crows = cdata['rows']
+                if not a.no_interior:  # v02.6 E1
+                    for r in await interior_check(pg, crows, 'data-fcs-chip-idx', data, a, ('CHIP_PAINTED', 'CHIP_PAINTED_LATENT')):
+                        r['verdict'] = r['verdict'].replace('CHIP_PAINTED', 'CHIP_EMPTY_FRAME'); r['severity'] = 'FLAT'; it_ = r['interior']
+                        r['reasons'] = [f"painted frame around an empty interior: inner {it_['px'][0]}x{it_['px'][1]} px stddev {it_['std']} (< {a.empty_std}), {round(it_['content'] * 100, 2)}% of pixels differ from median {tuple(it_['median'])} (< {a.empty_content * 100:g}%)"] + (['border-image fill paints above the background-image and hides it'] if r.get('bi_fill') else []) + (['art failed to load: ' + ', '.join(r['broken_art'])] if r.get('broken_art') else [])
+                ccnt = {k: sum(r['verdict'] == k for r in crows) for k in (CHIPKEYS if a.no_interior else CHIPKEYS6)}
                 ccnt['CHIP_FLAT_SEV_FLAT'] = sum(r['verdict'] == 'CHIP_FLAT' and r['severity'] == 'FLAT' for r in crows)
                 ccnt['CHIP_FLAT_LATENT_SEV_FLAT'] = sum(r['verdict'] == 'CHIP_FLAT_LATENT' and r['severity'] == 'FLAT' for r in crows)
                 ccnt['CHIP_WARN'] = sum(r['verdict'].startswith('CHIP_FLAT') and r['severity'] == 'WARN' for r in crows)
+                if not a.no_interior: ccnt['CHIP_EMPTY_FRAME_SEV_FLAT'] = ccnt['CHIP_EMPTY_FRAME'] + ccnt['CHIP_EMPTY_FRAME_LATENT']
                 csheet = None; ccstats = []
-                if a.sheets and any(r['verdict'].startswith('CHIP_FLAT') for r in crows):
+                isbad = (lambda v: v.startswith('CHIP_FLAT')) if a.no_interior else (lambda v: v.startswith('CHIP_FLAT') or v.startswith('CHIP_EMPTY'))
+                if a.sheets and any(isbad(r['verdict']) for r in crows):
                     os.makedirs(a.sheets, exist_ok=True); ccrops = []
                     for r in crows:
-                        if not r['verdict'].startswith('CHIP_FLAT') or len(ccrops) >= 60: continue
+                        if not isbad(r['verdict']) or len(ccrops) >= 60: continue
                         x, y, w, h = r['rect']; pad = 12
                         clip = dict(x=max(0, x - pad), y=max(0, y - pad), width=min(w + 2 * pad, data['docW'] - max(0, x - pad)), height=h + 2 * pad)
                         try:
@@ -738,7 +834,7 @@ async def run(a):
                         except Exception as e: r['crop_error'] = str(e)[:100]
                     if ccrops:
                         csheet = os.path.join(a.sheets, slug + '_CHIP_FLAT_contact_sheet.jpg')
-                        sheet(ccrops, csheet, f"{a.label} {path} CHIP_FLAT {ccnt['CHIP_FLAT']} (sev FLAT {ccnt['CHIP_FLAT_SEV_FLAT']}, WARN {ccnt['CHIP_WARN']}) / CHIP_PAINTED {ccnt['CHIP_PAINTED']} @ {a.width}x{a.height}")
+                        sheet(ccrops, csheet, f"{a.label} {path} CHIP_FLAT {ccnt['CHIP_FLAT']} (sev FLAT {ccnt['CHIP_FLAT_SEV_FLAT']}, WARN {ccnt['CHIP_WARN']}) / CHIP_PAINTED {ccnt['CHIP_PAINTED']}" + ('' if a.no_interior else f" / CHIP_EMPTY_FRAME {ccnt['CHIP_EMPTY_FRAME']}+{ccnt['CHIP_EMPTY_FRAME_LATENT']} latent") + f" @ {a.width}x{a.height}")
                 inextra.update(chip_rows=crows, chip_counts=ccnt, chip_ignored=cdata['ignored'], chip_contact_sheet=csheet, chip_crop_stats=ccstats)
             try: await pg.evaluate(RESTORE)  # back to default state (v02.1: + exclusive-accordion names and initial .open)
             except Exception as e: errs.append('RESTORE ' + str(e)[:100])
@@ -764,7 +860,10 @@ async def run(a):
         res['input_selector'] = INSEL
         res['input_totals'] = {k: sum(p_['input_counts'][k] for p_ in res['pages']) for k in INKEYS}
     if not a.no_chips:
-        res['chip_totals'] = {k: sum(p_.get('chip_counts', {}).get(k, 0) for p_ in res['pages']) for k in CHIPKEYS + CHIPSEV}
+        res['chip_totals'] = {k: sum(p_.get('chip_counts', {}).get(k, 0) for p_ in res['pages']) for k in (CHIPKEYS if a.no_interior else CHIPKEYS6) + CHIPSEV + (() if a.no_interior else ('CHIP_EMPTY_FRAME_SEV_FLAT',))}
+    if not a.no_interior:
+        res['interior'] = dict(enabled=True, empty_std=a.empty_std, empty_content=a.empty_content, controls=bool(a.interior_controls), method='inner box inset 30% of min(w,h) from page screenshot; PIL luma stddev + share of pixels > 24 from median colour')
+        if a.interior_controls: res['interior_control_totals'] = {k: sum(p_['counts'].get(k, 0) for p_ in res['pages']) for k in ('EMPTY_FRAME', 'EMPTY_FRAME_LATENT')}
     return res
 
 def to_md(res):
@@ -775,6 +874,8 @@ def to_md(res):
         it = res['input_totals']; L += [f"Native inputs (v02.2): NATIVE_PAINTED {it['NATIVE_PAINTED']}, NATIVE_FLAT {it['NATIVE_FLAT']}, NATIVE_PAINTED_LATENT {it['NATIVE_PAINTED_LATENT']}, NATIVE_FLAT_LATENT {it['NATIVE_FLAT_LATENT']}", '']
     if 'chip_totals' in res:
         ct = res['chip_totals']; L += [f"Chips (v02.5): CHIP_PAINTED {ct['CHIP_PAINTED']}, CHIP_FLAT {ct['CHIP_FLAT']} (severity FLAT {ct['CHIP_FLAT_SEV_FLAT']}, WARN {ct['CHIP_WARN']}), CHIP_PAINTED_LATENT {ct['CHIP_PAINTED_LATENT']}, CHIP_FLAT_LATENT {ct['CHIP_FLAT_LATENT']} (severity FLAT {ct['CHIP_FLAT_LATENT_SEV_FLAT']})", '']
+    if 'interior' in res:
+        ct = res.get('chip_totals') or {}; L += [f"Interior check (v02.6): CHIP_EMPTY_FRAME {ct.get('CHIP_EMPTY_FRAME', 0)}, CHIP_EMPTY_FRAME_LATENT {ct.get('CHIP_EMPTY_FRAME_LATENT', 0)} (severity FLAT); std < {res['interior']['empty_std']}, content < {res['interior']['empty_content']}; controls {'on: ' + str(res.get('interior_control_totals')) if res['interior']['controls'] else 'off (--interior-controls)'}", '']
     for pg in res['pages']:
         c = pg['counts']
         L += [f"## {pg['path']}  (HTTP {pg['http_status']}; PAINTED {c['PAINTED']}, FLAT {c['FLAT']}, PAINTED_LATENT {c['PAINTED_LATENT']}, FLAT_LATENT {c['FLAT_LATENT']}; ignored {pg['ignored']})", '',
@@ -824,6 +925,11 @@ def main():
     ap.add_argument('--sheets', help='dir for FLAT contact sheets'); ap.add_argument('--shots', help='dir for viewport screenshots')
     ap.add_argument('--no-chips', action='store_true', help='v02.5: skip the chip pass (reproduces v02.4 output; only version differs)')
     ap.add_argument('--chips-ok', action='store_true', help='v02.5: severity-FLAT chips are reported but do not set exit 1')
+    ap.add_argument('--no-interior', action='store_true', help='v02.6: skip the interior-content and broken-art checks (reproduces v02.5 output; only version differs)')
+    ap.add_argument('--empty-ok', action='store_true', help='v02.6: CHIP_EMPTY_FRAME / EMPTY_FRAME rows are reported but do not set exit 1')
+    ap.add_argument('--interior-controls', action='store_true', help='v02.6: also run the interior check on PAINTED controls (EMPTY_FRAME); default off')
+    ap.add_argument('--empty-std', type=float, default=6.0, help='v02.6: luma stddev below which an interior counts as flat (default 6.0)')
+    ap.add_argument('--empty-content', type=float, default=0.005, help='v02.6: share of pixels differing from the median colour by > 24 below which an interior has no content (default 0.005)')
     ap.add_argument('--base-url', help='v02.5: scan a live site at this base URL instead of serving --root')
     ap.add_argument('--version', action='version', version='flat_control_scan.py ' + VERSION)
     ap.add_argument('--chrome', default='/usr/bin/google-chrome' if os.path.exists('/usr/bin/google-chrome') else None)
@@ -838,10 +944,14 @@ def main():
     t = res['totals']; print(f"{a.label}: PAINTED {t['PAINTED']} FLAT {t['FLAT']} PAINTED_LATENT {t['PAINTED_LATENT']} FLAT_LATENT {t['FLAT_LATENT']} landings {res['landings']} -> {jp}")
     if 'input_totals' in res: it = res['input_totals']; print(f"{a.label} inputs: NATIVE_PAINTED {it['NATIVE_PAINTED']} NATIVE_FLAT {it['NATIVE_FLAT']} NATIVE_PAINTED_LATENT {it['NATIVE_PAINTED_LATENT']} NATIVE_FLAT_LATENT {it['NATIVE_FLAT_LATENT']}")
     if 'chip_totals' in res: ct = res['chip_totals']; print(f"{a.label} chips: CHIP_PAINTED {ct['CHIP_PAINTED']} CHIP_FLAT {ct['CHIP_FLAT']} (sev FLAT {ct['CHIP_FLAT_SEV_FLAT']} WARN {ct['CHIP_WARN']}) CHIP_PAINTED_LATENT {ct['CHIP_PAINTED_LATENT']} CHIP_FLAT_LATENT {ct['CHIP_FLAT_LATENT']} (sev FLAT {ct['CHIP_FLAT_LATENT_SEV_FLAT']})")
+    if 'interior' in res: ct = res['chip_totals']; print(f"{a.label} interior: CHIP_EMPTY_FRAME {ct['CHIP_EMPTY_FRAME']} CHIP_EMPTY_FRAME_LATENT {ct['CHIP_EMPTY_FRAME_LATENT']}" + (f" | controls EMPTY_FRAME {res['interior_control_totals']['EMPTY_FRAME']} EMPTY_FRAME_LATENT {res['interior_control_totals']['EMPTY_FRAME_LATENT']}" if 'interior_control_totals' in res else ''))
     for pg in res['pages']: print(f"  {pg['path']}: HTTP {pg['http_status']} {pg['landing']} -> {pg['final_url']} PAINTED {pg['counts']['PAINTED']} FLAT {pg['counts']['FLAT']} P_LAT {pg['counts']['PAINTED_LATENT']} F_LAT {pg['counts']['FLAT_LATENT']} ignored {pg['ignored']}" + (f" | IN NP {pg['input_counts']['NATIVE_PAINTED']} NF {pg['input_counts']['NATIVE_FLAT']} NP_LAT {pg['input_counts']['NATIVE_PAINTED_LATENT']} NF_LAT {pg['input_counts']['NATIVE_FLAT_LATENT']}" if 'input_counts' in pg else ''))
     bad = t['FLAT'] or (t['FLAT_LATENT'] and not a.latent_ok)
     if 'input_totals' in res and not a.inputs_ok: bad = bad or res['input_totals']['NATIVE_FLAT'] or (res['input_totals']['NATIVE_FLAT_LATENT'] and not a.latent_ok)
     if 'chip_totals' in res and not a.chips_ok: bad = bad or res['chip_totals']['CHIP_FLAT_SEV_FLAT'] or (res['chip_totals']['CHIP_FLAT_LATENT_SEV_FLAT'] and not a.latent_ok)  # v02.5 K1
+    if 'interior' in res and not a.empty_ok:  # v02.6 E1/E3
+        bad = bad or res['chip_totals']['CHIP_EMPTY_FRAME'] or (res['chip_totals']['CHIP_EMPTY_FRAME_LATENT'] and not a.latent_ok)
+        if 'interior_control_totals' in res: bad = bad or res['interior_control_totals']['EMPTY_FRAME'] or (res['interior_control_totals']['EMPTY_FRAME_LATENT'] and not a.latent_ok)
     sys.exit(1 if bad else 0)
 
 if __name__ == '__main__': main()

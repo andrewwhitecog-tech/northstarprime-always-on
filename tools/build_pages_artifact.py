@@ -133,6 +133,13 @@ def _must_stay_local(relative: Path) -> bool:
         return True
     if len(parts) >= 2 and (parts[0], parts[1]) == ("static", "vendor"):
         return True
+    if (
+        len(parts) >= 2
+        and (parts[0], parts[1]) == ("warband", "art")
+        and relative.name.startswith("vorath_")
+        and relative.suffix.lower() == ".webp"
+    ):
+        return True
     # pages_art_quality exact-hash delivery + comic interiors stay in the artifact.
     if len(parts) >= 3 and (parts[0], parts[1], parts[2]) == ("static", "art", "reviewed"):
         return True

@@ -1,5 +1,19 @@
 #!/usr/bin/env python3
-"""flat_control_scan.py v02.3 (Grok): sibling of plaque_fit_scan.py.
+"""flat_control_scan.py v02.5 (Grok): sibling of plaque_fit_scan.py.
+v02.5 (PR #320 seat note N7/N8: monogram tiles and episode badges are flat CSS but v02.4 scored the page FLAT 0):
+  K1 CHIP pass (third, separate pass; v02.1 control rows and v02.2 input rows untouched). A CHIP is a small visible box
+     (h <= 80, w <= 320 CSS px, not a control, not containing a control or input) with its own visible box (border
+     width > 0 with a visible colour, or a non-transparent background colour) and visible text of 1..24 chars.
+     CHIP_PAINTED = raster art covers >= --cover of the chip (v02.4 selfCoverage on self incl. background-clip,
+     border-image raster = 1, raster on ::before/::after, or a child <img>/<svg><image> covering >= --cover);
+     CHIP_FLAT otherwise. Outermost qualifying box wins (no double count of nested spans).
+     Severity: WARN by default; FLAT (sets exit 1) when the chip sits inside a control (a, button, ...), inside a
+     card/tile ancestor (class *card*/*tile*, <= 4 levels) that hosts a control, or is the direct element sibling of a
+     control. Chips inside a closed <details> are *_LATENT and follow --latent-ok.
+     --chips-ok: chip rows reported, no exit effect. --no-chips: skip the pass, output = v02.4 (only version differs).
+  K2 --base-url URL: scan a live site instead of serving --root (root becomes optional).  K3 --version.
+  K4 docstring/VERSION/--version all say v02.5 (v02.4 shipped VERSION v02.4 under a v02.3 docstring head).
+v02.4 (summary; see CHANGELOG): L1 label-hosted hidden toggles, C1 background-clip/position coverage, S1 --shots name.
 v02.3 (AG second-seat hardening notes 2026-11-15T14:07Z on v02.2 36c0506f; v02.1 control pass untouched):
   H1 every file write is encoding='utf-8' (labels with em dash / check marks broke cp1252 Windows runs).
   H2 RESTORE also strips data-fcs-idx / data-fcs-in-idx, so the inspected DOM is pristine after a scan; with the input
@@ -71,7 +85,7 @@ Exit: 1 if any FLAT or FLAT_LATENT (or visible FLAT only with --latent-ok), 0 if
 import argparse, asyncio, functools, http.server, json, os, re, socketserver, sys, threading
 from playwright.async_api import async_playwright
 
-VERSION = 'v02.4'
+VERSION = 'v02.5'
 SEL = 'a, button, [role=button], input[type=button], input[type=submit], input[type=reset], input[type=image], summary, select'
 INSEL = ('input[type=checkbox], input[type=radio], input[type=range], input[type=text], input[type=search], input[type=number], '
          'input[type=email], input[type=url], input[type=tel], input[type=password], input[type=file], input:not([type]), textarea')
@@ -409,6 +423,150 @@ async ([INSEL, SEL, ANCMAX]) => {
   return { rows, ignored, total_matched: els.length };
 }
 """
+CHIPJS = r"""
+async ([INSEL, SEL, COVER]) => {
+  // v02.5 K1 chip pass; runs after INJS (latent details still open)
+  const closed = window.__fcsClosed || [];
+  const docW = Math.max(document.documentElement.scrollWidth, innerWidth), docH = Math.max(document.documentElement.scrollHeight, innerHeight);
+  const sx = scrollX, sy = scrollY;
+  function splitTop(s) { const out = []; let d = 0, cur = ''; for (const ch of s) { if (ch === '(') d++; if (ch === ')') d--; if (ch === ',' && d === 0) { out.push(cur.trim()); cur = ''; } else cur += ch; } if (cur.trim()) out.push(cur.trim()); return out; }
+  function urls(v) { if (!v || v === 'none') return []; const o = []; for (const L of splitTop(v)) { const m = /url\(\s*["']?(.*?)["']?\s*\)/.exec(L); if (m) o.push(m[1]); } return o; }
+  function isVector(u) { return /^data:image\/svg/i.test(u) || /\.svgz?(\?|#|$)/i.test(u); }
+  function rasterOf(cs) { const r = []; for (const k of ['backgroundImage', 'borderImageSource']) for (const u of urls(cs[k])) if (!isVector(u)) r.push(k + ' ' + u.split('/').pop().slice(0, 60)); return r; }
+  function isClear(c) { return !c || /transparent|rgba\([^)]*,\s*0(\.0+)?\)|hsla\([^)]*,\s*0(\.0+)?%?\)|\/\s*0(\.0+)?%?\s*\)$/.test(c.trim()); }
+  const natCache = {};
+  async function natSize(u) { if (u in natCache) return natCache[u]; const im = new Image(); im.src = u; try { await im.decode(); natCache[u] = [im.naturalWidth, im.naturalHeight]; } catch (e) { natCache[u] = null; } return natCache[u]; }
+  function lenPx(t, box) { if (t.endsWith('%')) return parseFloat(t) / 100 * box; if (t.endsWith('px')) return parseFloat(t); return null; }
+  async function selfCoverage(cs, w, h) {
+    // H4: max coverage (0..1) of the raster background layers on the element box; border-image raster = 1
+    if (urls(cs.borderImageSource).some(u => !isVector(u))) return 1;
+    const L = splitTop(cs.backgroundImage || 'none'), S = splitTop(cs.backgroundSize || 'auto'), P = splitTop(cs.backgroundRepeat || 'repeat');
+    let best = 0;
+    for (let i = 0; i < L.length; i++) {
+      const m = /url\(\s*["']?(.*?)["']?\s*\)/.exec(L[i]); if (!m || isVector(m[1])) continue;
+      const sz = (S[i % S.length] || 'auto').trim(), rp = (P[i % P.length] || 'repeat').trim().split(/\s+/);
+      const rx = rp[0] === 'repeat-x' || rp[0] === 'repeat' || rp[0] === 'round' || rp[0] === 'space', ry = rp[0] === 'repeat-y' || (rp.length > 1 ? /repeat|round|space/.test(rp[1]) && rp[1] !== 'no-repeat' : (rp[0] === 'repeat' || rp[0] === 'round' || rp[0] === 'space'));
+      let lw = null, lh = null;
+      if (sz === 'cover') { lw = w; lh = h; }
+      else {
+        const nat = await natSize(m[1]); const nw = nat ? nat[0] : 0, nh = nat ? nat[1] : 0;
+        if (sz === 'contain') { if (nw && nh) { const k = Math.min(w / nw, h / nh); lw = nw * k; lh = nh * k; } else { lw = w; lh = h; } }
+        else {
+          const t = sz.split(/\s+/); let a = lenPx(t[0], w), b = t.length > 1 ? lenPx(t[1], h) : null;
+          if (a == null && b == null) { a = nw; b = nh; } else if (a == null) a = nh ? b * nw / nh : b; else if (b == null) b = nw ? a * nh / nw : a;
+          lw = a; lh = b;
+        }
+      }
+      // v02.4 C1: clip box (border-box | padding-box | content-box | text) and no-repeat position overflow
+      const CL = splitTop(cs.backgroundClip || 'border-box'), clip = (CL[i % CL.length] || 'border-box').trim();
+      if (clip === 'text') continue;
+      let bw = w, bh = h;
+      if (clip === 'padding-box' || clip === 'content-box') { bw -= px(cs.borderLeftWidth) + px(cs.borderRightWidth); bh -= px(cs.borderTopWidth) + px(cs.borderBottomWidth); }
+      if (clip === 'content-box') { bw -= px(cs.paddingLeft) + px(cs.paddingRight); bh -= px(cs.paddingTop) + px(cs.paddingBottom); }
+      bw = Math.max(0, bw); bh = Math.max(0, bh);
+      const PX = splitTop(cs.backgroundPositionX || '0%'), PY = splitTop(cs.backgroundPositionY || '0%');
+      function vis(rep, len, box, pos) { if (rep) return box; const t = (pos || '0%').trim(); let o = t.endsWith('%') ? (box - len) * parseFloat(t) / 100 : t.endsWith('px') ? parseFloat(t) : 0; if (!isFinite(o)) o = 0; return Math.max(0, Math.min(box, o + len) - Math.max(0, o)); }
+      const vx = vis(rx, lw || 0, w, PX[i % PX.length]), vy = vis(ry, lh || 0, h, PY[i % PY.length]);
+      const cx = Math.min(vx, bw) / Math.max(w, 1), cy = Math.min(vy, bh) / Math.max(h, 1);
+      best = Math.max(best, cx * cy);
+    }
+    return Math.round(best * 1000) / 1000;
+  }
+  function pseudoArt(el, pseudos) { const r = []; for (const p of pseudos) { let cs; try { cs = getComputedStyle(el, p); } catch (e) { continue; } if (!cs) continue; if (p !== '::file-selector-button' && (!cs.content || cs.content === 'none' || cs.content === 'normal')) continue; if (cs.display === 'none') continue; for (const x of rasterOf(cs)) r.push(p + ' ' + x); for (const u of urls(cs.content)) if (!isVector(u)) r.push(p + ' content ' + u.split('/').pop().slice(0, 60)); } return r; }
+  function hidden(el) {
+    for (let e = el; e && e.nodeType === 1; e = e.parentElement) {
+      const cs = getComputedStyle(e);
+      if (cs.display === 'none' || parseFloat(cs.opacity) === 0) return 'display/opacity';
+      if (e === el && (cs.visibility === 'hidden' || cs.visibility === 'collapse')) return 'visibility';
+    }
+    if (el.closest('[hidden],[aria-hidden=true][inert]')) return 'hidden-attr';
+    return null;
+  }
+  function R(r) { return { x: r.left, y: r.top, w: r.width, h: r.height }; }
+  function px(v) { return parseFloat(v) || 0; }
+  function cssPath(el) {
+    const parts = [];
+    for (let e = el; e && e.nodeType === 1 && parts.length < 4; e = e.parentElement) {
+      let s = e.tagName.toLowerCase();
+      if (e.id) { parts.unshift(s + '#' + e.id); break; }
+      const cl = [...e.classList].slice(0, 2).join('.'); if (cl) s += '.' + cl;
+      const sib = e.parentElement ? [...e.parentElement.children].filter(c => c.tagName === e.tagName) : [];
+      if (sib.length > 1) s += `:nth-of-type(${sib.indexOf(e) + 1})`;
+      parts.unshift(s);
+    }
+    return parts.join(' > ');
+  }
+  const CTL = SEL + ', ' + INSEL;
+  const SKIP = /^(HTML|BODY|HEAD|MAIN|HEADER|FOOTER|NAV|SECTION|ARTICLE|ASIDE|TABLE|THEAD|TBODY|TFOOT|TR|FORM|FIELDSET|SELECT|OPTION|TEXTAREA|INPUT|IMG|SVG|CANVAS|VIDEO|AUDIO|IFRAME|SCRIPT|STYLE|NOSCRIPT|BR|HR|PICTURE|SOURCE|DETAILS|DIALOG|LABEL)$/;
+  function boxed(cs) {
+    const bord = ['Top', 'Right', 'Bottom', 'Left'].some(s => px(cs['border' + s + 'Width']) > 0 && cs['border' + s + 'Style'] !== 'none' && cs['border' + s + 'Style'] !== 'hidden' && !isClear(cs['border' + s + 'Color']));
+    const bg = !isClear(cs.backgroundColor);
+    const bimg = cs.borderImageSource && cs.borderImageSource !== 'none';
+    const rimg = rasterOf(cs).length > 0;
+    return { bord, bg, any: bord || bg || bimg || rimg };
+  }
+  const rows = [], ignored = { hidden: 0, offscreen: 0, nested: 0 }, chosen = [];
+  const all = [...document.body.querySelectorAll('*')];
+  for (const el of all) {
+    if (SKIP.test(el.tagName.toUpperCase())) continue;
+    if (el.matches(CTL)) continue;                                   // already a control / native input row
+    if (el.querySelector(CTL)) continue;                             // a container of controls is a card, not a chip
+    const r = R(el.getBoundingClientRect());
+    if (r.w <= 2 || r.h <= 2 || r.h > 80 || r.w > 320) continue;
+    const cs = getComputedStyle(el), bx = boxed(cs);
+    if (!bx.any) continue;
+    const text = (el.innerText || '').replace(/\s+/g, ' ').trim();
+    if (!text || text.length > 24) continue;
+    if (hidden(el)) { ignored.hidden++; continue; }
+    if (chosen.some(c => c.contains(el))) { ignored.nested++; continue; }
+    const ctl = el.parentElement ? el.parentElement.closest(SEL) : null;
+    if (ctl) { const q = R(ctl.getBoundingClientRect()); if (Math.abs(q.x - r.x) <= 2 && Math.abs(q.y - r.y) <= 2 && Math.abs(q.w - r.w) <= 2 && Math.abs(q.h - r.h) <= 2) continue; }  // the control's own face: v02.1 row covers it
+    const pr = { x: r.x + sx, y: r.y + sy, w: r.w, h: r.h };
+    let inScroller = null;
+    for (let e = el.parentElement; e && e !== document.body; e = e.parentElement) { const c = getComputedStyle(e); if (/(auto|scroll)/.test(c.overflowX + c.overflowY) && (e.scrollHeight > e.clientHeight + 1 || e.scrollWidth > e.clientWidth + 1)) { inScroller = e; break; } }
+    if (pr.x + pr.w <= 0 || pr.y + pr.h <= 0 || ((pr.x >= docW || pr.y >= docH) && !inScroller)) { ignored.offscreen++; continue; }
+    chosen.push(el);
+    // coverage: self (v02.4 selfCoverage), pseudo raster, child img / svg image
+    let cov = rasterOf(cs).length ? await selfCoverage(cs, r.w, r.h) : 0, host = cov > 0 ? 'self' : '';
+    const pse = pseudoArt(el, ['::before', '::after']);
+    if (pse.length && cov < COVER) { cov = 1; host = 'pseudo'; }
+    for (const im of el.querySelectorAll('img, svg image')) {
+      const src = im.tagName.toLowerCase() === 'img' ? (im.currentSrc || im.src || '') : (im.getAttribute('href') || im.getAttribute('xlink:href') || '');
+      if (!src || isVector(src)) continue;
+      const q = R(im.getBoundingClientRect()); const x0 = Math.max(q.x, r.x), y0 = Math.max(q.y, r.y), x1 = Math.min(q.x + q.w, r.x + r.w), y1 = Math.min(q.y + q.h, r.y + r.h);
+      const c = (x1 > x0 && y1 > y0) ? (x1 - x0) * (y1 - y0) / (r.w * r.h) : 0;
+      if (c > cov) { cov = Math.round(c * 1000) / 1000; host = 'child'; }
+    }
+    const painted = cov >= COVER;
+    let esc = '';
+    if (ctl) esc = 'inside control <' + ctl.tagName.toLowerCase() + '>';
+    if (!esc) { let lv = 0; for (let e = el.parentElement; e && e !== document.body && lv < 4; e = e.parentElement, lv++) { if (/card|tile/i.test(typeof e.className === 'string' ? e.className : '') && e.querySelector(SEL)) { esc = 'inside card ' + cssPath(e); break; } } }
+    if (!esc) { const sb = [el.previousElementSibling, el.nextElementSibling].find(x => x && x.matches(SEL)); if (sb) esc = 'direct sibling of control <' + sb.tagName.toLowerCase() + '>'; }
+    const latentD = closed.find(d => d.contains(el));
+    const reasons = [];
+    if (!painted) {
+      if (cov > 0) reasons.push(`raster art covers only ${Math.round(cov * 100)}% (< ${Math.round(COVER * 100)}%)`);
+      if (bx.bg) reasons.push('css solid background ' + cs.backgroundColor);
+      if (bx.bord) reasons.push('css border ' + cs.borderTopWidth + ' ' + cs.borderTopStyle + ' ' + cs.borderTopColor);
+      const rad = px(cs.borderTopLeftRadius); if (rad > 0) reasons.push('css border-radius ' + cs.borderTopLeftRadius + (rad >= r.h / 2 - 1 ? ' (pill)' : ''));
+      if (/gradient/.test(cs.backgroundImage)) reasons.push('css gradient');
+      if (!reasons.length) reasons.push('css-only box');
+    }
+    const base = painted ? 'CHIP_PAINTED' : 'CHIP_FLAT';
+    const sev = painted ? 'OK' : (esc ? 'FLAT' : 'WARN');
+    const lm = el.closest('footer,nav,header,main,aside');
+    el.setAttribute('data-fcs-chip-idx', String(rows.length));
+    rows.push({ idx: rows.length, id: el.id || el.getAttribute('data-fx') || '', tag: el.tagName.toLowerCase(), selector: cssPath(el), text: text.slice(0, 24),
+      rect: [pr.x, pr.y, pr.w, pr.h].map(v => Math.round(v * 10) / 10), verdict: base + (latentD ? '_LATENT' : ''), severity: sev, escalation: esc,
+      art_coverage: Math.round(cov * 1000) / 1000, art_host: host, reasons, latent_in: latentD ? (latentD.id ? 'details#' + latentD.id : cssPath(latentD)) : '',
+      in_scroller: inScroller ? cssPath(inScroller) : '', landmark: lm ? lm.tagName.toLowerCase() + (lm.id ? '#' + lm.id : '') : '' });
+  }
+  return { rows, ignored };
+}
+"""
+CHIPKEYS = ('CHIP_PAINTED', 'CHIP_FLAT', 'CHIP_PAINTED_LATENT', 'CHIP_FLAT_LATENT')
+CHIPSEV = ('CHIP_FLAT_SEV_FLAT', 'CHIP_FLAT_LATENT_SEV_FLAT', 'CHIP_WARN')
+
 INKEYS = ('NATIVE_PAINTED', 'NATIVE_FLAT', 'NATIVE_PAINTED_LATENT', 'NATIVE_FLAT_LATENT')
 
 DSTATE = "[...document.querySelectorAll('details')].map(d => [d.getAttribute('name'), d.open])"
@@ -417,7 +575,7 @@ RESTORE = """() => {
   const N = window.__fcsNamed || [];
   for (const x of N) x.d.setAttribute('name', x.name);               // put exclusive-accordion names back
   for (const x of N) if (x.d.open !== x.open) x.d.open = x.open;     // re-apply each initial .open state
-  document.querySelectorAll('[data-fcs-idx],[data-fcs-in-idx]').forEach(e => { e.removeAttribute('data-fcs-idx'); e.removeAttribute('data-fcs-in-idx'); });  // v02.3 H2
+  document.querySelectorAll('[data-fcs-idx],[data-fcs-in-idx],[data-fcs-chip-idx]').forEach(e => { e.removeAttribute('data-fcs-idx'); e.removeAttribute('data-fcs-in-idx'); e.removeAttribute('data-fcs-chip-idx'); });  // v02.3 H2 (+ v02.5 chip idx)
   return N.length;
 }"""
 CHROMIUM_ARGS = ["--use-gl=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist", "--mute-audio"]
@@ -470,15 +628,15 @@ def sheet(crops, path, title):
 async def run(a):
     from PIL import Image
     import io
-    srv = serve(a.root); port = srv.server_address[1]
-    res = dict(tool='flat_control_scan.py', version=VERSION, root=os.path.abspath(a.root), label=a.label, viewport=[a.width, a.height], dpr=a.dpr,
+    srv = None if a.base_url else serve(a.root); port = srv.server_address[1] if srv else None  # v02.5 K2
+    res = dict(tool='flat_control_scan.py', version=VERSION, root=(a.base_url if a.base_url else os.path.abspath(a.root)), label=a.label, viewport=[a.width, a.height], dpr=a.dpr,
                cover=a.cover, anc_max=a.anc_max, selector=SEL, chromium_args=list(CHROMIUM_ARGS), pages=[])
     async with async_playwright() as p:
         kw = dict(args=list(CHROMIUM_ARGS))
         if a.chrome: kw['executable_path'] = a.chrome
         br = await p.chromium.launch(**kw)
         for path in a.page:
-            url = f"http://127.0.0.1:{port}{path}"
+            url = (a.base_url.rstrip('/') + path) if a.base_url else f"http://127.0.0.1:{port}{path}"
             ctx = await br.new_context(viewport={"width": a.width, "height": a.height}, device_scale_factor=a.dpr, is_mobile=True, has_touch=True)
             pg = await ctx.new_page(); errs = []; status = None; chain = []; http_redirs = []
             pg.on("pageerror", lambda e, errs=errs: errs.append(str(e)[:160]))
@@ -491,7 +649,7 @@ async def run(a):
                 while rq: http_redirs.insert(0, rq.url); rq = rq.redirected_from
             except Exception as e: errs.append("GOTO " + str(e)[:120])
             await pg.wait_for_timeout(a.settle)
-            base = f"http://127.0.0.1:{port}"; fin = pg.url; load_error = False
+            base = a.base_url.rstrip('/') if a.base_url else f"http://127.0.0.1:{port}"; fin = pg.url; load_error = False
             if fin.startswith('chrome-error:') and navreq: fin, load_error = navreq[-1], True  # destination failed to load: keep the URL it was sent to
             def rel(u): return u[len(base):] if u.startswith(base) else u
             norm = lambda u: rel(u).split('#')[0].split('?')[0]
@@ -505,7 +663,8 @@ async def run(a):
                 slug = safe_slug(a.label, path)
                 res['pages'].append(dict(path=path, http_status=status, errors=errs, counts=dict(PAINTED=0, FLAT=0, PAINTED_LATENT=0, FLAT_LATENT=0), ignored={}, ignored_samples=[], matched=0,
                                          doc=[0, 0], rows=[], contact_sheet=None, screenshot=None, rendered=False, skipped='external landing (--skip-external)', closed_details=0, latent_controls=0, exclusive_details=0, details_restore=None, crop_stats=[], **final,
-                                         **({} if a.no_inputs else dict(input_rows=[], input_counts={k: 0 for k in INKEYS}, input_ignored={}, input_matched=0, input_contact_sheet=None, input_crop_stats=[]))))
+                                         **({} if a.no_inputs else dict(input_rows=[], input_counts={k: 0 for k in INKEYS}, input_ignored={}, input_matched=0, input_contact_sheet=None, input_crop_stats=[])),
+                                         **({} if a.no_chips else dict(chip_rows=[], chip_counts={k: 0 for k in CHIPKEYS + CHIPSEV}, chip_ignored={}, chip_contact_sheet=None, chip_crop_stats=[]))))
                 await ctx.close(); continue
             try: await pg.evaluate("document.fonts && document.fonts.ready")
             except Exception: pass
@@ -559,13 +718,35 @@ async def run(a):
                         isheet = os.path.join(a.sheets, slug + '_INPUT_FLAT_contact_sheet.jpg')
                         sheet(icrops, isheet, f"{a.label} {path} NATIVE_FLAT {icnt['NATIVE_FLAT']} +latent {icnt['NATIVE_FLAT_LATENT']} / NATIVE_PAINTED {icnt['NATIVE_PAINTED']}")
                 inextra = dict(input_rows=irows, input_counts=icnt, input_ignored=indata['ignored'], input_matched=indata['total_matched'], input_contact_sheet=isheet, input_crop_stats=icstats)
+            if not a.no_chips:  # v02.5 K1
+                cdata = await pg.evaluate(CHIPJS, [INSEL, SEL, a.cover]); crows = cdata['rows']
+                ccnt = {k: sum(r['verdict'] == k for r in crows) for k in CHIPKEYS}
+                ccnt['CHIP_FLAT_SEV_FLAT'] = sum(r['verdict'] == 'CHIP_FLAT' and r['severity'] == 'FLAT' for r in crows)
+                ccnt['CHIP_FLAT_LATENT_SEV_FLAT'] = sum(r['verdict'] == 'CHIP_FLAT_LATENT' and r['severity'] == 'FLAT' for r in crows)
+                ccnt['CHIP_WARN'] = sum(r['verdict'].startswith('CHIP_FLAT') and r['severity'] == 'WARN' for r in crows)
+                csheet = None; ccstats = []
+                if a.sheets and any(r['verdict'].startswith('CHIP_FLAT') for r in crows):
+                    os.makedirs(a.sheets, exist_ok=True); ccrops = []
+                    for r in crows:
+                        if not r['verdict'].startswith('CHIP_FLAT') or len(ccrops) >= 60: continue
+                        x, y, w, h = r['rect']; pad = 12
+                        clip = dict(x=max(0, x - pad), y=max(0, y - pad), width=min(w + 2 * pad, data['docW'] - max(0, x - pad)), height=h + 2 * pad)
+                        try:
+                            png = await pg.locator(f"[data-fcs-chip-idx='{r['idx']}']").screenshot(timeout=10000, animations='disabled') if r.get('in_scroller') else await pg.screenshot(clip=clip, full_page=True, timeout=10000)
+                            cim = Image.open(io.BytesIO(png)).convert('RGB'); ccstats.append(dict(idx=r['idx'], w=cim.width, h=cim.height, ink=ink(cim)))
+                            ccrops.append((cim, f"chip#{r['idx']} {r['severity']} {r['tag']} '{r['text'][:24]}' [{r['landmark']}]"))
+                        except Exception as e: r['crop_error'] = str(e)[:100]
+                    if ccrops:
+                        csheet = os.path.join(a.sheets, slug + '_CHIP_FLAT_contact_sheet.jpg')
+                        sheet(ccrops, csheet, f"{a.label} {path} CHIP_FLAT {ccnt['CHIP_FLAT']} (sev FLAT {ccnt['CHIP_FLAT_SEV_FLAT']}, WARN {ccnt['CHIP_WARN']}) / CHIP_PAINTED {ccnt['CHIP_PAINTED']} @ {a.width}x{a.height}")
+                inextra.update(chip_rows=crows, chip_counts=ccnt, chip_ignored=cdata['ignored'], chip_contact_sheet=csheet, chip_crop_stats=ccstats)
             try: await pg.evaluate(RESTORE)  # back to default state (v02.1: + exclusive-accordion names and initial .open)
             except Exception as e: errs.append('RESTORE ' + str(e)[:100])
             try: post_state = await pg.evaluate(DSTATE)
             except Exception as e: post_state = None; errs.append('RESTORE-READBACK ' + str(e)[:100])
             restore = dict(before=pre_state, after=post_state, restore_ok=pre_state == post_state)
             if not a.no_inputs:  # v02.3 H2 read-back (kept out of --no-inputs so that shape stays v02.2/v02.1)
-                try: restore['dom_attrs_left'] = await pg.evaluate("document.querySelectorAll('[data-fcs-idx],[data-fcs-in-idx]').length")
+                try: restore['dom_attrs_left'] = await pg.evaluate("document.querySelectorAll('[data-fcs-idx],[data-fcs-in-idx],[data-fcs-chip-idx]').length")
                 except Exception as e: restore['dom_attrs_left'] = None; errs.append('ATTR-READBACK ' + str(e)[:100])
             shot = None
             if a.shots:
@@ -576,12 +757,14 @@ async def run(a):
                                      rendered=bool(status and status < 400), closed_details=data['closed_details'], latent_controls=data['latent_controls'], exclusive_details=data['exclusive_details'], details_restore=restore, crop_stats=crop_stats, **final, **inextra))
             await ctx.close()
         await br.close()
-    srv.shutdown()
+    if srv: srv.shutdown()
     res['totals'] = {k: sum(p_['counts'][k] for p_ in res['pages']) for k in ('PAINTED', 'FLAT', 'PAINTED_LATENT', 'FLAT_LATENT')}
     res['landings'] = {k: sum(p_['landing'] == k for p_ in res['pages']) for k in ('same', 'internal-redirect', 'external')}
     if not a.no_inputs:
         res['input_selector'] = INSEL
         res['input_totals'] = {k: sum(p_['input_counts'][k] for p_ in res['pages']) for k in INKEYS}
+    if not a.no_chips:
+        res['chip_totals'] = {k: sum(p_.get('chip_counts', {}).get(k, 0) for p_ in res['pages']) for k in CHIPKEYS + CHIPSEV}
     return res
 
 def to_md(res):
@@ -590,6 +773,8 @@ def to_md(res):
          f"Landings: {res['landings']}", '']
     if 'input_totals' in res:
         it = res['input_totals']; L += [f"Native inputs (v02.2): NATIVE_PAINTED {it['NATIVE_PAINTED']}, NATIVE_FLAT {it['NATIVE_FLAT']}, NATIVE_PAINTED_LATENT {it['NATIVE_PAINTED_LATENT']}, NATIVE_FLAT_LATENT {it['NATIVE_FLAT_LATENT']}", '']
+    if 'chip_totals' in res:
+        ct = res['chip_totals']; L += [f"Chips (v02.5): CHIP_PAINTED {ct['CHIP_PAINTED']}, CHIP_FLAT {ct['CHIP_FLAT']} (severity FLAT {ct['CHIP_FLAT_SEV_FLAT']}, WARN {ct['CHIP_WARN']}), CHIP_PAINTED_LATENT {ct['CHIP_PAINTED_LATENT']}, CHIP_FLAT_LATENT {ct['CHIP_FLAT_LATENT']} (severity FLAT {ct['CHIP_FLAT_LATENT_SEV_FLAT']})", '']
     for pg in res['pages']:
         c = pg['counts']
         L += [f"## {pg['path']}  (HTTP {pg['http_status']}; PAINTED {c['PAINTED']}, FLAT {c['FLAT']}, PAINTED_LATENT {c['PAINTED_LATENT']}, FLAT_LATENT {c['FLAT_LATENT']}; ignored {pg['ignored']})", '',
@@ -611,6 +796,15 @@ def to_md(res):
                 for r in sorted(pg['input_rows'], key=lambda r: (not r['verdict'].startswith('NATIVE_FLAT'), r['idx'])):
                     why = (r['art_host'] + ' ' + '; '.join(r['art'])) if r['art'] else '; '.join(r['reasons'])
                     L.append(f"| {r['idx']} | {r['verdict']} | {r['type']} | `{r['selector'][:70]}` | {r['text'][:40].replace('|', '/')} | {','.join(str(v) for v in r['rect'])} | {r['appearance']} / {r['accent_color']} | {why[:160].replace('|', '/')} |")
+        if 'chip_rows' in pg:
+            cc = pg['chip_counts']
+            L += ['', f"Chips (v02.5): CHIP_PAINTED {cc['CHIP_PAINTED']}, CHIP_FLAT {cc['CHIP_FLAT']} (severity FLAT {cc['CHIP_FLAT_SEV_FLAT']}, WARN {cc['CHIP_WARN']}), CHIP_FLAT_LATENT {cc['CHIP_FLAT_LATENT']}; ignored {pg['chip_ignored']}"]
+            if pg.get('chip_contact_sheet'): L.append(f"chip contact sheet: `{os.path.basename(pg['chip_contact_sheet'])}`")
+            if pg['chip_rows']:
+                L += ['', '| chip# | verdict | severity | selector | text | rect x,y,w,h | coverage | escalation / reasons |', '|---|---|---|---|---|---|---|---|']
+                for r in sorted(pg['chip_rows'], key=lambda r: ({'FLAT': 0, 'WARN': 1}.get(r['severity'], 2), r['idx'])):
+                    why = (r['escalation'] + '; ' if r['escalation'] else '') + ('; '.join(r['reasons']) if r['reasons'] else r['art_host'])
+                    L.append(f"| {r['idx']} | {r['verdict']} | {r['severity']} | `{r['selector'][:70]}` | {r['text'].replace('|', '/')} | {','.join(str(v) for v in r['rect'])} | {r['art_coverage']} | {why[:160].replace('|', '/')} |")
         if pg.get('ignored_samples'):
             L += ['', 'Ignored (first 40): ' + '; '.join(f"{x['why']} {x['tag']} '{x['text'][:30]}' {x['rect']}" for x in pg['ignored_samples'])]
         L.append('')
@@ -618,7 +812,7 @@ def to_md(res):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('--root', required=True); ap.add_argument('--page', action='append', required=True)
+    ap.add_argument('--root'); ap.add_argument('--page', action='append', required=True)
     ap.add_argument('--label', default='scan'); ap.add_argument('--out', default='.')
     ap.add_argument('--cover', type=float, default=0.60); ap.add_argument('--anc-max', type=float, default=3.0)
     ap.add_argument('--width', type=int, default=390); ap.add_argument('--height', type=int, default=844); ap.add_argument('--dpr', type=float, default=2)
@@ -628,8 +822,13 @@ def main():
     ap.add_argument('--no-inputs', action='store_true', help='v02.2: skip the native-input pass (reproduces v02.1 output; only version differs)')
     ap.add_argument('--inputs-ok', action='store_true', help='v02.2: NATIVE_FLAT inputs are reported but do not set exit 1')
     ap.add_argument('--sheets', help='dir for FLAT contact sheets'); ap.add_argument('--shots', help='dir for viewport screenshots')
+    ap.add_argument('--no-chips', action='store_true', help='v02.5: skip the chip pass (reproduces v02.4 output; only version differs)')
+    ap.add_argument('--chips-ok', action='store_true', help='v02.5: severity-FLAT chips are reported but do not set exit 1')
+    ap.add_argument('--base-url', help='v02.5: scan a live site at this base URL instead of serving --root')
+    ap.add_argument('--version', action='version', version='flat_control_scan.py ' + VERSION)
     ap.add_argument('--chrome', default='/usr/bin/google-chrome' if os.path.exists('/usr/bin/google-chrome') else None)
     a = ap.parse_args()
+    if not a.root and not a.base_url: ap.error('one of --root or --base-url is required')
     try: res = asyncio.run(run(a))
     except Exception as e: print('ERROR', repr(e), file=sys.stderr); sys.exit(2)
     os.makedirs(a.out, exist_ok=True)
@@ -638,9 +837,11 @@ def main():
     with open(mp, 'w', encoding='utf-8') as f: f.write(to_md(res))
     t = res['totals']; print(f"{a.label}: PAINTED {t['PAINTED']} FLAT {t['FLAT']} PAINTED_LATENT {t['PAINTED_LATENT']} FLAT_LATENT {t['FLAT_LATENT']} landings {res['landings']} -> {jp}")
     if 'input_totals' in res: it = res['input_totals']; print(f"{a.label} inputs: NATIVE_PAINTED {it['NATIVE_PAINTED']} NATIVE_FLAT {it['NATIVE_FLAT']} NATIVE_PAINTED_LATENT {it['NATIVE_PAINTED_LATENT']} NATIVE_FLAT_LATENT {it['NATIVE_FLAT_LATENT']}")
+    if 'chip_totals' in res: ct = res['chip_totals']; print(f"{a.label} chips: CHIP_PAINTED {ct['CHIP_PAINTED']} CHIP_FLAT {ct['CHIP_FLAT']} (sev FLAT {ct['CHIP_FLAT_SEV_FLAT']} WARN {ct['CHIP_WARN']}) CHIP_PAINTED_LATENT {ct['CHIP_PAINTED_LATENT']} CHIP_FLAT_LATENT {ct['CHIP_FLAT_LATENT']} (sev FLAT {ct['CHIP_FLAT_LATENT_SEV_FLAT']})")
     for pg in res['pages']: print(f"  {pg['path']}: HTTP {pg['http_status']} {pg['landing']} -> {pg['final_url']} PAINTED {pg['counts']['PAINTED']} FLAT {pg['counts']['FLAT']} P_LAT {pg['counts']['PAINTED_LATENT']} F_LAT {pg['counts']['FLAT_LATENT']} ignored {pg['ignored']}" + (f" | IN NP {pg['input_counts']['NATIVE_PAINTED']} NF {pg['input_counts']['NATIVE_FLAT']} NP_LAT {pg['input_counts']['NATIVE_PAINTED_LATENT']} NF_LAT {pg['input_counts']['NATIVE_FLAT_LATENT']}" if 'input_counts' in pg else ''))
     bad = t['FLAT'] or (t['FLAT_LATENT'] and not a.latent_ok)
     if 'input_totals' in res and not a.inputs_ok: bad = bad or res['input_totals']['NATIVE_FLAT'] or (res['input_totals']['NATIVE_FLAT_LATENT'] and not a.latent_ok)
+    if 'chip_totals' in res and not a.chips_ok: bad = bad or res['chip_totals']['CHIP_FLAT_SEV_FLAT'] or (res['chip_totals']['CHIP_FLAT_LATENT_SEV_FLAT'] and not a.latent_ok)  # v02.5 K1
     sys.exit(1 if bad else 0)
 
 if __name__ == '__main__': main()

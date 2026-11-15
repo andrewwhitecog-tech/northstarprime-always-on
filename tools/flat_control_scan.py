@@ -1,5 +1,18 @@
 #!/usr/bin/env python3
-"""flat_control_scan.py v02 (Grok): sibling of plaque_fit_scan.py.
+"""flat_control_scan.py v02.1 (Grok): sibling of plaque_fit_scan.py.
+
+v02.1 (AG 110300Z second-seat hardening notes, non-blocking; verdict rules unchanged):
+  * EXCLUSIVE ACCORDIONS: HTML5 <details name="x"> siblings close each other when one opens, so opening every closed
+    <details> left only the last one of a group open (its siblings' controls collapsed: innerText cleared, crops
+    wrong, rows lost). v02.1 strips [name] from every details[name] before the latent pass, then after the crops
+    closes what it opened, puts every name back and re-applies each one's initial .open state. The page record gets
+    exclusive_details (how many details[name] were stripped) and details_restore (DOM read-back of every <details>
+    [name, open] before the scan and after restore; restore_ok = identical).
+  * WINDOWS-SAFE SLUG: report/sheet/screenshot file names use re.sub(r'[^A-Za-z0-9._-]+', '_', slug), so
+    --page "/foo/?q=1" with --shots never hits OSError(22) on NTFS.
+  * --mute-audio in the Chromium launch args (handbook Rule 38); the args are recorded as chromium_args.
+  * Page record also gets crop_stats [{idx, w, h, ink}] for every FLAT/FLAT_LATENT crop (ink = share of crop
+    pixels with luma >= 128), so an emptied crop is visible in the JSON.
 
 v02 (AG-approved asks from the 101500Z census second seat):
   * LATENT: a control inside a CLOSED <details> (anything but that details' own <summary>) is not on screen until the
@@ -27,14 +40,17 @@ is <= max(--anc-max (3.0) x control height, 96 CSS px). So a link sitting in its
 page/section/footer backdrop texture (tall, or shared by several links) never certifies a plain link as art.
 Exit: 1 if any FLAT or FLAT_LATENT (or visible FLAT only with --latent-ok), 0 if none, 2 on runtime error.
 """
-import argparse, asyncio, functools, http.server, json, os, socketserver, sys, threading
+import argparse, asyncio, functools, http.server, json, os, re, socketserver, sys, threading
 from playwright.async_api import async_playwright
 
-VERSION = 'v02'
+VERSION = 'v02.1'
 SEL = 'a, button, [role=button], input[type=button], input[type=submit], input[type=reset], input[type=image], summary, select'
 
 JS = r"""
 async ([SEL, COVER, ANCMAX]) => {
+  // v02.1: strip [name] from exclusive-accordion <details> so opening one does not close its siblings (restored later)
+  window.__fcsNamed = [...document.querySelectorAll('details[name]')].map(d => ({ d, name: d.getAttribute('name'), open: d.open }));
+  for (const x of window.__fcsNamed) x.d.removeAttribute('name');
   // v02: find closed <details>, mark latent controls, then open them so latent controls get a real box
   const closedDet = [...document.querySelectorAll('details:not([open])')];
   const latentOf = new Map();
@@ -209,9 +225,28 @@ async ([SEL, COVER, ANCMAX]) => {
       href: el.getAttribute('href') || '', rect: [pr.x, pr.y, pr.w, pr.h].map(v => Math.round(v * 10) / 10), verdict, cover: Math.round(best * 1000) / 1000,
       sprite: bestC ? { kind: bestC.kind, host: bestC.host, url: (bestC.url || '').split('/').pop().slice(0, 60) } : null, reasons, landmark: (el.closest('footer,nav,header,main,aside') || {}).tagName ? el.closest('footer,nav,header,main,aside').tagName.toLowerCase() + (el.closest('footer,nav,header,main,aside').id ? '#' + el.closest('footer,nav,header,main,aside').id : '') : '' });
   }
-  return { rows, ignored, ignoredSamples, total_matched: els.length, docW, docH, closed_details: closedDet.length, latent_controls: latentOf.size };
+  return { rows, ignored, ignoredSamples, total_matched: els.length, docW, docH, closed_details: closedDet.length, latent_controls: latentOf.size, exclusive_details: window.__fcsNamed.length };
 }
 """
+
+DSTATE = "[...document.querySelectorAll('details')].map(d => [d.getAttribute('name'), d.open])"
+RESTORE = """() => {
+  (window.__fcsClosed || []).forEach(d => d.open = false);           // close what the scan opened
+  const N = window.__fcsNamed || [];
+  for (const x of N) x.d.setAttribute('name', x.name);               // put exclusive-accordion names back
+  for (const x of N) if (x.d.open !== x.open) x.d.open = x.open;     // re-apply each initial .open state
+  return N.length;
+}"""
+CHROMIUM_ARGS = ["--use-gl=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist", "--mute-audio"]
+
+def safe_slug(label, path):
+    """v02.1: Windows-safe file stem (no ? * : < > | " \\ / or spaces)."""
+    slug = (label + '_' + path.strip('/').replace('/', '_')).strip('_') or 'root'
+    return re.sub(r'[^A-Za-z0-9._-]+', '_', slug)
+
+def ink(im):
+    g = im.convert('L'); h = g.histogram(); n = sum(h)
+    return round(sum(h[128:]) / n, 4) if n else 0.0
 
 class Quiet(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *a): pass
@@ -254,9 +289,9 @@ async def run(a):
     import io
     srv = serve(a.root); port = srv.server_address[1]
     res = dict(tool='flat_control_scan.py', version=VERSION, root=os.path.abspath(a.root), label=a.label, viewport=[a.width, a.height], dpr=a.dpr,
-               cover=a.cover, anc_max=a.anc_max, selector=SEL, pages=[])
+               cover=a.cover, anc_max=a.anc_max, selector=SEL, chromium_args=list(CHROMIUM_ARGS), pages=[])
     async with async_playwright() as p:
-        kw = dict(args=["--use-gl=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"])
+        kw = dict(args=list(CHROMIUM_ARGS))
         if a.chrome: kw['executable_path'] = a.chrome
         br = await p.chromium.launch(**kw)
         for path in a.page:
@@ -284,18 +319,20 @@ async def run(a):
             else: landing = 'same'
             final = dict(requested=path, final_url=rel(fin), final_load_error=load_error, landing=landing, nav_chain=nav, http_redirects=[rel(u) for u in http_redirs])
             if landing == 'external' and a.skip_external:
-                slug = (a.label + '_' + path.strip('/').replace('/', '_')).strip('_') or 'root'
+                slug = safe_slug(a.label, path)
                 res['pages'].append(dict(path=path, http_status=status, errors=errs, counts=dict(PAINTED=0, FLAT=0, PAINTED_LATENT=0, FLAT_LATENT=0), ignored={}, ignored_samples=[], matched=0,
-                                         doc=[0, 0], rows=[], contact_sheet=None, screenshot=None, rendered=False, skipped='external landing (--skip-external)', closed_details=0, latent_controls=0, **final))
+                                         doc=[0, 0], rows=[], contact_sheet=None, screenshot=None, rendered=False, skipped='external landing (--skip-external)', closed_details=0, latent_controls=0, exclusive_details=0, details_restore=None, crop_stats=[], **final))
                 await ctx.close(); continue
             try: await pg.evaluate("document.fonts && document.fonts.ready")
             except Exception: pass
             await pg.evaluate("window.scrollTo(0,0)")
+            try: pre_state = await pg.evaluate(DSTATE)
+            except Exception as e: pre_state = None; errs.append('DSTATE ' + str(e)[:100])
             data = await pg.evaluate(JS, [SEL, a.cover, a.anc_max])
             rows = data['rows']
             cnt = {k: sum(r['verdict'] == k for r in rows) for k in ('PAINTED', 'FLAT', 'PAINTED_LATENT', 'FLAT_LATENT')}
-            slug = (a.label + '_' + path.strip('/').replace('/', '_')).strip('_') or 'root'
-            sheet_path = None
+            slug = safe_slug(a.label, path)
+            sheet_path = None; crop_stats = []
             if a.sheets and rows:
                 os.makedirs(a.sheets, exist_ok=True)
                 crops = []
@@ -308,21 +345,25 @@ async def run(a):
                         try: await el.scroll_into_view_if_needed(timeout=2000)
                         except Exception: pass  # animated/game pages may never report 'stable'; the full-page clip still works
                         png = await el.screenshot(timeout=10000, animations='disabled') if r.get('in_scroller') else await pg.screenshot(clip=clip, full_page=True, timeout=10000)
-                        crops.append((Image.open(io.BytesIO(png)).convert('RGB'), f"#{r['idx']}{' LATENT' if r['latent_in'] else ''} {r['tag']} '{r['text'][:40]}' [{r['landmark']}]"))
+                        cim = Image.open(io.BytesIO(png)).convert('RGB'); crop_stats.append(dict(idx=r['idx'], w=cim.width, h=cim.height, ink=ink(cim)))
+                        crops.append((cim, f"#{r['idx']}{' LATENT' if r['latent_in'] else ''} {r['tag']} '{r['text'][:40]}' [{r['landmark']}]"))
                     except Exception as e:
                         r['crop_error'] = str(e)[:100]
                 if crops:
                     sheet_path = os.path.join(a.sheets, slug + '_FLAT_contact_sheet.jpg')
                     sheet(crops, sheet_path, f"{a.label} {path} FLAT {cnt['FLAT']} +latent {cnt['FLAT_LATENT']} / PAINTED {cnt['PAINTED']} @ {a.width}x{a.height} DPR{a.dpr}")
-            try: await pg.evaluate("(window.__fcsClosed || []).forEach(d => d.open = false)")  # back to default state
+            try: await pg.evaluate(RESTORE)  # back to default state (v02.1: + exclusive-accordion names and initial .open)
             except Exception as e: errs.append('RESTORE ' + str(e)[:100])
+            try: post_state = await pg.evaluate(DSTATE)
+            except Exception as e: post_state = None; errs.append('RESTORE-READBACK ' + str(e)[:100])
+            restore = dict(before=pre_state, after=post_state, restore_ok=pre_state == post_state)
             shot = None
             if a.shots:
                 os.makedirs(a.shots, exist_ok=True); shot = os.path.join(a.shots, slug + '_vp390x844dpr2.png')
                 await pg.evaluate("window.scrollTo(0,0)"); await pg.wait_for_timeout(300); await pg.screenshot(path=shot)
             res['pages'].append(dict(path=path, http_status=status, errors=errs, counts=cnt, ignored=data['ignored'], ignored_samples=data['ignoredSamples'], matched=data['total_matched'],
                                      doc=[data['docW'], data['docH']], rows=rows, contact_sheet=sheet_path, screenshot=shot,
-                                     rendered=bool(status and status < 400), closed_details=data['closed_details'], latent_controls=data['latent_controls'], **final))
+                                     rendered=bool(status and status < 400), closed_details=data['closed_details'], latent_controls=data['latent_controls'], exclusive_details=data['exclusive_details'], details_restore=restore, crop_stats=crop_stats, **final))
             await ctx.close()
         await br.close()
     srv.shutdown()
@@ -338,6 +379,8 @@ def to_md(res):
         c = pg['counts']
         L += [f"## {pg['path']}  (HTTP {pg['http_status']}; PAINTED {c['PAINTED']}, FLAT {c['FLAT']}, PAINTED_LATENT {c['PAINTED_LATENT']}, FLAT_LATENT {c['FLAT_LATENT']}; ignored {pg['ignored']})", '',
               f"landing {pg['landing']} -> final `{pg['final_url']}`" + (f"; nav chain {pg['nav_chain']}" if len(pg['nav_chain']) > 1 else '') + (f"; HTTP redirects {pg['http_redirects']}" if pg['http_redirects'] else '') + (f"; SKIPPED: {pg['skipped']}" if pg.get('skipped') else ''), '']
+        if pg.get('exclusive_details') or (pg.get('details_restore') and not pg['details_restore']['restore_ok']):
+            L += [f"exclusive accordions: {pg.get('exclusive_details', 0)} details[name] stripped during the latent pass; restore_ok {pg['details_restore']['restore_ok'] if pg.get('details_restore') else None}", '']
         if pg['errors']: L += ['page errors: ' + '; '.join(pg['errors'])[:600], '']
         if pg['contact_sheet']: L += [f"contact sheet: `{os.path.basename(pg['contact_sheet'])}`", '']
         L += ['| # | verdict | landmark | selector | text | rect x,y,w,h | cover | sprite / reasons |', '|---|---|---|---|---|---|---|---|']

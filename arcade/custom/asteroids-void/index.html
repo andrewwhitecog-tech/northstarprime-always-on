@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Ossuary Orbit</title>
 <meta name="description" content="Play Ossuary Orbit free in your browser in the NorthStar Prime IDG Arcade, an original game from the Vorath universe.">
 <meta property="og:type" content="website">
@@ -18,1307 +18,1873 @@
 <meta name="twitter:image" content="https://northstarprime.net/static/games/og/asteroids-void_og_1200x630.jpg">
 <meta name="twitter:image:alt" content="Cover art for Ossuary Orbit, a free browser game in the NorthStar Prime IDG Arcade">
 <link rel="canonical" href="https://northstarprime.net/arcade/custom/asteroids-void/">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "VideoGame", "name": "Ossuary Orbit", "url": "https://northstarprime.net/arcade/custom/asteroids-void/", "gamePlatform": "Web browser", "applicationCategory": "Game", "operatingSystem": "Any", "isAccessibleForFree": true, "publisher": {"@type": "Organization", "name": "NorthStar Prime", "url": "https://northstarprime.net/"}, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "description": "Play Ossuary Orbit free in your browser in the NorthStar Prime IDG Arcade, an original game from the Vorath universe.", "image": "https://northstarprime.net/static/games/og/asteroids-void_og_1200x630.jpg"}</script>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{
+  width:100%;min-height:100vh;min-height:100dvh;overflow-x:hidden;
+  background:#04020b;color:#f7e7b8;
+  font-family:'Cinzel','Palatino Linotype','Georgia',serif;
+  user-select:none;
+}
 body{
-  background:#06060f;
-  font-family:'Courier New',monospace;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  min-height:100vh;
-  min-height:100dvh;
+  display:flex;flex-direction:column;justify-content:space-between;
+  background:
+    radial-gradient(ellipse at 50% 0%,rgba(168,85,247,0.28),transparent 55%),
+    radial-gradient(circle at 15% 30%,rgba(56,233,255,0.14),transparent 40%),
+    radial-gradient(circle at 85% 28%,rgba(244,114,182,0.14),transparent 40%),
+    radial-gradient(ellipse at 50% 92%,rgba(233,200,106,0.14),transparent 52%),
+    #04020a;
 }
-canvas{
+
+/* Sculpted Vorath Talisman Plaque (760x304 2x2 atlas) */
+.vorath-plaque{
+  display:inline-flex;align-items:center;justify-content:center;
+  background-color:transparent;
+  background-image:url('../blackjack-noir/art/vorath_ui_buttons_v01.webp');
+  background-size:200% 200%;
+  background-position:100% 0%;
+  background-repeat:no-repeat;
+  border:none;outline:none;cursor:pointer;
+  font-family:inherit;font-weight:900;text-transform:uppercase;
+  color:#fef3c7;text-decoration:none;
+  text-shadow:0 2px 4px #000,0 0 10px rgba(245,215,110,0.45);
+  filter:drop-shadow(0 4px 10px rgba(0,0,0,0.86));
+  transition:transform 0.14s,filter 0.14s,opacity 0.14s;
+  touch-action:manipulation;
+}
+.vorath-plaque:hover:not(:disabled){
+  transform:translateY(-1px) scale(1.03);
+  filter:drop-shadow(0 5px 14px rgba(103,232,249,0.55));
+  color:#fff;
+}
+.vorath-plaque:active,.vorath-plaque.is-down{
+  transform:translateY(1px) scale(0.98);
+  background-position:0% 100%;
+  color:#ecfeff;
+}
+.vorath-plaque.plaque-primary{
+  background-position:0% 0%;color:#fffbeb;
+  filter:drop-shadow(0 4px 14px rgba(236,72,153,0.5));
+}
+.vorath-plaque.plaque-active{
+  background-position:0% 100%;color:#ecfeff;
+  text-shadow:0 2px 4px #000,0 0 12px rgba(52,211,153,0.85);
+}
+.vorath-plaque.plaque-ruby{
+  background-position:100% 100%;color:#fce7f3;
+}
+
+#cabinet-shell{
+  width:100%;max-width:1040px;margin:0 auto;
+  padding:6px 8px 8px;
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  flex:1;justify-content:space-between;
+}
+.sr-only{
+  position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;
+}
+
+header.topbar{
+  width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;
+}
+.top-group{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.top-plaque{
+  width:92px;height:36px;font-size:10px;letter-spacing:1.1px;padding:0 12px;
+}
+.brand-title{
+  font-size:clamp(14px,2.2vw,20px);letter-spacing:3.4px;font-weight:900;text-align:center;
+  background:linear-gradient(90deg,#67e8f9,#fde047,#f472b6,#c084fc,#fde047);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 2px 6px rgba(0,0,0,0.95)) drop-shadow(0 0 14px rgba(245,215,110,0.38));
+}
+
+/* Rule 30(g): 100% Painted Canvas HUD with lettering_v04 sprite numerals + sculpted Vorath icons (zero text boxes) */
+#hud-strip.sr-only,#sector-ribbon.sr-only{
+  position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;
+}
+
+/* Boss Aegis Bar Outside Play */
+#boss-bar-wrap{
+  width:100%;display:none;flex-direction:column;align-items:center;gap:2px;
+}
+#boss-bar-wrap.show{display:flex}
+#boss-title{
+  font-size:10.5px;font-weight:900;letter-spacing:2.2px;color:#f0abfc;
+  text-shadow:0 2px 5px #000,0 0 14px rgba(244,114,182,0.85);
+}
+.boss-track{
+  width:min(540px,94%);height:9px;
+  clip-path:polygon(8px 0%,calc(100% - 8px) 0%,100% 50%,calc(100% - 8px) 100%,8px 100%,0% 50%);
+  background:rgba(8,3,20,0.92);border:1.5px solid #f5d76e;overflow:hidden;
+  box-shadow:0 0 16px rgba(168,85,247,0.5);
+}
+#boss-fill{
+  width:100%;height:100%;
+  background:linear-gradient(90deg,#22d3ee,#a855f7,#f472b6,#f5d76e);
+  transition:width 0.18s ease-out;
+}
+
+/* Sanctuary Playfield Viewport */
+#stage-frame{
+  position:relative;display:flex;align-items:center;justify-content:center;
+  width:100%;
+}
+canvas#c{
   display:block;
-  width:auto;
+  width:min(100%,calc((100dvh - 195px) * 900 / 680));
+  max-width:900px;
+  aspect-ratio:900 / 680;
   height:auto;
-  max-width:calc(100vw - 16px);
-  max-height:calc(100vh - 16px);
-  max-height:calc(100dvh - 16px);
-  border:1px solid rgba(233,200,106,0.3);
-  border-radius:8px;
-  box-shadow:0 0 40px rgba(127,215,255,0.15),0 20px 60px #000;
+  border-radius:14px;
+  border:2px solid transparent;
+  background:
+    linear-gradient(#05030d,#05030d) padding-box,
+    conic-gradient(from 90deg,#f5d76e,#22d3ee,#a855f7,#f472b6,#34d399,#f5d76e) border-box;
+  box-shadow:0 0 38px rgba(168,85,247,0.28),0 18px 48px rgba(0,0,0,0.9);
+  touch-action:none;
 }
-#controls-banner{
-  position:fixed;
-  bottom:10px;
-  left:50%;
-  transform:translateX(-50%);
-  display:flex;
-  gap:12px;
-  background:rgba(6,4,14,0.85);
-  backdrop-filter:blur(8px);
-  border:1px solid rgba(127,215,255,0.3);
-  border-radius:20px;
-  padding:5px 16px;
-  font-size:11px;
-  color:#a5f3fc;
-  letter-spacing:1px;
-  z-index:90;
-  pointer-events:none;
+
+/* Outside-play Action & Touch Controls */
+#deck-bar{
+  width:100%;display:flex;flex-direction:column;align-items:center;gap:4px;
 }
-.kbadge{
-  color:#fef08a;
-  background:rgba(255,255,255,0.08);
-  padding:2px 6px;
-  border-radius:4px;
-  border:1px solid rgba(254,240,138,0.3);
+#touch-controls{
+  display:none;width:100%;max-width:460px;
+  grid-template-columns:repeat(6,1fr);gap:4px;
 }
-.gamepad-badge{
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  background:rgba(16,185,129,0.18);
-  border:1px solid rgba(16,185,129,0.5);
-  color:#6ee7b7;
-  padding:2px 8px;
-  border-radius:12px;
-  font-size:10px;
-  font-weight:700;
-  letter-spacing:1px;
-  box-shadow:0 0 10px rgba(16,185,129,0.4);
+.touch-plaque{
+  width:100%;height:46px;min-height:44px;font-size:9.5px;letter-spacing:0.5px;padding:0 4px;
+  background-size:200% 200%;
+}
+#key-legend{
+  display:flex;flex-wrap:wrap;justify-content:center;gap:6px 14px;
+  font-size:10px;letter-spacing:1.3px;color:rgba(203,213,225,0.78);
+  text-shadow:0 1px 3px #000;
+}
+#key-legend strong{color:#fde68a;font-weight:800}
+#pad-status{color:#6ee7b7;display:none}
+#pad-status.show{display:inline}
+
+nav#nsp-related{
+  width:100%;font:12px/1.4 system-ui,sans-serif;padding:8px 12px;
+  background:#070913;color:#cbd5e1;text-align:center;
+  border-top:1px solid rgba(245,215,110,0.16);
+}
+nav#nsp-related a{color:#93c5fd;margin:0 8px;text-decoration:none}
+
+@media (max-width:760px),(pointer:coarse){
+  #touch-controls{display:grid}
+  #key-legend{font-size:9px;gap:4px 8px}
+  canvas#c{
+    width:100%;
+    max-height:calc(100dvh - 150px);
+  }
+}
+@media (max-width:440px){
+  #cabinet-shell{padding:6px 6px 10px;justify-content:space-between}
+  .top-plaque{width:72px;height:34px;font-size:8.5px;letter-spacing:0.6px;padding:0 6px}
+  .brand-title{font-size:14px;letter-spacing:1.8px}
+  .touch-plaque{height:52px;min-height:48px;font-size:9.5px}
+  #key-legend{display:none}
+  nav#nsp-related{font-size:10.5px;padding:6px 6px}
 }
 </style>
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "VideoGame", "name": "Ossuary Orbit", "url": "https://northstarprime.net/arcade/custom/asteroids-void/", "gamePlatform": "Web browser", "applicationCategory": "Game", "operatingSystem": "Any", "isAccessibleForFree": true, "publisher": {"@type": "Organization", "name": "NorthStar Prime", "url": "https://northstarprime.net/"}, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "description": "Play Ossuary Orbit free in your browser in the NorthStar Prime IDG Arcade, an original game from the Vorath universe.", "image": "https://northstarprime.net/static/games/og/asteroids-void_og_1200x630.jpg"}</script>
 </head>
 <body>
-<div style="position:fixed; top:12px; right:16px; z-index:100; display:flex; gap:10px; align-items:center;">
-  <a id="attestCryptoBtn" href="/crypto?game=ossuary-orbit&pane=arcade-pane" target="_blank" style="display:inline-flex; align-items:center; gap:6px; background:rgba(6,6,15,0.88); backdrop-filter:blur(8px); border:1px solid #00ffcc; color:#00ffcc; padding:7px 14px; border-radius:6px; font-size:11px; font-weight:700; text-decoration:none; letter-spacing:1px; text-transform:uppercase; transition:all 0.2s; box-shadow:0 0 14px rgba(0,255,204,0.25);">&#x2726; Attest Run to SpaceCash</a>
-</div>
+<main id="cabinet-shell">
+  <header class="topbar">
+    <div class="top-group">
+      <a class="vorath-plaque top-plaque" href="/arcade/">ARCADE</a>
+      <button type="button" class="vorath-plaque plaque-primary top-plaque" id="launch-btn">LAUNCH</button>
+    </div>
+    <h1 class="brand-title">OSSUARY ORBIT</h1>
+    <div class="top-group">
+      <button type="button" class="vorath-plaque top-plaque" id="mute-btn" aria-label="Toggle Audio">AUDIO</button>
+      <a class="vorath-plaque top-plaque" id="attestCryptoBtn" href="/crypto?game=ossuary-orbit&amp;pane=arcade-pane" target="_blank" rel="noopener">ATTEST</a>
+    </div>
+  </header>
 
-<div id="controls-banner">
-  <span><span class="kbadge">← / →</span> TURN</span>
-  <span><span class="kbadge">↑</span> THRUST</span>
-  <span><span class="kbadge">SPACE</span> FIRE</span>
-  <span><span class="kbadge">SHIFT / C</span> PHASE PARRY</span>
-  <span><span class="kbadge">Q</span> VORTEX PULSE</span>
-  <span><span class="kbadge">X</span> LASER LANCE</span>
-</div>
+  <section id="hud-strip" class="sr-only" aria-label="Sanctum Telemetry">
+    <div class="hud-stat"><span class="hud-lbl">Verdicts</span><span class="hud-val cyan" id="hud-score">0</span></div>
+    <div class="hud-stat"><span class="hud-lbl">Archive</span><span class="hud-val" id="hud-hi">0</span></div>
+    <div class="hud-stat"><span class="hud-lbl">Skiffs</span><span class="hud-val rose" id="hud-lives">3</span></div>
+    <div class="hud-stat"><span class="hud-lbl">Sector</span><span class="hud-val" id="hud-sector">I</span></div>
+    <div class="hud-stat"><span class="hud-lbl">Parry</span><span class="hud-val emerald" id="hud-parry">READY</span></div>
+    <div class="hud-stat"><span class="hud-lbl">Vortex</span><span class="hud-val cyan" id="hud-energy">30%</span></div>
+  </section>
 
-<canvas id="c"></canvas>
-<script src="/static/games/chiptune.js"></script>
+  <div id="sector-ribbon" class="sr-only" aria-label="Sanctum Sectors">
+    <span class="sec-step active" data-sec="1">I &middot; Outer Ossuary</span>
+    <span class="sec-step" data-sec="2">II &middot; Chained Reliquary</span>
+    <span class="sec-step" data-sec="3">III &middot; Split Oracle</span>
+    <span class="sec-step boss" data-sec="4">IV &middot; Ossuary Sovereign</span>
+  </div>
+
+  <div id="boss-bar-wrap" aria-live="polite">
+    <div id="boss-title">OSSUARY SOVEREIGN // AEGIS PHASE I</div>
+    <div class="boss-track"><div id="boss-fill"></div></div>
+  </div>
+
+  <div id="stage-frame">
+    <canvas id="c" width="900" height="680"></canvas>
+  </div>
+
+  <div id="deck-bar">
+    <div id="touch-controls" aria-label="Touch Flight Controls">
+      <button type="button" class="vorath-plaque touch-plaque" data-hold="left">&#x25C0; TURN</button>
+      <button type="button" class="vorath-plaque touch-plaque" data-hold="right">TURN &#x25B6;</button>
+      <button type="button" class="vorath-plaque plaque-active touch-plaque" data-hold="thrust">THRUST</button>
+      <button type="button" class="vorath-plaque plaque-primary touch-plaque" data-hold="fire">FIRE</button>
+      <button type="button" class="vorath-plaque touch-plaque" data-tap="parry">PARRY</button>
+      <button type="button" class="vorath-plaque plaque-ruby touch-plaque" data-tap="special">VORTEX</button>
+    </div>
+    <div id="key-legend">
+      <span><strong>&larr;/&rarr;</strong> Turn</span>
+      <span><strong>&uarr;</strong> Thrust</span>
+      <span><strong>Space</strong> Cannon</span>
+      <span><strong>Shift/C</strong> Phase Parry</span>
+      <span><strong>Q</strong> Graviton Vortex</span>
+      <span><strong>X</strong> Relic Lance</span>
+      <span><strong>M</strong> Audio</span>
+      <span id="pad-status"><strong>[PAD]</strong> Stick + A/X/Y/B</span>
+    </div>
+  </div>
+</main>
+
+<nav id="nsp-related" aria-label="More games">More games: <a href="/arcade/custom/blackjack-noir/">BLACKJACK NOIR</a><a href="/arcade/custom/breakout-wall/">GLYPHBREAKER</a><a href="/arcade/custom/container-yard/">VORATH STACKWARD</a><a href="/arcade/">All arcade games</a><a href="/store/">Store</a></nav>
+
+<script src="/static/games/hq_audio.js"></script>
 <script src="/static/games/glfx.js"></script>
 <script>
+"use strict";
 // ============================================================================
-// OSSUARY ORBIT : APEX AI EDITION
-// System 1 Fast Neural Hunter AI + Orbit Director + Graviton Vortex & Parry
+// OSSUARY ORBIT — VORATH SANCTUM OVERHAUL (Wave 2 #36)
+// Recorded HQ Audio + HiDPI Vorath Atlases + 4-Sector Sovereign Boss + Rule 30(g)
 // ============================================================================
-const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
-const W=canvas.width=900,H=canvas.height=700;
-let highScore=parseInt(localStorage.getItem('ossuaryOrbit_hi'))||0;
+const FULL_TURN = 60 * 6;
+const W = 900, H = 680;
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let viewDpr = 1;
 
-const ORBIT_ATLAS=new Image();
-let ORBIT_ATLAS_READY=false;
-ORBIT_ATLAS.onload=()=>{ORBIT_ATLAS_READY=true;};
-ORBIT_ATLAS.src='/static/art/games/vorath_overhaul_v01/ossuary_orbit/ossuary_orbit_atlas_v01.png';
+function syncHiDPI() {
+  const nextDpr = Math.min(window.devicePixelRatio || 1, 2);
+  if (nextDpr === viewDpr && canvas.width === Math.round(W * nextDpr)) return;
+  viewDpr = nextDpr;
+  canvas.width = Math.round(W * viewDpr);
+  canvas.height = Math.round(H * viewDpr);
+  ctx.setTransform(viewDpr, 0, 0, viewDpr, 0, 0);
+}
+syncHiDPI();
+window.addEventListener('resize', syncHiDPI);
 
-// --- Procedural Web Audio Synthesizer (Offline-First) ---
-let audioCtx=null;
-function initAudio(){
-  if(!audioCtx){
-    const AC=window.AudioContext||window.webkitAudioContext;
-    if(AC)audioCtx=new AC();
+let highScore = 0;
+try { highScore = parseInt(localStorage.getItem('ossuaryOrbit_hi'), 10) || 0; } catch (e) {}
+
+// --- Painted Vorath Atlases (6-cell 1024x1536 ship/reliquary + frozen v04 callout sheet) ---
+const ORBIT_ATLAS = new Image();
+let ORBIT_ATLAS_READY = false;
+ORBIT_ATLAS.decoding = 'async';
+ORBIT_ATLAS.onload = () => { ORBIT_ATLAS_READY = true; };
+ORBIT_ATLAS.src = '/static/art/games/vorath_overhaul_v01/ossuary_orbit/ossuary_orbit_atlas_v01.png';
+
+const LETTERING = new Image();
+let LETTERING_READY = false;
+LETTERING.decoding = 'async';
+LETTERING.onload = () => { LETTERING_READY = true; };
+LETTERING.src = '/static/art/games/vorath_overhaul_v01/blade_tribunal/lettering_v04_d438.webp';
+
+const LCELL = {
+  ko:[473,6,464,164], flash:[128,186,1153,164], guard:[318,366,773,164],
+  bout:[392,546,625,164], round:[401,726,607,164], fight:[449,906,511,164],
+  cleared:[303,1086,804,163], fallen:[337,1266,734,164],
+  "0":[6,1454,117,248], "1":[283,1454,76,248], "2":[524,1454,106,248],
+  "3":[780,1454,106,248], "4":[1030,1454,117,248], "5":[1291,1454,107,248],
+  "6":[13,1734,104,248], "7":[268,1734,106,248], "8":[524,1734,106,248],
+  "9":[780,1734,106,248], minus:[995,1835,188,46], x:[1281,1754,129,208]
+};
+
+function drawLetterCell(key, cx, cy, h, alpha) {
+  const c = LCELL[key];
+  if (!c || !LETTERING_READY || alpha <= 0) return 0;
+  const w = c[2] * h / c[3];
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+  ctx.drawImage(LETTERING, c[0], c[1], c[2], c[3], cx - w / 2, cy - h / 2, w, h);
+  ctx.restore();
+  return w;
+}
+
+function drawLetterGlyphs(str, cx, cy, h, alpha) {
+  if (!LETTERING_READY || alpha <= 0) return;
+  const keys = [...String(str)].map(ch => ch === '-' ? 'minus' : ch.toLowerCase()).filter(k => LCELL[k]);
+  if (!keys.length) return;
+  const gap = h * 0.05;
+  const ws = keys.map(k => k === 'minus' ? h * 0.62 : (k === 'x' ? LCELL.x[2] * (h * 0.8) / LCELL.x[3] : LCELL[k][2] * h / LCELL[k][3]));
+  let x = cx - (ws.reduce((a, b) => a + b, 0) + gap * (keys.length - 1)) / 2;
+  keys.forEach((k, i) => {
+    const w = ws[i];
+    if (k === 'minus') drawLetterCell(k, x + w / 2, cy, w * LCELL.minus[3] / LCELL.minus[2], alpha);
+    else drawLetterCell(k, x + w / 2, cy + (k === 'x' ? h * 0.08 : 0), k === 'x' ? h * 0.8 : h, alpha);
+    x += w + gap;
+  });
+}
+
+// --- Recorded HQ Audio Engine (Zero WebAudio Oscillators / Zero Synth) ---
+const SFX_PATHS = {
+  shoot: '/static/games/sfx/nova_shoot.mp3',
+  pop: '/static/games/sfx/nova_hit.mp3',
+  explode: '/static/games/sfx/nova_explode.mp3',
+  parry: '/static/games/sfx/rose_chime.mp3',
+  vortex: '/static/games/sfx/nova_wave.mp3',
+  lance: '/static/games/sfx/crown_charge.mp3',
+  bossPhase: '/static/games/sfx/static_rupture.mp3',
+  sectorClear: '/static/games/sfx/nova_powerup.mp3',
+  gameOver: '/static/games/sfx/nova_gameover.mp3'
+};
+
+const SOUND = (() => {
+  const pools = {};
+  const lastAt = {};
+  const counts = {};
+  let muted = false;
+  let unlocked = false;
+  try { muted = localStorage.getItem('nsp_ossuary_orbit_mute') === '1'; } catch (e) {}
+
+  const bedNormal = new Audio('../audio/idg_cues/souls_bed.mp3');
+  bedNormal.loop = true; bedNormal.volume = 0.34; bedNormal.preload = 'auto';
+  const bedBoss = new Audio('../audio/idg_cues/skillshot.mp3');
+  bedBoss.loop = true; bedBoss.volume = 0.40; bedBoss.preload = 'auto';
+  let activeBed = bedNormal;
+
+  for (const [k, src] of Object.entries(SFX_PATHS)) {
+    const a = new Audio(src);
+    a.preload = 'auto';
+    pools[k] = a;
   }
-  if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();
-  try{if(window.Chiptune)Chiptune.resume();}catch(e){}
-}
 
-function playSynthSound(type){
-  initAudio();
-  if(!audioCtx)return;
-  const now=audioCtx.currentTime;
-  try{
-    if(type==='shoot'){
-      const osc=audioCtx.createOscillator();const g=audioCtx.createGain();
-      osc.type='sawtooth';osc.frequency.setValueAtTime(740,now);osc.frequency.exponentialRampToValueAtTime(120,now+0.08);
-      g.gain.setValueAtTime(0.12,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.08);
-      osc.connect(g);g.connect(audioCtx.destination);osc.start(now);osc.stop(now+0.08);
-    }else if(type==='parry'){
-      // Radiant crystal chime
-      [587.33, 880, 1174.66, 1760].forEach((freq,i)=>{
-        const osc=audioCtx.createOscillator();const g=audioCtx.createGain();
-        osc.type='sine';osc.frequency.setValueAtTime(freq,now+i*0.02);
-        g.gain.setValueAtTime(0.22,now+i*0.02);g.gain.exponentialRampToValueAtTime(0.001,now+0.35+i*0.05);
-        osc.connect(g);g.connect(audioCtx.destination);osc.start(now+i*0.02);osc.stop(now+0.4+i*0.05);
-      });
-    }else if(type==='vortex'){
-      const osc=audioCtx.createOscillator();const g=audioCtx.createGain();
-      osc.type='triangle';osc.frequency.setValueAtTime(220,now);osc.frequency.exponentialRampToValueAtTime(45,now+0.45);
-      g.gain.setValueAtTime(0.35,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.5);
-      osc.connect(g);g.connect(audioCtx.destination);osc.start(now);osc.stop(now+0.5);
-    }else if(type==='lance'){
-      const osc=audioCtx.createOscillator();const g=audioCtx.createGain();
-      osc.type='square';osc.frequency.setValueAtTime(1200,now);osc.frequency.linearRampToValueAtTime(300,now+0.25);
-      g.gain.setValueAtTime(0.2,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.28);
-      osc.connect(g);g.connect(audioCtx.destination);osc.start(now);osc.stop(now+0.28);
-    }else if(type==='explode'){
-      const osc=audioCtx.createOscillator();const g=audioCtx.createGain();
-      osc.type='sawtooth';osc.frequency.setValueAtTime(130,now);osc.frequency.exponentialRampToValueAtTime(25,now+0.3);
-      g.gain.setValueAtTime(0.32,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.32);
-      osc.connect(g);g.connect(audioCtx.destination);osc.start(now);osc.stop(now+0.32);
-    }else if(type==='pop'){
-      const osc=audioCtx.createOscillator();const g=audioCtx.createGain();
-      osc.type='triangle';osc.frequency.setValueAtTime(440,now);osc.frequency.exponentialRampToValueAtTime(110,now+0.09);
-      g.gain.setValueAtTime(0.15,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.09);
-      osc.connect(g);g.connect(audioCtx.destination);osc.start(now);osc.stop(now+0.09);
+  function syncBtn() {
+    const btn = document.getElementById('mute-btn');
+    if (btn) {
+      btn.textContent = muted ? 'MUTED' : 'AUDIO';
+      btn.classList.toggle('plaque-ruby', muted);
     }
-  }catch(e){}
+    bedNormal.muted = muted;
+    bedBoss.muted = muted;
+  }
+  setTimeout(syncBtn, 0);
+
+  function unlock() {
+    if (!unlocked) unlocked = true;
+    if (!muted && !document.hidden && activeBed.paused) {
+      activeBed.play().catch(() => {});
+    }
+  }
+
+  function play(key, vol = 0.72, limitMs = 55) {
+    if (muted || document.hidden) return;
+    const now = performance.now();
+    if (lastAt[key] && now - lastAt[key] < limitMs) return;
+    lastAt[key] = now;
+    const base = pools[key];
+    if (!base) return;
+    try {
+      const node = base.cloneNode();
+      node.volume = Math.max(0, Math.min(1, vol));
+      node.play().catch(() => {});
+      counts[key] = (counts[key] || 0) + 1;
+    } catch (e) {}
+  }
+
+  function setBossMode(isBoss) {
+    const target = isBoss ? bedBoss : bedNormal;
+    if (target === activeBed) return;
+    try { activeBed.pause(); } catch (e) {}
+    activeBed = target;
+    activeBed.muted = muted;
+    if (unlocked && !muted && !document.hidden) {
+      activeBed.currentTime = 0;
+      activeBed.play().catch(() => {});
+    }
+  }
+
+  function toggleMute() {
+    muted = !muted;
+    try { localStorage.setItem('nsp_ossuary_orbit_mute', muted ? '1' : '0'); } catch (e) {}
+    syncBtn();
+    if (muted) {
+      try { activeBed.pause(); } catch (e) {}
+    } else if (unlocked && !document.hidden) {
+      activeBed.play().catch(() => {});
+    }
+    return muted;
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      try { activeBed.pause(); } catch (e) {}
+    } else if (unlocked && !muted) {
+      activeBed.play().catch(() => {});
+    }
+  });
+
+  return {
+    unlock,
+    play,
+    setBossMode,
+    toggleMute,
+    status: () => ({ muted, unlocked, counts: { ...counts }, bossMusic: activeBed === bedBoss })
+  };
+})();
+
+function SND(k, vol) { SOUND.play(k, vol); }
+
+// --- VFX & Painted Sanctuary Astrolabe Layers ---
+const VFX = { shake: 0, sx: 0, sy: 0, flash: 0, flashCol: '255,255,255' };
+function vfxShake(m) { VFX.shake = Math.max(VFX.shake, Math.min(18, m)); }
+function vfxFlash(a, col) { if (a >= VFX.flash) { VFX.flash = Math.min(0.55, a); VFX.flashCol = col || '255,255,255'; } }
+function vfxUpdate() {
+  if (VFX.shake > 0.15) {
+    VFX.sx = (Math.random() * 2 - 1) * VFX.shake;
+    VFX.sy = (Math.random() * 2 - 1) * VFX.shake;
+    VFX.shake *= 0.86;
+  } else {
+    VFX.shake = 0; VFX.sx = 0; VFX.sy = 0;
+  }
+  VFX.flash *= 0.85;
+  if (VFX.flash < 0.012) VFX.flash = 0;
 }
 
-const SND_LAST={};
-function SND(n){
-  try{
-    const now=performance.now();
-    if(SND_LAST[n]&&now-SND_LAST[n]<65)return;
-    SND_LAST[n]=now;
-    playSynthSound(n);
-    if(window.Chiptune&&Chiptune.SFX&&Chiptune.SFX[n])Chiptune.SFX[n]();
-  }catch(e){}
+function mkCanvas(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+const GLOW_SPR = {};
+function glowSprite(hue) {
+  const key = ((Math.round(hue / 24) * 24) % FULL_TURN + FULL_TURN) % FULL_TURN;
+  if (GLOW_SPR[key]) return GLOW_SPR[key];
+  const c = mkCanvas(64, 64), g = c.getContext('2d');
+  const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, 'rgba(255,255,255,0.95)');
+  grad.addColorStop(0.18, `hsla(${key},100%,76%,0.85)`);
+  grad.addColorStop(0.45, `hsla(${key},95%,56%,0.30)`);
+  grad.addColorStop(1, `hsla(${key},90%,48%,0)`);
+  g.fillStyle = grad; g.fillRect(0, 0, 64, 64);
+  GLOW_SPR[key] = c;
+  return c;
+}
+function drawGlow(cx2, x, y, r, hue, alpha) {
+  if (r <= 0 || alpha <= 0) return;
+  cx2.globalAlpha = Math.min(1, alpha);
+  cx2.drawImage(glowSprite(hue), x - r, y - r, r * 2, r * 2);
+  cx2.globalAlpha = 1;
 }
 
-// ===== VFX Toolkit =====
-const VFX={shake:0,sx:0,sy:0,flash:0,flashCol:'255,255,255'};
-function vfxShake(m){VFX.shake=Math.max(VFX.shake,Math.min(18,m));}
-function vfxFlash(a,col){if(a>=VFX.flash){VFX.flash=Math.min(0.6,a);VFX.flashCol=col||'255,255,255';}}
-function vfxUpdate(){
-  if(VFX.shake>0.15){VFX.sx=(Math.random()*2-1)*VFX.shake;VFX.sy=(Math.random()*2-1)*VFX.shake;VFX.shake*=0.86;}
-  else{VFX.shake=0;VFX.sx=0;VFX.sy=0;}
-  VFX.flash*=0.85;if(VFX.flash<0.012)VFX.flash=0;
-}
-
-function mkCanvas(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c;}
-const GLOW_SPR={};
-function glowSprite(hue){
-  const key=((Math.round(hue/24)*24)%360+360)%360;
-  if(GLOW_SPR[key])return GLOW_SPR[key];
-  const c=mkCanvas(64,64),g=c.getContext('2d');
-  const grad=g.createRadialGradient(32,32,0,32,32,32);
-  grad.addColorStop(0,'rgba(255,255,255,0.95)');
-  grad.addColorStop(0.16,`hsla(${key},100%,78%,0.85)`);
-  grad.addColorStop(0.42,`hsla(${key},95%,58%,0.32)`);
-  grad.addColorStop(1,`hsla(${key},90%,50%,0)`);
-  g.fillStyle=grad;g.fillRect(0,0,64,64);
-  GLOW_SPR[key]=c;return c;
-}
-function drawGlow(cx2,x,y,r,hue,alpha){
-  if(r<=0||alpha<=0)return;
-  cx2.globalAlpha=Math.min(1,alpha);
-  cx2.drawImage(glowSprite(hue),x-r,y-r,r*2,r*2);
-  cx2.globalAlpha=1;
-}
-
-function nebulaSprite(h1,h2){
-  const c=mkCanvas(256,256),g=c.getContext('2d');
-  const grad=g.createRadialGradient(128,128,0,128,128,128);
-  grad.addColorStop(0,`hsla(${h1},90%,60%,0.5)`);
-  grad.addColorStop(0.45,`hsla(${h2},85%,48%,0.2)`);
-  grad.addColorStop(1,'hsla(0,0%,0%,0)');
-  g.fillStyle=grad;g.fillRect(0,0,256,256);
+function nebulaSprite(h1, h2) {
+  const c = mkCanvas(256, 256), g = c.getContext('2d');
+  const grad = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+  grad.addColorStop(0, `hsla(${h1},92%,58%,0.52)`);
+  grad.addColorStop(0.48, `hsla(${h2},85%,46%,0.20)`);
+  grad.addColorStop(1, 'hsla(0,0%,0%,0)');
+  g.fillStyle = grad; g.fillRect(0, 0, 256, 256);
   return c;
 }
 
-let BG_CACHE=null,OVERLAY_CACHE=null;
-const NEBULAS=[];
-function buildSpaceLayers(){
-  BG_CACHE=mkCanvas(W,H);
-  const g=BG_CACHE.getContext('2d');
-  const base=g.createLinearGradient(0,0,0,H);
-  base.addColorStop(0,'#05030a');base.addColorStop(0.55,'#0a0618');base.addColorStop(1,'#0a0a18');
-  g.fillStyle=base;g.fillRect(0,0,W,H);
-  const wash=g.createRadialGradient(W*0.5,H*0.42,10,W*0.5,H*0.42,Math.max(W,H)*0.7);
-  wash.addColorStop(0,'rgba(60,30,110,0.22)');
-  wash.addColorStop(0.6,'rgba(20,25,70,0.12)');
-  wash.addColorStop(1,'rgba(0,0,0,0)');
-  g.fillStyle=wash;g.fillRect(0,0,W,H);
-  g.lineWidth=1;
-  for(let r=60;r<Math.max(W,H)*0.75;r+=88){
-    g.strokeStyle=(r/88)%2<1?'rgba(127,215,255,0.045)':'rgba(233,200,106,0.035)';
-    g.beginPath();g.arc(W*0.5,H*0.46,r,0,Math.PI*2);g.stroke();
+let BG_CACHE = null, OVERLAY_CACHE = null;
+const NEBULAS = [];
+function buildSpaceLayers() {
+  BG_CACHE = mkCanvas(W, H);
+  const g = BG_CACHE.getContext('2d');
+  const base = g.createLinearGradient(0, 0, 0, H);
+  base.addColorStop(0, '#05020d');
+  base.addColorStop(0.52, '#0c061d');
+  base.addColorStop(1, '#070816');
+  g.fillStyle = base; g.fillRect(0, 0, W, H);
+
+  const wash = g.createRadialGradient(W * 0.5, H * 0.48, 12, W * 0.5, H * 0.48, W * 0.65);
+  wash.addColorStop(0, 'rgba(139,92,246,0.22)');
+  wash.addColorStop(0.48, 'rgba(217,119,6,0.09)');
+  wash.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = wash; g.fillRect(0, 0, W, H);
+
+  // Sacred Vorath astrolabe sanctuary rings
+  g.save();
+  g.translate(W * 0.5, H * 0.5);
+  for (let r = 74; r <= 340; r += 66) {
+    g.strokeStyle = (r % 132 === 74) ? 'rgba(245,215,110,0.075)' : 'rgba(103,232,249,0.055)';
+    g.lineWidth = 1.1;
+    g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.stroke();
   }
-  OVERLAY_CACHE=mkCanvas(W,H);
-  const o=OVERLAY_CACHE.getContext('2d');
-  const v=o.createRadialGradient(W/2,H/2,Math.min(W,H)*0.36,W/2,H/2,Math.max(W,H)*0.74);
-  v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(2,1,6,0.5)');
-  o.fillStyle=v;o.fillRect(0,0,W,H);
-  o.fillStyle='rgba(0,0,0,0.05)';
-  for(let y=0;y<H;y+=3)o.fillRect(0,y,W,1);
-  NEBULAS.length=0;
-  NEBULAS.push({spr:nebulaSprite(265,320),x:W*0.26,y:H*0.32,r:W*0.42,dx:0.018,dy:0.008,ph:0});
-  NEBULAS.push({spr:nebulaSprite(192,150),x:W*0.78,y:H*0.7,r:W*0.36,dx:-0.013,dy:-0.007,ph:2.1});
-  NEBULAS.push({spr:nebulaSprite(322,25),x:W*0.6,y:H*0.14,r:W*0.28,dx:0.01,dy:0.006,ph:4.2});
+  for (let k = 0; k < 12; k++) {
+    const ang = k * Math.PI / 6;
+    g.strokeStyle = 'rgba(245,215,110,0.038)';
+    g.beginPath();
+    g.moveTo(Math.cos(ang) * 74, Math.sin(ang) * 74);
+    g.lineTo(Math.cos(ang) * 338, Math.sin(ang) * 338);
+    g.stroke();
+  }
+  g.restore();
+
+  OVERLAY_CACHE = mkCanvas(W, H);
+  const o = OVERLAY_CACHE.getContext('2d');
+  const v = o.createRadialGradient(W / 2, H / 2, H * 0.34, W / 2, H / 2, W * 0.72);
+  v.addColorStop(0, 'rgba(0,0,0,0)');
+  v.addColorStop(1, 'rgba(2,1,8,0.52)');
+  o.fillStyle = v; o.fillRect(0, 0, W, H);
+
+  NEBULAS.length = 0;
+  NEBULAS.push({ spr: nebulaSprite(274, 322), x: W * 0.25, y: H * 0.32, r: W * 0.40, dx: 0.02, dy: 0.008, ph: 0 });
+  NEBULAS.push({ spr: nebulaSprite(190, 44), x: W * 0.76, y: H * 0.68, r: W * 0.34, dx: -0.015, dy: -0.007, ph: 2.1 });
+  NEBULAS.push({ spr: nebulaSprite(42, 286), x: W * 0.56, y: H * 0.18, r: W * 0.28, dx: 0.011, dy: 0.006, ph: 4.2 });
 }
 buildSpaceLayers();
 
-const STARFIELD=[{spd:0.05,n:90},{spd:0.14,n:55},{spd:0.32,n:26}];
-STARFIELD.forEach((L,li)=>{
-  L.stars=[];
-  for(let i=0;i<L.n;i++)L.stars.push({x:Math.random()*W,y:Math.random()*H,s:0.6+li*0.7+Math.random()*0.9,b:Math.random()*6,hue:Math.random()<0.14?[200,48,315][li]:222});
+const STARFIELD = [{ spd: 0.06, n: 88 }, { spd: 0.15, n: 54 }, { spd: 0.34, n: 26 }];
+STARFIELD.forEach((L, li) => {
+  L.stars = [];
+  for (let i = 0; i < L.n; i++) {
+    L.stars.push({
+      x: Math.random() * W, y: Math.random() * H,
+      s: 0.7 + li * 0.65 + Math.random() * 0.85,
+      b: Math.random() * 6.28,
+      hue: Math.random() < 0.22 ? [192, 46, 292][li] : 225
+    });
+  }
 });
 
-function drawSpace(){
-  ctx.drawImage(BG_CACHE,0,0);
-  ctx.save();ctx.globalCompositeOperation='screen';
-  for(const n of NEBULAS){
-    n.ph+=0.004;n.x+=n.dx;n.y+=n.dy;
-    if(n.x<-n.r)n.x=W+n.r;else if(n.x>W+n.r)n.x=-n.r;
-    if(n.y<-n.r)n.y=H+n.r;else if(n.y>H+n.r)n.y=-n.r;
-    ctx.globalAlpha=0.16+Math.sin(n.ph)*0.06;
-    ctx.drawImage(n.spr,n.x-n.r,n.y-n.r,n.r*2,n.r*2);
+function drawSpace() {
+  ctx.drawImage(BG_CACHE, 0, 0);
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  for (const n of NEBULAS) {
+    n.ph += 0.004; n.x += n.dx; n.y += n.dy;
+    if (n.x < -n.r) n.x = W + n.r; else if (n.x > W + n.r) n.x = -n.r;
+    if (n.y < -n.r) n.y = H + n.r; else if (n.y > H + n.r) n.y = -n.r;
+    ctx.globalAlpha = 0.17 + Math.sin(n.ph) * 0.06;
+    ctx.drawImage(n.spr, n.x - n.r, n.y - n.r, n.r * 2, n.r * 2);
   }
-  ctx.globalAlpha=1;ctx.restore();
-  for(let li=0;li<STARFIELD.length;li++){
-    const L=STARFIELD[li];
-    for(const s of L.stars){
-      s.x-=L.spd;if(s.x<-2)s.x+=W+2;
-      s.b+=0.03;
-      const tw=0.28+li*0.14+Math.sin(s.b)*0.26;
-      ctx.fillStyle=`hsla(${s.hue},80%,84%,${Math.max(0.06,tw)})`;
-      ctx.fillRect(s.x,s.y,s.s,s.s);
+  ctx.globalAlpha = 1;
+  ctx.restore();
+
+  for (let li = 0; li < STARFIELD.length; li++) {
+    const L = STARFIELD[li];
+    for (const s of L.stars) {
+      s.x -= L.spd;
+      if (s.x < -2) s.x += W + 2;
+      s.b += 0.03;
+      const tw = 0.30 + li * 0.14 + Math.sin(s.b) * 0.25;
+      ctx.fillStyle = `hsla(${s.hue},82%,85%,${Math.max(0.08, tw)})`;
+      ctx.fillRect(s.x, s.y, s.s, s.s);
     }
   }
 }
 
-function hudPanel(x,y,w,h,stroke){
-  ctx.fillStyle='rgba(6,4,14,0.65)';
-  ctx.strokeStyle=stroke;ctx.lineWidth=1;
-  ctx.beginPath();
-  if(ctx.roundRect)ctx.roundRect(x,y,w,h,7);else ctx.rect(x,y,w,h);
-  ctx.fill();ctx.stroke();
-}
-function setSpacing(px){try{ctx.letterSpacing=px+'px';}catch(e){}}
-
-const STATE={MENU:0,PLAY:1,DEAD:2};
-let state=STATE.MENU,frameCount=0;
-
-// Game State Variables
-let ship,bullets,reflectedBullets,asteroids,particles,ufos,floatingTexts;
-let ufoTimer,score,lives,level,invincible;
-let debugShipVisualState=null;
-
-// Modern Mechanics & System 1 AI Director
-let freezeFrames=0;
-let singularityEnergy=25; // 0..100
-let activeSingularity=null;
-let activeLaserLance=null;
-
-const orbitDirector={
-  tension: 10,
-  state: 'STEADY_ORBIT', // STEADY_ORBIT, GRAVITY_ANOMALY, VOID_INCURSION, CALM_RESONANCE
-  stateTimer: 0,
-  killStreak: 0,
-  decisionLatencyUs: 0.48
-};
-
-function addFloatingText(x,y,text,color='#e9c86a',size=13){
-  floatingTexts.push({x,y,text,color,size,life:1.0,vy:-1.1});
-}
-
-function colorHue(color){
-  if(color==='#f44')return 4;
-  if(color==='#fd0')return 50;
-  if(color==='#f80')return 28;
-  if(color==='#0f8')return 150;
-  if(color==='#f0f')return 305;
-  if(color==='#0ff')return 185;
-  return 215;
-}
-
-function drawFacetGem(x,y,r,hue,rot=0,alpha=1){
+function drawFacetGem(x, y, r, hue, rot = 0, alpha = 1) {
   ctx.save();
-  ctx.translate(x,y);
+  ctx.translate(x, y);
   ctx.rotate(rot);
-  ctx.globalAlpha=alpha;
-  drawGlow(ctx,0,0,r*2.6,hue,0.5*alpha);
-  ctx.globalAlpha=alpha;
-  const g=ctx.createRadialGradient(-r*0.3,-r*0.35,r*0.1,0,0,r*1.2);
-  g.addColorStop(0,'rgba(255,255,255,0.94)');
-  g.addColorStop(0.22,`hsla(${hue+60},100%,76%,0.9)`);
-  g.addColorStop(0.58,`hsla(${hue},100%,54%,0.78)`);
-  g.addColorStop(1,`hsla(${hue+145},100%,34%,0.34)`);
-  ctx.fillStyle=g;
+  ctx.globalAlpha = alpha;
+  drawGlow(ctx, 0, 0, r * 2.5, hue, 0.48 * alpha);
+  const g = ctx.createRadialGradient(-r * 0.3, -r * 0.35, r * 0.1, 0, 0, r * 1.2);
+  g.addColorStop(0, 'rgba(255,255,255,0.95)');
+  g.addColorStop(0.24, `hsla(${(hue + 52) % FULL_TURN},100%,76%,0.9)`);
+  g.addColorStop(0.60, `hsla(${hue % FULL_TURN},100%,55%,0.8)`);
+  g.addColorStop(1, `hsla(${(hue + 140) % FULL_TURN},100%,32%,0.35)`);
+  ctx.fillStyle = g;
   ctx.beginPath();
-  for(let i=0;i<8;i++){
-    const a=i*Math.PI/4;
-    const rr=i%2?r*0.7:r;
-    ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr);
+  for (let i = 0; i < 8; i++) {
+    const a = i * Math.PI / 4;
+    const rr = (i % 2) ? r * 0.7 : r;
+    if (i === 0) ctx.moveTo(Math.cos(a) * rr, Math.sin(a) * rr);
+    else ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
   }
-  ctx.closePath();ctx.fill();
-  ctx.strokeStyle=`hsla(${hue+70},100%,84%,${0.82*alpha})`;
-  ctx.lineWidth=Math.max(1,r*0.09);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = `hsla(${(hue + 65) % FULL_TURN},100%,84%,${0.82 * alpha})`;
+  ctx.lineWidth = Math.max(1, r * 0.1);
   ctx.stroke();
   ctx.restore();
 }
 
-// --- Xbox 360 / Gamepad Subsystem with Dual-Rumble Haptics ---
-let gamepadConnected=false;
-let lastGpButtons={a:false,b:false,x:false,y:false,start:false,lb:false,rb:false,rt:false};
+// --- Game State & 4-Sector Progression + 2-Phase Sovereign Boss ---
+const STATE = { MENU: 0, PLAY: 1, DEAD: 2 };
+const ROMAN = ['I', 'II', 'III', 'IV'];
+let state = STATE.MENU;
+let frameCount = 0;
+let ship = null, bullets = [], reflectedBullets = [], asteroids = [], particles = [], ufos = [], callouts = [], boss = null;
+let ufoTimer = 480, score = 0, lives = 3, level = 1, invincible = 0;
+let unlockedSector = 1;
+let debugShipVisualState = null;
+let freezeFrames = 0;
+let singularityEnergy = 30;
+let activeSingularity = null;
+let activeLaserLance = null;
+let bannerState = { kind: 'round', num: 1, timer: 0 };
 
-window.addEventListener("gamepadconnected",(e)=>{
-  gamepadConnected=true;
-  triggerGamepadRumble(150,0.5,0.3);
-  updateGamepadBanner(true);
-});
+const orbitDirector = {
+  tension: 12,
+  state: 'STEADY_ORBIT',
+  stateTimer: 0,
+  killStreak: 0,
+  decisionLatencyUs: 0.42
+};
 
-window.addEventListener("gamepaddisconnected",(e)=>{
-  gamepadConnected=false;
-  updateGamepadBanner(false);
-});
-
-function updateGamepadBanner(connected){
-  const banner=document.getElementById('controls-banner');
-  if(!banner)return;
-  let gpSpan=document.getElementById('gp-badge-span');
-  if(connected){
-    if(!gpSpan){
-      gpSpan=document.createElement('span');
-      gpSpan.id='gp-badge-span';
-      gpSpan.className='gamepad-badge';
-      gpSpan.innerHTML='[PAD] READY [(A) FIRE | (X) PARRY | (Y) VORTEX | (B) LANCE]';
-      banner.prepend(gpSpan);
-    }
-  }else if(gpSpan){
-    gpSpan.remove();
-  }
-}
-
-function triggerGamepadRumble(durationMs,strongMag,weakMag){
-  try{
-    const gamepads=navigator.getGamepads?navigator.getGamepads():[];
-    for(const gp of gamepads){
-      if(gp&&gp.vibrationActuator&&gp.vibrationActuator.playEffect){
-        gp.vibrationActuator.playEffect('dual-rumble',{
-          startDelay:0,
-          duration:durationMs,
-          weakMagnitude:weakMag||0,
-          strongMagnitude:strongMag||0
-        }).catch(()=>{});
-      }
-    }
-  }catch(e){}
-}
-
-const keys={};
-document.addEventListener('keydown',e=>{
-  keys[e.code]=true;
-  initAudio();
-  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','ShiftLeft','ShiftRight','KeyQ','KeyX','KeyC'].includes(e.code))e.preventDefault();
-  
-  if(e.code==='Space'){
-    if(state===STATE.MENU){init();state=STATE.PLAY;}
-    else if(state===STATE.DEAD){state=STATE.MENU;}
-  }
-  if(state===STATE.PLAY){
-    if(e.code==='ShiftLeft'||e.code==='ShiftRight'||e.code==='KeyC')triggerPhaseParry();
-    if(e.code==='KeyQ')triggerGravitonVortex();
-    if(e.code==='KeyX')triggerLaserLance();
-  }
-});
-document.addEventListener('keyup',e=>keys[e.code]=false);
-
-function init(){
-  ship={
-    x:W/2,y:H/2,vx:0,vy:0,angle:0,thrust:false,shootCd:0,hitTimer:0,
-    isPhasing:false,phaseTimer:0,phaseCool:0,parryWindow:0,echoes:[]
-  };
-  bullets=[];
-  reflectedBullets=[];
-  asteroids=[];
-  particles=[];
-  ufos=[];
-  floatingTexts=[];
-  score=0;
-  lives=3;
-  level=1;
-  invincible=120;
-  ufoTimer=500;
-  singularityEnergy=30;
-  activeSingularity=null;
-  activeLaserLance=null;
-
-  orbitDirector.tension=15;
-  orbitDirector.state='STEADY_ORBIT';
-  orbitDirector.stateTimer=0;
-  orbitDirector.killStreak=0;
-
-  spawnAsteroids(4);
-}
-
-function spawnAsteroids(count){
-  for(let i=0;i<count;i++){
-    let x,y;
-    do{x=Math.random()*W;y=Math.random()*H;}
-    while(Math.hypot(x-ship.x,y-ship.y)<160);
-    const a=Math.random()*Math.PI*2;
-    const sp=0.6+Math.random()*1.4;
-    const verts=[];
-    const numV=8+Math.floor(Math.random()*5);
-    for(let j=0;j<numV;j++){
-      const ang=j*Math.PI*2/numV;
-      const r=35+Math.random()*15;
-      verts.push({x:Math.cos(ang)*r,y:Math.sin(ang)*r});
-    }
-    asteroids.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,size:3,radius:40,verts,rot:0,rotSpd:(Math.random()-0.5)*0.02});
-  }
-}
-
-function splitAsteroid(a){
-  if(a.size<=1)return;
-  for(let i=0;i<2;i++){
-    const ang=Math.random()*Math.PI*2;
-    const sp=1.2+Math.random()*2.2;
-    const newSize=a.size-1;
-    const r=newSize===2?22:12;
-    const verts=[];
-    const numV=6+Math.floor(Math.random()*4);
-    for(let j=0;j<numV;j++){
-      const va=j*Math.PI*2/numV;
-      const vr=r-4+Math.random()*8;
-      verts.push({x:Math.cos(va)*vr,y:Math.sin(va)*vr});
-    }
-    asteroids.push({x:a.x,y:a.y,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp,size:newSize,radius:r,verts,rot:0,rotSpd:(Math.random()-0.5)*0.03});
-  }
-}
-
-function spawnParticles(x,y,color,count,speed){
-  for(let i=0;i<count;i++){
-    const a=Math.random()*Math.PI*2;
-    const sp=Math.random()*(speed||4)+0.6;
-    particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,color,size:Math.random()*3.2+1.2});
-  }
-  if(particles.length>240)particles.splice(0,particles.length-240);
-}
-
-function wrap(obj){
-  if(obj.x<-50)obj.x=W+50;if(obj.x>W+50)obj.x=-50;
-  if(obj.y<-50)obj.y=H+50;if(obj.y>H+50)obj.y=-50;
-}
-
-// ----------------- COMBAT VERBS -----------------
-function triggerPhaseParry(){
-  if(ship.phaseCool>0||ship.isPhasing)return;
-  ship.isPhasing=true;
-  ship.phaseTimer=0.22;
-  ship.parryWindow=0.14;
-  ship.phaseCool=0.65;
-  
-  // Impulse boost in heading
-  ship.vx+=Math.cos(ship.angle)*4.5;
-  ship.vy+=Math.sin(ship.angle)*4.5;
-  
-  SND('parry');
-  vfxShake(3);
-  spawnParticles(ship.x,ship.y,'#7df9ff',15,4);
-  addFloatingText(ship.x,ship.y-30,'PHASE SHIFT!','#38bdf8',13);
-}
-
-function triggerGravitonVortex(){
-  if(singularityEnergy<50)return;
-  singularityEnergy-=50;
-  
-  activeSingularity={
-    x:ship.x+Math.cos(ship.angle)*120,
-    y:ship.y+Math.sin(ship.angle)*120,
-    life:3.5,
-    radius:160
-  };
-  
-  freezeFrames=5;
-  vfxShake(10);
-  vfxFlash(0.2,'127,215,255');
-  SND('vortex');
-  addFloatingText(activeSingularity.x,activeSingularity.y-40,'GRAVITON VORTEX ANCHOR!','#00ffcc',16);
-}
-
-function triggerLaserLance(){
-  if(singularityEnergy<35)return;
-  singularityEnergy-=35;
-  
-  const endX=ship.x+Math.cos(ship.angle)*W;
-  const endY=ship.y+Math.sin(ship.angle)*H;
-  activeLaserLance={
-    sx:ship.x,sy:ship.y,tx:endX,ty:endY,
-    angle:ship.angle,life:0.25
-  };
-  
-  freezeFrames=4;
-  vfxShake(8);
-  SND('lance');
-  
-  // Pierce clean through asteroids along trajectory line
-  let hitCount=0;
-  for(let ai=asteroids.length-1;ai>=0;ai--){
-    const a=asteroids[ai];
-    const dx=a.x-ship.x,dy=a.y-ship.y;
-    const proj=dx*Math.cos(ship.angle)+dy*Math.sin(ship.angle);
-    if(proj>0){
-      const perpDist=Math.abs(-dx*Math.sin(ship.angle)+dy*Math.cos(ship.angle));
-      if(perpDist<a.radius+16){
-        score+=a.size*50;
-        hitCount++;
-        spawnParticles(a.x,a.y,'#ff4fac',16,4);
-        splitAsteroid(a);
-        asteroids.splice(ai,1);
-      }
-    }
-  }
-  addFloatingText(ship.x,ship.y-35,`LASER LANCE! [${hitCount} PIERCED]`,'#f43f5e',16);
-}
-
-// ----------------- SYSTEM 1 AI ENGINE -----------------
-function updateSystem1Director(dt){
-  const t0=performance.now();
-  orbitDirector.stateTimer+=dt;
-
-  if(orbitDirector.state==='STEADY_ORBIT'){
-    orbitDirector.tension=Math.min(100,orbitDirector.tension+dt*6+orbitDirector.killStreak*1.5);
-    if(orbitDirector.tension>=72||orbitDirector.stateTimer>15){
-      orbitDirector.state='VOID_INCURSION';
-      orbitDirector.stateTimer=0;
-      vfxShake(7);
-      addFloatingText(W/2,H/2-80,'DIRECTOR: VOID INCURSION!','#ff4fac',18);
-      // Spawn tactical hunter immediately
-      spawnHunter();
-    }
-  }else if(orbitDirector.state==='VOID_INCURSION'){
-    orbitDirector.tension=Math.min(100,orbitDirector.tension+dt*3);
-    if(orbitDirector.stateTimer>9||(ufos.length===0&&asteroids.length<5)){
-      orbitDirector.state='CALM_RESONANCE';
-      orbitDirector.stateTimer=0;
-      addFloatingText(W/2,H/2-80,'DIRECTOR: CALM RESONANCE','#e9c86a',14);
-    }
-  }else if(orbitDirector.state==='CALM_RESONANCE'){
-    orbitDirector.tension=Math.max(10,orbitDirector.tension-dt*18);
-    if(orbitDirector.stateTimer>5){
-      orbitDirector.state='STEADY_ORBIT';
-      orbitDirector.stateTimer=0;
-      orbitDirector.killStreak=0;
-    }
-  }
-
-  const t1=performance.now();
-  orbitDirector.decisionLatencyUs=Math.max(0.18,(t1-t0)*1000);
-}
-
-function spawnHunter(){
-  const uy=60+Math.random()*(H-120);
-  const udir=Math.random()<0.5?1:-1;
-  ufos.push({
-    x:udir>0?-30:W+30,y:uy,
-    vx:udir*(2.0+level*0.35),vy:0,
-    hp:3+Math.floor(level/2),
-    shootCd:45+Math.floor(Math.random()*45),
-    radius:20,
-    tactics:'INTERCEPT',
-    shield:true
+function spawnCallout(kind, x, y, value = '') {
+  callouts.push({
+    kind,
+    x: Math.max(90, Math.min(W - 90, x)),
+    y: Math.max(52, Math.min(H - 90, y)),
+    value: String(value),
+    life: 44,
+    maxLife: 44
   });
+  if (callouts.length > 8) callouts.shift();
 }
 
-// ----------------- MAIN UPDATE LOOP -----------------
-function update(){
-  frameCount++;
+function setBanner(kind, num = 1, frames = 84) {
+  bannerState = { kind, num, timer: frames };
+}
 
-  if(freezeFrames>0){
-    freezeFrames--;
+function syncDOMHud() {
+  const elScore = document.getElementById('hud-score');
+  const elHi = document.getElementById('hud-hi');
+  const elLives = document.getElementById('hud-lives');
+  const elSec = document.getElementById('hud-sector');
+  const elParry = document.getElementById('hud-parry');
+  const elEnergy = document.getElementById('hud-energy');
+  const launchBtn = document.getElementById('launch-btn');
+  if (elScore) elScore.textContent = String(score);
+  if (elHi) elHi.textContent = String(Math.max(highScore, score));
+  if (elLives) elLives.textContent = String(Math.max(0, lives));
+  const secIdx = Math.min(4, ((level - 1) % 4) + 1);
+  if (elSec) elSec.textContent = ROMAN[secIdx - 1] + (level > 4 ? '+' + Math.floor((level - 1) / 4) : '');
+  if (elParry && ship) {
+    elParry.textContent = ship.phaseCool <= 0 ? 'READY' : ship.phaseCool.toFixed(1) + 's';
+  }
+  if (elEnergy) elEnergy.textContent = Math.round(singularityEnergy) + '%';
+  if (launchBtn) {
+    launchBtn.textContent = state === STATE.PLAY ? 'RESTART' : (state === STATE.DEAD ? 'RELAUNCH' : 'LAUNCH');
+  }
+
+  document.querySelectorAll('#sector-ribbon .sec-step').forEach(node => {
+    const n = Number(node.getAttribute('data-sec'));
+    node.classList.toggle('unlocked', n <= unlockedSector);
+    node.classList.toggle('active', n === secIdx);
+  });
+
+  const bossWrap = document.getElementById('boss-bar-wrap');
+  const bossTitle = document.getElementById('boss-title');
+  const bossFill = document.getElementById('boss-fill');
+  if (bossWrap) {
+    if (boss && boss.hp > 0 && state === STATE.PLAY) {
+      bossWrap.classList.add('show');
+      if (bossTitle) {
+        bossTitle.textContent = boss.phase === 2
+          ? 'OSSUARY SOVEREIGN // ORACLE APOTHEOSIS II'
+          : 'OSSUARY SOVEREIGN // AEGIS SANCTUM I';
+      }
+      if (bossFill) bossFill.style.width = Math.max(0, Math.min(100, (boss.hp / boss.maxHp) * 100)).toFixed(1) + '%';
+    } else {
+      bossWrap.classList.remove('show');
+    }
+  }
+}
+
+// --- Native Gamepad & Multi-Touch Input ---
+let gamepadConnected = false;
+let lastGp = { a: false, b: false, x: false, y: false, start: false };
+const holdInput = { left: false, right: false, thrust: false, fire: false };
+const keys = {};
+
+window.addEventListener('gamepadconnected', () => {
+  gamepadConnected = true;
+  const el = document.getElementById('pad-status');
+  if (el) el.classList.add('show');
+  triggerGamepadRumble(140, 0.45, 0.25);
+});
+window.addEventListener('gamepaddisconnected', () => {
+  gamepadConnected = false;
+  const el = document.getElementById('pad-status');
+  if (el) el.classList.remove('show');
+});
+
+function triggerGamepadRumble(durationMs, strongMag, weakMag) {
+  try {
+    const gps = navigator.getGamepads ? navigator.getGamepads() : [];
+    for (const gp of gps) {
+      if (gp && gp.vibrationActuator && gp.vibrationActuator.playEffect) {
+        gp.vibrationActuator.playEffect('dual-rumble', {
+          startDelay: 0,
+          duration: durationMs,
+          weakMagnitude: weakMag || 0,
+          strongMagnitude: strongMag || 0
+        }).catch(() => {});
+      }
+    }
+  } catch (e) {}
+}
+
+function startOrRestartRun() {
+  SOUND.unlock();
+  init();
+  state = STATE.PLAY;
+  syncDOMHud();
+}
+
+document.getElementById('launch-btn').addEventListener('click', () => startOrRestartRun());
+document.getElementById('mute-btn').addEventListener('click', () => {
+  SOUND.unlock();
+  SOUND.toggleMute();
+});
+canvas.addEventListener('pointerdown', () => {
+  SOUND.unlock();
+  if (state !== STATE.PLAY) startOrRestartRun();
+});
+
+document.querySelectorAll('#touch-controls [data-hold]').forEach(btn => {
+  const act = btn.getAttribute('data-hold');
+  const setDown = (down) => {
+    holdInput[act] = down;
+    btn.classList.toggle('is-down', down);
+    if (down) {
+      SOUND.unlock();
+      if (state !== STATE.PLAY) startOrRestartRun();
+    }
+  };
+  btn.addEventListener('pointerdown', e => { e.preventDefault(); try { btn.setPointerCapture(e.pointerId); } catch (_) {} setDown(true); });
+  btn.addEventListener('pointerup', e => { e.preventDefault(); setDown(false); });
+  btn.addEventListener('pointercancel', () => setDown(false));
+  btn.addEventListener('lostpointercapture', () => setDown(false));
+});
+
+document.querySelectorAll('#touch-controls [data-tap]').forEach(btn => {
+  const act = btn.getAttribute('data-tap');
+  btn.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    SOUND.unlock();
+    if (state !== STATE.PLAY) { startOrRestartRun(); return; }
+    if (act === 'parry') triggerPhaseParry();
+    else if (act === 'special') {
+      if (singularityEnergy >= 50) triggerGravitonVortex();
+      else triggerLaserLance();
+    }
+  });
+});
+
+document.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  SOUND.unlock();
+  if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight', 'KeyQ', 'KeyX', 'KeyC'].includes(e.code)) {
+    e.preventDefault();
+  }
+  if ((e.key === 'm' || e.key === 'M') && !e.repeat) {
+    SOUND.toggleMute();
     return;
   }
+  if (e.code === 'Space' || e.code === 'Enter') {
+    if (state === STATE.MENU || state === STATE.DEAD) {
+      startOrRestartRun();
+      return;
+    }
+  }
+  if (state === STATE.PLAY) {
+    if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyC') triggerPhaseParry();
+    if (e.code === 'KeyQ') triggerGravitonVortex();
+    if (e.code === 'KeyX') triggerLaserLance();
+  }
+});
+document.addEventListener('keyup', e => { keys[e.code] = false; });
 
-  if(state!==STATE.PLAY)return;
-  const dt=1/60;
+// --- Gameplay & Boss Setup ---
+function init() {
+  ship = {
+    x: W / 2, y: H * 0.62, vx: 0, vy: 0, angle: -Math.PI / 2,
+    thrust: false, shootCd: 0, hitTimer: 0,
+    isPhasing: false, phaseTimer: 0, phaseCool: 0, parryWindow: 0, echoes: []
+  };
+  bullets = [];
+  reflectedBullets = [];
+  asteroids = [];
+  particles = [];
+  ufos = [];
+  callouts = [];
+  boss = null;
+  score = 0;
+  lives = 3;
+  level = 1;
+  unlockedSector = 1;
+  invincible = 110;
+  ufoTimer = 440;
+  singularityEnergy = 35;
+  activeSingularity = null;
+  activeLaserLance = null;
+  orbitDirector.tension = 15;
+  orbitDirector.state = 'STEADY_ORBIT';
+  orbitDirector.stateTimer = 0;
+  orbitDirector.killStreak = 0;
+  SOUND.setBossMode(false);
+  setupSector(1);
+  syncDOMHud();
+}
 
-  // System 1 AI Director
+function setupSector(lvl) {
+  level = lvl;
+  const secIdx = ((lvl - 1) % 4) + 1;
+  unlockedSector = Math.max(unlockedSector, secIdx);
+  asteroids = [];
+  ufos = [];
+  boss = null;
+  setBanner('round', Math.min(9, lvl), 92);
+
+  if (secIdx === 4) {
+    spawnSovereignBoss();
+  } else {
+    SOUND.setBossMode(false);
+    spawnAsteroids(3 + secIdx);
+    if (secIdx >= 2) ufoTimer = 240;
+  }
+  syncDOMHud();
+}
+
+function spawnSovereignBoss() {
+  const tierScale = 1 + Math.floor((level - 1) / 4) * 0.35;
+  const maxHp = Math.round(48 * tierScale);
+  boss = {
+    name: 'The Ossuary Sovereign',
+    x: W / 2,
+    y: 154,
+    vx: 1.55,
+    phase: 1,
+    hp: maxHp,
+    maxHp,
+    radius: 58,
+    rot: 0,
+    fireCd: 55,
+    pylons: [
+      { angle: 0, dist: 96, hp: 6 },
+      { angle: Math.PI * 2 / 3, dist: 96, hp: 6 },
+      { angle: Math.PI * 4 / 3, dist: 96, hp: 6 }
+    ]
+  };
+  SOUND.setBossMode(true);
+  spawnAsteroids(2);
+  vfxShake(8);
+  vfxFlash(0.22, '244,114,182');
+  SND('bossPhase', 0.8);
+  syncDOMHud();
+}
+
+function spawnAsteroids(count) {
+  for (let i = 0; i < count; i++) {
+    let x, y, guard = 0;
+    do {
+      x = Math.random() * W;
+      y = Math.random() * H;
+      guard++;
+    } while (ship && Math.hypot(x - ship.x, y - ship.y) < 175 && guard < 24);
+    const a = Math.random() * Math.PI * 2;
+    const sp = 0.65 + Math.random() * 1.35;
+    const verts = [];
+    const numV = 8 + Math.floor(Math.random() * 4);
+    for (let j = 0; j < numV; j++) {
+      const ang = j * Math.PI * 2 / numV;
+      const r = 34 + Math.random() * 14;
+      verts.push({ x: Math.cos(ang) * r, y: Math.sin(ang) * r });
+    }
+    asteroids.push({
+      x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+      size: 3, radius: 40, verts, rot: Math.random() * 6, rotSpd: (Math.random() - 0.5) * 0.022
+    });
+  }
+}
+
+function splitAsteroid(a) {
+  if (a.size <= 1) return;
+  for (let i = 0; i < 2; i++) {
+    const ang = Math.random() * Math.PI * 2;
+    const sp = 1.2 + Math.random() * 2.0;
+    const newSize = a.size - 1;
+    const r = newSize === 2 ? 22 : 13;
+    const verts = [];
+    const numV = 7;
+    for (let j = 0; j < numV; j++) {
+      const va = j * Math.PI * 2 / numV;
+      const vr = r - 3 + Math.random() * 6;
+      verts.push({ x: Math.cos(va) * vr, y: Math.sin(va) * vr });
+    }
+    asteroids.push({
+      x: a.x, y: a.y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp,
+      size: newSize, radius: r, verts, rot: 0, rotSpd: (Math.random() - 0.5) * 0.03
+    });
+  }
+}
+
+function spawnParticles(x, y, hue, count, speed) {
+  for (let i = 0; i < count; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const sp = Math.random() * (speed || 4) + 0.6;
+    particles.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 1, hue, size: Math.random() * 3.2 + 1.2 });
+  }
+  if (particles.length > 240) particles.splice(0, particles.length - 240);
+}
+
+function wrap(obj) {
+  if (obj.x < -48) obj.x = W + 48; if (obj.x > W + 48) obj.x = -48;
+  if (obj.y < -48) obj.y = H + 48; if (obj.y > H + 48) obj.y = -48;
+}
+
+// --- Combat Verbs ---
+function triggerPhaseParry() {
+  if (!ship || ship.phaseCool > 0 || ship.isPhasing) return false;
+  ship.isPhasing = true;
+  ship.phaseTimer = 0.24;
+  ship.parryWindow = 0.16;
+  ship.phaseCool = 0.65;
+  ship.vx += Math.cos(ship.angle) * 4.4;
+  ship.vy += Math.sin(ship.angle) * 4.4;
+  SND('parry', 0.78);
+  vfxShake(3.2);
+  spawnParticles(ship.x, ship.y, 188, 15, 4);
+  spawnCallout('guard', ship.x, ship.y - 44);
+  syncDOMHud();
+  return true;
+}
+
+function triggerGravitonVortex() {
+  if (!ship || singularityEnergy < 50) return false;
+  singularityEnergy -= 50;
+  activeSingularity = {
+    x: Math.max(80, Math.min(W - 80, ship.x + Math.cos(ship.angle) * 125)),
+    y: Math.max(80, Math.min(H - 80, ship.y + Math.sin(ship.angle) * 125)),
+    life: 3.4,
+    radius: 162
+  };
+  freezeFrames = 4;
+  vfxShake(9);
+  vfxFlash(0.20, '103,232,249');
+  SND('vortex', 0.82);
+  syncDOMHud();
+  return true;
+}
+
+function triggerLaserLance() {
+  if (!ship || singularityEnergy < 35) return false;
+  singularityEnergy -= 35;
+  const endX = ship.x + Math.cos(ship.angle) * W * 1.2;
+  const endY = ship.y + Math.sin(ship.angle) * H * 1.2;
+  activeLaserLance = { sx: ship.x, sy: ship.y, tx: endX, ty: endY, angle: ship.angle, life: 0.26 };
+  freezeFrames = 4;
+  vfxShake(7.5);
+  SND('lance', 0.82);
+
+  let hits = 0;
+  for (let ai = asteroids.length - 1; ai >= 0; ai--) {
+    const a = asteroids[ai];
+    const dx = a.x - ship.x, dy = a.y - ship.y;
+    const proj = dx * Math.cos(ship.angle) + dy * Math.sin(ship.angle);
+    if (proj > 0) {
+      const perp = Math.abs(-dx * Math.sin(ship.angle) + dy * Math.cos(ship.angle));
+      if (perp < a.radius + 18) {
+        score += a.size * 55;
+        hits++;
+        spawnParticles(a.x, a.y, 330, 16, 4);
+        splitAsteroid(a);
+        asteroids.splice(ai, 1);
+      }
+    }
+  }
+  if (boss && boss.hp > 0) {
+    const dx = boss.x - ship.x, dy = boss.y - ship.y;
+    const proj = dx * Math.cos(ship.angle) + dy * Math.sin(ship.angle);
+    const perp = Math.abs(-dx * Math.sin(ship.angle) + dy * Math.cos(ship.angle));
+    if (proj > 0 && perp < boss.radius + 20) {
+      damageBoss(6, boss.x, boss.y);
+      hits++;
+    }
+  }
+  if (hits > 0) spawnCallout('num', ship.x, ship.y - 46, 'x' + Math.min(9, hits));
+  syncDOMHud();
+  return true;
+}
+
+function damageBoss(amount, hx, hy) {
+  if (!boss || boss.hp <= 0) return;
+  boss.hp = Math.max(0, boss.hp - amount);
+  score += amount * 35;
+  singularityEnergy = Math.min(100, singularityEnergy + amount * 2.5);
+  spawnParticles(hx, hy, boss.phase === 2 ? 45 : 310, 14, 4.2);
+  spawnCallout('num', hx, hy - 54, '-' + Math.min(99, amount));
+
+  if (boss.phase === 1 && boss.hp <= boss.maxHp * 0.5 && boss.hp > 0) {
+    boss.phase = 2;
+    boss.fireCd = 28;
+    freezeFrames = 6;
+    vfxShake(12);
+    vfxFlash(0.32, '245,215,110');
+    SND('bossPhase', 0.9);
+    spawnCallout('flash', boss.x, boss.y - 68, '');
+  }
+
+  if (boss.hp <= 0) {
+    freezeFrames = 10;
+    vfxShake(16);
+    vfxFlash(0.45, '253,224,71');
+    SND('explode', 0.95);
+    SND('sectorClear', 0.85);
+    spawnParticles(boss.x, boss.y, 46, 48, 6.5);
+    spawnParticles(boss.x, boss.y, 190, 36, 5.2);
+    score += 1500;
+    if (score > highScore) {
+      highScore = score;
+      try { localStorage.setItem('ossuaryOrbit_hi', String(highScore)); } catch (e) {}
+    }
+    setBanner('ko', 0, 90);
+    boss = null;
+    asteroids = [];
+    ufos = [];
+    bullets = bullets.filter(b => b.owner === 'player');
+    setTimeout(() => {
+      if (state === STATE.PLAY && !boss && asteroids.length === 0) {
+        setupSector(level + 1);
+      }
+    }, 1450);
+  }
+  syncDOMHud();
+}
+
+function spawnHunter() {
+  const uy = 72 + Math.random() * (H - 160);
+  const udir = Math.random() < 0.5 ? 1 : -1;
+  ufos.push({
+    x: udir > 0 ? -30 : W + 30, y: uy,
+    vx: udir * (2.0 + Math.min(4, level) * 0.32), vy: 0,
+    hp: 3 + Math.floor(level / 2),
+    shootCd: 48 + Math.floor(Math.random() * 36),
+    radius: 22
+  });
+}
+
+function updateSystem1Director(dt) {
+  const t0 = performance.now();
+  orbitDirector.stateTimer += dt;
+  if (orbitDirector.state === 'STEADY_ORBIT') {
+    orbitDirector.tension = Math.min(100, orbitDirector.tension + dt * 5.5 + orbitDirector.killStreak * 1.2);
+    if (orbitDirector.tension >= 74 || orbitDirector.stateTimer > 15) {
+      orbitDirector.state = 'VOID_INCURSION';
+      orbitDirector.stateTimer = 0;
+      if (!boss) spawnHunter();
+    }
+  } else if (orbitDirector.state === 'VOID_INCURSION') {
+    orbitDirector.tension = Math.min(100, orbitDirector.tension + dt * 2.5);
+    if (orbitDirector.stateTimer > 9 || (ufos.length === 0 && asteroids.length < 4)) {
+      orbitDirector.state = 'CALM_RESONANCE';
+      orbitDirector.stateTimer = 0;
+    }
+  } else {
+    orbitDirector.tension = Math.max(12, orbitDirector.tension - dt * 16);
+    if (orbitDirector.stateTimer > 5) {
+      orbitDirector.state = 'STEADY_ORBIT';
+      orbitDirector.stateTimer = 0;
+      orbitDirector.killStreak = 0;
+    }
+  }
+  orbitDirector.decisionLatencyUs = Math.max(0.18, (performance.now() - t0) * 1000);
+}
+
+// --- Main Simulation Step ---
+function update() {
+  frameCount++;
+  if (bannerState.timer > 0) bannerState.timer--;
+  if (freezeFrames > 0) { freezeFrames--; return; }
+  if (state !== STATE.PLAY || !ship) return;
+
+  const dt = 1 / 60;
   updateSystem1Director(dt);
 
-  // Active Laser Lance Decay
-  if(activeLaserLance){
-    activeLaserLance.life-=dt;
-    if(activeLaserLance.life<=0)activeLaserLance=null;
+  if (activeLaserLance) {
+    activeLaserLance.life -= dt;
+    if (activeLaserLance.life <= 0) activeLaserLance = null;
   }
 
-  // Active Graviton Singularity Vortex
-  if(activeSingularity){
-    activeSingularity.life-=dt;
-    // Pull nearby asteroids into vortex core
-    asteroids.forEach(a=>{
-      const dx=activeSingularity.x-a.x,dy=activeSingularity.y-a.y;
-      const dist=Math.hypot(dx,dy);
-      if(dist<activeSingularity.radius+80){
-        const pull=220/(dist+40);
-        a.vx+=dx/dist*pull*dt;
-        a.vy+=dy/dist*pull*dt;
-        // Collision inside singularity core
-        if(dist<28){
-          score+=120;
-          spawnParticles(a.x,a.y,'#00ffcc',12,3);
+  if (activeSingularity) {
+    activeSingularity.life -= dt;
+    for (let ai = asteroids.length - 1; ai >= 0; ai--) {
+      const a = asteroids[ai];
+      const dx = activeSingularity.x - a.x, dy = activeSingularity.y - a.y;
+      const dist = Math.max(1, Math.hypot(dx, dy));
+      if (dist < activeSingularity.radius + 80) {
+        const pull = 220 / (dist + 40);
+        a.vx += (dx / dist) * pull * dt;
+        a.vy += (dy / dist) * pull * dt;
+        if (dist < 28) {
+          score += 120;
+          spawnParticles(a.x, a.y, 182, 12, 3.2);
           splitAsteroid(a);
-          asteroids=asteroids.filter(item=>item!==a);
+          asteroids.splice(ai, 1);
         }
       }
-    });
-    if(activeSingularity.life<=0)activeSingularity=null;
+    }
+    if (boss && boss.hp > 0 && Math.hypot(activeSingularity.x - boss.x, activeSingularity.y - boss.y) < activeSingularity.radius) {
+      if (frameCount % 20 === 0) damageBoss(2, boss.x, boss.y);
+    }
+    if (activeSingularity.life <= 0) activeSingularity = null;
   }
 
-  // Ship controls
-  if(ship.hitTimer>0)ship.hitTimer--;
-  if(ship.phaseCool>0)ship.phaseCool-=dt;
-  if(ship.phaseTimer>0){
-    ship.phaseTimer-=dt;
-    if(ship.phaseTimer<=0)ship.isPhasing=false;
+  if (ship.hitTimer > 0) ship.hitTimer--;
+  if (ship.phaseCool > 0) ship.phaseCool = Math.max(0, ship.phaseCool - dt);
+  if (ship.phaseTimer > 0) {
+    ship.phaseTimer -= dt;
+    if (ship.phaseTimer <= 0) ship.isPhasing = false;
   }
-  if(ship.parryWindow>0)ship.parryWindow-=dt;
+  if (ship.parryWindow > 0) ship.parryWindow -= dt;
 
-  // --- Xbox 360 / Gamepad Input Polling ---
-  let gp=null;
-  try{
-    const gps=navigator.getGamepads?navigator.getGamepads():[];
-    for(const g of gps){if(g){gp=g;break;}}
-  }catch(_){}
+  // Gamepad polling
+  let gp = null;
+  try {
+    const gps = navigator.getGamepads ? navigator.getGamepads() : [];
+    for (const g of gps) { if (g) { gp = g; break; } }
+  } catch (e) {}
 
-  let gpFiring=false,gpThrust=false;
-  if(gp){
-    if(!gamepadConnected){
-      gamepadConnected=true;
-      updateGamepadBanner(true);
+  let gpFire = false, gpThrust = false;
+  if (gp) {
+    if (!gamepadConnected) {
+      gamepadConnected = true;
+      const el = document.getElementById('pad-status');
+      if (el) el.classList.add('show');
     }
-    // Left Stick Analog X or D-Pad for steering
-    const stickX=Math.abs(gp.axes[0])>0.16?gp.axes[0]:0;
-    const dpadL=gp.buttons[14]?.pressed?-1:0;
-    const dpadR=gp.buttons[15]?.pressed?1:0;
-    const steer=stickX||(dpadL+dpadR);
-    if(steer)ship.angle+=steer*0.065;
+    const stickX = Math.abs(gp.axes[0] || 0) > 0.16 ? gp.axes[0] : 0;
+    const dpad = (gp.buttons[14]?.pressed ? -1 : 0) + (gp.buttons[15]?.pressed ? 1 : 0);
+    const steer = stickX || dpad;
+    if (steer) ship.angle += steer * 0.065;
+    gpThrust = Boolean((gp.axes[1] || 0) < -0.25 || gp.buttons[7]?.value > 0.2 || gp.buttons[7]?.pressed || gp.buttons[12]?.pressed);
+    gpFire = Boolean(gp.buttons[0]?.pressed);
 
-    // Left Stick Analog Y Up or Right Trigger (RT) for Thrust
-    const stickY=gp.axes[1]<-0.25;
-    const rtThrust=(gp.buttons[7]?.value>0.2)||gp.buttons[7]?.pressed;
-    const dpadUp=gp.buttons[12]?.pressed;
-    gpThrust=stickY||rtThrust||dpadUp;
-
-    // Button A to shoot
-    gpFiring=gp.buttons[0]?.pressed;
-
-    // Button X or Left Bumper (LB) for Phase Parry
-    const btnX=gp.buttons[2]?.pressed||gp.buttons[4]?.pressed;
-    if(btnX&&!lastGpButtons.x){
-      triggerPhaseParry();
-      triggerGamepadRumble(120,0.6,0.3);
-    }
-
-    // Button Y or Right Bumper (RB) for Graviton Vortex
-    const btnY=gp.buttons[3]?.pressed||gp.buttons[5]?.pressed;
-    if(btnY&&!lastGpButtons.y){
-      triggerGravitonVortex();
-      triggerGamepadRumble(300,0.8,0.7);
-    }
-
-    // Button B for Laser Lance
-    const btnB=gp.buttons[1]?.pressed;
-    if(btnB&&!lastGpButtons.b){
-      triggerLaserLance();
-      triggerGamepadRumble(250,0.9,0.5);
-    }
-
-    // Start Button (Button 9)
-    const btnStart=gp.buttons[9]?.pressed;
-    if(btnStart&&!lastGpButtons.start){
-      if(state===STATE.MENU){init();state=STATE.PLAY;}
-      else if(state===STATE.DEAD){state=STATE.MENU;}
-    }
-
-    lastGpButtons={a:gpFiring,b:btnB,x:btnX,y:btnY,start:btnStart};
+    const btnX = Boolean(gp.buttons[2]?.pressed || gp.buttons[4]?.pressed);
+    if (btnX && !lastGp.x) triggerPhaseParry();
+    const btnY = Boolean(gp.buttons[3]?.pressed || gp.buttons[5]?.pressed);
+    if (btnY && !lastGp.y) triggerGravitonVortex();
+    const btnB = Boolean(gp.buttons[1]?.pressed);
+    if (btnB && !lastGp.b) triggerLaserLance();
+    const btnStart = Boolean(gp.buttons[9]?.pressed);
+    if (btnStart && !lastGp.start && state !== STATE.PLAY) startOrRestartRun();
+    lastGp = { a: gpFire, b: btnB, x: btnX, y: btnY, start: btnStart };
   }
 
-  if(keys['ArrowLeft'])ship.angle-=0.065;
-  if(keys['ArrowRight'])ship.angle+=0.065;
-  ship.thrust=!!keys['ArrowUp']||gpThrust;
-  if(ship.thrust){
-    ship.vx+=Math.cos(ship.angle)*0.14;
-    ship.vy+=Math.sin(ship.angle)*0.14;
-    if(frameCount%3===0)spawnParticles(
-      ship.x-Math.cos(ship.angle)*18,ship.y-Math.sin(ship.angle)*18,
-      '#f80',2,2
-    );
-    if(gpThrust&&frameCount%6===0)triggerGamepadRumble(20,0.08,0.04);
+  if (keys['ArrowLeft'] || keys['KeyA'] || holdInput.left) ship.angle -= 0.065;
+  if (keys['ArrowRight'] || keys['KeyD'] || holdInput.right) ship.angle += 0.065;
+  ship.thrust = Boolean(keys['ArrowUp'] || keys['KeyW'] || holdInput.thrust || gpThrust);
+  if (ship.thrust) {
+    ship.vx += Math.cos(ship.angle) * 0.145;
+    ship.vy += Math.sin(ship.angle) * 0.145;
+    if (frameCount % 3 === 0) {
+      spawnParticles(ship.x - Math.cos(ship.angle) * 18, ship.y - Math.sin(ship.angle) * 18, 38, 2, 2.2);
+    }
   }
 
-  // Friction & speed cap
-  ship.vx*=0.994;ship.vy*=0.994;
-  const spd=Math.hypot(ship.vx,ship.vy);
-  if(spd>7){ship.vx*=7/spd;ship.vy*=7/spd;}
-  ship.x+=ship.vx;ship.y+=ship.vy;
+  ship.vx *= 0.993;
+  ship.vy *= 0.993;
+  const spd = Math.hypot(ship.vx, ship.vy);
+  if (spd > 7) { ship.vx *= 7 / spd; ship.vy *= 7 / spd; }
+  ship.x += ship.vx;
+  ship.y += ship.vy;
   wrap(ship);
 
-  // Dash Echoes
-  if(ship.isPhasing&&frameCount%2===0){
-    ship.echoes.push({x:ship.x,y:ship.y,angle:ship.angle,alpha:0.65});
+  if (ship.isPhasing && frameCount % 2 === 0) {
+    ship.echoes.push({ x: ship.x, y: ship.y, angle: ship.angle, alpha: 0.65 });
   }
-  ship.echoes.forEach(ec=>ec.alpha-=0.08);
-  ship.echoes=ship.echoes.filter(ec=>ec.alpha>0);
+  ship.echoes.forEach(ec => { ec.alpha -= 0.08; });
+  ship.echoes = ship.echoes.filter(ec => ec.alpha > 0);
 
-  // Shooting
-  if(ship.shootCd>0)ship.shootCd--;
-  if((keys['Space']||gpFiring)&&ship.shootCd<=0){
-    ship.shootCd=10;
-    const bx=ship.x+Math.cos(ship.angle)*18;
-    const by=ship.y+Math.sin(ship.angle)*18;
-    bullets.push({x:bx,y:by,vx:Math.cos(ship.angle)*9,vy:Math.sin(ship.angle)*9,life:65,owner:'player',damage:1});
-    SND('shoot');
-    if(gpFiring)triggerGamepadRumble(25,0.12,0.05);
-  }
-
-  // Move Bullets
-  bullets.forEach(b=>{b.x+=b.vx;b.y+=b.vy;b.life--;wrap(b);});
-  bullets=bullets.filter(b=>b.life>0);
-
-  // Move Reflected Parry Bullets
-  reflectedBullets.forEach(b=>{b.x+=b.vx;b.y+=b.vy;b.life--;wrap(b);});
-  reflectedBullets=reflectedBullets.filter(b=>b.life>0);
-
-  // Move Asteroids
-  asteroids.forEach(a=>{a.x+=a.vx;a.y+=a.vy;a.rot+=a.rotSpd;wrap(a);});
-
-  // UFOs / System 1 Void Hunters
-  ufoTimer--;
-  if(ufoTimer<=0&&ufos.length===0){
-    spawnHunter();
-    ufoTimer=650+Math.floor(Math.random()*350);
+  if (ship.shootCd > 0) ship.shootCd--;
+  if ((keys['Space'] || holdInput.fire || gpFire) && ship.shootCd <= 0) {
+    ship.shootCd = 10;
+    bullets.push({
+      x: ship.x + Math.cos(ship.angle) * 20,
+      y: ship.y + Math.sin(ship.angle) * 20,
+      vx: Math.cos(ship.angle) * 9.2,
+      vy: Math.sin(ship.angle) * 9.2,
+      life: 64,
+      owner: 'player'
+    });
+    SND('shoot', 0.62);
   }
 
-  ufos.forEach(u=>{
-    u.x+=u.vx;u.y+=Math.sin(frameCount*0.04)*0.8;
+  bullets.forEach(b => { b.x += b.vx; b.y += b.vy; b.life--; wrap(b); });
+  bullets = bullets.filter(b => b.life > 0);
+
+  reflectedBullets.forEach(b => { b.x += b.vx; b.y += b.vy; b.life--; wrap(b); });
+  reflectedBullets = reflectedBullets.filter(b => b.life > 0);
+
+  asteroids.forEach(a => { a.x += a.vx; a.y += a.vy; a.rot += a.rotSpd; wrap(a); });
+
+  if (!boss) {
+    ufoTimer--;
+    if (ufoTimer <= 0 && ufos.length === 0) {
+      spawnHunter();
+      ufoTimer = 620 + Math.floor(Math.random() * 280);
+    }
+  }
+
+  ufos.forEach(u => {
+    u.x += u.vx;
+    u.y += Math.sin(frameCount * 0.04) * 0.85;
     u.shootCd--;
-    if(u.shootCd<=0){
-      u.shootCd=35+Math.floor(Math.random()*35);
-      // Lead targeting
-      const dist=Math.hypot(ship.x-u.x,ship.y-u.y);
-      const leadTime=dist/4.5;
-      const leadX=ship.x+ship.vx*leadTime;
-      const leadY=ship.y+ship.vy*leadTime;
-      const ang=Math.atan2(leadY-u.y,leadX-u.x);
-      bullets.push({x:u.x,y:u.y,vx:Math.cos(ang)*4.5,vy:Math.sin(ang)*4.5,life:95,owner:'ufo'});
-      SND('pop');
+    if (u.shootCd <= 0) {
+      u.shootCd = 42 + Math.floor(Math.random() * 32);
+      const ang = Math.atan2(ship.y - u.y, ship.x - u.x);
+      bullets.push({ x: u.x, y: u.y, vx: Math.cos(ang) * 4.5, vy: Math.sin(ang) * 4.5, life: 92, owner: 'ufo' });
+      SND('pop', 0.45);
     }
   });
-  ufos=ufos.filter(u=>u.x>-60&&u.x<W+60);
+  ufos = ufos.filter(u => u.x > -60 && u.x < W + 60);
 
-  // Invincibility
-  if(invincible>0)invincible--;
+  // Sovereign Boss AI & 2-Phase Barrage
+  if (boss && boss.hp > 0) {
+    boss.rot += boss.phase === 2 ? 0.022 : 0.011;
+    boss.x += boss.vx * (boss.phase === 2 ? 1.45 : 1.0);
+    if (boss.x < 150 || boss.x > W - 150) boss.vx *= -1;
+    boss.y = 152 + Math.sin(frameCount * 0.025) * 22;
+    boss.pylons.forEach(p => { p.angle += boss.phase === 2 ? 0.036 : 0.02; });
 
-  // ----------------- REFLECTIVE PHASE PARRY -----------------
-  if(ship.isPhasing&&ship.parryWindow>0){
-    for(let bi=bullets.length-1;bi>=0;bi--){
-      const b=bullets[bi];
-      if(b.owner==='ufo'&&Math.hypot(b.x-ship.x,b.y-ship.y)<38){
-        bullets.splice(bi,1);
-        freezeFrames=4;
-        vfxShake(8);
-        vfxFlash(0.18,'127,215,255');
-        SND('parry');
-
-        const reflectAng=Math.atan2(b.y-ship.y,b.x-ship.x);
-        reflectedBullets.push({
-          x:ship.x,y:ship.y,
-          vx:Math.cos(reflectAng)*12,
-          vy:Math.sin(reflectAng)*12,
-          life:70,damage:3
+    boss.fireCd--;
+    if (boss.fireCd <= 0) {
+      boss.fireCd = boss.phase === 2 ? 38 : 62;
+      const aim = Math.atan2(ship.y - boss.y, ship.x - boss.x);
+      const spread = boss.phase === 2 ? [-0.32, -0.16, 0, 0.16, 0.32] : [-0.20, 0, 0.20];
+      for (const off of spread) {
+        const a = aim + off;
+        bullets.push({
+          x: boss.x + Math.cos(a) * 44,
+          y: boss.y + Math.sin(a) * 44,
+          vx: Math.cos(a) * (boss.phase === 2 ? 5.1 : 4.2),
+          vy: Math.sin(a) * (boss.phase === 2 ? 5.1 : 4.2),
+          life: 110,
+          owner: 'ufo'
         });
-        
-        score+=200;
-        singularityEnergy=Math.min(100,singularityEnergy+25);
-        addFloatingText(ship.x,ship.y-35,'★ ORBITAL DEFLECTION PARRY! +200','#7df9ff',15);
-        spawnParticles(ship.x,ship.y,'#7df9ff',18,5);
+      }
+      SND('pop', 0.52);
+    }
+  }
+
+  if (invincible > 0) invincible--;
+
+  // Reflective Phase Parry against hostile bolts
+  if (ship.isPhasing && ship.parryWindow > 0) {
+    for (let bi = bullets.length - 1; bi >= 0; bi--) {
+      const b = bullets[bi];
+      if (b.owner === 'ufo' && Math.hypot(b.x - ship.x, b.y - ship.y) < 42) {
+        bullets.splice(bi, 1);
+        freezeFrames = 4;
+        vfxShake(8);
+        vfxFlash(0.20, '103,232,249');
+        SND('parry', 0.9);
+        const targetX = boss ? boss.x : (ufos[0] ? ufos[0].x : b.x - b.vx * 8);
+        const targetY = boss ? boss.y : (ufos[0] ? ufos[0].y : b.y - b.vy * 8);
+        const ang = Math.atan2(targetY - ship.y, targetX - ship.x);
+        reflectedBullets.push({ x: ship.x, y: ship.y, vx: Math.cos(ang) * 12, vy: Math.sin(ang) * 12, life: 75 });
+        score += 200;
+        singularityEnergy = Math.min(100, singularityEnergy + 24);
+        spawnCallout('flash', ship.x, ship.y - 48);
+        spawnParticles(ship.x, ship.y, 186, 18, 5);
       }
     }
   }
 
-  // ----------------- BULLETS VS ASTEROIDS -----------------
-  function checkBulletAsteroidHits(bList,isReflected=false){
-    for(let bi=bList.length-1;bi>=0;bi--){
-      const b=bList[bi];
-      if(!isReflected&&b.owner!=='player')continue;
-      for(let ai=asteroids.length-1;ai>=0;ai--){
-        const a=asteroids[ai];
-        if(Math.hypot(b.x-a.x,b.y-a.y)<a.radius){
-          if(!isReflected)bList.splice(bi,1);
-          const pts=(a.size===3?30:a.size===2?60:120)*(isReflected?2:1);
-          score+=pts;
-          singularityEnergy=Math.min(100,singularityEnergy+(a.size===3?15:6));
+  // Player & reflected bolts vs Asteroids / Hunters / Sovereign Boss
+  function processProjectileHits(list, reflected) {
+    for (let bi = list.length - 1; bi >= 0; bi--) {
+      const b = list[bi];
+      if (!reflected && b.owner !== 'player') continue;
+      let consumed = false;
+
+      for (let ai = asteroids.length - 1; ai >= 0; ai--) {
+        const a = asteroids[ai];
+        if (Math.hypot(b.x - a.x, b.y - a.y) < a.radius) {
+          if (!reflected) { list.splice(bi, 1); consumed = true; }
+          const pts = (a.size === 3 ? 30 : a.size === 2 ? 60 : 120) * (reflected ? 2 : 1);
+          score += pts;
+          singularityEnergy = Math.min(100, singularityEnergy + (a.size === 3 ? 14 : 6));
           orbitDirector.killStreak++;
-          
-          spawnParticles(a.x,a.y,['#0ff','#f0f','#fd0'][a.size-1],14+a.size*4,3.5);
-          vfxShake(a.size===3?4.5:a.size===2?2.8:1.5);
-          if(a.size===3)vfxFlash(0.12,'127,215,255');
-          SND(a.size===3?'explode':'pop');
-          
-          addFloatingText(a.x,a.y,`+${pts}`,['#0ff','#f0f','#fd0'][a.size-1],12);
+          spawnParticles(a.x, a.y, [50, 190, 305][a.size - 1], 12 + a.size * 4, 3.6);
+          vfxShake(a.size === 3 ? 4.2 : 2.2);
+          SND(a.size === 3 ? 'explode' : 'pop', 0.65);
+          if (reflected || a.size === 3) spawnCallout('num', a.x, a.y - 30, String(pts));
           splitAsteroid(a);
-          asteroids.splice(ai,1);
+          asteroids.splice(ai, 1);
           break;
         }
       }
-    }
-  }
-  checkBulletAsteroidHits(bullets,false);
-  checkBulletAsteroidHits(reflectedBullets,true);
+      if (consumed) continue;
 
-  // ----------------- BULLETS VS UFOS -----------------
-  function checkBulletUfoHits(bList,isReflected=false){
-    for(let bi=bList.length-1;bi>=0;bi--){
-      const b=bList[bi];
-      if(!isReflected&&b.owner!=='player')continue;
-      for(let ui=ufos.length-1;ui>=0;ui--){
-        const u=ufos[ui];
-        if(Math.hypot(b.x-u.x,b.y-u.y)<u.radius){
-          if(!isReflected)bList.splice(bi,1);
-          u.hp-=(isReflected?3:1);
-          if(u.hp<=0){
-            score+=450;
-            singularityEnergy=Math.min(100,singularityEnergy+30);
-            orbitDirector.killStreak+=2;
-            spawnParticles(u.x,u.y,'#0f8',25,5);
-            vfxShake(6.5);vfxFlash(0.18,'110,255,180');
-            ufos.splice(ui,1);
-            SND('explode');
-            addFloatingText(u.x,u.y,'+450 HUNTER DESTROYED!','#0f8',15);
-          }else{
-            SND('pop');
-            spawnParticles(b.x,b.y,'#e9c86a',8,2);
+      for (let ui = ufos.length - 1; ui >= 0; ui--) {
+        const u = ufos[ui];
+        if (Math.hypot(b.x - u.x, b.y - u.y) < u.radius) {
+          if (!reflected) { list.splice(bi, 1); consumed = true; }
+          u.hp -= reflected ? 3 : 1;
+          if (u.hp <= 0) {
+            score += 450;
+            singularityEnergy = Math.min(100, singularityEnergy + 28);
+            spawnParticles(u.x, u.y, 155, 24, 5);
+            vfxShake(6);
+            SND('explode', 0.8);
+            spawnCallout('num', u.x, u.y - 34, '450');
+            ufos.splice(ui, 1);
+          } else {
+            SND('pop', 0.55);
+            spawnParticles(b.x, b.y, 46, 7, 2.2);
           }
           break;
         }
       }
-    }
-  }
-  checkBulletUfoHits(bullets,false);
-  checkBulletUfoHits(reflectedBullets,true);
+      if (consumed) continue;
 
-  // ----------------- SHIP COLLISIONS -----------------
-  if(invincible<=0&&!ship.isPhasing){
-    for(let a of asteroids){
-      if(Math.hypot(ship.x-a.x,ship.y-a.y)<a.radius+12){
-        die();return;
+      if (boss && boss.hp > 0) {
+        for (const p of boss.pylons) {
+          if (p.hp <= 0) continue;
+          const px = boss.x + Math.cos(p.angle) * p.dist;
+          const py = boss.y + Math.sin(p.angle) * p.dist;
+          if (Math.hypot(b.x - px, b.y - py) < 24) {
+            if (!reflected) { list.splice(bi, 1); consumed = true; }
+            p.hp -= reflected ? 3 : 1;
+            SND('pop', 0.6);
+            spawnParticles(px, py, 190, 10, 3);
+            if (p.hp <= 0) {
+              score += 250;
+              SND('explode', 0.75);
+              spawnCallout('num', px, py - 28, '250');
+            }
+            break;
+          }
+        }
+        if (!consumed && Math.hypot(b.x - boss.x, b.y - boss.y) < boss.radius) {
+          if (!reflected) list.splice(bi, 1);
+          damageBoss(reflected ? 5 : 1, b.x, b.y);
+        }
       }
     }
-    for(let u of ufos){
-      if(Math.hypot(ship.x-u.x,ship.y-u.y)<u.radius+14){die();return;}
+  }
+  processProjectileHits(bullets, false);
+  processProjectileHits(reflectedBullets, true);
+
+  // Ship vulnerability check
+  if (invincible <= 0 && !ship.isPhasing) {
+    for (const a of asteroids) {
+      if (Math.hypot(ship.x - a.x, ship.y - a.y) < a.radius + 12) { die(); return; }
     }
-    for(let b of bullets){
-      if(b.owner==='ufo'&&Math.hypot(b.x-ship.x,b.y-ship.y)<15){die();return;}
+    for (const u of ufos) {
+      if (Math.hypot(ship.x - u.x, ship.y - u.y) < u.radius + 14) { die(); return; }
+    }
+    if (boss && boss.hp > 0 && Math.hypot(ship.x - boss.x, ship.y - boss.y) < boss.radius + 14) {
+      die(); return;
+    }
+    for (const b of bullets) {
+      if (b.owner === 'ufo' && Math.hypot(b.x - ship.x, b.y - ship.y) < 14) { die(); return; }
     }
   }
 
-  // Update Particles
-  particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.life-=0.02;p.vx*=0.98;p.vy*=0.98;});
-  particles=particles.filter(p=>p.life>0);
+  particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.life -= 0.022; p.vx *= 0.98; p.vy *= 0.98; });
+  particles = particles.filter(p => p.life > 0);
 
-  // Update Floating Texts
-  floatingTexts.forEach(ft=>{ft.y+=ft.vy;ft.life-=dt*1.2;});
-  floatingTexts=floatingTexts.filter(ft=>ft.life>0);
+  callouts.forEach(c => { c.y -= 0.65; c.life--; });
+  callouts = callouts.filter(c => c.life > 0);
 
-  // Level complete
-  if(asteroids.length===0&&ufos.length===0){
-    level++;
-    spawnAsteroids(3+level);
-    ufoTimer=300;
-    vfxFlash(0.18,'233,200,106');
-    SND('parry');
-    addFloatingText(W/2,H/2,'ORBIT SECTOR CLEARED!','#e9c86a',20);
+  if (score > highScore) {
+    highScore = score;
+    try { localStorage.setItem('ossuaryOrbit_hi', String(highScore)); } catch (e) {}
   }
+
+  // Non-boss Sector Clear
+  if (!boss && asteroids.length === 0 && ufos.length === 0) {
+    SND('sectorClear', 0.8);
+    vfxFlash(0.18, '245,215,110');
+    setBanner('cleared', 0, 56);
+    setupSector(level + 1);
+  }
+
+  if (frameCount % 4 === 0) syncDOMHud();
 }
 
-function die(){
-  freezeFrames=8;
-  vfxShake(14);vfxFlash(0.42,'255,45,85');
-  triggerGamepadRumble(350, 1.0, 0.8);
-  spawnParticles(ship.x,ship.y,'#f44',35,6);
-  spawnParticles(ship.x,ship.y,'#fd0',25,4);
+function die() {
+  freezeFrames = 8;
+  vfxShake(14);
+  vfxFlash(0.40, '244,63,94');
+  triggerGamepadRumble(320, 0.95, 0.75);
+  spawnParticles(ship.x, ship.y, 350, 34, 6);
+  spawnParticles(ship.x, ship.y, 46, 24, 4);
   lives--;
-  SND('explode');
-  if(lives<=0){
-    state=STATE.DEAD;
-    if(score>highScore){highScore=score;localStorage.setItem('ossuaryOrbit_hi',highScore);}
+  if (lives <= 0) {
+    state = STATE.DEAD;
+    SOUND.setBossMode(false);
+    SND('gameOver', 0.85);
+    setBanner('fallen', 0, 9999);
   } else {
-    ship.x=W/2;ship.y=H/2;ship.vx=0;ship.vy=0;ship.angle=0;ship.hitTimer=34;
-    invincible=180;
+    SND('explode', 0.85);
+    ship.x = W / 2; ship.y = H * 0.68; ship.vx = 0; ship.vy = 0; ship.angle = -Math.PI / 2;
+    ship.hitTimer = 36;
+    invincible = 165;
   }
+  syncDOMHud();
 }
 
-// ----------------- RENDERING -----------------
-const shipTrail=[];
-function drawShip(){
-  // Motion trail
-  const spdNow=Math.hypot(ship.vx,ship.vy);
-  shipTrail.push({x:ship.x,y:ship.y,a:Math.min(1,spdNow/3.5)});
-  if(shipTrail.length>20)shipTrail.shift();
-  ctx.save();ctx.globalCompositeOperation='lighter';
-  for(let i=0;i<shipTrail.length;i++){
-    const t=shipTrail[i];
-    drawGlow(ctx,t.x,t.y,3+i*0.45,190,t.a*(i/shipTrail.length)*0.4);
+// --- Rendering (Zero Canvas fillText / Pure Vorath Painted Art) ---
+const shipTrail = [];
+function drawShip() {
+  const spdNow = Math.hypot(ship.vx, ship.vy);
+  shipTrail.push({ x: ship.x, y: ship.y, a: Math.min(1, spdNow / 3.5) });
+  if (shipTrail.length > 18) shipTrail.shift();
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < shipTrail.length; i++) {
+    const t = shipTrail[i];
+    drawGlow(ctx, t.x, t.y, 3 + i * 0.45, 190, t.a * (i / shipTrail.length) * 0.38);
   }
   ctx.restore();
 
-  // Phase Shift After-Images
-  ship.echoes.forEach(echo=>{
-    ctx.save();ctx.globalAlpha=echo.alpha*0.6;
-    ctx.translate(echo.x,echo.y);ctx.rotate(echo.angle);
-    ctx.strokeStyle='#7df9ff';ctx.lineWidth=2;
-    ctx.beginPath();
-    ctx.moveTo(20,0);ctx.lineTo(-14,12);ctx.lineTo(-8,0);ctx.lineTo(-14,-12);ctx.closePath();
-    ctx.stroke();
+  ship.echoes.forEach(echo => {
+    ctx.save();
+    ctx.globalAlpha = echo.alpha * 0.55;
+    ctx.translate(echo.x, echo.y);
+    ctx.rotate(echo.angle);
+    if (ORBIT_ATLAS_READY) {
+      ctx.drawImage(ORBIT_ATLAS, 0, 1024, 512, 512, -36, -36, 72, 72);
+    }
     ctx.restore();
   });
 
-  if(invincible>0&&ship.hitTimer<=0&&Math.floor(frameCount/4)%2)return;
-  ctx.save();ctx.translate(ship.x,ship.y);ctx.rotate(ship.angle);
+  if (invincible > 0 && ship.hitTimer <= 0 && Math.floor(frameCount / 4) % 2) return;
 
-  // Parry Aura
-  if(ship.parryWindow>0){
-    ctx.strokeStyle='rgba(125,249,255,0.85)';
-    ctx.lineWidth=2.5;
+  ctx.save();
+  ctx.translate(ship.x, ship.y);
+  ctx.rotate(ship.angle);
+
+  if (ship.parryWindow > 0) {
+    ctx.strokeStyle = 'rgba(103,232,249,0.9)';
+    ctx.lineWidth = 2.6;
     ctx.beginPath();
-    ctx.arc(0,0,26+Math.sin(frameCount*0.4)*4,0,Math.PI*2);
+    ctx.arc(0, 0, 30 + Math.sin(frameCount * 0.4) * 4, 0, Math.PI * 2);
     ctx.stroke();
   }
 
-  drawGlow(ctx,0,0,36,188,0.55);
+  drawGlow(ctx, 0, 0, 36, 188, 0.5);
 
-  // Thrust flame
-  if(ship.thrust){
-    const flen=16+Math.random()*8;
-    drawGlow(ctx,-14-flen*0.4,0,12+Math.random()*4,32,0.8);
-    const fg=ctx.createLinearGradient(-8,0,-8-flen-8,0);
-    fg.addColorStop(0,'rgba(255,255,255,0.95)');
-    fg.addColorStop(0.35,'rgba(255,200,90,0.85)');
-    fg.addColorStop(1,'rgba(255,80,30,0)');
-    ctx.fillStyle=fg;
-    ctx.beginPath();ctx.moveTo(-8,5);ctx.lineTo(-8-flen,0);ctx.lineTo(-8,-5);ctx.closePath();ctx.fill();
+  if (ship.thrust) {
+    const flen = 16 + Math.random() * 9;
+    drawGlow(ctx, -16 - flen * 0.4, 0, 13, 38, 0.82);
+    const fg = ctx.createLinearGradient(-8, 0, -8 - flen - 8, 0);
+    fg.addColorStop(0, 'rgba(255,255,255,0.96)');
+    fg.addColorStop(0.38, 'rgba(253,224,71,0.88)');
+    fg.addColorStop(1, 'rgba(244,63,94,0)');
+    ctx.fillStyle = fg;
+    ctx.beginPath();
+    ctx.moveTo(-8, 5.5); ctx.lineTo(-8 - flen, 0); ctx.lineTo(-8, -5.5);
+    ctx.closePath();
+    ctx.fill();
   }
 
-  if(ORBIT_ATLAS_READY){
-    const row=debugShipVisualState===null?(ship.hitTimer>0?2:(ship.thrust?1:0)):debugShipVisualState;
-    const pulse=ship.hitTimer>0?1.08:(1+Math.sin(frameCount*0.08)*0.025);
-    ctx.globalAlpha=ship.hitTimer>0?0.94:1;
-    ctx.drawImage(ORBIT_ATLAS,0,row*512,512,512,-39*pulse,-39*pulse,78*pulse,78*pulse);
-    ctx.globalAlpha=1;
-    ctx.restore();
-    return;
+  if (ORBIT_ATLAS_READY) {
+    const row = debugShipVisualState === null
+      ? (ship.hitTimer > 0 || ship.parryWindow > 0 ? 2 : (ship.thrust ? 1 : 0))
+      : debugShipVisualState;
+    const pulse = ship.hitTimer > 0 ? 1.08 : (1 + Math.sin(frameCount * 0.08) * 0.025);
+    ctx.drawImage(ORBIT_ATLAS, 0, row * 512, 512, 512, -40 * pulse, -40 * pulse, 80 * pulse, 80 * pulse);
+  } else {
+    drawFacetGem(0, 0, 16, 190, 0, 1);
   }
-
-  // Ship hull
-  const hull=ctx.createLinearGradient(-18,-12,22,12);
-  hull.addColorStop(0,'rgba(255,255,255,0.6)');
-  hull.addColorStop(0.32,'rgba(236,72,153,0.4)');
-  hull.addColorStop(0.7,'rgba(127,215,255,0.5)');
-  hull.addColorStop(1,'rgba(20,40,70,0.35)');
-  ctx.fillStyle=hull;
-  ctx.beginPath();
-  ctx.moveTo(20,0);ctx.lineTo(-14,12);ctx.lineTo(-8,0);ctx.lineTo(-14,-12);ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle='rgba(127,215,255,0.3)';ctx.lineWidth=5;ctx.stroke();
-  ctx.strokeStyle='#bffcff';ctx.lineWidth=1.6;ctx.stroke();
-
   ctx.restore();
 }
 
-const AST_GRAD={};
-function astGrad(size,hue){
-  if(AST_GRAD[size])return AST_GRAD[size];
-  const R=size===3?40:size===2?22:12;
-  const g=ctx.createRadialGradient(-R*0.35,-R*0.4,R*0.12,0,0,R*1.15);
-  g.addColorStop(0,`hsla(${hue},75%,62%,0.4)`);
-  g.addColorStop(0.5,`hsla(${hue},80%,36%,0.22)`);
-  g.addColorStop(1,'rgba(6,3,14,0.7)');
-  AST_GRAD[size]=g;return g;
-}
-
-function drawAsteroid(a){
-  const hue=a.size===3?305:a.size===2?185:50;
-  drawGlow(ctx,a.x,a.y,a.radius*1.8,hue,0.35);
-  ctx.save();ctx.translate(a.x,a.y);ctx.rotate(a.rot);
-  if(ORBIT_ATLAS_READY){
-    const row=a.size===3?0:(a.size===2?1:2);
-    const d=a.radius*2.65;
-    ctx.drawImage(ORBIT_ATLAS,512,row*512,512,512,-d/2,-d/2,d,d);
-    ctx.restore();
-    return;
+function drawAsteroid(a) {
+  const hue = a.size === 3 ? 305 : (a.size === 2 ? 190 : 46);
+  drawGlow(ctx, a.x, a.y, a.radius * 1.75, hue, 0.34);
+  ctx.save();
+  ctx.translate(a.x, a.y);
+  ctx.rotate(a.rot);
+  if (ORBIT_ATLAS_READY) {
+    const row = a.size === 3 ? 0 : (a.size === 2 ? 1 : 2);
+    const d = a.radius * 2.65;
+    ctx.drawImage(ORBIT_ATLAS, 512, row * 512, 512, 512, -d / 2, -d / 2, d, d);
+  } else {
+    drawFacetGem(0, 0, a.radius * 0.85, hue, 0, 0.9);
   }
-  ctx.fillStyle=astGrad(a.size,hue);
-  ctx.beginPath();
-  ctx.moveTo(a.verts[0].x,a.verts[0].y);
-  for(let i=1;i<a.verts.length;i++)ctx.lineTo(a.verts[i].x,a.verts[i].y);
-  ctx.closePath();ctx.fill();
-  ctx.strokeStyle=`hsla(${hue},100%,60%,0.3)`;ctx.lineWidth=5;ctx.stroke();
-  ctx.strokeStyle=`hsla(${hue},100%,78%,0.95)`;ctx.lineWidth=1.6;ctx.stroke();
   ctx.restore();
 }
 
-function drawUFO(u){
-  drawGlow(ctx,u.x,u.y,38,44,0.5);
-  ctx.save();ctx.translate(u.x,u.y);
-  ctx.rotate(frameCount*0.02*Math.sign(u.vx));
-  ctx.strokeStyle='rgba(233,200,106,0.9)';ctx.lineWidth=2;
-  ctx.beginPath();ctx.arc(0,0,19,0,Math.PI*2);ctx.stroke();
-  ctx.strokeStyle='rgba(127,215,255,0.75)';ctx.lineWidth=1;
-  ctx.beginPath();ctx.arc(0,0,12,0,Math.PI*2);ctx.stroke();
-  for(let i=0;i<6;i++){
-    const a=i*Math.PI/3;
-    ctx.beginPath();ctx.moveTo(Math.cos(a)*12,Math.sin(a)*12);ctx.lineTo(Math.cos(a)*25,Math.sin(a)*25);ctx.stroke();
-    drawFacetGem(Math.cos(a)*24,Math.sin(a)*24,2.8,42+i*48,-frameCount*0.03+i,0.86);
+function drawUFO(u) {
+  drawGlow(ctx, u.x, u.y, 38, 44, 0.52);
+  ctx.save();
+  ctx.translate(u.x, u.y);
+  ctx.rotate(frameCount * 0.025 * Math.sign(u.vx || 1));
+  if (ORBIT_ATLAS_READY) {
+    ctx.drawImage(ORBIT_ATLAS, 512, 1024, 512, 512, -32, -32, 64, 64);
   }
-  drawFacetGem(0,0,8,315,frameCount*0.035,1);
+  drawFacetGem(0, 0, 7, 320, frameCount * 0.04, 0.95);
   ctx.restore();
 }
 
-function drawHUD(){
-  setSpacing(2.5);
-  // Score panel (left)
-  hudPanel(12,12,210,48,'rgba(127,215,255,0.35)');
-  ctx.textAlign='left';
-  ctx.fillStyle='rgba(127,215,255,0.7)';ctx.font='10px "Segoe UI",Arial,sans-serif';
-  ctx.fillText('VERDICTS',24,27);
-  ctx.font='600 20px "Segoe UI",Arial,sans-serif';
-  ctx.fillStyle='#eafcff';
-  ctx.fillText(String(score),24,49);
+function drawSovereignBoss() {
+  if (!boss || boss.hp <= 0) return;
+  const auraHue = boss.phase === 2 ? 342 : 284;
+  drawGlow(ctx, boss.x, boss.y, boss.radius * 2.6, auraHue, 0.58);
 
-  // System 1 Orbit Director Telemetry (Center-Left)
-  const dirColor=orbitDirector.tension>70?'#ff4fac':(orbitDirector.tension>40?'#e9c86a':'#64f0b0');
-  hudPanel(W/2-110,12,220,48,'rgba(233,200,106,0.35)');
-  ctx.textAlign='center';
-  ctx.font='600 12px "Segoe UI",Arial,sans-serif';
-  ctx.fillStyle='#e9c86a';
-  ctx.fillText(`ORBIT SECTOR ${level}`,W/2,27);
-  ctx.font='10px ui-monospace,monospace';ctx.fillStyle=dirColor;
-  ctx.fillText(`DIRECTOR [${orbitDirector.state}] ${Math.round(orbitDirector.tension)}% · ${orbitDirector.decisionLatencyUs.toFixed(3)}µs`,W/2,48);
-
-  // Singularity Energy (Right)
-  hudPanel(W-190,12,178,48,'rgba(236,72,153,0.35)');
-  ctx.textAlign='right';
-  ctx.fillStyle=singularityEnergy>=50?'#00ffcc':'#aaa';
-  ctx.font='600 11px ui-monospace,monospace';
-  ctx.fillText(`VORTEX [Q]: ${Math.round(singularityEnergy)}%`,W-24,27);
-  ctx.fillStyle='rgba(255,255,255,0.15)';ctx.fillRect(W-176,36,150,4);
-  ctx.fillStyle='#00ffcc';ctx.fillRect(W-176,36,150*(singularityEnergy/100),4);
-
-  // Lives
-  ctx.textAlign='left';
-  for(let i=0;i<lives;i++){
-    drawGlow(ctx,26+i*29,78,12,48,0.38);
-    if(ORBIT_ATLAS_READY)ctx.drawImage(ORBIT_ATLAS,0,0,512,512,13+i*29,65,26,26);
-    else{
-      ctx.save();ctx.translate(26+i*29,78);ctx.strokeStyle='#e9c86a';ctx.lineWidth=1.5;
-      ctx.beginPath();ctx.arc(0,0,8,-Math.PI*0.72,Math.PI*0.72);ctx.stroke();ctx.restore();
+  // Sacred Orbiting Witness Obelisk Pylons
+  for (const p of boss.pylons) {
+    if (p.hp <= 0) continue;
+    const px = boss.x + Math.cos(p.angle) * p.dist;
+    const py = boss.y + Math.sin(p.angle) * p.dist;
+    ctx.strokeStyle = boss.phase === 2 ? 'rgba(244,114,182,0.45)' : 'rgba(103,232,249,0.38)';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(boss.x, boss.y); ctx.lineTo(px, py); ctx.stroke();
+    drawGlow(ctx, px, py, 28, 190, 0.45);
+    if (ORBIT_ATLAS_READY) {
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(p.angle + Math.PI / 2);
+      ctx.drawImage(ORBIT_ATLAS, 512, 512, 512, 512, -28, -28, 56, 56);
+      ctx.restore();
     }
   }
 
-  // Parry Status
-  ctx.textAlign='right';ctx.font='11px ui-monospace,monospace';
-  ctx.fillStyle=ship.phaseCool<=0?'#7df9ff':'#777';
-  ctx.fillText(ship.phaseCool<=0?'PARRY READY [SHIFT]':`PARRY CD: ${ship.phaseCool.toFixed(1)}s`,W-20,H-22);
-  setSpacing(0);
+  // Sovereign Core (Cell 1,0 Crowned Ossuary + Phase 2 Oracle Maw Halo)
+  ctx.save();
+  ctx.translate(boss.x, boss.y);
+  ctx.strokeStyle = boss.phase === 2 ? 'rgba(253,224,71,0.82)' : 'rgba(192,132,252,0.65)';
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  ctx.arc(0, 0, boss.radius + 10 + Math.sin(frameCount * 0.12) * 4, 0, Math.PI * 2);
+  ctx.stroke();
+
+  const scale = 1 + Math.sin(frameCount * 0.08) * 0.04;
+  ctx.rotate(Math.sin(boss.rot) * 0.18);
+  if (ORBIT_ATLAS_READY) {
+    const d = boss.radius * 2.75 * scale;
+    ctx.drawImage(ORBIT_ATLAS, 512, 0, 512, 512, -d / 2, -d / 2, d, d);
+    if (boss.phase === 2) {
+      ctx.globalAlpha = 0.55;
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.drawImage(ORBIT_ATLAS, 512, 1024, 512, 512, -d * 0.42, -d * 0.42, d * 0.84, d * 0.84);
+    }
+  } else {
+    drawFacetGem(0, 0, boss.radius * 0.8, auraHue, boss.rot, 1);
+  }
+  ctx.restore();
 }
 
-function draw(){
+function drawPaintedCallouts() {
+  for (const c of callouts) {
+    const age = c.maxLife - c.life;
+    const alpha = Math.min(1, c.life / 12) * Math.min(1, age / 3 + 0.4);
+    const scale = 1 + 0.14 * Math.max(0, 1 - age / 8);
+    if (c.kind === 'flash') drawLetterCell('flash', c.x, c.y, 40 * scale, alpha);
+    else if (c.kind === 'guard') drawLetterCell('guard', c.x, c.y, 32 * scale, alpha);
+    else if (c.kind === 'num') drawLetterGlyphs(c.value, c.x, c.y, 30 * scale, alpha);
+  }
+
+  if (state === STATE.MENU) {
+    // Painted Sanctuary Title Showcase (zero typed canvas text)
+    const cy = H * 0.46;
+    drawGlow(ctx, W / 2, cy, 150, 280, 0.42);
+    drawGlow(ctx, W / 2, cy, 95, 44, 0.38);
+    if (ORBIT_ATLAS_READY) {
+      const bob = Math.sin(frameCount * 0.05) * 6;
+      ctx.drawImage(ORBIT_ATLAS, 512, 0, 512, 512, W / 2 - 190, cy - 110 - bob, 130, 130);
+      ctx.drawImage(ORBIT_ATLAS, 512, 512, 512, 512, W / 2 + 60, cy - 110 + bob, 130, 130);
+      ctx.drawImage(ORBIT_ATLAS, 0, 512, 512, 512, W / 2 - 64, cy - 52 + bob * 0.6, 128, 128);
+    }
+    const pulse = 0.68 + Math.sin(frameCount * 0.08) * 0.28;
+    drawLetterCell('fight', W / 2, H * 0.74, 54, pulse);
+    return;
+  }
+
+  if (state === STATE.DEAD) {
+    drawLetterCell('fallen', W / 2, H * 0.45, 64, 0.95);
+    drawLetterGlyphs(String(score), W / 2, H * 0.58, 42, 0.92);
+    return;
+  }
+
+  if (bannerState.timer > 0) {
+    const cy = 74;
+    const alpha = Math.min(1, bannerState.timer / 12);
+    if (bannerState.kind === 'round') {
+      if (bannerState.timer > 38) {
+        const h = 42;
+        const rw = LCELL.round[2] * h / LCELL.round[3];
+        const nStr = String(Math.min(9, bannerState.num));
+        const nw = LCELL[nStr][2] * (h * 1.2) / LCELL[nStr][3];
+        const x0 = W / 2 - (rw + 14 + nw) / 2;
+        drawLetterCell('round', x0 + rw / 2, cy, h, alpha);
+        drawLetterGlyphs(nStr, x0 + rw + 14 + nw / 2, cy, h * 1.2, alpha);
+      } else {
+        drawLetterCell('fight', W / 2, cy, 48, alpha);
+      }
+    } else if (bannerState.kind === 'cleared') {
+      drawLetterCell('cleared', W / 2, cy, 48, alpha);
+    } else if (bannerState.kind === 'ko') {
+      drawLetterCell('ko', W / 2, cy + 24, 68, alpha);
+    }
+  }
+}
+
+function drawPaintedHUD() {
+  ctx.save();
+  // Sculpted HUD Top-Bar Underlay
+  const gHud = ctx.createLinearGradient(0, 0, 0, 36);
+  gHud.addColorStop(0, 'rgba(4,2,11,0.88)');
+  gHud.addColorStop(0.75, 'rgba(4,2,11,0.65)');
+  gHud.addColorStop(1, 'rgba(4,2,11,0)');
+  ctx.fillStyle = gHud;
+  ctx.fillRect(0, 0, W, 40);
+
+  // Subtle gold hairline rail
+  ctx.strokeStyle = 'rgba(245,215,110,0.22)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(14, 38);
+  ctx.lineTo(W - 14, 38);
+  ctx.stroke();
+
+  // 1. Skiffs (Lives) — Mini Skiff Sprite + Count
+  if (ORBIT_ATLAS_READY) {
+    ctx.drawImage(ORBIT_ATLAS, 0, 0, 512, 512, 18, 8, 22, 22);
+  } else {
+    drawFacetGem(29, 19, 7, 340, 0, 0.95);
+  }
+  drawLetterGlyphs(String(Math.max(0, lives)), 54, 19, 18, 0.95);
+
+  // 2. Verdicts (Score) — Cyan Gem + Painted Numerals
+  drawFacetGem(96, 19, 6.5, 188, frameCount * 0.03, 0.95);
+  drawLetterGlyphs(String(score), 146, 19, 20, 0.95);
+
+  // 3. Archive (Hi-Score) — Gold Gem + Painted Numerals
+  drawFacetGem(232, 19, 5.5, 45, 0, 0.82);
+  drawLetterGlyphs(String(Math.max(highScore, score)), 278, 19, 16, 0.72);
+
+  // 4. Sector Progression Icon Medallions (I - IV)
+  const secPips = [
+    { x: 420, label: '1' },
+    { x: 440, label: '2' },
+    { x: 460, label: '3' },
+    { x: 480, label: '4' }
+  ];
+  for (let s = 1; s <= 4; s++) {
+    const pip = secPips[s - 1];
+    const isAct = s === level;
+    const isUnl = s <= level;
+    ctx.save();
+    ctx.translate(pip.x, 19);
+    if (isAct) {
+      ctx.shadowColor = s === 4 ? '#f472b6' : '#67e8f9';
+      ctx.shadowBlur = 10;
+    }
+    ctx.fillStyle = isAct ? (s === 4 ? '#f472b6' : '#67e8f9') : (isUnl ? '#f5d76e' : 'rgba(168,85,247,0.22)');
+    ctx.beginPath();
+    ctx.arc(0, 0, isAct ? 6.5 : 4.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = isAct ? '#fff' : (isUnl ? 'rgba(245,215,110,0.6)' : 'rgba(100,80,140,0.3)');
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // 5. Slit-Eye Parry Medallion
+  {
+    const parryReady = !ship || ship.parryTimer <= 0;
+    ctx.save();
+    ctx.translate(750, 19);
+    if (parryReady) {
+      ctx.shadowColor = '#34d399';
+      ctx.shadowBlur = 12;
+    }
+    ctx.fillStyle = parryReady ? '#081c15' : '#080514';
+    ctx.strokeStyle = parryReady ? '#34d399' : 'rgba(168,85,247,0.35)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 11, 6.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = parryReady ? '#6ee7b7' : 'rgba(140,110,180,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 2, 5.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // 6. Vortex Energy Gem & Percentage
+  {
+    const nrg = Math.floor(ship ? ship.energy : 30);
+    drawFacetGem(800, 19, 7.5, 280, frameCount * 0.05, 0.95);
+    drawLetterGlyphs(nrg + '%', 846, 19, 17, 0.9);
+  }
+
+  ctx.restore();
+}
+
+function draw() {
+  syncHiDPI();
   vfxUpdate();
   drawSpace();
 
   ctx.save();
-  ctx.translate(VFX.sx,VFX.sy);
-  if(state===STATE.PLAY||(state===STATE.DEAD&&lives<=0)){
-    asteroids.forEach(a=>drawAsteroid(a));
-    ufos.forEach(u=>drawUFO(u));
+  ctx.translate(VFX.sx, VFX.sy);
 
-    // Active Graviton Vortex Rendering
-    if(activeSingularity){
+  if (state === STATE.PLAY || state === STATE.DEAD) {
+    asteroids.forEach(drawAsteroid);
+    ufos.forEach(drawUFO);
+    drawSovereignBoss();
+
+    if (activeSingularity) {
       ctx.save();
-      const pulse=Math.sin(frameCount*0.2)*8;
-      const gv=ctx.createRadialGradient(activeSingularity.x,activeSingularity.y,2,activeSingularity.x,activeSingularity.y,activeSingularity.radius+pulse);
-      gv.addColorStop(0,'rgba(0,255,204,0.85)');
-      gv.addColorStop(0.35,'rgba(34,211,238,0.4)');
-      gv.addColorStop(0.7,'rgba(168,85,247,0.2)');
-      gv.addColorStop(1,'rgba(0,0,0,0)');
-      ctx.fillStyle=gv;
-      ctx.beginPath();ctx.arc(activeSingularity.x,activeSingularity.y,activeSingularity.radius+pulse,0,Math.PI*2);ctx.fill();
-      drawFacetGem(activeSingularity.x,activeSingularity.y,16,180,frameCount*0.1,1);
+      const pulse = Math.sin(frameCount * 0.22) * 8;
+      const gv = ctx.createRadialGradient(
+        activeSingularity.x, activeSingularity.y, 2,
+        activeSingularity.x, activeSingularity.y, activeSingularity.radius + pulse
+      );
+      gv.addColorStop(0, 'rgba(103,232,249,0.88)');
+      gv.addColorStop(0.36, 'rgba(168,85,247,0.42)');
+      gv.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = gv;
+      ctx.beginPath();
+      ctx.arc(activeSingularity.x, activeSingularity.y, activeSingularity.radius + pulse, 0, Math.PI * 2);
+      ctx.fill();
+      drawFacetGem(activeSingularity.x, activeSingularity.y, 16, 186, frameCount * 0.1, 1);
       ctx.restore();
     }
 
-    // Active Laser Lance Rendering
-    if(activeLaserLance){
+    if (activeLaserLance) {
       ctx.save();
-      ctx.strokeStyle='rgba(244,63,94,0.9)';ctx.lineWidth=6;
-      ctx.shadowColor='#f43f5e';ctx.shadowBlur=24;
-      ctx.beginPath();ctx.moveTo(activeLaserLance.sx,activeLaserLance.sy);ctx.lineTo(activeLaserLance.tx,activeLaserLance.ty);ctx.stroke();
-      ctx.strokeStyle='#fff';ctx.lineWidth=2;
-      ctx.beginPath();ctx.moveTo(activeLaserLance.sx,activeLaserLance.sy);ctx.lineTo(activeLaserLance.tx,activeLaserLance.ty);ctx.stroke();
+      ctx.strokeStyle = 'rgba(244,63,94,0.9)';
+      ctx.lineWidth = 6;
+      ctx.shadowColor = '#f43f5e';
+      ctx.shadowBlur = 22;
+      ctx.beginPath();
+      ctx.moveTo(activeLaserLance.sx, activeLaserLance.sy);
+      ctx.lineTo(activeLaserLance.tx, activeLaserLance.ty);
+      ctx.stroke();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
       ctx.restore();
     }
 
-    // Player & Enemy Bullets
-    bullets.forEach(b=>{
-      const hue=b.owner==='player'?185:340;
-      ctx.strokeStyle=`hsla(${hue},100%,78%,0.8)`;ctx.lineWidth=1.8;
-      ctx.beginPath();ctx.moveTo(b.x-b.vx*1.4,b.y-b.vy*1.4);ctx.lineTo(b.x,b.y);ctx.stroke();
-      drawGlow(ctx,b.x,b.y,10,hue,0.75);
+    bullets.forEach(b => {
+      const hue = b.owner === 'player' ? 188 : 340;
+      ctx.strokeStyle = `hsla(${hue},100%,78%,0.85)`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(b.x - b.vx * 1.4, b.y - b.vy * 1.4);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+      drawGlow(ctx, b.x, b.y, 10, hue, 0.78);
     });
 
-    // Reflected Parry Bullets (Radiant Prism Lances)
-    reflectedBullets.forEach(b=>{
-      ctx.strokeStyle='#7df9ff';ctx.lineWidth=2.8;
-      ctx.beginPath();ctx.moveTo(b.x-b.vx*2.0,b.y-b.vy*2.0);ctx.lineTo(b.x,b.y);ctx.stroke();
-      drawGlow(ctx,b.x,b.y,14,180,0.9);
+    reflectedBullets.forEach(b => {
+      ctx.strokeStyle = '#67e8f9';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(b.x - b.vx * 2, b.y - b.vy * 2);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+      drawGlow(ctx, b.x, b.y, 14, 185, 0.92);
     });
 
-    if(lives>0)drawShip();
+    if (lives > 0 && ship) drawShip();
 
-    // Particles
-    ctx.save();ctx.globalCompositeOperation='lighter';
-    particles.forEach(p=>{
-      drawGlow(ctx,p.x,p.y,(p.size+2.5)*(0.7+p.life*0.9),colorHue(p.color),p.life);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    particles.forEach(p => {
+      drawGlow(ctx, p.x, p.y, (p.size + 2.4) * (0.7 + p.life * 0.85), p.hue, p.life);
     });
     ctx.restore();
-
-    // Floating Text
-    floatingTexts.forEach(ft=>{
-      ctx.save();ctx.globalAlpha=ft.life;
-      ctx.font=`bold ${ft.size}px ui-monospace,monospace`;
-      ctx.fillStyle=ft.color;ctx.textAlign='center';
-      ctx.shadowColor=ft.color;ctx.shadowBlur=8;
-      ctx.fillText(ft.text,ft.x,ft.y);
-      ctx.restore();
-    });
   }
   ctx.restore();
 
-  // Impact flash
-  if(VFX.flash>0){
-    ctx.fillStyle=`rgba(${VFX.flashCol},${VFX.flash})`;
-    ctx.fillRect(0,0,W,H);
+  if (VFX.flash > 0) {
+    ctx.fillStyle = `rgba(${VFX.flashCol},${VFX.flash})`;
+    ctx.fillRect(0, 0, W, H);
   }
 
-  if(state===STATE.PLAY||(state===STATE.DEAD&&lives<=0))drawHUD();
-  if(state===STATE.MENU)drawMenu();
-  if(state===STATE.DEAD)drawDead();
-
-  ctx.drawImage(OVERLAY_CACHE,0,0);
+  drawPaintedCallouts();
+  drawPaintedHUD();
+  ctx.drawImage(OVERLAY_CACHE, 0, 0);
 }
 
-function drawMenu(){
-  ctx.fillStyle='rgba(3,2,8,0.75)';ctx.fillRect(0,0,W,H);
-  ctx.textAlign='center';
-
-  setSpacing(7);
-  ctx.font='800 50px "Segoe UI",Arial,sans-serif';
-  ctx.shadowColor='#e9c86a';ctx.shadowBlur=24;
-  ctx.fillStyle='#e9c86a';
-  ctx.fillText('OSSUARY',W/2,H/2-95);
-  ctx.font='700 24px "Segoe UI",Arial,sans-serif';
-  ctx.fillStyle='#7df9ff';
-  ctx.fillText('ORBIT',W/2,H/2-55);
-  ctx.shadowBlur=0;
-  setSpacing(0);
-
-  const pa=0.45+Math.sin(frameCount*0.06)*0.4;
-  setSpacing(4);
-  ctx.font='600 16px "Segoe UI",Arial,sans-serif';
-  ctx.fillStyle=`rgba(233,200,106,${pa})`;
-  ctx.fillText('PRESS SPACE TO COMMENCE RUN',W/2,H/2+90);
-  setSpacing(1);
-  ctx.font='11px ui-monospace,monospace';ctx.fillStyle='rgba(160,170,205,0.7)';
-  ctx.fillText('ARROWS: TURN / THRUST  |  SPACE: CANNON',W/2,H/2+120);
-  ctx.fillText('SHIFT / C: PHASE SHIFT & REFLECTIVE PARRY',W/2,H/2+140);
-  ctx.fillText('Q: GRAVITON SINGULARITY VORTEX  |  X: LASER LANCE',W/2,H/2+160);
-  ctx.fillText('SYSTEM 1 VOID HUNTERS & REAL-TIME DIRECTOR PACING',W/2,H/2+185);
-  setSpacing(0);
-}
-
-function drawDead(){
-  hudPanel(W/2-210,H/2-115,420,270,'rgba(255,45,85,0.4)');
-  ctx.textAlign='center';
-  setSpacing(5);
-  ctx.shadowColor='rgba(255,45,85,0.8)';ctx.shadowBlur=22;
-  ctx.font='800 36px "Segoe UI",Arial,sans-serif';ctx.fillStyle='#ff5d7d';
-  ctx.fillText('SKIFF DISPERSED',W/2,H/2-48);
-  ctx.shadowBlur=0;
-  setSpacing(2);
-  ctx.font='600 22px "Segoe UI",Arial,sans-serif';ctx.fillStyle='#e9c86a';
-  ctx.fillText('VERDICTS  '+score,W/2,H/2+4);
-  
-  if(score>=highScore&&score>0){
-    ctx.fillStyle='#7fffc4';ctx.font='600 15px "Segoe UI",Arial,sans-serif';
-    ctx.fillText('★ NEW ARCHIVE RECORD ★',W/2,H/2+32);
-  }
-  ctx.font='12px "Segoe UI",Arial,sans-serif';ctx.fillStyle='rgba(170,180,210,0.7)';
-  ctx.fillText('ALL-TIME ARCHIVE: '+highScore,W/2,H/2+56);
-  ctx.fillText(`DIRECTOR PEAK TENSION: ${Math.round(orbitDirector.tension)}%`,W/2,H/2+78);
-
-  const pa=0.45+Math.sin(frameCount*0.06)*0.4;
-  ctx.fillStyle=`rgba(127,215,255,${pa})`;ctx.font='600 15px "Segoe UI",Arial,sans-serif';
-  setSpacing(3);
-  ctx.fillText('PRESS SPACE TO REENTER THE ORBIT',W/2,H/2+116);
-  setSpacing(0);
-}
-
-// ----------------- COMPATIBILITY & DEBUG APIS -----------------
-function ossuaryOrbitPayload(){
-  const runtimeState=debugShipVisualState===null
-    ? (ship ? (ship.hitTimer>0?2:(ship.thrust?1:0)) : 0)
+// --- Compatibility & Automated QA Hooks ---
+function ossuaryOrbitPayload() {
+  const runtimeState = debugShipVisualState === null
+    ? (ship ? (ship.hitTimer > 0 ? 2 : (ship.thrust ? 1 : 0)) : 0)
     : debugShipVisualState;
   return {
-    title:'Ossuary Orbit : Apex AI Edition',
+    title: 'Ossuary Orbit',
     state,
-    frame:frameCount,
-    atlas:'/static/art/games/vorath_overhaul_v01/ossuary_orbit/ossuary_orbit_atlas_v01.png',
-    atlas_ready:ORBIT_ATLAS_READY,
-    ship_visual_state:runtimeState,
-    ship_visual_name:['idle','thrust','hit'][runtimeState]||'unknown',
-    debris_families:(asteroids||[]).map(a=>a.size===3?'crown_ossuary':(a.size===2?'chained_witness':'split_oracle')),
-    ship_pose:ship?{x:ship.x,y:ship.y,angle:ship.angle,vx:ship.vx,vy:ship.vy}:null,
-    bullet_count:(bullets||[]).filter(b=>b.owner==='player').length,
-    score:score||0,
-    lives:lives||0,
-    level:level||0,
-    orbitDirector:{
-      state:orbitDirector.state,
-      tension:Math.round(orbitDirector.tension),
-      decisionLatencyUs:orbitDirector.decisionLatencyUs
+    frame: frameCount,
+    dpr: viewDpr,
+    atlas: '/static/art/games/vorath_overhaul_v01/ossuary_orbit/ossuary_orbit_atlas_v01.png',
+    atlas_ready: ORBIT_ATLAS_READY,
+    lettering_ready: LETTERING_READY,
+    ship_visual_state: runtimeState,
+    ship_visual_name: ['idle', 'thrust', 'hit'][runtimeState] || 'unknown',
+    debris_families: (asteroids || []).map(a => a.size === 3 ? 'crown_ossuary' : (a.size === 2 ? 'chained_witness' : 'split_oracle')),
+    ship_pose: ship ? { x: ship.x, y: ship.y, angle: ship.angle, vx: ship.vx, vy: ship.vy } : null,
+    bullet_count: (bullets || []).filter(b => b.owner === 'player').length,
+    score: score || 0,
+    lives: lives || 0,
+    level: level || 1,
+    boss: boss ? { name: boss.name, phase: boss.phase, hp: boss.hp, maxHp: boss.maxHp } : null,
+    audio: SOUND.status(),
+    orbitDirector: {
+      state: orbitDirector.state,
+      tension: Math.round(orbitDirector.tension),
+      decisionLatencyUs: orbitDirector.decisionLatencyUs
     }
   };
 }
-window.ossuaryOrbitPayload=ossuaryOrbitPayload;
-window.__ossuaryOrbitDebug={
-  payload:ossuaryOrbitPayload,
-  triggerParry:()=>triggerPhaseParry(),
-  triggerVortex:()=>triggerGravitonVortex(),
-  setShipVisualState(value){
-    if(!ship)init();
-    state=STATE.PLAY;invincible=0;
-    debugShipVisualState=Math.max(0,Math.min(2,Number(value)||0));
+window.ossuaryOrbitPayload = ossuaryOrbitPayload;
+window.__ossuaryOrbitDebug = {
+  payload: ossuaryOrbitPayload,
+  enterPlay() { startOrRestartRun(); return ossuaryOrbitPayload(); },
+  spawnBoss() {
+    if (!ship) init();
+    state = STATE.PLAY;
+    setupSector(4);
     return ossuaryOrbitPayload();
   },
-  clearShipVisualState(){debugShipVisualState=null;return ossuaryOrbitPayload();},
-  setDebrisFamilies(){
-    if(!ship)init();
-    state=STATE.PLAY;invincible=0;ufos=[];bullets=[];
-    const make=(x,y,size)=>({x,y,vx:0,vy:0,size,radius:size===3?40:(size===2?22:12),verts:[{x:1,y:0},{x:0,y:1},{x:-1,y:0},{x:0,y:-1}],rot:0,rotSpd:0});
-    asteroids=[make(190,180,3),make(700,230,2),make(690,530,1)];
+  triggerParry: () => { triggerPhaseParry(); return ossuaryOrbitPayload(); },
+  triggerVortex: () => { singularityEnergy = 100; triggerGravitonVortex(); return ossuaryOrbitPayload(); },
+  triggerLance: () => { singularityEnergy = 100; triggerLaserLance(); return ossuaryOrbitPayload(); },
+  setShipVisualState(value) {
+    if (!ship) init();
+    state = STATE.PLAY; invincible = 0;
+    debugShipVisualState = Math.max(0, Math.min(2, Number(value) || 0));
+    return ossuaryOrbitPayload();
+  },
+  clearShipVisualState() { debugShipVisualState = null; return ossuaryOrbitPayload(); },
+  setDebrisFamilies() {
+    if (!ship) init();
+    state = STATE.PLAY; invincible = 0; ufos = []; bullets = []; boss = null;
+    const make = (x, y, size) => ({
+      x, y, vx: 0, vy: 0, size,
+      radius: size === 3 ? 40 : (size === 2 ? 22 : 13),
+      verts: [{ x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 0, y: -1 }],
+      rot: 0, rotSpd: 0
+    });
+    asteroids = [make(190, 180, 3), make(700, 230, 2), make(690, 520, 1)];
+    syncDOMHud();
     return ossuaryOrbitPayload();
   }
 };
 
 let lastAttestScore = -1;
-function loop(){
+syncDOMHud();
+function loop() {
   update();
   draw();
-  if(typeof score !== 'undefined' && score !== lastAttestScore){
+  if (score !== lastAttestScore) {
     lastAttestScore = score;
     const btn = document.getElementById('attestCryptoBtn');
-    if(btn) btn.href = '/crypto?game=ossuary-orbit&score=' + score + '&pane=arcade-pane';
+    if (btn) btn.href = '/crypto?game=ossuary-orbit&score=' + score + '&pane=arcade-pane';
   }
   requestAnimationFrame(loop);
 }
 loop();
-try { window.GLFX && GLFX.attach(canvas, {bloom:0.7, threshold:0.55, scanlines:0.06, aberration:0.0018, vignette:0.32}); } catch(e){}
+try { window.GLFX && GLFX.attach(canvas, { bloom: 0.65, threshold: 0.56, scanlines: 0.05, aberration: 0.0016, vignette: 0.30 }); } catch (e) {}
 </script>
-<nav id="nsp-related" aria-label="More games" style="font:13px sans-serif;padding:10px;background:#080c16;color:#ccc">More games: <a href="/arcade/custom/blackjack-noir/" style="color:#9cf;margin-right:12px">BLACKJACK NOIR</a><a href="/arcade/custom/breakout-wall/" style="color:#9cf;margin-right:12px">GLYPHBREAKER // APEX AI EDITION</a><a href="/arcade/custom/container-yard/" style="color:#9cf;margin-right:12px">VORATH STACKWARD // THREE-YARD COVENANT</a><a href="/arcade/" style="color:#9cf;margin-right:12px">All arcade games</a><a href="/store/" style="color:#fc6">Store</a></nav>
 </body>
 </html>

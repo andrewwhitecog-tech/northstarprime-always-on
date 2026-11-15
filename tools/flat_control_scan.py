@@ -1,5 +1,20 @@
 #!/usr/bin/env python3
-"""flat_control_scan.py v02.6 (Grok): sibling of plaque_fit_scan.py.
+"""flat_control_scan.py v02.7 (Grok): sibling of plaque_fit_scan.py.
+v02.7 (Grok PR #324 seat 215553Z: 4 new 1280 CHIP_EMPTY_FRAME rows were scanner false positives; census: 20,954 of 23,644 CHIP_FLAT rows were table cells):
+  T1 T-CLIP visibility gate before every interior crop (default ON with the interior check; --no-tclip reproduces v02.6 byte-for-byte except version).
+     The element is scrolled to centre (window and every scroll ancestor), then: vis_frac = share of its border box left after intersecting the
+     viewport and every ancestor whose overflow is not visible; occluded = share of a 3x3 grid of interior points whose elementFromPoint hit is not
+     the element, a descendant or an ancestor (pseudo-elements hit-test as their host). vis_frac < --tclip-min (0.95) -> CLIPPED; occluded > 1/3 ->
+     OCCLUDED. Such rows are NOT judged empty: verdict stays CHIP_PAINTED(_LATENT), row.interior = {unverified: CLIPPED|OCCLUDED, vis_frac, occluded,
+     hit}, counted in chip_counts CHIP_INTERIOR_UNVERIFIED (no exit effect; a seat must look at them by eye). Scroll positions are restored after each row.
+  T2 tall pages (> 16000 device px, no trusted full capture): rows are shot with the element screenshot after the scroll, not
+     page.screenshot(clip, full_page=True), which returned black tiles far down tall pages (AG 213000Z / ag_fcs_v02_6_1 3248b77d, adopted).
+  T3 TABLE class: a chip whose box is a table cell (<td>/<th>) is a data cell, not UI. It becomes TABLE_CELL_PAINTED / TABLE_CELL_FLAT (+_LATENT),
+     severity INFO, counted in table_counts / table_totals only (never in chip_counts, CHIP_WARN or the exit). Spans/badges INSIDE a cell stay chips.
+     --table-as-chips reproduces v02.6 chip rows and counts.
+  T4 docstring/VERSION/--version say v02.7.
+v02.6 history follows.
+flat_control_scan.py v02.6 (Grok): sibling of plaque_fit_scan.py.
 v02.6 (Grok 1909Z HOLD seat of PR #322 head 3f6b5473: /links/ 390 sigil plaques were a painted frame around an EMPTY slot yet scored CHIP_PAINTED):
   E1 interior-content check on CHIP_PAINTED chips (default ON; --no-interior reproduces v02.5 byte-for-byte except version). After the chip pass the
      tool samples the chip's inner box (inset 30% of min(w,h), never < 4 css px of interior) from the page screenshot. If the interior is near-uniform
@@ -95,7 +110,7 @@ Exit: 1 if any FLAT or FLAT_LATENT (or visible FLAT only with --latent-ok), 0 if
 import argparse, asyncio, functools, http.server, json, os, re, socketserver, sys, threading
 from playwright.async_api import async_playwright
 
-VERSION = 'v02.6'
+VERSION = 'v02.7'
 SEL = 'a, button, [role=button], input[type=button], input[type=submit], input[type=reset], input[type=image], summary, select'
 INSEL = ('input[type=checkbox], input[type=radio], input[type=range], input[type=text], input[type=search], input[type=number], '
          'input[type=email], input[type=url], input[type=tel], input[type=password], input[type=file], input:not([type]), textarea')
@@ -434,7 +449,8 @@ async ([INSEL, SEL, ANCMAX]) => {
 }
 """
 CHIPJS = r"""
-async ([INSEL, SEL, COVER, CHK]) => {
+async ([INSEL, SEL, COVER, CHK, TBL]) => {
+  // v02.7: TBL = table cells (td/th) get TABLE_CELL_* verdicts, not CHIP_*
   // v02.6: CHK = interior/broken-art checks on (false = v02.5 behaviour)
   // v02.5 K1 chip pass; runs after INJS (latent details still open)
   const closed = window.__fcsClosed || [];
@@ -577,8 +593,9 @@ async ([INSEL, SEL, COVER, CHK]) => {
       if (/gradient/.test(cs.backgroundImage)) reasons.push('css gradient');
       if (!reasons.length) reasons.push('css-only box');
     }
-    const base = painted ? 'CHIP_PAINTED' : 'CHIP_FLAT';
-    const sev = painted ? 'OK' : (esc ? 'FLAT' : 'WARN');
+    const isCell = TBL && /^(TD|TH)$/.test(el.tagName.toUpperCase());  // v02.7 T3
+    const base = isCell ? (painted ? 'TABLE_CELL_PAINTED' : 'TABLE_CELL_FLAT') : (painted ? 'CHIP_PAINTED' : 'CHIP_FLAT');
+    const sev = isCell ? 'INFO' : (painted ? 'OK' : (esc ? 'FLAT' : 'WARN'));
     const lm = el.closest('footer,nav,header,main,aside');
     el.setAttribute('data-fcs-chip-idx', String(rows.length));
     rows.push({ idx: rows.length, id: el.id || el.getAttribute('data-fx') || '', tag: el.tagName.toLowerCase(), selector: cssPath(el), text: text.slice(0, 24),
@@ -593,6 +610,54 @@ async ([INSEL, SEL, COVER, CHK]) => {
 CHIPKEYS = ('CHIP_PAINTED', 'CHIP_FLAT', 'CHIP_PAINTED_LATENT', 'CHIP_FLAT_LATENT')
 CHIPSEV = ('CHIP_FLAT_SEV_FLAT', 'CHIP_FLAT_LATENT_SEV_FLAT', 'CHIP_WARN')
 CHIPKEYS6 = CHIPKEYS + ('CHIP_EMPTY_FRAME', 'CHIP_EMPTY_FRAME_LATENT')   # v02.6 E1 (only present when the interior check is on)
+TABLEKEYS = ('TABLE_CELL_PAINTED', 'TABLE_CELL_FLAT', 'TABLE_CELL_PAINTED_LATENT', 'TABLE_CELL_FLAT_LATENT')  # v02.7 T3
+VISJS = r"""
+async ([attr, idx]) => {
+  // v02.7 T1 T-CLIP: scroll the element to centre, then measure clip + occlusion of its border box
+  const el = document.querySelector('[' + attr + '="' + idx + '"]'); if (!el) return { missing: true };
+  const save = { x: scrollX, y: scrollY, sc: [] };
+  for (let e = el.parentElement; e; e = e.parentElement) save.sc.push([e, e.scrollLeft, e.scrollTop]);
+  window.__fcsScrollSave = save;
+  // only user-scrollable ancestors (overflow auto|scroll) and the window move; overflow hidden/clip boxes are never scrolled (a reader cannot scroll them)
+  for (let e = el.parentElement; e && e !== document.body && e !== document.documentElement; e = e.parentElement) {
+    const c = getComputedStyle(e);
+    if (!/(auto|scroll)/.test(c.overflowX + c.overflowY)) continue;
+    const q = e.getBoundingClientRect(), r0 = el.getBoundingClientRect();
+    if (/(auto|scroll)/.test(c.overflowX)) e.scrollLeft += (r0.left + r0.width / 2) - (q.left + e.clientLeft + e.clientWidth / 2);
+    if (/(auto|scroll)/.test(c.overflowY)) e.scrollTop += (r0.top + r0.height / 2) - (q.top + e.clientTop + e.clientHeight / 2);
+  }
+  { const r0 = el.getBoundingClientRect(); window.scrollBy(r0.left + r0.width / 2 - innerWidth / 2, r0.top + r0.height / 2 - innerHeight / 2); }
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  const b = el.getBoundingClientRect(); const area = Math.max(1e-6, b.width * b.height);
+  let x0 = Math.max(0, b.left), y0 = Math.max(0, b.top), x1 = Math.min(innerWidth, b.right), y1 = Math.min(innerHeight, b.bottom), clipBy = (x1 - x0) * (y1 - y0) < area - 0.5 ? 'viewport' : '';
+  for (let e = el.parentElement; e && e !== document.documentElement; e = e.parentElement) {
+    const c = getComputedStyle(e); const ox = c.overflowX !== 'visible', oy = c.overflowY !== 'visible'; if (!ox && !oy) continue;
+    const q = e.getBoundingClientRect(); const bx0 = q.left + e.clientLeft, by0 = q.top + e.clientTop, bx1 = bx0 + e.clientWidth, by1 = by0 + e.clientHeight;
+    const pre = [x0, y0, x1, y1];
+    if (ox) { x0 = Math.max(x0, bx0); x1 = Math.min(x1, bx1); } if (oy) { y0 = Math.max(y0, by0); y1 = Math.min(y1, by1); }
+    if (!clipBy && (pre[0] !== x0 || pre[1] !== y0 || pre[2] !== x1 || pre[3] !== y1)) clipBy = e.tagName.toLowerCase() + (e.id ? '#' + e.id : (typeof e.className === 'string' && e.className ? '.' + e.className.trim().split(/\s+/)[0] : ''));
+  }
+  const vis = Math.max(0, x1 - x0) * Math.max(0, y1 - y0) / area;
+  const m = Math.min(b.width, b.height), ins = Math.max(0, Math.min(0.30 * m, (m - 4) / 2));
+  let n = 0, bad = 0, hit = '';
+  for (const fx of [0.2, 0.5, 0.8]) for (const fy of [0.2, 0.5, 0.8]) {
+    const px = b.left + ins + (b.width - 2 * ins) * fx, py = b.top + ins + (b.height - 2 * ins) * fy;
+    if (px < 0 || py < 0 || px >= innerWidth || py >= innerHeight) continue;
+    n++; const h = document.elementFromPoint(px, py);
+    if (!h || h === el || el.contains(h) || h.contains(el)) continue;
+    bad++; if (!hit) hit = h.tagName.toLowerCase() + (h.id ? '#' + h.id : (typeof h.className === 'string' && h.className ? '.' + h.className.trim().split(/\s+/)[0] : ''));
+  }
+  return { vis_frac: Math.round(vis * 1000) / 1000, occluded: n ? Math.round(bad / n * 1000) / 1000 : 1, hit, clip_by: clipBy };
+}
+"""
+UNSCROLLJS = """() => { const s = window.__fcsScrollSave; if (!s) return 0; for (const [e, l, t] of s.sc) { e.scrollLeft = l; e.scrollTop = t; } window.scrollTo(s.x, s.y); window.__fcsScrollSave = null; return 1; }"""
+
+def tclip_verdict(v, tclip_min):
+    """v02.7 T1: '' when the interior can be judged, else 'CLIPPED' or 'OCCLUDED'."""
+    if not v or v.get('missing'): return ''
+    if v.get('vis_frac', 1) < tclip_min: return 'CLIPPED'
+    if v.get('occluded', 0) > 1 / 3: return 'OCCLUDED'
+    return ''
 
 def inner_inset(w, h):
     """v02.6 E1: css-px inset from each edge: 30% of the short side, but the interior never drops below 4 css px."""
@@ -635,6 +700,24 @@ async def interior_check(pg, rows, attr, data, a, verdicts):
     bad = []
     for r in todo:
         x, y, w, h = r['rect']; ins = inner_inset(w, h); crop = None
+        if not getattr(a, 'no_tclip', True):  # v02.7 T1/T2
+            try:
+                v = await pg.evaluate(VISJS, [attr, str(r['idx'])]); why = tclip_verdict(v, a.tclip_min)
+                if why:
+                    r['interior'] = dict(unverified=why, vis_frac=v.get('vis_frac'), occluded=v.get('occluded'), hit=v.get('hit', ''), clip_by=v.get('clip_by', ''), empty=False); continue
+                if full is not None and not r.get('in_scroller'):
+                    k = full.width / max(1.0, float(data['docW'])); crop = full.crop((round((x + ins) * k), round((y + ins) * k), round((x + w - ins) * k), round((y + h - ins) * k)))
+                else:
+                    im = Image.open(io.BytesIO(await pg.locator(f"[{attr}='{r['idx']}']").screenshot(timeout=10000, animations='disabled'))).convert('RGB'); k = im.width / max(1.0, w)
+                    crop = im.crop((round(ins * k), round(ins * k), round((w - ins) * k), round((h - ins) * k)))
+                if crop.width < 2 or crop.height < 2: raise ValueError('interior crop under 2 px')
+                st = interior_stats(crop, a.empty_std, a.empty_content); st['inset'] = round(ins, 1); st['vis_frac'] = v.get('vis_frac'); st['occluded'] = v.get('occluded'); r['interior'] = st
+                if st['empty']: bad.append(r)
+            except Exception as e: r['interior'] = dict(error=str(e)[:100], empty=False)
+            finally:
+                try: await pg.evaluate(UNSCROLLJS)
+                except Exception: pass
+            continue
         try:
             if full is not None and not r.get('in_scroller'):
                 k = full.width / max(1.0, float(data['docW'])); crop = full.crop((round((x + ins) * k), round((y + ins) * k), round((x + w - ins) * k), round((y + h - ins) * k)))
@@ -809,7 +892,9 @@ async def run(a):
                     r['reasons'] = [f"painted control around an empty interior: inner {it_['px'][0]}x{it_['px'][1]} px stddev {it_['std']} (< {a.empty_std}), {round(it_['content'] * 100, 2)}% of pixels differ from median (< {a.empty_content * 100:g}%)"]
                 cnt = {k: sum(r['verdict'] == k for r in rows) for k in ('PAINTED', 'FLAT', 'PAINTED_LATENT', 'FLAT_LATENT', 'EMPTY_FRAME', 'EMPTY_FRAME_LATENT')}
             if not a.no_chips:  # v02.5 K1
-                cdata = await pg.evaluate(CHIPJS, [INSEL, SEL, a.cover, not a.no_interior]); crows = cdata['rows']
+                cdata = await pg.evaluate(CHIPJS, [INSEL, SEL, a.cover, not a.no_interior, not a.table_as_chips]); crows = cdata['rows']
+                trows = [r for r in crows if r['verdict'].startswith('TABLE_CELL')]  # v02.7 T3
+                if not a.table_as_chips: crows = [r for r in crows if not r['verdict'].startswith('TABLE_CELL')]
                 if not a.no_interior:  # v02.6 E1
                     for r in await interior_check(pg, crows, 'data-fcs-chip-idx', data, a, ('CHIP_PAINTED', 'CHIP_PAINTED_LATENT')):
                         r['verdict'] = r['verdict'].replace('CHIP_PAINTED', 'CHIP_EMPTY_FRAME'); r['severity'] = 'FLAT'; it_ = r['interior']
@@ -819,6 +904,7 @@ async def run(a):
                 ccnt['CHIP_FLAT_LATENT_SEV_FLAT'] = sum(r['verdict'] == 'CHIP_FLAT_LATENT' and r['severity'] == 'FLAT' for r in crows)
                 ccnt['CHIP_WARN'] = sum(r['verdict'].startswith('CHIP_FLAT') and r['severity'] == 'WARN' for r in crows)
                 if not a.no_interior: ccnt['CHIP_EMPTY_FRAME_SEV_FLAT'] = ccnt['CHIP_EMPTY_FRAME'] + ccnt['CHIP_EMPTY_FRAME_LATENT']
+                if not a.no_interior and not a.no_tclip: ccnt['CHIP_INTERIOR_UNVERIFIED'] = sum(bool((r.get('interior') or {}).get('unverified')) for r in crows)  # v02.7 T1
                 csheet = None; ccstats = []
                 isbad = (lambda v: v.startswith('CHIP_FLAT')) if a.no_interior else (lambda v: v.startswith('CHIP_FLAT') or v.startswith('CHIP_EMPTY'))
                 if a.sheets and any(isbad(r['verdict']) for r in crows):
@@ -836,6 +922,7 @@ async def run(a):
                         csheet = os.path.join(a.sheets, slug + '_CHIP_FLAT_contact_sheet.jpg')
                         sheet(ccrops, csheet, f"{a.label} {path} CHIP_FLAT {ccnt['CHIP_FLAT']} (sev FLAT {ccnt['CHIP_FLAT_SEV_FLAT']}, WARN {ccnt['CHIP_WARN']}) / CHIP_PAINTED {ccnt['CHIP_PAINTED']}" + ('' if a.no_interior else f" / CHIP_EMPTY_FRAME {ccnt['CHIP_EMPTY_FRAME']}+{ccnt['CHIP_EMPTY_FRAME_LATENT']} latent") + f" @ {a.width}x{a.height}")
                 inextra.update(chip_rows=crows, chip_counts=ccnt, chip_ignored=cdata['ignored'], chip_contact_sheet=csheet, chip_crop_stats=ccstats)
+                if not a.table_as_chips: inextra.update(table_rows=trows, table_counts={k: sum(r['verdict'] == k for r in trows) for k in TABLEKEYS})  # v02.7 T3
             try: await pg.evaluate(RESTORE)  # back to default state (v02.1: + exclusive-accordion names and initial .open)
             except Exception as e: errs.append('RESTORE ' + str(e)[:100])
             try: post_state = await pg.evaluate(DSTATE)
@@ -861,8 +948,13 @@ async def run(a):
         res['input_totals'] = {k: sum(p_['input_counts'][k] for p_ in res['pages']) for k in INKEYS}
     if not a.no_chips:
         res['chip_totals'] = {k: sum(p_.get('chip_counts', {}).get(k, 0) for p_ in res['pages']) for k in (CHIPKEYS if a.no_interior else CHIPKEYS6) + CHIPSEV + (() if a.no_interior else ('CHIP_EMPTY_FRAME_SEV_FLAT',))}
+    if not a.no_chips and not a.no_interior and not a.no_tclip:
+        res['chip_totals']['CHIP_INTERIOR_UNVERIFIED'] = sum(p_.get('chip_counts', {}).get('CHIP_INTERIOR_UNVERIFIED', 0) for p_ in res['pages'])
+    if not a.no_chips and not a.table_as_chips:
+        res['table_totals'] = {k: sum(p_.get('table_counts', {}).get(k, 0) for p_ in res['pages']) for k in TABLEKEYS}
     if not a.no_interior:
         res['interior'] = dict(enabled=True, empty_std=a.empty_std, empty_content=a.empty_content, controls=bool(a.interior_controls), method='inner box inset 30% of min(w,h) from page screenshot; PIL luma stddev + share of pixels > 24 from median colour')
+        if not a.no_tclip: res['interior'].update(tclip=True, tclip_min=a.tclip_min, tclip_method='scroll to centre; vis_frac after viewport + overflow-ancestor clip < tclip_min -> CLIPPED; > 1/3 of a 3x3 interior grid hit by an unrelated element -> OCCLUDED; unverified rows keep CHIP_PAINTED and are counted in CHIP_INTERIOR_UNVERIFIED')  # v02.7 T1
         if a.interior_controls: res['interior_control_totals'] = {k: sum(p_['counts'].get(k, 0) for p_ in res['pages']) for k in ('EMPTY_FRAME', 'EMPTY_FRAME_LATENT')}
     return res
 
@@ -874,7 +966,10 @@ def to_md(res):
         it = res['input_totals']; L += [f"Native inputs (v02.2): NATIVE_PAINTED {it['NATIVE_PAINTED']}, NATIVE_FLAT {it['NATIVE_FLAT']}, NATIVE_PAINTED_LATENT {it['NATIVE_PAINTED_LATENT']}, NATIVE_FLAT_LATENT {it['NATIVE_FLAT_LATENT']}", '']
     if 'chip_totals' in res:
         ct = res['chip_totals']; L += [f"Chips (v02.5): CHIP_PAINTED {ct['CHIP_PAINTED']}, CHIP_FLAT {ct['CHIP_FLAT']} (severity FLAT {ct['CHIP_FLAT_SEV_FLAT']}, WARN {ct['CHIP_WARN']}), CHIP_PAINTED_LATENT {ct['CHIP_PAINTED_LATENT']}, CHIP_FLAT_LATENT {ct['CHIP_FLAT_LATENT']} (severity FLAT {ct['CHIP_FLAT_LATENT_SEV_FLAT']})", '']
+    if 'table_totals' in res:
+        tt = res['table_totals']; L += [f"Tables (v02.7): TABLE_CELL_PAINTED {tt['TABLE_CELL_PAINTED']}, TABLE_CELL_FLAT {tt['TABLE_CELL_FLAT']}, TABLE_CELL_PAINTED_LATENT {tt['TABLE_CELL_PAINTED_LATENT']}, TABLE_CELL_FLAT_LATENT {tt['TABLE_CELL_FLAT_LATENT']} (severity INFO; data cells, not UI; no exit effect)", '']
     if 'interior' in res:
+        if (res.get('interior') or {}).get('tclip'): L += [f"T-CLIP (v02.7): CHIP_INTERIOR_UNVERIFIED {(res.get('chip_totals') or {}).get('CHIP_INTERIOR_UNVERIFIED', 0)} (clipped or occluded; not judged empty, check by eye); tclip_min {res['interior']['tclip_min']}", '']
         ct = res.get('chip_totals') or {}; L += [f"Interior check (v02.6): CHIP_EMPTY_FRAME {ct.get('CHIP_EMPTY_FRAME', 0)}, CHIP_EMPTY_FRAME_LATENT {ct.get('CHIP_EMPTY_FRAME_LATENT', 0)} (severity FLAT); std < {res['interior']['empty_std']}, content < {res['interior']['empty_content']}; controls {'on: ' + str(res.get('interior_control_totals')) if res['interior']['controls'] else 'off (--interior-controls)'}", '']
     for pg in res['pages']:
         c = pg['counts']
@@ -930,6 +1025,9 @@ def main():
     ap.add_argument('--interior-controls', action='store_true', help='v02.6: also run the interior check on PAINTED controls (EMPTY_FRAME); default off')
     ap.add_argument('--empty-std', type=float, default=6.0, help='v02.6: luma stddev below which an interior counts as flat (default 6.0)')
     ap.add_argument('--empty-content', type=float, default=0.005, help='v02.6: share of pixels differing from the median colour by > 24 below which an interior has no content (default 0.005)')
+    ap.add_argument('--no-tclip', action='store_true', help='v02.7: skip the T-CLIP visibility gate and use the v02.6 crop paths (reproduces v02.6 output; only version differs)')
+    ap.add_argument('--tclip-min', type=float, default=0.95, help='v02.7: visible share of the box below which an interior is CLIPPED (default 0.95)')
+    ap.add_argument('--table-as-chips', action='store_true', help='v02.7: count <td>/<th> boxes as chips again (v02.6 behaviour); default: TABLE_CELL_* rows, reported only')
     ap.add_argument('--base-url', help='v02.5: scan a live site at this base URL instead of serving --root')
     ap.add_argument('--version', action='version', version='flat_control_scan.py ' + VERSION)
     ap.add_argument('--chrome', default='/usr/bin/google-chrome' if os.path.exists('/usr/bin/google-chrome') else None)
@@ -944,6 +1042,8 @@ def main():
     t = res['totals']; print(f"{a.label}: PAINTED {t['PAINTED']} FLAT {t['FLAT']} PAINTED_LATENT {t['PAINTED_LATENT']} FLAT_LATENT {t['FLAT_LATENT']} landings {res['landings']} -> {jp}")
     if 'input_totals' in res: it = res['input_totals']; print(f"{a.label} inputs: NATIVE_PAINTED {it['NATIVE_PAINTED']} NATIVE_FLAT {it['NATIVE_FLAT']} NATIVE_PAINTED_LATENT {it['NATIVE_PAINTED_LATENT']} NATIVE_FLAT_LATENT {it['NATIVE_FLAT_LATENT']}")
     if 'chip_totals' in res: ct = res['chip_totals']; print(f"{a.label} chips: CHIP_PAINTED {ct['CHIP_PAINTED']} CHIP_FLAT {ct['CHIP_FLAT']} (sev FLAT {ct['CHIP_FLAT_SEV_FLAT']} WARN {ct['CHIP_WARN']}) CHIP_PAINTED_LATENT {ct['CHIP_PAINTED_LATENT']} CHIP_FLAT_LATENT {ct['CHIP_FLAT_LATENT']} (sev FLAT {ct['CHIP_FLAT_LATENT_SEV_FLAT']})")
+    if 'table_totals' in res: tt = res['table_totals']; print(f"{a.label} tables: TABLE_CELL_PAINTED {tt['TABLE_CELL_PAINTED']} TABLE_CELL_FLAT {tt['TABLE_CELL_FLAT']} TABLE_CELL_PAINTED_LATENT {tt['TABLE_CELL_PAINTED_LATENT']} TABLE_CELL_FLAT_LATENT {tt['TABLE_CELL_FLAT_LATENT']} (INFO, no exit effect)")
+    if 'chip_totals' in res and 'CHIP_INTERIOR_UNVERIFIED' in res['chip_totals']: print(f"{a.label} tclip: CHIP_INTERIOR_UNVERIFIED {res['chip_totals']['CHIP_INTERIOR_UNVERIFIED']}")
     if 'interior' in res: ct = res['chip_totals']; print(f"{a.label} interior: CHIP_EMPTY_FRAME {ct['CHIP_EMPTY_FRAME']} CHIP_EMPTY_FRAME_LATENT {ct['CHIP_EMPTY_FRAME_LATENT']}" + (f" | controls EMPTY_FRAME {res['interior_control_totals']['EMPTY_FRAME']} EMPTY_FRAME_LATENT {res['interior_control_totals']['EMPTY_FRAME_LATENT']}" if 'interior_control_totals' in res else ''))
     for pg in res['pages']: print(f"  {pg['path']}: HTTP {pg['http_status']} {pg['landing']} -> {pg['final_url']} PAINTED {pg['counts']['PAINTED']} FLAT {pg['counts']['FLAT']} P_LAT {pg['counts']['PAINTED_LATENT']} F_LAT {pg['counts']['FLAT_LATENT']} ignored {pg['ignored']}" + (f" | IN NP {pg['input_counts']['NATIVE_PAINTED']} NF {pg['input_counts']['NATIVE_FLAT']} NP_LAT {pg['input_counts']['NATIVE_PAINTED_LATENT']} NF_LAT {pg['input_counts']['NATIVE_FLAT_LATENT']}" if 'input_counts' in pg else ''))
     bad = t['FLAT'] or (t['FLAT_LATENT'] and not a.latent_ok)

@@ -7,6 +7,8 @@ import hashlib
 import json
 from pathlib import Path
 
+from verify_home_static import canonical_bytes, collect_local_assets, read_page
+
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = ROOT / "ARCADE_FREEZE_MANIFEST.json"
 
@@ -114,6 +116,25 @@ def main() -> None:
     data["asset_count"] = len(assets)
     data["asset_bytes"] = sum(int(r["bytes"]) for r in assets)
     data["source_asset_bytes"] = sum(int(r.get("source_bytes", r["bytes"])) for r in assets)
+
+    journey_refs: set[str] = set()
+    for jrel in ("arcade/index.html", "arcade/lab/index.html"):
+        jp = ROOT / jrel
+        if jp.is_file():
+            journey_refs.update(collect_local_assets(ROOT, jp, read_page(jp)))
+    if journey_refs:
+        jrows = []
+        for jrel in sorted(journey_refs):
+            jbuf = canonical_bytes(ROOT / jrel)
+            jrows.append({
+                "web_path": f"/{jrel}",
+                "relative_path": jrel,
+                "bytes": len(jbuf),
+                "sha256": sha256_bytes(jbuf),
+            })
+        data["journey_assets"] = jrows
+        data["journey_asset_count"] = len(jrows)
+        data["journey_asset_bytes"] = sum(int(r["bytes"]) for r in jrows)
 
     MANIFEST_PATH.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
     print(

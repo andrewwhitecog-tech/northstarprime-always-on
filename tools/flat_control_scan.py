@@ -1,5 +1,33 @@
 #!/usr/bin/env python3
-"""flat_control_scan.py v02.1 (Grok): sibling of plaque_fit_scan.py.
+"""flat_control_scan.py v02.3 (Grok): sibling of plaque_fit_scan.py.
+v02.3 (AG second-seat hardening notes 2026-11-15T14:07Z on v02.2 36c0506f; v02.1 control pass untouched):
+  H1 every file write is encoding='utf-8' (labels with em dash / check marks broke cp1252 Windows runs).
+  H2 RESTORE also strips data-fcs-idx / data-fcs-in-idx, so the inspected DOM is pristine after a scan; with the input
+     pass on, details_restore.dom_attrs_left records the read-back count (0 = clean). --no-inputs output shape = v02.2.
+  H3 input pass: transparency test isClear() also accepts hsla(..,0), color(.. / 0), any 'x y z / 0' colour, so a field
+     on a plaque with background color(srgb 1 1 1 / 0) is PAINTED (v02.2 said art hidden behind the field).
+  H4 input pass: a raster background-image on the input itself counts as art only if its rendered layer covers
+     >= 60% of the field box (background-size cover/contain/% /px/auto with natural size, repeat axes = full);
+     border-image always covers. A 16px search-icon raster on a 240px field is NATIVE_FLAT ('icon, not a plaque').
+     rows gain art_coverage (0..1, max over raster layers on self; null when art is on a pseudo/ancestor).
+
+v02.2 (tool gap T1, AG concurred 2026-11-15T13:15Z): native form inputs were outside SEL, so a native grey checkbox
+(LLL "Text only", N1) was invisible. v02.2 adds a SECOND, separate pass (v02.1 rows/counts/crops are untouched) over
+INSEL = input[type=checkbox|radio|range|text|search|number|email|url|tel|password|file], input without type, textarea.
+(<select> is already in SEL and keeps its v02.1 PAINTED/FLAT verdict; it is not double-counted.)
+  NATIVE_PAINTED  checkbox/radio/range: computed appearance is 'none' AND a raster (non-SVG url) background-image or
+                  border-image on the input itself or on its ::before/::after (also content:url(raster)).
+                  text-like/textarea/file: raster bg/border-image on self (file: or its ::file-selector-button), or a
+                  single-control ancestor (<= 2 levels, same height guard as v02.1) carrying raster art while the field
+                  itself is see-through (transparent background, no visible border).
+  NATIVE_FLAT     anything else: default UA widget (appearance auto/checkbox/radio/...), accent-color-only tint,
+                  appearance:none with CSS-only box, plain UA text border with no image.
+Same ignore rules as v02.1 (hidden / opacity 0 / <=2 px / offscreen). Inputs inside a closed <details> (the v02 latent
+pass) get *_LATENT. Page record gains input_rows, input_counts, input_ignored, input_contact_sheet, input_crop_stats;
+result gains input_selector and input_totals. --no-inputs skips the pass and reproduces v02.1 output exactly (only the
+version string differs). Exit 1 also when NATIVE_FLAT > 0 (or NATIVE_FLAT_LATENT unless --latent-ok), unless --inputs-ok.
+
+flat_control_scan.py v02.1 notes follow.
 
 v02.1 (AG 110300Z second-seat hardening notes, non-blocking; verdict rules unchanged):
   * EXCLUSIVE ACCORDIONS: HTML5 <details name="x"> siblings close each other when one opens, so opening every closed
@@ -43,8 +71,10 @@ Exit: 1 if any FLAT or FLAT_LATENT (or visible FLAT only with --latent-ok), 0 if
 import argparse, asyncio, functools, http.server, json, os, re, socketserver, sys, threading
 from playwright.async_api import async_playwright
 
-VERSION = 'v02.1'
+VERSION = 'v02.3'
 SEL = 'a, button, [role=button], input[type=button], input[type=submit], input[type=reset], input[type=image], summary, select'
+INSEL = ('input[type=checkbox], input[type=radio], input[type=range], input[type=text], input[type=search], input[type=number], '
+         'input[type=email], input[type=url], input[type=tel], input[type=password], input[type=file], input:not([type]), textarea')
 
 JS = r"""
 async ([SEL, COVER, ANCMAX]) => {
@@ -229,12 +259,146 @@ async ([SEL, COVER, ANCMAX]) => {
 }
 """
 
+INJS = r"""
+async ([INSEL, SEL, ANCMAX]) => {
+  // v02.2 native-input pass; runs after JS (latent details are still open, exclusive names still stripped)
+  const closed = window.__fcsClosed || [];
+  const docW = Math.max(document.documentElement.scrollWidth, innerWidth), docH = Math.max(document.documentElement.scrollHeight, innerHeight);
+  const sx = scrollX, sy = scrollY;
+  function splitTop(s) { const out = []; let d = 0, cur = ''; for (const ch of s) { if (ch === '(') d++; if (ch === ')') d--; if (ch === ',' && d === 0) { out.push(cur.trim()); cur = ''; } else cur += ch; } if (cur.trim()) out.push(cur.trim()); return out; }
+  function urls(v) { if (!v || v === 'none') return []; const o = []; for (const L of splitTop(v)) { const m = /url\(\s*["']?(.*?)["']?\s*\)/.exec(L); if (m) o.push(m[1]); } return o; }
+  function isVector(u) { return /^data:image\/svg/i.test(u) || /\.svgz?(\?|#|$)/i.test(u); }
+  function rasterOf(cs) { const r = []; for (const k of ['backgroundImage', 'borderImageSource']) for (const u of urls(cs[k])) if (!isVector(u)) r.push(k + ' ' + u.split('/').pop().slice(0, 60)); return r; }
+  function isClear(c) { return !c || /transparent|rgba\([^)]*,\s*0(\.0+)?\)|hsla\([^)]*,\s*0(\.0+)?%?\)|\/\s*0(\.0+)?%?\s*\)$/.test(c.trim()); }
+  const natCache = {};
+  async function natSize(u) { if (u in natCache) return natCache[u]; const im = new Image(); im.src = u; try { await im.decode(); natCache[u] = [im.naturalWidth, im.naturalHeight]; } catch (e) { natCache[u] = null; } return natCache[u]; }
+  function lenPx(t, box) { if (t.endsWith('%')) return parseFloat(t) / 100 * box; if (t.endsWith('px')) return parseFloat(t); return null; }
+  async function selfCoverage(cs, w, h) {
+    // H4: max coverage (0..1) of the raster background layers on the element box; border-image raster = 1
+    if (urls(cs.borderImageSource).some(u => !isVector(u))) return 1;
+    const L = splitTop(cs.backgroundImage || 'none'), S = splitTop(cs.backgroundSize || 'auto'), P = splitTop(cs.backgroundRepeat || 'repeat');
+    let best = 0;
+    for (let i = 0; i < L.length; i++) {
+      const m = /url\(\s*["']?(.*?)["']?\s*\)/.exec(L[i]); if (!m || isVector(m[1])) continue;
+      const sz = (S[i % S.length] || 'auto').trim(), rp = (P[i % P.length] || 'repeat').trim().split(/\s+/);
+      const rx = rp[0] === 'repeat-x' || rp[0] === 'repeat' || rp[0] === 'round' || rp[0] === 'space', ry = rp[0] === 'repeat-y' || (rp.length > 1 ? /repeat|round|space/.test(rp[1]) && rp[1] !== 'no-repeat' : (rp[0] === 'repeat' || rp[0] === 'round' || rp[0] === 'space'));
+      let lw = null, lh = null;
+      if (sz === 'cover') { lw = w; lh = h; }
+      else {
+        const nat = await natSize(m[1]); const nw = nat ? nat[0] : 0, nh = nat ? nat[1] : 0;
+        if (sz === 'contain') { if (nw && nh) { const k = Math.min(w / nw, h / nh); lw = nw * k; lh = nh * k; } else { lw = w; lh = h; } }
+        else {
+          const t = sz.split(/\s+/); let a = lenPx(t[0], w), b = t.length > 1 ? lenPx(t[1], h) : null;
+          if (a == null && b == null) { a = nw; b = nh; } else if (a == null) a = nh ? b * nw / nh : b; else if (b == null) b = nw ? a * nh / nw : a;
+          lw = a; lh = b;
+        }
+      }
+      const cx = rx ? 1 : Math.min(1, (lw || 0) / Math.max(w, 1)), cy = ry ? 1 : Math.min(1, (lh || 0) / Math.max(h, 1));
+      best = Math.max(best, cx * cy);
+    }
+    return Math.round(best * 1000) / 1000;
+  }
+  function pseudoArt(el, pseudos) { const r = []; for (const p of pseudos) { let cs; try { cs = getComputedStyle(el, p); } catch (e) { continue; } if (!cs) continue; if (p !== '::file-selector-button' && (!cs.content || cs.content === 'none' || cs.content === 'normal')) continue; if (cs.display === 'none') continue; for (const x of rasterOf(cs)) r.push(p + ' ' + x); for (const u of urls(cs.content)) if (!isVector(u)) r.push(p + ' content ' + u.split('/').pop().slice(0, 60)); } return r; }
+  function hidden(el) {
+    for (let e = el; e && e.nodeType === 1; e = e.parentElement) {
+      const cs = getComputedStyle(e);
+      if (cs.display === 'none' || parseFloat(cs.opacity) === 0) return 'display/opacity';
+      if (e === el && (cs.visibility === 'hidden' || cs.visibility === 'collapse')) return 'visibility';
+    }
+    if (el.closest('[hidden],[aria-hidden=true][inert]')) return 'hidden-attr';
+    return null;
+  }
+  function R(r) { return { x: r.left, y: r.top, w: r.width, h: r.height }; }
+  function px(v) { return parseFloat(v) || 0; }
+  function cssPath(el) {
+    const parts = [];
+    for (let e = el; e && e.nodeType === 1 && parts.length < 4; e = e.parentElement) {
+      let s = e.tagName.toLowerCase();
+      if (e.id) { parts.unshift(s + '#' + e.id); break; }
+      const cl = [...e.classList].slice(0, 2).join('.'); if (cl) s += '.' + cl;
+      const sib = e.parentElement ? [...e.parentElement.children].filter(c => c.tagName === e.tagName) : [];
+      if (sib.length > 1) s += `:nth-of-type(${sib.indexOf(e) + 1})`;
+      parts.unshift(s);
+    }
+    return parts.join(' > ');
+  }
+  const rows = [], ignored = { hidden: 0, tiny: 0, offscreen: 0 };
+  const els = [...document.querySelectorAll(INSEL)];
+  for (const el of els) {
+    if (hidden(el)) { ignored.hidden++; continue; }
+    const r = R(el.getBoundingClientRect());
+    if (r.w <= 2 || r.h <= 2) { ignored.tiny++; continue; }
+    const pr = { x: r.x + sx, y: r.y + sy, w: r.w, h: r.h };
+    let inScroller = null;
+    for (let e = el.parentElement; e && e !== document.body; e = e.parentElement) { const c = getComputedStyle(e); if (/(auto|scroll)/.test(c.overflowX + c.overflowY) && (e.scrollHeight > e.clientHeight + 1 || e.scrollWidth > e.clientWidth + 1)) { inScroller = e; break; } }
+    if (pr.x + pr.w <= 0 || pr.y + pr.h <= 0 || ((pr.x >= docW || pr.y >= docH) && !inScroller)) { ignored.offscreen++; continue; }
+    const cs = getComputedStyle(el);
+    const type = el.tagName === 'TEXTAREA' ? 'textarea' : (el.type || 'text');
+    const kind = (type === 'checkbox' || type === 'radio') ? 'toggle' : type === 'range' ? 'range' : type === 'file' ? 'file' : 'text';
+    const app = cs.appearance || cs.webkitAppearance || '';
+    const accent = cs.accentColor || 'auto';
+    let self = rasterOf(cs); let coverage = null;
+    if (self.length) {
+      coverage = await selfCoverage(cs, r.w, r.h);
+      if (coverage < 0.60) { var covNote = `raster art covers only ${Math.round(coverage * 100)}% of the field (< 60%): icon, not a plaque`; self = []; } else var covNote = '';
+    } else var covNote = '';
+    const pse = pseudoArt(el, kind === 'file' ? ['::file-selector-button'] : ['::before', '::after']);
+    let art = [], host = '', reasons = [];
+    if (kind === 'toggle' || kind === 'range') {
+      if (app === 'none' && (self.length || pse.length)) { art = self.concat(pse); host = self.length ? 'self' : 'pseudo'; }
+      else if (app !== 'none') {
+        reasons.push(`native UA widget (appearance ${app})`);
+        if (accent && accent !== 'auto') reasons.push(`accent-color ${accent} only tints the UA widget (still native)`);
+        if (self.length || pse.length) reasons.push('raster art present but appearance is not none, so the UA widget paints over it');
+      } else reasons.push('appearance:none with CSS-only box (no raster art on self or ::before/::after)');
+    } else {
+      if (self.length || (kind === 'file' && pse.length)) { art = self.concat(pse); host = self.length ? 'self' : 'pseudo'; }
+      else {
+        const bgA = isClear(cs.backgroundColor);
+        const bord = ['Top', 'Right', 'Bottom', 'Left'].some(s => px(cs['border' + s + 'Width']) > 0 && cs['border' + s + 'Style'] !== 'none' && !isClear(cs['border' + s + 'Color']));
+        let lvl = 1;
+        for (let e = el.parentElement; e && lvl <= 2 && e !== document.body; e = e.parentElement, lvl++) {
+          const er = R(e.getBoundingClientRect());
+          const n = e.querySelectorAll(INSEL).length + e.querySelectorAll(SEL).length;
+          const ea = rasterOf(getComputedStyle(e));
+          if (!ea.length) continue;
+          if (n > 1 || er.h > Math.max(ANCMAX * r.h, 96)) { reasons.push(`ancestor+${lvl} raster art is a backdrop (${n > 1 ? 'hosts ' + n + ' controls' : 'h ' + Math.round(er.h)})`); continue; }
+          if (!bgA || bord) { reasons.push(`ancestor+${lvl} raster art hidden behind the field's own ${!bgA ? 'background ' + cs.backgroundColor : 'border'}`); continue; }
+          art = ea; host = 'ancestor+' + lvl; break;
+        }
+        if (!art.length) {
+          if (app && app !== 'none' && app !== 'auto') reasons.push(`native UA appearance ${app}`);
+          if (bord) reasons.push(`plain css border ${cs.borderTopWidth} ${cs.borderTopStyle} ${cs.borderTopColor}`);
+          if (!bgA) reasons.push('css solid background ' + cs.backgroundColor);
+          if (!reasons.length) reasons.push('no backing at all (bare text field)');
+          reasons.unshift('no raster art on the field (plain UA/CSS text field)');
+        }
+      }
+    }
+    if (covNote) reasons.push(covNote);
+    const latentD = closed.find(d => d.contains(el));
+    const base = art.length ? 'NATIVE_PAINTED' : 'NATIVE_FLAT';
+    const lab = (el.labels && el.labels[0]) ? el.labels[0].innerText : '';
+    const lm = el.closest('footer,nav,header,main,aside');
+    el.setAttribute('data-fcs-in-idx', String(rows.length));
+    rows.push({ idx: rows.length, id: el.id || el.getAttribute('data-fx') || '', type, kind, tag: el.tagName.toLowerCase(), selector: cssPath(el),
+      text: (lab || el.getAttribute('aria-label') || el.placeholder || el.title || '').replace(/\s+/g, ' ').trim().slice(0, 70),
+      rect: [pr.x, pr.y, pr.w, pr.h].map(v => Math.round(v * 10) / 10), verdict: base + (latentD ? '_LATENT' : ''),
+      latent_in: latentD ? (latentD.id ? 'details#' + latentD.id : cssPath(latentD)) : '', in_scroller: inScroller ? cssPath(inScroller) : '',
+      appearance: app, accent_color: accent, art, art_host: host, art_coverage: host === 'self' ? coverage : null, reasons, landmark: lm ? lm.tagName.toLowerCase() + (lm.id ? '#' + lm.id : '') : '' });
+  }
+  return { rows, ignored, total_matched: els.length };
+}
+"""
+INKEYS = ('NATIVE_PAINTED', 'NATIVE_FLAT', 'NATIVE_PAINTED_LATENT', 'NATIVE_FLAT_LATENT')
+
 DSTATE = "[...document.querySelectorAll('details')].map(d => [d.getAttribute('name'), d.open])"
 RESTORE = """() => {
   (window.__fcsClosed || []).forEach(d => d.open = false);           // close what the scan opened
   const N = window.__fcsNamed || [];
   for (const x of N) x.d.setAttribute('name', x.name);               // put exclusive-accordion names back
   for (const x of N) if (x.d.open !== x.open) x.d.open = x.open;     // re-apply each initial .open state
+  document.querySelectorAll('[data-fcs-idx],[data-fcs-in-idx]').forEach(e => { e.removeAttribute('data-fcs-idx'); e.removeAttribute('data-fcs-in-idx'); });  // v02.3 H2
   return N.length;
 }"""
 CHROMIUM_ARGS = ["--use-gl=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist", "--mute-audio"]
@@ -321,7 +485,8 @@ async def run(a):
             if landing == 'external' and a.skip_external:
                 slug = safe_slug(a.label, path)
                 res['pages'].append(dict(path=path, http_status=status, errors=errs, counts=dict(PAINTED=0, FLAT=0, PAINTED_LATENT=0, FLAT_LATENT=0), ignored={}, ignored_samples=[], matched=0,
-                                         doc=[0, 0], rows=[], contact_sheet=None, screenshot=None, rendered=False, skipped='external landing (--skip-external)', closed_details=0, latent_controls=0, exclusive_details=0, details_restore=None, crop_stats=[], **final))
+                                         doc=[0, 0], rows=[], contact_sheet=None, screenshot=None, rendered=False, skipped='external landing (--skip-external)', closed_details=0, latent_controls=0, exclusive_details=0, details_restore=None, crop_stats=[], **final,
+                                         **({} if a.no_inputs else dict(input_rows=[], input_counts={k: 0 for k in INKEYS}, input_ignored={}, input_matched=0, input_contact_sheet=None, input_crop_stats=[]))))
                 await ctx.close(); continue
             try: await pg.evaluate("document.fonts && document.fonts.ready")
             except Exception: pass
@@ -330,6 +495,7 @@ async def run(a):
             except Exception as e: pre_state = None; errs.append('DSTATE ' + str(e)[:100])
             data = await pg.evaluate(JS, [SEL, a.cover, a.anc_max])
             rows = data['rows']
+            indata = None if a.no_inputs else await pg.evaluate(INJS, [INSEL, SEL, a.anc_max])
             cnt = {k: sum(r['verdict'] == k for r in rows) for k in ('PAINTED', 'FLAT', 'PAINTED_LATENT', 'FLAT_LATENT')}
             slug = safe_slug(a.label, path)
             sheet_path = None; crop_stats = []
@@ -352,29 +518,59 @@ async def run(a):
                 if crops:
                     sheet_path = os.path.join(a.sheets, slug + '_FLAT_contact_sheet.jpg')
                     sheet(crops, sheet_path, f"{a.label} {path} FLAT {cnt['FLAT']} +latent {cnt['FLAT_LATENT']} / PAINTED {cnt['PAINTED']} @ {a.width}x{a.height} DPR{a.dpr}")
+            inextra = {}
+            if indata is not None:
+                irows = indata['rows']; icnt = {k: sum(r['verdict'] == k for r in irows) for k in INKEYS}; isheet = None; icstats = []
+                if a.sheets and any(r['verdict'].startswith('NATIVE_FLAT') for r in irows):
+                    os.makedirs(a.sheets, exist_ok=True); icrops = []
+                    for r in irows:
+                        if not r['verdict'].startswith('NATIVE_FLAT'): continue
+                        x, y, w, h = r['rect']; pad = 12
+                        clip = dict(x=max(0, x - pad), y=max(0, y - pad), width=min(w + 2 * pad, data['docW'] - max(0, x - pad)), height=h + 2 * pad)
+                        try:
+                            el = pg.locator(f"[data-fcs-in-idx='{r['idx']}']")
+                            try: await el.scroll_into_view_if_needed(timeout=2000)
+                            except Exception: pass
+                            png = await el.screenshot(timeout=10000, animations='disabled') if r.get('in_scroller') else await pg.screenshot(clip=clip, full_page=True, timeout=10000)
+                            cim = Image.open(io.BytesIO(png)).convert('RGB'); icstats.append(dict(idx=r['idx'], w=cim.width, h=cim.height, ink=ink(cim)))
+                            icrops.append((cim, f"in#{r['idx']}{' LATENT' if r['latent_in'] else ''} {r['type']} '{r['text'][:36]}' [{r['landmark']}]"))
+                        except Exception as e:
+                            r['crop_error'] = str(e)[:100]
+                    if icrops:
+                        isheet = os.path.join(a.sheets, slug + '_INPUT_FLAT_contact_sheet.jpg')
+                        sheet(icrops, isheet, f"{a.label} {path} NATIVE_FLAT {icnt['NATIVE_FLAT']} +latent {icnt['NATIVE_FLAT_LATENT']} / NATIVE_PAINTED {icnt['NATIVE_PAINTED']}")
+                inextra = dict(input_rows=irows, input_counts=icnt, input_ignored=indata['ignored'], input_matched=indata['total_matched'], input_contact_sheet=isheet, input_crop_stats=icstats)
             try: await pg.evaluate(RESTORE)  # back to default state (v02.1: + exclusive-accordion names and initial .open)
             except Exception as e: errs.append('RESTORE ' + str(e)[:100])
             try: post_state = await pg.evaluate(DSTATE)
             except Exception as e: post_state = None; errs.append('RESTORE-READBACK ' + str(e)[:100])
             restore = dict(before=pre_state, after=post_state, restore_ok=pre_state == post_state)
+            if not a.no_inputs:  # v02.3 H2 read-back (kept out of --no-inputs so that shape stays v02.2/v02.1)
+                try: restore['dom_attrs_left'] = await pg.evaluate("document.querySelectorAll('[data-fcs-idx],[data-fcs-in-idx]').length")
+                except Exception as e: restore['dom_attrs_left'] = None; errs.append('ATTR-READBACK ' + str(e)[:100])
             shot = None
             if a.shots:
                 os.makedirs(a.shots, exist_ok=True); shot = os.path.join(a.shots, slug + '_vp390x844dpr2.png')
                 await pg.evaluate("window.scrollTo(0,0)"); await pg.wait_for_timeout(300); await pg.screenshot(path=shot)
             res['pages'].append(dict(path=path, http_status=status, errors=errs, counts=cnt, ignored=data['ignored'], ignored_samples=data['ignoredSamples'], matched=data['total_matched'],
                                      doc=[data['docW'], data['docH']], rows=rows, contact_sheet=sheet_path, screenshot=shot,
-                                     rendered=bool(status and status < 400), closed_details=data['closed_details'], latent_controls=data['latent_controls'], exclusive_details=data['exclusive_details'], details_restore=restore, crop_stats=crop_stats, **final))
+                                     rendered=bool(status and status < 400), closed_details=data['closed_details'], latent_controls=data['latent_controls'], exclusive_details=data['exclusive_details'], details_restore=restore, crop_stats=crop_stats, **final, **inextra))
             await ctx.close()
         await br.close()
     srv.shutdown()
     res['totals'] = {k: sum(p_['counts'][k] for p_ in res['pages']) for k in ('PAINTED', 'FLAT', 'PAINTED_LATENT', 'FLAT_LATENT')}
     res['landings'] = {k: sum(p_['landing'] == k for p_ in res['pages']) for k in ('same', 'internal-redirect', 'external')}
+    if not a.no_inputs:
+        res['input_selector'] = INSEL
+        res['input_totals'] = {k: sum(p_['input_counts'][k] for p_ in res['pages']) for k in INKEYS}
     return res
 
 def to_md(res):
     L = [f"# flat_control_scan {res['version']} - {res['label']}", '', f"root `{res['root']}`, viewport {res['viewport'][0]}x{res['viewport'][1]} DPR{res['dpr']}, cover >= {res['cover']}, ancestor guard: 1 control and h <= max({res['anc_max']}x control h, 96)", '',
          f"Totals: PAINTED {res['totals']['PAINTED']}, FLAT {res['totals']['FLAT']} (visible at default state); latent in closed <details>: PAINTED_LATENT {res['totals']['PAINTED_LATENT']}, FLAT_LATENT {res['totals']['FLAT_LATENT']}", '',
          f"Landings: {res['landings']}", '']
+    if 'input_totals' in res:
+        it = res['input_totals']; L += [f"Native inputs (v02.2): NATIVE_PAINTED {it['NATIVE_PAINTED']}, NATIVE_FLAT {it['NATIVE_FLAT']}, NATIVE_PAINTED_LATENT {it['NATIVE_PAINTED_LATENT']}, NATIVE_FLAT_LATENT {it['NATIVE_FLAT_LATENT']}", '']
     for pg in res['pages']:
         c = pg['counts']
         L += [f"## {pg['path']}  (HTTP {pg['http_status']}; PAINTED {c['PAINTED']}, FLAT {c['FLAT']}, PAINTED_LATENT {c['PAINTED_LATENT']}, FLAT_LATENT {c['FLAT_LATENT']}; ignored {pg['ignored']})", '',
@@ -387,6 +583,15 @@ def to_md(res):
         for r in sorted(pg['rows'], key=lambda r: (not r['verdict'].startswith('FLAT'), r['idx'])):
             why = (f"{r['sprite']['kind']} {r['sprite']['host']} {r['sprite']['url']}" if r['verdict'].startswith('PAINTED') and r['sprite'] else '; '.join(r['reasons']))
             L.append(f"| {r['idx']} | {r['verdict']} | {r['landmark']} | `{r['selector'][:70]}` | {r['text'][:40].replace('|', '/')} | {','.join(str(v) for v in r['rect'])} | {r['cover']} | {why[:160].replace('|', '/')} |")
+        if 'input_rows' in pg:
+            ic = pg['input_counts']
+            L += ['', f"Native inputs (v02.2): NATIVE_PAINTED {ic['NATIVE_PAINTED']}, NATIVE_FLAT {ic['NATIVE_FLAT']}, NATIVE_PAINTED_LATENT {ic['NATIVE_PAINTED_LATENT']}, NATIVE_FLAT_LATENT {ic['NATIVE_FLAT_LATENT']}; ignored {pg['input_ignored']}"]
+            if pg.get('input_contact_sheet'): L.append(f"input contact sheet: `{os.path.basename(pg['input_contact_sheet'])}`")
+            if pg['input_rows']:
+                L += ['', '| in# | verdict | type | selector | label | rect x,y,w,h | appearance / accent | art / reasons |', '|---|---|---|---|---|---|---|---|']
+                for r in sorted(pg['input_rows'], key=lambda r: (not r['verdict'].startswith('NATIVE_FLAT'), r['idx'])):
+                    why = (r['art_host'] + ' ' + '; '.join(r['art'])) if r['art'] else '; '.join(r['reasons'])
+                    L.append(f"| {r['idx']} | {r['verdict']} | {r['type']} | `{r['selector'][:70]}` | {r['text'][:40].replace('|', '/')} | {','.join(str(v) for v in r['rect'])} | {r['appearance']} / {r['accent_color']} | {why[:160].replace('|', '/')} |")
         if pg.get('ignored_samples'):
             L += ['', 'Ignored (first 40): ' + '; '.join(f"{x['why']} {x['tag']} '{x['text'][:30]}' {x['rect']}" for x in pg['ignored_samples'])]
         L.append('')
@@ -401,6 +606,8 @@ def main():
     ap.add_argument('--settle', type=int, default=2500)
     ap.add_argument('--latent-ok', action='store_true', help='exit 1 only on visible FLAT (latent FLAT still reported)')
     ap.add_argument('--skip-external', action='store_true', help='do not scan pages that land off the served root')
+    ap.add_argument('--no-inputs', action='store_true', help='v02.2: skip the native-input pass (reproduces v02.1 output; only version differs)')
+    ap.add_argument('--inputs-ok', action='store_true', help='v02.2: NATIVE_FLAT inputs are reported but do not set exit 1')
     ap.add_argument('--sheets', help='dir for FLAT contact sheets'); ap.add_argument('--shots', help='dir for viewport screenshots')
     ap.add_argument('--chrome', default='/usr/bin/google-chrome' if os.path.exists('/usr/bin/google-chrome') else None)
     a = ap.parse_args()
@@ -408,9 +615,13 @@ def main():
     except Exception as e: print('ERROR', repr(e), file=sys.stderr); sys.exit(2)
     os.makedirs(a.out, exist_ok=True)
     jp = os.path.join(a.out, a.label + '.json'); mp = os.path.join(a.out, a.label + '.md')
-    json.dump(res, open(jp, 'w'), indent=1); open(mp, 'w').write(to_md(res))
+    with open(jp, 'w', encoding='utf-8') as f: json.dump(res, f, indent=1)  # v02.3 H1
+    with open(mp, 'w', encoding='utf-8') as f: f.write(to_md(res))
     t = res['totals']; print(f"{a.label}: PAINTED {t['PAINTED']} FLAT {t['FLAT']} PAINTED_LATENT {t['PAINTED_LATENT']} FLAT_LATENT {t['FLAT_LATENT']} landings {res['landings']} -> {jp}")
-    for pg in res['pages']: print(f"  {pg['path']}: HTTP {pg['http_status']} {pg['landing']} -> {pg['final_url']} PAINTED {pg['counts']['PAINTED']} FLAT {pg['counts']['FLAT']} P_LAT {pg['counts']['PAINTED_LATENT']} F_LAT {pg['counts']['FLAT_LATENT']} ignored {pg['ignored']}")
-    sys.exit(1 if (t['FLAT'] or (t['FLAT_LATENT'] and not a.latent_ok)) else 0)
+    if 'input_totals' in res: it = res['input_totals']; print(f"{a.label} inputs: NATIVE_PAINTED {it['NATIVE_PAINTED']} NATIVE_FLAT {it['NATIVE_FLAT']} NATIVE_PAINTED_LATENT {it['NATIVE_PAINTED_LATENT']} NATIVE_FLAT_LATENT {it['NATIVE_FLAT_LATENT']}")
+    for pg in res['pages']: print(f"  {pg['path']}: HTTP {pg['http_status']} {pg['landing']} -> {pg['final_url']} PAINTED {pg['counts']['PAINTED']} FLAT {pg['counts']['FLAT']} P_LAT {pg['counts']['PAINTED_LATENT']} F_LAT {pg['counts']['FLAT_LATENT']} ignored {pg['ignored']}" + (f" | IN NP {pg['input_counts']['NATIVE_PAINTED']} NF {pg['input_counts']['NATIVE_FLAT']} NP_LAT {pg['input_counts']['NATIVE_PAINTED_LATENT']} NF_LAT {pg['input_counts']['NATIVE_FLAT_LATENT']}" if 'input_counts' in pg else ''))
+    bad = t['FLAT'] or (t['FLAT_LATENT'] and not a.latent_ok)
+    if 'input_totals' in res and not a.inputs_ok: bad = bad or res['input_totals']['NATIVE_FLAT'] or (res['input_totals']['NATIVE_FLAT_LATENT'] and not a.latent_ok)
+    sys.exit(1 if bad else 0)
 
 if __name__ == '__main__': main()

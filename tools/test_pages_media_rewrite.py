@@ -395,5 +395,9 @@ class IncludedGameAssetRewrite(unittest.TestCase):
   self.assertEqual(m.rewrite_sticker_refs(raw,Path("stickerforge/index.html")),'<img src="'+m.RAW_STICKER_BASE+'stickerforge/assets/pack.webp">')
   raw='<img src="/stickerforge/assets/pack.webp">'
   self.assertEqual(m.rewrite_sticker_refs(raw,Path("arcade/index.html")),'<img src="'+m.RAW_STICKER_BASE+'stickerforge/assets/pack.webp">')
+ def test_vorath_ui_plaques_stay_same_origin_while_portraits_offload(self):
+  self.assertFalse(m.external_release_media(Path("warband/art/vorath_btn_obsidian.webp")))
+  self.assertFalse(m.external_release_media(Path("warband/art/vorath_cartouche_9slice.webp")))
+  self.assertTrue(m.external_release_media(Path("warband/art/01_prism_saint.png")))
 
 if __name__=="__main__":unittest.main()

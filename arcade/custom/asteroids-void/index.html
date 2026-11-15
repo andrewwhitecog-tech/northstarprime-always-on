@@ -129,35 +129,36 @@ header.topbar{
 #stage-frame{
   position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;
   width:100%;flex:1;min-height:0;
-  border-radius:16px;
-  background:
-    radial-gradient(ellipse at 50% 50%,rgba(168,85,247,0.18),transparent 75%),
-    linear-gradient(180deg,rgba(8,3,20,0.92) 0%,rgba(14,5,32,0.96) 50%,rgba(8,3,20,0.92) 100%);
-  border:1.5px solid rgba(245,215,110,0.32);
-  box-shadow:0 0 28px rgba(168,85,247,0.32),inset 0 0 32px rgba(0,0,0,0.88);
-  padding:4px 6px;gap:4px;
+  border-radius:0;
+  border:2px solid rgba(245,215,110,0.45);
+  box-shadow:0 0 24px rgba(168,85,247,0.32);
+  padding:0;gap:0;
+  background:#05030a;
+  overflow:hidden;
 }
-.stage-architrave{
-  display:none;width:100%;align-items:center;justify-content:center;gap:8px;
-  font-family:'Cinzel',serif;font-weight:900;text-transform:uppercase;
-  color:#fde68a;text-shadow:0 1px 3px #000,0 0 8px rgba(245,215,110,0.45);
-  font-size:9.5px;letter-spacing:1.4px;
-  padding:2px 8px;
+.stage-art-panel{
+  display:none;width:100%;flex:1;min-height:60px;
+  background-size:cover;background-position:center;background-repeat:no-repeat;
+  border-radius:0;
 }
-.stage-architrave.top-architrave{border-bottom:1px solid rgba(245,215,110,0.18)}
-.stage-architrave.bot-architrave{border-top:1px solid rgba(245,215,110,0.18);color:#67e8f9}
+.stage-art-panel.stage-art-top{
+  background-image:url('/static/art/games/vorath_overhaul_v01/blade_tribunal/arena_high_chancel_colonnade_v01.webp');
+  border-bottom:2px solid rgba(245,215,110,0.45);
+}
+.stage-art-panel.stage-art-bot{
+  background-image:url('/static/art/games/vorath_overhaul_v01/blade_tribunal/arena_reliquary_court_stelae_v01.webp');
+  border-top:2px solid rgba(245,215,110,0.45);
+}
 canvas#c{
   display:block;
   width:100%;
   max-width:900px;
   aspect-ratio:900 / 680;
   height:auto;
-  border-radius:12px;
-  border:2px solid transparent;
-  background:
-    linear-gradient(#05030d,#05030d) padding-box,
-    conic-gradient(from 90deg,#f5d76e,#22d3ee,#a855f7,#f472b6,#34d399,#f5d76e) border-box;
-  box-shadow:0 0 38px rgba(168,85,247,0.28),0 18px 48px rgba(0,0,0,0.9);
+  border-radius:0;
+  border:none;
+  background:#05030d;
+  box-shadow:0 0 32px rgba(168,85,247,0.25);
   touch-action:none;
 }
 
@@ -184,15 +185,16 @@ canvas#c{
 
 nav#nsp-related{
   width:100%;font:12px/1.4 system-ui,sans-serif;padding:8px 12px;
-  background:#070913;color:#cbd5e1;text-align:center;
-  border-top:1px solid rgba(245,215,110,0.16);
+  background:linear-gradient(90deg,#130728 0%,#240e48 50%,#130728 100%);
+  color:#cbd5e1;text-align:center;
+  border-top:1px solid rgba(245,215,110,0.35);
 }
 nav#nsp-related a{color:#93c5fd;margin:0 8px;text-decoration:none}
 
 @media (max-width:760px),(pointer:coarse){
   #touch-controls{display:grid}
   #key-legend{font-size:9px;gap:4px 8px}
-  .stage-architrave{display:flex}
+  .stage-art-panel{display:block}
   canvas#c{
     width:100%;
     max-height:100%;
@@ -244,9 +246,9 @@ nav#nsp-related a{color:#93c5fd;margin:0 8px;text-decoration:none}
   </div>
 
   <div id="stage-frame">
-    <div class="stage-architrave top-architrave">&#x25C6; SANCTUARY DEFENSE MATRIX &middot; SECTOR VORATH &#x25C6;</div>
+    <div class="stage-art-panel stage-art-top" aria-hidden="true"></div>
     <canvas id="c" width="900" height="680"></canvas>
-    <div class="stage-architrave bot-architrave">&#x25C7; GRAVITON VORTEX ENGINE &middot; SLIT-EYE PARRY READY &#x25C7;</div>
+    <div class="stage-art-panel stage-art-bot" aria-hidden="true"></div>
   </div>
 
   <div id="deck-bar">
@@ -313,6 +315,12 @@ let LETTERING_READY = false;
 LETTERING.decoding = 'async';
 LETTERING.onload = () => { LETTERING_READY = true; };
 LETTERING.src = '/static/art/games/vorath_overhaul_v01/blade_tribunal/lettering_v04_d438.webp';
+
+const CARTOUCHE = new Image();
+let CARTOUCHE_READY = false;
+CARTOUCHE.decoding = 'async';
+CARTOUCHE.onload = () => { CARTOUCHE_READY = true; };
+CARTOUCHE.src = '../blackjack-noir/art/vorath_hud_cartouche_v01.webp';
 
 const LCELL = {
   ko:[473,6,464,164], flash:[128,186,1153,164], guard:[318,366,773,164],
@@ -1664,24 +1672,11 @@ function drawPaintedHUD() {
   ctx.stroke();
 
   function drawHudPlaque(x, y, w, h) {
-    ctx.save();
-    ctx.fillStyle = 'rgba(18,8,36,0.88)';
-    ctx.strokeStyle = 'rgba(245,215,110,0.55)';
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    const r = 6;
-    ctx.moveTo(x - w / 2 + r, y - h / 2);
-    ctx.lineTo(x + w / 2 - r, y - h / 2);
-    ctx.quadraticCurveTo(x + w / 2, y - h / 2, x + w / 2, y - h / 2 + r);
-    ctx.lineTo(x + w / 2, y + h / 2 - r);
-    ctx.quadraticCurveTo(x + w / 2, y + h / 2, x + w / 2 - r, y + h / 2);
-    ctx.lineTo(x - w / 2 + r, y + h / 2);
-    ctx.quadraticCurveTo(x - w / 2, y + h / 2, x - w / 2, y + h / 2 - r);
-    ctx.lineTo(x - w / 2, y - h / 2 + r);
-    ctx.quadraticCurveTo(x - w / 2, y - h / 2, x - w / 2 + r, y - h / 2);
-    ctx.fill();
-    ctx.stroke();
-    ctx.restore();
+    if (CARTOUCHE_READY) {
+      ctx.save();
+      ctx.drawImage(CARTOUCHE, 0, 0, 360, 112, Math.round(x - w / 2), Math.round(y - h / 2), Math.round(w), Math.round(h));
+      ctx.restore();
+    }
   }
 
   const cy = 26;

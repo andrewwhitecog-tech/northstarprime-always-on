@@ -71,7 +71,7 @@ Exit: 1 if any FLAT or FLAT_LATENT (or visible FLAT only with --latent-ok), 0 if
 import argparse, asyncio, functools, http.server, json, os, re, socketserver, sys, threading
 from playwright.async_api import async_playwright
 
-VERSION = 'v02.3'
+VERSION = 'v02.4'
 SEL = 'a, button, [role=button], input[type=button], input[type=submit], input[type=reset], input[type=image], summary, select'
 INSEL = ('input[type=checkbox], input[type=radio], input[type=range], input[type=text], input[type=search], input[type=number], '
          'input[type=email], input[type=url], input[type=tel], input[type=password], input[type=file], input:not([type]), textarea')
@@ -293,7 +293,17 @@ async ([INSEL, SEL, ANCMAX]) => {
           lw = a; lh = b;
         }
       }
-      const cx = rx ? 1 : Math.min(1, (lw || 0) / Math.max(w, 1)), cy = ry ? 1 : Math.min(1, (lh || 0) / Math.max(h, 1));
+      // v02.4 C1: clip box (border-box | padding-box | content-box | text) and no-repeat position overflow
+      const CL = splitTop(cs.backgroundClip || 'border-box'), clip = (CL[i % CL.length] || 'border-box').trim();
+      if (clip === 'text') continue;
+      let bw = w, bh = h;
+      if (clip === 'padding-box' || clip === 'content-box') { bw -= px(cs.borderLeftWidth) + px(cs.borderRightWidth); bh -= px(cs.borderTopWidth) + px(cs.borderBottomWidth); }
+      if (clip === 'content-box') { bw -= px(cs.paddingLeft) + px(cs.paddingRight); bh -= px(cs.paddingTop) + px(cs.paddingBottom); }
+      bw = Math.max(0, bw); bh = Math.max(0, bh);
+      const PX = splitTop(cs.backgroundPositionX || '0%'), PY = splitTop(cs.backgroundPositionY || '0%');
+      function vis(rep, len, box, pos) { if (rep) return box; const t = (pos || '0%').trim(); let o = t.endsWith('%') ? (box - len) * parseFloat(t) / 100 : t.endsWith('px') ? parseFloat(t) : 0; if (!isFinite(o)) o = 0; return Math.max(0, Math.min(box, o + len) - Math.max(0, o)); }
+      const vx = vis(rx, lw || 0, w, PX[i % PX.length]), vy = vis(ry, lh || 0, h, PY[i % PY.length]);
+      const cx = Math.min(vx, bw) / Math.max(w, 1), cy = Math.min(vy, bh) / Math.max(h, 1);
       best = Math.max(best, cx * cy);
     }
     return Math.round(best * 1000) / 1000;
@@ -324,25 +334,33 @@ async ([INSEL, SEL, ANCMAX]) => {
   }
   const rows = [], ignored = { hidden: 0, tiny: 0, offscreen: 0 };
   const els = [...document.querySelectorAll(INSEL)];
-  for (const el of els) {
-    if (hidden(el)) { ignored.hidden++; continue; }
-    const r = R(el.getBoundingClientRect());
-    if (r.w <= 2 || r.h <= 2) { ignored.tiny++; continue; }
+  ignored.label_hosted = 0;
+  for (const el0 of els) {
+    let el = el0, viaLabel = null;
+    const hid = hidden(el0), r0 = R(el0.getBoundingClientRect()), tiny = r0.w <= 2 || r0.h <= 2;
+    if ((hid || tiny) && (el0.type === 'checkbox' || el0.type === 'radio') && el0.tagName === 'INPUT') {
+      // v02.4 L1: the visible <label> is the control the visitor sees
+      const lb = [...(el0.labels || [])].find(l => !hidden(l) && l.getBoundingClientRect().width > 2 && l.getBoundingClientRect().height > 2);
+      if (lb) { viaLabel = lb; ignored.label_hosted++; }
+    }
+    if (!viaLabel && hid) { ignored.hidden++; continue; }
+    if (!viaLabel && tiny) { ignored.tiny++; continue; }
+    const r = viaLabel ? R(viaLabel.getBoundingClientRect()) : r0;
     const pr = { x: r.x + sx, y: r.y + sy, w: r.w, h: r.h };
     let inScroller = null;
     for (let e = el.parentElement; e && e !== document.body; e = e.parentElement) { const c = getComputedStyle(e); if (/(auto|scroll)/.test(c.overflowX + c.overflowY) && (e.scrollHeight > e.clientHeight + 1 || e.scrollWidth > e.clientWidth + 1)) { inScroller = e; break; } }
     if (pr.x + pr.w <= 0 || pr.y + pr.h <= 0 || ((pr.x >= docW || pr.y >= docH) && !inScroller)) { ignored.offscreen++; continue; }
-    const cs = getComputedStyle(el);
+    const cs = getComputedStyle(viaLabel || el);
     const type = el.tagName === 'TEXTAREA' ? 'textarea' : (el.type || 'text');
     const kind = (type === 'checkbox' || type === 'radio') ? 'toggle' : type === 'range' ? 'range' : type === 'file' ? 'file' : 'text';
-    const app = cs.appearance || cs.webkitAppearance || '';
+    const app = viaLabel ? 'none' : (cs.appearance || cs.webkitAppearance || '');
     const accent = cs.accentColor || 'auto';
     let self = rasterOf(cs); let coverage = null;
     if (self.length) {
       coverage = await selfCoverage(cs, r.w, r.h);
       if (coverage < 0.60) { var covNote = `raster art covers only ${Math.round(coverage * 100)}% of the field (< 60%): icon, not a plaque`; self = []; } else var covNote = '';
     } else var covNote = '';
-    const pse = pseudoArt(el, kind === 'file' ? ['::file-selector-button'] : ['::before', '::after']);
+    const pse = pseudoArt(viaLabel || el, kind === 'file' ? ['::file-selector-button'] : ['::before', '::after']);
     let art = [], host = '', reasons = [];
     if (kind === 'toggle' || kind === 'range') {
       if (app === 'none' && (self.length || pse.length)) { art = self.concat(pse); host = self.length ? 'self' : 'pseudo'; }
@@ -350,7 +368,8 @@ async ([INSEL, SEL, ANCMAX]) => {
         reasons.push(`native UA widget (appearance ${app})`);
         if (accent && accent !== 'auto') reasons.push(`accent-color ${accent} only tints the UA widget (still native)`);
         if (self.length || pse.length) reasons.push('raster art present but appearance is not none, so the UA widget paints over it');
-      } else reasons.push('appearance:none with CSS-only box (no raster art on self or ::before/::after)');
+      } else reasons.push(viaLabel ? 'hidden input carried by a CSS-only <label> (no raster art on the label or its ::before/::after)' : 'appearance:none with CSS-only box (no raster art on self or ::before/::after)');
+      if (viaLabel && art.length) { host = 'label' + (self.length ? '' : ' pseudo'); reasons.push('hidden input carried by a painted <label>'); }
     } else {
       if (self.length || (kind === 'file' && pse.length)) { art = self.concat(pse); host = self.length ? 'self' : 'pseudo'; }
       else {
@@ -380,12 +399,12 @@ async ([INSEL, SEL, ANCMAX]) => {
     const base = art.length ? 'NATIVE_PAINTED' : 'NATIVE_FLAT';
     const lab = (el.labels && el.labels[0]) ? el.labels[0].innerText : '';
     const lm = el.closest('footer,nav,header,main,aside');
-    el.setAttribute('data-fcs-in-idx', String(rows.length));
+    (viaLabel || el).setAttribute('data-fcs-in-idx', String(rows.length));
     rows.push({ idx: rows.length, id: el.id || el.getAttribute('data-fx') || '', type, kind, tag: el.tagName.toLowerCase(), selector: cssPath(el),
       text: (lab || el.getAttribute('aria-label') || el.placeholder || el.title || '').replace(/\s+/g, ' ').trim().slice(0, 70),
       rect: [pr.x, pr.y, pr.w, pr.h].map(v => Math.round(v * 10) / 10), verdict: base + (latentD ? '_LATENT' : ''),
       latent_in: latentD ? (latentD.id ? 'details#' + latentD.id : cssPath(latentD)) : '', in_scroller: inScroller ? cssPath(inScroller) : '',
-      appearance: app, accent_color: accent, art, art_host: host, art_coverage: host === 'self' ? coverage : null, reasons, landmark: lm ? lm.tagName.toLowerCase() + (lm.id ? '#' + lm.id : '') : '' });
+      appearance: app, accent_color: accent, art, art_host: host, art_coverage: coverage,  /* v02.4: reported whenever a raster on the field (or its carrying <label>) was measured, incl. < 60% */ reasons, label_hosted: !!viaLabel, landmark: lm ? lm.tagName.toLowerCase() + (lm.id ? '#' + lm.id : '') : '' });
   }
   return { rows, ignored, total_matched: els.length };
 }
@@ -550,7 +569,7 @@ async def run(a):
                 except Exception as e: restore['dom_attrs_left'] = None; errs.append('ATTR-READBACK ' + str(e)[:100])
             shot = None
             if a.shots:
-                os.makedirs(a.shots, exist_ok=True); shot = os.path.join(a.shots, slug + '_vp390x844dpr2.png')
+                os.makedirs(a.shots, exist_ok=True); shot = os.path.join(a.shots, slug + f"_vp{a.width}x{a.height}dpr{a.dpr:g}.png")
                 await pg.evaluate("window.scrollTo(0,0)"); await pg.wait_for_timeout(300); await pg.screenshot(path=shot)
             res['pages'].append(dict(path=path, http_status=status, errors=errs, counts=cnt, ignored=data['ignored'], ignored_samples=data['ignoredSamples'], matched=data['total_matched'],
                                      doc=[data['docW'], data['docH']], rows=rows, contact_sheet=sheet_path, screenshot=shot,

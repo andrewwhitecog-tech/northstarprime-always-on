@@ -1753,52 +1753,91 @@ function drawBossWarden() {
 function drawPaintedHUD() {
   ctx.save();
   // Sculpted HUD Top-Bar Underlay
-  const gHud = ctx.createLinearGradient(0, 0, 0, 52);
+  const gHud = ctx.createLinearGradient(0, 0, 0, 56);
   gHud.addColorStop(0, 'rgba(4,2,11,0.96)');
   gHud.addColorStop(0.85, 'rgba(12,5,28,0.85)');
   gHud.addColorStop(1, 'rgba(4,2,11,0)');
   ctx.fillStyle = gHud;
-  ctx.fillRect(0, 0, W, 54);
+  ctx.fillRect(0, 0, W, 58);
 
   // Subtle gold hairline rail
   ctx.strokeStyle = 'rgba(245,201,92,0.38)';
   ctx.lineWidth = 1.2;
   ctx.beginPath();
-  ctx.moveTo(14, 52);
-  ctx.lineTo(W - 14, 52);
+  ctx.moveTo(14, 56);
+  ctx.lineTo(W - 14, 56);
   ctx.stroke();
 
-  function drawHudPlaque(x, y, w, h) {
-    if (CARTOUCHE_READY) {
-      ctx.save();
-      ctx.drawImage(CARTOUCHE, 0, 0, 360, 112, Math.round(x - w / 2), Math.round(y - h / 2), Math.round(w), Math.round(h));
-      ctx.restore();
-    }
+  function getLetterGlyphsWidth(str, h) {
+    if (!LETTERING_READY) return String(str).length * (h * 0.45);
+    const keys = [...String(str)].map(ch => ch === '-' ? 'minus' : (ch === '%' ? 'x' : ch.toLowerCase())).filter(k => LCELL[k]);
+    if (!keys.length) return 0;
+    const gap = h * 0.05;
+    const ws = keys.map(k => k === 'minus' ? h * 0.62 : (k === 'x' ? LCELL.x[2] * (h * 0.8) / LCELL.x[3] : LCELL[k][2] * h / LCELL[k][3]));
+    return ws.reduce((a, b) => a + b, 0) + gap * (keys.length - 1);
   }
 
-  const cy = 26;
+  function drawHudPlaque(cx, cy, w, h) {
+    ctx.save();
+    const dx = Math.round(cx - w / 2);
+    const dy = Math.round(cy - h / 2);
+    const dw = Math.round(w);
+    const dh = Math.round(h);
+    if (CARTOUCHE_READY) {
+      const capSrcW = 58;
+      const srcH = 112;
+      const capDstW = Math.round(capSrcW * (dh / srcH));
+      // Dark reliquary backing inside plaque so background stars never clash with digits
+      ctx.fillStyle = 'rgba(8,4,16,0.92)';
+      ctx.fillRect(dx + Math.round(capDstW * 0.35), dy + 3, Math.max(0, dw - Math.round(capDstW * 0.7)), dh - 6);
+      // Left end ornament
+      ctx.drawImage(CARTOUCHE, 43, 0, capSrcW, srcH, dx, dy, capDstW, dh);
+      // Center opening
+      const midDstW = Math.max(0, dw - capDstW * 2);
+      if (midDstW > 0) {
+        ctx.drawImage(CARTOUCHE, 101, 0, 157, srcH, dx + capDstW, dy, midDstW, dh);
+      }
+      // Right end ornament
+      ctx.drawImage(CARTOUCHE, 258, 0, capSrcW, srcH, dx + dw - capDstW, dy, capDstW, dh);
+    } else {
+      ctx.fillStyle = 'rgba(18,8,36,0.92)';
+      ctx.strokeStyle = 'rgba(245,215,110,0.55)';
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(dx, dy, dw, dh);
+      ctx.fillRect(dx, dy, dw, dh);
+    }
+    ctx.restore();
+  }
 
-  // 1. Continuities (Lives) — Plaque + Rail/Heart Gem + Count
-  drawHudPlaque(58, cy, 92, 38);
+  function drawHudStat(cx, cy, str, digitH = 42, plaqueH = 48, minW = 76) {
+    const textW = getLetterGlyphsWidth(str, digitH);
+    const capDstW = Math.round(58 * (plaqueH / 112));
+    const pw = Math.max(minW, Math.round(textW + capDstW * 2 + 16));
+    drawHudPlaque(cx, cy, pw, plaqueH);
+    drawLetterGlyphs(String(str), cx, cy, digitH, 1.0, true);
+    return pw;
+  }
+
+  const cy = 28;
+
+  // 1. Continuities (Lives) — Gem + Cartouche Plaque with Centered Count
   drawFacetGem(28, cy, 10, 340, 0, 1.0);
-  drawLetterGlyphs(String(Math.max(0, lives)), 74, cy, 30, 1.0, true);
+  drawHudStat(88, cy, String(Math.max(0, lives)), 42, 48, 76);
 
-  // 2. Resonance (Score) — Plaque + Cyan Gem + Numerals
-  drawHudPlaque(180, cy, 134, 38);
-  drawFacetGem(132, cy, 11, 188, phase * 2, 1.0);
-  drawLetterGlyphs(String(Math.floor(score)), 200, cy, 32, 1.0, true);
+  // 2. Resonance (Score) — Cyan Gem + Cartouche Plaque with Centered Numerals
+  drawFacetGem(160, cy, 11, 188, phase * 2, 1.0);
+  drawHudStat(240, cy, String(Math.floor(score)), 42, 48, 88);
 
-  // 3. Archive (Hi-Score) — Plaque + Gold Gem + Numerals
-  drawHudPlaque(328, cy, 126, 36);
-  drawFacetGem(282, cy, 9, 45, 0, 0.95);
-  drawLetterGlyphs(String(Math.max(Math.floor(highScore), Math.floor(score))), 348, cy, 26, 0.95, true);
+  // 3. Archive (Hi-Score) — Gold Gem + Cartouche Plaque with Centered Numerals
+  drawFacetGem(338, cy, 9, 45, 0, 0.95);
+  drawHudStat(414, cy, String(Math.max(Math.floor(highScore), Math.floor(score))), 42, 48, 88);
 
   // 4. Seal Layer Progression Icon Medallions (I - IV)
   const layerPips = [
-    { x: 440, label: '1' },
-    { x: 468, label: '2' },
-    { x: 496, label: '3' },
-    { x: 524, label: '4' }
+    { x: 486, label: '1' },
+    { x: 512, label: '2' },
+    { x: 538, label: '3' },
+    { x: 564, label: '4' }
   ];
   for (let s = 1; s <= 4; s++) {
     const pip = layerPips[s - 1];
@@ -1824,7 +1863,7 @@ function drawPaintedHUD() {
   {
     const parryReady = combatVerbs.parryCooldown <= 0;
     ctx.save();
-    ctx.translate(630, cy);
+    ctx.translate(644, cy);
     if (parryReady) {
       ctx.shadowColor = '#34d399';
       ctx.shadowBlur = 16;
@@ -1846,17 +1885,16 @@ function drawPaintedHUD() {
   // 6. EMP Medallion
   {
     const empReady = combatVerbs.empCooldown <= 0;
-    drawFacetGem(678, cy, 11, 340, phase * 3, empReady ? 1.0 : 0.4);
+    drawFacetGem(724, cy, 11, 340, phase * 3, empReady ? 1.0 : 0.4);
   }
 
   // 7. Chain Multiplier or Singularity Catch
   {
     const combo = 1 + combatVerbs.comboCount * 0.25;
     if (combatVerbs.comboCount > 0) {
-      drawHudPlaque(748, cy, 78, 36);
-      drawLetterGlyphs('x' + Math.min(9, Math.floor(combo)), 748, cy, 28, 1.0, true);
+      drawHudStat(804, cy, 'x' + Math.min(9, Math.floor(combo)), 36, 46, 74);
     } else {
-      drawFacetGem(748, cy, 10, 188, 0, combatVerbs.catchCooldown <= 0 ? 0.95 : 0.4);
+      drawFacetGem(804, cy, 10, 188, 0, combatVerbs.catchCooldown <= 0 ? 0.95 : 0.4);
     }
   }
 

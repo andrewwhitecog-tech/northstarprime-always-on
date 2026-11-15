@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prism Forge — 3D Spatial Assemblage &amp; Shattered-Mirror Studio | NorthStar Prime</title>
+<meta name="description" content="Turn any artwork or brand emblem into a 1,088-shard 3D Spatial Assemblage Sculpture and Arkham-style shattered-mirror perspective puzzle. Orbit, play the full-watch Sweet-Spot Reveal sweep, export HTML or WebM video, or commission a bespoke 3D reveal.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://northstarprime.net/shattered-mirror/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#06040d">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="NorthStar Prime">
+<meta property="og:title" content="Prism Forge — 3D Spatial Assemblage &amp; Shattered-Mirror Studio">
+<meta property="og:description" content="1,088 floating 3D mirror shards scattered across perspective depth that fuse into a razor-sharp image from one secret sweet-spot angle.">
+<meta property="og:url" content="https://northstarprime.net/shattered-mirror/">
+<meta property="og:image" content="https://northstarprime.net/shattered-mirror/presets/og_prism_forge_1200x630.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"NorthStar Prism Forge — 3D Spatial Assemblage & Shattered-Mirror Studio","url":"https://northstarprime.net/shattered-mirror/","applicationCategory":"DesignApplication","operatingSystem":"Modern WebGL browsers (desktop & mobile)","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"creator":{"@type":"Organization","name":"NorthStar Prime","url":"https://northstarprime.net/"}}</script>
+<style>
+  :root {
+    color-scheme: dark;
+    --void: #05030b;
+    --gold: #f5d76e;
+    --gold-dim: rgba(245, 215, 110, 0.34);
+    --cyan: #67e8f9;
+    --ink: #f8f3e6;
+    --muted: #b8b0a0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: radial-gradient(circle at 50% 42%, #160e2a 0%, #080512 60%, #040209 100%);
+    color: var(--ink);
+    font-family: "Cinzel", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+    touch-action: none;
+  }
+  main#main { position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; }
+  #gl-canvas {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    display: block; cursor: grab;
+  }
+  #gl-canvas:active { cursor: grabbing; }
+
+  /* Sculpted Vorath Painted Plaque Controls (760x304 2x2 Atlas — Zero CSS Pill Boxes) */
+  .vorath-plaque {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 44px; min-width: 88px; padding: 0 14px;
+    background-color: transparent;
+    background-image: url("./art/vorath_ui_buttons_v01.webp");
+    background-size: 200% 200%;
+    background-position: 100% 0%;
+    background-repeat: no-repeat;
+    border: none; outline: none; cursor: pointer;
+    font-family: inherit; font-size: 10.5px; font-weight: 800;
+    letter-spacing: 0.09em; text-transform: uppercase;
+    color: #fef3c7; text-decoration: none;
+    text-shadow: 0 2px 4px #000, 0 0 10px rgba(245, 215, 110, 0.45);
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.88));
+    transition: transform 0.15s ease, filter 0.15s ease;
+    white-space: nowrap;
+  }
+  .vorath-plaque:hover, .vorath-plaque:focus-visible {
+    transform: translateY(-1px) scale(1.02);
+    filter: drop-shadow(0 5px 14px rgba(103, 232, 249, 0.55));
+    color: #ffffff;
+  }
+  .vorath-plaque.plaque-primary {
+    background-position: 0% 0%;
+    color: #fffbeb;
+    filter: drop-shadow(0 4px 14px rgba(236, 72, 153, 0.48));
+  }
+  .vorath-plaque.plaque-active {
+    background-position: 0% 100%;
+    color: #ecfeff;
+    text-shadow: 0 2px 4px #000, 0 0 12px rgba(52, 211, 153, 0.85);
+  }
+  .vorath-plaque.plaque-ruby {
+    background-position: 100% 100%;
+    color: #fce7f3;
+  }
+  input[type="file"] { display: none; }
+
+  /* Top Sovereign Bar */
+  .top-bar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 8px 12px;
+    background: linear-gradient(180deg, rgba(6, 4, 13, 0.94) 0%, rgba(6, 4, 13, 0.62) 82%, transparent 100%);
+    border-bottom: 1px solid rgba(245, 215, 110, 0.24);
+    pointer-events: none;
+  }
+  .top-bar > * { pointer-events: auto; }
+  .top-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .nav-home { min-width: 78px; padding: 0 12px; font-size: 10px; }
+  .title-stack { min-width: 0; }
+  .eyebrow {
+    display: block; font-size: 9.5px; letter-spacing: 0.20em;
+    color: var(--gold); text-transform: uppercase;
+  }
+  h1.brand-title {
+    font-size: clamp(13px, 1.85vw, 19px); font-weight: 800; letter-spacing: 0.08em;
+    background: linear-gradient(90deg, #67e8f9, #fde047, #f472b6, #fde047);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.95));
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  /* Sculpted Solar-Eye HUD Cartouche for Perspective Alignment */
+  .hud-cartouche {
+    width: 196px; height: 58px; flex-shrink: 0;
+    background: url("./art/vorath_hud_cartouche_v01.webp") center / 100% 100% no-repeat;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 0 34px 0 48px;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.88));
+  }
+  .res-row {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 6px;
+    font-size: 9.5px; letter-spacing: 0.10em; color: #e2d8c3; font-weight: 700;
+  }
+  .res-val {
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 13px; font-weight: 900; color: var(--cyan);
+    text-shadow: 0 1px 3px #000;
+  }
+  .res-track {
+    width: 100%; height: 5px; margin-top: 3px;
+    background: rgba(8, 5, 16, 0.85);
+    border: 1px solid rgba(245, 215, 110, 0.42);
+    overflow: hidden;
+  }
+  .res-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, #38bdf8 0%, #67e8f9 55%, #fde047 100%);
+    transition: width 0.06s linear;
+  }
+
+  /* Center Astrolabe Sight Ring */
+  #reticle {
+    position: fixed; left: 50%; top: 50%;
+    width: min(64vmin, 480px); height: min(64vmin, 480px);
+    transform: translate(-50%, -50%);
+    border: 1px solid rgba(245, 215, 110, 0.11);
+    pointer-events: none; z-index: 5;
+    transition: opacity 0.35s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  #reticle.hot {
+    border-color: rgba(103, 232, 249, 0.45);
+    box-shadow: 0 0 34px rgba(103, 232, 249, 0.18), inset 0 0 24px rgba(245, 215, 110, 0.14);
+  }
+  #reticle.locked { opacity: 0; }
+
+  /* Sweet-Spot Singularity Plaque */
+  #solved-banner {
+    position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
+    z-index: 25; width: min(390px, calc(100vw - 24px)); min-height: 78px;
+    background: radial-gradient(ellipse at center, rgba(6, 4, 14, 0.88) 42%, transparent 74%), url("./art/vorath_hud_cartouche_v01.webp") center / 100% 100% no-repeat;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 12px 48px; text-align: center;
+    text-shadow: 0 2px 6px #000, 0 0 10px #000;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.35s ease;
+    filter: drop-shadow(0 0 24px rgba(245, 215, 110, 0.45));
+  }
+  #solved-banner.visible { opacity: 1; }
+  #solved-banner .lock-tag {
+    font-size: 9px; letter-spacing: 0.22em; color: var(--cyan); font-weight: 800;
+  }
+  #solved-banner .lock-name {
+    font-size: 12.5px; color: #fef3c7; letter-spacing: 0.08em; font-weight: 800;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+  }
+  #solved-banner .lock-stats {
+    font-family: "Consolas", monospace; font-size: 10px; color: #d6cbb5;
+  }
+
+  /* Bottom Sculpted Control Deck */
+  .bottom-deck {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 20;
+    display: flex; flex-direction: column; gap: 4px;
+    padding: 6px 10px 8px;
+    background: linear-gradient(0deg, rgba(5, 3, 12, 0.96) 0%, rgba(8, 5, 18, 0.84) 82%, transparent 100%);
+    border-top: 1px solid rgba(245, 215, 110, 0.24);
+  }
+  .deck-row {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 5px;
+  }
+  .preset-btn { min-width: 52px; padding: 0 10px; }
+
+  /* Custom Commission & Service Modal (Sculpted Bevel Architecture) */
+  #service-modal {
+    position: fixed; inset: 0; z-index: 60;
+    background: rgba(4, 2, 10, 0.86);
+    display: none; align-items: center; justify-content: center; padding: 14px;
+    user-select: text; -webkit-user-select: text;
+  }
+  #service-modal.open { display: flex; }
+  .modal-card {
+    width: min(640px, 100%); max-height: calc(100vh - 28px); overflow-y: auto;
+    background: linear-gradient(160deg, #130d24 0%, #090613 100%);
+    border: 2px solid var(--gold);
+    box-shadow: 0 0 48px rgba(168, 85, 247, 0.42), inset 0 0 32px rgba(245, 215, 110, 0.10);
+    clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+    padding: 22px 20px;
+  }
+  .modal-head {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+    border-bottom: 1px solid var(--gold-dim); padding-bottom: 12px; margin-bottom: 14px;
+  }
+  .modal-head h2 {
+    font-size: clamp(16px, 2.4vw, 22px); color: var(--gold); letter-spacing: 0.08em;
+  }
+  .modal-body p {
+    font-family: Inter, system-ui, -apple-system, sans-serif;
+    font-size: 14px; line-height: 1.6; color: #ddd6c7; margin-bottom: 12px;
+  }
+  .tier-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 14px 0;
+  }
+  .tier-box {
+    border: 1px solid var(--gold-dim); background: rgba(255, 255, 255, 0.03);
+    padding: 12px;
+    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  }
+  .tier-box h3 { font-size: 12.5px; color: var(--cyan); letter-spacing: 0.08em; margin-bottom: 4px; }
+  .tier-box p { font-size: 12.5px; margin: 0; color: var(--muted); }
+  .modal-actions {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px;
+  }
+
+  /* Drag-and-Drop Veil */
+  #drop-veil {
+    position: fixed; inset: 16px; z-index: 55;
+    border: 2px dashed var(--gold);
+    background: rgba(6, 4, 14, 0.90);
+    display: none; align-items: center; justify-content: center; text-align: center;
+    padding: 20px; font-size: 18px; letter-spacing: 0.14em; color: var(--gold);
+    text-transform: uppercase;
+  }
+  #drop-veil.active { display: flex; }
+
+  @media (max-width: 720px) {
+    .top-bar { padding: 6px 8px; gap: 6px; }
+    .eyebrow { font-size: 8px; letter-spacing: 0.14em; }
+    .nav-home { min-width: 62px; padding: 0 8px; font-size: 9px; }
+    .hud-cartouche { width: 150px; height: 48px; padding: 0 24px 0 36px; }
+    .res-row { font-size: 8.5px; }
+    .res-val { font-size: 11px; }
+    .bottom-deck { padding: 4px 6px 6px; gap: 3px; }
+    .vorath-plaque { min-height: 44px; min-width: 68px; padding: 0 8px; font-size: 9px; letter-spacing: 0.04em; }
+    .preset-btn { min-width: 44px; padding: 0 5px; }
+    .tier-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+  <main id="main">
+    <canvas id="gl-canvas" aria-label="Interactive 1,088-shard 3D Spatial Assemblage and Shattered-Mirror Perspective Puzzle"></canvas>
+    <div id="reticle"></div>
+
+    <header class="top-bar">
+      <div class="top-left">
+        <a class="vorath-plaque nav-home" href="/software/" title="Back to NorthStar Software">Software</a>
+        <div class="title-stack">
+          <span class="eyebrow">NORTHSTAR PRISM FORGE · 1,088 3D SHARDS</span>
+          <h1 class="brand-title" id="puzzle-title">FOUNDRY OF THE LIVING EYE</h1>
+        </div>
+      </div>
+      <div class="hud-cartouche" aria-live="polite">
+        <div class="res-row">
+          <span>LOCK</span>
+          <span class="res-val" id="coherence-pct">0.0%</span>
+        </div>
+        <div class="res-track"><div class="res-fill" id="coherence-bar"></div></div>
+      </div>
+    </header>
+
+    <div id="solved-banner" role="status">
+      <div class="lock-tag">SWEET-SPOT SINGULARITY LOCKED</div>
+      <div class="lock-name" id="solved-title">ARTIFACT RECONSTRUCTED</div>
+      <div class="lock-stats" id="solved-stats">1,088 shards fused · 0.00° error</div>
+    </div>
+
+    <footer class="bottom-deck" id="bottom-deck">
+      <div class="deck-row" id="preset-strip" aria-label="Artwork Presets"></div>
+      <div class="deck-row" id="action-strip">
+        <button type="button" class="vorath-plaque plaque-primary" id="btn-sweep" title="Fly through and orbit around the 3D Spatial Assemblage into the Sweet-Spot Reveal">Reveal Sweep</button>
+        <button type="button" class="vorath-plaque" id="btn-solve" title="Snap camera smoothly to the secret perspective sweet spot">Snap Lock</button>
+        <button type="button" class="vorath-plaque" id="btn-reshatter" title="Scatter 1,088 mirror shards to a new secret 3D angle">Re-Shatter</button>
+        <label class="vorath-plaque" id="upload-label" title="Turn any PNG, JPG, or WEBP image into a 1,088-piece 3D sculpture locally in your browser">
+          Upload Art
+          <input type="file" id="file-input" accept="image/*">
+        </label>
+        <button type="button" class="vorath-plaque" id="btn-record" title="Record a 12-second 3D Spatial Assemblage Reveal video (.webm) in your browser">Record Video</button>
+        <button type="button" class="vorath-plaque" id="btn-export" title="Download standalone shareable HTML puzzle for this image">Export HTML</button>
+        <button type="button" class="vorath-plaque plaque-ruby" id="btn-commission" title="Commission a bespoke 3D Spatial Assemblage hero embed or 4K reveal reel">Commission</button>
+      </div>
+    </footer>
+
+    <div id="service-modal" role="dialog" aria-modal="true" aria-labelledby="commission-heading">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h2 id="commission-heading">Custom 3D Spatial Assemblage &amp; Shattered-Mirror Commissions</h2>
+          <button type="button" class="vorath-plaque" id="btn-close-modal" style="min-width:72px">Close</button>
+        </div>
+        <div class="modal-body">
+          <p>Use Prism Forge free right here in your browser (100% client-side WebGL — your uploaded images never leave your device), or commission <strong>NorthStar Digital</strong> to engineer a bespoke 3D perspective sculpture for your launch, album, game, or storefront.</p>
+          <div class="tier-grid">
+            <div class="tier-box">
+              <h3>Interactive Brand Hero Embed</h3>
+              <p>Custom shard geometry, 24K gold/chrome/neon glass shaders, secret ARG unlock callbacks, and mobile-first 60fps WebGL embed with full code ownership.</p>
+            </div>
+            <div class="tier-box">
+              <h3>4K Beat-Synced Reveal Visualizers</h3>
+              <p>9:16 Reels/Shorts/TikTok and 16:9 widescreen 3D Spatial Assemblage fly-through visualizers timed to lock into the Sweet-Spot Reveal right on your musical drop.</p>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <a class="vorath-plaque plaque-primary" href="/hire/">Fixed-Scope Sprints</a>
+            <a class="vorath-plaque" href="/warband/">Warband Codex</a>
+            <a class="vorath-plaque" href="https://app.northstarprime.net/services?utm_source=northstarprime.net&amp;utm_medium=shattered_mirror&amp;utm_campaign=prism_forge">Studio Services</a>
+            <a class="vorath-plaque plaque-ruby" href="mailto:contact@northstarprime.net?subject=Custom%203D%20Spatial%20Assemblage%20Commission">Email Desk</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="drop-veil">Drop Any Artwork to Shatter into 1,088 3D Mirror Shards</div>
+  </main>
+
+<script id="puzzle-config" type="application/json">{
+  "mode": "studio",
+  "presets": [
+    {"shortLabel": "01", "title": "FOUNDRY OF THE LIVING EYE", "src": "./presets/01_mc_foundry_living_eye.jpg", "seed": 409101},
+    {"shortLabel": "02", "title": "IDG #37 · GLYPHBREAKER CROWN", "src": "./presets/02_idg_glyphbreaker_crown.jpg", "seed": 718209},
+    {"shortLabel": "03", "title": "SUNSET BOULEVARD CITADEL", "src": "./presets/03_mc_sunset_citadel.jpg", "seed": 552319},
+    {"shortLabel": "04", "title": "IDG #36 · OSSUARY ORBIT", "src": "./presets/04_idg_ossuary_orbit.jpg", "seed": 931415},
+    {"shortLabel": "05", "title": "TWILIGHT EYE GATEHOUSE", "src": "./presets/05_mc_eye_gatehouse.jpg", "seed": 614887},
+    {"shortLabel": "06", "title": "SOVEREIGN ARCADE SUITE", "src": "./presets/06_idg_sovereign_arcade.jpg", "seed": 824103},
+    {"shortLabel": "07", "title": "VORATH WARBAND · SEVENTH VEIL", "src": "./presets/07_warband_seventh_veil.jpg", "seed": 477707},
+    {"shortLabel": "08", "title": "SAPTARATNA MOSAIC BUDDHA", "src": "./presets/08_saptaratna_mosaic_buddha.jpg", "seed": 588808}
+  ]
+}</script>
+<script>
+(function() {
+  "use strict";
+
+  const CONFIG = JSON.parse(document.getElementById("puzzle-config").textContent);
+  const canvas = document.getElementById("gl-canvas");
+  const gl = canvas.getContext("webgl2", { antialias: true, alpha: false, depth: true, preserveDrawingBuffer: true, powerPreference: "high-performance" })
+          || canvas.getContext("webgl",  { antialias: true, alpha: false, depth: true, preserveDrawingBuffer: true });
+
+  if (!gl) {
+    canvas.insertAdjacentHTML("afterend", "<p style='padding:80px 24px;color:#fde047'>WebGL is required for 3D Spatial Assemblage rendering.</p>");
+    return;
+  }
+
+  function mulberry32(seed) {
+    let a = seed >>> 0;
+    return function() {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function v3Sub(a, b) { return [a[0]-b[0], a[1]-b[1], a[2]-b[2]]; }
+  function v3Add(a, b) { return [a[0]+b[0], a[1]+b[1], a[2]+b[2]]; }
+  function v3Scale(a, s) { return [a[0]*s, a[1]*s, a[2]*s]; }
+  function v3Dot(a, b) { return a[0]*b[0] + a[1]*b[1] + a[2]*b[2]; }
+  function v3Cross(a, b) {
+    return [a[1]*b[2] - a[2]*b[1], a[2]*b[0] - a[0]*b[2], a[0]*b[1] - a[1]*b[0]];
+  }
+  function v3Norm(a) {
+    const l = Math.hypot(a[0], a[1], a[2]) || 1;
+    return [a[0]/l, a[1]/l, a[2]/l];
+  }
+
+  const RADIUS = 3.4;
+  const BASE_FOV_RAD = 38 * Math.PI / 180;
+
+  function sphericalPos(theta, phi, rad) {
+    const r = rad !== undefined ? rad : RADIUS;
+    const cp = Math.cos(phi);
+    return [r * cp * Math.sin(theta), r * Math.sin(phi), r * cp * Math.cos(theta)];
+  }
+
+  function cameraBasis(theta, phi, rad) {
+    const eye = sphericalPos(theta, phi, rad);
+    const fwd = v3Norm([-eye[0], -eye[1], -eye[2]]);
+    const right = v3Norm(v3Cross(fwd, [0, 1, 0]));
+    const up = v3Cross(right, fwd);
+    return { eye, right, up, fwd };
+  }
+
+  function makeLookAt(eye, right, up, fwd) {
+    return new Float32Array([
+      right[0], up[0], -fwd[0], 0,
+      right[1], up[1], -fwd[1], 0,
+      right[2], up[2], -fwd[2], 0,
+      -v3Dot(right, eye), -v3Dot(up, eye), v3Dot(fwd, eye), 1
+    ]);
+  }
+
+  function makePerspective(fovY, aspect, near, far) {
+    const f = 1.0 / Math.tan(fovY * 0.5);
+    const nf = 1.0 / (near - far);
+    return new Float32Array([
+      f / aspect, 0, 0, 0,
+      0, f, 0, 0,
+      0, 0, (far + near) * nf, -1,
+      0, 0, (2 * far * near) * nf, 0
+    ]);
+  }
+
+  function compileShader(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+    return s;
+  }
+
+  const prog = gl.createProgram();
+  gl.attachShader(prog, compileShader(gl.VERTEX_SHADER, `
+    precision highp float;
+    attribute vec3 aPos;
+    attribute vec3 aNormal;
+    attribute vec3 aUvQ;
+    attribute vec3 aBary;
+    attribute float aFaceKind;
+    uniform mat4 uProj;
+    uniform mat4 uView;
+    varying vec3 vNormal;
+    varying vec3 vWorldPos;
+    varying vec3 vUvQ;
+    varying vec3 vBary;
+    varying float vFaceKind;
+    void main() {
+      vNormal = aNormal;
+      vWorldPos = aPos;
+      vUvQ = aUvQ;
+      vBary = aBary;
+      vFaceKind = aFaceKind;
+      gl_Position = uProj * uView * vec4(aPos, 1.0);
+    }
+  `));
+  gl.attachShader(prog, compileShader(gl.FRAGMENT_SHADER, `
+    precision highp float;
+    varying vec3 vNormal;
+    varying vec3 vWorldPos;
+    varying vec3 vUvQ;
+    varying vec3 vBary;
+    varying float vFaceKind;
+    uniform sampler2D uTex;
+    uniform vec3 uEyePos;
+    uniform float uLockBlend;
+    uniform float uFlash;
+    void main() {
+      vec3 V = normalize(uEyePos - vWorldPos);
+      vec3 N = normalize(vNormal);
+      if (!gl_FrontFacing) N = -N;
+      vec3 rimTint = vec3(0.90, 0.73, 0.36);
+      if (vFaceKind > 0.5) {
+        vec3 L = normalize(vec3(0.5, 0.8, 0.6));
+        float ndl = max(dot(N, L), 0.24);
+        float spec = pow(max(dot(reflect(-L, N), V), 0.0), 30.0);
+        gl_FragColor = vec4(rimTint * (0.42 + 0.58 * ndl) + vec3(1.0, 0.96, 0.86) * spec * 0.80, 1.0);
+        return;
+      }
+      vec2 uv = clamp(vUvQ.xy / max(vUvQ.z, 1e-5), 0.0, 1.0);
+      vec3 imgCol = texture2D(uTex, uv).rgb;
+      if (!gl_FrontFacing || vFaceKind < -0.5) {
+        vec3 L = normalize(vec3(-0.4, 0.75, 0.55));
+        float fres = pow(1.0 - max(dot(N, V), 0.0), 2.3);
+        float spec = pow(max(dot(reflect(-L, N), V), 0.0), 24.0);
+        float minB = min(min(vBary.x, vBary.y), vBary.z);
+        float rimB = 1.0 - smoothstep(0.0, 0.06, minB);
+        gl_FragColor = vec4(imgCol * 0.64 + rimTint * (fres * 0.34 + spec * 0.40 + rimB * 0.58), 1.0);
+        return;
+      }
+      float freeAmt = 1.0 - smoothstep(0.32, 0.994, uLockBlend);
+      float minBary = min(min(vBary.x, vBary.y), vBary.z);
+      float edgeMask = 1.0 - smoothstep(0.0, 0.044, minBary);
+      vec3 L1 = normalize(vec3(0.45, 0.76, 0.52));
+      vec3 H1 = normalize(L1 + V);
+      float glassSpec = pow(max(dot(N, H1), 0.0), 34.0) * freeAmt * 0.44;
+      float fresnel = pow(1.0 - max(dot(N, V), 0.0), 3.2) * freeAmt * 0.28;
+      vec3 col = imgCol + (rimTint * fresnel) + vec3(1.0, 0.97, 0.90) * glassSpec;
+      col = mix(col, rimTint * 1.14, edgeMask * freeAmt * 0.72);
+      float sweep = exp(-pow((uv.x * 0.8 + uv.y * 0.5) - uFlash * 1.5, 2.0) * 28.0) * step(0.001, uFlash) * step(uFlash, 0.999);
+      col += (vec3(1.0, 0.88, 0.54) * 0.46 + vec3(0.38, 0.90, 0.96) * 0.18) * sweep;
+      gl_FragColor = vec4(col, 1.0);
+    }
+  `));
+  gl.linkProgram(prog);
+
+  const loc = {
+    aPos: gl.getAttribLocation(prog, "aPos"),
+    aNormal: gl.getAttribLocation(prog, "aNormal"),
+    aUvQ: gl.getAttribLocation(prog, "aUvQ"),
+    aBary: gl.getAttribLocation(prog, "aBary"),
+    aFaceKind: gl.getAttribLocation(prog, "aFaceKind"),
+    uProj: gl.getUniformLocation(prog, "uProj"),
+    uView: gl.getUniformLocation(prog, "uView"),
+    uTex: gl.getUniformLocation(prog, "uTex"),
+    uEyePos: gl.getUniformLocation(prog, "uEyePos"),
+    uLockBlend: gl.getUniformLocation(prog, "uLockBlend"),
+    uFlash: gl.getUniformLocation(prog, "uFlash")
+  };
+
+  // Ambient Sanctuary Dust Stars
+  const starProg = gl.createProgram();
+  gl.attachShader(starProg, compileShader(gl.VERTEX_SHADER, `
+    precision highp float;
+    attribute vec3 aStarPos;
+    attribute float aStarSize;
+    uniform mat4 uProj;
+    uniform mat4 uView;
+    varying float vAlpha;
+    void main() {
+      vAlpha = clamp(aStarSize / 3.0, 0.25, 0.90);
+      gl_Position = uProj * uView * vec4(aStarPos, 1.0);
+      gl_PointSize = aStarSize;
+    }
+  `));
+  gl.attachShader(starProg, compileShader(gl.FRAGMENT_SHADER, `
+    precision highp float;
+    varying float vAlpha;
+    void main() {
+      vec2 d = gl_PointCoord - vec2(0.5);
+      float r = dot(d, d);
+      if (r > 0.25) discard;
+      gl_FragColor = vec4(0.92, 0.78, 0.48, (1.0 - r * 4.0) * vAlpha * 0.52);
+    }
+  `));
+  gl.linkProgram(starProg);
+  const starLoc = {
+    aStarPos: gl.getAttribLocation(starProg, "aStarPos"),
+    aStarSize: gl.getAttribLocation(starProg, "aStarSize"),
+    uProj: gl.getUniformLocation(starProg, "uProj"),
+    uView: gl.getUniformLocation(starProg, "uView")
+  };
+  const starBuf = gl.createBuffer();
+  const starCount = 380;
+  {
+    const rng = mulberry32(900999);
+    const sData = new Float32Array(starCount * 4);
+    for (let i = 0; i < starCount; i++) {
+      const th = rng() * Math.PI * 2;
+      const ph = (rng() - 0.5) * Math.PI * 0.92;
+      const rad = 4.2 + rng() * 6.0;
+      sData[i*4+0] = rad * Math.cos(ph) * Math.sin(th);
+      sData[i*4+1] = rad * Math.sin(ph);
+      sData[i*4+2] = rad * Math.cos(ph) * Math.cos(th);
+      sData[i*4+3] = 1.4 + rng() * 2.4;
+    }
+    gl.bindBuffer(gl.ARRAY_BUFFER, starBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, sData, gl.STATIC_DRAW);
+  }
+
+  let audioCtx = null;
+  function playLockChord(coherence, isSolve) {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      const now = audioCtx.currentTime;
+      const freqs = isSolve ? [293.66, 440.0, 554.37, 880.0, 1174.66] : [220 + coherence * 330];
+      freqs.forEach((f, idx) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(f, now + idx * 0.045);
+        const peak = isSolve ? 0.05 / (1 + idx * 0.35) : 0.016;
+        const dur = isSolve ? 1.4 : 0.14;
+        gain.gain.setValueAtTime(0.0001, now + idx * 0.045);
+        gain.gain.exponentialRampToValueAtTime(peak, now + idx * 0.045 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.045 + dur);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(now + idx * 0.045); osc.stop(now + idx * 0.045 + dur + 0.02);
+      });
+    } catch (_) {}
+  }
+
+  let vbo = gl.createBuffer();
+  let vertexCount = 0;
+  let shardCount = 0;
+  let glTex = gl.createTexture();
+  let imgAspect = 16 / 9;
+  let currentImageSrc = "";
+  let currentTitle = "";
+
+  let solTheta = 0.62, solPhi = 0.28;
+  let camTheta = -1.35, camPhi = -0.46, camRad = RADIUS;
+  let targetTheta = -1.35, targetPhi = -0.46;
+
+  let isSolved = false;
+  let solveFlash = 0.0;
+  let startTimeMs = performance.now();
+  let lastPingBucket = -1;
+
+  // Live 4-Act Spatial Assemblage Reveal Sweep State
+  let sweepActive = false;
+  let sweepStartMs = 0;
+  const SWEEP_DURATION_S = 11.5;
+  const SWEEP_LOCK_S = 9.0;
+  let activeRecorder = null;
+
+  function smootherstep(a, b, x) {
+    const u = Math.max(0.0, Math.min(1.0, (x - a) / Math.max(1e-6, b - a)));
+    return u * u * u * (u * (u * 6.0 - 15.0) + 10.0);
+  }
+
+  function buildAnamorphicMesh(nx, ny, seed) {
+    const rng = mulberry32(seed);
+    solTheta = (rng() * 2 - 1) * 2.2;
+    solPhi = (rng() * 2 - 1) * 0.56;
+
+    const offsetDir = rng() > 0.5 ? 1 : -1;
+    camTheta = solTheta + offsetDir * (0.90 + rng() * 0.36);
+    camPhi = Math.max(-0.95, Math.min(0.95, solPhi + (rng() > 0.5 ? 1 : -1) * (0.38 + rng() * 0.22)));
+    camRad = RADIUS;
+    targetTheta = camTheta;
+    targetPhi = camPhi;
+
+    isSolved = false;
+    sweepActive = false;
+    solveFlash = 0.0;
+    startTimeMs = performance.now();
+    lastPingBucket = -1;
+    document.getElementById("solved-banner").classList.remove("visible");
+    document.getElementById("reticle").classList.remove("locked");
+    document.getElementById("btn-sweep").classList.remove("plaque-active");
+
+    const basis = cameraBasis(solTheta, solPhi, RADIUS);
+    const C = basis.eye, R = basis.right, U = basis.up, F = basis.fwd;
+
+    const refHalfH = 0.76 * RADIUS * Math.tan(BASE_FOV_RAD * 0.5);
+    let quadH = refHalfH;
+    let quadW = quadH * imgAspect;
+    const maxW = refHalfH * 1.46;
+    if (quadW > maxW) {
+      const sc = maxW / quadW;
+      quadW *= sc; quadH *= sc;
+    }
+
+    const impactU = 0.32 + rng() * 0.36;
+    const impactV = 0.32 + rng() * 0.36;
+    const gridU = new Float32Array((nx + 1) * (ny + 1));
+    const gridV = new Float32Array((nx + 1) * (ny + 1));
+
+    for (let iy = 0; iy <= ny; iy++) {
+      for (let ix = 0; ix <= nx; ix++) {
+        let u = ix / nx, v = iy / ny;
+        if (ix > 0 && ix < nx) {
+          u += ((rng() - 0.5) * 0.68 + Math.sin((u - impactU) * 19.0 + (v - impactV) * 13.0) * 0.11) / nx;
+        }
+        if (iy > 0 && iy < ny) {
+          v += ((rng() - 0.5) * 0.68 + Math.cos((u - impactU) * 15.0 - (v - impactV) * 17.0) * 0.11) / ny;
+        }
+        gridU[iy * (nx + 1) + ix] = u;
+        gridV[iy * (nx + 1) + ix] = v;
+      }
+    }
+
+    shardCount = nx * ny * 2;
+    const STRIDE = 13;
+    const data = new Float32Array(shardCount * 8 * 3 * STRIDE);
+    let ptr = 0;
+
+    function pushVert(p, n, uvq, bary, kind) {
+      data[ptr++] = p[0]; data[ptr++] = p[1]; data[ptr++] = p[2];
+      data[ptr++] = n[0]; data[ptr++] = n[1]; data[ptr++] = n[2];
+      data[ptr++] = uvq[0]; data[ptr++] = uvq[1]; data[ptr++] = uvq[2];
+      data[ptr++] = bary[0]; data[ptr++] = bary[1]; data[ptr++] = bary[2];
+      data[ptr++] = kind;
+    }
+
+    function rayForUV(u, v) {
+      const xk = (2.0 * u - 1.0) * quadW;
+      const yk = (1.0 - 2.0 * v) * quadH;
+      return [
+        RADIUS * F[0] + xk * R[0] + yk * U[0],
+        RADIUS * F[1] + xk * R[1] + yk * U[1],
+        RADIUS * F[2] + xk * R[2] + yk * U[2]
+      ];
+    }
+
+    const B0 = [1, 0, 0], B1 = [0, 1, 0], B2 = [0, 0, 1];
+
+    function emitShard(u0, v0, u1, v1, u2, v2) {
+      const uc = (u0 + u1 + u2) / 3.0, vc = (v0 + v1 + v2) / 3.0;
+      const rc = rayForUV(uc, vc);
+      const lam = 0.44 + rng() * 1.12;
+      const tx = (rng() - 0.5) * 0.70, ty = (rng() - 0.5) * 0.70;
+      const planeN = v3Norm([
+        -F[0] + tx * R[0] + ty * U[0],
+        -F[1] + tx * R[1] + ty * U[1],
+        -F[2] + tx * R[2] + ty * U[2]
+      ]);
+
+      const num = lam * v3Dot(rc, planeN);
+      const r0 = rayForUV(u0, v0), r1 = rayForUV(u1, v1), r2 = rayForUV(u2, v2);
+      const t0 = num / v3Dot(r0, planeN), t1 = num / v3Dot(r1, planeN), t2 = num / v3Dot(r2, planeN);
+
+      const P0 = v3Add(C, v3Scale(r0, t0)), P1 = v3Add(C, v3Scale(r1, t1)), P2 = v3Add(C, v3Scale(r2, t2));
+      const thickScale = 1.0018;
+      const Q0 = v3Add(C, v3Scale(r0, t0 * thickScale)), Q1 = v3Add(C, v3Scale(r1, t1 * thickScale)), Q2 = v3Add(C, v3Scale(r2, t2 * thickScale));
+
+      let fn = v3Norm(v3Cross(v3Sub(P1, P0), v3Sub(P2, P0)));
+      if (v3Dot(fn, F) > 0) fn = v3Scale(fn, -1);
+      const bn = v3Scale(fn, -1);
+
+      const uvq0 = [u0 * t0, v0 * t0, t0], uvq1 = [u1 * t1, v1 * t1, t1], uvq2 = [u2 * t2, v2 * t2, t2];
+      pushVert(P0, fn, uvq0, B0, 0.0); pushVert(P1, fn, uvq1, B1, 0.0); pushVert(P2, fn, uvq2, B2, 0.0);
+      pushVert(Q0, bn, uvq0, B0, -1.0); pushVert(Q2, bn, uvq2, B2, -1.0); pushVert(Q1, bn, uvq1, B1, -1.0);
+
+      const zeroUv = [0, 0, 1];
+      const edges = [[P0, P1, Q1, Q0], [P1, P2, Q2, Q1], [P2, P0, Q0, Q2]];
+      for (let e = 0; e < 3; e++) {
+        const [a, b, c, d] = edges[e];
+        const en = v3Norm(v3Cross(v3Sub(b, a), v3Sub(d, a)));
+        pushVert(a, en, zeroUv, B0, 1.0); pushVert(b, en, zeroUv, B1, 1.0); pushVert(c, en, zeroUv, B2, 1.0);
+        pushVert(a, en, zeroUv, B0, 1.0); pushVert(c, en, zeroUv, B2, 1.0); pushVert(d, en, zeroUv, B1, 1.0);
+      }
+    }
+
+    for (let iy = 0; iy < ny; iy++) {
+      for (let ix = 0; ix < nx; ix++) {
+        const i00 = iy * (nx + 1) + ix, i10 = i00 + 1, i01 = i00 + (nx + 1), i11 = i01 + 1;
+        if (((ix + iy) & 1) === 0) {
+          emitShard(gridU[i00], gridV[i00], gridU[i01], gridV[i01], gridU[i11], gridV[i11]);
+          emitShard(gridU[i00], gridV[i00], gridU[i11], gridV[i11], gridU[i10], gridV[i10]);
+        } else {
+          emitShard(gridU[i00], gridV[i00], gridU[i01], gridV[i01], gridU[i10], gridV[i10]);
+          emitShard(gridU[i10], gridV[i10], gridU[i01], gridV[i01], gridU[i11], gridV[i11]);
+        }
+      }
+    }
+
+    vertexCount = ptr / STRIDE;
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+    gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+  }
+
+  function loadPuzzleImage(src, title, seedOverride) {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = function() {
+      imgAspect = (img.naturalWidth || 16) / (img.naturalHeight || 9);
+      currentImageSrc = src;
+      currentTitle = title || "CUSTOM SPATIAL ASSEMBLAGE";
+      document.getElementById("puzzle-title").textContent = currentTitle;
+
+      gl.bindTexture(gl.TEXTURE_2D, glTex);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+      const seed = seedOverride !== undefined ? seedOverride : ((Date.now() & 0xffffff) ^ 0x5f3759df);
+      buildAnamorphicMesh(34, 16, seed);
+    };
+    img.src = src;
+  }
+
+  const presetStrip = document.getElementById("preset-strip");
+  if (CONFIG.mode === "client_single") {
+    document.getElementById("upload-label").style.display = "none";
+    document.getElementById("btn-export").style.display = "none";
+    document.getElementById("btn-commission").style.display = "none";
+  }
+  (CONFIG.presets || []).forEach((p, idx) => {
+    if (CONFIG.presets.length <= 1) return;
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "vorath-plaque preset-btn" + (idx === 0 ? " plaque-active" : "");
+    b.textContent = p.shortLabel || ("0" + (idx + 1));
+    b.title = p.title;
+    b.addEventListener("click", () => {
+      Array.from(presetStrip.children).forEach((el, j) => el.classList.toggle("plaque-active", j === idx));
+      loadPuzzleImage(p.src, p.title, p.seed || (1001 + idx * 7919));
+    });
+    presetStrip.appendChild(b);
+  });
+
+  function wrapAngle(a) {
+    while (a > Math.PI) a -= Math.PI * 2;
+    while (a < -Math.PI) a += Math.PI * 2;
+    return a;
+  }
+
+  function angularErrorDeg(th, ph, rad) {
+    const d1 = v3Norm(sphericalPos(th, ph, RADIUS));
+    const d2 = v3Norm(sphericalPos(solTheta, solPhi, RADIUS));
+    const dot = Math.max(-1.0, Math.min(1.0, v3Dot(d1, d2)));
+    return Math.acos(dot) * (180.0 / Math.PI) + Math.abs((rad || RADIUS) - RADIUS) * 8.0;
+  }
+
+  function triggerSolveLock() {
+    if (isSolved) return;
+    isSolved = true;
+    targetTheta = camTheta + wrapAngle(solTheta - camTheta);
+    targetPhi = solPhi;
+    camRad = RADIUS;
+    solveFlash = 0.002;
+    playLockChord(1.0, true);
+    const secs = ((performance.now() - startTimeMs) / 1000).toFixed(1);
+    document.getElementById("solved-title").textContent = currentTitle;
+    document.getElementById("solved-stats").textContent =
+      shardCount.toLocaleString() + " 3D shards fused · " + secs + "s";
+    document.getElementById("solved-banner").classList.add("visible");
+    document.getElementById("reticle").classList.add("locked");
+  }
+
+  // Pointer / Touch Orbit
+  let dragging = false, lastX = 0, lastY = 0;
+  canvas.addEventListener("pointerdown", (e) => {
+    dragging = true; lastX = e.clientX; lastY = e.clientY;
+    sweepActive = false;
+    document.getElementById("btn-sweep").classList.remove("plaque-active");
+    canvas.setPointerCapture(e.pointerId);
+    if (isSolved) {
+      isSolved = false;
+      document.getElementById("solved-banner").classList.remove("visible");
+      document.getElementById("reticle").classList.remove("locked");
+    }
+  });
+  canvas.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    const dx = e.clientX - lastX, dy = e.clientY - lastY;
+    lastX = e.clientX; lastY = e.clientY;
+    const curErr = angularErrorDeg(targetTheta, targetPhi, camRad);
+    const fineScale = curErr < 14.0 ? (0.38 + 0.62 * (curErr / 14.0)) : 1.0;
+    const sens = 0.0052 * fineScale;
+    targetTheta -= dx * sens;
+    targetPhi = Math.max(-1.15, Math.min(1.15, targetPhi + dy * sens));
+  });
+  function endDrag() { dragging = false; }
+  canvas.addEventListener("pointerup", endDrag);
+  canvas.addEventListener("pointercancel", endDrag);
+
+  window.addEventListener("keydown", (e) => {
+    if (document.getElementById("service-modal").classList.contains("open")) {
+      if (e.key === "Escape") document.getElementById("service-modal").classList.remove("open");
+      return;
+    }
+    const step = e.shiftKey ? 0.008 : 0.032;
+    if (e.key === "ArrowLeft" || e.key === "a") { sweepActive = false; isSolved = false; targetTheta += step; }
+    else if (e.key === "ArrowRight" || e.key === "d") { sweepActive = false; isSolved = false; targetTheta -= step; }
+    else if (e.key === "ArrowUp" || e.key === "w") { sweepActive = false; isSolved = false; targetPhi = Math.min(1.15, targetPhi + step); }
+    else if (e.key === "ArrowDown" || e.key === "s") { sweepActive = false; isSolved = false; targetPhi = Math.max(-1.15, targetPhi - step); }
+  });
+
+  // Start 4-Act Spatial Assemblage Reveal Sweep
+  function startRevealSweep() {
+    isSolved = false;
+    solveFlash = 0.0;
+    document.getElementById("solved-banner").classList.remove("visible");
+    document.getElementById("reticle").classList.remove("locked");
+    sweepActive = true;
+    sweepStartMs = performance.now();
+    document.getElementById("btn-sweep").classList.add("plaque-active");
+  }
+
+  document.getElementById("btn-sweep").addEventListener("click", startRevealSweep);
+
+  document.getElementById("btn-solve").addEventListener("click", () => {
+    sweepActive = false;
+    document.getElementById("btn-sweep").classList.remove("plaque-active");
+    targetTheta = camTheta + wrapAngle(solTheta - camTheta);
+    targetPhi = solPhi;
+    camRad = RADIUS;
+    triggerSolveLock();
+  });
+
+  document.getElementById("btn-reshatter").addEventListener("click", () => {
+    buildAnamorphicMesh(34, 16, (Date.now() & 0xffffff) ^ 0x9e3779b9);
+  });
+
+  // Record 12s Spatial Assemblage Reveal Video (.webm) right in Browser
+  document.getElementById("btn-record").addEventListener("click", () => {
+    const btn = document.getElementById("btn-record");
+    if (activeRecorder || typeof MediaRecorder === "undefined" || !canvas.captureStream) return;
+    startRevealSweep();
+    const stream = canvas.captureStream(30);
+    const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9") ? "video/webm;codecs=vp9" : "video/webm";
+    const chunks = [];
+    const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8000000 });
+    activeRecorder = rec;
+    btn.textContent = "Rec 12s...";
+    btn.classList.add("plaque-active");
+    rec.ondataavailable = (ev) => { if (ev.data && ev.data.size > 0) chunks.push(ev.data); };
+    rec.onstop = () => {
+      activeRecorder = null;
+      btn.textContent = "Record Video";
+      btn.classList.remove("plaque-active");
+      const blob = new Blob(chunks, { type: "video/webm" });
+      const a = document.createElement("a");
+      const slug = (currentTitle || "spatial_assemblage").toLowerCase().replace(/[^a-z0-9]+/g, "_");
+      a.href = URL.createObjectURL(blob);
+      a.download = "NorthStar_Spatial_Assemblage_Reveal_" + slug + ".webm";
+      a.click();
+    };
+    rec.start();
+    setTimeout(() => { if (rec.state === "recording") rec.stop(); }, (SWEEP_DURATION_S * 1000) | 0);
+  });
+
+  // Upload Custom Image
+  function ingestFile(file) {
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const tmp = new Image();
+      tmp.onload = () => {
+        const maxDim = 1920;
+        let w = tmp.naturalWidth, h = tmp.naturalHeight;
+        if (w > maxDim || h > maxDim) {
+          const r = Math.min(maxDim / w, maxDim / h);
+          w = Math.round(w * r); h = Math.round(h * r);
+        }
+        const off = document.createElement("canvas");
+        off.width = w; off.height = h;
+        off.getContext("2d").drawImage(tmp, 0, 0, w, h);
+        const cleanDataUrl = off.toDataURL("image/jpeg", 0.90);
+        const cleanName = file.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").toUpperCase();
+        Array.from(presetStrip.children).forEach((el) => el.classList.remove("plaque-active"));
+        loadPuzzleImage(cleanDataUrl, cleanName);
+      };
+      tmp.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+  document.getElementById("file-input").addEventListener("change", (e) => {
+    if (e.target.files && e.target.files[0]) ingestFile(e.target.files[0]);
+  });
+
+  const dropVeil = document.getElementById("drop-veil");
+  window.addEventListener("dragover", (e) => { e.preventDefault(); dropVeil.classList.add("active"); });
+  window.addEventListener("dragleave", (e) => { if (e.target === dropVeil) dropVeil.classList.remove("active"); });
+  window.addEventListener("drop", (e) => {
+    e.preventDefault(); dropVeil.classList.remove("active");
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) ingestFile(e.dataTransfer.files[0]);
+  });
+
+  // Export Standalone Shareable HTML
+  document.getElementById("btn-export").addEventListener("click", () => {
+    if (!currentImageSrc) return;
+    const exportCfg = {
+      mode: "client_single",
+      presets: [{ shortLabel: "01", title: currentTitle, src: currentImageSrc, seed: (Date.now() & 0xffffff) }]
+    };
+    const rawDoc = document.documentElement.outerHTML;
+    const baked = rawDoc.replace(
+      /<script id="puzzle-config" type="application\/json">[\s\S]*?<\/script>/,
+      '<script id="puzzle-config" type="application/json">' + JSON.stringify(exportCfg) + '<\/script>'
+    );
+    const blob = new Blob(["<!DOCTYPE html>\n" + baked], { type: "text/html;charset=utf-8" });
+    const a = document.createElement("a");
+    const slug = (currentTitle || "shattered_puzzle").toLowerCase().replace(/[^a-z0-9]+/g, "_");
+    a.href = URL.createObjectURL(blob);
+    a.download = "NorthStar_3D_Shattered_Puzzle_" + slug + ".html";
+    a.click();
+  });
+
+  // Commission Modal
+  const modal = document.getElementById("service-modal");
+  document.getElementById("btn-commission").addEventListener("click", () => modal.classList.add("open"));
+  document.getElementById("btn-close-modal").addEventListener("click", () => modal.classList.remove("open"));
+  modal.addEventListener("click", (e) => { if (e.target === modal) modal.classList.remove("open"); });
+
+  window.__NSP_SHATTER_API__ = {
+    snapToSolutionInstant: function() {
+      sweepActive = false; camTheta = solTheta; camPhi = solPhi; camRad = RADIUS;
+      targetTheta = solTheta; targetPhi = solPhi; isSolved = true; solveFlash = 0.0;
+    },
+    getMetrics: function() {
+      return { shardCount, vertexCount, angularErrorDeg: angularErrorDeg(camTheta, camPhi, camRad), isSolved, title: currentTitle };
+    }
+  };
+
+  function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = Math.floor(window.innerWidth * dpr);
+    const h = Math.floor(window.innerHeight * dpr);
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  let lastFrame = performance.now();
+  function render(now) {
+    const dt = Math.min(0.05, (now - lastFrame) / 1000);
+    lastFrame = now;
+    resize();
+
+    if (sweepActive) {
+      const elapsed = (now - sweepStartMs) / 1000;
+      if (elapsed < SWEEP_LOCK_S) {
+        const p = elapsed / SWEEP_LOCK_S;
+        const lockEase = 1.0 - smootherstep(0.56, 1.0, p);
+        const dTh = (-1.18 * (1.0 - p) + 0.90 * Math.sin(p * Math.PI * 1.12)) * lockEase;
+        const dPh = (0.34 * Math.cos(p * Math.PI * 0.62) + 0.36 * Math.sin(p * Math.PI * 1.15)) * lockEase;
+        const flyOut = smootherstep(0.0, 0.36, p);
+        const radRaw = 2.05 * (1.0 - flyOut) + 3.62 * flyOut;
+        camTheta = solTheta + dTh;
+        camPhi = Math.max(-1.12, Math.min(1.12, solPhi + dPh));
+        camRad = RADIUS + (radRaw - RADIUS) * lockEase;
+        targetTheta = camTheta;
+        targetPhi = camPhi;
+      } else {
+        camTheta = solTheta;
+        camPhi = solPhi;
+        camRad = RADIUS;
+        targetTheta = solTheta;
+        targetPhi = solPhi;
+        if (!isSolved) triggerSolveLock();
+        if (elapsed >= SWEEP_DURATION_S) {
+          sweepActive = false;
+          document.getElementById("btn-sweep").classList.remove("plaque-active");
+        }
+      }
+    } else {
+      const damp = isSolved ? (1.0 - Math.exp(-12.0 * dt)) : (1.0 - Math.exp(-15.0 * dt));
+      camTheta += wrapAngle(targetTheta - camTheta) * damp;
+      camPhi += (targetPhi - camPhi) * damp;
+      camRad += (RADIUS - camRad) * damp;
+    }
+
+    const errDeg = angularErrorDeg(camTheta, camPhi, camRad);
+    const coherence = Math.max(0.0, Math.min(1.0, Math.pow(1.0 - Math.min(errDeg, 120.0) / 120.0, 2.2)));
+    const lockBlend = 1.0 - Math.min(1.0, errDeg / 2.6);
+
+    document.getElementById("coherence-pct").textContent = (coherence * 100).toFixed(1) + "%";
+    document.getElementById("coherence-bar").style.width = (coherence * 100).toFixed(1) + "%";
+
+    const ret = document.getElementById("reticle");
+    if (!isSolved && !sweepActive) {
+      ret.classList.toggle("hot", errDeg < 16.0);
+      const bucket = Math.floor(coherence * 10);
+      if (dragging && bucket >= 7 && bucket > lastPingBucket) {
+        lastPingBucket = bucket;
+        playLockChord(coherence, false);
+      }
+      if (!dragging && errDeg <= 2.35 && vertexCount > 0) {
+        triggerSolveLock();
+      }
+    }
+
+    if (solveFlash > 0.0) {
+      solveFlash += dt * 0.85;
+      if (solveFlash >= 1.0) solveFlash = 0.0;
+    }
+
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.clearColor(0.026, 0.018, 0.048, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.enable(gl.DEPTH_TEST);
+    gl.disable(gl.CULL_FACE);
+
+    const aspect = canvas.width / Math.max(1, canvas.height);
+    const tanBase = Math.tan(BASE_FOV_RAD * 0.5);
+    const adaptFov = 2.0 * Math.atan(tanBase / Math.min(1.0, aspect / 1.48));
+    const proj = makePerspective(adaptFov, aspect, 0.18, 24.0);
+    const basis = cameraBasis(camTheta, camPhi, camRad);
+    const view = makeLookAt(basis.eye, basis.right, basis.up, basis.fwd);
+
+    gl.useProgram(starProg);
+    gl.uniformMatrix4fv(starLoc.uProj, false, proj);
+    gl.uniformMatrix4fv(starLoc.uView, false, view);
+    gl.bindBuffer(gl.ARRAY_BUFFER, starBuf);
+    gl.enableVertexAttribArray(starLoc.aStarPos);
+    gl.vertexAttribPointer(starLoc.aStarPos, 3, gl.FLOAT, false, 16, 0);
+    gl.enableVertexAttribArray(starLoc.aStarSize);
+    gl.vertexAttribPointer(starLoc.aStarSize, 1, gl.FLOAT, false, 16, 12);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    gl.drawArrays(gl.POINTS, 0, starCount);
+    gl.disable(gl.BLEND);
+
+    if (vertexCount > 0) {
+      gl.useProgram(prog);
+      gl.uniformMatrix4fv(loc.uProj, false, proj);
+      gl.uniformMatrix4fv(loc.uView, false, view);
+      gl.uniform3fv(loc.uEyePos, basis.eye);
+      gl.uniform1f(loc.uLockBlend, Math.max(0.0, lockBlend));
+      gl.uniform1f(loc.uFlash, solveFlash);
+
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, glTex);
+      gl.uniform1i(loc.uTex, 0);
+
+      const B = 13 * 4;
+      gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+      gl.enableVertexAttribArray(loc.aPos); gl.vertexAttribPointer(loc.aPos, 3, gl.FLOAT, false, B, 0);
+      gl.enableVertexAttribArray(loc.aNormal); gl.vertexAttribPointer(loc.aNormal, 3, gl.FLOAT, false, B, 12);
+      gl.enableVertexAttribArray(loc.aUvQ); gl.vertexAttribPointer(loc.aUvQ, 3, gl.FLOAT, false, B, 24);
+      gl.enableVertexAttribArray(loc.aBary); gl.vertexAttribPointer(loc.aBary, 3, gl.FLOAT, false, B, 36);
+      gl.enableVertexAttribArray(loc.aFaceKind); gl.vertexAttribPointer(loc.aFaceKind, 1, gl.FLOAT, false, B, 48);
+      gl.drawArrays(gl.TRIANGLES, 0, vertexCount);
+    }
+
+    requestAnimationFrame(render);
+  }
+
+  if (CONFIG.presets && CONFIG.presets.length > 0) {
+    const p0 = CONFIG.presets[0];
+    loadPuzzleImage(p0.src, p0.title, p0.seed || 409101);
+  }
+  requestAnimationFrame(render);
+})();
+</script>
+</body>
+</html>

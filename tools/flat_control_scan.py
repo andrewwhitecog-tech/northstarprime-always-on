@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""flat_control_scan.py v02.7 (Grok): sibling of plaque_fit_scan.py.
+"""flat_control_scan.py v02.8 (Grok): sibling of plaque_fit_scan.py.
+v02.8 (AG 000330Z N1 on the v02.7 Windows seat): T-CLIP scrolls were animated on pages with scroll-behavior:smooth
+  (html, body or a scroller), so 2 rAFs later the box could still read CLIPPED (viewport).
+  S1 VISJS pins inline scroll-behavior:auto !important on html, body and every ancestor (saved), then scrolls with
+     behavior:"instant"; UNSCROLLJS restores scroll positions instantly, then each saved style attribute string verbatim (DOM pristine).
+  S2 the two page-level window.scrollTo(0,0) calls also use behavior:"instant" (pre-scan and --shots).
+  S3 --smooth-scroll-legacy reproduces v02.7 scrolling (for A/B only). S4 VERSION/--version v02.8.
 v02.7 (Grok PR #324 seat 215553Z: 4 new 1280 CHIP_EMPTY_FRAME rows were scanner false positives; census: 20,954 of 23,644 CHIP_FLAT rows were table cells):
   T1 T-CLIP visibility gate before every interior crop (default ON with the interior check; --no-tclip reproduces v02.6 byte-for-byte except version).
      The element is scrolled to centre (window and every scroll ancestor), then: vis_frac = share of its border box left after intersecting the
@@ -110,7 +116,7 @@ Exit: 1 if any FLAT or FLAT_LATENT (or visible FLAT only with --latent-ok), 0 if
 import argparse, asyncio, functools, http.server, json, os, re, socketserver, sys, threading
 from playwright.async_api import async_playwright
 
-VERSION = 'v02.7'
+VERSION = 'v02.8'
 SEL = 'a, button, [role=button], input[type=button], input[type=submit], input[type=reset], input[type=image], summary, select'
 INSEL = ('input[type=checkbox], input[type=radio], input[type=range], input[type=text], input[type=search], input[type=number], '
          'input[type=email], input[type=url], input[type=tel], input[type=password], input[type=file], input:not([type]), textarea')
@@ -618,6 +624,12 @@ async ([attr, idx]) => {
   const save = { x: scrollX, y: scrollY, sc: [] };
   for (let e = el.parentElement; e; e = e.parentElement) save.sc.push([e, e.scrollLeft, e.scrollTop]);
   window.__fcsScrollSave = save;
+  // v02.8 S1: pin scroll-behavior:auto on html, body and every ancestor so every scroll below lands at once
+  save.sb = [];
+  if (!window.__fcsLegacySmooth) {
+    const pin = new Set([document.documentElement, document.body]); for (let e = el.parentElement; e; e = e.parentElement) pin.add(e);
+    for (const e of pin) { if (!e || !e.style) continue; save.sb.push([e, e.getAttribute('style')]); e.style.setProperty('scroll-behavior', 'auto', 'important'); }
+  }
   // only user-scrollable ancestors (overflow auto|scroll) and the window move; overflow hidden/clip boxes are never scrolled (a reader cannot scroll them)
   for (let e = el.parentElement; e && e !== document.body && e !== document.documentElement; e = e.parentElement) {
     const c = getComputedStyle(e);
@@ -626,7 +638,8 @@ async ([attr, idx]) => {
     if (/(auto|scroll)/.test(c.overflowX)) e.scrollLeft += (r0.left + r0.width / 2) - (q.left + e.clientLeft + e.clientWidth / 2);
     if (/(auto|scroll)/.test(c.overflowY)) e.scrollTop += (r0.top + r0.height / 2) - (q.top + e.clientTop + e.clientHeight / 2);
   }
-  { const r0 = el.getBoundingClientRect(); window.scrollBy(r0.left + r0.width / 2 - innerWidth / 2, r0.top + r0.height / 2 - innerHeight / 2); }
+  { const r0 = el.getBoundingClientRect(), dx = r0.left + r0.width / 2 - innerWidth / 2, dy = r0.top + r0.height / 2 - innerHeight / 2;
+    if (window.__fcsLegacySmooth) window.scrollBy(dx, dy); else window.scrollBy({ left: dx, top: dy, behavior: 'instant' }); }
   await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
   const b = el.getBoundingClientRect(); const area = Math.max(1e-6, b.width * b.height);
   let x0 = Math.max(0, b.left), y0 = Math.max(0, b.top), x1 = Math.min(innerWidth, b.right), y1 = Math.min(innerHeight, b.bottom), clipBy = (x1 - x0) * (y1 - y0) < area - 0.5 ? 'viewport' : '';
@@ -650,7 +663,11 @@ async ([attr, idx]) => {
   return { vis_frac: Math.round(vis * 1000) / 1000, occluded: n ? Math.round(bad / n * 1000) / 1000 : 1, hit, clip_by: clipBy };
 }
 """
-UNSCROLLJS = """() => { const s = window.__fcsScrollSave; if (!s) return 0; for (const [e, l, t] of s.sc) { e.scrollLeft = l; e.scrollTop = t; } window.scrollTo(s.x, s.y); window.__fcsScrollSave = null; return 1; }"""
+TOPJS = "window.__fcsLegacySmooth ? window.scrollTo(0,0) : window.scrollTo({ left: 0, top: 0, behavior: 'instant' })"  # v02.8 S2
+UNSCROLLJS = """() => { const s = window.__fcsScrollSave; if (!s) return 0; for (const [e, l, t] of s.sc) { e.scrollLeft = l; e.scrollTop = t; }
+  if (window.__fcsLegacySmooth) window.scrollTo(s.x, s.y); else window.scrollTo({ left: s.x, top: s.y, behavior: 'instant' });
+  for (const [e, v] of (s.sb || [])) { if (v === null) e.removeAttribute('style'); else e.setAttribute('style', v); }  // exact attribute string back
+  window.__fcsScrollSave = null; return 1; }"""
 
 def tclip_verdict(v, tclip_min):
     """v02.7 T1: '' when the interior can be judged, else 'CLIPPED' or 'OCCLUDED'."""
@@ -803,10 +820,12 @@ async def run(a):
         kw = dict(args=list(CHROMIUM_ARGS))
         if a.chrome: kw['executable_path'] = a.chrome
         br = await p.chromium.launch(**kw)
+        if getattr(a, 'smooth_scroll_legacy', False): res['smooth_scroll_legacy'] = True  # v02.8 S3
         for path in a.page:
             url = (a.base_url.rstrip('/') + path) if a.base_url else f"http://127.0.0.1:{port}{path}"
             ctx = await br.new_context(viewport={"width": a.width, "height": a.height}, device_scale_factor=a.dpr, is_mobile=True, has_touch=True)
             pg = await ctx.new_page(); errs = []; status = None; chain = []; http_redirs = []
+            if getattr(a, 'smooth_scroll_legacy', False): await pg.add_init_script('window.__fcsLegacySmooth = true')  # v02.8 S3 (A/B only)
             pg.on("pageerror", lambda e, errs=errs: errs.append(str(e)[:160]))
             pg.on("framenavigated", lambda f, pg=pg, chain=chain: chain.append(f.url) if f == pg.main_frame else None)
             navreq = []
@@ -836,7 +855,7 @@ async def run(a):
                 await ctx.close(); continue
             try: await pg.evaluate("document.fonts && document.fonts.ready")
             except Exception: pass
-            await pg.evaluate("window.scrollTo(0,0)")
+            await pg.evaluate(TOPJS)
             try: pre_state = await pg.evaluate(DSTATE)
             except Exception as e: pre_state = None; errs.append('DSTATE ' + str(e)[:100])
             data = await pg.evaluate(JS, [SEL, a.cover, a.anc_max])
@@ -934,7 +953,7 @@ async def run(a):
             shot = None
             if a.shots:
                 os.makedirs(a.shots, exist_ok=True); shot = os.path.join(a.shots, slug + f"_vp{a.width}x{a.height}dpr{a.dpr:g}.png")
-                await pg.evaluate("window.scrollTo(0,0)"); await pg.wait_for_timeout(300); await pg.screenshot(path=shot)
+                await pg.evaluate(TOPJS); await pg.wait_for_timeout(300); await pg.screenshot(path=shot)
             res['pages'].append(dict(path=path, http_status=status, errors=errs, counts=cnt, ignored=data['ignored'], ignored_samples=data['ignoredSamples'], matched=data['total_matched'],
                                      doc=[data['docW'], data['docH']], rows=rows, contact_sheet=sheet_path, screenshot=shot,
                                      rendered=bool(status and status < 400), closed_details=data['closed_details'], latent_controls=data['latent_controls'], exclusive_details=data['exclusive_details'], details_restore=restore, crop_stats=crop_stats, **final, **inextra))
@@ -1027,6 +1046,7 @@ def main():
     ap.add_argument('--empty-content', type=float, default=0.005, help='v02.6: share of pixels differing from the median colour by > 24 below which an interior has no content (default 0.005)')
     ap.add_argument('--no-tclip', action='store_true', help='v02.7: skip the T-CLIP visibility gate and use the v02.6 crop paths (reproduces v02.6 output; only version differs)')
     ap.add_argument('--tclip-min', type=float, default=0.95, help='v02.7: visible share of the box below which an interior is CLIPPED (default 0.95)')
+    ap.add_argument('--smooth-scroll-legacy', action='store_true', help='v02.8: scroll like v02.7 (no scroll-behavior pin, no behavior:instant); A/B only')
     ap.add_argument('--table-as-chips', action='store_true', help='v02.7: count <td>/<th> boxes as chips again (v02.6 behaviour); default: TABLE_CELL_* rows, reported only')
     ap.add_argument('--base-url', help='v02.5: scan a live site at this base URL instead of serving --root')
     ap.add_argument('--version', action='version', version='flat_control_scan.py ' + VERSION)

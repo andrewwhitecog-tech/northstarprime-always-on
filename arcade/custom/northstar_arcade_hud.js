@@ -674,8 +674,8 @@
     .nshud-volume-wrap input[type="range"] {
       -webkit-appearance: none !important;
       appearance: none !important;
-      width: 52px !important;
-      height: 16px !important;
+      width: 58px !important;
+      height: 18px !important;
       background: none !important;
       border-style: solid !important;
       border-color: transparent !important;
@@ -685,19 +685,34 @@
       padding: 0 2px !important;
       cursor: pointer !important;
     }
+    .nshud-volume-wrap input[type="range"]::-webkit-slider-runnable-track {
+      -webkit-appearance: none !important;
+      appearance: none !important;
+      height: 8px !important;
+      background: url("/warband/art/vorath_cartouche_9slice.webp") center / 100% 100% no-repeat !important;
+      border: 0 !important;
+      border-radius: 0 !important;
+    }
+    .nshud-volume-wrap input[type="range"]::-moz-range-track {
+      height: 8px !important;
+      background: url("/warband/art/vorath_cartouche_9slice.webp") center / 100% 100% no-repeat !important;
+      border: 0 !important;
+      border-radius: 0 !important;
+    }
     .nshud-volume-wrap input[type="range"]::-webkit-slider-thumb {
       -webkit-appearance: none !important;
       appearance: none !important;
-      width: 12px !important;
-      height: 12px !important;
-      background: url("/warband/art/vorath_btn_primary.webp") center / 100% 100% no-repeat !important;
+      width: 16px !important;
+      height: 14px !important;
+      margin-top: -3px !important;
+      background: url("/warband/art/vorath_btn_active.webp") center / 100% 100% no-repeat !important;
       border: 0 !important;
       border-radius: 0 !important;
     }
     .nshud-volume-wrap input[type="range"]::-moz-range-thumb {
-      width: 12px !important;
-      height: 12px !important;
-      background: url("/warband/art/vorath_btn_primary.webp") center / 100% 100% no-repeat !important;
+      width: 16px !important;
+      height: 14px !important;
+      background: url("/warband/art/vorath_btn_active.webp") center / 100% 100% no-repeat !important;
       border: 0 !important;
       border-radius: 0 !important;
     }
@@ -756,10 +771,16 @@
   @media (forced-colors: active) {
     #northstar-arcade-hud,
     .nshud-score-pill,
+    .nshud-toast-pts,
+    .nshud-pause-hints kbd,
     .nshud-btn,
     .nshud-action-btn,
     .nshud-pause-card,
+    .nshud-leaderboard-card,
+    .nshud-achievements-card,
+    .nshud-achievement-toast,
     .nshud-stat-box,
+    .nshud-ach-badge-card,
     .nshud-volume-wrap input[type="range"] {
       border-image: none !important;
       background: ButtonFace !important;
@@ -767,6 +788,13 @@
       border: 1px solid ButtonText !important;
       appearance: auto !important;
       -webkit-appearance: auto !important;
+      text-shadow: none !important;
+      box-shadow: none !important;
+    }
+    .nshud-volume-wrap input[type="range"]::-webkit-slider-runnable-track,
+    .nshud-volume-wrap input[type="range"]::-webkit-slider-thumb {
+      background: ButtonFace !important;
+      border: 1px solid ButtonText !important;
     }
   }
 
@@ -842,22 +870,22 @@
         PAD <span id="nshud-gamepad-name">PAD</span>
       </div>
 
-      <button type="button" class="nshud-btn" id="nshud-pause-btn" title="Pause Game (Esc, P, or Start)">
+      <button type="button" class="nshud-btn" id="nshud-pause-btn" aria-label="Pause" title="Pause Game (Esc, P, or Start)">
         II <span>Pause</span>
       </button>
 
       <div class="nshud-volume-wrap">
-        <button type="button" class="nshud-btn" id="nshud-mute-btn" title="Toggle Mute (M)">
+        <button type="button" class="nshud-btn" id="nshud-mute-btn" aria-label="Toggle Mute" title="Toggle Mute (M)">
           ${state.isMuted || state.volume === 0 ? 'MUT' : 'SND'}
         </button>
-        <input type="range" id="nshud-vol-slider" min="0" max="1" step="0.05" value="${state.isMuted ? 0 : state.volume}" title="Master Audio Volume">
+        <input type="range" id="nshud-vol-slider" aria-label="Master Audio Volume" min="0" max="1" step="0.05" value="${state.isMuted ? 0 : state.volume}" title="Master Audio Volume">
       </div>
 
-      <button type="button" class="nshud-btn ${state.crtEnabled ? 'active' : ''}" id="nshud-crt-btn" title="Toggle CRT Scanlines">
+      <button type="button" class="nshud-btn ${state.crtEnabled ? 'active' : ''}" id="nshud-crt-btn" aria-label="Toggle CRT Scanlines" title="Toggle CRT Scanlines">
         ◫ <span>CRT</span>
       </button>
 
-      <button type="button" class="nshud-btn" id="nshud-fullscreen-btn" title="Toggle Fullscreen (F)">
+      <button type="button" class="nshud-btn" id="nshud-fullscreen-btn" aria-label="Toggle Fullscreen" title="Toggle Fullscreen (F)">
         ⛶
       </button>
     `;

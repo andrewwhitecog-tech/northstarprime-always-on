@@ -770,6 +770,30 @@
     }
   }
 
+  /* GROK-PR329-SEAT-FIX-PROPOSAL v01 (B1 gamepad badge, B2 bar footprint) */
+  #nshud-gamepad-badge[style*="display:none"],
+  #nshud-gamepad-badge[style*="display: none"] {
+    display: none !important;
+  }
+  @media (forced-colors: none) {
+    #northstar-arcade-hud {
+      flex-wrap: nowrap !important;
+      gap: 4px !important;
+    }
+    #northstar-arcade-hud .nshud-btn,
+    #northstar-arcade-hud .nshud-score-pill {
+      border-width: 4px 7px !important;
+      padding: 1px 5px !important;
+    }
+  }
+  @media (max-width: 600px) {
+    #northstar-arcade-hud .nshud-brand,
+    #northstar-arcade-hud .nshud-volume-wrap input[type="range"],
+    #nshud-fullscreen-btn {
+      display: none !important;
+    }
+  }
+
   `;
 
   function injectCSS() {

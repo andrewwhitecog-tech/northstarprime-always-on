@@ -615,6 +615,161 @@
       width: 40px;
     }
   }
+  /* NSP-VORATH-WAVE3J: Sculpted Vorath Cabinet HUD & Pause Modal */
+  @media (forced-colors: none) {
+    #northstar-arcade-hud {
+      background: none !important;
+      border-style: solid !important;
+      border-color: transparent !important;
+      border-radius: 0 !important;
+      border-width: 7px 14px !important;
+      border-image: url("/warband/art/vorath_obsidian_plate_v01.webp") 36 48 fill / 7px 14px stretch !important;
+      padding: 3px 8px !important;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.78) !important;
+      flex-wrap: wrap !important;
+      max-width: calc(100vw - 16px) !important;
+    }
+    .nshud-score-pill,
+    .nshud-toast-pts,
+    .nshud-pause-hints kbd {
+      display: inline-flex !important;
+      align-items: center !important;
+      background: none !important;
+      border-style: solid !important;
+      border-color: transparent !important;
+      border-radius: 0 !important;
+      border-width: 4px 9px !important;
+      border-image: url("/warband/art/vorath_stat_plaque_v01.webp") 18 36 fill / 4px 9px stretch !important;
+      padding: 2px 7px !important;
+      color: #fef3c7 !important;
+      text-shadow: 0 1px 2px #000 !important;
+      box-shadow: none !important;
+    }
+    .nshud-btn {
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      background: none !important;
+      border-style: solid !important;
+      border-color: transparent !important;
+      border-radius: 0 !important;
+      border-width: 5px 10px !important;
+      border-image: url("/warband/art/vorath_stat_plaque_v01.webp") 18 36 fill / 5px 10px stretch !important;
+      padding: 3px 8px !important;
+      color: #fef3c7 !important;
+      text-shadow: 0 1px 3px #000 !important;
+      box-shadow: none !important;
+    }
+    .nshud-btn.active {
+      border-width: 6px 12px !important;
+      border-image: url("/warband/art/vorath_btn_primary.webp") 44 66 fill / 6px 12px stretch !important;
+      padding: 3px 9px !important;
+      color: #fffdf5 !important;
+    }
+    .nshud-btn:hover {
+      border-image: url("/warband/art/vorath_btn_active.webp") 44 66 fill / 6px 12px stretch !important;
+      color: #ffffff !important;
+      filter: brightness(1.12) !important;
+    }
+    .nshud-volume-wrap input[type="range"] {
+      -webkit-appearance: none !important;
+      appearance: none !important;
+      width: 52px !important;
+      height: 16px !important;
+      background: none !important;
+      border-style: solid !important;
+      border-color: transparent !important;
+      border-radius: 0 !important;
+      border-width: 4px 8px !important;
+      border-image: url("/warband/art/vorath_stat_plaque_v01.webp") 18 36 fill / 4px 8px stretch !important;
+      padding: 0 2px !important;
+      cursor: pointer !important;
+    }
+    .nshud-volume-wrap input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none !important;
+      appearance: none !important;
+      width: 12px !important;
+      height: 12px !important;
+      background: url("/warband/art/vorath_btn_primary.webp") center / 100% 100% no-repeat !important;
+      border: 0 !important;
+      border-radius: 0 !important;
+    }
+    .nshud-volume-wrap input[type="range"]::-moz-range-thumb {
+      width: 12px !important;
+      height: 12px !important;
+      background: url("/warband/art/vorath_btn_primary.webp") center / 100% 100% no-repeat !important;
+      border: 0 !important;
+      border-radius: 0 !important;
+    }
+    .nshud-pause-card,
+    .nshud-leaderboard-card,
+    .nshud-achievements-card,
+    .nshud-achievement-toast {
+      background: none !important;
+      border-style: solid !important;
+      border-color: transparent !important;
+      border-radius: 0 !important;
+      border-width: 16px !important;
+      border-image: url("/warband/art/vorath_card_frame_v01.webp") 64 fill / 16px stretch !important;
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.85) !important;
+    }
+    .nshud-stat-box,
+    .nshud-ach-badge-card {
+      background: none !important;
+      border-style: solid !important;
+      border-color: transparent !important;
+      border-radius: 0 !important;
+      border-width: 8px 12px !important;
+      border-image: url("/warband/art/vorath_obsidian_plate_v01.webp") 36 48 fill / 8px 12px stretch !important;
+      box-shadow: none !important;
+    }
+    .nshud-action-btn {
+      background: none !important;
+      border-style: solid !important;
+      border-color: transparent !important;
+      border-radius: 0 !important;
+      border-width: 9px 18px !important;
+      border-image: url("/warband/art/vorath_btn_obsidian.webp") 44 66 fill / 9px 18px stretch !important;
+      padding: 8px 16px !important;
+      color: #fef3c7 !important;
+      text-shadow: 0 1px 3px #000 !important;
+      box-shadow: none !important;
+    }
+    .nshud-action-btn.nshud-btn-resume {
+      border-image: url("/warband/art/vorath_btn_primary.webp") 44 66 fill / 9px 18px stretch !important;
+      color: #fffdf5 !important;
+    }
+    .nshud-action-btn:hover {
+      border-image: url("/warband/art/vorath_btn_active.webp") 44 66 fill / 9px 18px stretch !important;
+      color: #ffffff !important;
+    }
+  }
+  @media (max-width: 600px) {
+    #nshud-pause-btn span,
+    #nshud-crt-btn span {
+      display: none !important;
+    }
+    .nshud-volume-wrap input[type="range"] {
+      width: 38px !important;
+    }
+  }
+  @media (forced-colors: active) {
+    #northstar-arcade-hud,
+    .nshud-score-pill,
+    .nshud-btn,
+    .nshud-action-btn,
+    .nshud-pause-card,
+    .nshud-stat-box,
+    .nshud-volume-wrap input[type="range"] {
+      border-image: none !important;
+      background: ButtonFace !important;
+      color: ButtonText !important;
+      border: 1px solid ButtonText !important;
+      appearance: auto !important;
+      -webkit-appearance: auto !important;
+    }
+  }
+
   `;
 
   function injectCSS() {

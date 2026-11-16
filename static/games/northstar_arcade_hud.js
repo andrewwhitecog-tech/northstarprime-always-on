@@ -770,7 +770,7 @@
     }
   }
 
-  /* GROK-PR329-SEAT-FIX-PROPOSAL v01 (B1 gamepad badge, B2 bar footprint) */
+  /* GROK-PR329-SEAT-FIX-PROPOSAL v01 (B1 gamepad badge, B2 bar footprint, B4 PFS slice well) */
   #nshud-gamepad-badge[style*="display:none"],
   #nshud-gamepad-badge[style*="display: none"] {
     display: none !important;
@@ -783,7 +783,8 @@
     #northstar-arcade-hud .nshud-btn,
     #northstar-arcade-hud .nshud-score-pill {
       border-width: 4px 7px !important;
-      padding: 1px 5px !important;
+      padding: 3px 6px !important;
+      line-height: 1.05 !important;
     }
   }
   @media (max-width: 600px) {
@@ -842,7 +843,7 @@
       </div>
 
       <button type="button" class="nshud-btn" id="nshud-pause-btn" title="Pause Game (Esc, P, or Start)">
-        ⏸ <span>Pause</span>
+        II <span>Pause</span>
       </button>
 
       <div class="nshud-volume-wrap">
@@ -904,7 +905,7 @@
 
         <div class="nshud-achievements-card">
           <div class="nshud-ach-header">
-            <span class="nshud-ach-title">★️ Cabinet Trophies</span>
+            <span class="nshud-ach-title">★ Cabinet Trophies</span>
             <span class="nshud-ach-tally" id="nshud-modal-ach-count">0 / 0 Unlocked (0 PTS)</span>
           </div>
           <div class="nshud-ach-grid" id="nshud-modal-ach-list">
@@ -1331,21 +1332,21 @@
       gameId: 'vorath_blade_tribunal',
       title: 'First Blood',
       desc: 'Strike down your first opponent in the Tribunal',
-      icon: '⚔️',
+      icon: '✦',
       points: 50
     },
     vbt_flawless_parry: {
       gameId: 'vorath_blade_tribunal',
       title: 'Flawless Parry',
       desc: 'Execute a frame-perfect blade parry against an enemy strike',
-      icon: '⛊️',
+      icon: '◈',
       points: 100
     },
     vbt_supersonic_execution: {
       gameId: 'vorath_blade_tribunal',
       title: 'Supersonic Execution',
       desc: 'Trigger and land a Counter Dash execution strike',
-      icon: '⚡',
+      icon: '★',
       points: 150
     },
     vbt_grand_champion: {
@@ -1412,7 +1413,7 @@
       gameId: 'vorath_pinball',
       title: 'Gravimetric Defiance',
       desc: 'Use dynamic cabinet nudge to rescue a draining ball',
-      icon: 'JOY️',
+      icon: 'JOY',
       points: 100
     },
 
@@ -1421,7 +1422,7 @@
       gameId: 'prism_drift',
       title: 'Apex Slider',
       desc: 'Sustain a continuous drift for over 3 seconds',
-      icon: 'CAR️',
+      icon: 'CAR',
       points: 75
     },
     pdr_overdrive_boost: {
@@ -1435,14 +1436,14 @@
       gameId: 'prism_drift',
       title: 'Sub-Minute Legend',
       desc: 'Complete an entire lap in under 60.00 seconds',
-      icon: '⏱️',
+      icon: '◎',
       points: 200
     },
     pdr_clean_race: {
       gameId: 'prism_drift',
       title: 'Ghost Driver',
       desc: 'Complete an entire lap without grazing any track barriers',
-      icon: '✨',
+      icon: '✦',
       points: 150
     },
 

@@ -581,7 +581,8 @@
     text-shadow: 0 1px 2px #000 !important;
     box-shadow: none !important;
   }
-  .status-pill {
+  .status-pill,
+  .blade-tab-index {
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -598,8 +599,66 @@
     text-shadow: 0 1px 2px #000 !important;
     box-shadow: none !important;
   }
+  button.btn-toggle,
+  .guide-item {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: none !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-radius: 0 !important;
+    border-width: 7px 14px !important;
+    border-image: url("/warband/art/vorath_btn_obsidian.webp") 44 66 fill / 7px 14px stretch !important;
+    padding: 5px 12px !important;
+    color: #fef3c7 !important;
+    text-shadow: 0 1px 3px #000 !important;
+    box-shadow: none !important;
+  }
+  button.btn-toggle:hover,
+  .guide-item:hover,
+  .guide-item.focused {
+    border-image-source: url("/warband/art/vorath_btn_active.webp") !important;
+    color: #ffffff !important;
+  }
+  #achievement-banner {
+    width: min(520px, calc(100vw - 16px)) !important;
+    height: auto !important;
+    min-height: 68px !important;
+    padding: 8px 18px !important;
+    background: none !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-radius: 0 !important;
+    border-width: 14px !important;
+    border-image: url("/warband/art/vorath_card_frame_v01.webp") 64 fill / 14px stretch !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.85) !important;
+  }
+  #achievement-banner .achieve-desc {
+    white-space: normal !important;
+    overflow: hidden !important;
+    line-height: 1.25 !important;
+  }
 }
-@media (max-width: 600px) {
+html, body {
+  overflow-x: hidden !important;
+  max-width: 100vw !important;
+}
+#guide-overlay:not(.open) {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+#guide-overlay.open {
+  visibility: visible !important;
+  max-width: calc(100vw - 16px) !important;
+}
+#achievement-banner:not(.show) {
+  visibility: hidden !important;
+}
+#achievement-banner.show {
+  visibility: visible !important;
+}
+@media (max-width: 860px) {
   header {
     height: auto !important;
     min-height: 58px !important;
@@ -612,13 +671,92 @@
     font-size: 11px !important;
     flex-wrap: wrap !important;
   }
+  .blade {
+    left: 8px !important;
+    right: 8px !important;
+    width: calc(100vw - 16px) !important;
+    margin-left: 0 !important;
+    top: 8px !important;
+    bottom: 8px !important;
+  }
+  .blade:not(.active-blade) {
+    visibility: hidden !important;
+    pointer-events: none !important;
+    transform: none !important;
+    opacity: 0 !important;
+  }
+  .blade-tab-header {
+    height: auto !important;
+    min-height: 48px !important;
+    padding: 8px 14px !important;
+    gap: 8px !important;
+  }
+  .blade-title {
+    font-size: 18px !important;
+  }
+  .blade-content {
+    padding: 12px !important;
+    gap: 12px !important;
+  }
+  .game-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+  .game-card {
+    padding: 10px !important;
+    gap: 10px !important;
+  }
+  .game-thumb {
+    width: 58px !important;
+    height: 74px !important;
+    flex-shrink: 0 !important;
+  }
+  .game-title {
+    font-size: 15px !important;
+  }
+  .setting-item,
+  .media-row {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+  #achievement-banner {
+    width: calc(100vw - 16px) !important;
+    max-width: 440px !important;
+    height: auto !important;
+    min-height: 58px !important;
+    padding: 6px 12px !important;
+    gap: 10px !important;
+  }
+  .achieve-desc {
+    white-space: normal !important;
+    font-size: 12px !important;
+    line-height: 1.25 !important;
+  }
+  footer {
+    height: auto !important;
+    padding: 6px 10px !important;
+    flex-wrap: wrap !important;
+    gap: 6px 10px !important;
+    justify-content: center !important;
+  }
+  .bumper-prompts {
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+  }
+  .action-buttons {
+    gap: 6px 12px !important;
+    font-size: 11px !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+  }
 }
 @media (forced-colors: active) {
   html body nav#nsp-related a.nsp-rel-plaque,
   html body nav#nsp-related a.nsp-rel-plaque.nsp-rel-teal,
   html body nav#nsp-related a.nsp-rel-plaque.nsp-rel-purple,
-  span.launch-badge, span.g-icon, .status-pill,
-  button.btn-bumper {
+  span.launch-badge, span.g-icon, .status-pill, .blade-tab-index,
+  button.btn-bumper, button.btn-toggle, .guide-item, #achievement-banner {
     border-image: none !important;
     background: ButtonFace !important;
     color: ButtonText !important;
@@ -1269,6 +1407,7 @@
   function updateBladesLayout() {
     blades.forEach((blade, idx) => {
       const diff = idx - currentBlade;
+      blade.classList.toggle('active-blade', diff === 0);
       if (diff === 0) {
         // Active Center Blade
         blade.style.transform = `translateX(0px) translateZ(0px) rotateY(0deg)`;

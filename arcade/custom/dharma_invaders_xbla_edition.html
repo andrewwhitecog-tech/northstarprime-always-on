@@ -587,10 +587,26 @@ function eraseEnemy(e){
   syncHud();
 }
 
+function tickEffects(dt){
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];
+    p.x+=p.vx*dt;p.y+=p.vy*dt;
+    p.vx*=0.97;p.vy*=0.97;
+    p.life-=dt;
+    if(p.life<=0)particles.splice(i,1);
+  }
+  for(let i=floatingTexts.length-1;i>=0;i--){
+    const ft=floatingTexts[i];
+    ft.y+=ft.vy;
+    ft.life-=dt*1.2;
+    if(ft.life<=0)floatingTexts.splice(i,1);
+  }
+}
+
 function update(dt){
   time+=dt;
   const pad=pollGamepad();
-  if(state!=='playing')return;
+  if(state!=='playing'){tickEffects(dt);return;}
 
   if(freezeFrames>0){freezeFrames--;return;}
 
@@ -751,22 +767,7 @@ function update(dt){
     if(d.y>H||d.life<=0)inkDrops.splice(i,1);
   }
 
-  // Particles
-  for(let i=particles.length-1;i>=0;i--){
-    const p=particles[i];
-    p.x+=p.vx*dt;p.y+=p.vy*dt;
-    p.vx*=0.97;p.vy*=0.97;
-    p.life-=dt;
-    if(p.life<=0)particles.splice(i,1);
-  }
-
-  // Floating text
-  for(let i=floatingTexts.length-1;i>=0;i--){
-    const ft=floatingTexts[i];
-    ft.y+=ft.vy;
-    ft.life-=dt*1.2;
-    if(ft.life<=0)floatingTexts.splice(i,1);
-  }
+  tickEffects(dt);
 }
 
 function draw(){

@@ -6,8 +6,8 @@ Andrew's computer. The homepage is a lightweight guest entrance with original st
 clear listening, viewing and workshop routes. Links that still need server-side
 behavior go to app.northstarprime.net, the verified Render service.
 
-The /idc-programming/ route contains the complete Season One catalogue, nine
-verified YouTube players, direct MP4 backups, and sixteen channel bumpers. The
+The /idc-programming/ route contains the complete Season One catalogue, eight
+direct-hosted MP4 episodes, a teaser, and sixteen channel bumpers. The
 repository preserves the video source copies; the curated Pages artifact omits
 those duplicate 384 MB and routes playback to the identical files on
 app.northstarprime.net. The owner-review anthology packet is deliberately
@@ -105,7 +105,7 @@ branch. Build and verify the exact artifact locally with:
 it is expected to reject legacy whole-branch publishing. The curated artifact
 verifier is the release capacity gate.
 
-Add --network to the IDC verifier to test every YouTube oEmbed endpoint as
+Add --network to the IDC verifier to check video blob sizes on GitHub as
 well. See ROUTE_MANIFEST.md, the route-specific freeze manifests, and
 PAGES_CAPACITY_BUDGET.json for routing, provenance, hashes, failover details,
 and the enforced GitHub Pages capacity ceiling.

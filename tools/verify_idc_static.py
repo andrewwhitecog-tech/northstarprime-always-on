@@ -4,11 +4,9 @@
 from __future__ import annotations
 
 import argparse
-import concurrent.futures
 import json
 import subprocess
 import sys
-import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -35,16 +33,20 @@ def fail(message: str) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--network", action="store_true", help="verify all YouTube oEmbed URLs"
+        "--network", action="store_true", help="verify video blob sizes through the GitHub API"
     )
     args = parser.parse_args()
 
     html = HTML_PATH.read_text(encoding="utf-8")
+    # yt_manifest.json is the retired record of the nine Season One uploads.
+    # All nine are unavailable on YouTube, so the page plays its own MP4s.
     manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
     if len(manifest) != 9:
-        fail(f"expected 9 Season One YouTube entries, found {len(manifest)}")
-    if "youtube-nocookie.com/embed/" not in html:
-        fail("privacy-enhanced YouTube embed code is missing")
+        fail(f"expected 9 Season One entries, found {len(manifest)}")
+    if "youtube-nocookie.com/embed/" in html or "IDC_YT" in html:
+        fail("the retired YouTube player is back on the public page")
+    if '.idc-bv[src*="/bumper_"]' not in html:
+        fail("Play Local Bumpers no longer stops at the bumpers")
     if "C:/Program Files/Git/" in html:
         fail("frozen Windows paths remain in HTML")
     if PRIVATE_PACKET_ROUTE in html:
@@ -63,11 +65,13 @@ def main() -> int:
 
     tracked = set(git_output("ls-tree", "-r", "--name-only", "HEAD").splitlines())
     for stem, url in manifest.items():
-        if url not in html:
-            fail(f"manifest URL for {stem} is not present in HTML")
+        if url in html:
+            fail(f"retired YouTube link for {stem} is back in HTML")
         mp4 = f"static/idc_video/{stem}.mp4"
+        if f'src="/{mp4}"' not in html:
+            fail(f"page does not play {mp4}")
         if mp4 not in tracked:
-            fail(f"missing tracked MP4 backup: {mp4}")
+            fail(f"missing tracked MP4: {mp4}")
 
     video_paths = sorted(
         path
@@ -104,28 +108,8 @@ def main() -> int:
             fail(f"GitHub-size-limit violation: {oversized}")
         sizes = remote_sizes
 
-        def verify_youtube(item: tuple[str, str]) -> tuple[str, str]:
-            stem, url = item
-            query = urllib.parse.urlencode({"url": url, "format": "json"})
-            request = urllib.request.Request(
-                "https://www.youtube.com/oembed?" + query,
-                headers={"User-Agent": "NorthStarPrimeStaticVerifier/1.0"},
-            )
-            with urllib.request.urlopen(request, timeout=12) as response:
-                if response.status != 200:
-                    fail(f"YouTube oEmbed failed for {stem}: HTTP {response.status}")
-                data = json.load(response)
-                if not data.get("title"):
-                    fail(f"YouTube oEmbed returned no title for {stem}")
-                return stem, data["title"]
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
-            results = executor.map(verify_youtube, manifest.items())
-            for stem, title in results:
-                print(f"OK youtube {stem}: {title}")
-
-    print(f"OK: {len(manifest)} verified YouTube mappings")
-    print(f"OK: {len(video_paths)} tracked MP4 backups/bumpers")
+    print(f"OK: {len(manifest)} Season One episodes play from direct-hosted MP4s")
+    print(f"OK: {len(video_paths)} tracked MP4 episodes/bumpers")
     if sizes:
         largest = max(sizes, key=lambda item: item[1])
         print(

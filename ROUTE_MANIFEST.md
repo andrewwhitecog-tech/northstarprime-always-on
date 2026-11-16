@@ -35,10 +35,10 @@ Verified 2026-08-27.
 ## Static recovery route
 
 - Source: idc-programming/index.html
-- Nine Season One broadcasts use privacy-enhanced youtube-nocookie.com embeds.
-- Every embedded broadcast retains a direct static MP4 backup.
+- Nine Season One broadcasts play from direct-hosted MP4s in static/idc_video/.
 - Sixteen channel bumpers remain direct-hosted in static/idc_video/.
-- YouTube IDs are mirrored in static/idc_video/yt_manifest.json.
+- static/idc_video/yt_manifest.json is a retired record of the nine YouTube IDs.
+  All nine are unavailable, and the page no longer loads them.
 - All 25 MP4 files are below GitHub's 100 MB per-file limit.
 - The unreleased anthology packet is absent from the public tree; the page
   displays an owner-review withholding notice instead of a download link.
@@ -89,7 +89,7 @@ destination, and the security policy canonically identifies its always-on URL.
 
 - Source: links/index.html
 - Canonical public path: /links/
-- Provides one tracker-free, always-on directory for NSP experiences and the
+- Provides one always-on directory for NSP experiences and the
   verified TikTok, YouTube, Instagram, Reddit, and Moltbook profiles.
 - The homepage footer exposes this route.
 
@@ -178,11 +178,11 @@ destination, and the security policy canonically identifies its always-on URL.
 ## Failover boundary
 
 The homepage, founders surface, mystery-school route, health marker, Season One
-catalogue, YouTube players, MP4 backups, Continuity Atlas, contact/security
+catalogue, Continuity Atlas, contact/security
 desk, service catalog, arcade landing, 47 mirrored games, IDR catalog, and
 direct static assets survive a Render outage. IDR audio relies on the separate
-NSP asset host. Checkout, accounts, live server state, the private arcade
-archive, and other dynamic actions still require app.northstarprime.net and
+NSP asset host. Checkout, accounts, live server state, Season One and bumper
+video playback, the private arcade archive, and other dynamic actions still require app.northstarprime.net and
 degrade to ordinary cloud links when that service is unavailable.
 
 ## Capacity guard
@@ -220,8 +220,9 @@ published-size calculation.
 The home verifier checks the page identity, its required app doors and local
 routes, manifest hashes for every referenced asset, local filesystem leakage,
 and dangling local routes. The IDC verifier
-checks the HTML/manifest mapping, tracked MP4 inventory and sizes, broken local
-Windows paths, embed code, and optionally all nine YouTube oEmbed endpoints.
+checks the nine Season One video sources, that the retired YouTube player stays
+off the page, tracked MP4 inventory and sizes, broken local Windows paths, and
+optionally the video blob sizes on GitHub.
 The creator-route verifier checks the app target, canonical/refresh/fallback
 contract, query-and-fragment preservation, sitemap entry, and existing creator
 navigation. The atlas verifier checks the complete self-contained bundle, local references,

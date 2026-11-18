@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="nsp-analytics" content="none">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="author" content="Andrew White" />
+  <title>Precision Armory &amp; Relic Restoration 3D Sim — NorthStar IDG</title>
+  <script src="../three.min.js"></script>
+  <style>
+    :root {
+      --amber: #f5a623;
+      --cyan: #2cf2ff;
+      --emerald: #2ee59d;
+      --crimson: #ff3e5e;
+      --steel: #9fb0c7;
+      --ink: rgba(10, 14, 22, 0.86);
+      --text: #f3f6fb;
+    }
+    * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      overflow: hidden; background: #090c12; color: var(--text);
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    }
+    #bench-canvas {
+      position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 1;
+      touch-action: none; cursor: crosshair;
+    }
+    .hud-grid {
+      position: fixed; inset: 0; z-index: 10; pointer-events: none;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      grid-template-columns: 305px 1fr 290px;
+      gap: 10px; padding: 10px 14px;
+    }
+    .machined-frame {
+      pointer-events: auto;
+      background: linear-gradient(165deg, rgba(16, 22, 34, 0.88), rgba(9, 12, 20, 0.92));
+      border: 1px solid rgba(245, 166, 35, 0.34);
+      clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px), 0 10px);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.65), inset 0 0 22px rgba(44, 242, 255, 0.05);
+      backdrop-filter: blur(8px);
+    }
+    #top-bar {
+      grid-column: 1 / 4; grid-row: 1;
+      display: flex; flex-direction: column; gap: 6px; padding: 8px 14px;
+    }
+    .top-main { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .bench-title { display: flex; align-items: center; gap: 10px; }
+    .caliper-badge {
+      padding: 4px 10px; font-weight: 900; font-size: 0.74rem; letter-spacing: 0.08em;
+      background: linear-gradient(90deg, var(--amber), #ffe082); color: #120d04;
+      clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+    }
+    .bench-title h1 { margin: 0; font-size: 0.98rem; letter-spacing: 0.06em; text-transform: uppercase; }
+    .contract-strip { display: flex; gap: 6px; overflow-x: auto; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.08); }
+    .w-tab {
+      flex: 1; min-width: 155px; padding: 5px 9px; cursor: pointer;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12);
+      font-size: 0.71rem; font-weight: 700; color: var(--text); text-align: left;
+      clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+    }
+    .w-tab.active {
+      border-color: var(--amber); background: rgba(245, 166, 35, 0.18); color: #fff4d6;
+    }
+
+    #left-bench {
+      grid-column: 1; grid-row: 2;
+      padding: 10px 12px; display: flex; flex-direction: column; gap: 6px;
+      max-height: calc(100vh - 190px); overflow-y: auto;
+    }
+    #right-bench {
+      grid-column: 3; grid-row: 2;
+      padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;
+      max-height: calc(100vh - 190px); overflow-y: auto;
+    }
+    .sec-lbl {
+      font-size: 0.72rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--amber); border-bottom: 1px solid rgba(245, 166, 35, 0.25); padding-bottom: 4px;
+      display: flex; justify-content: space-between;
+    }
+    .part-item {
+      padding: 5px 8px; font-size: 0.7rem; cursor: pointer;
+      background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.09);
+      display: flex; justify-content: space-between; align-items: center; gap: 6px;
+    }
+    .part-item:hover { border-color: var(--amber); }
+    .part-item.selected { border-color: var(--cyan); background: rgba(44, 242, 255, 0.13); }
+    .part-item.next-step { border-left: 3px solid var(--amber); }
+
+    .gauge-bar {
+      height: 8px; background: rgba(255,255,255,0.1); overflow: hidden; margin-top: 3px;
+    }
+    .gauge-fill { height: 100%; transition: width 0.12s ease; }
+
+    .a-btn {
+      cursor: pointer; font-family: inherit; font-weight: 800; font-size: 0.7rem;
+      letter-spacing: 0.05em; text-transform: uppercase; padding: 6px 10px;
+      color: var(--text); background: linear-gradient(180deg, rgba(38, 48, 68, 0.85), rgba(16, 22, 34, 0.94));
+      border: 1px solid rgba(245, 166, 35, 0.38);
+      clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+      transition: all 0.14s ease;
+    }
+    .a-btn:hover:not(:disabled) { border-color: var(--cyan); box-shadow: 0 0 12px rgba(44, 242, 255, 0.35); }
+    .a-btn.active { background: linear-gradient(180deg, rgba(245, 166, 35, 0.36), rgba(130, 78, 12, 0.65)); border-color: var(--amber); }
+    .a-btn.emerald { border-color: var(--emerald); background: rgba(46, 229, 157, 0.18); }
+    .a-btn:disabled { opacity: 0.38; cursor: not-allowed; }
+
+    #center-reticle {
+      grid-column: 2; grid-row: 2;
+      display: flex; flex-direction: column; justify-content: space-between; align-items: center;
+      pointer-events: none; padding: 8px;
+    }
+    #phase-banner {
+      padding: 5px 16px; background: rgba(10, 14, 22, 0.82);
+      border: 1px solid var(--cyan); color: var(--cyan);
+      font-size: 0.74rem; font-weight: 800; letter-spacing: 0.08em;
+      clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+    }
+    #range-hud {
+      display: none; text-align: center; padding: 6px 14px;
+      background: rgba(10, 14, 22, 0.85); border: 1px solid var(--emerald);
+      font-size: 0.78rem; font-weight: 800; color: var(--emerald);
+    }
+
+    #tool-dock {
+      grid-column: 1 / 4; grid-row: 3;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 7px 14px; gap: 8px; flex-wrap: wrap;
+    }
+    .tool-cluster { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+    @media (max-width: 900px) {
+      .hud-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto 1fr auto;
+        padding: 6px; gap: 6px;
+      }
+      #top-bar { grid-column: 1; padding: 6px 8px; }
+      .bench-title h1 { font-size: 0.8rem; }
+      #left-bench { grid-column: 1; grid-row: 2; max-height: 105px; padding: 6px 8px; }
+      #right-bench { display: none; }
+      #right-bench.mobile-open {
+        display: flex; position: fixed; top: 88px; left: 6px; right: 6px; z-index: 30; max-height: 55vh;
+      }
+      #center-reticle { grid-column: 1; grid-row: 3; }
+      #tool-dock { grid-column: 1; grid-row: 4; padding: 6px 8px; }
+    }
+  </style>
+
+<style data-nsp-vorath="games-zero-flat">
+@media (forced-colors: none) {
+  button, [role="button"], select, a, summary {
+    border-radius: 0 !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-width: 6px 12px !important;
+    border-image: url("/warband/art/vorath_btn_obsidian.webp") 44 66 fill / 6px 12px stretch !important;
+    background-image: none !important;
+    background-color: transparent !important;
+    color: #fef3c7 !important;
+    text-shadow: 0 1px 3px #000 !important;
+    box-shadow: none !important;
+  }
+  button.active, button.primary, .play-btn, .launch-btn, a.nsp-hub-return {
+    border-image-source: url("/warband/art/vorath_btn_primary.webp") !important;
+    color: #fffdf5 !important;
+  }
+  input[type="search"], input[type="text"], input[type="number"], textarea {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    border-radius: 0 !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-width: 7px 14px !important;
+    border-image: url("/warband/art/vorath_stat_plaque_v01.webp") 18 36 fill / 7px 14px stretch !important;
+    background: none !important;
+    color: #fef3c7 !important;
+  }
+  input[type="range"], input[type="checkbox"], input[type="radio"] {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    border-radius: 0 !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-width: 4px 8px !important;
+    border-image: url("/warband/art/vorath_stat_plaque_v01.webp") 18 36 fill / 4px 8px stretch !important;
+    background: none !important;
+  }
+  .cw-pill, .xp-pill, .metric-pill, .ns-tag, .brand-pill, .meter-pill, .tier-crest, .star-crest,
+  .cab-medal, .cab-stats-row, .stat-chip, .dmd-cell, .part-chip, #chrono-box {
+    border-radius: 0 !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-width: 5px 10px !important;
+    border-image: url("/warband/art/vorath_stat_plaque_v01.webp") 18 36 fill / 5px 10px stretch !important;
+    background: none !important;
+    clip-path: none !important;
+    color: #fef3c7 !important;
+  }
+}
+.nsp-hub-return-bar {
+  position: fixed;
+  bottom: 10px;
+  right: 12px;
+  z-index: 9999;
+  display: flex;
+  gap: 6px;
+}
+.nsp-hub-return {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 3px 10px;
+  font: 700 12px/1.2 system-ui, sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+</style>
+
+</head>
+<body>
+  <div id="bench-canvas"></div>
+
+  <div class="hud-grid">
+    <header id="top-bar" class="machined-frame">
+      <div class="top-main">
+        <div class="bench-title">
+          <span class="caliper-badge">PRECISION ARMORY 3D</span>
+          <h1>Mechanical Field-Strip, Ultrasonic &amp; Ballistics Lab &bull; Andrew White</h1>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:0.74rem;font-weight:800;">
+          <span style="color:var(--amber)">CREDITS: <b id="hud-cr">$480</b></span>
+          <span style="color:var(--emerald)">OVERALL: <b id="hud-overall">22%</b></span>
+          <span style="color:var(--cyan)">CONTRACTS: <b id="hud-contracts">0</b></span>
+          <button class="a-btn" id="btn-mobile-diag">DIAGNOSTICS</button>
+        </div>
+      </div>
+      <div class="contract-strip" id="mechanism-tabs"></div>
+    </header>
+
+    <!-- Left: 10 Sub-Parts Manifest & Field-Strip Sequence -->
+    <aside id="left-bench" class="machined-frame">
+      <div class="sec-lbl">
+        <span>10 Machined Sub-Parts</span>
+        <span id="stripped-count">0 / 10 Stripped</span>
+      </div>
+      <div id="parts-list" style="display:flex;flex-direction:column;gap:4px;"></div>
+    </aside>
+
+    <!-- Center Phase & Range Telemetry -->
+    <main id="center-reticle">
+      <div id="phase-banner">PHASE 1: FIELD-STRIP DISASSEMBLY — Click highlighted 3D part or [EXTRACT NEXT]</div>
+      <div id="range-hud">
+        RANGE LIVE: Click 3D Reactive Steel Plates! &bull; Hits: <span id="rng-hits">0</span> &bull; MOA Grouping: <span id="rng-moa">0.85</span>&quot;
+      </div>
+    </main>
+
+    <!-- Right: Part Surface Telemetry, Replacement & Workshop Upgrades -->
+    <aside id="right-bench" class="machined-frame">
+      <div class="sec-lbl">
+        <span id="insp-name">Select Sub-Part</span>
+        <span id="insp-state" style="color:var(--cyan)">MOUNTED</span>
+      </div>
+      <div style="font-size:0.7rem;">
+        <div style="display:flex;justify-content:space-between;"><span>Surface Mirror Polish</span><b id="val-clean">20%</b></div>
+        <div class="gauge-bar"><div class="gauge-fill" id="bar-clean" style="width:20%;background:var(--cyan);"></div></div>
+      </div>
+      <div style="font-size:0.7rem;">
+        <div style="display:flex;justify-content:space-between;"><span>Precision CLP Lubrication</span><b id="val-lube">15%</b></div>
+        <div class="gauge-bar"><div class="gauge-fill" id="bar-lube" style="width:15%;background:var(--amber);"></div></div>
+      </div>
+      <div style="font-size:0.7rem;">
+        <div style="display:flex;justify-content:space-between;"><span>Structural Integrity</span><b id="val-integrity">82%</b></div>
+        <div class="gauge-bar"><div class="gauge-fill" id="bar-integrity" style="width:82%;background:var(--emerald);"></div></div>
+      </div>
+
+      <button class="a-btn" id="btn-replace-part">REPLACE WORN PART ($65)</button>
+      <button class="a-btn" id="btn-ultrasonic">ULTRASONIC CAVITATION BATH</button>
+
+      <div class="sec-lbl" style="margin-top:4px;"><span>Workshop Upgrades</span></div>
+      <div id="upgrades-box" style="display:flex;flex-direction:column;gap:4px;"></div>
+
+      <div class="sec-lbl" style="margin-top:4px;"><span>Function &amp; Range</span></div>
+      <button class="a-btn" id="btn-cycle-action">CYCLE ACTION CHECK</button>
+      <button class="a-btn emerald" id="btn-range-toggle">ENTER 3D BALLISTICS RANGE</button>
+    </aside>
+
+    <!-- Bottom Tool Dock -->
+    <footer id="tool-dock" class="machined-frame">
+      <div class="tool-cluster">
+        <button class="a-btn active" data-tool="hand" id="tool-hand">1. FIELD-STRIP / MOUNT</button>
+        <button class="a-btn" data-tool="solvent" id="tool-solvent">2. SOLVENT SPRAY</button>
+        <button class="a-btn" data-tool="brush" id="tool-brush">3. BRONZE BRUSH</button>
+        <button class="a-btn" data-tool="cloth" id="tool-cloth">4. MIRROR CLOTH</button>
+        <button class="a-btn" data-tool="oil" id="tool-oil">5. CLP OIL DROPPER</button>
+      </div>
+      <div class="tool-cluster">
+        <button class="a-btn" id="btn-step-auto">EXTRACT / MOUNT NEXT</button>
+        <button class="a-btn" id="btn-exploded">EXPLODED SCHEMATIC</button>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+  (function() {
+    'use strict';
+
+    const jsErrors = [];
+    window.addEventListener('error', (e) => jsErrors.push(e.message || 'error'));
+
+    // --- Mechanical & Range WebAudio Foley ---
+    let audioCtx = null;
+    function ensureAudio() {
+      if (!audioCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) audioCtx = new AC();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    }
+    function playFoley(kind) {
+      try {
+        ensureAudio();
+        if (!audioCtx) return;
+        const t = audioCtx.currentTime;
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.connect(g); g.connect(audioCtx.destination);
+        if (kind === 'pin') {
+          o.type = 'triangle'; o.frequency.setValueAtTime(920, t); o.frequency.exponentialRampToValueAtTime(340, t + 0.07);
+          g.gain.setValueAtTime(0.09, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+          o.start(t); o.stop(t + 0.08);
+        } else if (kind === 'scrub') {
+          o.type = 'sawtooth'; o.frequency.setValueAtTime(320 + Math.random() * 180, t);
+          g.gain.setValueAtTime(0.035, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+          o.start(t); o.stop(t + 0.05);
+        } else if (kind === 'ultrasonic') {
+          o.type = 'sine'; o.frequency.setValueAtTime(1480, t); o.frequency.linearRampToValueAtTime(1640, t + 0.35);
+          g.gain.setValueAtTime(0.06, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.36);
+          o.start(t); o.stop(t + 0.36);
+        } else if (kind === 'shot') {
+          o.type = 'sawtooth'; o.frequency.setValueAtTime(195, t); o.frequency.exponentialRampToValueAtTime(38, t + 0.22);
+          g.gain.setValueAtTime(0.16, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.24);
+          o.start(t); o.stop(t + 0.24);
+        } else if (kind === 'steel_ping') {
+          o.type = 'sine'; o.frequency.setValueAtTime(1760, t); o.frequency.exponentialRampToValueAtTime(1320, t + 0.38);
+          g.gain.setValueAtTime(0.11, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+          o.start(t); o.stop(t + 0.4);
+        }
+      } catch (_) {}
+    }
+
+    // --- Save State & Upgrades ---
+    const SAVE_KEY = 'nsp_precision_armory_3d_20261115';
+    let career = {
+      credits: 480,
+      contractsDone: 0,
+      upgrades: { heater: false, diamondStone: false, laserBore: false }
+    };
+    try {
+      const s = localStorage.getItem(SAVE_KEY);
+      if (s) Object.assign(career, JSON.parse(s));
+    } catch (_) {}
+    function persistCareer() {
+      try { localStorage.setItem(SAVE_KEY, JSON.stringify(career)); } catch (_) {}
+    }
+
+    // --- 4 Multi-Part 3D Precision Mechanisms (10 Sub-Parts Each!) ---
+    const MECHANISMS = [
+      {
+        id: 'sovereign_pistol',
+        name: '1. Sovereign Match Pistol (.45)',
+        baseAlloy: '#364152', accentAlloy: '#e0b34c', gripCol: '#59331d',
+        parts: [
+          { name: 'Box Magazine (.45)', geo: 'box', sz: [0.32, 1.15, 0.52], pos: [0, -0.78, -0.58], ext: [0, -1.9, -0.8], mat: 'alloy' },
+          { name: 'Slide-Stop Takedown Pin', geo: 'cylZ', sz: [0.07, 0.48], pos: [0, 0.12, 0.15], ext: [0.9, 0.12, 0.15], mat: 'gold' },
+          { name: 'CNC-Milled Top Slide', geo: 'box', sz: [0.42, 0.44, 2.55], pos: [0, 0.44, 0.25], ext: [0, 1.35, 1.35], mat: 'alloy' },
+          { name: 'Dual-Rate Recoil Spring', geo: 'cylX', sz: [0.09, 1.65], pos: [0, 0.26, 0.65], ext: [-1.1, 0.75, 0.85], mat: 'gold' },
+          { name: 'TiN-Gold Fluted Barrel', geo: 'cylX', sz: [0.12, 2.25], pos: [0, 0.45, 0.48], ext: [1.1, 1.1, 0.7], mat: 'gold' },
+          { name: 'Compensator Bushing', geo: 'box', sz: [0.40, 0.40, 0.42], pos: [0, 0.44, 1.68], ext: [0, 0.75, 2.45], mat: 'gold' },
+          { name: 'External Extractor Claw', geo: 'box', sz: [0.08, 0.12, 0.52], pos: [0.22, 0.46, -0.15], ext: [1.25, 0.55, -0.15], mat: 'alloy' },
+          { name: 'Match Sear & Trigger Group', geo: 'box', sz: [0.24, 0.36, 0.46], pos: [0, -0.08, -0.05], ext: [-1.15, -0.2, 0], mat: 'gold' },
+          { name: 'Checkered Walnut Grips', geo: 'box', sz: [0.44, 1.05, 0.62], pos: [0, -0.62, -0.58], ext: [1.2, -0.7, -0.6], mat: 'walnut' },
+          { name: 'Billet Steel Receiver Frame', geo: 'box', sz: [0.38, 0.34, 2.15], pos: [0, 0.10, 0.05], ext: [0, 0.10, 0.05], mat: 'alloy' }
+        ]
+      },
+      {
+        id: 'chronos_rifle',
+        name: '2. Chronos Precision Rifle (.338)',
+        baseAlloy: '#2a333d', accentAlloy: '#98aabd', gripCol: '#384634',
+        parts: [
+          { name: '10-Rd Precision Magazine', geo: 'box', sz: [0.30, 0.88, 0.68], pos: [0, -0.58, -0.15], ext: [0, -1.65, -0.15], mat: 'alloy' },
+          { name: 'Fluted Bolt Carrier', geo: 'cylX', sz: [0.11, 1.35], pos: [0, 0.36, -0.35], ext: [0, 0.85, -1.65], mat: 'gold' },
+          { name: 'Titanium Firing Pin Core', geo: 'cylX', sz: [0.05, 1.15], pos: [0, 0.36, -0.38], ext: [0.95, 0.85, -1.2], mat: 'gold' },
+          { name: 'Illuminated Variable Optic', geo: 'cylX', sz: [0.18, 1.65], pos: [0, 0.78, -0.10], ext: [0, 1.65, -0.10], mat: 'alloy' },
+          { name: '3-Chamber Muzzle Brake', geo: 'box', sz: [0.32, 0.28, 0.55], pos: [0, 0.36, 2.65], ext: [0, 0.65, 3.35], mat: 'gold' },
+          { name: 'M-LOK Free-Float Handguard', geo: 'box', sz: [0.38, 0.38, 1.85], pos: [0, 0.34, 1.25], ext: [-1.15, 0.65, 1.25], mat: 'alloy' },
+          { name: 'Heavy Cryo-Relieved Barrel', geo: 'cylX', sz: [0.11, 2.85], pos: [0, 0.36, 1.20], ext: [1.15, 0.85, 1.20], mat: 'gold' },
+          { name: 'Recoil Buffer Assembly', geo: 'cylX', sz: [0.12, 1.05], pos: [0, 0.26, -1.45], ext: [-1.0, 0.26, -2.0], mat: 'alloy' },
+          { name: 'Folding Bipod Yoke', geo: 'box', sz: [0.55, 0.52, 0.25], pos: [0, -0.14, 1.85], ext: [0, -1.05, 1.95], mat: 'alloy' },
+          { name: 'Anodized Billet Chassis', geo: 'box', sz: [0.36, 0.42, 2.45], pos: [0, 0.16, -0.35], ext: [0, 0.16, -0.35], mat: 'walnut' }
+        ]
+      },
+      {
+        id: 'plasma_igniter',
+        name: '3. Covenant Plasma Arc-Igniter',
+        baseAlloy: '#241c35', accentAlloy: '#e6a93e', gripCol: '#171324',
+        parts: [
+          { name: 'High-Density Capacitor Cell', geo: 'cylY', sz: [0.22, 0.95], pos: [0, -0.62, -0.45], ext: [0, -1.75, -0.45], mat: 'gold' },
+          { name: 'Liturgical Bus Lock-Pin', geo: 'cylZ', sz: [0.08, 0.54], pos: [0, 0.22, 0.05], ext: [1.05, 0.22, 0.05], mat: 'gold' },
+          { name: 'Single-Slit Brass Shroud', geo: 'box', sz: [0.52, 0.50, 2.15], pos: [0, 0.48, 0.35], ext: [0, 1.45, 0.55], mat: 'gold' },
+          { name: 'Primary Induction Coil', geo: 'cylX', sz: [0.19, 1.45], pos: [0, 0.44, 0.55], ext: [-1.2, 0.9, 0.55], mat: 'alloy' },
+          { name: 'Quartz Plasma Arc Chamber', geo: 'cylX', sz: [0.15, 1.75], pos: [0, 0.44, 0.65], ext: [1.2, 0.95, 0.65], mat: 'cyan' },
+          { name: 'Radial Copper Heat-Sink', geo: 'box', sz: [0.56, 0.42, 0.65], pos: [0, 0.44, 1.45], ext: [-1.1, 0.44, 1.85], mat: 'gold' },
+          { name: 'Focusing Cathode Crown', geo: 'cylX', sz: [0.22, 0.36], pos: [0, 0.44, 1.92], ext: [0, 0.75, 2.65], mat: 'cyan' },
+          { name: 'Magnetic Trigger Solenoid', geo: 'box', sz: [0.26, 0.38, 0.44], pos: [0, -0.05, -0.05], ext: [1.1, -0.25, 0], mat: 'alloy' },
+          { name: 'Conduction Spine Rail', geo: 'box', sz: [0.22, 0.16, 1.95], pos: [0, 0.78, 0.25], ext: [0, 1.85, -0.35], mat: 'gold' },
+          { name: 'Obsidian Relic Grip Frame', geo: 'box', sz: [0.40, 0.38, 2.05], pos: [0, 0.12, 0.0], ext: [0, 0.12, 0.0], mat: 'walnut' }
+        ]
+      },
+      {
+        id: 'cryo_caster',
+        name: '4. Coaxial 15mK Cryo-Caster',
+        baseAlloy: '#192a3b', accentAlloy: '#f5cb5c', gripCol: '#12202e',
+        parts: [
+          { name: 'Helium-3 Cryo Dewar Cell', geo: 'cylY', sz: [0.24, 1.02], pos: [0, -0.65, -0.40], ext: [0, -1.8, -0.4], mat: 'cyan' },
+          { name: 'Vacuum Gate Lock-Pin', geo: 'cylZ', sz: [0.08, 0.56], pos: [0, 0.18, 0.15], ext: [1.1, 0.18, 0.15], mat: 'gold' },
+          { name: 'Mu-Metal Radiation Shield', geo: 'cylX', sz: [0.28, 2.05], pos: [0, 0.45, 0.45], ext: [0, 1.48, 0.45], mat: 'alloy' },
+          { name: '24K-Gold 4K Mixing Plate', geo: 'cylY', sz: [0.36, 0.14], pos: [0, 0.45, -0.35], ext: [-1.25, 0.95, -0.35], mat: 'gold' },
+          { name: 'Coaxial Niobium Barrel', geo: 'cylX', sz: [0.13, 2.45], pos: [0, 0.45, 0.78], ext: [1.25, 1.0, 0.78], mat: 'gold' },
+          { name: 'Sapphire Resonance Lens', geo: 'cylX', sz: [0.22, 0.30], pos: [0, 0.45, 2.08], ext: [0, 0.75, 2.85], mat: 'cyan' },
+          { name: 'Josephson Trigger Array', geo: 'box', sz: [0.28, 0.36, 0.48], pos: [0, -0.06, 0.0], ext: [-1.15, -0.25, 0.1], mat: 'cyan' },
+          { name: 'Copper Thermal Bus Strut', geo: 'cylX', sz: [0.08, 1.75], pos: [0.24, 0.28, 0.45], ext: [1.25, 0.35, 0.45], mat: 'gold' },
+          { name: 'Cryo Pressure Regulator', geo: 'cylY', sz: [0.18, 0.42], pos: [0, 0.85, -0.25], ext: [0, 1.85, -0.55], mat: 'gold' },
+          { name: 'Billet Titanium Cryo-Chassis', geo: 'box', sz: [0.42, 0.36, 2.15], pos: [0, 0.12, 0.05], ext: [0, 0.12, 0.05], mat: 'alloy' }
+        ]
+      }
+    ];
+
+    // --- Three.js Workbench & Ballistics Range Scene ---
+    const wrap = document.getElementById('bench-canvas');
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.24;
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    wrap.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0c111b);
+    scene.fog = new THREE.FogExp2(0x0c111b, 0.015);
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 140);
+
+    // Studio Armorer Softbox IBL Environment via PMREMGenerator
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    const envScene = new THREE.Scene();
+    envScene.background = new THREE.Color(0x141b29);
+    const addLightCard = (col, x, y, z, sx, sy, sz) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), new THREE.MeshBasicMaterial({ color: col }));
+      m.position.set(x, y, z);
+      envScene.add(m);
+    };
+    addLightCard(0xfff1d6, 0, 14, 4, 16, 1, 12);
+    addLightCard(0x2cf2ff, -14, 6, 0, 1, 8, 14);
+    addLightCard(0xffb74d, 14, 7, 2, 1, 8, 14);
+    scene.environment = pmrem.fromScene(envScene, 0.035).texture;
+
+    // Lighting
+    scene.add(new THREE.HemisphereLight(0xb5d0ff, 0x2b1d12, 0.68));
+    const benchSpot = new THREE.DirectionalLight(0xfff0d4, 1.65);
+    benchSpot.position.set(5, 11, 7);
+    benchSpot.castShadow = true;
+    benchSpot.shadow.mapSize.set(2048, 2048);
+    benchSpot.shadow.camera.near = 1; benchSpot.shadow.camera.far = 35;
+    benchSpot.shadow.camera.left = -8; benchSpot.shadow.camera.right = 8;
+    benchSpot.shadow.camera.top = 8; benchSpot.shadow.camera.bottom = -8;
+    scene.add(benchSpot);
+
+    const tankGlow = new THREE.PointLight(0x2cf2ff, 1.35, 9);
+    tankGlow.position.set(-3.6, 0.8, -1.6);
+    scene.add(tankGlow);
+
+    // --- 512x512 Walnut & Blueprint Mat Textures ---
+    function makeWalnutTexture() {
+      const c = document.createElement('canvas'); c.width = c.height = 512;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#3d2415'; ctx.fillRect(0, 0, 512, 512);
+      for (let y = 0; y < 512; y++) {
+        const wave = Math.sin(y * 0.055) * 14;
+        ctx.fillStyle = y % 5 === 0 ? 'rgba(25, 12, 6, 0.34)' : 'rgba(92, 54, 30, 0.18)';
+        ctx.fillRect(0, y, 512, 2);
+        ctx.fillStyle = 'rgba(18, 9, 4, 0.22)';
+        ctx.fillRect((y * 7 + wave + 512) % 512, y, 48, 1);
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(3, 2);
+      tex.encoding = THREE.sRGBEncoding;
+      return tex;
+    }
+
+    function makeArmorerMatTexture() {
+      const c = document.createElement('canvas'); c.width = 1024; c.height = 512;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#113028'; ctx.fillRect(0, 0, 1024, 512);
+      ctx.strokeStyle = 'rgba(86, 224, 176, 0.22)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x <= 1024; x += 32) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 512); ctx.stroke(); }
+      for (let y = 0; y <= 512; y += 32) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1024, y); ctx.stroke(); }
+      ctx.strokeStyle = 'rgba(245, 166, 35, 0.55)';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(18, 18, 988, 476);
+      ctx.fillStyle = 'rgba(245, 166, 35, 0.72)';
+      ctx.font = 'bold 22px sans-serif';
+      ctx.fillText('NORTHSTAR PRECISION ARMORY // METRIC SPEC MAT', 36, 52);
+      const tex = new THREE.CanvasTexture(c);
+      tex.encoding = THREE.sRGBEncoding;
+      return tex;
+    }
+
+    // Workbench Environment Group
+    const benchGroup = new THREE.Group();
+    scene.add(benchGroup);
+
+    const walnutSlab = new THREE.Mesh(
+      new THREE.BoxGeometry(15, 0.6, 9),
+      new THREE.MeshStandardMaterial({ map: makeWalnutTexture(), roughness: 0.48, metalness: 0.08 })
+    );
+    walnutSlab.position.set(0, -1.75, 0);
+    walnutSlab.receiveShadow = true;
+    benchGroup.add(walnutSlab);
+
+    const greenMat = new THREE.Mesh(
+      new THREE.BoxGeometry(8.2, 0.05, 4.6),
+      new THREE.MeshStandardMaterial({ map: makeArmorerMatTexture(), roughness: 0.78, metalness: 0.05 })
+    );
+    greenMat.position.set(0.3, -1.43, 0.3);
+    greenMat.receiveShadow = true;
+    benchGroup.add(greenMat);
+
+    // Pegboard Back Wall + Hung 3D Tools
+    const pegboard = new THREE.Mesh(
+      new THREE.BoxGeometry(15, 6.5, 0.25),
+      new THREE.MeshStandardMaterial({ color: 0x1b2333, metalness: 0.55, roughness: 0.45 })
+    );
+    pegboard.position.set(0, 1.5, -3.9);
+    pegboard.receiveShadow = true;
+    benchGroup.add(pegboard);
+
+    const toolSteelMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.88, roughness: 0.2 });
+    const toolHandleMat = new THREE.MeshStandardMaterial({ color: 0xf5a623, roughness: 0.4 });
+    for (let i = 0; i < 6; i++) {
+      const tx = -4.5 + i * 1.8;
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.1 + (i % 2) * 0.3, 8), toolSteelMat);
+      shaft.position.set(tx, 2.2, -3.7);
+      const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.08, 0.45, 10), toolHandleMat);
+      grip.position.set(tx, 2.85, -3.7);
+      benchGroup.add(shaft, grip);
+    }
+
+    // 3D Stainless Ultrasonic Cavitation Tank (Left Side of Bench)
+    const tankGroup = new THREE.Group();
+    tankGroup.position.set(-3.6, -1.05, -1.5);
+    const tankBody = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.85, 1.45), toolSteelMat);
+    tankBody.castShadow = true;
+    const bathFluid = new THREE.Mesh(
+      new THREE.BoxGeometry(1.85, 0.65, 1.2),
+      new THREE.MeshStandardMaterial({
+        color: 0x18c4ff, emissive: 0x0a6c9c, emissiveIntensity: 0.85,
+        roughness: 0.08, metalness: 0.2, transparent: true, opacity: 0.86
+      })
+    );
+    bathFluid.position.y = 0.16;
+    tankGroup.add(tankBody, bathFluid);
+    benchGroup.add(tankGroup);
+
+    // Magnifying Ring Lamp (Right Side of Bench)
+    const lampArm = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 2.8, 10), toolSteelMat);
+    lampArm.position.set(3.8, 0.1, -1.6);
+    lampArm.rotation.z = 0.38;
+    const lampRing = new THREE.Mesh(
+      new THREE.TorusGeometry(0.62, 0.07, 10, 24),
+      new THREE.MeshStandardMaterial({ color: 0xfff3d1, emissive: 0xffe09e, emissiveIntensity: 1.5 })
+    );
+    lampRing.position.set(2.9, 1.32, -1.2);
+    lampRing.rotation.x = Math.PI / 2.3;
+    benchGroup.add(lampArm, lampRing);
+
+    // --- 3D Ballistics Firing Range Group (Hidden on Bench, Visible in Range Mode!) ---
+    const rangeGroup = new THREE.Group();
+    rangeGroup.visible = false;
+    scene.add(rangeGroup);
+
+    const rangeFloor = new THREE.Mesh(
+      new THREE.PlaneGeometry(36, 80),
+      new THREE.MeshStandardMaterial({ color: 0x161c26, roughness: 0.72, metalness: 0.2 })
+    );
+    rangeFloor.rotation.x = -Math.PI / 2;
+    rangeFloor.position.set(0, -1.8, -28);
+    rangeFloor.receiveShadow = true;
+    rangeGroup.add(rangeFloor);
+
+    // Lane dividers, concrete range side walls, backstop berm & bullseye steel targets
+    const rangeWallMat = new THREE.MeshStandardMaterial({ color: 0x1c2434, roughness: 0.75, metalness: 0.25 });
+    const leftRangeWall = new THREE.Mesh(new THREE.BoxGeometry(0.6, 8, 70), rangeWallMat);
+    leftRangeWall.position.set(-10.5, 2.2, -26);
+    const rightRangeWall = new THREE.Mesh(new THREE.BoxGeometry(0.6, 8, 70), rangeWallMat);
+    rightRangeWall.position.set(10.5, 2.2, -26);
+    const backBerm = new THREE.Mesh(new THREE.BoxGeometry(22, 7.5, 2.5), new THREE.MeshStandardMaterial({ color: 0x261d18, roughness: 0.92 }));
+    backBerm.position.set(0, 1.5, -46);
+    rangeGroup.add(leftRangeWall, rightRangeWall, backBerm);
+
+    for (let z = -10; z >= -42; z -= 10) {
+      const baffle = new THREE.Mesh(
+        new THREE.BoxGeometry(21, 0.9, 0.45),
+        new THREE.MeshStandardMaterial({ color: 0x28354a, metalness: 0.65, roughness: 0.35 })
+      );
+      baffle.position.set(0, 4.1, z);
+      const laneStripe = new THREE.Mesh(
+        new THREE.PlaneGeometry(18, 0.18),
+        new THREE.MeshBasicMaterial({ color: 0x2cf2ff, transparent: true, opacity: 0.45 })
+      );
+      laneStripe.rotation.x = -Math.PI / 2;
+      laneStripe.position.set(0, -1.78, z);
+      const rLight = new THREE.PointLight(0xffe6b3, 1.15, 20);
+      rLight.position.set(0, 3.3, z + 2);
+      rangeGroup.add(baffle, laneStripe, rLight);
+    }
+
+    function makeBullseyeTexture(primaryHex) {
+      const c = document.createElement('canvas'); c.width = c.height = 256;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#1b2230'; ctx.fillRect(0, 0, 256, 256);
+      [112, 82, 52, 24].forEach((r, i) => {
+        ctx.beginPath(); ctx.arc(128, 128, r, 0, Math.PI * 2);
+        ctx.fillStyle = i % 2 === 0 ? primaryHex : '#0f141f';
+        ctx.fill();
+      });
+      const t = new THREE.CanvasTexture(c);
+      t.encoding = THREE.sRGBEncoding;
+      return t;
+    }
+    const bullAmber = makeBullseyeTexture('#f5a623');
+    const bullCyan = makeBullseyeTexture('#2cf2ff');
+
+    // 6 Reactive Moving 3D Steel Targets
+    const steelTargets = [];
+    const targetPlateGeo = new THREE.CylinderGeometry(0.78, 0.78, 0.12, 28);
+    const targetDefs = [
+      { x: -4.2, z: -14, spd: 1.4 }, { x: 0, z: -16, spd: -1.6 }, { x: 4.2, z: -14, spd: 1.3 },
+      { x: -3.5, z: -26, spd: -2.1 }, { x: 3.5, z: -28, spd: 2.2 }, { x: 0, z: -38, spd: 2.6 }
+    ];
+    targetDefs.forEach((td, idx) => {
+      const stand = new THREE.Group();
+      stand.position.set(td.x, -1.8, td.z);
+      const base = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.14, 0.8), toolSteelMat);
+      base.position.y = 0.07;
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.16, 1.8, 0.16), toolSteelMat);
+      post.position.y = 0.9;
+      const bTex = idx % 2 === 0 ? bullAmber : bullCyan;
+      const plateMat = new THREE.MeshStandardMaterial({
+        map: bTex, emissiveMap: bTex, emissive: 0xffffff, emissiveIntensity: 0.35,
+        metalness: 0.72, roughness: 0.25
+      });
+      const plate = new THREE.Mesh(targetPlateGeo, plateMat);
+      plate.rotation.x = Math.PI / 2;
+      plate.position.y = 2.0;
+      plate.castShadow = true;
+      stand.add(base, post, plate);
+      rangeGroup.add(stand);
+      steelTargets.push({ group: stand, plate, baseX: td.x, z: td.z, spd: td.spd, tilt: 0 });
+    });
+
+    // --- Dynamic Per-Part CanvasTexture PBR Grime & Mirror Polish System ---
+    const mechanismRoot = new THREE.Group();
+    scene.add(mechanismRoot);
+
+    let activeMechIdx = 0;
+    let activeTool = 'hand'; // 'hand' | 'solvent' | 'brush' | 'cloth' | 'oil'
+    let explodedMode = false;
+    let inRangeMode = false;
+    let partStates = [];
+    let selectedPartIdx = 0;
+    let rangeHits = 0;
+    let lastMoa = 0.85;
+    let cycleAnimTimer = 0;
+    let ultrasonicTimer = 0;
+
+    function createPartDynamicTextures(matType, mech) {
+      const sz = 256;
+      const albC = document.createElement('canvas'); albC.width = albC.height = sz;
+      const rghC = document.createElement('canvas'); rghC.width = rghC.height = sz;
+      const actx = albC.getContext('2d');
+      const rctx = rghC.getContext('2d');
+
+      const baseCol = matType === 'gold' ? mech.accentAlloy : (matType === 'walnut' ? mech.gripCol : (matType === 'cyan' ? '#38e9ff' : mech.baseAlloy));
+      const baseRough = matType === 'walnut' ? '#909090' : '#222222';
+
+      function repaint(cleanPct, grimeBlots) {
+        actx.fillStyle = baseCol;
+        actx.fillRect(0, 0, sz, sz);
+        // Machined milling lines
+        actx.strokeStyle = 'rgba(255,255,255,0.12)';
+        actx.lineWidth = 1;
+        for (let y = 0; y < sz; y += 8) { actx.beginPath(); actx.moveTo(0, y); actx.lineTo(sz, y); actx.stroke(); }
+
+        rctx.fillStyle = baseRough;
+        rctx.fillRect(0, 0, sz, sz);
+
+        // Draw realistic feathered carbon soot & oxidation rust clouds
+        const grimeAlpha = Math.max(0, 1 - cleanPct / 100);
+        if (grimeAlpha > 0.02) {
+          grimeBlots.forEach((b) => {
+            if (b.cleared) return;
+            const ga = actx.createRadialGradient(b.x, b.y, 2, b.x, b.y, b.r * 1.45);
+            if (b.rust) {
+              ga.addColorStop(0, `rgba(118, 52, 18, ${0.65 * grimeAlpha})`);
+              ga.addColorStop(1, 'rgba(118, 52, 18, 0)');
+            } else {
+              ga.addColorStop(0, `rgba(16, 18, 22, ${0.72 * grimeAlpha})`);
+              ga.addColorStop(1, 'rgba(16, 18, 22, 0)');
+            }
+            actx.fillStyle = ga;
+            actx.beginPath(); actx.arc(b.x, b.y, b.r * 1.45, 0, Math.PI * 2); actx.fill();
+
+            const gr = rctx.createRadialGradient(b.x, b.y, 2, b.x, b.y, b.r * 1.45);
+            gr.addColorStop(0, `rgba(235, 235, 235, ${0.88 * grimeAlpha})`);
+            gr.addColorStop(1, 'rgba(235, 235, 235, 0)');
+            rctx.fillStyle = gr;
+            rctx.beginPath(); rctx.arc(b.x, b.y, b.r * 1.45, 0, Math.PI * 2); rctx.fill();
+          });
+        }
+      }
+
+      const blots = [];
+      for (let i = 0; i < 42; i++) {
+        blots.push({
+          x: (i * 53 + 19) % sz,
+          y: (i * 89 + 31) % sz,
+          r: 16 + (i % 20),
+          rust: i % 3 === 0,
+          cleared: false
+        });
+      }
+
+      repaint(22, blots);
+      const map = new THREE.CanvasTexture(albC);
+      map.encoding = THREE.sRGBEncoding;
+      const roughnessMap = new THREE.CanvasTexture(rghC);
+      return { albC, rghC, map, roughnessMap, blots, repaint };
+    }
+
+    function buildGeometry(geoKind, sz) {
+      if (geoKind === 'box') return new THREE.BoxGeometry(sz[0], sz[1], sz[2]);
+      if (geoKind === 'cylX') {
+        const g = new THREE.CylinderGeometry(sz[0], sz[0], sz[1], 18);
+        g.rotateX(Math.PI / 2);
+        return g;
+      }
+      if (geoKind === 'cylY') return new THREE.CylinderGeometry(sz[0], sz[0], sz[1], 18);
+      if (geoKind === 'cylZ') {
+        const g = new THREE.CylinderGeometry(sz[0], sz[0], sz[1], 16);
+        g.rotateZ(Math.PI / 2);
+        return g;
+      }
+      return new THREE.BoxGeometry(0.3, 0.3, 0.3);
+    }
+
+    function loadMechanism(idx) {
+      activeMechIdx = idx;
+      inRangeMode = false;
+      explodedMode = false;
+      rangeGroup.visible = false;
+      benchGroup.visible = true;
+      document.getElementById('range-hud').style.display = 'none';
+      document.getElementById('btn-range-toggle').textContent = 'ENTER 3D BALLISTICS RANGE';
+
+      while (mechanismRoot.children.length > 0) mechanismRoot.remove(mechanismRoot.children[0]);
+      partStates = [];
+
+      const mech = MECHANISMS[idx];
+      mech.parts.forEach((pd, pIdx) => {
+        const texPack = createPartDynamicTextures(pd.mat, mech);
+        const mat = new THREE.MeshStandardMaterial({
+          map: texPack.map,
+          roughnessMap: texPack.roughnessMap,
+          metalness: pd.mat === 'walnut' ? 0.12 : 0.86,
+          roughness: 0.9,
+          emissive: pd.mat === 'cyan' ? 0x0a4866 : 0x000000,
+          emissiveIntensity: pd.mat === 'cyan' ? 0.55 : 0.0
+        });
+        const mesh = new THREE.Mesh(buildGeometry(pd.geo, pd.sz), mat);
+        mesh.position.set(pd.pos[0], pd.pos[1], pd.pos[2]);
+        mesh.castShadow = true; mesh.receiveShadow = true;
+        mesh.userData.partIdx = pIdx;
+
+        // Add CNC-machined tactical sub-details (cooling fins, rail teeth, sight blades, knurled bands)
+        if (pd.geo === 'cylX' && pd.sz[1] > 1.2) {
+          for (let r = -2; r <= 2; r++) {
+            const collar = new THREE.Mesh(new THREE.TorusGeometry(pd.sz[0] * 1.08, pd.sz[0] * 0.14, 8, 18), mat);
+            collar.position.z = r * (pd.sz[1] * 0.16);
+            collar.userData.partIdx = pIdx;
+            mesh.add(collar);
+          }
+        } else if (pd.geo === 'box' && pd.sz[2] > 1.5) {
+          for (let t = -4; t <= 4; t++) {
+            const lug = new THREE.Mesh(new THREE.BoxGeometry(pd.sz[0] * 0.82, 0.06, 0.08), mat);
+            lug.position.set(0, pd.sz[1] * 0.52, t * 0.18);
+            lug.userData.partIdx = pIdx;
+            mesh.add(lug);
+          }
+        }
+        mechanismRoot.add(mesh);
+
+        // Tray slot target on green armorer mat when stripped
+        const col = pIdx % 5;
+        const row = Math.floor(pIdx / 5);
+        const trayPos = new THREE.Vector3(-2.4 + col * 1.35, -1.24, 0.95 + row * 1.05);
+
+        partStates.push({
+          idx: pIdx,
+          def: pd,
+          mesh,
+          mat,
+          texPack,
+          stripped: false,
+          clean: 22,
+          lube: 16,
+          integrity: pIdx === 3 ? 64 : 88,
+          homePos: new THREE.Vector3(pd.pos[0], pd.pos[1], pd.pos[2]),
+          extPos: new THREE.Vector3(pd.ext[0], pd.ext[1], pd.ext[2]),
+          trayPos,
+          targetPos: new THREE.Vector3(pd.pos[0], pd.pos[1], pd.pos[2])
+        });
+      });
+
+      selectedPartIdx = 0;
+      resetBenchCamera();
+      renderMechanismTabs();
+      refreshArmoryUI();
+    }
+
+    function nextDisassembleIdx() {
+      for (let i = 0; i < partStates.length - 1; i++) {
+        if (!partStates[i].stripped) return i;
+      }
+      return -1;
+    }
+    function nextReassembleIdx() {
+      for (let i = partStates.length - 2; i >= 0; i--) {
+        if (partStates[i].stripped) return i;
+      }
+      return -1;
+    }
+
+    function togglePartStrip(pIdx) {
+      const ps = partStates[pIdx];
+      if (!ps || pIdx === partStates.length - 1) return; // Frame stays anchored
+      const nextOut = nextDisassembleIdx();
+      const nextIn = nextReassembleIdx();
+
+      if (!ps.stripped) {
+        // Enforce realistic sequential order or auto-popblocking pin/mag
+        if (pIdx !== nextOut && nextOut !== -1) {
+          selectPart(nextOut);
+          document.getElementById('phase-banner').textContent = `SAFETY SEQUENCE: Extract [${partStates[nextOut].def.name}] first!`;
+          return;
+        }
+        ps.stripped = true;
+        ps.targetPos.copy(ps.trayPos);
+        playFoley('pin');
+        selectPart(pIdx);
+      } else {
+        if (pIdx !== nextIn && nextIn !== -1) {
+          selectPart(nextIn);
+          document.getElementById('phase-banner').textContent = `REASSEMBLY ORDER: Mount [${partStates[nextIn].def.name}] first!`;
+          return;
+        }
+        ps.stripped = false;
+        ps.targetPos.copy(ps.homePos);
+        playFoley('pin');
+        selectPart(pIdx);
+      }
+      refreshArmoryUI();
+    }
+
+    function scrubPartAtUV(ps, uv, tool) {
+      const boost = career.upgrades.diamondStone ? 1.45 : 1.0;
+      if (tool === 'oil') {
+        ps.lube = Math.min(100, ps.lube + 8 * boost);
+        playFoley('pin');
+      } else {
+        const gain = (tool === 'solvent' ? 5 : (tool === 'brush' ? 9 : 12)) * boost;
+        ps.clean = Math.min(100, ps.clean + gain);
+        if (uv) {
+          const cx = uv.x * 256, cy = (1 - uv.y) * 256;
+          ps.texPack.blots.forEach((b) => {
+            if (Math.hypot(b.x - cx, b.y - cy) < 58) b.cleared = true;
+          });
+        }
+        ps.texPack.repaint(ps.clean, ps.texPack.blots);
+        ps.texPack.map.needsUpdate = true;
+        ps.texPack.roughnessMap.needsUpdate = true;
+        ps.mat.roughness = Math.max(0.14, 0.9 - (ps.clean / 100) * 0.74);
+        playFoley('scrub');
+      }
+      checkContractCompletion();
+      refreshArmoryUI();
+    }
+
+    function runUltrasonicBath() {
+      playFoley('ultrasonic');
+      ultrasonicTimer = 1.1;
+      const bonus = career.upgrades.heater ? 45 : 30;
+      partStates.forEach((ps) => {
+        if (ps.stripped || ps.idx === partStates.length - 1) {
+          ps.clean = Math.min(100, ps.clean + bonus);
+          ps.texPack.blots.forEach((b, i) => { if (i % 2 === 0 || ps.clean >= 95) b.cleared = true; });
+          ps.texPack.repaint(ps.clean, ps.texPack.blots);
+          ps.texPack.map.needsUpdate = true;
+          ps.texPack.roughnessMap.needsUpdate = true;
+          ps.mat.roughness = Math.max(0.14, 0.9 - (ps.clean / 100) * 0.74);
+        }
+      });
+      checkContractCompletion();
+      refreshArmoryUI();
+    }
+
+    function computeOverallScore() {
+      if (!partStates.length) return 0;
+      const sum = partStates.reduce((acc, p) => acc + p.clean * 0.5 + p.lube * 0.3 + p.integrity * 0.2, 0);
+      return Math.round(sum / partStates.length);
+    }
+
+    let rewardedCurrent = false;
+    function checkContractCompletion() {
+      const allMounted = partStates.every((p) => !p.stripped);
+      const score = computeOverallScore();
+      if (allMounted && score >= 88 && !rewardedCurrent) {
+        rewardedCurrent = true;
+        career.credits += 220;
+        career.contractsDone += 1;
+        persistCareer();
+      }
+    }
+
+    // --- Camera Orbit & Pointer Raycasting ---
+    let camYaw = 0.48, camPitch = 0.42, camRadius = 5.4;
+    let camFocus = new THREE.Vector3(0, -0.1, 0.2);
+
+    function resetBenchCamera() {
+      camYaw = 0.48; camPitch = 0.42; camRadius = 5.4;
+      camFocus.set(0, -0.1, 0.2);
+      rewardedCurrent = false;
+    }
+
+    const raycaster = new THREE.Raycaster();
+    const ptr = new THREE.Vector2();
+    let pointerDown = false;
+    let isOrbiting = false;
+    let prevPtr = { x: 0, y: 0 };
+
+    // Sculpted 3D Muzzle Flash Starburst & Tracer Beam for Ballistics Range
+    const muzzleFlash = new THREE.Mesh(
+      new THREE.ConeGeometry(0.16, 0.65, 8),
+      new THREE.MeshBasicMaterial({ color: 0xffb838, transparent: true, opacity: 0 })
+    );
+    muzzleFlash.rotation.x = -Math.PI / 2;
+    scene.add(muzzleFlash);
+
+    renderer.domElement.addEventListener('pointerdown', (e) => {
+      ensureAudio();
+      pointerDown = true;
+      prevPtr = { x: e.clientX, y: e.clientY };
+
+      const rect = renderer.domElement.getBoundingClientRect();
+      ptr.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      ptr.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(ptr, camera);
+
+      if (inRangeMode) {
+        fireBallisticsShot();
+        return;
+      }
+
+      const hits = raycaster.intersectObjects(partStates.map((p) => p.mesh));
+      if (hits.length > 0) {
+        const hit = hits[0];
+        const pIdx = hit.object.userData.partIdx;
+        selectPart(pIdx);
+        if (activeTool === 'hand') {
+          togglePartStrip(pIdx);
+        } else {
+          scrubPartAtUV(partStates[pIdx], hit.uv, activeTool);
+        }
+        isOrbiting = false;
+      } else {
+        isOrbiting = true;
+      }
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (!pointerDown || inRangeMode) return;
+      const dx = e.clientX - prevPtr.x, dy = e.clientY - prevPtr.y;
+      prevPtr = { x: e.clientX, y: e.clientY };
+
+      if (isOrbiting) {
+        camYaw -= dx * 0.007;
+        camPitch = Math.max(0.08, Math.min(1.25, camPitch + dy * 0.006));
+      } else if (activeTool !== 'hand') {
+        const rect = renderer.domElement.getBoundingClientRect();
+        ptr.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        ptr.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(ptr, camera);
+        const hits = raycaster.intersectObjects(partStates.map((p) => p.mesh));
+        if (hits.length > 0) {
+          const pIdx = hits[0].object.userData.partIdx;
+          scrubPartAtUV(partStates[pIdx], hits[0].uv, activeTool);
+        }
+      }
+    });
+    window.addEventListener('pointerup', () => { pointerDown = false; isOrbiting = false; });
+    renderer.domElement.addEventListener('wheel', (e) => {
+      if (!inRangeMode) camRadius = Math.max(2.6, Math.min(9.5, camRadius + e.deltaY * 0.005));
+    }, { passive: true });
+
+    function fireBallisticsShot() {
+      playFoley('shot');
+      cycleAnimTimer = 0.16;
+      muzzleFlash.position.set(0.35, -0.15, -1.8);
+      muzzleFlash.material.opacity = 0.95;
+
+      // Accuracy MOA governed by restoration cleanliness + lube + bore sighter upgrade!
+      const quality = computeOverallScore() / 100;
+      const boreBonus = career.upgrades.laserBore ? 0.55 : 1.0;
+      lastMoa = Number((Math.max(0.28, (2.4 - quality * 1.95) * boreBonus)).toFixed(2));
+      const jitter = (1 - quality) * 0.035 * boreBonus;
+
+      const shotRay = new THREE.Raycaster();
+      shotRay.setFromCamera(
+        new THREE.Vector2(ptr.x + (Math.random() - 0.5) * jitter, ptr.y + (Math.random() - 0.5) * jitter),
+        camera
+      );
+      const targetMeshes = steelTargets.map((t) => t.plate);
+      const hits = shotRay.intersectObjects(targetMeshes);
+      if (hits.length > 0) {
+        const st = steelTargets.find((t) => t.plate === hits[0].object);
+        if (st) {
+          st.tilt = 1.25;
+          rangeHits++;
+          career.credits += 35;
+          persistCareer();
+          playFoley('steel_ping');
+        }
+      }
+      document.getElementById('rng-hits').textContent = rangeHits;
+      document.getElementById('rng-moa').textContent = lastMoa;
+      refreshArmoryUI();
+    }
+
+    function selectPart(idx) {
+      selectedPartIdx = idx;
+      const ps = partStates[idx];
+      if (ps && ps.stripped) {
+        // Elevate inspected stripped part slightly under magnifying lamp when scrubbing
+        if (activeTool !== 'hand') {
+          ps.targetPos.set(0.2, 0.35, 0.35);
+        } else {
+          ps.targetPos.copy(ps.trayPos);
+        }
+      }
+      refreshArmoryUI();
+    }
+
+    // --- UI Rendering & Controls ---
+    function renderMechanismTabs() {
+      const strip = document.getElementById('mechanism-tabs');
+      strip.innerHTML = '';
+      MECHANISMS.forEach((m, i) => {
+        const b = document.createElement('button');
+        b.className = 'w-tab' + (i === activeMechIdx ? ' active' : '');
+        b.textContent = m.name;
+        b.onclick = () => loadMechanism(i);
+        strip.appendChild(b);
+      });
+    }
+
+    function refreshArmoryUI() {
+      const overall = computeOverallScore();
+      document.getElementById('hud-cr').textContent = '$' + career.credits;
+      document.getElementById('hud-overall').textContent = overall + '%';
+      document.getElementById('hud-contracts').textContent = career.contractsDone;
+
+      const strippedCnt = partStates.filter((p) => p.stripped).length;
+      document.getElementById('stripped-count').textContent = `${strippedCnt} / ${partStates.length - 1} Stripped`;
+
+      const nextOut = nextDisassembleIdx();
+      if (!inRangeMode) {
+        if (strippedCnt === 0 && overall < 80) {
+          document.getElementById('phase-banner').textContent = `PHASE 1: FIELD-STRIP — Click [${partStates[0].def.name}] or [EXTRACT / MOUNT NEXT]`;
+        } else if (overall < 85) {
+          document.getElementById('phase-banner').textContent = `PHASE 2: RESTORATION — Drag Solvent/Brush/Cloth on 3D Parts or run Ultrasonic Bath`;
+        } else if (strippedCnt > 0) {
+          document.getElementById('phase-banner').textContent = `PHASE 3: REASSEMBLY — Mount cleaned parts & Enter 3D Ballistics Range!`;
+        } else {
+          document.getElementById('phase-banner').textContent = `RESTORATION COMPLETE (${overall}%) — Ready for 3D Ballistics Test Range!`;
+        }
+      }
+
+      const list = document.getElementById('parts-list');
+      list.innerHTML = '';
+      partStates.forEach((ps, i) => {
+        const row = document.createElement('div');
+        row.className = 'part-item' + (i === selectedPartIdx ? ' selected' : '') + (i === nextOut ? ' next-step' : '');
+        row.innerHTML = `
+          <span>${i + 1}. ${ps.def.name}</span>
+          <b style="color:${ps.clean >= 85 ? 'var(--emerald)' : 'var(--amber)'}">${Math.round(ps.clean)}% ${ps.stripped ? '[OUT]' : ''}</b>
+        `;
+        row.onclick = () => {
+          selectPart(i);
+          if (activeTool === 'hand') togglePartStrip(i);
+        };
+        list.appendChild(row);
+      });
+
+      const cur = partStates[selectedPartIdx];
+      if (cur) {
+        document.getElementById('insp-name').textContent = cur.def.name;
+        document.getElementById('insp-state').textContent = cur.stripped ? 'ON MAT' : 'MOUNTED';
+        document.getElementById('val-clean').textContent = Math.round(cur.clean) + '%';
+        document.getElementById('bar-clean').style.width = cur.clean + '%';
+        document.getElementById('val-lube').textContent = Math.round(cur.lube) + '%';
+        document.getElementById('bar-lube').style.width = cur.lube + '%';
+        document.getElementById('val-integrity').textContent = Math.round(cur.integrity) + '%';
+        document.getElementById('bar-integrity').style.width = cur.integrity + '%';
+      }
+
+      const upBox = document.getElementById('upgrades-box');
+      upBox.innerHTML = '';
+      [
+        ['heater', '80C Ultrasonic Heater', 140],
+        ['diamondStone', 'Diamond Honing Polish', 160],
+        ['laserBore', 'Laser Bore-Sighter', 180]
+      ].forEach(([key, title, cost]) => {
+        const owned = career.upgrades[key];
+        const b = document.createElement('button');
+        b.className = 'a-btn' + (owned ? ' active' : '');
+        b.textContent = owned ? `${title} [OWNED]` : `${title} ($${cost})`;
+        b.onclick = () => {
+          if (!owned && career.credits >= cost) {
+            career.credits -= cost;
+            career.upgrades[key] = true;
+            persistCareer(); refreshArmoryUI();
+          }
+        };
+        upBox.appendChild(b);
+      });
+    }
+
+    // Tool Buttons
+    document.querySelectorAll('[data-tool]').forEach((btn) => {
+      btn.onclick = () => {
+        activeTool = btn.dataset.tool;
+        document.querySelectorAll('[data-tool]').forEach((x) => x.classList.toggle('active', x === btn));
+        selectPart(selectedPartIdx);
+      };
+    });
+
+    document.getElementById('btn-step-auto').onclick = () => {
+      const nOut = nextDisassembleIdx();
+      if (nOut !== -1 && computeOverallScore() < 80) {
+        togglePartStrip(nOut);
+      } else {
+        const nIn = nextReassembleIdx();
+        if (nIn !== -1) togglePartStrip(nIn);
+        else if (nOut !== -1) togglePartStrip(nOut);
+      }
+    };
+
+    document.getElementById('btn-exploded').onclick = () => {
+      explodedMode = !explodedMode;
+      document.getElementById('btn-exploded').classList.toggle('active', explodedMode);
+      partStates.forEach((ps) => {
+        ps.targetPos.copy(explodedMode ? ps.extPos : (ps.stripped ? ps.trayPos : ps.homePos));
+      });
+    };
+
+    document.getElementById('btn-ultrasonic').onclick = runUltrasonicBath;
+    document.getElementById('btn-replace-part').onclick = () => {
+      const cur = partStates[selectedPartIdx];
+      if (cur && career.credits >= 65) {
+        career.credits -= 65;
+        cur.integrity = 100;
+        cur.clean = 100;
+        cur.lube = 100;
+        cur.texPack.blots.forEach((b) => { b.cleared = true; });
+        cur.texPack.repaint(100, cur.texPack.blots);
+        cur.texPack.map.needsUpdate = true;
+        cur.texPack.roughnessMap.needsUpdate = true;
+        cur.mat.roughness = 0.15;
+        playFoley('pin');
+        persistCareer(); refreshArmoryUI();
+      }
+    };
+
+    document.getElementById('btn-cycle-action').onclick = () => {
+      cycleAnimTimer = 0.35;
+      playFoley('pin');
+    };
+
+    document.getElementById('btn-range-toggle').onclick = () => {
+      inRangeMode = !inRangeMode;
+      benchGroup.visible = !inRangeMode;
+      rangeGroup.visible = inRangeMode;
+      document.getElementById('range-hud').style.display = inRangeMode ? 'block' : 'none';
+      document.getElementById('btn-range-toggle').textContent = inRangeMode ? 'RETURN TO 3D WORKBENCH' : 'ENTER 3D BALLISTICS RANGE';
+      if (inRangeMode) {
+        // Reassemble visually in first-person right-hand stance!
+        partStates.forEach((ps) => { ps.stripped = false; ps.targetPos.copy(ps.homePos); ps.mesh.position.copy(ps.homePos); });
+        mechanismRoot.position.set(0.55, -0.52, -1.25);
+        mechanismRoot.rotation.set(0, Math.PI, 0);
+        mechanismRoot.scale.setScalar(0.52);
+        camera.position.set(0, 0.25, 0.6);
+        camera.lookAt(0, 0.15, -22);
+        document.getElementById('phase-banner').textContent = '3D BALLISTICS TEST RANGE — Click moving steel plates to test MOA accuracy!';
+      } else {
+        mechanismRoot.position.set(0, 0, 0);
+        mechanismRoot.rotation.set(0, 0, 0);
+        mechanismRoot.scale.setScalar(1);
+        resetBenchCamera();
+        refreshArmoryUI();
+      }
+    };
+
+    document.getElementById('btn-mobile-diag').onclick = () => {
+      document.getElementById('right-bench').classList.toggle('mobile-open');
+    };
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    loadMechanism(0);
+
+    // --- 60 FPS Render & Animation Loop ---
+    let lastT = performance.now();
+    let fpsFrames = 0, fpsAcc = 0, measuredFps = 60;
+
+    function animate(now) {
+      requestAnimationFrame(animate);
+      const dt = Math.min(0.05, (now - lastT) / 1000);
+      lastT = now;
+
+      fpsFrames++; fpsAcc += dt;
+      if (fpsAcc >= 0.5) { measuredFps = Math.round(fpsFrames / fpsAcc); fpsFrames = 0; fpsAcc = 0; }
+
+      // Smooth part interpolation
+      partStates.forEach((ps, idx) => {
+        ps.mesh.position.lerp(ps.targetPos, Math.min(1, dt * 10));
+        if (cycleAnimTimer > 0 && idx === 2) {
+          ps.mesh.position.z = ps.homePos.z - Math.sin((cycleAnimTimer / 0.35) * Math.PI) * 0.65;
+        }
+      });
+      if (cycleAnimTimer > 0) cycleAnimTimer = Math.max(0, cycleAnimTimer - dt);
+
+      if (ultrasonicTimer > 0) {
+        ultrasonicTimer = Math.max(0, ultrasonicTimer - dt);
+        bathFluid.position.y = 0.16 + Math.sin(now * 0.06) * 0.03;
+        tankGlow.intensity = 1.4 + Math.sin(now * 0.08) * 0.8;
+      }
+
+      if (muzzleFlash.material.opacity > 0) {
+        muzzleFlash.material.opacity = Math.max(0, muzzleFlash.material.opacity - dt * 9);
+      }
+
+      if (inRangeMode) {
+        steelTargets.forEach((st) => {
+          st.group.position.x = st.baseX + Math.sin(now * 0.0014 * st.spd) * 2.4;
+          if (st.tilt > 0) {
+            st.tilt = Math.max(0, st.tilt - dt * 2.8);
+            st.plate.rotation.x = Math.PI / 2 - st.tilt;
+          }
+        });
+        mechanismRoot.position.z = -1.25 + (cycleAnimTimer > 0 ? 0.14 : 0);
+      } else {
+        camera.position.set(
+          camFocus.x + Math.sin(camYaw) * Math.cos(camPitch) * camRadius,
+          camFocus.y + Math.sin(camPitch) * camRadius,
+          camFocus.z + Math.cos(camYaw) * Math.cos(camPitch) * camRadius
+        );
+        camera.lookAt(camFocus);
+      }
+
+      renderer.render(scene, camera);
+    }
+    requestAnimationFrame(animate);
+
+    // Expose Truthful Engine Diagnostic & Automation API
+    window.__NSP_GAME__ = {
+      id: 'northstar_precision_armory_3d',
+      title: 'Precision Armory & Relic Restoration 3D Sim',
+      getState: () => ({
+        fps: measuredFps,
+        jsErrors: jsErrors.slice(),
+        mechanismsAvailable: MECHANISMS.length,
+        activeMechanism: MECHANISMS[activeMechIdx].id,
+        partCount: partStates.length,
+        strippedParts: partStates.filter((p) => p.stripped).length,
+        overallQuality: computeOverallScore(),
+        inRangeMode,
+        rangeHits,
+        lastMoa,
+        credits: career.credits
+      }),
+      demonstrateFieldStripAndScrub: () => {
+        loadMechanism(3); // Coaxial 15mK Cryo-Caster
+        for (let i = 0; i < 6; i++) togglePartStrip(i);
+        document.getElementById('btn-exploded').click();
+        runUltrasonicBath();
+        partStates.forEach((ps) => {
+          for (let pass = 0; pass < 6; pass++) {
+            scrubPartAtUV(ps, { x: (pass % 3) * 0.35 + 0.15, y: 0.5 }, 'cloth');
+            scrubPartAtUV(ps, null, 'oil');
+          }
+        });
+        return window.__NSP_GAME__.getState();
+      },
+      demonstrateBallisticsRange: () => {
+        if (!inRangeMode) document.getElementById('btn-range-toggle').click();
+        // Aim directly at center steel plate and fire!
+        const targetWorld = new THREE.Vector3();
+        steelTargets[1].plate.getWorldPosition(targetWorld);
+        camera.lookAt(targetWorld);
+        camera.updateMatrixWorld();
+        ptr.set(0, 0);
+        fireBallisticsShot();
+        return window.__NSP_GAME__.getState();
+      }
+    };
+  })();
+  </script>
+
+<div class="nsp-hub-return-bar">
+  <a class="nsp-hub-return" href="/games/" target="_top">← 3D Games Hub</a>
+  <a class="nsp-hub-return" href="/arcade/" target="_top">Arcade (60)</a>
+</div>
+
+</body>
+</html>

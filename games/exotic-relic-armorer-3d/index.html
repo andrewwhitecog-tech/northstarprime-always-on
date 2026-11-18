@@ -1,0 +1,2604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="nsp-analytics" content="none">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="author" content="Andrew White" />
+  <title>NSP ARMORER LAB: Exotic Firearms &amp; Ancient Alien Relic Restoration Simulator</title>
+  <script src="../three.min.js"></script>
+  
+  <style>
+    :root {
+      --bg-dark: #060911;
+      --panel-bg: rgba(12, 17, 29, 0.90);
+      --panel-border: rgba(94, 129, 244, 0.30);
+      --accent-gold: #f59e0b;
+      --accent-cyan: #00f2fe;
+      --accent-green: #10b981;
+      --accent-red: #f43f5e;
+      --accent-purple: #a855f7;
+      --text-main: #f1f5f9;
+      --text-dim: #94a3b8;
+      --rainbow-grad: linear-gradient(90deg, #ff3e88, #ff9900, #10b981, #00f2fe, #a855f7, #ff3e88);
+    }
+    * { box-sizing: border-box; user-select: none; }
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      overflow: hidden;
+      background: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+    #canvas-container {
+      position: fixed; inset: 0; width: 100vw; height: 100vh;
+      z-index: 1;
+      cursor: crosshair;
+    }
+
+    /* Non-Overlapping Master HUD Grid Overlay */
+    #ui-shell {
+      position: fixed; inset: 0; width: 100vw; height: 100vh;
+      z-index: 10;
+      pointer-events: none;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      grid-template-columns: 300px 1fr 265px;
+      gap: 10px;
+      padding: 10px 12px;
+    }
+    #top-hud, #left-panel, #right-panel, #tool-dock {
+      pointer-events: auto;
+    }
+
+    /* Top Header HUD */
+    #top-hud {
+      grid-column: 1 / 4;
+      grid-row: 1;
+      display: flex; flex-direction: column; gap: 6px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 8px 14px;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.60);
+    }
+    .top-row-main {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    }
+    .brand-block { display: flex; align-items: center; gap: 12px; }
+    .rainbow-badge {
+      padding: 5px 11px;
+      border-radius: 8px;
+      background: var(--rainbow-grad);
+      background-size: 200% 100%;
+      animation: rainbowShift 6s linear infinite;
+      color: #050811;
+      font-weight: 900;
+      font-size: 0.74rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    @keyframes rainbowShift {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 200% 50%; }
+    }
+    .title-stack h1 {
+      margin: 0; font-size: 1.0rem; font-weight: 800; letter-spacing: 0.02em;
+    }
+    .title-stack span {
+      font-size: 0.75rem; color: var(--text-dim);
+    }
+
+    /* Campaign Weapon Tier Selector Strip */
+    #weapon-tier-strip {
+      display: flex; gap: 6px; align-items: center; overflow-x: auto;
+      padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.08);
+    }
+    .tier-tab {
+      flex: 1; min-width: 145px;
+      padding: 6px 10px;
+      border-radius: 9px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 6px;
+      transition: all 0.16s ease;
+      font-size: 0.74rem;
+    }
+    .tier-tab:hover { background: rgba(255, 255, 255, 0.09); transform: translateY(-1px); }
+    .tier-tab.active {
+      border-color: var(--accent-cyan);
+      background: rgba(0, 242, 254, 0.15);
+      box-shadow: 0 0 14px rgba(0, 242, 254, 0.22);
+    }
+    .tier-tab.boss-tab {
+      border-color: rgba(168, 85, 247, 0.45);
+      background: linear-gradient(135deg, rgba(88, 28, 135, 0.35), rgba(15, 23, 42, 0.7));
+    }
+    .tier-tab.boss-tab.active {
+      border-color: #e879f9;
+      box-shadow: 0 0 18px rgba(217, 70, 239, 0.45);
+    }
+    .tier-tab.completed .tier-status { color: var(--accent-green); }
+    .tier-title { font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tier-sub { font-size: 0.65rem; color: var(--text-dim); display: block; }
+    .tier-status { font-size: 0.85rem; }
+
+    /* Telemetry Bars */
+    .telemetry-strip {
+      display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    }
+    .metric-box {
+      min-width: 124px;
+      background: rgba(8, 12, 22, 0.78);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 9px;
+      padding: 5px 9px;
+    }
+    .metric-header {
+      display: flex; justify-content: space-between; font-size: 0.68rem;
+      font-weight: 700; margin-bottom: 3px; color: var(--text-dim);
+    }
+    .metric-val { color: var(--text-main); font-family: monospace; font-size: 0.76rem; }
+    .progress-track {
+      width: 100%; height: 6px; background: rgba(255, 255, 255, 0.09);
+      border-radius: 0px; overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; border-radius: 0px; transition: width 0.2s ease, background 0.25s ease;
+    }
+
+    /* Left Panel: 7-Stage Armorer Protocol & Educational Coach */
+    #left-panel {
+      grid-column: 1;
+      grid-row: 2;
+      display: flex; flex-direction: column; gap: 8px;
+      min-height: 0; overflow: hidden;
+    }
+    .glass-card {
+      background: var(--panel-bg);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.48);
+    }
+    .section-title {
+      font-size: 0.69rem; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--accent-cyan); font-weight: 800; margin: 0 0 6px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    #stage-list {
+      display: flex; flex-direction: column; gap: 4px;
+      max-height: 210px; overflow-y: auto;
+    }
+    .stage-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 8px; border-radius: 7px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 0.73rem; cursor: pointer;
+      transition: all 0.16s ease;
+    }
+    .stage-item:hover { background: rgba(255, 255, 255, 0.07); }
+    .stage-item.active {
+      background: rgba(0, 242, 254, 0.13);
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 12px rgba(0, 242, 254, 0.18);
+    }
+    .stage-item.done {
+      border-color: rgba(16, 185, 129, 0.45);
+      background: rgba(16, 185, 129, 0.09);
+    }
+    .stage-num {
+      width: 19px; height: 19px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.66rem; font-weight: 800;
+      background: rgba(255, 255, 255, 0.1);
+      flex-shrink: 0;
+    }
+    .stage-item.active .stage-num { background: var(--accent-cyan); color: #050811; }
+    .stage-item.done .stage-num { background: var(--accent-green); color: #050811; }
+
+    /* Coach / Educational Box */
+    #coach-card {
+      flex: 1; display: flex; flex-direction: column; justify-content: space-between;
+      min-height: 0; overflow-y: auto;
+    }
+    #coach-lesson {
+      font-size: 0.76rem; line-height: 1.40; color: #e2e8f0;
+    }
+    .sci-fact {
+      margin-top: 6px; padding: 6px 9px;
+      border-radius: 7px;
+      background: rgba(245, 158, 11, 0.11);
+      border-left: 3px solid var(--accent-gold);
+      font-size: 0.70rem; color: #fde68a;
+    }
+    .action-btn-row {
+      display: flex; gap: 6px; margin-top: 7px; flex-wrap: wrap;
+    }
+    .sim-btn {
+      flex: 1; padding: 7px 9px; border-radius: 7px;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      color: var(--text-main); font-weight: 700; font-size: 0.72rem;
+      cursor: pointer; transition: all 0.15s ease;
+      text-align: center;
+    }
+    .sim-btn:hover { border-color: var(--accent-cyan); transform: translateY(-1px); }
+    .sim-btn.primary {
+      background: linear-gradient(135deg, #00f2fe, #0284c7);
+      color: #040814; border: none;
+    }
+    .sim-btn.warn {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #040814; border: none;
+    }
+    .sim-btn.boss {
+      background: linear-gradient(135deg, #c084fc, #7e22ce);
+      color: #fff; border: none;
+    }
+
+    /* Right Panel: Part Inspector & Bore Scope */
+    #right-panel {
+      grid-column: 3;
+      grid-row: 2;
+      display: flex; flex-direction: column; gap: 8px;
+      min-height: 0; overflow-y: auto;
+    }
+    .part-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 5px;
+    }
+    .part-chip {
+      padding: 5px 7px; border-radius: 7px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      font-size: 0.71rem; cursor: pointer;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .part-chip.selected {
+      border-color: var(--accent-cyan);
+      background: rgba(0, 242, 254, 0.14);
+    }
+    .part-status-dot {
+      width: 7px; height: 7px; border-radius: 50%; background: var(--accent-red);
+    }
+    .part-status-dot.clean { background: var(--accent-green); }
+
+    /* Interactive Bore Scope / Core Scope Mini-Viewport */
+    #borescope-card {
+      display: flex; flex-direction: column; align-items: center;
+    }
+    #borescope-canvas {
+      width: 145px; height: 145px;
+      border-radius: 50%;
+      border: 3px solid #38bdf8;
+      box-shadow: 0 0 18px rgba(56, 189, 248, 0.35), inset 0 0 20px #000;
+      background: #050811;
+    }
+
+    /* Bottom Dock: Tool Dock */
+    #tool-dock {
+      grid-column: 1 / 4;
+      grid-row: 3;
+      justify-self: center;
+      display: flex; gap: 6px; padding: 7px 12px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--panel-border);
+      border-radius: 14px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65);
+    }
+    .tool-slot {
+      width: 102px; padding: 7px 6px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      cursor: pointer; transition: all 0.16s ease;
+      position: relative;
+    }
+    .tool-slot:hover {
+      transform: translateY(-3px);
+      background: rgba(255, 255, 255, 0.09);
+    }
+    .tool-slot.active {
+      border-color: var(--accent-cyan);
+      background: rgba(0, 242, 254, 0.16);
+      box-shadow: 0 0 18px rgba(0, 242, 254, 0.28);
+    }
+    .tool-slot.danger-tool {
+      border-color: rgba(244, 63, 94, 0.35);
+    }
+    .tool-slot.recommended::after {
+      content: "USE NOW";
+      position: absolute; top: -8px; right: 5px;
+      background: var(--accent-gold); color: #050811;
+      font-size: 0.58rem; font-weight: 900; padding: 1px 5px;
+      border-radius: 4px; letter-spacing: 0.04em;
+    }
+    .tool-icon { font-size: 1.28rem; }
+    .tool-name { font-size: 0.69rem; font-weight: 700; text-align: center; line-height: 1.15; }
+    .tool-sub { font-size: 0.60rem; color: var(--text-dim); text-align: center; }
+
+    /* Floating Toast / Feedback Banner */
+    #toast-banner {
+      position: absolute; top: 134px; left: 50%; transform: translateX(-50%);
+      z-index: 25;
+      padding: 9px 20px; border-radius: 0px;
+      background: rgba(15, 23, 42, 0.94);
+      border: 1px solid var(--accent-cyan);
+      color: var(--text-main); font-weight: 700; font-size: 0.84rem;
+      pointer-events: none; opacity: 0;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.55);
+      max-width: 640px; text-align: center;
+    }
+    #toast-banner.show { opacity: 1; transform: translateX(-50%) translateY(4px); }
+    #toast-banner.error { border-color: var(--accent-red); color: #fda4af; background: rgba(45, 10, 22, 0.95); }
+
+    /* Modal for Certification / Next Weapon Unlock */
+    #cert-modal {
+      position: absolute; inset: 0; z-index: 40;
+      background: rgba(4, 7, 15, 0.84);
+      backdrop-filter: blur(10px);
+      display: none; align-items: center; justify-content: center;
+    }
+    #cert-modal.open { display: flex; }
+    .cert-card {
+      width: 590px; max-width: 92vw;
+      background: linear-gradient(145deg, #111827, #0b0f19);
+      border: 2px solid var(--accent-cyan);
+      border-radius: 18px; padding: 26px 30px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.85);
+      text-align: center;
+    }
+  </style>
+
+<style data-nsp-vorath="games-zero-flat">
+@media (forced-colors: none) {
+  button, [role="button"], select, a, summary {
+    border-radius: 0 !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-width: 6px 12px !important;
+    border-image: url("/warband/art/vorath_btn_obsidian.webp") 44 66 fill / 6px 12px stretch !important;
+    background-image: none !important;
+    background-color: transparent !important;
+    color: #fef3c7 !important;
+    text-shadow: 0 1px 3px #000 !important;
+    box-shadow: none !important;
+  }
+  button.active, button.primary, .play-btn, .launch-btn, a.nsp-hub-return {
+    border-image-source: url("/warband/art/vorath_btn_primary.webp") !important;
+    color: #fffdf5 !important;
+  }
+  input[type="search"], input[type="text"], input[type="number"], textarea {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    border-radius: 0 !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-width: 7px 14px !important;
+    border-image: url("/warband/art/vorath_stat_plaque_v01.webp") 18 36 fill / 7px 14px stretch !important;
+    background: none !important;
+    color: #fef3c7 !important;
+  }
+  input[type="range"], input[type="checkbox"], input[type="radio"] {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    border-radius: 0 !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-width: 4px 8px !important;
+    border-image: url("/warband/art/vorath_stat_plaque_v01.webp") 18 36 fill / 4px 8px stretch !important;
+    background: none !important;
+  }
+  .cw-pill, .xp-pill, .metric-pill, .ns-tag, .brand-pill, .meter-pill, .tier-crest, .star-crest,
+  .cab-medal, .cab-stats-row, .stat-chip, .dmd-cell, .part-chip, #chrono-box {
+    border-radius: 0 !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-width: 5px 10px !important;
+    border-image: url("/warband/art/vorath_stat_plaque_v01.webp") 18 36 fill / 5px 10px stretch !important;
+    background: none !important;
+    clip-path: none !important;
+    color: #fef3c7 !important;
+  }
+}
+.nsp-hub-return-bar {
+  position: fixed;
+  bottom: 10px;
+  right: 12px;
+  z-index: 9999;
+  display: flex;
+  gap: 6px;
+}
+.nsp-hub-return {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 3px 10px;
+  font: 700 12px/1.2 system-ui, sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+</style>
+
+</head>
+<body>
+  <div id="canvas-container"></div>
+  <div id="toast-banner">Welcome to NSP Armorer Lab!</div>
+
+  <div id="ui-shell">
+  <!-- Top Telemetry, Score & 6-Tier Campaign Armory Strip -->
+  <header id="top-hud">
+    <div class="top-row-main">
+      <div class="brand-block">
+        <div class="rainbow-badge" id="active-weapon-badge">TIER 1 • SIG P239 .40 S&amp;W</div>
+        <div class="title-stack">
+          <h1 id="active-weapon-title">SIG SAUER P239 RAINBOW TITANIUM (.40 S&amp;W) — PACIFIC BEACH SAND DROP</h1>
+          <span id="sub-status">6-Tier Exotic Armorer &amp; Relic Restoration Campaign • Click any Tier Tab below or Unlock Progressively!</span>
+        </div>
+      </div>
+
+      <div class="telemetry-strip">
+        <div class="metric-box">
+          <div class="metric-header"><span id="lbl-layer1">DRY QUARTZ SAND</span><span class="metric-val" id="val-sand">100%</span></div>
+          <div class="progress-track"><div class="progress-fill" id="bar-sand" style="width:100%; background:#f59e0b;"></div></div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-header"><span id="lbl-layer2">SALT &amp; CARBON</span><span class="metric-val" id="val-salt">100%</span></div>
+          <div class="progress-track"><div class="progress-fill" id="bar-salt" style="width:100%; background:#f43f5e;"></div></div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-header"><span>GREASE &amp; LUBE</span><span class="metric-val" id="val-lube">0%</span></div>
+          <div class="progress-track"><div class="progress-fill" id="bar-lube" style="width:0%; background:#10b981;"></div></div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-header"><span id="lbl-finish">PVD RAINBOW FINISH</span><span class="metric-val" id="val-finish">100%</span></div>
+          <div class="progress-track"><div class="progress-fill" id="bar-finish" style="width:100%; background:var(--rainbow-grad);"></div></div>
+        </div>
+        <div class="metric-box" style="min-width:112px;">
+          <div class="metric-header"><span>ARMORER XP</span><span class="metric-val" id="val-score">0</span></div>
+          <div style="font-size:0.70rem; color:#38bdf8; font-weight:800;" id="rank-label">APPRENTICE</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6 Unlockable Weapon Tiers Strip -->
+    <div id="weapon-tier-strip">
+      <div class="tier-tab active" data-tier="1" onclick="loadWeaponTier(1)">
+        <div>
+          <div class="tier-title">1. SIG P239 Rainbow .40</div>
+          <span class="tier-sub">Beach Quartz Sand &amp; Surf Salt</span>
+        </div>
+        <span class="tier-status" id="tier-stat-1">◆</span>
+      </div>
+      <div class="tier-tab" data-tier="2" onclick="loadWeaponTier(2)">
+        <div>
+          <div class="tier-title">2. Mateba 6 Unica .44</div>
+          <span class="tier-sub">Bayou Swamp Peat &amp; Pine Sap</span>
+        </div>
+        <span class="tier-status" id="tier-stat-2">◆</span>
+      </div>
+      <div class="tier-tab" data-tier="3" onclick="loadWeaponTier(3)">
+        <div>
+          <div class="tier-title">3. 1965 MBA Gyrojet 13mm</div>
+          <span class="tier-sub">Mud-Dauber Nests &amp; Rocket Slag</span>
+        </div>
+        <span class="tier-status" id="tier-stat-3">◆</span>
+      </div>
+      <div class="tier-tab" data-tier="4" onclick="loadWeaponTier(4)">
+        <div>
+          <div class="tier-title">4. 1896 Gold Mauser C96</div>
+          <span class="tier-sub">Volcanic Sulfur &amp; 1900 Cosmoline</span>
+        </div>
+        <span class="tier-status" id="tier-stat-4">◆</span>
+      </div>
+      <div class="tier-tab" data-tier="5" onclick="loadWeaponTier(5)">
+        <div>
+          <div class="tier-title">5. Helios Cryo-Gauss MK4</div>
+          <span class="tier-sub">Cherenkov Glass &amp; Ferrofluid</span>
+        </div>
+        <span class="tier-status" id="tier-stat-5">◆</span>
+      </div>
+      <div class="tier-tab boss-tab" data-tier="6" onclick="loadWeaponTier(6)">
+        <div>
+          <div class="tier-title" style="color:#f0abfc;">6. ★ BOSS: ALIEN RELIC</div>
+          <span class="tier-sub" style="color:#d8b4fe;">100% Rusted Vorathian Dredge</span>
+        </div>
+        <span class="tier-status" id="tier-stat-6">♛</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Left Panel: 7-Stage Armorer Checklist & Coach -->
+  <aside id="left-panel">
+    <div class="glass-card">
+      <div class="section-title">
+        <span id="protocol-header-title">7-STAGE RESTORATION PROTOCOL</span>
+        <span id="stage-counter">STAGE 1/7</span>
+      </div>
+      <div id="stage-list">
+        <div class="stage-item active" data-stage="1" onclick="selectStage(1)">
+          <div class="stage-num">1</div>
+          <div><strong id="st-title-1">Safety Clear &amp; Field-Strip</strong><br/><span style="font-size:0.68rem;color:var(--text-dim);" id="st-sub-1">Separate 5 sub-assemblies gently</span></div>
+        </div>
+        <div class="stage-item" data-stage="2" onclick="selectStage(2)">
+          <div class="stage-num">2</div>
+          <div><strong id="st-title-2">Compressed Air / Ultrasonic Blast</strong><br/><span style="font-size:0.68rem;color:var(--text-dim);" id="st-sub-2">Remove loose dry grit BEFORE wiping!</span></div>
+        </div>
+        <div class="stage-item" data-stage="3" onclick="selectStage(3)">
+          <div class="stage-num">3</div>
+          <div><strong id="st-title-3">Lucas CLP Flush &amp; Polymer Pick</strong><br/><span style="font-size:0.68rem;color:var(--text-dim);" id="st-sub-3">Dissolve bonded crust &amp; pick crevices</span></div>
+        </div>
+        <div class="stage-item" data-stage="4" onclick="selectStage(4)">
+          <div class="stage-num">4</div>
+          <div><strong id="st-title-4">Chamber-to-Muzzle Bore Rod</strong><br/><span style="font-size:0.68rem;color:var(--text-dim);" id="st-sub-4">Rod barrel/waveguide to 100% clean</span></div>
+        </div>
+        <div class="stage-item" data-stage="5" onclick="selectStage(5)">
+          <div class="stage-num">5</div>
+          <div><strong id="st-title-5">Magazine / Feed Core Service</strong><br/><span style="font-size:0.68rem;color:var(--text-dim);" id="st-sub-5">Strip feed assembly &amp; keep bone-dry</span></div>
+        </div>
+        <div class="stage-item" data-stage="6" onclick="selectStage(6)">
+          <div class="stage-num">6</div>
+          <div><strong id="st-title-6">Rail Grease &amp; Silicone Polish</strong><br/><span style="font-size:0.68rem;color:var(--text-dim);" id="st-sub-6">Lucas #10889 grease &amp; mirror buff</span></div>
+        </div>
+        <div class="stage-item" data-stage="7" onclick="selectStage(7)">
+          <div class="stage-num">7</div>
+          <div><strong id="st-title-7">Reassemble &amp; Live Range Fire!</strong><br/><span style="font-size:0.68rem;color:var(--text-dim);" id="st-sub-7">Function check &amp; test fire weapon</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass-card" id="coach-card">
+      <div>
+        <div class="section-title">
+          <span>MASTER ARMORER BRIEFING</span>
+          <span id="coach-badge" style="color:var(--accent-gold);">CRITICAL LESSON</span>
+        </div>
+        <div id="coach-lesson"></div>
+        <div class="sci-fact" id="coach-science"></div>
+      </div>
+      <div>
+        <div class="action-btn-row">
+          <button class="sim-btn primary" id="btn-stage-action" onclick="triggerPrimaryStageAction()">Safe Clear &amp; Field-Strip</button>
+          <button class="sim-btn" id="btn-auto-step" onclick="performGuidedAutoStep()">Auto-Step</button>
+        </div>
+        <div class="action-btn-row" style="margin-top:6px;">
+          <button class="sim-btn boss" onclick="loadWeaponTier(6)">Jump to Final Boss (Alien Relic)</button>
+          <button class="sim-btn warn" onclick="completeEntireCurrentWeapon()">Instant Full Restore</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Right Panel: Sub-Assembly Selector & Bore Scope -->
+  <aside id="right-panel">
+    <div class="glass-card">
+      <div class="section-title">
+        <span>SUB-ASSEMBLY INSPECTOR</span>
+        <span id="view-mode-label">ASSEMBLED</span>
+      </div>
+      <div class="part-grid">
+        <div class="part-chip selected" data-part="all" onclick="focusPart('all')">
+          <span>All Parts View</span><span class="part-status-dot" id="dot-all"></span>
+        </div>
+        <div class="part-chip" data-part="slide" onclick="focusPart('slide')">
+          <span id="part-lbl-slide">Upper / Slide</span><span class="part-status-dot" id="dot-slide"></span>
+        </div>
+        <div class="part-chip" data-part="frame" onclick="focusPart('frame')">
+          <span id="part-lbl-frame">Lower Frame</span><span class="part-status-dot" id="dot-frame"></span>
+        </div>
+        <div class="part-chip" data-part="barrel" onclick="focusPart('barrel')">
+          <span id="part-lbl-barrel">Barrel / Core</span><span class="part-status-dot" id="dot-barrel"></span>
+        </div>
+        <div class="part-chip" data-part="spring" onclick="focusPart('spring')">
+          <span id="part-lbl-spring">Recoil / Gyro</span><span class="part-status-dot" id="dot-spring"></span>
+        </div>
+        <div class="part-chip" data-part="mag" onclick="focusPart('mag')">
+          <span id="part-lbl-mag">Mag / Cell</span><span class="part-status-dot" id="dot-mag"></span>
+        </div>
+      </div>
+      <div class="action-btn-row" style="margin-top:8px;">
+        <button class="sim-btn" onclick="toggleFieldStrip()" id="btn-strip-toggle">Field-Strip / Explode</button>
+        <button class="sim-btn warn" onclick="EnterTestRange()" id="btn-range">Live Test Fire</button>
+      </div>
+      <div class="action-btn-row" style="margin-top:5px;">
+        <button class="sim-btn" onclick="toggleUVBlacklight()" id="btn-uv" title="365nm UV Forensic Contamination Lamp">◆ UV Blacklight</button>
+        <button class="sim-btn" onclick="toggleXRayMode()" id="btn-xray" title="Internal X-Ray Blueprint Cutaway">◆ X-Ray View</button>
+      </div>
+      <div class="action-btn-row" style="margin-top:5px;">
+        <button class="sim-btn primary" onclick="runUltrasonicCavitationBath()" id="btn-sonic" title="40 kHz Ultrasonic Cavitation Bath">◆ 40kHz Sonic Bath</button>
+        
+      </div>
+      <div class="action-btn-row" style="margin-top:5px;">
+        <button class="sim-btn warn" onclick="toggleCinemaShowcase()" id="btn-cinema" title="Choreographed 3D Armorer &amp; Firing Range Showcase">◆ 3D Cinema Demo</button>
+      </div>
+      <div id="chrono-box" style="margin-top:6px; padding:5px 8px; border-radius:6px; background:rgba(0,242,254,0.08); border:1px solid rgba(0,242,254,0.22); font-size:0.68rem; font-family:monospace; color:#7dd3fc;">
+        CHRONO: <span id="chrono-readout">READY • 0 SHOTS</span>
+      </div>
+    </div>
+
+    <div class="glass-card" id="borescope-card">
+      <div class="section-title" style="width:100%;">
+        <span id="borescope-title">OPTICAL BORE SCOPE</span>
+        <span id="bore-clean-pct" style="color:var(--accent-gold);">12% CLEAN</span>
+      </div>
+      <canvas id="borescope-canvas" width="200" height="200"></canvas>
+      <div style="font-size:0.71rem; color:var(--text-dim); text-align:center; margin-top:6px;" id="bore-caption">
+        6-Groove Right-Hand Rifling • Debris detected inside bore!
+      </div>
+    </div>
+  </aside>
+
+  <!-- Bottom Tool Dock -->
+  <nav id="tool-dock">
+    <div class="tool-slot recommended" data-tool="air" onclick="selectTool('air')">
+      <div class="tool-icon">◆</div>
+      <div class="tool-name">10oz Air / Sonic</div>
+      <div class="tool-sub">Blast Dry Grit (#3)</div>
+    </div>
+    <div class="tool-slot" data-tool="clp" onclick="selectTool('clp')">
+      <div class="tool-icon">◆</div>
+      <div class="tool-name">Lucas 4oz CLP</div>
+      <div class="tool-sub">Dissolve Crust (#2)</div>
+    </div>
+    <div class="tool-slot" data-tool="pick" onclick="selectTool('pick')">
+      <div class="tool-icon">◆</div>
+      <div class="tool-name">Polymer Pick</div>
+      <div class="tool-sub">Safe Descale (#4)</div>
+    </div>
+    <div class="tool-slot" data-tool="nylon" onclick="selectTool('nylon')">
+      <div class="tool-icon">◆</div>
+      <div class="tool-name">Nylon Brush &amp; Swab</div>
+      <div class="tool-sub">6" Bamboo Swab (#5)</div>
+    </div>
+    <div class="tool-slot" data-tool="rod" onclick="selectTool('rod')">
+      <div class="tool-icon">◆</div>
+      <div class="tool-name">Bronze Bore Rod</div>
+      <div class="tool-sub">Breech-to-Muzzle (#1)</div>
+    </div>
+    <div class="tool-slot" data-tool="grease" onclick="selectTool('grease')">
+      <div class="tool-icon">◈</div>
+      <div class="tool-name">Lucas Gun Grease</div>
+      <div class="tool-sub">Rails &amp; Pivots (#2)</div>
+    </div>
+    <div class="tool-slot" data-tool="silicone" onclick="selectTool('silicone')">
+      <div class="tool-icon">✨</div>
+      <div class="tool-name">Hoppe's Silicone</div>
+      <div class="tool-sub">Mirror Buff (#6)</div>
+    </div>
+    <div class="tool-slot danger-tool" data-tool="steelpick" onclick="selectTool('steelpick')" title="Warning: Metal picks gouge PVD & ancient relics!">
+      <div class="tool-icon">⚠</div>
+      <div class="tool-name">Steel Pick (TRAP)</div>
+      <div class="tool-sub">GOUGES FINISH!</div>
+    </div>
+  </nav>
+  </div><!-- /#ui-shell -->
+
+  <!-- Certification & Next Tier Unlock Modal -->
+  <div id="cert-modal">
+    <div class="cert-card">
+      <div class="rainbow-badge" id="cert-badge" style="display:inline-block; margin-bottom:10px;">RESTORATION CERTIFIED</div>
+      <h2 style="margin:4px 0 10px; font-size:1.45rem;" id="cert-heading">Weapon Restored to Factory Spec!</h2>
+      <p style="color:var(--text-dim); font-size:0.88rem; line-height:1.5;" id="cert-summary"></p>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:16px 0; text-align:left; background:rgba(255,255,255,0.04); padding:14px; border-radius:10px; font-size:0.83rem;">
+        <div><strong>Finish / Relic Integrity:</strong> <span id="cert-finish">100%</span></div>
+        <div><strong>Bore / Waveguide Purity:</strong> <span id="cert-bore">100%</span></div>
+        <div><strong>Rail / Levitation Lube:</strong> <span id="cert-lube">100%</span></div>
+        <div><strong>Total Armorer XP:</strong> <span id="cert-score">2,500 XP</span></div>
+      </div>
+      <div class="action-btn-row">
+        <button class="sim-btn primary" onclick="closeCertAndFire()">Test Fire on Live Range!</button>
+        <button class="sim-btn boss" id="btn-next-tier" onclick="advanceToNextWeaponTier()">Proceed to Next Exotic Weapon →</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. PROCEDURAL WEB AUDIO SYNTHESIZER (Gunsmithing + Exotic & Alien Shots)
+    // =========================================================================
+    let audioCtx = null;
+    function ensureAudio() {
+      if (!audioCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) audioCtx = new AC();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function playSound(type) {
+      try {
+        ensureAudio();
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+
+        if (type === 'air') {
+          const bufSize = audioCtx.sampleRate * 0.14;
+          const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+          const data = buf.getChannelData(0);
+          for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufSize * 0.6));
+          const noise = audioCtx.createBufferSource();
+          noise.buffer = buf;
+          const filter = audioCtx.createBiquadFilter();
+          filter.type = 'bandpass';
+          filter.frequency.setValueAtTime(3400, now);
+          const gain = audioCtx.createGain();
+          gain.gain.setValueAtTime(0.16, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.13);
+          noise.connect(filter).connect(gain).connect(audioCtx.destination);
+          noise.start(now);
+        } else if (type === 'clp' || type === 'brush') {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = type === 'clp' ? 'sine' : 'triangle';
+          osc.frequency.setValueAtTime(type === 'clp' ? 680 : 320, now);
+          osc.frequency.exponentialRampToValueAtTime(type === 'clp' ? 1180 : 180, now + 0.08);
+          gain.gain.setValueAtTime(0.09, now);
+          gain.gain.exponentialRampToValueAtTime(0.005, now + 0.08);
+          osc.connect(gain).connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.085);
+        } else if (type === 'strip') {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(520, now);
+          osc.frequency.exponentialRampToValueAtTime(140, now + 0.09);
+          gain.gain.setValueAtTime(0.22, now);
+          gain.gain.exponentialRampToValueAtTime(0.005, now + 0.09);
+          osc.connect(gain).connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.095);
+        } else if (type === 'scratch') {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(1950, now);
+          osc.frequency.linearRampToValueAtTime(840, now + 0.22);
+          gain.gain.setValueAtTime(0.22, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.22);
+          osc.connect(gain).connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.23);
+        } else if (type === 'shot') {
+          if (state.tier === 6) {
+            // Alien Singularity Cannon Harmonic Warp Blast!
+            const osc1 = audioCtx.createOscillator();
+            const osc2 = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc1.type = 'sawtooth';
+            osc2.type = 'sine';
+            osc1.frequency.setValueAtTime(180, now);
+            osc1.frequency.exponentialRampToValueAtTime(1240, now + 0.18);
+            osc1.frequency.exponentialRampToValueAtTime(55, now + 0.65);
+            osc2.frequency.setValueAtTime(880, now);
+            osc2.frequency.exponentialRampToValueAtTime(220, now + 0.65);
+            gain.gain.setValueAtTime(0.32, now);
+            gain.gain.exponentialRampToValueAtTime(0.008, now + 0.66);
+            osc1.connect(gain); osc2.connect(gain); gain.connect(audioCtx.destination);
+            osc1.start(now); osc2.start(now);
+            osc1.stop(now + 0.67); osc2.stop(now + 0.67);
+          } else if (state.tier === 3) {
+            // Gyrojet Rocket Whoosh!
+            const bufSize = audioCtx.sampleRate * 0.42;
+            const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+            const data = buf.getChannelData(0);
+            for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * Math.sin((i / bufSize) * Math.PI);
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buf;
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.setValueAtTime(900, now);
+            filter.frequency.exponentialRampToValueAtTime(2800, now + 0.38);
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.35, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.41);
+            noise.connect(filter).connect(gain).connect(audioCtx.destination);
+            noise.start(now);
+          } else {
+            // Conventional firearm report + steel plate ring
+            const bufSize = audioCtx.sampleRate * 0.25;
+            const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+            const data = buf.getChannelData(0);
+            for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufSize * 0.18));
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buf;
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.40, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.24);
+            noise.connect(gain).connect(audioCtx.destination);
+            noise.start(now);
+          }
+          // Steel target plate harmonic chime
+          const ding = audioCtx.createOscillator();
+          const dingGain = audioCtx.createGain();
+          ding.type = 'sine';
+          ding.frequency.setValueAtTime(state.tier === 6 ? 1960 : 1480, now + 0.12);
+          ding.frequency.exponentialRampToValueAtTime(1320, now + 0.65);
+          dingGain.gain.setValueAtTime(0.001, now);
+          dingGain.gain.setValueAtTime(0.24, now + 0.12);
+          dingGain.gain.exponentialRampToValueAtTime(0.005, now + 0.65);
+          ding.connect(dingGain).connect(audioCtx.destination);
+          ding.start(now + 0.12);
+          ding.stop(now + 0.66);
+        }
+      } catch (e) {}
+    }
+
+    // =========================================================================
+    // 2. THE 6 EXOTIC WEAPON TIERS & CONTAMINANT DEFINITIONS
+    // =========================================================================
+    const WEAPON_TIERS = {
+      1: {
+        name: "SIG SAUER P239 RAINBOW TITANIUM (.40 S&W)",
+        shortBadge: "TIER 1 • SIG P239 .40 S&W",
+        incident: "Dropped in Pacific Beach Quartz Sand & Saltwater Surf",
+        layer1Name: "DRY QUARTZ SAND",
+        layer1Color: 0xeab308,
+        layer2Name: "MARINE SALT CRUST",
+        layer2Color: 0xe2e8f0,
+        finishName: "PVD RAINBOW FINISH",
+        boreTitle: "OPTICAL .40 S&W BORE",
+        boreDesc: "6-Groove Right-Hand Rifling • Silica grains & copper fouling inside bore",
+        partLabels: { slide: "Rainbow Slide", frame: "Alloy Frame", barrel: ".40 S&W Barrel", spring: "Recoil Spring", mag: "7-Rd Magazine" },
+        muzzleColor: 0xffaa00,
+        lessons: {
+          1: "Your <strong>SIG Sauer P239 Rainbow Titanium (.40 S&amp;W)</strong> was dropped in wet &amp; dry coastal beach sand.<br/><br/><strong>Step 1:</strong> Do <em>not</em> rack the slide! Click <strong>'Safe Clear &amp; Field-Strip'</strong> to drop the magazine and separate the 5 sub-assemblies.",
+          2: "Select <strong>10oz Air Duster (◆)</strong> and click/drag across the 3D parts to blast off loose Mohs-7 quartz beach sand <em>before</em> touching the Rainbow Titanium PVD slide with any brush or rag!",
+          3: "Flood with <strong>Lucas 4oz CLP (◆)</strong> to dissolve hygroscopic ocean salt crystals, then detail the frame rails and decocker lever with the <strong>Polymer Pick (◆)</strong> &amp; <strong>Nylon Brush (◆)</strong>.",
+          4: "Select the <strong>.40 Bronze Bore Rod (◆)</strong> and scrub the .40 S&amp;W barrel from <strong>Chamber to Muzzle</strong> so no sand remains to bulge the barrel.",
+          5: "Disassemble and swab the single-stack <strong>7-Round .40 S&amp;W Magazine</strong> with <strong>6\" Bamboo Swabs (◆)</strong>—leave the inside of the mag tube bone-dry so sand never sticks!",
+          6: "Coat the anodized aluminum frame rails with <strong>Lucas Extreme Duty Gun Grease (◈)</strong> to prevent stainless-on-aluminum galling, and buff the PVD slide with the <strong>Hoppe's Silicone Cloth (✨)</strong>!",
+          7: "Reassemble your P239 Rainbow Titanium, verify the DA/SA decocking lever, and test-fire on the live steel range!"
+        },
+        science: "<strong>Materials Science Fact:</strong> Beach sand is quartz silica (Mohs hardness <strong>7.0</strong>)—harder than steel (6.0). Wiping dry sand before blowing it off scratches PVD coatings!"
+      },
+      2: {
+        name: "MATEBA MODEL 6 UNICA AUTOREVOLVER (.44 MAGNUM)",
+        shortBadge: "TIER 2 • MATEBA 6 UNICA .44",
+        incident: "Dropped in Bayou Alligator Swamp Peat, Clay & Sticky Pine Sap",
+        layer1Name: "DRIED BAYOU PEAT",
+        layer1Color: 0x78350f,
+        layer2Name: "STICKY PINE RESIN",
+        layer2Color: 0xd97706,
+        finishName: "BLUED STEEL FINISH",
+        boreTitle: "6-O'CLOCK .44 BORE",
+        boreDesc: "Low-Axis 6-o'clock Polygonal Rifling • Swamp peat & pine resin fouling",
+        partLabels: { slide: "Recoil Upper Assembly", frame: "Lower Grip Frame", barrel: "6-O'Clock Shroud", spring: "Upper Recoil Rod", mag: "6-Shot Cylinder" },
+        muzzleColor: 0xff5500,
+        lessons: {
+          1: "Emilio Ghisoni's legendary <strong>Mateba 6 Unica (.44 Magnum Autorevolver)</strong> fell into a Louisiana bayou swamp! Separate the recoil-sliding upper receiver, swinging 6-shot cylinder, and low-mounted barrel shroud.",
+          2: "Use <strong>Compressed Air / Sonic Pulse (◆)</strong> to blow dried bayou peat clods and Spanish moss fibers out of the upper recoil tracks and cylinder star!",
+          3: "Flush sticky polymerized <strong>Pine Sap Resin</strong> and acidic bog tannins with <strong>Lucas CLP (◆)</strong>, then free the cylinder ratchet teeth using the <strong>Polymer Pick (◆)</strong>.",
+          4: "Rod the Mateba's signature <strong>bottom-chamber (6-o'clock) .44 Magnum barrel</strong> with the <strong>Bronze Bore Rod (◆)</strong>.",
+          5: "Scrub all 6 chambers of the swing-out <strong>.44 Magnum Cylinder</strong> with <strong>Nylon Brush &amp; Swabs (◆)</strong> so spent brass extracts smoothly.",
+          6: "Lubricate the Mateba's upper recoil-operated slide rails with <strong>Lucas Gun Grease (◈)</strong> (if dry, the upper won't cycle to cock the hammer!) and polish with <strong>Silicone Cloth (✨)</strong>.",
+          7: "Reassemble the Mateba 6 Unica and test its ultra-low-bore-axis semi-auto .44 Magnum recoil on the steel range!"
+        },
+        science: "<strong>Autorevolver Mechanics:</strong> Unlike standard revolvers, the Mateba's entire upper assembly slides backward on rails under .44 Magnum recoil, cocking the hammer on the backstroke and rotating the cylinder on the forward stroke!"
+      },
+      3: {
+        name: "1965 MBA GYROJET MARK I ROCKET PISTOL (13MM MICRO-ROCKET)",
+        shortBadge: "TIER 3 • 1965 MBA GYROJET",
+        incident: "Mojave Bunker Find: Mud-Dauber Wasp Clay Nests & Solid Rocket Propellant Slag",
+        layer1Name: "MUD-DAUBER CLAY",
+        layer1Color: 0xb45309,
+        layer2Name: "PERCHLORATE SLAG",
+        layer2Color: 0x475569,
+        finishName: "ZAMAK ANODIZING",
+        boreTitle: "13MM VENTURI TUBE",
+        boreDesc: "Smoothbore Rocket Launch Tube + 4 Angled Spin Nozzles • Slag blockage!",
+        partLabels: { slide: "Venturi Upper Tube", frame: "Zamak Alloy Frame", barrel: "13mm Launch Tube", spring: "Forward Hammer Arm", mag: "13mm Micro-Rocket" },
+        muzzleColor: 0x38bdf8,
+        lessons: {
+          1: "This rare 1960s <strong>MBA Gyrojet Rocket Pistol</strong> spent 40 years in a Mojave Desert bunker! Open the top hinged loading gate and field-strip the perforated venturi launch shroud.",
+          2: "Blast calcified <strong>Mud-Dauber Wasp Clay Nests</strong> and Mojave alkali dust out of the 3D venturi exhaust ports using <strong>Compressed Air (◆)</strong>!",
+          3: "Dissolve rock-hard <strong>Solid-Fuel Ammonium Perchlorate Rocket Exhaust Slag</strong> with <strong>Lucas CLP (◆)</strong> and carefully clear the 4 angled rocket nozzle vents with the <strong>Polymer Pick (◆)</strong>.",
+          4: "Run the <strong>Bore Rod (◆)</strong> down the 13mm smoothbore launch tube so the spin-stabilized rocket doesn't snag on launch.",
+          5: "Clean the internal follower spring and forward-slapping hammer lever with <strong>6\" Bamboo Swabs (◆)</strong>.",
+          6: "Grease the forward hammer cam with <strong>Lucas Grease (◈)</strong> and buff the space-age bronze Zamak frame with <strong>Silicone Cloth (✨)</strong>.",
+          7: "Reassemble the 1965 Gyrojet and fire live spin-stabilized 13mm micro-rockets downrange!"
+        },
+        science: "<strong>Gyrojet Rocket Physics:</strong> The Gyrojet has no cartridge case and almost zero recoil! Its hammer swings from the <em>front</em> to slap the nose of the 13mm rocket backward onto a rear firing pin, igniting 4 angled exhaust nozzles that spin the rocket to 18,000 RPM!"
+      },
+      4: {
+        name: "1896 ROYAL GOLD-DAMASCENED MAUSER C96 'BROOMHANDLE' (7.63MM)",
+        shortBadge: "TIER 4 • 1896 GOLD MAUSER C96",
+        incident: "120 Years Sealed in a Volcanic Sulfur Cave & Petrified 1900 Cosmoline Crate",
+        layer1Name: "VOLCANIC SULFUR ASH",
+        layer1Color: 0xfacc15,
+        layer2Name: "1900 COSMOLINE WAX",
+        layer2Color: 0x92400e,
+        finishName: "24K GOLD DAMASCENE",
+        boreTitle: "7.63×25MM BORE",
+        boreDesc: "4-Groove Deep Historic Rifling • Petrified amber Cosmoline & sulfur",
+        partLabels: { slide: "24k Gold Barrel Extension", frame: "Broomhandle Frame", barrel: "Fluted Square Bolt", spring: "Puzzle Lock Assembly", mag: "Integral Box Follower" },
+        muzzleColor: 0xfbbf24,
+        lessons: {
+          1: "This priceless <strong>1896 24k Gold-Damascened Mauser C96</strong> is encased in volcanic sulfur ash and century-old petrified military <strong>Cosmoline wax</strong>! Disassemble its pinless puzzle-box action.",
+          2: "Blow abrasive volcanic pumice ash and yellow sulfur crystals off the 24-karat gold koftgari scrollwork using <strong>Compressed Air (◆)</strong>.",
+          3: "Emulsify the rock-hard 1900s amber <strong>Cosmoline Grease-Wax</strong> using <strong>Lucas CLP (◆)</strong> and gently lift wax plugs from the locking lugs with the <strong>Polymer Pick (◆)</strong> (never use steel on 24k gold inlay!).",
+          4: "Rod the long stepped 7.63×25mm barrel from breech to muzzle with the <strong>Bronze Bore Rod (◆)</strong>.",
+          5: "Swab the integral forward box magazine and stripper-clip guide rails with <strong>6\" Bamboo Swabs (◆)</strong>.",
+          6: "Apply <strong>Lucas Gun Grease (◈)</strong> to the C96's short-recoil harmonic locking block and polish the 24k gold damascene with <strong>Hoppe's Silicone Cloth (✨)</strong>.",
+          7: "Lock the pinless Mauser C96 puzzle-frame back together and test-fire on the range!"
+        },
+        science: "<strong>Pinless Engineering & Cosmoline:</strong> Paul Mauser designed the C96 with virtually zero cross-pins—the internal lockwork interlocks like a mechanical puzzle. Old military Cosmoline (petroleum wax) oxidizes into a varnish that locks firing pins solid until dissolved with solvent/CLP!"
+      },
+      5: {
+        name: "HELIOS-ZERO CRYO-GAUSS COILGUN CARBINE MK-IV (HYPERVELOCITY)",
+        shortBadge: "TIER 5 • HELIOS CRYO-GAUSS MK4",
+        incident: "Sub-Orbital Lab Breach: Shattered Cherenkov Glass & Magnetized Ferrofluid Sludge",
+        layer1Name: "CHERENKOV GLASS",
+        layer1Color: 0x38bdf8,
+        layer2Name: "MAGNETIC FERROFLUID",
+        layer2Color: 0x1e293b,
+        finishName: "CRYO-COIL DIELECTRIC",
+        boreTitle: "GAUSS INDUCTION RAIL",
+        boreDesc: "6-Stage Optical Timing Bore • Ferrofluid bridging superconducting coils!",
+        partLabels: { slide: "6-Stage Toroid Array", frame: "Carbon-Ti Chassis", barrel: "Accelerator Core", spring: "Capacitor Busbar", mag: "Tungsten Sabot Cell" },
+        muzzleColor: 0x00f2fe,
+        lessons: {
+          1: "The experimental <strong>Helios-Zero Cryo-Gauss Coilgun</strong> suffered a lab containment breach! Decouple the capacitor busbars and separate the 6-stage toroidal induction array.",
+          2: "Blast razor-sharp <strong>Cherenkov Borosilicate Glass Shards</strong> and electrostatic lunar regolith off the copper induction windings with <strong>Compressed Air (◆)</strong> before touching the insulation!",
+          3: "Flush the magnetically clinging <strong>Colloidal Magnetite Ferrofluid Sludge</strong> with dielectric <strong>Lucas CLP (◆)</strong> and clear the optical timing gates with the <strong>Polymer Pick (◆)</strong>.",
+          4: "Run the non-magnetic rod (◆) through the central <strong>Magnetic Levitation Accelerator Tube</strong> so optical coil sensors read 100% clear.",
+          5: "Swab the high-density <strong>Tungsten-Sabot Magazine Cell</strong> and superconducting contacts with <strong>Bamboo Swabs (◆)</strong>.",
+          6: "Apply dielectric cryo-grease (◈) to the recoil damper rails and buff the carbon-titanium housing with the <strong>Silicone Cloth (✨)</strong>.",
+          7: "Re-energize the 6-stage synchronous Gauss array and fire hypervelocity plasma-sabot rounds on the range!"
+        },
+        science: "<strong>Synchronous Coilgun Physics:</strong> A multi-stage Gauss coilgun pulses sequential electromagnetic coils via optical infrared gates. If conductive ferrofluid bridges two stages, eddy currents induce a back-EMF quench!"
+      },
+      6: {
+        name: "FINAL BOSS: ANCIENT VORATHIAN SINGULARITY RELIQUARY CANNON",
+        shortBadge: "TIER 6 ★ BOSS • ALIEN RELIC",
+        incident: "10,000 Years on the Mariana Trench Floor: 100% Rusted-Over, Barnacle-Encrusted & Void-Mycelium Fused!",
+        layer1Name: "ABYSSAL RUST & BARNACLES",
+        layer1Color: 0x9a3412,
+        layer2Name: "VOID MYCELIUM & SLAG",
+        layer2Color: 0x86198f,
+        finishName: "ORICHALCUM CARAPACE",
+        boreTitle: "EVENT-HORIZON WAVEGUIDE",
+        boreDesc: "Sacred Hexagonal Graviton Core • Encrusted in 10,000-year abyssal rust!",
+        partLabels: { slide: "Orichalcum Carapace", frame: "Vorathian Reliquary Grip", barrel: "Graviton Waveguide", spring: "Counter-Rotating Gyros", mag: "Singularity Crystal" },
+        muzzleColor: 0xd946ef,
+        lessons: {
+          1: "<strong>★ FINAL BOSS CONTRACT ★</strong><br/>Dredged from the Mariana Trench, this 10,000-year-old <strong>Antique Alien Vorathian Singularity Cannon</strong> is <strong>100% rusted over</strong> in thick reddish-brown iron-oxide crust, deep-sea barnacles, and glowing Void-Mycelium! Disengage its ancient gravity locks to float the 5 relic sub-assemblies apart.",
+          2: "<strong>PHASE 1 DESCALING:</strong> Select <strong>Air / Ultrasonic Impulse (◆)</strong> and blast across the rusted alien hulk to shatter the heavy <strong>Abyssal Rust Scale &amp; Calcified Barnacles</strong>! Watch the ancient Orichalcum &amp; Iridescent Neutronium metal emerge underneath!",
+          3: "<strong>PHASE 2 CHELATION:</strong> Bathe the relic in <strong>Lucas CLP (◆)</strong> to dissolve the fused <strong>Bioluminescent Void-Mycelium &amp; Trench Oxide</strong>, then use the <strong>Polymer Pick (◆)</strong> and <strong>Nylon Brush (◆)</strong> to free the counter-rotating Astrolabe Gyro-Rings!",
+          4: "<strong>PHASE 3 WAVEGUIDE ALIGNMENT:</strong> Rod the hexagonal <strong>Event-Horizon Graviton Waveguide (◆)</strong> from Breach to Emitter until the internal sacred-geometry facets resonate at 100%!",
+          5: "<strong>PHASE 4 SINGULARITY CORE:</strong> Clean the levitating <strong>Aether-Singularity Containment Crystal</strong> and energy conduits with <strong>6\" Swabs (◆)</strong>.",
+          6: "<strong>PHASE 5 AWAKENING:</strong> Anoint the magnetic levitation tracks with <strong>Lucas Extreme Duty Grease (◈)</strong> and buff the <strong>Damascus-Orichalcum &amp; Rainbow Neutronium Carapace</strong> with the <strong>Silicone Cloth (✨)</strong>—watch the ancient alien crust transform into a glowing golden-iridescent masterpiece!",
+          7: "<strong>FINAL BOSS AWAKENED!</strong> Reassemble the Vorathian Singularity Cannon—its golden Astrolabe rings now spin in mid-air around the violet Singularity Core—and unleash gravitational vortex bolts on the range!"
+        },
+        science: "<strong>Archaeological Metallurgy & Chelation:</strong> Deep-ocean iron concretions form when carbonate barnacles and ferric oxyhydroxides (FeOOH) fuse over millennia. Ultrasonic cavitation + penetrating CLP oil fractures brittle oxide concretions without harming noble gold/orichalcum alloys underneath!"
+      }
+    };
+
+    // =========================================================================
+    // 3. GAME STATE
+    // =========================================================================
+    const state = {
+      tier: 1,
+      completedTiers: {},
+      stage: 1,
+      stripped: false,
+      inRangeMode: false,
+      selectedTool: 'air',
+      focusedPart: 'all',
+      drySandPct: 100,
+      saltCarbonPct: 100,
+      clpAppliedPct: 0,
+      boreCleanPct: 12,
+      magCleanPct: 0,
+      lubeGreasePct: 0,
+      pvdPolishPct: 75,
+      finishIntegrity: 100,
+      score: 0,
+      shotsFired: 0,
+      slideRecoilOffset: 0,
+      muzzleFlashIntensity: 0
+    };
+
+    function showToast(msg, isError = false) {
+      const el = document.getElementById('toast-banner');
+      el.innerHTML = msg;
+      el.className = isError ? 'show error' : 'show';
+      clearTimeout(showToast._timer);
+      showToast._timer = setTimeout(() => { el.className = ''; }, 3600);
+    }
+
+    // =========================================================================
+    // 4. THREE.JS 3D SCENE & SHARED MATERIALS
+    // =========================================================================
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x060911);
+    scene.fog = new THREE.FogExp2(0x060911, 0.022);
+
+    const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 120);
+    camera.position.set(0, 6.2, 10.5);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    const ambientLight = new THREE.AmbientLight(0xdbeafe, 0.72);
+    scene.add(ambientLight);
+
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.40);
+    keyLight.position.set(6, 12, 8);
+    keyLight.castShadow = true;
+    scene.add(keyLight);
+
+    const rimLight1 = new THREE.PointLight(0x00f2fe, 1.5, 24);
+    rimLight1.position.set(-7, 5, -4);
+    scene.add(rimLight1);
+
+    const rimLight2 = new THREE.PointLight(0xff3e88, 1.6, 28);
+    rimLight2.position.set(7, 4, -5);
+    scene.add(rimLight2);
+
+    const studioFrontLight = new THREE.PointLight(0xffffff, 2.2, 35);
+    studioFrontLight.position.set(0, 5.5, 6.5);
+    scene.add(studioFrontLight);
+
+    const studioWarmFill = new THREE.PointLight(0xfde68a, 1.4, 30);
+    studioWarmFill.position.set(-4, 4.0, 5.0);
+    scene.add(studioWarmFill);
+
+    const muzzleLight = new THREE.PointLight(0xffaa00, 0, 18);
+    muzzleLight.position.set(-3.2, 1.6, 0);
+    scene.add(muzzleLight);
+
+    // Procedural Textures
+    function createRainbowPVDTexture() {
+      const c = document.createElement('canvas');
+      c.width = 512; c.height = 256;
+      const ctx = c.getContext('2d');
+      const grad = ctx.createLinearGradient(0, 0, 512, 180);
+      grad.addColorStop(0.00, '#ff3e88');
+      grad.addColorStop(0.18, '#ffaa00');
+      grad.addColorStop(0.36, '#10b981');
+      grad.addColorStop(0.55, '#00f2fe');
+      grad.addColorStop(0.76, '#8b5cf6');
+      grad.addColorStop(0.92, '#ec4899');
+      grad.addColorStop(1.00, '#fbbf24');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 512, 256);
+      ctx.fillStyle = 'rgba(255,255,255,0.07)';
+      for (let y = 0; y < 256; y += 2) ctx.fillRect(0, y, 512, 1);
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      return tex;
+    }
+
+    function createHeavyRustOverlayTexture() {
+      const c = document.createElement('canvas');
+      c.width = 256; c.height = 256;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#5c1f0c';
+      ctx.fillRect(0, 0, 256, 256);
+      const rustPalette = ['#7c2d12', '#9a3412', '#b45309', '#431407', '#713f12'];
+      for (let i = 0; i < 600; i++) {
+        ctx.fillStyle = rustPalette[i % rustPalette.length];
+        ctx.beginPath();
+        ctx.arc(Math.random() * 256, Math.random() * 256, 2 + Math.random() * 10, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      return new THREE.CanvasTexture(c);
+    }
+
+    const rainbowTex = createRainbowPVDTexture();
+    const rustTex = createHeavyRustOverlayTexture();
+
+    const slideMat = new THREE.MeshStandardMaterial({
+      map: rainbowTex, metalness: 0.92, roughness: 0.16,
+      emissive: new THREE.Color(0x1a1033), emissiveIntensity: 0.18
+    });
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0x181c24, metalness: 0.65, roughness: 0.38 });
+    const gripMat = new THREE.MeshStandardMaterial({ color: 0x11131a, metalness: 0.15, roughness: 0.85 });
+    const walnutMat = new THREE.MeshStandardMaterial({ color: 0x5c2c16, metalness: 0.12, roughness: 0.65 });
+    const barrelMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.94, roughness: 0.20 });
+    const brassMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, metalness: 0.90, roughness: 0.18 });
+    const coilCopperMat = new THREE.MeshStandardMaterial({ color: 0xd97706, emissive: 0x0284c7, emissiveIntensity: 0.35, metalness: 0.88, roughness: 0.2 });
+
+    // Alien Boss Dynamic Materials (Start 100% Rusted Over, Transform to Glowing Orichalcum & Void Crystal as Cleaned!)
+    const alienCarapaceMat = new THREE.MeshStandardMaterial({
+      map: rustTex,
+      color: 0x853214,
+      metalness: 0.22,
+      roughness: 0.96,
+      emissive: new THREE.Color(0x000000),
+      emissiveIntensity: 0.0
+    });
+    const alienGyroMat = new THREE.MeshStandardMaterial({
+      color: 0x7c2d12,
+      metalness: 0.30,
+      roughness: 0.92,
+      emissive: new THREE.Color(0x000000),
+      emissiveIntensity: 0.0
+    });
+    const alienCoreMat = new THREE.MeshStandardMaterial({
+      color: 0x4a1d46,
+      metalness: 0.2,
+      roughness: 0.85,
+      emissive: new THREE.Color(0x581c87),
+      emissiveIntensity: 0.25
+    });
+
+    // Workbench Armorer Mat & 3D Sovereign Workshop Architecture
+    const IS_PROMO_MODE = new URLSearchParams(window.location.search).get('promo') === '1';
+    const benchGroup = new THREE.Group();
+    scene.add(benchGroup);
+    function createArmorerMatTexture() {
+      const c = document.createElement('canvas');
+      c.width = 1024; c.height = 512;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#0a0f1d';
+      ctx.fillRect(0, 0, 1024, 512);
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.22)';
+      ctx.lineWidth = 2;
+      for (let x = 0; x <= 1024; x += 64) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 512); ctx.stroke(); }
+      for (let y = 0; y <= 512; y += 64) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1024, y); ctx.stroke(); }
+      ctx.strokeStyle = 'rgba(245, 158, 11, 0.58)';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(24, 24, 976, 464);
+      ctx.strokeStyle = 'rgba(0, 242, 254, 0.35)';
+      ctx.beginPath(); ctx.arc(512, 256, 155, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(512, 256, 95, 0, Math.PI * 2); ctx.stroke();
+      if (!IS_PROMO_MODE) {
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.38)';
+        ctx.font = 'bold 22px monospace';
+        ctx.fillText('NORTHSTAR ARMORER LAB • EXOTIC FIREARMS & XENO-ARCHAEOLOGY MAGNETIC BENCH', 42, 60);
+        ctx.font = '17px monospace';
+        ctx.fillText('[UPPER / CARAPACE]      [BARREL / WAVEGUIDE]      [RECOIL / GYRO]      [FRAME]      [MAG / CORE]', 42, 466);
+      }
+      return new THREE.CanvasTexture(c);
+    }
+    const matMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(15.5, 0.25, 8.2),
+      new THREE.MeshStandardMaterial({ map: createArmorerMatTexture(), roughness: 0.68, metalness: 0.22 })
+    );
+    matMesh.position.y = -0.2;
+    matMesh.receiveShadow = true;
+    benchGroup.add(matMesh);
+
+    // 3D Workshop Pillars, Neon Light Columns, Subfloor Grid & Rotating Calibration Rings (Rich 3D Depth Parallax!)
+    const workshopCalibRings = [];
+    (function buildWorkshopArchitecture() {
+      const steelSlab = new THREE.Mesh(
+        new THREE.BoxGeometry(16.6, 0.45, 9.2),
+        new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.82, roughness: 0.28 })
+      );
+      steelSlab.position.y = -0.56;
+      benchGroup.add(steelSlab);
+
+      const floorGrid = new THREE.GridHelper(64, 48, 0x00f2fe, 0x1e293b);
+      floorGrid.position.y = -3.8;
+      benchGroup.add(floorGrid);
+
+      // 360-Degree Sovereign Xeno-Armory Rotunda & Nebula Vault Dome (Rich 360° 3D Depth — Zero Dark Void!)
+      const domeCanvas = document.createElement('canvas');
+      domeCanvas.width = 512; domeCanvas.height = 256;
+      const dctx = domeCanvas.getContext('2d');
+      const dgrad = dctx.createLinearGradient(0, 0, 0, 256);
+      dgrad.addColorStop(0.0, '#0b1536');
+      dgrad.addColorStop(0.45, '#13204a');
+      dgrad.addColorStop(0.75, '#1e1b4b');
+      dgrad.addColorStop(1.0, '#090d1f');
+      dctx.fillStyle = dgrad;
+      dctx.fillRect(0, 0, 512, 256);
+      for (let s = 0; s < 220; s++) {
+        dctx.fillStyle = s % 5 === 0 ? '#38bdf8' : (s % 7 === 0 ? '#fbbf24' : 'rgba(226,232,240,0.65)');
+        dctx.fillRect((s * 73) % 512, (s * 41) % 210, s % 4 === 0 ? 2 : 1.5, s % 4 === 0 ? 2 : 1.5);
+      }
+      dctx.strokeStyle = 'rgba(0, 242, 254, 0.22)';
+      dctx.lineWidth = 2;
+      for (let ry = 40; ry < 220; ry += 44) {
+        dctx.beginPath(); dctx.moveTo(0, ry); dctx.lineTo(512, ry); dctx.stroke();
+      }
+      const vaultDome = new THREE.Mesh(
+        new THREE.SphereGeometry(42, 32, 20),
+        new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(domeCanvas), side: THREE.BackSide })
+      );
+      scene.add(vaultDome);
+
+      const pillarMat = new THREE.MeshStandardMaterial({ color: 0x162238, metalness: 0.78, roughness: 0.28 });
+      const neonCols = [0x00f2fe, 0xf59e0b, 0xa855f7, 0x10b981, 0xff3e88];
+      for (let i = 0; i < 16; i++) {
+        const ang = (i / 16) * Math.PI * 2;
+        const rad = 18.5;
+        const px = Math.sin(ang) * rad;
+        const pz = Math.cos(ang) * rad;
+        const pil = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.62, 16.0, 12), pillarMat);
+        pil.position.set(px, 4.2, pz);
+        benchGroup.add(pil);
+
+        const ncol = neonCols[i % neonCols.length];
+        const tubeMat = new THREE.MeshBasicMaterial({ color: ncol });
+        const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 13.0, 10), tubeMat);
+        tube.position.set(Math.sin(ang) * (rad - 0.65), 4.2, Math.cos(ang) * (rad - 0.65));
+        benchGroup.add(tube);
+
+        const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.35, 1.8, 16), pillarMat);
+        pedestal.position.set(Math.sin(ang + 0.19) * 15.2, -2.8, Math.cos(ang + 0.19) * 15.2);
+        benchGroup.add(pedestal);
+        const holoOrb = new THREE.Mesh(
+          new THREE.OctahedronGeometry(0.62, 1),
+          new THREE.MeshStandardMaterial({ color: ncol, emissive: ncol, emissiveIntensity: 0.85, metalness: 0.9, roughness: 0.12 })
+        );
+        holoOrb.position.set(pedestal.position.x, -1.25, pedestal.position.z);
+        benchGroup.add(holoOrb);
+        workshopCalibRings.push(holoOrb);
+      }
+
+      const rotundaCrown = new THREE.Mesh(new THREE.TorusGeometry(18.2, 0.35, 12, 64), brassMat);
+      rotundaCrown.rotation.x = Math.PI / 2;
+      rotundaCrown.position.y = 11.2;
+      benchGroup.add(rotundaCrown);
+
+      for (let rIdx = 0; rIdx < 3; rIdx++) {
+        const holoRing = new THREE.Mesh(
+          new THREE.TorusGeometry(4.4 + rIdx * 1.45, 0.075, 12, 56),
+          new THREE.MeshStandardMaterial({
+            color: rIdx === 0 ? 0xf59e0b : (rIdx === 1 ? 0x00f2fe : 0xd946ef),
+            emissive: rIdx === 0 ? 0xd97706 : (rIdx === 1 ? 0x0284c7 : 0xa21caf),
+            emissiveIntensity: 0.85,
+            metalness: 0.9,
+            roughness: 0.14
+          })
+        );
+        holoRing.position.set(0, 3.4, -12.5);
+        benchGroup.add(holoRing);
+        workshopCalibRings.push(holoRing);
+      }
+    })();
+
+    // =========================================================================
+    // 5. BESPOKE 3D GEOMETRY BUILDER FOR ALL 6 WEAPON TIERS
+    // =========================================================================
+    const gunRoot = new THREE.Group();
+    gunRoot.scale.setScalar(1.0);
+    scene.add(gunRoot);
+
+    const parts = {
+      slide: new THREE.Group(),
+      barrel: new THREE.Group(),
+      spring: new THREE.Group(),
+      frame: new THREE.Group(),
+      mag: new THREE.Group()
+    };
+    Object.values(parts).forEach(g => gunRoot.add(g));
+
+    let alienRings = [];
+
+    function clearSubAssemblies() {
+      alienRings = [];
+      Object.values(parts).forEach(grp => {
+        while (grp.children.length > 0) grp.remove(grp.children[0]);
+      });
+    }
+
+    function buildWeaponGeometryForTier(tier) {
+      clearSubAssemblies();
+
+      if (tier === 1) {
+        // --- TIER 1: SIG SAUER P239 RAINBOW TITANIUM (.40 S&W) ---
+        const slideMain = new THREE.Mesh(new THREE.BoxGeometry(4.3, 0.82, 0.76), slideMat);
+        const slideTop = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 4.28, 16), slideMat);
+        slideTop.rotation.z = Math.PI / 2; slideTop.position.y = 0.32;
+        parts.slide.add(slideMain, slideTop);
+        for (let i = 0; i < 8; i++) {
+          const serr = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.62, 0.80), frameMat);
+          serr.position.set(1.1 + i * 0.12, -0.02, 0);
+          parts.slide.add(serr);
+        }
+        const fSight = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.22, 0.14), frameMat);
+        fSight.position.set(-1.92, 0.72, 0);
+        const rSight = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.24, 0.52), frameMat);
+        rSight.position.set(1.85, 0.72, 0);
+        parts.slide.add(fSight, rSight);
+
+        const bTube = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 3.65, 24), barrelMat);
+        bTube.rotation.z = Math.PI / 2; bTube.position.set(-0.22, 0, 0);
+        const cBlock = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.56, 0.56), barrelMat);
+        cBlock.position.set(0.35, 0.04, 0);
+        parts.barrel.add(bTube, cBlock);
+
+        const gRod = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 2.55, 16), barrelMat);
+        gRod.rotation.z = Math.PI / 2;
+        parts.spring.add(gRod);
+        for (let i = 0; i < 16; i++) {
+          const coil = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.026, 8, 16), barrelMat);
+          coil.rotation.y = Math.PI / 2; coil.position.x = -1.0 + i * 0.13;
+          parts.spring.add(coil);
+        }
+
+        const dust = new THREE.Mesh(new THREE.BoxGeometry(3.85, 0.52, 0.72), frameMat);
+        dust.position.set(-0.05, -0.52, 0);
+        const grip = new THREE.Mesh(new THREE.BoxGeometry(1.14, 2.30, 0.74), gripMat);
+        grip.position.set(1.38, -1.62, 0); grip.rotation.z = -0.22;
+        const tGuard = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.12, 0.36), frameMat);
+        tGuard.position.set(0.32, -1.25, 0);
+        const decocker = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.16, 0.14), slideMat);
+        decocker.position.set(1.05, -0.58, 0.40);
+        parts.frame.add(dust, grip, tGuard, decocker);
+
+        const mTube = new THREE.Mesh(new THREE.BoxGeometry(0.92, 2.15, 0.52), barrelMat);
+        const rMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.68, 16), brassMat);
+        rMesh.rotation.z = Math.PI / 2; rMesh.position.set(-0.05, 1.12, 0);
+        parts.mag.add(mTube, rMesh);
+
+      } else if (tier === 2) {
+        // --- TIER 2: MATEBA 6 UNICA AUTOREVOLVER (.44 MAGNUM) ---
+        // Hexagonal vent-rib shroud + low-mounted 6-o'clock barrel
+        const shroud = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.95, 0.72), frameMat);
+        shroud.position.set(-1.35, -0.10, 0);
+        parts.barrel.add(shroud);
+        const lowBarrel = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 3.8, 20), barrelMat);
+        lowBarrel.rotation.z = Math.PI / 2; lowBarrel.position.set(-1.3, -0.28, 0);
+        parts.barrel.add(lowBarrel);
+
+        // Recoil-operated sliding upper receiver bridge
+        const upperSlide = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.55, 0.88), frameMat);
+        upperSlide.position.set(0.6, 0.48, 0);
+        parts.slide.add(upperSlide);
+
+        // 6-Chamber Revolving Cylinder (in 'mag' group)
+        const cyl = new THREE.Mesh(new THREE.CylinderGeometry(0.68, 0.68, 1.35, 18), barrelMat);
+        cyl.rotation.z = Math.PI / 2;
+        parts.mag.add(cyl);
+        for (let i = 0; i < 6; i++) {
+          const a = (i * Math.PI) / 3;
+          const flute = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 1.38, 12), brassMat);
+          flute.rotation.z = Math.PI / 2;
+          flute.position.set(0, Math.cos(a) * 0.42, Math.sin(a) * 0.42);
+          parts.mag.add(flute);
+        }
+
+        // Recoil rod assembly
+        const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 2.8, 12), brassMat);
+        rod.rotation.z = Math.PI / 2;
+        parts.spring.add(rod);
+
+        // Lower Frame + Ergonomic Walnut Target Grip
+        const lowFrame = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.48, 0.76), frameMat);
+        lowFrame.position.set(0.2, -0.62, 0);
+        const wGrip = new THREE.Mesh(new THREE.BoxGeometry(1.22, 2.4, 0.82), walnutMat);
+        wGrip.position.set(1.75, -1.68, 0); wGrip.rotation.z = -0.32;
+        parts.frame.add(lowFrame, wGrip);
+
+      } else if (tier === 3) {
+        // --- TIER 3: 1965 MBA GYROJET MARK I ROCKET PISTOL (13MM) ---
+        // Perforated tubular space-age launch shroud
+        const launchTube = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.44, 4.9, 24), brassMat);
+        launchTube.rotation.z = Math.PI / 2;
+        parts.slide.add(launchTube);
+        // Venturi exhaust ports along the sides
+        for (let i = 0; i < 7; i++) {
+          const vent = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.92, 12), frameMat);
+          vent.rotation.x = Math.PI / 2;
+          vent.position.set(-1.8 + i * 0.52, 0.05, 0);
+          parts.slide.add(vent);
+        }
+
+        const innerTube = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 4.5, 20), barrelMat);
+        innerTube.rotation.z = Math.PI / 2;
+        parts.barrel.add(innerTube);
+
+        // Forward-pivoting slap hammer lever
+        const slapHammer = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.22, 0.24), barrelMat);
+        slapHammer.rotation.z = 0.25;
+        parts.spring.add(slapHammer);
+
+        // Ribbed Zamak alloy receiver + walnut panels
+        const gFrame = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.65, 0.68), frameMat);
+        gFrame.position.set(0.3, -0.55, 0);
+        const gGrip = new THREE.Mesh(new THREE.BoxGeometry(1.1, 2.25, 0.72), walnutMat);
+        gGrip.position.set(1.45, -1.6, 0); gGrip.rotation.z = -0.20;
+        parts.frame.add(gFrame, gGrip);
+
+        // 13mm Spin-Stabilized Stainless Micro-Rocket Cartridge!
+        const rocketBody = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 1.45, 16), barrelMat);
+        rocketBody.rotation.z = Math.PI / 2;
+        const rocketNose = new THREE.Mesh(new THREE.ConeGeometry(0.24, 0.55, 16), brassMat);
+        rocketNose.rotation.z = Math.PI / 2; rocketNose.position.x = -0.98;
+        parts.mag.add(rocketBody, rocketNose);
+
+      } else if (tier === 4) {
+        // --- TIER 4: 1896 ROYAL GOLD-DAMASCENED MAUSER C96 "BROOMHANDLE" ---
+        // Stepped long barrel + 24k Gold Damascened Upper Receiver
+        const c96Receiver = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.85, 0.74), brassMat);
+        c96Receiver.position.set(0.8, 0.1, 0);
+        const steppedBarrel = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.25, 3.4, 20), brassMat);
+        steppedBarrel.rotation.z = Math.PI / 2; steppedBarrel.position.set(-2.1, 0.22, 0);
+        parts.slide.add(c96Receiver, steppedBarrel);
+
+        // Square fluted bolt with rear round knob
+        const boltBody = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.42, 0.42), barrelMat);
+        const boltKnob = new THREE.Mesh(new THREE.SphereGeometry(0.24, 14, 14), slideMat);
+        boltKnob.position.set(1.2, 0, 0.32);
+        parts.barrel.add(boltBody, boltKnob);
+
+        // Harmonic locking block assembly
+        const lockBlock = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.35, 0.45), brassMat);
+        parts.spring.add(lockBlock);
+
+        // Forward Integral Box Magazine (in front of trigger!) + Iconic Broomhandle Grip
+        const fFrame = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.62, 0.68), frameMat);
+        fFrame.position.set(0.5, -0.55, 0);
+        const broomGrip = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.48, 2.25, 16), walnutMat);
+        broomGrip.position.set(1.85, -1.65, 0); broomGrip.rotation.z = -0.15;
+        parts.frame.add(fFrame, broomGrip);
+
+        // Forward integral magazine box + brass stripper clip rounds
+        const fwdMagBox = new THREE.Mesh(new THREE.BoxGeometry(1.15, 1.45, 0.64), brassMat);
+        fwdMagBox.position.set(-1.35, 0.4, 0);
+        parts.mag.add(fwdMagBox);
+
+      } else if (tier === 5) {
+        // --- TIER 5: HELIOS-ZERO CRYO-GAUSS COILGUN CARBINE MK-IV ---
+        // 6 Toroidal Copper-Cyan Electromagnetic Accelerator Coils!
+        const railSpine = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.32, 0.56), frameMat);
+        railSpine.position.y = 0.35;
+        parts.slide.add(railSpine);
+        for (let i = 0; i < 6; i++) {
+          const toroid = new THREE.Mesh(new THREE.TorusGeometry(0.52, 0.13, 14, 24), coilCopperMat);
+          toroid.rotation.y = Math.PI / 2;
+          toroid.position.set(-2.1 + i * 0.82, 0.0, 0);
+          parts.slide.add(toroid);
+        }
+
+        // Central Quartz-Titanium Levitation Core Tube
+        const coreTube = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.20, 5.1, 20), slideMat);
+        coreTube.rotation.z = Math.PI / 2;
+        parts.barrel.add(coreTube);
+
+        // Twin High-Voltage Capacitor Banks
+        const cap1 = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 2.8, 16), coilCopperMat);
+        cap1.rotation.z = Math.PI / 2; cap1.position.z = 0.45;
+        const cap2 = cap1.clone(); cap2.position.z = -0.45;
+        parts.spring.add(cap1, cap2);
+
+        // Skeletal Carbon-Titanium Chassis
+        const cChassis = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.55, 0.76), frameMat);
+        cChassis.position.set(0.2, -0.58, 0);
+        const cGrip = new THREE.Mesh(new THREE.BoxGeometry(1.05, 2.15, 0.68), gripMat);
+        cGrip.position.set(1.55, -1.55, 0); cGrip.rotation.z = -0.24;
+        parts.frame.add(cChassis, cGrip);
+
+        // Glowing Sabot Battery Magazine
+        const sabotCell = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.9, 0.62), slideMat);
+        parts.mag.add(sabotCell);
+
+      } else if (tier === 6) {
+        // --- TIER 6 (FINAL BOSS): ANCIENT VORATHIAN SINGULARITY RELIQUARY CANNON ---
+        // Starts 100% Rusted Over & Barnacle-Encrusted -> Awakens into Floating Sacred-Geometry Orichalcum & Void Crystal!
+        updateAlienBossMaterials();
+
+        // 1. Floating Segmented Orichalcum Carapace Fins (parts.slide)
+        const dorsalSpine = new THREE.Mesh(new THREE.ConeGeometry(0.65, 5.4, 6), alienCarapaceMat);
+        dorsalSpine.rotation.z = Math.PI / 2;
+        dorsalSpine.scale.set(1, 1, 0.55);
+        dorsalSpine.position.set(-0.2, 0.35, 0);
+        parts.slide.add(dorsalSpine);
+
+        for (let i = 0; i < 4; i++) {
+          const wingL = new THREE.Mesh(new THREE.OctahedronGeometry(0.48, 0), alienCarapaceMat);
+          wingL.scale.set(1.8, 0.35, 0.8);
+          wingL.position.set(-1.6 + i * 1.05, 0.15, 0.68);
+          const wingR = wingL.clone();
+          wingR.position.z = -0.68;
+          parts.slide.add(wingL, wingR);
+        }
+
+        // 2. Hexagonal Event-Horizon Graviton Waveguide Core (parts.barrel)
+        const hexBarrel = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, 4.9, 6), alienCarapaceMat);
+        hexBarrel.rotation.z = Math.PI / 2;
+        hexBarrel.position.set(-0.4, -0.05, 0);
+        const muzzleCrown = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.09, 10, 6), alienGyroMat);
+        muzzleCrown.rotation.y = Math.PI / 2;
+        muzzleCrown.position.set(-2.85, -0.05, 0);
+        parts.barrel.add(hexBarrel, muzzleCrown);
+
+        // 3. Three Counter-Rotating Sacred-Geometry Astrolabe Gyro-Rings (parts.spring)
+        for (let i = 0; i < 3; i++) {
+          const ring = new THREE.Mesh(new THREE.TorusGeometry(0.78 + i * 0.24, 0.065, 12, 24), alienGyroMat);
+          ring.position.set(-0.2, 0.0, 0);
+          parts.spring.add(ring);
+          alienRings.push(ring);
+        }
+
+        // 4. Sculpted Vorathian Reliquary Lower Frame & Organic Tendril Grip (parts.frame)
+        const relicBase = new THREE.Mesh(new THREE.BoxGeometry(3.9, 0.48, 0.82), alienCarapaceMat);
+        relicBase.position.set(0.3, -0.58, 0);
+        const relicGrip = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.58, 2.45, 8), alienCarapaceMat);
+        relicGrip.position.set(1.55, -1.65, 0);
+        relicGrip.rotation.z = -0.28;
+        const guardArc = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.09, 10, 16, Math.PI), alienGyroMat);
+        guardArc.position.set(0.45, -0.82, 0);
+        guardArc.rotation.z = Math.PI;
+        parts.frame.add(relicBase, relicGrip, guardArc);
+
+        // 5. Levitating Singularity Containment Crystal Core (parts.mag)
+        const coreCrystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.56, 1), alienCoreMat);
+        const innerHalo = new THREE.Mesh(new THREE.TorusGeometry(0.70, 0.04, 10, 24), alienGyroMat);
+        parts.mag.add(coreCrystal, innerHalo);
+        alienRings.push(innerHalo);
+      }
+    }
+
+    function updateAlienBossMaterials() {
+      if (state.tier !== 6) return;
+      // Compute how clean & polished the Alien Boss Relic is (0.0 = 100% Rusted Over, 1.0 = Fully Awakened Orichalcum & Rainbow Neutronium!)
+      const rustFactor = (state.drySandPct + state.saltCarbonPct) / 200; // 1.0 when dirty, 0.0 when clean
+      const awakeFactor = 1.0 - rustFactor;
+      const polishBoost = (state.lubeGreasePct + state.pvdPolishPct) / 200;
+
+      if (rustFactor > 0.35) {
+        alienCarapaceMat.map = rustTex;
+        alienCarapaceMat.color.setHex(0x8a3314);
+        alienCarapaceMat.metalness = 0.25 + awakeFactor * 0.4;
+        alienCarapaceMat.roughness = 0.95 - awakeFactor * 0.4;
+        alienCarapaceMat.emissive.setHex(0x1f0904);
+        alienCarapaceMat.emissiveIntensity = 0.1;
+      } else {
+        // Transformed into Iridescent Orichalcum & Rainbow Neutronium!
+        alienCarapaceMat.map = rainbowTex;
+        alienCarapaceMat.color.setHex(0xffffff);
+        alienCarapaceMat.metalness = 0.95;
+        alienCarapaceMat.roughness = Math.max(0.06, 0.25 - polishBoost * 0.20);
+        alienCarapaceMat.emissive.setHex(0x4c1d95);
+        alienCarapaceMat.emissiveIntensity = 0.28 + polishBoost * 0.35;
+      }
+      alienCarapaceMat.needsUpdate = true;
+
+      // Golden Astrolabe Gyro Rings
+      alienGyroMat.color.lerpColors(new THREE.Color(0x7c2d12), new THREE.Color(0xfbbf24), awakeFactor);
+      alienGyroMat.metalness = 0.3 + awakeFactor * 0.65;
+      alienGyroMat.roughness = 0.9 - awakeFactor * 0.75;
+      alienGyroMat.emissive.setHex(awakeFactor > 0.6 ? 0xd97706 : 0x000000);
+      alienGyroMat.emissiveIntensity = awakeFactor * 0.45;
+
+      // Levitating Singularity Crystal Core
+      alienCoreMat.color.lerpColors(new THREE.Color(0x4a1d46), new THREE.Color(0x00f2fe), awakeFactor);
+      alienCoreMat.emissive.setHex(awakeFactor > 0.5 ? 0xd946ef : 0x581c87);
+      alienCoreMat.emissiveIntensity = 0.3 + awakeFactor * 1.4;
+    }
+
+    // Target Positions: Assembled vs Field-Stripped
+    const POS_ASSEMBLED = {
+      slide:  new THREE.Vector3(0, 1.85, 0),
+      barrel: new THREE.Vector3(0, 1.80, 0),
+      spring: new THREE.Vector3(-0.35, 1.50, 0),
+      frame:  new THREE.Vector3(0, 1.85, 0),
+      mag:    new THREE.Vector3(1.38, 0.22, 0)
+    };
+    const ROT_ASSEMBLED = {
+      mag: new THREE.Euler(0, 0, -0.22)
+    };
+
+    const POS_STRIPPED = {
+      slide:  new THREE.Vector3(-4.2, 0.65, -0.6),
+      barrel: new THREE.Vector3(-0.6, 0.45, -1.3),
+      spring: new THREE.Vector3(-0.6, 0.45, 1.2),
+      frame:  new THREE.Vector3(2.4, 1.55, -0.2),
+      mag:    new THREE.Vector3(5.3, 0.45, 0.6)
+    };
+    const ROT_STRIPPED = {
+      mag: new THREE.Euler(Math.PI / 2, 0.2, 0)
+    };
+
+    // =========================================================================
+    // 6. 3D CONTAMINANTS (SAND / PEAT / BARNACLES / RUST / FERROFLUID / LUBE)
+    // =========================================================================
+    const sandGrains = [];
+    const saltPatches = [];
+    const lubeBeads = [];
+    const flyingParticles = [];
+
+    const sandGeo = new THREE.DodecahedronGeometry(0.055, 0);
+    const sandMat = new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.9, metalness: 0.05 });
+
+    const saltGeo = new THREE.DodecahedronGeometry(0.075, 1);
+    const saltMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.95, transparent: true, opacity: 0.84 });
+
+    const lubeGeo = new THREE.SphereGeometry(0.058, 10, 10);
+    const lubeMat = new THREE.MeshStandardMaterial({
+      color: 0x10b981, emissive: 0x059669, emissiveIntensity: 0.5,
+      roughness: 0.1, metalness: 0.3, transparent: true, opacity: 0.0
+    });
+
+    function rebuildContaminationForTier(tier) {
+      sandGrains.length = 0;
+      saltPatches.length = 0;
+      lubeBeads.length = 0;
+
+      const cfg = WEAPON_TIERS[tier];
+      sandMat.color.setHex(cfg.layer1Color);
+      saltMat.color.setHex(cfg.layer2Color);
+
+      const isBoss = tier === 6;
+      const grainCount = isBoss ? 340 : 250;
+      const patchCount = isBoss ? 180 : 110;
+      const partKeys = ['slide', 'barrel', 'spring', 'frame', 'mag'];
+
+      for (let i = 0; i < grainCount; i++) {
+        const pk = partKeys[i % partKeys.length];
+        const m = new THREE.Mesh(sandGeo, sandMat);
+        m.position.set(
+          (Math.random() - 0.5) * 3.8,
+          (Math.random() - 0.5) * 0.85,
+          (Math.random() - 0.5) * 0.85
+        );
+        // Boss barnacles & rust chunks are chunkier!
+        const scaleMult = isBoss ? (1.1 + Math.random() * 1.6) : (0.65 + Math.random() * 0.85);
+        m.scale.setScalar(scaleMult);
+        parts[pk].add(m);
+        sandGrains.push({ mesh: m, part: pk, active: true });
+      }
+
+      for (let i = 0; i < patchCount; i++) {
+        const pk = partKeys[i % partKeys.length];
+        const m = new THREE.Mesh(saltGeo, saltMat.clone());
+        m.scale.set(isBoss ? 2.2 : 1.5, isBoss ? 0.9 : 0.4, isBoss ? 1.8 : 1.2);
+        m.position.set(
+          (Math.random() - 0.5) * 3.4,
+          (Math.random() - 0.5) * 0.72,
+          (Math.random() - 0.5) * 0.78
+        );
+        parts[pk].add(m);
+        saltPatches.push({ mesh: m, part: pk, active: true });
+      }
+
+      for (let i = 0; i < 36; i++) {
+        const m = new THREE.Mesh(lubeGeo, lubeMat.clone());
+        const side = i % 2 === 0 ? 0.36 : -0.36;
+        const x = -1.4 + (i / 36) * 3.0;
+        m.position.set(x, -0.22, side);
+        parts.frame.add(m);
+        lubeBeads.push(m);
+      }
+    }
+
+    // =========================================================================
+    // 7. LIVE TEST RANGE (STEEL PLATES & PROJECTILES)
+    // =========================================================================
+    const rangeGroup = new THREE.Group();
+    rangeGroup.visible = false;
+    scene.add(rangeGroup);
+
+    const targets = [];
+    const shellCasings = [];
+    for (let i = 0; i < 5; i++) {
+      const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 2.2, 8), frameMat);
+      const xPos = -6.0 + i * 3.0;
+      stand.position.set(xPos, 0.8, -11.5);
+      rangeGroup.add(stand);
+
+      const plate = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.85, 0.85, 0.12, 24),
+        new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.7, roughness: 0.3, emissive: 0x0284c7, emissiveIntensity: 0.28 })
+      );
+      plate.rotation.x = Math.PI / 2;
+      plate.position.set(xPos, 2.1, -11.4);
+      rangeGroup.add(plate);
+      targets.push({ mesh: plate, tilt: 0 });
+    }
+
+    function spawnProjectileOrBrass() {
+      const shell = new THREE.Mesh(
+        state.tier === 6 ? new THREE.OctahedronGeometry(0.16, 1) : new THREE.CylinderGeometry(0.07, 0.07, 0.28, 12),
+        state.tier === 6 ? alienCoreMat : brassMat
+      );
+      shell.position.set(0.2, 2.25, 0.25);
+      scene.add(shell);
+      shellCasings.push({
+        mesh: shell,
+        vel: new THREE.Vector3(0.06 + Math.random() * 0.05, 0.16 + Math.random() * 0.06, 0.14 + Math.random() * 0.07),
+        rot: new THREE.Vector3(Math.random() * 0.3, Math.random() * 0.3, Math.random() * 0.3),
+        life: 85
+      });
+    }
+
+    // =========================================================================
+    // 8. 3D TOOL CURSOR & INTERACTIVE RAYCASTING
+    // =========================================================================
+    const toolCursor = new THREE.Group();
+    scene.add(toolCursor);
+    const nozzleBody = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.14, 1.1, 16), new THREE.MeshStandardMaterial({ color: 0x00f2fe, metalness: 0.6, roughness: 0.2 }));
+    nozzleBody.rotation.x = Math.PI / 4;
+    const strawTip = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.7, 10), new THREE.MeshBasicMaterial({ color: 0xf43f5e }));
+    strawTip.rotation.x = Math.PI / 4;
+    strawTip.position.set(0, -0.45, -0.45);
+    toolCursor.add(nozzleBody, strawTip);
+
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let isPointerDown = false;
+    let isOrbitDragging = false;
+    let prevPointer = { x: 0, y: 0 };
+    let camYaw = 0.0, camPitch = 0.48, camDist = 11.2;
+    let camTarget = new THREE.Vector3(0, 1.0, 0);
+
+    function spawnToolParticles(pos, colorHex, count = 5) {
+      const pGeo = new THREE.SphereGeometry(0.045, 6, 6);
+      const pMat = new THREE.MeshBasicMaterial({ color: colorHex });
+      for (let i = 0; i < count; i++) {
+        const m = new THREE.Mesh(pGeo, pMat);
+        m.position.copy(pos);
+        scene.add(m);
+        flyingParticles.push({
+          mesh: m,
+          vel: new THREE.Vector3((Math.random() - 0.5) * 0.24, 0.07 + Math.random() * 0.18, (Math.random() - 0.5) * 0.24),
+          life: 24
+        });
+      }
+    }
+
+    function applyToolAtPoint(hitPoint) {
+      const tool = state.selectedTool;
+      const cfg = WEAPON_TIERS[state.tier];
+
+      if (tool === 'steelpick') {
+        playSound('scratch');
+        state.finishIntegrity = Math.max(40, state.finishIntegrity - 5);
+        showToast(`⚠ STEEL PICK TRAP! Metal picks gouge ${cfg.finishName}! Switch to Non-Marring Polymer Pick (◆).`, true);
+        updateHUD();
+        return;
+      }
+
+      if ((tool === 'nylon' || tool === 'silicone' || tool === 'pick') && state.drySandPct > 25) {
+        playSound('scratch');
+        state.finishIntegrity = Math.max(50, state.finishIntegrity - 3);
+        showToast(`⚠ ABRASION WARNING! Don't wipe or scrub ${cfg.layer1Name} dry! Blast with Air / Sonic Duster (◆) FIRST!`, true);
+        updateHUD();
+        return;
+      }
+
+      if (tool === 'air') {
+        playSound('air');
+        spawnToolParticles(hitPoint, 0x7dd3fc, 6);
+        let removedNow = 0;
+        sandGrains.forEach(g => {
+          if (g.active) {
+            const worldPos = new THREE.Vector3();
+            g.mesh.getWorldPosition(worldPos);
+            if (worldPos.distanceTo(hitPoint) < 2.4 || Math.random() < 0.07) {
+              g.active = false;
+              g.mesh.visible = false;
+              removedNow++;
+            }
+          }
+        });
+        if (removedNow > 0) {
+          state.score += removedNow * 5;
+          const activeCount = sandGrains.filter(g => g.active).length;
+          state.drySandPct = Math.round((activeCount / sandGrains.length) * 100);
+          if (state.drySandPct <= 6) {
+            state.drySandPct = 0;
+            sandGrains.forEach(g => { g.active = false; g.mesh.visible = false; });
+            if (state.stage === 2) selectStage(3);
+            showToast(`✅ 100% of ${cfg.layer1Name} Blasted Off cleanly!`);
+          }
+        }
+      } else if (tool === 'clp') {
+        playSound('clp');
+        spawnToolParticles(hitPoint, 0x38bdf8, 5);
+        state.clpAppliedPct = Math.min(100, state.clpAppliedPct + 10);
+        saltPatches.forEach(s => {
+          if (s.active && Math.random() < 0.16) {
+            s.mesh.material.color.setHex(0x38bdf8);
+            s.mesh.material.opacity = 0.42;
+          }
+        });
+        state.saltCarbonPct = Math.max(30, state.saltCarbonPct - 6);
+        state.score += 15;
+        if (state.clpAppliedPct >= 80) {
+          showToast(`◆ Lucas CLP penetrated ${cfg.layer2Name}! Switch to Polymer Pick (◆) or Nylon Brush (◆).`);
+        }
+      } else if (tool === 'pick' || tool === 'nylon') {
+        playSound('brush');
+        spawnToolParticles(hitPoint, 0xfbbf24, 4);
+        saltPatches.forEach(s => {
+          if (s.active && Math.random() < 0.20) {
+            s.active = false;
+            s.mesh.visible = false;
+          }
+        });
+        const remSalt = saltPatches.filter(s => s.active).length;
+        state.saltCarbonPct = Math.round((remSalt / saltPatches.length) * 100);
+        state.magCleanPct = Math.min(100, state.magCleanPct + 14);
+        state.score += 20;
+        if (state.saltCarbonPct <= 6) {
+          state.saltCarbonPct = 0;
+          saltPatches.forEach(s => { s.active = false; s.mesh.visible = false; });
+          if (state.stage === 3) selectStage(4);
+          showToast(`✅ All ${cfg.layer2Name} Descaled & Swabbed Clean!`);
+        }
+      } else if (tool === 'rod') {
+        playSound('brush');
+        spawnToolParticles(hitPoint, 0xf59e0b, 4);
+        state.boreCleanPct = Math.min(100, state.boreCleanPct + 15);
+        state.score += 25;
+        if (state.boreCleanPct >= 100) {
+          if (state.stage === 4) selectStage(5);
+          showToast(`✅ ${cfg.boreTitle} Rodded to 100% Mirror Alignment!`);
+        }
+      } else if (tool === 'grease') {
+        playSound('clp');
+        spawnToolParticles(hitPoint, 0x10b981, 5);
+        state.lubeGreasePct = Math.min(100, state.lubeGreasePct + 18);
+        const visibleBeads = Math.floor((state.lubeGreasePct / 100) * lubeBeads.length);
+        lubeBeads.forEach((b, idx) => { b.material.opacity = idx < visibleBeads ? 0.92 : 0.0; });
+        state.score += 25;
+        if (state.lubeGreasePct >= 100) {
+          showToast("✅ Rails Greased (#10889) & Pivots Oiled (#10875)! Now buff with Hoppe's Silicone Cloth (✨).");
+        }
+      } else if (tool === 'silicone') {
+        playSound('brush');
+        spawnToolParticles(hitPoint, 0xf472b6, 5);
+        state.pvdPolishPct = Math.min(100, state.pvdPolishPct + 14);
+        slideMat.roughness = Math.max(0.06, 0.26 - (state.pvdPolishPct / 100) * 0.20);
+        state.score += 25;
+        if (state.pvdPolishPct >= 100 && state.lubeGreasePct >= 100 && state.drySandPct === 0 && state.saltCarbonPct === 0) {
+          if (state.stage === 6) selectStage(7);
+          showToast(`✨ ${cfg.finishName} Polished to 100% Master Luster!`);
+        }
+      }
+      updateAlienBossMaterials();
+      updateHUD();
+    }
+
+    container.addEventListener('pointerdown', (e) => {
+      ensureAudio();
+      isPointerDown = true;
+      prevPointer = { x: e.clientX, y: e.clientY };
+
+      if (state.inRangeMode && e.button === 0) {
+        fireTestShot();
+        return;
+      }
+
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+      const hits = raycaster.intersectObjects(gunRoot.children, true);
+      if (hits.length > 0 && e.button === 0) {
+        isOrbitDragging = false;
+        applyToolAtPoint(hits[0].point);
+      } else {
+        isOrbitDragging = true;
+      }
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      const hits = raycaster.intersectObjects(gunRoot.children, true);
+      if (hits.length > 0) {
+        toolCursor.position.copy(hits[0].point).add(new THREE.Vector3(0, 0.55, 0.55));
+        toolCursor.visible = !state.inRangeMode;
+        if (isPointerDown && !isOrbitDragging) {
+          applyToolAtPoint(hits[0].point);
+        }
+      } else {
+        toolCursor.visible = false;
+      }
+
+      if (isPointerDown && isOrbitDragging) {
+        const dx = e.clientX - prevPointer.x;
+        const dy = e.clientY - prevPointer.y;
+        camYaw -= dx * 0.007;
+        camPitch = Math.max(0.12, Math.min(1.38, camPitch + dy * 0.007));
+        prevPointer = { x: e.clientX, y: e.clientY };
+      }
+    });
+
+    window.addEventListener('pointerup', () => {
+      isPointerDown = false;
+      isOrbitDragging = false;
+    });
+
+    container.addEventListener('wheel', (e) => {
+      camDist = Math.max(4.8, Math.min(16.5, camDist + e.deltaY * 0.005));
+    });
+
+    // =========================================================================
+    // 9. TIER LOADING, STAGE FLOW & INSTANT RESTORATION
+    // =========================================================================
+    function loadWeaponTier(tierNum) {
+      document.getElementById('cert-modal').classList.remove('open');
+      state.tier = tierNum;
+      state.inRangeMode = false;
+      rangeGroup.visible = false;
+      state.stripped = false;
+      state.drySandPct = 100;
+      state.saltCarbonPct = 100;
+      state.clpAppliedPct = 0;
+      state.boreCleanPct = 12;
+      state.magCleanPct = 0;
+      state.lubeGreasePct = 0;
+      state.pvdPolishPct = 70;
+      state.finishIntegrity = 100;
+      state.shotsFired = 0;
+
+      const cfg = WEAPON_TIERS[tierNum];
+      document.getElementById('active-weapon-badge').textContent = cfg.shortBadge;
+      document.getElementById('active-weapon-title').textContent = `${cfg.name} — ${cfg.incident}`;
+      document.getElementById('lbl-layer1').textContent = cfg.layer1Name;
+      document.getElementById('lbl-layer2').textContent = cfg.layer2Name;
+      document.getElementById('lbl-finish').textContent = cfg.finishName;
+      document.getElementById('borescope-title').textContent = cfg.boreTitle;
+      document.getElementById('bore-caption').textContent = cfg.boreDesc;
+
+      Object.keys(cfg.partLabels).forEach(k => {
+        const el = document.getElementById('part-lbl-' + k);
+        if (el) el.textContent = cfg.partLabels[k];
+      });
+
+      document.querySelectorAll('.tier-tab').forEach(el => {
+        el.classList.toggle('active', parseInt(el.getAttribute('data-tier'), 10) === tierNum);
+      });
+
+      muzzleLight.color.setHex(cfg.muzzleColor);
+      buildWeaponGeometryForTier(tierNum);
+      rebuildContaminationForTier(tierNum);
+      updateAlienBossMaterials();
+      focusPart('all');
+      selectStage(1);
+      updateHUD();
+      showToast(`⚙ Loaded Tier ${tierNum}: ${cfg.name}`);
+    }
+
+    function selectTool(toolKey) {
+      state.selectedTool = toolKey;
+      document.querySelectorAll('.tool-slot').forEach(el => {
+        el.classList.toggle('active', el.getAttribute('data-tool') === toolKey);
+      });
+      const colorMap = {
+        air: 0x00f2fe, clp: 0x38bdf8, pick: 0xfbbf24,
+        nylon: 0xa855f7, rod: 0xf59e0b, grease: 0x10b981,
+        silicone: 0xf472b6, steelpick: 0xf43f5e
+      };
+      nozzleBody.material.color.setHex(colorMap[toolKey] || 0x00f2fe);
+    }
+
+    function selectStage(stageNum) {
+      state.stage = stageNum;
+      const cfg = WEAPON_TIERS[state.tier];
+      const toolForStage = { 1: 'air', 2: 'air', 3: 'clp', 4: 'rod', 5: 'nylon', 6: 'grease', 7: 'silicone' }[stageNum];
+      const btnLabels = {
+        1: "Safe Clear & Field-Strip",
+        2: `Blast ${cfg.layer1Name}`,
+        3: `Flush ${cfg.layer2Name}`,
+        4: `Rod ${cfg.boreTitle}`,
+        5: "Service Feed / Core",
+        6: "Apply Grease & Polish",
+        7: "Reassemble & Test Fire!"
+      };
+
+      document.getElementById('stage-counter').textContent = `STAGE ${stageNum}/7`;
+      document.getElementById('coach-badge').textContent = `TIER ${state.tier} • STAGE ${stageNum}/7`;
+      document.getElementById('coach-lesson').innerHTML = cfg.lessons[stageNum];
+      document.getElementById('coach-science').innerHTML = cfg.science;
+      document.getElementById('btn-stage-action').textContent = btnLabels[stageNum];
+
+      document.querySelectorAll('.stage-item').forEach(el => {
+        const s = parseInt(el.getAttribute('data-stage'), 10);
+        el.classList.toggle('active', s === stageNum);
+      });
+
+      document.querySelectorAll('.tool-slot').forEach(el => {
+        el.classList.toggle('recommended', el.getAttribute('data-tool') === toolForStage);
+      });
+      selectTool(toolForStage);
+    }
+
+    function toggleFieldStrip(forceState) {
+      state.stripped = typeof forceState === 'boolean' ? forceState : !state.stripped;
+      playSound('strip');
+      document.getElementById('view-mode-label').textContent = state.stripped ? 'FIELD-STRIPPED' : 'ASSEMBLED';
+      document.getElementById('btn-strip-toggle').textContent = state.stripped ? 'Reassemble Weapon' : 'Field-Strip / Explode';
+      if (state.stripped && state.stage === 1) {
+        state.score += 200;
+        selectStage(2);
+        showToast("✅ Sub-Assemblies Separated onto Magnetic Bench! Now use 10oz Air / Sonic Duster (◆).");
+      }
+      updateHUD();
+    }
+
+    function focusPart(partKey) {
+      state.focusedPart = partKey;
+      document.querySelectorAll('.part-chip').forEach(el => {
+        el.classList.toggle('selected', el.getAttribute('data-part') === partKey);
+      });
+      if (partKey === 'all') {
+        camTarget.set(0.2, state.stripped ? 0.8 : 1.35, 0);
+        camDist = state.stripped ? 12.4 : 9.6;
+      } else {
+        const targetGroup = parts[partKey];
+        if (targetGroup) {
+          camTarget.copy(targetGroup.position);
+          camDist = 5.6;
+        }
+      }
+    }
+
+    function triggerPrimaryStageAction() {
+      performGuidedAutoStep();
+    }
+
+    function performGuidedAutoStep() {
+      ensureAudio();
+      const cfg = WEAPON_TIERS[state.tier];
+      if (state.stage === 1) {
+        toggleFieldStrip(true);
+      } else if (state.stage === 2) {
+        if (!state.stripped) toggleFieldStrip(true);
+        playSound('air');
+        sandGrains.forEach(g => { g.active = false; g.mesh.visible = false; });
+        state.drySandPct = 0;
+        state.score += 450;
+        updateAlienBossMaterials();
+        showToast(`◆ 100% of ${cfg.layer1Name} blasted off!`);
+        selectStage(3);
+      } else if (state.stage === 3) {
+        playSound('clp');
+        saltPatches.forEach(s => { s.active = false; s.mesh.visible = false; });
+        state.clpAppliedPct = 100;
+        state.saltCarbonPct = 0;
+        state.score += 500;
+        updateAlienBossMaterials();
+        showToast(`◆ Lucas CLP + Polymer Pick removed 100% of ${cfg.layer2Name}!`);
+        selectStage(4);
+      } else if (state.stage === 4) {
+        playSound('brush');
+        state.boreCleanPct = 100;
+        state.score += 400;
+        focusPart('barrel');
+        showToast(`◆ ${cfg.boreTitle} rodded to 100% mirror alignment!`);
+        selectStage(5);
+      } else if (state.stage === 5) {
+        playSound('brush');
+        state.magCleanPct = 100;
+        state.score += 350;
+        focusPart('mag');
+        showToast("◆ Feed / Containment Core cleaned & dried!");
+        selectStage(6);
+      } else if (state.stage === 6) {
+        playSound('clp');
+        state.lubeGreasePct = 100;
+        state.pvdPolishPct = 100;
+        lubeBeads.forEach(b => { b.material.opacity = 0.92; });
+        slideMat.roughness = 0.06;
+        state.score += 600;
+        updateAlienBossMaterials();
+        focusPart('all');
+        showToast(`✨ ${cfg.finishName} Restored to 100% Master Luster!`);
+        selectStage(7);
+      } else if (state.stage === 7) {
+        toggleFieldStrip(false);
+        focusPart('all');
+        markTierCompleted(state.tier);
+        openCertificationModal();
+      }
+      updateHUD();
+    }
+
+    function completeEntireCurrentWeapon() {
+      ensureAudio();
+      sandGrains.forEach(g => { g.active = false; g.mesh.visible = false; });
+      saltPatches.forEach(s => { s.active = false; s.mesh.visible = false; });
+      lubeBeads.forEach(b => { b.material.opacity = 0.92; });
+      state.drySandPct = 0;
+      state.saltCarbonPct = 0;
+      state.clpAppliedPct = 100;
+      state.boreCleanPct = 100;
+      state.magCleanPct = 100;
+      state.lubeGreasePct = 100;
+      state.pvdPolishPct = 100;
+      state.stripped = false;
+      state.score += 2500;
+      updateAlienBossMaterials();
+      selectStage(7);
+      markTierCompleted(state.tier);
+      updateHUD();
+      openCertificationModal();
+    }
+
+    function markTierCompleted(t) {
+      state.completedTiers[t] = true;
+      const tab = document.querySelector(`.tier-tab[data-tier="${t}"]`);
+      if (tab) tab.classList.add('completed');
+      const stat = document.getElementById('tier-stat-' + t);
+      if (stat) stat.textContent = '✅';
+    }
+
+    function openCertificationModal() {
+      const cfg = WEAPON_TIERS[state.tier];
+      document.getElementById('cert-badge').textContent = state.tier === 6 ? '★ GRAND XENO-ARMORER BOSS VICTORY ★' : `TIER ${state.tier} RESTORATION CERTIFIED`;
+      document.getElementById('cert-heading').textContent = `${cfg.name} Restored!`;
+      document.getElementById('cert-summary').textContent = state.tier === 6
+        ? "Incredible! You stripped away 10,000 years of Mariana Trench rust scale, barnacles, and Void-Mycelium to awaken the Ancient Vorathian Singularity Reliquary Cannon!"
+        : `You safely removed 100% of ${cfg.layer1Name} and ${cfg.layer2Name} while preserving the ${cfg.finishName}.`;
+      document.getElementById('cert-finish').textContent = state.finishIntegrity + '%';
+      document.getElementById('cert-bore').textContent = state.boreCleanPct + '%';
+      document.getElementById('cert-lube').textContent = state.lubeGreasePct + '%';
+      document.getElementById('cert-score').textContent = state.score.toLocaleString() + ' XP';
+
+      const nextTier = state.tier < 6 ? state.tier + 1 : 1;
+      document.getElementById('btn-next-tier').textContent = state.tier < 6
+        ? `Unlock & Load Tier ${nextTier}: ${WEAPON_TIERS[nextTier].shortBadge} →`
+        : `Replay Campaign from Tier 1 →`;
+      document.getElementById('cert-modal').classList.add('open');
+    }
+
+    function advanceToNextWeaponTier() {
+      const nextTier = state.tier < 6 ? state.tier + 1 : 1;
+      loadWeaponTier(nextTier);
+    }
+
+    function closeCertAndFire() {
+      document.getElementById('cert-modal').classList.remove('open');
+      EnterTestRange();
+    }
+
+    function EnterTestRange() {
+      ensureAudio();
+      if (state.drySandPct > 25) {
+        playSound('scratch');
+        state.finishIntegrity = Math.max(40, state.finishIntegrity - 8);
+        showToast("⚠ STOP! Firing with heavy abrasive debris in the bore/rails will damage the weapon! Clean it first!", true);
+        updateHUD();
+        return;
+      }
+      state.inRangeMode = !state.inRangeMode;
+      if (state.inRangeMode) {
+        toggleFieldStrip(false);
+        rangeGroup.visible = true;
+        camYaw = 0; camPitch = 0.18; camDist = 6.8;
+        camTarget.set(0, 1.8, -2.5);
+        document.getElementById('btn-range').textContent = "Return to Bench";
+        showToast(`◎ LIVE RANGE ACTIVE! Click anywhere to fire the ${WEAPON_TIERS[state.tier].shortBadge}!`);
+        fireTestShot();
+      } else {
+        rangeGroup.visible = false;
+        camYaw = 0; camPitch = 0.48; camDist = 11.2;
+        camTarget.set(0, 1.0, 0);
+        document.getElementById('btn-range').textContent = "Live Test Fire";
+      }
+    }
+
+    function fireTestShot() {
+      // Realistic Malfunction Diagnosis if rails are dry!
+      if (state.lubeGreasePct < 40 && Math.random() < 0.45) {
+        playSound('scratch');
+        document.getElementById('chrono-readout').textContent = 'MALFUNCTION: FAILURE TO BATTERY (DRY RAILS!)';
+        showToast("⚠ FAILURE TO BATTERY! Rails lack Lucas #10889 Gun Grease—slide friction stalled return!", true);
+        return;
+      }
+      playSound('shot');
+      state.shotsFired++;
+      state.slideRecoilOffset = 0.72;
+      state.muzzleFlashIntensity = 5.5;
+      state.score += 120;
+      spawnProjectileOrBrass();
+      const targetIdx = (state.shotsFired - 1) % targets.length;
+      targets[targetIdx].tilt = 1.3;
+
+      const velocities = {
+        1: `${985 + Math.floor(Math.random()*18)} FPS • 410 FT-LBS (.40 S&W)`,
+        2: `${1360 + Math.floor(Math.random()*25)} FPS • 1,090 FT-LBS (.44 MAG)`,
+        3: `${1250 + Math.floor(Math.random()*30)} FPS • 18,000 RPM ROCKET`,
+        4: `${1420 + Math.floor(Math.random()*22)} FPS • 560 FT-LBS (7.63MM)`,
+        5: `${6850 + Math.floor(Math.random()*90)} FPS • MACH 6.1 GAUSS SABOT`,
+        6: `0.94c RELATIVISTIC • 4.2 TERA-JOULES SINGULARITY`
+      };
+      document.getElementById('chrono-readout').textContent = velocities[state.tier] || '1000 FPS';
+      updateHUD();
+    }
+
+    // =========================================================================
+    // 10B. ADVANCED LAB MODES: UV BLACKLIGHT, X-RAY CUTAWAY, 40kHz SONIC BATH
+    // =========================================================================
+    let uvModeActive = false;
+    let xrayModeActive = false;
+
+    function toggleUVBlacklight() {
+      uvModeActive = !uvModeActive;
+      const btn = document.getElementById('btn-uv');
+      if (uvModeActive) {
+        ambientLight.color.setHex(0x4c1d95);
+        ambientLight.intensity = 1.35;
+        keyLight.color.setHex(0x8b5cf6);
+        keyLight.intensity = 0.75;
+        sandMat.emissive = new THREE.Color(0x22c55e);
+        sandMat.emissiveIntensity = 0.85;
+        saltPatches.forEach(s => {
+          s.mesh.material.emissive = new THREE.Color(0xf43f5e);
+          s.mesh.material.emissiveIntensity = 0.9;
+        });
+        btn.style.borderColor = '#a855f7';
+        showToast("◆ 365nm UV Blacklight ON: Residual grit & salt crystals fluoresce neon green/magenta!");
+      } else {
+        ambientLight.color.setHex(0xdbeafe);
+        ambientLight.intensity = 0.72;
+        keyLight.color.setHex(0xffffff);
+        keyLight.intensity = 1.40;
+        sandMat.emissive = new THREE.Color(0x000000);
+        sandMat.emissiveIntensity = 0;
+        saltPatches.forEach(s => {
+          s.mesh.material.emissive = new THREE.Color(0x000000);
+          s.mesh.material.emissiveIntensity = 0;
+        });
+        btn.style.borderColor = '';
+        showToast("◆ Standard Studio Lighting Restored.");
+      }
+    }
+
+    function toggleXRayMode() {
+      xrayModeActive = !xrayModeActive;
+      const btn = document.getElementById('btn-xray');
+      [slideMat, frameMat, gripMat, walnutMat, barrelMat, brassMat, coilCopperMat, alienCarapaceMat].forEach(mat => {
+        mat.wireframe = xrayModeActive;
+      });
+      btn.style.borderColor = xrayModeActive ? '#00f2fe' : '';
+      showToast(xrayModeActive
+        ? "◆ X-Ray Blueprint Cutaway ON: Inspect internal firing pin, recoil spring & hidden grit!"
+        : "◆ Solid PBR Metallic Rendering Restored.");
+    }
+
+    function runUltrasonicCavitationBath() {
+      ensureAudio();
+      if (!state.stripped) toggleFieldStrip(true);
+      playSound('clp');
+      // Spawn 45 rising ultrasonic cavitation micro-bubbles across the parts
+      for (let i = 0; i < 45; i++) {
+        spawnToolParticles(
+          new THREE.Vector3((Math.random() - 0.5) * 9.0, 0.3 + Math.random() * 1.2, (Math.random() - 0.5) * 3.0),
+          0x38bdf8,
+          1
+        );
+      }
+      // Remove up to 55% of remaining dry sand & salt patches per sonic cycle
+      sandGrains.forEach(g => {
+        if (g.active && Math.random() < 0.65) { g.active = false; g.mesh.visible = false; }
+      });
+      saltPatches.forEach(s => {
+        if (s.active && Math.random() < 0.65) { s.active = false; s.mesh.visible = false; }
+      });
+      const remSand = sandGrains.filter(g => g.active).length;
+      const remSalt = saltPatches.filter(s => s.active).length;
+      state.drySandPct = Math.round((remSand / sandGrains.length) * 100);
+      state.saltCarbonPct = Math.round((remSalt / saltPatches.length) * 100);
+      if (state.drySandPct <= 8) {
+        state.drySandPct = 0;
+        sandGrains.forEach(g => { g.active = false; g.mesh.visible = false; });
+      }
+      if (state.saltCarbonPct <= 8) {
+        state.saltCarbonPct = 0;
+        saltPatches.forEach(s => { s.active = false; s.mesh.visible = false; });
+      }
+      state.score += 350;
+      updateAlienBossMaterials();
+      updateHUD();
+      showToast("◆ 40 kHz Ultrasonic Cavitation Pulse complete! Concretions & deep crevice fouling stripped!");
+    }
+
+    function toggleAmazonKitModal() {
+      const m = document.getElementById('amazon-modal');
+      m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
+    }
+
+    // =========================================================================
+    // 10. OPTICAL BORE / GRAVITON WAVEGUIDE SCOPE RENDERER & HUD
+    // =========================================================================
+    const boreCanvas = document.getElementById('borescope-canvas');
+    const boreCtx = boreCanvas.getContext('2d');
+
+    function drawBoreScope(time) {
+      const w = boreCanvas.width, h = boreCanvas.height;
+      const cx = w / 2, cy = h / 2;
+      boreCtx.clearRect(0, 0, w, h);
+
+      const cleanRatio = state.boreCleanPct / 100;
+      const isBoss = state.tier === 6;
+      const grad = boreCtx.createRadialGradient(cx, cy, 10, cx, cy, 96);
+      grad.addColorStop(0, isBoss && cleanRatio > 0.7 ? '#a855f7' : '#020617');
+      grad.addColorStop(0.55, isBoss ? (cleanRatio > 0.7 ? '#4c1d95' : '#431407') : (cleanRatio > 0.8 ? '#64748b' : '#334155'));
+      grad.addColorStop(0.88, isBoss ? (cleanRatio > 0.7 ? '#f59e0b' : '#7c2d12') : (cleanRatio > 0.8 ? '#e2e8f0' : '#475569'));
+      grad.addColorStop(1, '#0f172a');
+      boreCtx.fillStyle = grad;
+      boreCtx.beginPath();
+      boreCtx.arc(cx, cy, 96, 0, Math.PI * 2);
+      boreCtx.fill();
+
+      // Spiral Rifling or Sacred Hexagonal Waveguide Lines
+      boreCtx.strokeStyle = isBoss
+        ? `rgba(245, 158, 11, ${0.35 + cleanRatio * 0.65})`
+        : `rgba(226, 232, 240, ${0.25 + cleanRatio * 0.55})`;
+      boreCtx.lineWidth = isBoss ? 2.5 : 3;
+      for (let i = 0; i < 6; i++) {
+        const baseAngle = (i * Math.PI) / 3 + time * (isBoss ? 0.45 : 0.15);
+        boreCtx.beginPath();
+        for (let r = 14; r <= 94; r += 4) {
+          const a = baseAngle + (r / 94) * 0.85;
+          const x = cx + Math.cos(a) * r;
+          const y = cy + Math.sin(a) * r;
+          if (r === 14) boreCtx.moveTo(x, y);
+          else boreCtx.lineTo(x, y);
+        }
+        boreCtx.stroke();
+      }
+
+      // Draw Remaining Contamination Specks inside Bore
+      const speckCount = Math.floor((1 - cleanRatio) * 44);
+      for (let i = 0; i < speckCount; i++) {
+        const a = (i * 2.39996) + 0.5;
+        const r = 18 + ((i * 17) % 68);
+        const x = cx + Math.cos(a) * r;
+        const y = cy + Math.sin(a) * r;
+        boreCtx.fillStyle = isBoss ? '#9a3412' : (i % 2 === 0 ? '#eab308' : '#b45309');
+        boreCtx.beginPath();
+        boreCtx.arc(x, y, 2.5 + (i % 3), 0, Math.PI * 2);
+        boreCtx.fill();
+      }
+    }
+
+    function updateHUD() {
+      document.getElementById('val-sand').textContent = state.drySandPct + '%';
+      document.getElementById('bar-sand').style.width = state.drySandPct + '%';
+
+      document.getElementById('val-salt').textContent = state.saltCarbonPct + '%';
+      document.getElementById('bar-salt').style.width = state.saltCarbonPct + '%';
+
+      document.getElementById('val-lube').textContent = state.lubeGreasePct + '%';
+      document.getElementById('bar-lube').style.width = state.lubeGreasePct + '%';
+
+      document.getElementById('val-finish').textContent = state.finishIntegrity + '%';
+      document.getElementById('bar-finish').style.width = state.finishIntegrity + '%';
+
+      document.getElementById('val-score').textContent = state.score.toLocaleString();
+      const rank = state.score >= 8000 ? 'GRAND XENO-ARMORER' : state.score >= 4000 ? 'RELIC MASTER' : state.score >= 1500 ? 'MASTER SIG ARMORER' : 'BENCH TECH';
+      document.getElementById('rank-label').textContent = rank;
+
+      document.getElementById('bore-clean-pct').textContent = state.boreCleanPct + '% CLEAN';
+      document.getElementById('bore-clean-pct').style.color = state.boreCleanPct >= 95 ? '#10b981' : '#f59e0b';
+
+      const stageChecks = {
+        1: state.stripped || state.stage > 1,
+        2: state.drySandPct === 0,
+        3: state.saltCarbonPct === 0,
+        4: state.boreCleanPct >= 95,
+        5: state.magCleanPct >= 90 || state.saltCarbonPct === 0,
+        6: state.lubeGreasePct >= 95 && state.pvdPolishPct >= 95,
+        7: state.shotsFired > 0
+      };
+      document.querySelectorAll('.stage-item').forEach(el => {
+        const s = parseInt(el.getAttribute('data-stage'), 10);
+        el.classList.toggle('done', !!stageChecks[s]);
+      });
+
+      const cleanAll = state.drySandPct === 0 && state.saltCarbonPct === 0;
+      ['all', 'slide', 'frame', 'barrel', 'spring', 'mag'].forEach(k => {
+        const dot = document.getElementById('dot-' + k);
+        if (dot) dot.classList.toggle('clean', cleanAll);
+      });
+    }
+
+    // =========================================================================
+    // 11. CINEMA SHOWCASE DIRECTOR & MAIN RENDER LOOP
+    // =========================================================================
+    let cinemaActive = IS_PROMO_MODE;
+    let cinemaStart = 0;
+    let cinemaAct = -1;
+    let cinemaLastShot = 0;
+
+    function applyCinemaVisibility(hideUI) {
+      ['ui-shell', 'toast-banner', 'cert-modal', 'amazon-modal'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = hideUI ? 'none' : '';
+      });
+    }
+
+    function toggleCinemaShowcase() {
+      cinemaActive = !cinemaActive;
+      cinemaStart = performance.now() * 0.001;
+      cinemaAct = -1;
+      if (IS_PROMO_MODE) applyCinemaVisibility(true);
+    }
+
+    if (IS_PROMO_MODE) {
+      applyCinemaVisibility(true);
+      toolCursor.visible = false;
+    }
+
+    const clock = new THREE.Clock();
+    function animate() {
+      requestAnimationFrame(animate);
+      const t = clock.getElapsedTime();
+
+      workshopCalibRings.forEach((ring, idx) => {
+        ring.rotation.z = t * (idx === 0 ? 0.35 : -0.48);
+        ring.rotation.y = Math.sin(t * 0.55 + idx) * 0.38;
+      });
+
+      if (cinemaActive) {
+        if (IS_PROMO_MODE) {
+          applyCinemaVisibility(true);
+          toolCursor.visible = false;
+        }
+        const asp = window.innerWidth / Math.max(1, window.innerHeight);
+        const targetFov = asp < 1.0 ? 64 : 42;
+        if (Math.abs(camera.fov - targetFov) > 0.1) {
+          camera.fov = targetFov;
+          camera.updateProjectionMatrix();
+        }
+        const ct = (t - cinemaStart) % 24.4;
+        const act = Math.min(5, Math.floor(ct / 4.0));
+        const u = Math.min(1.0, (ct - act * 4.0) / 4.0);
+        const tierOrder = [1, 2, 4, 5, 6, 6];
+        const curTier = tierOrder[act];
+
+        if (cinemaAct !== act) {
+          cinemaAct = act;
+          loadWeaponTier(curTier);
+          document.getElementById('cert-modal').classList.remove('open');
+          if (IS_PROMO_MODE) applyCinemaVisibility(true);
+          cinemaLastShot = ct;
+          if (act === 0 || act === 1 || act === 2) {
+            state.inRangeMode = false;
+            rangeGroup.visible = false;
+            toggleFieldStrip(true);
+            runUltrasonicCavitationBath();
+          } else if (act === 4) {
+            state.inRangeMode = false;
+            rangeGroup.visible = false;
+            toggleFieldStrip(true);
+          } else {
+            completeEntireCurrentWeapon();
+            document.getElementById('cert-modal').classList.remove('open');
+            state.inRangeMode = true;
+            rangeGroup.visible = true;
+            if (IS_PROMO_MODE) applyCinemaVisibility(true);
+          }
+        }
+
+        if (act <= 2 || act === 4) {
+          if (u > 0.36 && state.drySandPct > 0) {
+            runUltrasonicCavitationBath();
+            completeEntireCurrentWeapon();
+            document.getElementById('cert-modal').classList.remove('open');
+            if (IS_PROMO_MODE) applyCinemaVisibility(true);
+            spawnToolParticles(new THREE.Vector3(0, 1.4, 0), act === 4 ? 0xf59e0b : 0x00f2fe, 22);
+          }
+          if (u > 0.68 && state.stripped) {
+            toggleFieldStrip(false);
+          }
+          const dirSign = act % 2 === 0 ? 1 : -1;
+          camYaw = (-0.98 + u * 1.96) * dirSign;
+          camPitch = 0.34 + Math.sin(u * Math.PI) * 0.22;
+          camDist = (asp < 1.0 ? 10.2 : 8.6) - Math.sin(u * Math.PI) * 1.8;
+          camTarget.set(0.0, 1.15, 0.0);
+        } else {
+          if (ct - cinemaLastShot >= 0.42) {
+            cinemaLastShot = ct;
+            fireTestShot();
+            spawnToolParticles(new THREE.Vector3(-2.6, 1.65, 0), act === 5 ? 0xd946ef : 0x00f2fe, 12);
+          }
+          camYaw = act === 3 ? (-0.64 + u * 1.28) : (0.88 - u * 1.76);
+          camPitch = 0.24 + Math.sin(u * Math.PI * 2) * 0.12;
+          camDist = (asp < 1.0 ? 8.2 : 6.8) - Math.sin(u * Math.PI) * 1.2;
+          camTarget.set(0, 1.62, -1.8);
+        }
+      }
+
+      const targetMap = state.stripped ? POS_STRIPPED : POS_ASSEMBLED;
+      Object.keys(parts).forEach(k => {
+        const desired = targetMap[k].clone();
+        if (k === 'slide' && !state.stripped) {
+          desired.x += state.slideRecoilOffset;
+        }
+        // Subtle levitation bob for Final Boss Alien Relic when cleaned!
+        if (state.tier === 6 && state.drySandPct === 0) {
+          desired.y += Math.sin(t * 2.4 + (k === 'slide' ? 1 : 0)) * 0.08;
+        }
+        parts[k].position.lerp(desired, 0.12);
+      });
+
+      // Counter-rotate the Alien Boss Astrolabe Gyro-Rings once freed from rust!
+      if (state.tier === 6) {
+        const speedMult = state.drySandPct === 0 ? (state.saltCarbonPct === 0 ? 1.8 : 0.6) : 0.03;
+        alienRings.forEach((r, idx) => {
+          r.rotation.x += 0.015 * speedMult * (idx % 2 === 0 ? 1 : -1);
+          r.rotation.y += 0.022 * speedMult * (idx % 2 === 0 ? -1 : 1);
+        });
+      }
+
+      state.slideRecoilOffset *= 0.78;
+      state.muzzleFlashIntensity *= 0.72;
+      muzzleLight.intensity = state.muzzleFlashIntensity;
+
+      const desiredMagRot = state.stripped ? ROT_STRIPPED.mag : ROT_ASSEMBLED.mag;
+      parts.mag.rotation.x += (desiredMagRot.x - parts.mag.rotation.x) * 0.12;
+      parts.mag.rotation.y += (desiredMagRot.y - parts.mag.rotation.y) * 0.12;
+      parts.mag.rotation.z += (desiredMagRot.z - parts.mag.rotation.z) * 0.12;
+
+      rainbowTex.offset.x = Math.sin(t * 0.35) * 0.08 + (camYaw * 0.15);
+
+      for (let i = flyingParticles.length - 1; i >= 0; i--) {
+        const p = flyingParticles[i];
+        p.mesh.position.add(p.vel);
+        p.life--;
+        p.mesh.scale.multiplyScalar(0.93);
+        if (p.life <= 0) {
+          scene.remove(p.mesh);
+          flyingParticles.splice(i, 1);
+        }
+      }
+
+      for (let i = shellCasings.length - 1; i >= 0; i--) {
+        const sc = shellCasings[i];
+        sc.mesh.position.add(sc.vel);
+        sc.vel.y -= 0.012;
+        sc.mesh.rotation.x += sc.rot.x;
+        sc.mesh.rotation.z += sc.rot.z;
+        sc.life--;
+        if (sc.life <= 0) {
+          scene.remove(sc.mesh);
+          shellCasings.splice(i, 1);
+        }
+      }
+
+      targets.forEach(tg => {
+        tg.tilt *= 0.88;
+        tg.mesh.rotation.x = Math.PI / 2 - tg.tilt;
+      });
+
+      const cx = camTarget.x + Math.sin(camYaw) * Math.cos(camPitch) * camDist;
+      const cy = camTarget.y + Math.sin(camPitch) * camDist;
+      const cz = camTarget.z + Math.cos(camYaw) * Math.cos(camPitch) * camDist;
+      camera.position.lerp(new THREE.Vector3(cx, cy, cz), 0.15);
+      camera.lookAt(camTarget);
+
+      drawBoreScope(t);
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Boot into Tier 1 (SIG P239 Rainbow Titanium .40 S&W)
+    loadWeaponTier(1);
+    animate();
+  </script>
+
+<div class="nsp-hub-return-bar">
+  <a class="nsp-hub-return" href="/games/" target="_top">← 3D Games Hub</a>
+  <a class="nsp-hub-return" href="/arcade/" target="_top">Arcade (60)</a>
+</div>
+
+</body>
+</html>

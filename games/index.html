@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>3D Games &amp; Sovereign Super Arcade — NorthStar Prime</title>
+  <meta name="description" content="Play original NorthStar IDG 3D WebGL worlds and the 12-cabinet AAA 3D PBR Super Arcade v3 directly in your browser. Zero installs, zero accounts, instant full-screen play.">
+  <link rel="canonical" href="https://northstarprime.net/games/">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="NorthStar Prime">
+  <meta property="og:title" content="NorthStar IDG — Browser-Playable 3D Worlds &amp; AAA Super Arcade v3">
+  <meta property="og:description" content="Instant 1-click full-screen browser play: 12-Cabinet 3D PBR Super Arcade v3, Pro Skate &amp; Spray 3D, Vorath 5-Covenant Tactical Wargame, Quantum Chandelier Pinball FX, and 3D Armorer Labs.">
+  <meta property="og:url" content="https://northstarprime.net/games/">
+  <meta property="og:image" content="https://northstarprime.net/static/og/arcade-1200x630.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="NorthStar IDG — 3D Browser Worlds &amp; Super Arcade v3">
+  <meta name="twitter:description" content="Play 12 AAA 3D Deluxe Arcade Cabinets and 6 custom Three.js 3D worlds free in your browser.">
+  <meta name="twitter:image" content="https://northstarprime.net/static/og/arcade-1200x630.jpg">
+  <meta name="theme-color" content="#06060f">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/front-door.css">
+  <style>
+  .games-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.95fr);
+    gap: 1.8rem;
+    align-items: center;
+    padding-block: 2rem 1.2rem;
+  }
+  .games-hero h1 {
+    font-size: clamp(30px, 4.4vw, 52px);
+    line-height: 1.08;
+    margin: 0.4rem 0 0.8rem;
+  }
+  .games-hero .lead {
+    color: var(--ns-muted);
+    font-size: 18px;
+    max-width: 60ch;
+    line-height: 1.6;
+  }
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    margin-top: 1.1rem;
+  }
+  .hero-preview-frame {
+    padding: 12px;
+    background-color: var(--ns-card);
+    border-style: solid;
+    border-color: transparent;
+    border-width: 14px;
+    border-image: url("/warband/art/vorath_card_frame_v01.webp") 48 fill / 14px stretch;
+  }
+  .hero-preview-frame img {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    display: block;
+    background: #060610;
+  }
+  .hero-preview-cap {
+    margin-top: 0.6rem;
+    font-size: 13.5px;
+    color: var(--ns-gold);
+    text-align: center;
+    letter-spacing: 0.05em;
+  }
+
+  /* Live 1-Click Full-Screen Stage */
+  .stage-shell {
+    margin-block: 1.2rem 2rem;
+    padding: 1rem 1.1rem 1.2rem;
+    background-color: #080814;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 16px;
+    border-image: url("/warband/art/vorath_card_frame_v01.webp") 48 fill / 16px stretch;
+  }
+  .stage-topbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.85rem;
+  }
+  .stage-title-wrap strong {
+    display: block;
+    font-family: var(--ns-display);
+    font-size: 20px;
+    color: #fef3c7;
+  }
+  .stage-title-wrap span {
+    font-size: 14px;
+    color: var(--ns-muted);
+  }
+  .stage-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .stage-viewport {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    min-height: 440px;
+    background: #04040c;
+    overflow: hidden;
+  }
+  .stage-viewport iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+    background: #04040c;
+  }
+  .stage-boot-cover {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    text-align: center;
+    background: radial-gradient(circle at 50% 42%, rgba(16, 18, 42, 0.82), rgba(5, 5, 14, 0.96));
+  }
+  .stage-boot-cover[hidden] {
+    display: none !important;
+  }
+  .stage-boot-cover h2 {
+    font-size: clamp(22px, 3vw, 34px);
+    color: #fef3c7;
+    margin: 0;
+  }
+  .stage-boot-cover p {
+    max-width: 54ch;
+    color: #d4d0e8;
+    font-size: 15.5px;
+    margin: 0;
+  }
+  .quick-select-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-top: 0.85rem;
+  }
+
+  /* Filter & Search Bar */
+  .controls-bar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.85rem 1.25rem;
+    align-items: end;
+    margin-block: 1.4rem 0.9rem;
+  }
+  .vorath-search {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    min-height: 48px;
+    padding: 6px 14px;
+    background: none;
+    border-style: solid;
+    border-color: transparent;
+    border-radius: 0;
+    border-width: 9px 18px;
+    border-image: url("/warband/art/vorath_stat_plaque_v01.webp") 18 36 fill / 9px 18px stretch;
+    color: var(--ns-ink);
+    font: 500 16px/1.35 var(--ns-body);
+  }
+  .vorath-search::placeholder {
+    color: #a39fc0;
+  }
+  .filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+
+  /* Worlds Grid */
+  .worlds-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.35rem;
+    margin-block: 1.1rem 2.4rem;
+  }
+  .world-card {
+    display: flex;
+    flex-direction: column;
+    background-color: var(--ns-card);
+    border-style: solid;
+    border-color: transparent;
+    border-radius: 0;
+    border-width: 14px;
+    border-image: url("/warband/art/vorath_card_frame_v01.webp") 48 fill / 14px stretch;
+    min-width: 0;
+  }
+  .world-card[hidden] {
+    display: none !important;
+  }
+  .world-thumb {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    display: block;
+    background: #050510;
+  }
+  .world-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    padding: 1rem 0.9rem 0.95rem;
+    flex: 1;
+  }
+  .world-eyebrow {
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ns-gold);
+  }
+  .world-card h3 {
+    font-size: 20px;
+    line-height: 1.22;
+    color: var(--ns-ink);
+    margin: 0;
+  }
+  .world-desc {
+    color: var(--ns-muted);
+    font-size: 15px;
+    line-height: 1.5;
+    margin: 0;
+  }
+  .world-specs {
+    font-size: 13.5px;
+    color: #dcd8f2;
+    margin-top: 0.2rem;
+  }
+  .world-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: auto;
+    padding-top: 0.7rem;
+  }
+  .world-actions .button {
+    flex: 1 1 145px;
+    min-height: 44px;
+    font-size: 14px;
+    padding: 5px 10px;
+  }
+
+  @media (max-width: 980px) {
+    .games-hero { grid-template-columns: minmax(0, 1fr); }
+    .worlds-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .controls-bar { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 620px) {
+    .worlds-grid { grid-template-columns: minmax(0, 1fr); }
+    .stage-viewport { min-height: 320px; }
+  }
+  @media (forced-colors: active) {
+    .hero-preview-frame, .stage-shell, .vorath-search, .world-card {
+      border-image: none !important;
+      background: Canvas !important;
+      color: CanvasText !important;
+      border: 1px solid LinkText !important;
+    }
+  }
+  </style>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": "3D Games & Sovereign Super Arcade — NorthStar Prime",
+    "url": "https://northstarprime.net/games/",
+    "description": "Play original NorthStar IDG 3D WebGL worlds and the 12-cabinet AAA 3D PBR Super Arcade v3 free in your browser.",
+    "isPartOf": {"@type": "WebSite", "name": "NorthStar Prime", "url": "https://northstarprime.net/"}
+  }
+  </script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="top">
+    <div class="wrap">
+      <a class="brand" href="/">
+        <img src="/static/front/nsp_signal_eye_v15.webp" width="720" height="720" alt="">
+        <span>NorthStar Prime</span>
+      </a>
+      <nav class="menu" aria-label="Main menu">
+        <a href="/games/" aria-current="page">3D Games</a>
+        <a href="/arcade/">Arcade (60)</a>
+        <a href="/music/">Music Lounge</a>
+        <a href="/idc-programming/">Cinema</a>
+        <a href="/realm/">Java 26.3 Realm</a>
+        <a href="/merch/">Studio Archive</a>
+        <a href="/store/">Digital Library</a>
+        <a href="/links/">All Links</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="wrap games-hero" aria-labelledby="games-heading">
+      <div>
+        <p class="eyebrow">NorthStar IDG · Self-Hosted Three.js WebGL · Zero Install</p>
+        <h1 id="games-heading">Playable 3D Worlds &amp; <em class="foil">Super Arcade v3.</em></h1>
+        <p class="lead">Every title below runs live in your browser on a local self-hosted WebGL engine—no downloads, no sign-ups, no paywalls. Step into the 12-cabinet 3D PBR Super Arcade Hall or launch any standalone 3D world in one click.</p>
+        <div class="hero-actions">
+          <button type="button" class="button primary" onclick="bootWorld('/games/super-arcade-v3/', 'AAA 3D PBR Super Arcade v3 (12 Deluxe Cabinets)', true)">Play Super Arcade v3 Fullscreen →</button>
+          <a class="button" href="/games/flagship-3d-suite/">Open 4-World 3D Showroom →</a>
+          <a class="button" href="/arcade/">Browse All 60 Arcade Cabinets →</a>
+        </div>
+      </div>
+      <div class="hero-preview-frame">
+        <img src="/games/assets/thumb_super_arcade_v3.webp" width="640" height="360" alt="Three-dimensional emerald blade duel inside a reflective obsidian Vorath tribunal chamber" fetchpriority="high">
+        <p class="hero-preview-cap">Live WebGL 3D · Keyboard, Mouse, Touch &amp; Gamepad Ready</p>
+      </div>
+    </section>
+
+    <section class="wrap" aria-labelledby="live-stage-title">
+      <div class="stage-shell" id="arcade-stage-box">
+        <div class="stage-topbar">
+          <div class="stage-title-wrap">
+            <strong id="live-stage-title">AAA 3D PBR Super Arcade v3 — 12 Deluxe Cabinets + Daily Gauntlet</strong>
+            <span id="live-stage-sub">Click Launch Live Stage to boot WebGL audio &amp; 60fps 3D rendering, or pop out full-window.</span>
+          </div>
+          <div class="stage-controls">
+            <button type="button" class="button primary" id="btn-fullscreen-stage">Fullscreen Stage ⛶</button>
+            <a class="button" id="btn-standalone-stage" href="/games/super-arcade-v3/" target="_blank" rel="noopener">Open Standalone Tab ↗</a>
+          </div>
+        </div>
+
+        <div class="stage-viewport" id="stage-viewport">
+          <iframe id="stage-iframe" title="NorthStar IDG 3D Live Game Stage" src="about:blank" allow="fullscreen; gamepad; autoplay"></iframe>
+          <div class="stage-boot-cover" id="stage-boot-cover">
+            <p class="eyebrow">Instant Browser Boot · Zero CDN Dependencies</p>
+            <h2>Ready on Deck: AAA 3D PBR Super Arcade v3</h2>
+            <p>Walk the 3D Neon Arcade Hall and play all 12 upgraded 3D Deluxe Cabinets—SWORD-09 Trench Run, NeonDeck Skate, Vorath Citadel, HyperPin Quantum, OutRun-X Drift, Abyss-7 Sonar, ShatterCore QPU, and more.</p>
+            <div class="hero-actions">
+              <button type="button" class="button primary" onclick="bootWorld('/games/super-arcade-v3/', 'AAA 3D PBR Super Arcade v3 — 12 Deluxe Cabinets', false)">Launch Live in Stage ▶</button>
+              <button type="button" class="button" onclick="bootWorld('/games/super-arcade-v3/', 'AAA 3D PBR Super Arcade v3 — 12 Deluxe Cabinets', true)">Launch Fullscreen ⛶</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="quick-select-row" role="group" aria-label="Quick switch 3D world">
+          <button type="button" class="button primary" onclick="bootWorld('/games/super-arcade-v3/', 'AAA 3D PBR Super Arcade v3 (12 Deluxe Cabinets)', false)">Super Arcade v3 (12)</button>
+          <button type="button" class="button" onclick="bootWorld('/games/pro-skate-3d/', 'NorthStar Plaza: Pro Skate & Spray 3D World', false)">Pro Skate &amp; Spray 3D</button>
+          <button type="button" class="button" onclick="bootWorld('/games/vorath-wargame-3d/', 'Vorath 5-Covenant 3D Tactical Wargame', false)">Vorath 3D Wargame</button>
+          <button type="button" class="button" onclick="bootWorld('/games/quantum-pinball-3d/', 'Quantum Chandelier 3D Pinball FX', false)">Quantum 3D Pinball</button>
+          <button type="button" class="button" onclick="bootWorld('/games/precision-armory-3d/', 'Precision Armory 3D Workbench & Ballistics Sim', false)">Precision Armory 3D</button>
+          <button type="button" class="button" onclick="bootWorld('/games/exotic-relic-armorer-3d/', 'Exotic & Alien Relic 3D Armorer Lab', false)">Exotic Relic Lab 3D</button>
+          <button type="button" class="button" onclick="bootWorld('/games/vorath-loomgate-3d/', 'Vorath Loomgate: Sovereign 3D Rhythm Runner', false)">Vorath Loomgate 3D</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="wrap" aria-labelledby="catalog-heading">
+      <p class="eyebrow">Standalone 3D Worlds &amp; Sovereign Cabinets</p>
+      <h2 id="catalog-heading">Choose a World to Play</h2>
+
+      <div class="controls-bar">
+        <div>
+          <label class="eyebrow" for="world-search">Filter Worlds &amp; Cabinets</label>
+          <input type="search" id="world-search" class="vorath-search" placeholder="Search skate, tactical wargame, pinball, armory, trench run, logic…" autocomplete="off">
+        </div>
+        <div class="filter-row" role="group" aria-label="Filter by type">
+          <button type="button" class="button primary cat-filter" data-cat="all">All Playable (12)</button>
+          <button type="button" class="button cat-filter" data-cat="3d-world">3D Custom Worlds (7)</button>
+          <button type="button" class="button cat-filter" data-cat="sovereign">Sovereign Cabinets (5)</button>
+        </div>
+      </div>
+
+      <div class="worlds-grid" id="worlds-grid">
+        <article class="world-card" data-cat="3d-world" data-search="aaa super arcade v3 12 deluxe cabinets sword-09 trench run neondeck outrun-x hyperpin shattercore">
+          <img class="world-thumb" src="/games/assets/thumb_super_arcade_v3.webp" width="640" height="360" alt="AAA 3D Super Arcade v3 gameplay preview" loading="lazy">
+          <div class="world-body">
+            <p class="world-eyebrow">12-Cabinet 3D Hall · Three.js PBR</p>
+            <h3>NorthStar AAA Super Arcade v3</h3>
+            <p class="world-desc">Walkable 3D neon arcade hall housing 12 custom 3D cabinets: SWORD-09 Trench Run, NeonDeck Skate, Vorath Citadel, HyperPin Quantum, SugarGlass Siege, OutRun-X Drift, Astral Ring, Turntable Clash, Abyss-7 Sonar, Colosseum PlasmaTag, Kinetic Golf &amp; ShatterCore.</p>
+            <p class="world-specs"><strong>Controls:</strong> Keyboard, Touch Deck &amp; Gamepad · Daily Gauntlet + Pro AI</p>
+            <div class="world-actions">
+              <button type="button" class="button primary" onclick="bootWorld('/games/super-arcade-v3/', 'AAA 3D PBR Super Arcade v3 (12 Cabinets)', false)">Play in Stage ▶</button>
+              <a class="button" href="/games/super-arcade-v3/">Full Window →</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="world-card" data-cat="3d-world" data-search="pro skate and spray 3d world northstar plaza rail grind kickflip graffiti mural">
+          <img class="world-thumb" src="/games/assets/thumb_pro_skate_3d.webp" width="640" height="360" alt="Skater grinding a neon-lit plaza rail in Pro Skate and Spray 3D World" loading="lazy">
+          <div class="world-body">
+            <p class="world-eyebrow">3D Free-Roam Action · Three.js</p>
+            <h3>Pro Skate &amp; Spray 3D World</h3>
+            <p class="world-desc">Drop into rain-slick dusk NorthStar Plaza: chain kickflips, 360 flips, spine transfers, copper rail grinds, S-K-A-T-E career goals, and spray-paint district murals while evading patrol drones.</p>
+            <p class="world-specs"><strong>Controls:</strong> WASD / Arrows + Space Ollie + J/K/L Tricks · Skate Shop Tuning</p>
+            <div class="world-actions">
+              <button type="button" class="button primary" onclick="bootWorld('/games/pro-skate-3d/', 'NorthStar Plaza: Pro Skate & Spray 3D World', false)">Play in Stage ▶</button>
+              <a class="button" href="/games/pro-skate-3d/">Full Window →</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="world-card" data-cat="3d-world" data-search="vorath 5-covenant 3d tactical wargame tabletop skirmish hex dice crusade">
+          <img class="world-thumb" src="/games/assets/thumb_vorath_wargame_3d.webp" width="640" height="360" alt="Five-Covenant 28mm miniatures arrayed across a basalt cathedral hex board in WebGL" loading="lazy">
+          <div class="world-body">
+            <p class="world-eyebrow">3D Tabletop Skirmish · 5 Covenants</p>
+            <h3>Vorath 5-Covenant 3D Tactical Wargame</h3>
+            <p class="world-desc">Command a 500-point Strike Force of 28mm miniatures across a basalt and stained-glass cathedral floor. Measure movement rings, roll 3D brass dice, trigger Covenant abilities, and clear 5-Mission Crusades.</p>
+            <p class="world-specs"><strong>Controls:</strong> Mouse / Touch Tactical Orbit + 1–4 Action Orders · 15mK / 5000K Toggle</p>
+            <div class="world-actions">
+              <button type="button" class="button primary" onclick="bootWorld('/games/vorath-wargame-3d/', 'Vorath 5-Covenant 3D Tactical Wargame', false)">Play in Stage ▶</button>
+              <a class="button" href="/games/vorath-wargame-3d/">Full Window →</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="world-card" data-cat="3d-world" data-search="quantum chandelier 3d pinball fx 15mk cryostat multiball physics table">
+          <img class="world-thumb" src="/static/og/arcade-1200x630.jpg" width="640" height="360" alt="Golden 3D pinball chandelier and arcade showcase" loading="lazy">
+          <div class="world-body">
+            <p class="world-eyebrow">720Hz Substep Physics · Three.js</p>
+            <h3>Quantum Chandelier 3D Pinball FX</h3>
+            <p class="world-desc">Launch steel spheres around a 5-tier 24K-gold dilution refrigerator chandelier: hit ceramic spark bumpers, wireform ramps, Josephson locks, and ignite Zero-Kelvin 3-Ball Multiball.</p>
+            <p class="world-specs"><strong>Controls:</strong> Z / Left-Shift &amp; / / Right-Shift Flippers + Enter Plunge + Space Nudge</p>
+            <div class="world-actions">
+              <button type="button" class="button primary" onclick="bootWorld('/games/quantum-pinball-3d/', 'Quantum Chandelier 3D Pinball FX', false)">Play in Stage ▶</button>
+              <a class="button" href="/games/quantum-pinball-3d/">Full Window →</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="world-card" data-cat="3d-world" data-search="precision armory 3d workbench sim mechanical field-strip ultrasonic ballistics">
+          <img class="world-thumb" src="/games/assets/thumb_precision_armory.webp" width="640" height="360" alt="Mechanical 3D arena and precision engineering chamber" loading="lazy">
+          <div class="world-body">
+            <p class="world-eyebrow">3D Mechanical Workbench · Ballistics</p>
+            <h3>Precision Armory 3D Workbench Sim</h3>
+            <p class="world-desc">Field-strip four 10-part precision mechanisms on a metric spec mat, run 80°C ultrasonic cavitation baths, brush &amp; lubricate tolerances, then step onto the live 3D steel-plate range to test MOA accuracy.</p>
+            <p class="world-specs"><strong>Controls:</strong> Interactive 3D Part Inspection + 1–5 Bench Tools + Live 3D Range</p>
+            <div class="world-actions">
+              <button type="button" class="button primary" onclick="bootWorld('/games/precision-armory-3d/', 'Precision Armory 3D Workbench Sim', false)">Play in Stage ▶</button>
+              <a class="button" href="/games/precision-armory-3d/">Full Window →</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="world-card" data-cat="3d-world" data-search="exotic and alien relic 3d armorer lab restoration diagnostic workbench">
+          <img class="world-thumb" src="/games/assets/thumb_exotic_relic_armorer.webp" width="640" height="360" alt="Glowing golden induction coils and cyan optics on the 3D Relic Armorer workbench" loading="lazy">
+          <div class="world-body">
+            <p class="world-eyebrow">Sci-Fi Relic Restoration · 6 Tiers</p>
+            <h3>Exotic &amp; Alien Relic 3D Armorer Lab</h3>
+            <p class="world-desc">Restore six tiers of crystalline and electromagnetic relics—from PVD-coated precision sidearms to plasma coilgun armatures—using laser bore alignment, harmonic tuning, and exploded 3D schematics.</p>
+            <p class="world-specs"><strong>Controls:</strong> 360° 3D Orbit + Ultrasonic / Solvent / Calibration Passes</p>
+            <div class="world-actions">
+              <button type="button" class="button primary" onclick="bootWorld('/games/exotic-relic-armorer-3d/', 'Exotic & Alien Relic 3D Armorer Lab', false)">Play in Stage ▶</button>
+              <a class="button" href="/games/exotic-relic-armorer-3d/">Full Window →</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="world-card" data-cat="3d-world" data-search="vorath loomgate 3d rhythm runner portal flight cube ship">
+          <img class="world-thumb" src="/games/assets/thumb_vorath_loomgate.webp" width="640" height="360" alt="Neon cyan and violet 3D Loomwheel portals and geometric obstacles" loading="lazy">
+          <div class="world-body">
+            <p class="world-eyebrow">3D Precision Rhythm · 60 FPS</p>
+            <h3>Vorath Loomgate: 3D Rhythm Runner</h3>
+            <p class="world-desc">Thread the Loomwheel passages in real-time 3D WebGL: vault neon spike gates, cross gravity-flip rings, shift into aerial ship flight, and clear 100% of the threshold course.</p>
+            <p class="world-specs"><strong>Controls:</strong> Space / Up / Click / Tap Jump &amp; Hold Flight · Practice Checkpoints</p>
+            <div class="world-actions">
+              <button type="button" class="button primary" onclick="bootWorld('/games/vorath-loomgate-3d/', 'Vorath Loomgate: Sovereign 3D Rhythm Runner', false)">Play in Stage ▶</button>
+              <a class="button" href="/games/vorath-loomgate-3d/">Full Window →</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="world-card" data-cat="sovereign" data-search="logic foundry boolean circuit workshop 3d cartridges">
+          <img class="world-thumb" src="/static/games/logic_foundry_v14/workshop.webp" width="640" height="360" alt="Logic Foundry workbench with glowing vacuum relays and brass circuit cartridges" loading="lazy">
+          <div class="world-body">
+            <p class="world-eyebrow">Boolean Engineering · Sovereign Release</p>
+            <h3>Logic Foundry</h3>
+            <p class="world-desc">Wire six Boolean logic circuits on an interactive 3D brass workbench, toggle live input vectors, inspect failing truth-table rows, and seal verified cartridge solutions.</p>
+            <p class="world-specs"><strong>Controls:</strong> Drag/Click Gate Wiring + Live Truth Table Trace</p>
+            <div class="world-actions">
+              <button type="button" class="button primary" onclick="bootWorld('/arcade/custom/logic-foundry/', 'Logic Foundry — Six-Circuit Workshop', false)">Play in Stage ▶</button>
+              <a class="button" href="/arcade/custom/logic-foundry/">Open Cabinet →</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="world-card" data-cat="sovereign" data-search="ladder the ninefold relay boolean loomwheel chamber">
+          <img class="world-thumb" src="/games/assets/thumb_cascade_salmon.webp" width="640" height="360" alt="Rushing mountain river and crystalline canyon in Cascade Salmon Run" loading="lazy">
+          <div class="world-body">
+            <p class="world-eyebrow">Pacific Northwest Action · Arcade</p>
+            <h3>Cascade Salmon Run &amp; 60-Cabinet Pavilion</h3>
+            <p class="world-desc">Swim upriver through Pacific Northwest rapids, or step into the full 60-cabinet Sovereign Arcade Pavilion featuring Ladder, Side Street, NorthStar Chrono Defender, Super Vorath Bros, and Vorath Souls.</p>
+            <p class="world-specs"><strong>Catalog:</strong> 60 Verified Offline-Ready Browser Cabinets</p>
+            <div class="world-actions">
+              <a class="button primary" href="/arcade/">Enter 60-Cabinet Pavilion →</a>
+              <a class="button" href="/arcade/custom/northstar-chrono-defender/">Chrono Defender →</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="world-card" data-cat="sovereign" data-search="side street daily route puzzle twelve boards">
+          <img class="world-thumb" src="/static/front/journeys_20261018/play.webp" width="640" height="360" alt="Jewel-lit entrance into the Vorath Arcade Hall" loading="lazy">
+          <div class="world-body">
+            <p class="world-eyebrow">Route Puzzle · Daily UTC Selection</p>
+            <h3>Side Street</h3>
+            <p class="world-desc">Twelve handcrafted spatial route boards with ordered stops, exact-turn par targets, instant step undo, and deterministic daily board rotation.</p>
+            <p class="world-specs"><strong>Controls:</strong> Arrow Keys / WASD / Swipe · Zero Timers</p>
+            <div class="world-actions">
+              <button type="button" class="button primary" onclick="bootWorld('/arcade/custom/side-street/', 'Side Street — 12-Board Route Puzzle', false)">Play in Stage ▶</button>
+              <a class="button" href="/arcade/custom/side-street/">Open Cabinet →</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="world-card" data-cat="sovereign" data-search="chronosphere astral synthesizer 11 chambers interactive instrument">
+          <img class="world-thumb" src="/static/front/journeys_20261018/explore.webp" width="640" height="360" alt="Golden Vorath observatory beneath a jeweled cosmic eye" loading="lazy">
+          <div class="world-body">
+            <p class="world-eyebrow">Interactive Audio-Visual Instrument</p>
+            <h3>Chronosphere (11 Astral Chambers)</h3>
+            <p class="world-desc">Explore eleven interactive audiovisual chambers—from Astral Hall and Electric Garden to Seraphim Oracle—with live Web Audio synthesis and zero tracking.</p>
+            <p class="world-specs"><strong>Mode:</strong> Standalone Browser Release · Instant Load</p>
+            <div class="world-actions">
+              <a class="button primary" href="/chronosphere/">Enter Chronosphere →</a>
+              <a class="button" href="/software/">Software Releases →</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="world-card" data-cat="sovereign" data-search="minecraft java 26.3 survival realm create contraptions vorath world v2">
+          <img class="world-thumb" src="/static/front/journeys_20261018/watch.webp" width="640" height="360" alt="Monumental Vorath portal cathedral" loading="lazy">
+          <div class="world-body">
+            <p class="world-eyebrow">Multiplayer Sandbox · Java 26.3</p>
+            <h3>NorthStar Overhauled Minecraft Realm</h3>
+            <p class="world-desc">Connect to <code>play.northstarprime.net</code>: custom World v2 living interiors, Create mechanical contraptions, 28 signed wardrobe skins, and protected survival districts.</p>
+            <p class="world-specs"><strong>Server:</strong> Java Edition · Live World Map &amp; Connection Guide</p>
+            <div class="world-actions">
+              <a class="button primary" href="/realm/">Server Guide &amp; Address →</a>
+              <a class="button" href="/map/">Live World Map →</a>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="wrap">
+      <nav aria-label="More from NorthStar Prime">
+        <a href="/">Home</a>
+        <a href="/games/">3D Games Hub</a>
+        <a href="/arcade/">Arcade Pavilion (60)</a>
+        <a href="/arcade/lab/">Game Workshop</a>
+        <a href="/music/">Music &amp; Beat Lounge</a>
+        <a href="/idc-programming/">IDC Cinema</a>
+        <a href="/merch/">Studio Archive</a>
+        <a href="/3d-prints/">3D Prints &amp; STLs</a>
+        <a href="/store/">Digital Library</a>
+        <a href="/realm/">Java 26.3 Server</a>
+        <a href="/contact/">Contact</a>
+        <a href="/links/">All Links</a>
+      </nav>
+      <p>NorthStar IDG · Self-hosted browser WebGL &amp; HTML5 releases · Playable free with no account required.</p>
+    </div>
+  </footer>
+
+  <script>
+  (function () {
+    var iframe = document.getElementById("stage-iframe");
+    var cover = document.getElementById("stage-boot-cover");
+    var titleEl = document.getElementById("live-stage-title");
+    var subEl = document.getElementById("live-stage-sub");
+    var standaloneBtn = document.getElementById("btn-standalone-stage");
+    var fsBtn = document.getElementById("btn-fullscreen-stage");
+    var viewport = document.getElementById("stage-viewport");
+    var currentUrl = "/games/super-arcade-v3/";
+
+    window.bootWorld = function (url, title, goFullscreen) {
+      currentUrl = url;
+      cover.hidden = true;
+      if (iframe.getAttribute("src") !== url) {
+        iframe.setAttribute("src", url);
+      }
+      titleEl.textContent = title;
+      subEl.textContent = "Live 3D WebGL session active · Click inside stage for keyboard/gamepad focus, or press Fullscreen Stage.";
+      standaloneBtn.setAttribute("href", url);
+      document.getElementById("arcade-stage-box").scrollIntoView({ behavior: "smooth", block: "start" });
+      if (goFullscreen && viewport.requestFullscreen) {
+        viewport.requestFullscreen().catch(function () {});
+      }
+      setTimeout(function () {
+        try { iframe.focus(); } catch (e) {}
+      }, 150);
+    };
+
+    fsBtn.addEventListener("click", function () {
+      if (cover && !cover.hidden) {
+        window.bootWorld(currentUrl, titleEl.textContent, true);
+        return;
+      }
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(function () {});
+      } else if (viewport.requestFullscreen) {
+        viewport.requestFullscreen().catch(function () {});
+      }
+    });
+
+    var searchInput = document.getElementById("world-search");
+    var cards = Array.prototype.slice.call(document.querySelectorAll(".world-card"));
+    var catBtns = Array.prototype.slice.call(document.querySelectorAll(".cat-filter"));
+    var activeCat = "all";
+
+    function applyFilter() {
+      var q = (searchInput.value || "").trim().toLowerCase();
+      cards.forEach(function (c) {
+        var catOk = activeCat === "all" || c.getAttribute("data-cat") === activeCat;
+        var hay = (c.getAttribute("data-search") + " " + c.textContent).toLowerCase();
+        var qOk = !q || hay.indexOf(q) !== -1;
+        c.hidden = !(catOk && qOk);
+      });
+    }
+
+    searchInput.addEventListener("input", applyFilter);
+    catBtns.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        catBtns.forEach(function (b) { b.classList.remove("primary"); });
+        btn.classList.add("primary");
+        activeCat = btn.getAttribute("data-cat") || "all";
+        applyFilter();
+      });
+    });
+  })();
+  </script>
+</body>
+</html>

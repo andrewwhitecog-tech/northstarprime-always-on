@@ -1,0 +1,2046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="nsp-analytics" content="none">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="author" content="Andrew White" />
+  <title>The Vorathic Procession: 5-Covenant 3D Tactical Skirmish — NorthStar IDG</title>
+  <script src="../three.min.js"></script>
+  <style>
+    :root {
+      --bg-void: #05060b;
+      --gold: #f0c45a;
+      --gold-dim: rgba(240, 196, 90, 0.34);
+      --brass: #b88738;
+      --cyan: #38e9ff;
+      --crimson: #ff3366;
+      --violet: #b666ff;
+      --emerald: #38f2a6;
+      --solar: #ff7b29;
+      --ink: rgba(8, 11, 20, 0.82);
+      --text: #f6f3eb;
+      --muted: #a6b0c3;
+    }
+    * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      overflow: hidden; background: var(--bg-void); color: var(--text);
+      font-family: "Cinzel", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+    }
+    #viewport {
+      position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 1;
+      touch-action: none; cursor: crosshair;
+    }
+    .hud-layer {
+      position: fixed; inset: 0; z-index: 10; pointer-events: none;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      grid-template-columns: 310px 1fr 295px;
+      gap: 10px; padding: 10px 14px;
+    }
+    .bevel-frame {
+      pointer-events: auto;
+      background: linear-gradient(165deg, rgba(14, 17, 30, 0.86) 0%, rgba(7, 8, 15, 0.90) 100%);
+      border: 1px solid var(--gold-dim);
+      clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px), 0 10px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65), inset 0 0 24px rgba(240, 196, 90, 0.08);
+      backdrop-filter: blur(8px);
+    }
+    #top-banner {
+      grid-column: 1 / 4; grid-row: 1;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 7px 16px; gap: 12px; flex-wrap: wrap;
+    }
+    .crest-group { display: flex; align-items: center; gap: 12px; }
+    .slit-emblem {
+      width: 28px; height: 34px;
+      background: linear-gradient(180deg, #f5d680, #8a5e1d);
+      clip-path: polygon(50% 0%, 95% 20%, 88% 80%, 50% 100%, 12% 80%, 5% 20%);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 14px rgba(240, 196, 90, 0.5);
+    }
+    .slit-emblem::after {
+      content: ""; width: 3px; height: 22px; background: #05070e;
+      box-shadow: 0 0 6px var(--cyan);
+    }
+    .title-col h1 {
+      margin: 0; font-size: 0.98rem; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--gold); text-shadow: 0 0 14px rgba(240, 196, 90, 0.45);
+    }
+    .title-col .sub {
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 0.7rem; color: var(--muted); letter-spacing: 0.06em;
+    }
+    .phase-strip {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .stat-chip {
+      padding: 4px 10px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em;
+      background: rgba(240, 196, 90, 0.09); border: 1px solid rgba(240, 196, 90, 0.28);
+      clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+      color: var(--text);
+    }
+    .stat-chip strong { color: var(--gold); }
+    .stat-chip.cyan strong { color: var(--cyan); }
+    .stat-chip.crimson strong { color: var(--crimson); }
+
+    #left-drawer {
+      grid-column: 1; grid-row: 2;
+      display: flex; flex-direction: column; gap: 8px;
+      padding: 10px 12px; max-height: calc(100vh - 155px); overflow-y: auto;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    #right-drawer {
+      grid-column: 3; grid-row: 2;
+      display: flex; flex-direction: column; gap: 8px;
+      padding: 10px 12px; max-height: calc(100vh - 155px); overflow-y: auto;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .sec-head {
+      font-family: "Cinzel", Georgia, serif;
+      font-size: 0.74rem; letter-spacing: 0.13em; text-transform: uppercase;
+      color: var(--gold); border-bottom: 1px solid rgba(240, 196, 90, 0.24);
+      padding-bottom: 4px; margin-bottom: 4px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .tab-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+    .g-btn {
+      cursor: pointer; font-family: inherit; font-size: 0.71rem; font-weight: 700;
+      letter-spacing: 0.05em; text-transform: uppercase;
+      padding: 6px 8px; color: var(--text);
+      background: linear-gradient(180deg, rgba(36, 44, 70, 0.72), rgba(16, 20, 36, 0.88));
+      border: 1px solid rgba(240, 196, 90, 0.3);
+      clip-path: polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px);
+      transition: all 0.14s ease;
+    }
+    .g-btn:hover:not(:disabled) {
+      border-color: var(--gold); color: #fff;
+      box-shadow: 0 0 12px rgba(240, 196, 90, 0.35);
+      transform: translateY(-1px);
+    }
+    .g-btn.active {
+      background: linear-gradient(180deg, rgba(240, 196, 90, 0.32), rgba(140, 95, 22, 0.48));
+      border-color: var(--gold); color: #fff5d6;
+    }
+    .g-btn.cyan { border-color: rgba(56, 233, 255, 0.5); }
+    .g-btn.cyan:hover:not(:disabled), .g-btn.cyan.active {
+      background: linear-gradient(180deg, rgba(56, 233, 255, 0.28), rgba(14, 74, 102, 0.6));
+      border-color: var(--cyan); box-shadow: 0 0 14px rgba(56, 233, 255, 0.4);
+    }
+    .g-btn.solar { border-color: rgba(255, 123, 41, 0.65); }
+    .g-btn.solar.active {
+      background: linear-gradient(180deg, rgba(255, 123, 41, 0.36), rgba(128, 34, 10, 0.68));
+      border-color: var(--solar); box-shadow: 0 0 14px rgba(255, 123, 41, 0.48);
+    }
+    .g-btn:disabled { opacity: 0.38; cursor: not-allowed; }
+
+    .unit-row {
+      padding: 6px 8px; border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(12, 16, 28, 0.68); cursor: pointer;
+      display: flex; justify-content: space-between; align-items: center; gap: 6px;
+      font-size: 0.72rem; transition: border-color 0.14s;
+    }
+    .unit-row:hover { border-color: rgba(240, 196, 90, 0.5); }
+    .unit-row.selected {
+      border-color: var(--cyan);
+      background: linear-gradient(90deg, rgba(56, 233, 255, 0.16), rgba(12, 16, 28, 0.78));
+    }
+    .unit-row.spent { opacity: 0.55; }
+    .cov-dot {
+      width: 9px; height: 14px; display: inline-block; flex-shrink: 0;
+      clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+    }
+    .hp-pips { display: flex; gap: 2px; margin-top: 2px; }
+    .pip { width: 7px; height: 4px; background: var(--emerald); }
+    .pip.lost { background: rgba(255,255,255,0.14); }
+
+    .stat-matrix {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; text-align: center;
+      margin: 4px 0;
+    }
+    .stat-cell {
+      background: rgba(240, 196, 90, 0.07); border: 1px solid rgba(240, 196, 90, 0.2);
+      padding: 3px 2px; font-size: 0.66rem;
+    }
+    .stat-cell span { display: block; color: var(--muted); font-size: 0.58rem; }
+    .stat-cell b { color: var(--gold); font-size: 0.78rem; }
+
+    #dice-readout {
+      padding: 7px 9px; background: rgba(5, 8, 16, 0.8);
+      border: 1px solid rgba(240, 196, 90, 0.28); font-size: 0.72rem;
+    }
+    .dice-faces { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; }
+    .die-pip-badge {
+      width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center;
+      font-weight: 900; font-size: 0.8rem;
+      background: linear-gradient(145deg, #2a233d, #120e1c);
+      border: 1px solid var(--gold); color: var(--gold);
+    }
+    .die-pip-badge.hit {
+      background: linear-gradient(145deg, #1b4d3e, #0c261f);
+      border-color: var(--emerald); color: var(--emerald);
+      box-shadow: 0 0 8px rgba(56, 242, 166, 0.4);
+    }
+    .die-pip-badge.crit {
+      background: linear-gradient(145deg, #593b10, #2b1a05);
+      border-color: #ffe07d; color: #ffe07d;
+      box-shadow: 0 0 10px rgba(255, 224, 125, 0.65);
+    }
+
+    #combat-log {
+      font-size: 0.68rem; color: #cbd5e1; line-height: 1.38;
+      max-height: 118px; overflow-y: auto;
+      display: flex; flex-direction: column; gap: 3px;
+    }
+    .log-entry { border-left: 2px solid var(--gold-dim); padding-left: 6px; }
+    .log-entry.cov5 { border-color: var(--cyan); }
+    .log-entry.enemy { border-color: var(--crimson); }
+
+    #bottom-command {
+      grid-column: 1 / 4; grid-row: 3;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 7px 14px; gap: 8px; flex-wrap: wrap;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .action-cluster { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .hint-pill {
+      font-size: 0.71rem; color: var(--cyan); letter-spacing: 0.04em;
+      padding: 4px 10px; border-left: 2px solid var(--cyan);
+      background: rgba(56, 233, 255, 0.07);
+    }
+
+    /* Responsive Mobile 390x844 Layout */
+    @media (max-width: 900px) {
+      .hud-layer {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto 1fr auto;
+        padding: 6px; gap: 6px;
+      }
+      #top-banner { grid-column: 1; padding: 5px 9px; }
+      .title-col h1 { font-size: 0.78rem; }
+      .title-col .sub { display: none; }
+      #left-drawer {
+        grid-column: 1; grid-row: 2;
+        max-height: 118px; padding: 6px 8px;
+      }
+      #right-drawer {
+        display: none;
+      }
+      #right-drawer.mobile-open {
+        display: flex; position: fixed; top: 58px; right: 6px; left: 6px;
+        max-height: 56vh; z-index: 30;
+      }
+      #bottom-command {
+        grid-column: 1; grid-row: 4; padding: 6px 8px;
+      }
+      .g-btn { padding: 5px 7px; font-size: 0.64rem; }
+    }
+  </style>
+
+<style data-nsp-vorath="games-zero-flat">
+@media (forced-colors: none) {
+  button, [role="button"], select, a, summary {
+    border-radius: 0 !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-width: 6px 12px !important;
+    border-image: url("/warband/art/vorath_btn_obsidian.webp") 44 66 fill / 6px 12px stretch !important;
+    background-image: none !important;
+    background-color: transparent !important;
+    color: #fef3c7 !important;
+    text-shadow: 0 1px 3px #000 !important;
+    box-shadow: none !important;
+  }
+  button.active, button.primary, .play-btn, .launch-btn, a.nsp-hub-return {
+    border-image-source: url("/warband/art/vorath_btn_primary.webp") !important;
+    color: #fffdf5 !important;
+  }
+  input[type="search"], input[type="text"], input[type="number"], textarea {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    border-radius: 0 !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-width: 7px 14px !important;
+    border-image: url("/warband/art/vorath_stat_plaque_v01.webp") 18 36 fill / 7px 14px stretch !important;
+    background: none !important;
+    color: #fef3c7 !important;
+  }
+  input[type="range"], input[type="checkbox"], input[type="radio"] {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    border-radius: 0 !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-width: 4px 8px !important;
+    border-image: url("/warband/art/vorath_stat_plaque_v01.webp") 18 36 fill / 4px 8px stretch !important;
+    background: none !important;
+  }
+  .cw-pill, .xp-pill, .metric-pill, .ns-tag, .brand-pill, .meter-pill, .tier-crest, .star-crest,
+  .cab-medal, .cab-stats-row, .stat-chip, .dmd-cell, .part-chip, #chrono-box {
+    border-radius: 0 !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-width: 5px 10px !important;
+    border-image: url("/warband/art/vorath_stat_plaque_v01.webp") 18 36 fill / 5px 10px stretch !important;
+    background: none !important;
+    clip-path: none !important;
+    color: #fef3c7 !important;
+  }
+}
+.nsp-hub-return-bar {
+  position: fixed;
+  bottom: 10px;
+  right: 12px;
+  z-index: 9999;
+  display: flex;
+  gap: 6px;
+}
+.nsp-hub-return {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 3px 10px;
+  font: 700 12px/1.2 system-ui, sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+</style>
+
+</head>
+<body>
+  <div id="viewport"></div>
+
+  <div class="hud-layer">
+    <header id="top-banner" class="bevel-frame">
+      <div class="crest-group">
+        <div class="slit-emblem" title="Canonical Single-Vertical-Slit Mask"></div>
+        <div class="title-col">
+          <h1>The Vorathic Procession // Tactical Skirmish 3D</h1>
+          <div class="sub">5-Covenant 28mm Cathedral Wargame &bull; Architecture by Andrew White</div>
+        </div>
+      </div>
+      <div class="phase-strip">
+        <div class="stat-chip"><span id="hud-mission">CRUSADE I: BROKEN ROSE</span></div>
+        <div class="stat-chip">ROUND <strong id="hud-round">1 / 5</strong></div>
+        <div class="stat-chip cyan">VP <strong id="hud-vp">0</strong> : <strong id="hud-enemy-vp" style="color:var(--crimson)">0</strong></div>
+        <div class="stat-chip">CP <strong id="hud-cp">3</strong></div>
+        <div class="stat-chip">MUSTER <strong id="hud-pts">495 / 500pt</strong></div>
+        <button class="g-btn" id="btn-mobile-inspector" style="padding:4px 8px;">INSPECT</button>
+      </div>
+    </header>
+
+    <!-- Left Panel: Roster, 500pt Army Muster & 5-Mission Crusade -->
+    <aside id="left-drawer" class="bevel-frame">
+      <div class="tab-row">
+        <button class="g-btn active" data-tab="roster" id="tab-btn-roster">WARBAND</button>
+        <button class="g-btn" data-tab="muster" id="tab-btn-muster">500PT MUSTER</button>
+        <button class="g-btn" data-tab="crusade" id="tab-btn-crusade">CRUSADE (5)</button>
+      </div>
+
+      <div id="pane-roster">
+        <div class="sec-head">
+          <span>Procession Strike Force</span>
+          <span id="hud-turn-owner" style="color:var(--emerald)">YOUR ACTIVATION</span>
+        </div>
+        <div id="unit-list" style="display:flex;flex-direction:column;gap:5px;"></div>
+      </div>
+
+      <div id="pane-muster" style="display:none;flex-direction:column;gap:6px;">
+        <div class="sec-head">
+          <span>500pt Muster Forge</span>
+          <span id="muster-total-lbl">495 / 500pt</span>
+        </div>
+        <div style="font-size:0.68rem;color:var(--muted);">Recruit Single-Slit Masked Miniatures across all 5 Covenants &amp; bind a Relic:</div>
+        <div id="muster-catalog" style="display:flex;flex-direction:column;gap:4px;"></div>
+        <div class="sec-head" style="margin-top:4px;"><span>Crusade Relic</span></div>
+        <select id="relic-select" style="background:#0d1222;color:var(--gold);border:1px solid var(--gold-dim);padding:5px;font-size:0.72rem;">
+          <option value="zero_kelvin_shard">Shard of Zero-Kelvin (+1 DEF &amp; Free Cryo Toggle)</option>
+          <option value="prism_lens">Refracted Saint Lens (+3&quot; Range &amp; Crit on 5+)</option>
+          <option value="seventh_thurible">Seventh-Veil Thurible (+2&quot; Move &amp; Shadow Cover)</option>
+          <option value="sovereign_crest">Rose-Bronze Diadem (+1 Melee Die on Charge)</option>
+        </select>
+        <button class="g-btn cyan" id="btn-deploy-muster">DEPLOY MUSTERED WARBAND</button>
+      </div>
+
+      <div id="pane-crusade" style="display:none;flex-direction:column;gap:5px;">
+        <div class="sec-head">
+          <span>5-Mission Crusade</span>
+          <span id="crusade-xp-lbl">XP: 0</span>
+        </div>
+        <div id="crusade-list" style="display:flex;flex-direction:column;gap:5px;"></div>
+      </div>
+    </aside>
+
+    <!-- Right Panel: Unit Telemetry, Cov V State, 3D Dice Tray Readout & Log -->
+    <aside id="right-drawer" class="bevel-frame">
+      <div class="sec-head">
+        <span id="sel-name">Select Miniature</span>
+        <span id="sel-cov" style="color:var(--cyan);font-size:0.65rem;">COV V</span>
+      </div>
+      <div id="sel-role" style="font-size:0.69rem;color:var(--muted);margin-top:-4px;">Single-Vertical-Slit Masked Operative</div>
+      <div class="stat-matrix">
+        <div class="stat-cell"><span>MOVE</span><b id="st-m">6"</b></div>
+        <div class="stat-cell"><span>RNG</span><b id="st-r">12"</b></div>
+        <div class="stat-cell"><span>ATK</span><b id="st-a">4D6</b></div>
+        <div class="stat-cell"><span>DEF</span><b id="st-d">4+</b></div>
+        <div class="stat-cell"><span>WND</span><b id="st-w">5/5</b></div>
+      </div>
+      <div id="sel-modifiers" style="font-size:0.68rem;color:var(--emerald);min-height:16px;">Elevation: Ground &bull; Cover: Clear</div>
+
+      <div id="cov5-box" style="display:none;padding:6px;border:1px solid rgba(56,233,255,0.35);background:rgba(12,28,44,0.45);">
+        <div style="font-size:0.66rem;font-weight:700;letter-spacing:0.06em;margin-bottom:4px;color:var(--cyan);" id="cov5-mode-lbl">
+          QUANTUM STATE: 15 mK COHERENCE
+        </div>
+        <button class="g-btn cyan" id="btn-cov5-toggle" style="width:100%;">
+          TOGGLE 15 mK &harr; 5,000 K SPARK-GAP
+        </button>
+      </div>
+
+      <div id="dice-readout">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <strong style="color:var(--gold);letter-spacing:0.06em;">3D BRASS DICE TRAY</strong>
+          <span id="dice-summary" style="color:var(--cyan);">Awaiting Roll</span>
+        </div>
+        <div class="dice-faces" id="dice-faces">
+          <span class="die-pip-badge">6</span>
+          <span class="die-pip-badge">5</span>
+          <span class="die-pip-badge">4</span>
+          <span class="die-pip-badge">6</span>
+        </div>
+      </div>
+
+      <div class="sec-head" style="margin-top:2px;"><span>Cathedral Vox Chronicle</span></div>
+      <div id="combat-log"></div>
+    </aside>
+
+    <!-- Bottom Tactical Order Bar -->
+    <footer id="bottom-command" class="bevel-frame">
+      <div class="action-cluster">
+        <button class="g-btn active" id="act-move" title="Move miniature within cyan 3D range ring [1]">1. MOVE</button>
+        <button class="g-btn" id="act-shoot" title="Fire Covenant ranged / witchfire attack [2]">2. SHOOT / HEX</button>
+        <button class="g-btn" id="act-charge" title="Charge into melee combat [3]">3. CHARGE MELEE</button>
+        <button class="g-btn cyan" id="act-command" title="Trigger Covenant Command Ability (1 CP) [4]">4. COVENANT ABILITY (1 CP)</button>
+        <button class="g-btn" id="act-end-unit" title="Finish current unit activation [Space]">END ACTIVATION</button>
+      </div>
+      <div class="action-cluster">
+        <span class="hint-pill" id="tactical-hint">Click board inside cyan ring to Move, or click crimson foe to Strike</span>
+        <button class="g-btn" id="btn-cam-preset">CAM: TACTICAL</button>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+  (function() {
+    'use strict';
+
+    const jsErrors = [];
+    window.addEventListener('error', (e) => jsErrors.push(e.message || 'error'));
+
+    // --- WebAudio Liturgical Synth & Physical Foley ---
+    let audioCtx = null;
+    function ensureAudio() {
+      if (!audioCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) audioCtx = new AC();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    }
+    function playTone(freq, dur, type, vol, slideTo) {
+      try {
+        ensureAudio();
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type || 'triangle';
+        osc.frequency.setValueAtTime(freq, now);
+        if (slideTo) osc.frequency.exponentialRampToValueAtTime(Math.max(25, slideTo), now + dur);
+        gain.gain.setValueAtTime(vol || 0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.0008, now + dur);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + dur);
+      } catch (_) {}
+    }
+    function sfxDiceClatter() {
+      [0, 45, 95, 150].forEach((ms, i) => {
+        setTimeout(() => playTone(620 + i * 170 + Math.random() * 140, 0.055, 'triangle', 0.06, 280), ms);
+      });
+    }
+    function sfxBeam(covId, sparkMode) {
+      if (covId === 5 && !sparkMode) {
+        playTone(980, 0.28, 'sine', 0.09, 220);
+      } else if (covId === 5 && sparkMode) {
+        playTone(180, 0.34, 'sawtooth', 0.11, 920);
+        playTone(1320, 0.25, 'triangle', 0.08, 310);
+      } else if (covId === 4) {
+        playTone(540, 0.30, 'sawtooth', 0.08, 190);
+      } else {
+        playTone(760, 0.24, 'triangle', 0.09, 360);
+      }
+    }
+
+    // --- 5 Canonical Vorathic Covenants ---
+    const COVENANTS = {
+      1: {
+        code: 'COV I', name: 'Prism Saints', color: 0xf4cf6d, accent: 0xfff6d6, glow: 0xffe28a, css: '#f4cf6d',
+        ability: 'Aegis of Refracted Grace', desc: '+2 Armor Save & Prismatic Halo Pulse (4" heal 1W)',
+        archetype: { title: 'Prism-Lance Cantor', pts: 100, m: 6, rng: 14, atk: 4, def: 3, w: 5, ap: 1 }
+      },
+      2: {
+        code: 'COV II', name: 'Seventh-Veil', color: 0xd92657, accent: 0x1a1423, glow: 0xff3870, css: '#ff3870',
+        ability: 'Seventh-Veil Mirage', desc: 'Shadow-Blink 5" & Flanking Criticals on 5+',
+        archetype: { title: 'Veilcutter Dancer', pts: 95, m: 8, rng: 8, atk: 5, def: 4, w: 4, ap: 1 }
+      },
+      3: {
+        code: 'COV III', name: 'Warrior Princesses', color: 0x4688ff, accent: 0xd99b66, glow: 0x6ba6ff, css: '#6ba6ff',
+        ability: 'Sovereign Vanguard Charge', desc: '+3" Charge Reach & Rose-Bronze Shockwave (1 Mortal Hit)',
+        archetype: { title: 'Sovereign Halberdier', pts: 105, m: 7, rng: 9, atk: 5, def: 3, w: 6, ap: 1 }
+      },
+      4: {
+        code: 'COV IV', name: 'Umbral Hex-Witches', color: 0x9e47ff, accent: 0x9aa8b8, glow: 0xc17dff, css: '#c17dff',
+        ability: 'Umbral Chain-Malediction', desc: 'Witchfire arcs to a 2nd nearby enemy & sunders DEF',
+        archetype: { title: 'Umbral Hex-Weaver', pts: 90, m: 6, rng: 13, atk: 4, def: 4, w: 4, ap: 1 }
+      },
+      5: {
+        code: 'COV V', name: 'Zero-Kelvin Cryo-Igniters', color: 0x2ce6ff, accent: 0xd4a238, glow: 0x38f2ff, css: '#38e9ff',
+        ability: 'Dilution Quench Cascade', desc: 'Pulse 5" Cryo/Plasma Nova & refresh Quantum Toggle',
+        archetype: { title: 'Cryo-Igniter Savant', pts: 105, m: 6, rng: 12, atk: 4, def: 3, w: 5, ap: 1 }
+      }
+    };
+
+    const MISSIONS = [
+      { id: 1, name: 'Crusade I: Sanctum of the Broken Rose', goal: 'Seize Glowing Reliquary Shrines', enemyBonus: 0, rewardXp: 120 },
+      { id: 2, name: 'Crusade II: Brass Conduit Overload', goal: 'Hold High Catwalks & Brass Valves', enemyBonus: 1, rewardXp: 160 },
+      { id: 3, name: 'Crusade III: Veiled Reliquary Escort', goal: 'Purge Umbral Ambushers in Central Nave', enemyBonus: 1, rewardXp: 200 },
+      { id: 4, name: 'Crusade IV: Rose-Glass Eclipse Siege', goal: 'Break Fortified High Altar Guard', enemyBonus: 2, rewardXp: 250 },
+      { id: 5, name: 'Crusade V: Zero-Kelvin Convergence', goal: 'Defeat the Arch-Cantor Procession', enemyBonus: 2, rewardXp: 350 }
+    ];
+
+    // --- Persistent Save State ---
+    const SAVE_KEY = 'nsp_vorath_5cov_crusade_20261115';
+    let saveState = { xp: 140, unlockedMission: 1, completedMissions: [], veteranBonus: 0, relic: 'zero_kelvin_shard' };
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (raw) Object.assign(saveState, JSON.parse(raw));
+    } catch (_) {}
+    function persistSave() {
+      try { localStorage.setItem(SAVE_KEY, JSON.stringify(saveState)); } catch (_) {}
+    }
+
+    // --- Procedural 512x512 PBR Texture & Normal-Map Forge ---
+    function generatePBRTextures(style) {
+      const size = 512;
+      const alb = document.createElement('canvas'); alb.width = alb.height = size;
+      const rgh = document.createElement('canvas'); rgh.width = rgh.height = size;
+      const nrm = document.createElement('canvas'); nrm.width = nrm.height = size;
+      const actx = alb.getContext('2d');
+      const rctx = rgh.getContext('2d');
+      const nctx = nrm.getContext('2d');
+
+      const heights = new Float32Array(size * size);
+
+      if (style === 'cathedral_basalt') {
+        actx.fillStyle = '#1b1f2b';
+        actx.fillRect(0, 0, size, size);
+        rctx.fillStyle = '#9a9a9a';
+        rctx.fillRect(0, 0, size, size);
+
+        const tile = 64;
+        for (let ty = 0; ty < size; ty += tile) {
+          for (let tx = 0; tx < size; tx += tile) {
+            const ox = (ty / tile) % 2 === 0 ? 0 : 32;
+            const x0 = (tx + ox) % size;
+            const shade = 24 + ((tx * 7 + ty * 13) % 18);
+            actx.fillStyle = `rgb(${shade}, ${shade + 4}, ${shade + 14})`;
+            actx.fillRect(x0 + 2, ty + 2, tile - 4, tile - 4);
+            // Brass inlay filigree cross on alternating slabs
+            if (((tx + ty) / tile) % 3 === 0) {
+              actx.strokeStyle = 'rgba(212, 162, 56, 0.34)';
+              actx.lineWidth = 2;
+              actx.strokeRect(x0 + 10, ty + 10, tile - 20, tile - 20);
+            }
+          }
+        }
+        for (let y = 0; y < size; y++) {
+          for (let x = 0; x < size; x++) {
+            const ox = Math.floor(y / tile) % 2 === 0 ? 0 : 32;
+            const gx = (x + ox) % tile;
+            const gy = y % tile;
+            const groove = (gx < 3 || gx > tile - 3 || gy < 3 || gy > tile - 3) ? -0.65 : 0.0;
+            const grain = (Math.sin(x * 0.37) * Math.cos(y * 0.41) + Math.sin((x + y) * 0.19)) * 0.12;
+            heights[y * size + x] = groove + grain;
+          }
+        }
+        // Subtle glowing mortar & specular damp patches in roughness
+        for (let i = 0; i < 90; i++) {
+          const px = (i * 97) % size, py = (i * 151) % size, rad = 16 + (i % 26);
+          const g = rctx.createRadialGradient(px, py, 2, px, py, rad);
+          g.addColorStop(0, '#303030');
+          g.addColorStop(1, 'rgba(150,150,150,0)');
+          rctx.fillStyle = g;
+          rctx.beginPath(); rctx.arc(px, py, rad, 0, Math.PI * 2); rctx.fill();
+        }
+      } else if (style === 'brass_metal') {
+        const grad = actx.createLinearGradient(0, 0, size, size);
+        grad.addColorStop(0, '#d8a648');
+        grad.addColorStop(0.5, '#b07b25');
+        grad.addColorStop(1, '#e6be6a');
+        actx.fillStyle = grad;
+        actx.fillRect(0, 0, size, size);
+        rctx.fillStyle = '#484848';
+        rctx.fillRect(0, 0, size, size);
+        for (let y = 0; y < size; y++) {
+          const ring = Math.sin(y * 0.35) * 0.22;
+          for (let x = 0; x < size; x++) {
+            heights[y * size + x] = ring + Math.cos(x * 0.25) * 0.05;
+          }
+        }
+      } else if (style === 'gothic_stone') {
+        actx.fillStyle = '#303546';
+        actx.fillRect(0, 0, size, size);
+        rctx.fillStyle = '#b4b4b4';
+        rctx.fillRect(0, 0, size, size);
+        for (let i = 0; i < 400; i++) {
+          const x = (i * 73) % size, y = (i * 137) % size;
+          actx.fillStyle = i % 2 ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.14)';
+          actx.fillRect(x, y, 18, 10);
+        }
+        for (let y = 0; y < size; y++) {
+          for (let x = 0; x < size; x++) {
+            const flute = Math.sin(x * (Math.PI * 16 / size)) * 0.35;
+            heights[y * size + x] = flute + Math.sin(y * 0.22) * 0.08;
+          }
+        }
+      }
+
+      // Compute tangent-space normal map via Sobel filter
+      const img = nctx.createImageData(size, size);
+      const d = img.data;
+      const strength = 2.6;
+      for (let y = 0; y < size; y++) {
+        const ym = (y - 1 + size) % size, yp = (y + 1) % size;
+        for (let x = 0; x < size; x++) {
+          const xm = (x - 1 + size) % size, xp = (x + 1) % size;
+          const dx = (heights[y * size + xp] - heights[y * size + xm]) * strength;
+          const dy = (heights[yp * size + x] - heights[ym * size + x]) * strength;
+          const inv = 1.0 / Math.sqrt(dx * dx + dy * dy + 1.0);
+          const idx = (y * size + x) * 4;
+          d[idx] = Math.floor((-dx * inv * 0.5 + 0.5) * 255);
+          d[idx + 1] = Math.floor((-dy * inv * 0.5 + 0.5) * 255);
+          d[idx + 2] = Math.floor((inv * 0.5 + 0.5) * 255);
+          d[idx + 3] = 255;
+        }
+      }
+      nctx.putImageData(img, 0, 0);
+
+      const map = new THREE.CanvasTexture(alb);
+      const roughnessMap = new THREE.CanvasTexture(rgh);
+      const normalMap = new THREE.CanvasTexture(nrm);
+      [map, roughnessMap, normalMap].forEach((t) => {
+        t.wrapS = t.wrapT = THREE.RepeatWrapping;
+      });
+      map.encoding = THREE.sRGBEncoding;
+      return { map, roughnessMap, normalMap };
+    }
+
+    function generateStainedGlassTexture() {
+      const c = document.createElement('canvas'); c.width = c.height = 512;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#090b14';
+      ctx.fillRect(0, 0, 512, 512);
+      const cx = 256, cy = 256;
+      const palette = ['#ff2e6d', '#38e9ff', '#f5c542', '#9e47ff', '#38f2a6', '#4688ff'];
+      for (let ring = 4; ring >= 1; ring--) {
+        const r = ring * 54;
+        const petals = 12;
+        for (let p = 0; p < petals; p++) {
+          const a0 = (p / petals) * Math.PI * 2;
+          const a1 = ((p + 1) / petals) * Math.PI * 2;
+          ctx.beginPath();
+          ctx.moveTo(cx, cy);
+          ctx.arc(cx, cy, r, a0, a1);
+          ctx.closePath();
+          ctx.fillStyle = palette[(p + ring) % palette.length];
+          ctx.fill();
+          ctx.lineWidth = 5;
+          ctx.strokeStyle = '#12131a';
+          ctx.stroke();
+        }
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.encoding = THREE.sRGBEncoding;
+      return tex;
+    }
+
+    // --- Three.js Scene & Renderer Setup ---
+    const container = document.getElementById('viewport');
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.22;
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x070913);
+    scene.fog = new THREE.FogExp2(0x090c1a, 0.017);
+
+    const camera = new THREE.PerspectiveCamera(44, window.innerWidth / window.innerHeight, 0.2, 160);
+
+    // Procedural HDR-like Cathedral Environment Map via PMREMGenerator
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    const envScene = new THREE.Scene();
+    envScene.background = new THREE.Color(0x0d1224);
+    const addEnvPanel = (col, pos, scl) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(scl[0], scl[1], scl[2]), new THREE.MeshBasicMaterial({ color: col }));
+      m.position.set(pos[0], pos[1], pos[2]);
+      envScene.add(m);
+    };
+    addEnvPanel(0xffe09e, [0, 18, 0], [18, 1, 18]);
+    addEnvPanel(0x38e9ff, [-18, 8, -10], [1, 10, 14]);
+    addEnvPanel(0xff3870, [18, 8, 10], [1, 10, 14]);
+    addEnvPanel(0xb666ff, [0, 10, -20], [14, 10, 1]);
+    scene.environment = pmrem.fromScene(envScene, 0.04).texture;
+
+    // Cathedral Lighting
+    const hemi = new THREE.HemisphereLight(0x8aa8ff, 0x261a12, 0.55);
+    scene.add(hemi);
+
+    const keyLight = new THREE.DirectionalLight(0xffe6b8, 1.55);
+    keyLight.position.set(14, 24, 12);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(2048, 2048);
+    keyLight.shadow.camera.near = 2;
+    keyLight.shadow.camera.far = 65;
+    const sc = 16;
+    keyLight.shadow.camera.left = -sc; keyLight.shadow.camera.right = sc;
+    keyLight.shadow.camera.top = sc; keyLight.shadow.camera.bottom = -sc;
+    keyLight.shadow.bias = -0.0005;
+    scene.add(keyLight);
+
+    const rimCyan = new THREE.DirectionalLight(0x38e9ff, 0.65);
+    rimCyan.position.set(-16, 12, -14);
+    scene.add(rimCyan);
+
+    // --- Sculpted 24"x24" Gothic Cathedral Board ---
+    const BOARD_SIZE = 24;
+    const basaltTex = generatePBRTextures('cathedral_basalt');
+    basaltTex.map.repeat.set(6, 6);
+    basaltTex.roughnessMap.repeat.set(6, 6);
+    basaltTex.normalMap.repeat.set(6, 6);
+
+    const brassTex = generatePBRTextures('brass_metal');
+    const stoneTex = generatePBRTextures('gothic_stone');
+    const roseGlassTex = generateStainedGlassTexture();
+
+    const boardGroup = new THREE.Group();
+    scene.add(boardGroup);
+
+    const boardMat = new THREE.MeshStandardMaterial({
+      map: basaltTex.map,
+      roughnessMap: basaltTex.roughnessMap,
+      normalMap: basaltTex.normalMap,
+      metalness: 0.25,
+      roughness: 0.68
+    });
+    const boardSlab = new THREE.Mesh(new THREE.BoxGeometry(BOARD_SIZE, 0.8, BOARD_SIZE), boardMat);
+    boardSlab.position.y = -0.4;
+    boardSlab.receiveShadow = true;
+    boardGroup.add(boardSlab);
+
+    // Ornate Brass Wargame Table Bezel
+    const brassMat = new THREE.MeshStandardMaterial({
+      map: brassTex.map, normalMap: brassTex.normalMap,
+      color: 0xd9a84e, metalness: 0.88, roughness: 0.24
+    });
+    const stoneMat = new THREE.MeshStandardMaterial({
+      map: stoneTex.map, normalMap: stoneTex.normalMap, roughnessMap: stoneTex.roughnessMap,
+      color: 0x454c63, metalness: 0.18, roughness: 0.72
+    });
+    [
+      [0, -0.32, BOARD_SIZE / 2 + 0.35, BOARD_SIZE + 1.4, 0.95, 0.7],
+      [0, -0.32, -BOARD_SIZE / 2 - 0.35, BOARD_SIZE + 1.4, 0.95, 0.7],
+      [BOARD_SIZE / 2 + 0.35, -0.32, 0, 0.7, 0.95, BOARD_SIZE],
+      [-BOARD_SIZE / 2 - 0.35, -0.32, 0, 0.7, 0.95, BOARD_SIZE]
+    ].forEach((b) => {
+      const trim = new THREE.Mesh(new THREE.BoxGeometry(b[3], b[4], b[5]), brassMat);
+      trim.position.set(b[0], b[1], b[2]);
+      trim.castShadow = true; trim.receiveShadow = true;
+      boardGroup.add(trim);
+    });
+
+    // Elevated Sanctum Dais Platforms + Stairs (Provide +1 High Ground!)
+    const platforms = [
+      { x: -6.8, z: 0, w: 4.8, d: 5.4, h: 1.15 },
+      { x: 6.8, z: 0, w: 4.8, d: 5.4, h: 1.15 },
+      { x: 0, z: -7.5, w: 6.4, d: 3.6, h: 0.95 }
+    ];
+    platforms.forEach((p) => {
+      const dais = new THREE.Mesh(new THREE.BoxGeometry(p.w, p.h, p.d), stoneMat);
+      dais.position.set(p.x, p.h / 2, p.z);
+      dais.castShadow = true; dais.receiveShadow = true;
+      boardGroup.add(dais);
+
+      const rim = new THREE.Mesh(new THREE.BoxGeometry(p.w + 0.16, 0.12, p.d + 0.16), brassMat);
+      rim.position.set(p.x, p.h - 0.04, p.z);
+      boardGroup.add(rim);
+
+      // Stone steps toward Z+ and Z-
+      for (let s = 1; s <= 3; s++) {
+        const sh = (p.h * (4 - s)) / 4;
+        const stepA = new THREE.Mesh(new THREE.BoxGeometry(2.2, sh, 0.55), stoneMat);
+        stepA.position.set(p.x, sh / 2, p.z + p.d / 2 + s * 0.5);
+        stepA.castShadow = true; stepA.receiveShadow = true;
+        boardGroup.add(stepA);
+      }
+    });
+
+    // LOS Blockers & Ruined Cathedral Cover Pillars + Stained Glass Rose Backdrop
+    const losObstacles = [];
+    const pillarCoords = [
+      [-3.2, -3.2], [3.2, -3.2], [-3.2, 3.2], [3.2, 3.2],
+      [-8.5, -5.8], [8.5, -5.8], [-8.5, 5.8], [8.5, 5.8]
+    ];
+    pillarCoords.forEach(([px, pz], idx) => {
+      const h = idx < 4 ? 3.4 : 2.6;
+      const g = new THREE.Group();
+      g.position.set(px, 0, pz);
+      const plinth = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.5, 1.35), stoneMat);
+      plinth.position.y = 0.25;
+      plinth.castShadow = true; plinth.receiveShadow = true;
+      g.add(plinth);
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.52, h, 12), stoneMat);
+      shaft.position.y = 0.5 + h / 2;
+      shaft.castShadow = true; shaft.receiveShadow = true;
+      g.add(shaft);
+      const band = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.07, 8, 16), brassMat);
+      band.rotation.x = Math.PI / 2;
+      band.position.y = 1.4;
+      g.add(band);
+      // Brazier flame crystal on inner 4 pillars
+      if (idx < 4) {
+        const flame = new THREE.Mesh(
+          new THREE.OctahedronGeometry(0.26, 0),
+          new THREE.MeshStandardMaterial({ color: 0xff9d3b, emissive: 0xff6a1a, emissiveIntensity: 2.2, roughness: 0.2 })
+        );
+        flame.position.y = 0.75 + h;
+        g.add(flame);
+      }
+      boardGroup.add(g);
+      losObstacles.push({ x: px, z: pz, r: 0.72, mesh: shaft });
+    });
+
+    // North Cathedral Stained-Glass Rose Arch Backdrop
+    const archGroup = new THREE.Group();
+    archGroup.position.set(0, 0, -BOARD_SIZE / 2 - 0.1);
+    const leftButtress = new THREE.Mesh(new THREE.BoxGeometry(1.8, 7.5, 1.2), stoneMat);
+    leftButtress.position.set(-5.2, 3.75, 0); leftButtress.castShadow = true;
+    const rightButtress = new THREE.Mesh(new THREE.BoxGeometry(1.8, 7.5, 1.2), stoneMat);
+    rightButtress.position.set(5.2, 3.75, 0); rightButtress.castShadow = true;
+    const roseDisc = new THREE.Mesh(
+      new THREE.CylinderGeometry(3.5, 3.5, 0.18, 32),
+      new THREE.MeshStandardMaterial({
+        map: roseGlassTex, emissiveMap: roseGlassTex, emissive: 0xffffff, emissiveIntensity: 0.95,
+        roughness: 0.15, metalness: 0.1
+      })
+    );
+    roseDisc.rotation.x = Math.PI / 2;
+    roseDisc.position.set(0, 4.9, 0);
+    const roseFrame = new THREE.Mesh(new THREE.TorusGeometry(3.6, 0.24, 12, 36), brassMat);
+    roseFrame.position.set(0, 4.9, 0.1);
+    archGroup.add(leftButtress, rightButtress, roseDisc, roseFrame);
+    boardGroup.add(archGroup);
+
+    // Brass Vorathic Conduit Pipes snaking across Cathedral floor
+    [[-11.5, 11.5, -2.0], [-11.5, 11.5, 2.0]].forEach(([x0, x1, z]) => {
+      const curve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(x0, 0.14, z),
+        new THREE.Vector3(-4.5, 0.14, z + (z < 0 ? -0.9 : 0.9)),
+        new THREE.Vector3(0, 0.18, z),
+        new THREE.Vector3(4.5, 0.14, z + (z < 0 ? -0.9 : 0.9)),
+        new THREE.Vector3(x1, 0.14, z)
+      ]);
+      const pipe = new THREE.Mesh(new THREE.TubeGeometry(curve, 36, 0.14, 10, false), brassMat);
+      pipe.castShadow = true; pipe.receiveShadow = true;
+      boardGroup.add(pipe);
+    });
+
+    // 3 Glowing Objective Shrines
+    const shrines = [
+      { id: 'central', name: 'Central Reliquary', x: 0, z: 0, owner: 0, color: 0xf0c45a },
+      { id: 'west', name: 'West Cryo-Font', x: -6.8, z: 0, owner: 0, color: 0x38e9ff },
+      { id: 'east', name: 'East Prism Altar', x: 6.8, z: 0, owner: 0, color: 0xff3870 }
+    ];
+    shrines.forEach((sh) => {
+      const yBase = getTerrainHeight(sh.x, sh.z);
+      const sg = new THREE.Group();
+      sg.position.set(sh.x, yBase, sh.z);
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(1.25, 1.5, 32),
+        new THREE.MeshBasicMaterial({ color: sh.color, side: THREE.DoubleSide, transparent: true, opacity: 0.72 })
+      );
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.y = 0.04;
+      const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.48, 0.65, 8), brassMat);
+      ped.position.y = 0.32;
+      const crystalMat = new THREE.MeshStandardMaterial({
+        color: sh.color, emissive: sh.color, emissiveIntensity: 1.8, metalness: 0.3, roughness: 0.12
+      });
+      const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.34, 0), crystalMat);
+      crystal.position.y = 0.98;
+      const pt = new THREE.PointLight(sh.color, 1.25, 8.5);
+      pt.position.y = 1.3;
+      sg.add(ring, ped, crystal, pt);
+      boardGroup.add(sg);
+      sh.crystal = crystal; sh.ring = ring; sh.light = pt;
+    });
+
+    function getTerrainHeight(x, z) {
+      for (const p of platforms) {
+        if (Math.abs(x - p.x) <= p.w / 2 && Math.abs(z - p.z) <= p.d / 2) return p.h;
+      }
+      return 0;
+    }
+
+    // --- 3D Brass-Rimmed Dice Tray on Table Corner ---
+    const diceTrayGroup = new THREE.Group();
+    diceTrayGroup.position.set(9.4, 0.12, 9.4);
+    const trayRim = new THREE.Mesh(new THREE.CylinderGeometry(2.1, 2.25, 0.42, 8), brassMat);
+    const trayFelt = new THREE.Mesh(
+      new THREE.CylinderGeometry(1.88, 1.88, 0.44, 8),
+      new THREE.MeshStandardMaterial({ color: 0x260b1c, roughness: 0.92, metalness: 0.05 })
+    );
+    diceTrayGroup.add(trayRim, trayFelt);
+    boardGroup.add(diceTrayGroup);
+
+    const diceMeshes = [];
+    const dieGeo = new THREE.BoxGeometry(0.42, 0.42, 0.42);
+    for (let i = 0; i < 6; i++) {
+      const dm = new THREE.Mesh(
+        dieGeo,
+        new THREE.MeshStandardMaterial({ color: 0xf7e7be, metalness: 0.35, roughness: 0.25 })
+      );
+      dm.castShadow = true;
+      const ang = (i / 6) * Math.PI * 2;
+      dm.position.set(Math.cos(ang) * 0.85, 0.45, Math.sin(ang) * 0.85);
+      diceTrayGroup.add(dm);
+      diceMeshes.push({ mesh: dm, spin: new THREE.Vector3(), timer: 0 });
+    }
+
+    // --- Sculpted 28mm Single-Vertical-Slit Masked Miniature Builder ---
+    function createMiniature(unitData) {
+      const cov = COVENANTS[unitData.covId];
+      const root = new THREE.Group();
+
+      const armorColor = unitData.team === 'enemy' ? 0x2b1522 : cov.color;
+      const trimColor = unitData.team === 'enemy' ? 0xff2e55 : cov.accent;
+      const glowColor = unitData.team === 'enemy' ? 0xff2e55 : cov.glow;
+
+      const armorMat = new THREE.MeshStandardMaterial({
+        color: armorColor, metalness: 0.72, roughness: 0.26
+      });
+      const trimMat = new THREE.MeshStandardMaterial({
+        color: trimColor, metalness: 0.85, roughness: 0.22
+      });
+      const cloakMat = new THREE.MeshStandardMaterial({
+        color: unitData.team === 'enemy' ? 0x1a0b14 : 0x181c2e, roughness: 0.78, metalness: 0.12
+      });
+      const slitGlowMat = new THREE.MeshStandardMaterial({
+        color: glowColor, emissive: glowColor, emissiveIntensity: 2.4, roughness: 0.1
+      });
+
+      // Textured 28mm Round Beveled Base
+      const baseRim = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.58, 0.65, 0.16, 24),
+        new THREE.MeshStandardMaterial({
+          color: unitData.team === 'enemy' ? 0x8f162e : cov.color,
+          metalness: 0.65, roughness: 0.35
+        })
+      );
+      baseRim.position.y = 0.08;
+      baseRim.castShadow = true; baseRim.receiveShadow = true;
+      root.add(baseRim);
+
+      const slateTop = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.53, 0.56, 0.07, 16),
+        stoneMat
+      );
+      slateTop.position.y = 0.17;
+      root.add(slateTop);
+
+      // Miniature Body Rig
+      const body = new THREE.Group();
+      body.position.y = 0.20;
+      root.add(body);
+
+      // Greaves / Legs
+      [-0.14, 0.14].forEach((lx) => {
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.08, 0.52, 10), armorMat);
+        leg.position.set(lx, 0.26, 0);
+        leg.castShadow = true;
+        body.add(leg);
+      });
+
+      // Liturgical Tabard / Draped Robe
+      const robe = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.68, 12, 1, true), cloakMat);
+      robe.position.y = 0.44;
+      body.add(robe);
+
+      // Cuirass Torso
+      const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.18, 0.50, 12), armorMat);
+      torso.position.y = 0.72;
+      torso.castShadow = true;
+      body.add(torso);
+
+      // Sculpted Pauldrons
+      [-0.28, 0.28].forEach((sx) => {
+        const pld = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.65), trimMat);
+        pld.position.set(sx, 0.90, 0);
+        pld.rotation.z = sx < 0 ? 0.35 : -0.35;
+        pld.castShadow = true;
+        body.add(pld);
+      });
+
+      // CANONICAL SINGLE-VERTICAL-SLIT MASKED HEAD (100% Enforced, Zero Open Faces!)
+      const headGroup = new THREE.Group();
+      headGroup.position.y = 1.16;
+      const helm = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.17, 0.32, 14), trimMat);
+      helm.castShadow = true;
+      headGroup.add(helm);
+      const dome = new THREE.Mesh(new THREE.SphereGeometry(0.15, 14, 10), armorMat);
+      dome.position.y = 0.12;
+      headGroup.add(dome);
+
+      // Smooth front visor plate + single vertical centerline slit!
+      const faceplate = new THREE.Mesh(new THREE.CylinderGeometry(0.162, 0.175, 0.28, 12, 1, false, -0.75, 1.5), armorMat);
+      headGroup.add(faceplate);
+      const slitRecess = new THREE.Mesh(new THREE.BoxGeometry(0.028, 0.25, 0.06), new THREE.MeshBasicMaterial({ color: 0x040509 }));
+      slitRecess.position.set(0, 0.01, 0.158);
+      headGroup.add(slitRecess);
+      const slitCore = new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.22, 0.065), slitGlowMat);
+      slitCore.position.set(0, 0.01, 0.16);
+      headGroup.add(slitCore);
+
+      // Covenant-Specific Crest & Weapon Sculpt
+      if (unitData.covId === 1) {
+        // Prism Halo & Solar Lance
+        const halo = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.025, 8, 20), trimMat);
+        halo.position.set(0, 0.14, -0.08);
+        headGroup.add(halo);
+        const lance = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.045, 1.45, 8), trimMat);
+        lance.position.set(0.32, 0.85, 0.25);
+        lance.rotation.x = 0.65;
+        body.add(lance);
+      } else if (unitData.covId === 2) {
+        // Seventh-Veil Twin Curved Blades
+        [-0.32, 0.32].forEach((bx) => {
+          const blade = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.026, 6, 14, Math.PI * 0.85), slitGlowMat);
+          blade.position.set(bx, 0.72, 0.22);
+          blade.rotation.y = Math.PI / 2;
+          body.add(blade);
+        });
+      } else if (unitData.covId === 3) {
+        // Warrior Princesses Diadem Crest & Storm Halberd
+        const crest = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.28, 4), trimMat);
+        crest.position.set(0, 0.28, 0);
+        headGroup.add(crest);
+        const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 1.55, 8), trimMat);
+        shaft.position.set(0.30, 0.88, 0.12);
+        const axe = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.32, 0.24), slitGlowMat);
+        axe.position.set(0.30, 1.48, 0.20);
+        body.add(shaft, axe);
+      } else if (unitData.covId === 4) {
+        // Umbral Hex-Witch Tall Spire Crown & Witchfire Staff
+        const spire = new THREE.Mesh(new THREE.ConeGeometry(0.19, 0.48, 10), armorMat);
+        spire.position.y = 0.36;
+        headGroup.add(spire);
+        const staff = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.03, 1.5, 8), trimMat);
+        staff.position.set(0.30, 0.85, 0.14);
+        const orb = new THREE.Mesh(new THREE.OctahedronGeometry(0.11, 0), slitGlowMat);
+        orb.position.set(0.30, 1.62, 0.14);
+        body.add(staff, orb);
+      } else {
+        // Covenant V: Dorsal 24K Gold Cryo-Condenser Backpack & Coaxial Igniter
+        const pack = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.46, 12), brassMat);
+        pack.position.set(0, 0.78, -0.22);
+        const flange = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.05, 16), brassMat);
+        flange.position.set(0, 0.96, -0.22);
+        const gun = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.07, 0.78, 10), brassMat);
+        gun.rotation.x = Math.PI / 2;
+        gun.position.set(0.28, 0.76, 0.30);
+        const muzzle = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.02, 8, 14), slitGlowMat);
+        muzzle.position.set(0.28, 0.76, 0.69);
+        body.add(pack, flange, gun, muzzle);
+      }
+
+      body.add(headGroup);
+
+      // Covenant V State Aura Ring (15 mK Cyan vs 5,000 K Solar)
+      const stateRing = new THREE.Mesh(
+        new THREE.RingGeometry(0.68, 0.78, 28),
+        new THREE.MeshBasicMaterial({ color: 0x38e9ff, side: THREE.DoubleSide, transparent: true, opacity: unitData.covId === 5 ? 0.75 : 0.0 })
+      );
+      stateRing.rotation.x = -Math.PI / 2;
+      stateRing.position.y = 0.03;
+      root.add(stateRing);
+
+      unitData.mesh = root;
+      unitData.body = body;
+      unitData.slitMat = slitGlowMat;
+      unitData.stateRing = stateRing;
+      return root;
+    }
+
+    // --- Dynamic 3D Range Rings & VFX ---
+    const moveRing = new THREE.Mesh(
+      new THREE.RingGeometry(0.95, 1.0, 64),
+      new THREE.MeshBasicMaterial({ color: 0x38e9ff, side: THREE.DoubleSide, transparent: true, opacity: 0.65 })
+    );
+    moveRing.rotation.x = -Math.PI / 2;
+    moveRing.visible = false;
+    scene.add(moveRing);
+
+    const rangeRing = new THREE.Mesh(
+      new THREE.RingGeometry(0.985, 1.0, 64),
+      new THREE.MeshBasicMaterial({ color: 0xf0c45a, side: THREE.DoubleSide, transparent: true, opacity: 0.35 })
+    );
+    rangeRing.rotation.x = -Math.PI / 2;
+    rangeRing.visible = false;
+    scene.add(rangeRing);
+
+    const selectionHalo = new THREE.Mesh(
+      new THREE.TorusGeometry(0.75, 0.045, 8, 32),
+      new THREE.MeshBasicMaterial({ color: 0xffe27a })
+    );
+    selectionHalo.rotation.x = Math.PI / 2;
+    selectionHalo.visible = false;
+    scene.add(selectionHalo);
+
+    const activeVFX = [];
+    function spawnBeamVFX(fromVec, toVec, colorHex, jagged) {
+      const pts = [];
+      const segs = jagged ? 12 : 4;
+      for (let i = 0; i <= segs; i++) {
+        const t = i / segs;
+        const p = new THREE.Vector3().lerpVectors(fromVec, toVec, t);
+        if (jagged && i > 0 && i < segs) {
+          p.x += (Math.random() - 0.5) * 0.65;
+          p.y += (Math.random() - 0.5) * 0.55;
+          p.z += (Math.random() - 0.5) * 0.65;
+        }
+        pts.push(p);
+      }
+      const curve = new THREE.CatmullRomCurve3(pts);
+      const geo = new THREE.TubeGeometry(curve, 20, jagged ? 0.055 : 0.08, 8, false);
+      const mat = new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 0.95 });
+      const beam = new THREE.Mesh(geo, mat);
+      scene.add(beam);
+
+      const burst = new THREE.Mesh(
+        new THREE.SphereGeometry(0.35, 12, 10),
+        new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 0.9 })
+      );
+      burst.position.copy(toVec);
+      scene.add(burst);
+
+      activeVFX.push({ mesh: beam, burst, life: 0.45, maxLife: 0.45 });
+    }
+
+    // --- Game State & Roster Management ---
+    let musterDraft = [1, 2, 3, 4, 5]; // Default balanced 5-Covenant Procession = 495 pts!
+    let currentMissionIdx = 0;
+    let units = [];
+    let selectedUnit = null;
+    let currentAction = 'move'; // 'move' | 'shoot' | 'charge'
+    let round = 1;
+    let playerCP = 3;
+    let playerVP = 0;
+    let enemyVP = 0;
+    let turnLock = false;
+    let totalAttacksResolved = 0;
+
+    function logCombat(msg, cls) {
+      const box = document.getElementById('combat-log');
+      const div = document.createElement('div');
+      div.className = 'log-entry ' + (cls || '');
+      div.textContent = msg;
+      box.prepend(div);
+      while (box.children.length > 26) box.removeChild(box.lastChild);
+    }
+
+    function clearUnits() {
+      units.forEach((u) => { if (u.mesh) scene.remove(u.mesh); });
+      units = [];
+    }
+
+    function buildBattlefieldUnits() {
+      clearUnits();
+      const mission = MISSIONS[currentMissionIdx];
+      round = 1;
+      playerCP = 3;
+      playerVP = 0;
+      enemyVP = 0;
+      turnLock = false;
+
+      // Player Mustered Warband along South Deployment Zone
+      const count = musterDraft.length;
+      musterDraft.forEach((covId, idx) => {
+        const cov = COVENANTS[covId];
+        const arch = cov.archetype;
+        const spreadX = (idx - (count - 1) / 2) * 3.2;
+        const px = Math.max(-10, Math.min(10, spreadX));
+        const pz = 8.8 + (idx % 2 === 0 ? 0 : 0.8);
+        const vetRank = Math.min(3, Math.floor(saveState.xp / 180));
+        const u = {
+          id: 'P' + (idx + 1),
+          team: 'player',
+          covId,
+          name: `${cov.code} ${arch.title}`,
+          m: arch.m + (saveState.relic === 'seventh_thurible' ? 2 : 0),
+          rng: arch.rng + (saveState.relic === 'prism_lens' ? 3 : 0),
+          atk: arch.atk + (vetRank >= 2 ? 1 : 0),
+          def: Math.max(2, arch.def - (saveState.relic === 'zero_kelvin_shard' && covId === 5 ? 1 : 0)),
+          maxW: arch.w + (vetRank >= 1 ? 1 : 0),
+          w: arch.w + (vetRank >= 1 ? 1 : 0),
+          pts: arch.pts,
+          x: px, z: pz,
+          rotY: Math.PI,
+          moved: false, acted: false, activated: false,
+          quantumSpark: false, // Cov V: false = 15 mK Coherence, true = 5,000 K Spark-Gap Ignition
+          vetRank
+        };
+        createMiniature(u);
+        u.mesh.position.set(u.x, getTerrainHeight(u.x, u.z), u.z);
+        u.mesh.rotation.y = u.rotY;
+        scene.add(u.mesh);
+        units.push(u);
+      });
+
+      // Enemy Heretic Procession along North Deployment Zone
+      const enemyCovs = [4, 2, 5, 3, 1];
+      enemyCovs.forEach((covId, idx) => {
+        const cov = COVENANTS[covId];
+        const arch = cov.archetype;
+        const px = (idx - 2) * 3.4;
+        const pz = -8.6 - (idx % 2 === 0 ? 0.5 : 0);
+        const u = {
+          id: 'E' + (idx + 1),
+          team: 'enemy',
+          covId,
+          name: `Schism ${arch.title}`,
+          m: arch.m,
+          rng: arch.rng,
+          atk: arch.atk + (mission.enemyBonus > 1 && idx === 2 ? 1 : 0),
+          def: arch.def,
+          maxW: arch.w + mission.enemyBonus,
+          w: arch.w + mission.enemyBonus,
+          pts: arch.pts,
+          x: px, z: pz,
+          rotY: 0,
+          moved: false, acted: false, activated: false,
+          quantumSpark: idx === 2
+        };
+        createMiniature(u);
+        u.mesh.position.set(u.x, getTerrainHeight(u.x, u.z), u.z);
+        u.mesh.rotation.y = u.rotY;
+        scene.add(u.mesh);
+        units.push(u);
+      });
+
+      const cov5Unit = units.find((u) => u.team === 'player' && u.covId === 5) || units[0];
+      selectUnit(cov5Unit);
+      logCombat(`Deployed ${musterPointsTotal()}pt Procession into ${mission.name}.`, 'cov5');
+      refreshHUD();
+    }
+
+    function musterPointsTotal() {
+      return musterDraft.reduce((acc, id) => acc + COVENANTS[id].archetype.pts, 0);
+    }
+
+    // --- Line of Sight, Cover, Elevation & Flanking Checks ---
+    function checkLOSAndCover(attacker, target) {
+      if (attacker.covId === 5 && !attacker.quantumSpark) {
+        // 15 mK Quantum Tunneling ignores cover penalties!
+        return { blocked: false, inCover: false, quantumTunnel: true };
+      }
+      const ax = attacker.x, az = attacker.z;
+      const tx = target.x, tz = target.z;
+      const dx = tx - ax, dz = tz - az;
+      const lenSq = dx * dx + dz * dz;
+      let inCover = false;
+      for (const obs of losObstacles) {
+        const t = Math.max(0, Math.min(1, ((obs.x - ax) * dx + (obs.z - az) * dz) / (lenSq || 1)));
+        const cx = ax + t * dx, cz = az + t * dz;
+        const dist = Math.hypot(obs.x - cx, obs.z - cz);
+        if (dist < obs.r * 0.52 && t > 0.12 && t < 0.88) {
+          return { blocked: true, inCover: true, quantumTunnel: false };
+        }
+        if (dist < obs.r * 1.35 && t > 0.1 && t < 0.95) {
+          inCover = true;
+        }
+      }
+      return { blocked: false, inCover, quantumTunnel: false };
+    }
+
+    function isFlanking(attacker, target) {
+      const fwdX = Math.sin(target.rotY);
+      const fwdZ = Math.cos(target.rotY);
+      const toAttX = attacker.x - target.x;
+      const toAttZ = attacker.z - target.z;
+      const len = Math.hypot(toAttX, toAttZ) || 1;
+      const dot = (fwdX * toAttX + fwdZ * toAttZ) / len;
+      return dot < -0.15; // Attacking into side/rear arc!
+    }
+
+    // --- 3D Physical Dice Roll & Combat Resolution ---
+    function roll3DDice(numDice, threshold, critThreshold, summaryPrefix) {
+      sfxDiceClatter();
+      const rolls = [];
+      let hits = 0;
+      for (let i = 0; i < numDice; i++) {
+        const val = 1 + Math.floor(Math.random() * 6);
+        const crit = val >= critThreshold;
+        const hit = val >= threshold;
+        if (crit) hits += 2;
+        else if (hit) hits += 1;
+        rolls.push({ val, hit, crit });
+      }
+      // Spin physical 3D dice in brass tray
+      diceMeshes.forEach((d, idx) => {
+        d.mesh.visible = idx < Math.max(4, Math.min(6, numDice));
+        d.timer = 0.55;
+        d.spin.set(10 + Math.random() * 12, 8 + Math.random() * 10, 9 + Math.random() * 12);
+      });
+
+      const facesEl = document.getElementById('dice-faces');
+      facesEl.innerHTML = '';
+      rolls.forEach((r) => {
+        const span = document.createElement('span');
+        span.className = 'die-pip-badge' + (r.crit ? ' crit' : (r.hit ? ' hit' : ''));
+        span.textContent = r.val;
+        facesEl.appendChild(span);
+      });
+      document.getElementById('dice-summary').textContent = `${summaryPrefix}: ${hits} Hits`;
+      return hits;
+    }
+
+    function executeAttack(attacker, target, isMelee) {
+      const dist = Math.hypot(target.x - attacker.x, target.z - attacker.z);
+      const maxR = isMelee ? attacker.m + 2.2 : attacker.rng;
+      if (dist > maxR + 0.35) {
+        logCombat(`${target.name} is out of range (${dist.toFixed(1)}" > ${maxR}").`, '');
+        return false;
+      }
+      const los = checkLOSAndCover(attacker, target);
+      if (!isMelee && los.blocked) {
+        logCombat(`Cathedral pillar blocks Line of Sight to ${target.name}!`, '');
+        return false;
+      }
+
+      if (isMelee && dist > 1.55) {
+        // Charge Lunge close to enemy base!
+        const ang = Math.atan2(attacker.x - target.x, attacker.z - target.z);
+        attacker.x = target.x + Math.sin(ang) * 1.32;
+        attacker.z = target.z + Math.cos(ang) * 1.32;
+        attacker.mesh.position.set(attacker.x, getTerrainHeight(attacker.x, attacker.z), attacker.z);
+      }
+
+      // Face target
+      attacker.rotY = Math.atan2(target.x - attacker.x, target.z - attacker.z);
+      attacker.mesh.rotation.y = attacker.rotY;
+
+      const attElev = getTerrainHeight(attacker.x, attacker.z);
+      const tgtElev = getTerrainHeight(target.x, target.z);
+      const highGround = attElev > tgtElev + 0.3 ? 1 : 0;
+      const flanked = isFlanking(attacker, target) ? 1 : 0;
+      const sparkBonus = (attacker.covId === 5 && attacker.quantumSpark) ? 3 : 0;
+      const chargeRelic = (isMelee && attacker.team === 'player' && saveState.relic === 'sovereign_crest') ? 1 : 0;
+
+      const diceCount = attacker.atk + highGround + flanked + sparkBonus + chargeRelic;
+      let hitTarget = target.def + (los.inCover && !isMelee ? 1 : 0) - (attacker.covId === 5 && attacker.quantumSpark ? 1 : 0);
+      if (target.covId === 5 && !target.quantumSpark) hitTarget += 1; // 15 mK Coherence +1 Defense!
+      hitTarget = Math.max(2, Math.min(6, hitTarget));
+      const critAt = (attacker.team === 'player' && saveState.relic === 'prism_lens') ? 5 : 6;
+
+      const hits = roll3DDice(diceCount, hitTarget, critAt, `${diceCount}D6 @ ${hitTarget}+`);
+      const dmg = Math.max(1, hits); // Grazing liturgical burn minimum 1 on clean lock
+      target.w = Math.max(0, target.w - dmg);
+      totalAttacksResolved++;
+
+      // 3D Beam / Chain-Lightning VFX
+      const fromV = new THREE.Vector3(attacker.x, attElev + 1.05, attacker.z);
+      const toV = new THREE.Vector3(target.x, tgtElev + 0.95, target.z);
+      const vfxCol = attacker.covId === 5
+        ? (attacker.quantumSpark ? 0xff6b2b : 0x38e9ff)
+        : COVENANTS[attacker.covId].glow;
+      spawnBeamVFX(fromV, toV, vfxCol, attacker.covId === 4 || (attacker.covId === 5 && attacker.quantumSpark));
+      sfxBeam(attacker.covId, attacker.quantumSpark);
+
+      const mods = [
+        highGround ? '+HighGround' : '',
+        flanked ? '+Flank' : '',
+        los.quantumTunnel ? '+15mK-Tunnel' : '',
+        sparkBonus ? '+5000K-Plasma' : '',
+        los.inCover && !isMelee ? 'vs Cover' : ''
+      ].filter(Boolean).join(' ');
+
+      logCombat(
+        `${attacker.name} strikes ${target.name} ${mods ? '[' + mods + ']' : ''} -> ${dmg} DMG (${target.w}/${target.maxW}W)`,
+        attacker.team === 'enemy' ? 'enemy' : (attacker.covId === 5 ? 'cov5' : '')
+      );
+
+      // Covenant IV Umbral Chain-Lightning passive bounce!
+      if (attacker.covId === 4 && target.w > 0) {
+        const chainFoe = units.find((u) => u.team === target.team && u.id !== target.id && u.w > 0 && Math.hypot(u.x - target.x, u.z - target.z) <= 5.5);
+        if (chainFoe) {
+          chainFoe.w = Math.max(0, chainFoe.w - 1);
+          spawnBeamVFX(toV, new THREE.Vector3(chainFoe.x, getTerrainHeight(chainFoe.x, chainFoe.z) + 0.9, chainFoe.z), 0xc17dff, true);
+          logCombat(`Umbral Witchfire arcs to ${chainFoe.name} (-1W)!`, 'cov5');
+          if (chainFoe.w <= 0) handleUnitDefeat(chainFoe);
+        }
+      }
+
+      if (target.w <= 0) handleUnitDefeat(target);
+
+      attacker.acted = true;
+      attacker.activated = true;
+      refreshHUD();
+      if (attacker.team === 'player') scheduleEnemyActivation();
+      return true;
+    }
+
+    function handleUnitDefeat(u) {
+      if (u.mesh) u.mesh.visible = false;
+      logCombat(`${u.name} banished from the Cathedral!`, u.team === 'enemy' ? 'cov5' : 'enemy');
+      if (u.team === 'enemy') {
+        playerVP += 2;
+        saveState.xp += 35;
+        persistSave();
+      } else {
+        enemyVP += 2;
+      }
+      checkVictoryState();
+    }
+
+    // --- Covenant V Quantum Toggle & Command Abilities ---
+    function toggleCov5Mode(unit) {
+      if (!unit || unit.covId !== 5 || unit.w <= 0) return;
+      unit.quantumSpark = !unit.quantumSpark;
+      const col = unit.quantumSpark ? 0xff6b2b : 0x38e9ff;
+      unit.slitMat.color.setHex(col);
+      unit.slitMat.emissive.setHex(col);
+      unit.stateRing.material.color.setHex(col);
+      playTone(unit.quantumSpark ? 260 : 940, 0.25, 'sawtooth', 0.08, unit.quantumSpark ? 880 : 320);
+      logCombat(
+        `${unit.name} shifted to ${unit.quantumSpark ? '5,000 K SPARK-GAP IGNITION (+3D6 AP)' : '15 mK QUANTUM COHERENCE (Tunneling +1 DEF)'}!`,
+        'cov5'
+      );
+      refreshHUD();
+    }
+
+    function triggerCovenantAbility(unit) {
+      if (!unit || unit.team !== 'player' || unit.w <= 0 || playerCP < 1) return;
+      playerCP -= 1;
+      const cov = COVENANTS[unit.covId];
+      const uPos = new THREE.Vector3(unit.x, getTerrainHeight(unit.x, unit.z) + 1.0, unit.z);
+
+      if (unit.covId === 1) {
+        units.filter((f) => f.team === 'player' && f.w > 0 && Math.hypot(f.x - unit.x, f.z - unit.z) <= 5.5).forEach((f) => {
+          f.w = Math.min(f.maxW, f.w + 1);
+        });
+        spawnBeamVFX(uPos, uPos.clone().add(new THREE.Vector3(0, 2.2, 0)), 0xffe28a, false);
+      } else if (unit.covId === 2) {
+        unit.z = Math.max(-10.5, unit.z - 4.2);
+        unit.mesh.position.set(unit.x, getTerrainHeight(unit.x, unit.z), unit.z);
+      } else if (unit.covId === 3) {
+        unit.m += 3;
+      } else if (unit.covId === 4) {
+        const foes = units.filter((e) => e.team === 'enemy' && e.w > 0).slice(0, 2);
+        foes.forEach((e) => {
+          e.w = Math.max(0, e.w - 2);
+          spawnBeamVFX(uPos, new THREE.Vector3(e.x, getTerrainHeight(e.x, e.z) + 0.9, e.z), 0xc17dff, true);
+          if (e.w <= 0) handleUnitDefeat(e);
+        });
+      } else if (unit.covId === 5) {
+        toggleCov5Mode(unit);
+        units.filter((e) => e.team === 'enemy' && e.w > 0 && Math.hypot(e.x - unit.x, e.z - unit.z) <= 6.5).forEach((e) => {
+          e.w = Math.max(0, e.w - 2);
+          spawnBeamVFX(uPos, new THREE.Vector3(e.x, getTerrainHeight(e.x, e.z) + 0.9, e.z), unit.quantumSpark ? 0xff6b2b : 0x38e9ff, true);
+          if (e.w <= 0) handleUnitDefeat(e);
+        });
+      }
+      logCombat(`[1 CP] ${unit.name} unleashed ${cov.ability}!`, 'cov5');
+      refreshHUD();
+    }
+
+    // --- Alternating Tactical Enemy AI ---
+    function scheduleEnemyActivation() {
+      if (turnLock) return;
+      const readyEnemies = units.filter((u) => u.team === 'enemy' && u.w > 0 && !u.activated);
+      const readyPlayers = units.filter((u) => u.team === 'player' && u.w > 0 && !u.activated);
+
+      if (readyEnemies.length === 0) {
+        if (readyPlayers.length === 0) advanceRound();
+        return;
+      }
+      turnLock = true;
+      document.getElementById('hud-turn-owner').textContent = 'ENEMY ACTIVATION';
+      document.getElementById('hud-turn-owner').style.color = 'var(--crimson)';
+
+      setTimeout(() => {
+        const ai = readyEnemies[0];
+        const livePlayers = units.filter((p) => p.team === 'player' && p.w > 0);
+        if (ai && livePlayers.length > 0) {
+          // Pick closest shrine or wounded player target
+          livePlayers.sort((a, b) => (Math.hypot(a.x - ai.x, a.z - ai.z) + a.w * 0.6) - (Math.hypot(b.x - ai.x, b.z - ai.z) + b.w * 0.6));
+          const target = livePlayers[0];
+          const shrine = shrines[0];
+          const goalX = (shrine.owner !== -1 && Math.hypot(shrine.x - ai.x, shrine.z - ai.z) > 2.2) ? shrine.x : target.x;
+          const goalZ = (shrine.owner !== -1 && Math.hypot(shrine.x - ai.x, shrine.z - ai.z) > 2.2) ? shrine.z : target.z;
+          const ang = Math.atan2(goalX - ai.x, goalZ - ai.z);
+          const step = Math.min(ai.m * 0.72, Math.max(0, Math.hypot(goalX - ai.x, goalZ - ai.z) - 2.0));
+          ai.x = Math.max(-10.8, Math.min(10.8, ai.x + Math.sin(ang) * step));
+          ai.z = Math.max(-10.8, Math.min(10.8, ai.z + Math.cos(ang) * step));
+          ai.rotY = ang;
+          ai.mesh.position.set(ai.x, getTerrainHeight(ai.x, ai.z), ai.z);
+          ai.mesh.rotation.y = ai.rotY;
+
+          const distToTarget = Math.hypot(target.x - ai.x, target.z - ai.z);
+          if (distToTarget <= ai.rng) {
+            executeAttack(ai, target, distToTarget < 2.2);
+          } else {
+            ai.activated = true;
+            logCombat(`${ai.name} advances toward ${shrine.name}.`, 'enemy');
+          }
+        }
+        turnLock = false;
+        evaluateShrines();
+        const remP = units.filter((u) => u.team === 'player' && u.w > 0 && !u.activated);
+        const remE = units.filter((u) => u.team === 'enemy' && u.w > 0 && !u.activated);
+        if (remP.length === 0 && remE.length > 0) {
+          scheduleEnemyActivation();
+        } else if (remP.length === 0 && remE.length === 0) {
+          advanceRound();
+        } else if (remP.length > 0) {
+          document.getElementById('hud-turn-owner').textContent = 'YOUR ACTIVATION';
+          document.getElementById('hud-turn-owner').style.color = 'var(--emerald)';
+          if (!selectedUnit || selectedUnit.activated || selectedUnit.w <= 0) selectUnit(remP[0]);
+          refreshHUD();
+        }
+      }, 420);
+    }
+
+    function evaluateShrines() {
+      shrines.forEach((sh) => {
+        const pNear = units.filter((u) => u.team === 'player' && u.w > 0 && Math.hypot(u.x - sh.x, u.z - sh.z) <= 2.4).length;
+        const eNear = units.filter((u) => u.team === 'enemy' && u.w > 0 && Math.hypot(u.x - sh.x, u.z - sh.z) <= 2.4).length;
+        if (pNear > eNear) {
+          sh.owner = 1;
+          sh.ring.material.color.setHex(0x38f2a6);
+        } else if (eNear > pNear) {
+          sh.owner = -1;
+          sh.ring.material.color.setHex(0xff3366);
+        }
+      });
+    }
+
+    function advanceRound() {
+      evaluateShrines();
+      shrines.forEach((sh) => {
+        if (sh.owner === 1) playerVP += 1;
+        if (sh.owner === -1) enemyVP += 1;
+      });
+      if (round >= 5) {
+        checkVictoryState(true);
+        return;
+      }
+      round += 1;
+      playerCP = Math.min(6, playerCP + 2);
+      units.forEach((u) => { u.moved = false; u.acted = false; u.activated = false; });
+      document.getElementById('hud-turn-owner').textContent = 'YOUR ACTIVATION';
+      document.getElementById('hud-turn-owner').style.color = 'var(--emerald)';
+      const firstReady = units.find((u) => u.team === 'player' && u.w > 0);
+      if (firstReady) selectUnit(firstReady);
+      logCombat(`=== ROUND ${round} BEGINS (+2 CP, Shrines Scored) ===`, 'cov5');
+      refreshHUD();
+    }
+
+    function checkVictoryState(forceEnd) {
+      const aliveEnemies = units.filter((u) => u.team === 'enemy' && u.w > 0).length;
+      const alivePlayers = units.filter((u) => u.team === 'player' && u.w > 0).length;
+      if (aliveEnemies === 0 || (forceEnd && playerVP >= enemyVP)) {
+        const m = MISSIONS[currentMissionIdx];
+        saveState.xp += m.rewardXp;
+        if (!saveState.completedMissions.includes(m.id)) saveState.completedMissions.push(m.id);
+        saveState.unlockedMission = Math.min(5, Math.max(saveState.unlockedMission, m.id + 1));
+        persistSave();
+        logCombat(`VICTORY IN ${m.name.toUpperCase()}! +${m.rewardXp} Crusade XP Awarded!`, 'cov5');
+        renderCrusadeList();
+      } else if (alivePlayers === 0 || forceEnd) {
+        logCombat(`Procession Repelled — Re-muster warband to strike again.`, 'enemy');
+      }
+    }
+
+    // --- Selection & Board Raycasting ---
+    function selectUnit(u) {
+      selectedUnit = u;
+      if (!u || u.w <= 0) {
+        moveRing.visible = false; rangeRing.visible = false; selectionHalo.visible = false;
+        return;
+      }
+      const y = getTerrainHeight(u.x, u.z) + 0.05;
+      selectionHalo.position.set(u.x, y + 0.04, u.z);
+      selectionHalo.visible = true;
+
+      moveRing.position.set(u.x, y, u.z);
+      moveRing.scale.set(u.m, u.m, 1);
+      moveRing.visible = !u.moved && u.team === 'player';
+
+      rangeRing.position.set(u.x, y + 0.01, u.z);
+      const rScale = currentAction === 'charge' ? u.m + 2.0 : u.rng;
+      rangeRing.scale.set(rScale, rScale, 1);
+      rangeRing.visible = u.team === 'player';
+
+      refreshHUD();
+    }
+
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+
+    let camAngle = 0.58;
+    let camPitch = 0.72;
+    let camDist = 25.5;
+    let camTarget = new THREE.Vector3(0, 0.8, 0.8);
+    let draggingCam = false;
+    let dragMoved = false;
+    let lastPtr = { x: 0, y: 0 };
+
+    function updateCamera() {
+      camera.position.set(
+        camTarget.x + Math.sin(camAngle) * Math.cos(camPitch) * camDist,
+        camTarget.y + Math.sin(camPitch) * camDist,
+        camTarget.z + Math.cos(camAngle) * Math.cos(camPitch) * camDist
+      );
+      camera.lookAt(camTarget);
+    }
+    updateCamera();
+
+    renderer.domElement.addEventListener('pointerdown', (e) => {
+      ensureAudio();
+      draggingCam = true;
+      dragMoved = false;
+      lastPtr = { x: e.clientX, y: e.clientY };
+    });
+    window.addEventListener('pointermove', (e) => {
+      if (!draggingCam) return;
+      const dx = e.clientX - lastPtr.x, dy = e.clientY - lastPtr.y;
+      if (Math.hypot(dx, dy) > 5) dragMoved = true;
+      if (dragMoved) {
+        camAngle -= dx * 0.0065;
+        camPitch = Math.max(0.28, Math.min(1.32, camPitch + dy * 0.0055));
+        updateCamera();
+      }
+      lastPtr = { x: e.clientX, y: e.clientY };
+    });
+    window.addEventListener('pointerup', (e) => {
+      if (!draggingCam) return;
+      draggingCam = false;
+      if (dragMoved || e.target !== renderer.domElement || turnLock) return;
+
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+
+      // Check miniature click first
+      const hitPos = new THREE.Vector3();
+      raycaster.ray.intersectPlane(groundPlane, hitPos);
+
+      let clickedUnit = null;
+      let bestD = 1.05;
+      units.forEach((u) => {
+        if (u.w <= 0) return;
+        const d = Math.hypot(u.x - hitPos.x, u.z - hitPos.z);
+        if (d < bestD) { bestD = d; clickedUnit = u; }
+      });
+
+      if (clickedUnit) {
+        if (clickedUnit.team === 'player') {
+          selectUnit(clickedUnit);
+          playTone(520, 0.08, 'triangle', 0.06, 680);
+          return;
+        } else if (selectedUnit && selectedUnit.team === 'player' && !selectedUnit.activated) {
+          executeAttack(selectedUnit, clickedUnit, currentAction === 'charge');
+          return;
+        }
+      }
+
+      // Ground Move Command
+      if (selectedUnit && selectedUnit.team === 'player' && !selectedUnit.activated && !selectedUnit.moved) {
+        const gx = Math.max(-11.0, Math.min(11.0, hitPos.x));
+        const gz = Math.max(-11.0, Math.min(11.0, hitPos.z));
+        const dist = Math.hypot(gx - selectedUnit.x, gz - selectedUnit.z);
+        if (dist <= selectedUnit.m + 0.35) {
+          // Ensure not colliding into LOS pillar center
+          const blockedPillar = losObstacles.some((o) => Math.hypot(o.x - gx, o.z - gz) < o.r * 0.85);
+          if (!blockedPillar) {
+            selectedUnit.rotY = Math.atan2(gx - selectedUnit.x, gz - selectedUnit.z);
+            selectedUnit.x = gx;
+            selectedUnit.z = gz;
+            selectedUnit.moved = true;
+            selectedUnit.mesh.position.set(gx, getTerrainHeight(gx, gz), gz);
+            selectedUnit.mesh.rotation.y = selectedUnit.rotY;
+            playTone(340, 0.11, 'sine', 0.07, 480);
+            evaluateShrines();
+            currentAction = 'shoot';
+            selectUnit(selectedUnit);
+            logCombat(`${selectedUnit.name} advanced ${dist.toFixed(1)}" (${getTerrainHeight(gx, gz) > 0.3 ? 'High Sanctum' : 'Nave Floor'}).`, '');
+          }
+        }
+      }
+    });
+
+    renderer.domElement.addEventListener('wheel', (e) => {
+      camDist = Math.max(11, Math.min(38, camDist + e.deltaY * 0.015));
+      updateCamera();
+    }, { passive: true });
+
+    // --- UI Wiring ---
+    function refreshHUD() {
+      document.getElementById('hud-mission').textContent = MISSIONS[currentMissionIdx].name.toUpperCase();
+      document.getElementById('hud-round').textContent = `${round} / 5`;
+      document.getElementById('hud-vp').textContent = playerVP;
+      document.getElementById('hud-enemy-vp').textContent = enemyVP;
+      document.getElementById('hud-cp').textContent = playerCP;
+      document.getElementById('hud-pts').textContent = `${musterPointsTotal()} / 500pt`;
+
+      // Unit List
+      const list = document.getElementById('unit-list');
+      list.innerHTML = '';
+      units.filter((u) => u.team === 'player').forEach((u) => {
+        const cov = COVENANTS[u.covId];
+        const row = document.createElement('div');
+        row.className = 'unit-row' + (selectedUnit === u ? ' selected' : '') + (u.activated || u.w <= 0 ? ' spent' : '');
+        const pips = Array.from({ length: u.maxW }, (_, i) => `<span class="pip ${i < u.w ? '' : 'lost'}"></span>`).join('');
+        row.innerHTML = `
+          <div style="display:flex;align-items:center;gap:7px;">
+            <span class="cov-dot" style="background:${cov.css}"></span>
+            <div>
+              <div style="font-weight:700;">${u.name} ${u.vetRank > 0 ? '&#9733;' + u.vetRank : ''}</div>
+              <div class="hp-pips">${pips}</div>
+            </div>
+          </div>
+          <span style="font-size:0.65rem;color:${u.w <= 0 ? 'var(--crimson)' : (u.activated ? 'var(--muted)' : 'var(--emerald)')}">
+            ${u.w <= 0 ? 'FALLEN' : (u.activated ? 'DONE' : 'READY')}
+          </span>
+        `;
+        row.onclick = () => { if (u.w > 0) selectUnit(u); };
+        list.appendChild(row);
+      });
+
+      // Selected Unit Inspector
+      if (selectedUnit) {
+        const cov = COVENANTS[selectedUnit.covId];
+        document.getElementById('sel-name').textContent = selectedUnit.name;
+        document.getElementById('sel-cov').textContent = cov.code + ' // ' + cov.name.toUpperCase();
+        document.getElementById('sel-role').textContent = `Single-Vertical-Slit Mask • ${cov.ability}`;
+        document.getElementById('st-m').textContent = selectedUnit.m + '"';
+        document.getElementById('st-r').textContent = selectedUnit.rng + '"';
+        const atkDice = selectedUnit.atk + (selectedUnit.covId === 5 && selectedUnit.quantumSpark ? 3 : 0);
+        document.getElementById('st-a').textContent = atkDice + 'D6';
+        const defVal = Math.max(2, selectedUnit.def + (selectedUnit.covId === 5 && !selectedUnit.quantumSpark ? -1 : 0));
+        document.getElementById('st-d').textContent = defVal + '+';
+        document.getElementById('st-w').textContent = `${selectedUnit.w}/${selectedUnit.maxW}`;
+
+        const elev = getTerrainHeight(selectedUnit.x, selectedUnit.z) > 0.3 ? 'High Sanctum (+1D6)' : 'Cathedral Floor';
+        document.getElementById('sel-modifiers').textContent = `${elev} • Relic: ${saveState.relic.replace(/_/g, ' ')}`;
+
+        const c5 = document.getElementById('cov5-box');
+        if (selectedUnit.covId === 5 && selectedUnit.team === 'player') {
+          c5.style.display = 'block';
+          const btn = document.getElementById('btn-cov5-toggle');
+          const lbl = document.getElementById('cov5-mode-lbl');
+          if (selectedUnit.quantumSpark) {
+            lbl.textContent = 'QUANTUM STATE: 5,000 K SPARK-GAP (+3D6 AP)';
+            lbl.style.color = 'var(--solar)';
+            btn.className = 'g-btn solar active';
+          } else {
+            lbl.textContent = 'QUANTUM STATE: 15 mK COHERENCE (TUNNEL +1 DEF)';
+            lbl.style.color = 'var(--cyan)';
+            btn.className = 'g-btn cyan active';
+          }
+        } else {
+          c5.style.display = 'none';
+        }
+      }
+
+      ['move', 'shoot', 'charge'].forEach((a) => {
+        document.getElementById('act-' + a).classList.toggle('active', currentAction === a);
+      });
+    }
+
+    function renderMusterCatalog() {
+      const cat = document.getElementById('muster-catalog');
+      cat.innerHTML = '';
+      Object.keys(COVENANTS).forEach((k) => {
+        const id = Number(k);
+        const c = COVENANTS[id];
+        const count = musterDraft.filter((x) => x === id).length;
+        const row = document.createElement('div');
+        row.className = 'unit-row';
+        row.innerHTML = `
+          <div>
+            <strong style="color:${c.css}">${c.code}: ${c.archetype.title}</strong>
+            <div style="font-size:0.64rem;color:var(--muted);">${c.archetype.pts}pt &bull; M${c.archetype.m}" R${c.archetype.rng}" ${c.archetype.atk}D6</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;">
+            <button class="g-btn" data-sub="${id}" style="padding:2px 7px;">-</button>
+            <b>${count}</b>
+            <button class="g-btn" data-add="${id}" style="padding:2px 7px;">+</button>
+          </div>
+        `;
+        cat.appendChild(row);
+      });
+      cat.querySelectorAll('[data-add]').forEach((b) => {
+        b.onclick = () => {
+          const id = Number(b.dataset.add);
+          if (musterPointsTotal() + COVENANTS[id].archetype.pts <= 500) {
+            musterDraft.push(id);
+            renderMusterCatalog();
+          }
+        };
+      });
+      cat.querySelectorAll('[data-sub]').forEach((b) => {
+        b.onclick = () => {
+          const id = Number(b.dataset.sub);
+          const idx = musterDraft.indexOf(id);
+          if (idx !== -1 && musterDraft.length > 1) {
+            musterDraft.splice(idx, 1);
+            renderMusterCatalog();
+          }
+        };
+      });
+      document.getElementById('muster-total-lbl').textContent = `${musterPointsTotal()} / 500pt`;
+    }
+
+    function renderCrusadeList() {
+      document.getElementById('crusade-xp-lbl').textContent = `XP: ${saveState.xp}`;
+      const list = document.getElementById('crusade-list');
+      list.innerHTML = '';
+      MISSIONS.forEach((m, idx) => {
+        const done = saveState.completedMissions.includes(m.id);
+        const row = document.createElement('div');
+        row.className = 'unit-row' + (currentMissionIdx === idx ? ' selected' : '');
+        row.innerHTML = `
+          <div>
+            <div style="font-weight:700;color:${done ? 'var(--emerald)' : 'var(--gold)'}">${m.name}</div>
+            <div style="font-size:0.64rem;color:var(--muted);">${m.goal} (+${m.rewardXp} XP)</div>
+          </div>
+          <button class="g-btn" style="padding:3px 7px;">LAUNCH</button>
+        `;
+        row.querySelector('button').onclick = () => {
+          currentMissionIdx = idx;
+          buildBattlefieldUnits();
+          switchTab('roster');
+        };
+        list.appendChild(row);
+      });
+    }
+
+    function switchTab(tab) {
+      ['roster', 'muster', 'crusade'].forEach((t) => {
+        document.getElementById('pane-' + t).style.display = t === tab ? (t === 'roster' ? 'block' : 'flex') : 'none';
+        document.getElementById('tab-btn-' + t).classList.toggle('active', t === tab);
+      });
+    }
+
+    ['roster', 'muster', 'crusade'].forEach((t) => {
+      document.getElementById('tab-btn-' + t).onclick = () => switchTab(t);
+    });
+    document.getElementById('btn-deploy-muster').onclick = () => {
+      saveState.relic = document.getElementById('relic-select').value;
+      persistSave();
+      buildBattlefieldUnits();
+      switchTab('roster');
+    };
+    document.getElementById('btn-cov5-toggle').onclick = () => toggleCov5Mode(selectedUnit);
+    document.getElementById('act-move').onclick = () => { currentAction = 'move'; selectUnit(selectedUnit); };
+    document.getElementById('act-shoot').onclick = () => { currentAction = 'shoot'; selectUnit(selectedUnit); };
+    document.getElementById('act-charge').onclick = () => { currentAction = 'charge'; selectUnit(selectedUnit); };
+    document.getElementById('act-command').onclick = () => triggerCovenantAbility(selectedUnit);
+    document.getElementById('act-end-unit').onclick = () => {
+      if (selectedUnit && selectedUnit.team === 'player') {
+        selectedUnit.activated = true;
+        refreshHUD();
+        scheduleEnemyActivation();
+      }
+    };
+
+    let camModeIdx = 0;
+    const camModes = [
+      { name: 'CAM: TACTICAL', dist: 25.5, pitch: 0.72, angle: 0.58 },
+      { name: 'CAM: MINIATURE CLOSE', dist: 12.5, pitch: 0.42, angle: 0.35 },
+      { name: 'CAM: OVERHEAD', dist: 31.0, pitch: 1.24, angle: 0.0 }
+    ];
+    document.getElementById('btn-cam-preset').onclick = () => {
+      camModeIdx = (camModeIdx + 1) % camModes.length;
+      const cm = camModes[camModeIdx];
+      camDist = cm.dist; camPitch = cm.pitch; camAngle = cm.angle;
+      if (camModeIdx === 1 && selectedUnit) {
+        camTarget.set(selectedUnit.x, 1.0, selectedUnit.z);
+      } else {
+        camTarget.set(0, 0.8, 0.8);
+      }
+      document.getElementById('btn-cam-preset').textContent = cm.name;
+      updateCamera();
+    };
+    document.getElementById('btn-mobile-inspector').onclick = () => {
+      document.getElementById('right-drawer').classList.toggle('mobile-open');
+    };
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === '1') { currentAction = 'move'; selectUnit(selectedUnit); }
+      if (e.key === '2') { currentAction = 'shoot'; selectUnit(selectedUnit); }
+      if (e.key === '3') { currentAction = 'charge'; selectUnit(selectedUnit); }
+      if (e.key === '4') triggerCovenantAbility(selectedUnit);
+      if (e.key === 'q' || e.key === 'Q') toggleCov5Mode(selectedUnit);
+      if (e.key === ' ') { document.getElementById('act-end-unit').click(); }
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Boot Warband & UI
+    renderMusterCatalog();
+    renderCrusadeList();
+    buildBattlefieldUnits();
+
+    // --- 60 FPS Render & Gamepad Loop ---
+    let lastTime = performance.now();
+    let fpsFrames = 0, fpsTimer = 0, measuredFps = 60;
+
+    function animate(now) {
+      requestAnimationFrame(animate);
+      const dt = Math.min(0.05, (now - lastTime) / 1000);
+      lastTime = now;
+
+      fpsFrames++;
+      fpsTimer += dt;
+      if (fpsTimer >= 0.5) {
+        measuredFps = Math.round(fpsFrames / fpsTimer);
+        fpsFrames = 0; fpsTimer = 0;
+      }
+
+      // Gamepad camera & unit cycling
+      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      if (pads && pads[0]) {
+        const gp = pads[0];
+        if (Math.abs(gp.axes[2] || 0) > 0.18) { camAngle -= gp.axes[2] * dt * 1.6; updateCamera(); }
+        if (Math.abs(gp.axes[3] || 0) > 0.18) { camPitch = Math.max(0.3, Math.min(1.28, camPitch + gp.axes[3] * dt * 1.1)); updateCamera(); }
+      }
+
+      // Animate shrines, miniatures & 3D dice
+      shrines.forEach((sh, i) => {
+        sh.crystal.rotation.y += dt * 1.4;
+        sh.crystal.position.y = 0.98 + Math.sin(now * 0.003 + i) * 0.08;
+      });
+
+      units.forEach((u, i) => {
+        if (u.w <= 0 || !u.body) return;
+        u.body.position.y = 0.20 + Math.sin(now * 0.0035 + i * 1.3) * 0.022;
+        if (u.covId === 5) u.stateRing.rotation.z += dt * 1.2;
+      });
+
+      selectionHalo.rotation.z += dt * 1.5;
+
+      diceMeshes.forEach((d) => {
+        if (d.timer > 0) {
+          d.timer -= dt;
+          d.mesh.rotation.x += d.spin.x * dt;
+          d.mesh.rotation.y += d.spin.y * dt;
+          d.mesh.rotation.z += d.spin.z * dt;
+          d.mesh.position.y = 0.45 + Math.abs(Math.sin(d.timer * 18)) * 0.45;
+        } else {
+          d.mesh.position.y = 0.42;
+        }
+      });
+
+      for (let i = activeVFX.length - 1; i >= 0; i--) {
+        const v = activeVFX[i];
+        v.life -= dt;
+        const alpha = Math.max(0, v.life / v.maxLife);
+        v.mesh.material.opacity = alpha;
+        v.burst.material.opacity = alpha;
+        v.burst.scale.setScalar(1 + (1 - alpha) * 1.8);
+        if (v.life <= 0) {
+          scene.remove(v.mesh);
+          scene.remove(v.burst);
+          activeVFX.splice(i, 1);
+        }
+      }
+
+      renderer.render(scene, camera);
+    }
+    requestAnimationFrame(animate);
+
+    // Expose Truthful Engine Diagnostic & Automation API
+    window.__NSP_GAME__ = {
+      id: 'vorath_5covenant_tactical_3d',
+      title: 'The Vorathic Procession: Tactical Skirmish 3D',
+      getState: () => ({
+        fps: measuredFps,
+        jsErrors: jsErrors.slice(),
+        round,
+        playerCP,
+        playerVP,
+        enemyVP,
+        musterPoints: musterPointsTotal(),
+        covenantsLoaded: Object.keys(COVENANTS).length,
+        activeUnits: units.filter((u) => u.w > 0).length,
+        totalAttacksResolved,
+        cov5SparkActive: units.some((u) => u.covId === 5 && u.quantumSpark),
+        crusadeMissions: MISSIONS.length,
+        xp: saveState.xp
+      }),
+      simulateSkirmishTurn: () => {
+        const cov5 = units.find((u) => u.team === 'player' && u.covId === 5 && u.w > 0) || units.find((u) => u.team === 'player' && u.w > 0);
+        const foe = units.find((u) => u.team === 'enemy' && u.w > 0);
+        if (cov5 && foe) {
+          selectUnit(cov5);
+          if (cov5.covId === 5 && !cov5.quantumSpark) toggleCov5Mode(cov5);
+          cov5.x = 0.2; cov5.z = 1.2;
+          cov5.moved = true;
+          cov5.mesh.position.set(cov5.x, getTerrainHeight(cov5.x, cov5.z), cov5.z);
+          foe.x = 0.4; foe.z = -3.8;
+          foe.mesh.position.set(foe.x, getTerrainHeight(foe.x, foe.z), foe.z);
+          camTarget.set(0.2, 0.9, -1.2);
+          camDist = 15.5; camPitch = 0.52; camAngle = 0.42;
+          updateCamera();
+          executeAttack(cov5, foe, false);
+        }
+        return window.__NSP_GAME__.getState();
+      }
+    };
+  })();
+  </script>
+
+<div class="nsp-hub-return-bar">
+  <a class="nsp-hub-return" href="/games/" target="_top">← 3D Games Hub</a>
+  <a class="nsp-hub-return" href="/arcade/" target="_top">Arcade (60)</a>
+</div>
+
+</body>
+</html>

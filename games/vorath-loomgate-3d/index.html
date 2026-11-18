@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="nsp-analytics" content="none">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="author" content="Andrew White" />
+  <title>Vorath Loomgate: Sovereign 3D Rhythm Runner — VL-001 Loomgate (Standalone 3D WebGL Playable)</title>
+  <script src="../three.min.js"></script>
+  <style>
+    * { box-sizing: border-box; user-select: none; }
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
+      background: #050613; color: #f8fafc;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+    #webgl-root { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 1; }
+    #hud-overlay {
+      position: fixed; inset: 0; z-index: 10; pointer-events: none;
+      display: flex; flex-direction: column; justify-content: space-between;
+      padding: 16px 24px;
+    }
+    .top-bar {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      pointer-events: auto;
+    }
+    .brand-pill {
+      background: rgba(10, 14, 32, 0.84);
+      border: 1px solid rgba(45, 212, 191, 0.45);
+      border-radius: 12px; padding: 8px 14px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+    }
+    .brand-pill h1 { margin: 0; font-size: 0.95rem; letter-spacing: 0.05em; color: #fde68a; }
+    .brand-pill span { font-size: 0.72rem; color: #94a3b8; }
+    .progress-wrap {
+      flex: 1; max-width: 480px;
+      background: rgba(10, 14, 32, 0.82);
+      border: 1px solid rgba(251, 191, 36, 0.40);
+      border-radius: 0px; height: 18px; padding: 2px;
+      display: flex; align-items: center; position: relative;
+    }
+    #progress-fill {
+      height: 100%; width: 0%; border-radius: 0px;
+      background: linear-gradient(90deg, #14b8a6, #fbbf24, #d946ef);
+      transition: width 0.08s linear;
+    }
+    #progress-pct {
+      position: absolute; inset: 0; text-align: center;
+      font-size: 0.68rem; font-weight: 800; line-height: 14px; color: #fff;
+    }
+    .ctrl-row { display: flex; gap: 8px; }
+    .gd-btn {
+      padding: 7px 12px; border-radius: 9px; cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(15, 23, 42, 0.88); color: #f1f5f9;
+      font-weight: 700; font-size: 0.74rem;
+    }
+    .gd-btn.active { border-color: #2dd4bf; color: #2dd4bf; }
+    .bottom-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.74rem; color: #cbd5e1;
+      background: rgba(8, 12, 28, 0.76);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 10px; padding: 7px 14px;
+    }
+  </style>
+
+<style data-nsp-vorath="games-zero-flat">
+@media (forced-colors: none) {
+  button, [role="button"], select, a, summary {
+    border-radius: 0 !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-width: 6px 12px !important;
+    border-image: url("/warband/art/vorath_btn_obsidian.webp") 44 66 fill / 6px 12px stretch !important;
+    background-image: none !important;
+    background-color: transparent !important;
+    color: #fef3c7 !important;
+    text-shadow: 0 1px 3px #000 !important;
+    box-shadow: none !important;
+  }
+  button.active, button.primary, .play-btn, .launch-btn, a.nsp-hub-return {
+    border-image-source: url("/warband/art/vorath_btn_primary.webp") !important;
+    color: #fffdf5 !important;
+  }
+  input[type="search"], input[type="text"], input[type="number"], textarea {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    border-radius: 0 !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-width: 7px 14px !important;
+    border-image: url("/warband/art/vorath_stat_plaque_v01.webp") 18 36 fill / 7px 14px stretch !important;
+    background: none !important;
+    color: #fef3c7 !important;
+  }
+  input[type="range"], input[type="checkbox"], input[type="radio"] {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    border-radius: 0 !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-width: 4px 8px !important;
+    border-image: url("/warband/art/vorath_stat_plaque_v01.webp") 18 36 fill / 4px 8px stretch !important;
+    background: none !important;
+  }
+  .cw-pill, .xp-pill, .metric-pill, .ns-tag, .brand-pill, .meter-pill, .tier-crest, .star-crest,
+  .cab-medal, .cab-stats-row, .stat-chip, .dmd-cell, .part-chip, #chrono-box {
+    border-radius: 0 !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-width: 5px 10px !important;
+    border-image: url("/warband/art/vorath_stat_plaque_v01.webp") 18 36 fill / 5px 10px stretch !important;
+    background: none !important;
+    clip-path: none !important;
+    color: #fef3c7 !important;
+  }
+}
+.nsp-hub-return-bar {
+  position: fixed;
+  bottom: 10px;
+  right: 12px;
+  z-index: 9999;
+  display: flex;
+  gap: 6px;
+}
+.nsp-hub-return {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 3px 10px;
+  font: 700 12px/1.2 system-ui, sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+</style>
+
+</head>
+<body>
+  <div id="webgl-root"></div>
+
+  <div id="hud-overlay">
+    <div class="top-bar">
+      <div class="brand-pill">
+        <h1>VL-001: LOOMGATE — SOVEREIGN 3D EDITION</h1>
+        <span id="passage-label">PASSAGE I: THRESHOLD • CUBE MODE • ATTEMPT 1</span>
+      </div>
+      <div class="progress-wrap">
+        <div id="progress-fill"></div>
+        <div id="progress-pct">0%</div>
+      </div>
+      <div class="ctrl-row">
+        <button class="gd-btn" id="btn-practice" onclick="togglePractice()">PRACTICE [P]</button>
+        <button class="gd-btn" id="btn-autopilot" onclick="toggleAutoPilot()">SHOWCASE AI [A]</button>
+        <button class="gd-btn" onclick="resetRun(true)">RESET [R]</button>
+      </div>
+    </div>
+    <div class="bottom-bar">
+      <div><strong>CONTROLS:</strong> [SPACE / W / UP / CLICK] Jump, Orb-Snap, Ship Thrust &amp; Wave Glide &bull; [Z] Checkpoint (Practice)</div>
+      <div>Standalone Three.js 3D WebGL Playable Edition (Not a native RobTop GD / Geode runtime import)</div>
+    </div>
+  </div>
+
+  <script>
+    const IS_PROMO_MODE = new URLSearchParams(window.location.search).get('promo') === '1';
+    if (IS_PROMO_MODE) {
+      document.getElementById('hud-overlay').style.display = 'none';
+    }
+
+    // =========================================================================
+    // 1. SYNTHESIZED 128 BPM COSMIC LOOM RHYTHM ENGINE (ZERO EXTERNAL MP3 NEEDED)
+    // =========================================================================
+    let audioCtx = null;
+    let lastBeatIndex = -1;
+    const BPM = 128;
+    const BEAT_SEC = 60 / BPM;
+
+    function ensureAudio() {
+      if (IS_PROMO_MODE) return;
+      if (!audioCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) audioCtx = new AC();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function playBeatPulse(beatIdx) {
+      if (!audioCtx || IS_PROMO_MODE) return;
+      try {
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        const scaleNotes = [110, 130.81, 146.83, 164.81, 196.00, 220.00, 261.63, 293.66];
+        osc.type = beatIdx % 2 === 0 ? 'sawtooth' : 'triangle';
+        osc.frequency.setValueAtTime(scaleNotes[beatIdx % scaleNotes.length], now);
+        gain.gain.setValueAtTime(0.10, now);
+        gain.gain.exponentialRampToValueAtTime(0.002, now + 0.22);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.23);
+      } catch (e) {}
+    }
+
+    // =========================================================================
+    // 2. THREE.JS 3D COSMIC LOOM CATHEDRAL, AURORA NEBULA SKYBOX & PARALLAX
+    // =========================================================================
+    const rootEl = document.getElementById('webgl-root');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x090b24);
+    scene.fog = new THREE.FogExp2(0x0c1033, 0.0065);
+
+    const initAsp = window.innerWidth / Math.max(1, window.innerHeight);
+    const camera = new THREE.PerspectiveCamera(initAsp < 1.0 ? 70 : 52, initAsp, 0.1, 240);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    rootEl.appendChild(renderer.domElement);
+
+    const ambLight = new THREE.AmbientLight(0xdbeafe, 0.95);
+    scene.add(ambLight);
+
+    const sunLight = new THREE.DirectionalLight(0xfde68a, 1.65);
+    sunLight.position.set(16, 26, 18);
+    scene.add(sunLight);
+
+    const playerGlow = new THREE.PointLight(0x2dd4bf, 3.6, 24);
+    scene.add(playerGlow);
+
+    // Cosmic Aurora & Sacred Nebula Sky Dome (follows camera X so background is ALWAYS vibrant!)
+    function createCosmicAuroraTexture() {
+      const c = document.createElement('canvas');
+      c.width = 1024; c.height = 512;
+      const ctx = c.getContext('2d');
+      const bg = ctx.createLinearGradient(0, 0, 0, 512);
+      bg.addColorStop(0.0, '#090d2c');
+      bg.addColorStop(0.32, '#1e1b4b');
+      bg.addColorStop(0.55, '#0f766e');
+      bg.addColorStop(0.75, '#4c1d95');
+      bg.addColorStop(1.0, '#090b20');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, 1024, 512);
+
+      // Luminous Aurora Ribbons
+      const auroraColors = ['rgba(45,212,191,0.38)', 'rgba(217,70,239,0.34)', 'rgba(251,191,36,0.28)', 'rgba(56,189,248,0.36)'];
+      for (let band = 0; band < 4; band++) {
+        ctx.strokeStyle = auroraColors[band];
+        ctx.lineWidth = 26 + band * 8;
+        ctx.beginPath();
+        for (let x = 0; x <= 1024; x += 16) {
+          const y = 155 + band * 48 + Math.sin(x * 0.012 + band * 1.4) * 38 + Math.cos(x * 0.025 - band) * 18;
+          if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+
+      // Crisp Starfield & Golden Sacred Constellations
+      for (let s = 0; s < 480; s++) {
+        ctx.fillStyle = s % 6 === 0 ? '#fde047' : (s % 5 === 0 ? '#38bdf8' : '#ffffff');
+        const sz = s % 9 === 0 ? 3 : 1.8;
+        ctx.fillRect((s * 137) % 1024, (s * 89) % 480, sz, sz);
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.ClampToEdgeWrapping;
+      return tex;
+    }
+
+    const skyTex = createCosmicAuroraTexture();
+    const skyDome = new THREE.Mesh(
+      new THREE.SphereGeometry(115, 36, 24),
+      new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide, fog: false })
+    );
+    scene.add(skyDome);
+
+    const obsidianMat = new THREE.MeshStandardMaterial({ color: 0x172554, emissive: 0x0f172a, emissiveIntensity: 0.35, metalness: 0.82, roughness: 0.20 });
+    const goldMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, emissive: 0xd97706, emissiveIntensity: 0.48, metalness: 0.94, roughness: 0.12 });
+    const ivoryTopMat = new THREE.MeshStandardMaterial({ color: 0x2dd4bf, emissive: 0x0d9488, emissiveIntensity: 0.85, metalness: 0.55, roughness: 0.14 });
+    const spikeMat = new THREE.MeshStandardMaterial({ color: 0xf43f5e, emissive: 0xe11d48, emissiveIntensity: 0.92, metalness: 0.72, roughness: 0.15 });
+    const orbMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 1.1, metalness: 0.4, roughness: 0.1 });
+
+    // Extended 6-Passage Sovereign Course (x = 0 .. 572 = 24.6s @ 23.2 m/s!)
+    const loomGears = [];
+    const loomShuttles = [];
+    const shockwaves = [];
+    const LEVEL_END_X = 572.0;
+
+    (function buildCosmicLoomEnvironment() {
+      const pillarColors = [0x2dd4bf, 0xfbbf24, 0xd946ef, 0xf43f5e, 0x38bdf8];
+      for (let x = -12; x <= 610; x += 10) {
+        const colHex = pillarColors[Math.abs(Math.floor(x / 10)) % pillarColors.length];
+
+        // Multi-tiered Cathedral Buttresses & Neon Arches (z = -9.5 and z = -17)
+        const pHeight = 20 + (Math.abs(x * 7) % 12);
+        const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.95, pHeight, 8), obsidianMat);
+        pillar.position.set(x, pHeight * 0.5 - 5.5, -11.5);
+        scene.add(pillar);
+
+        const inlay = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.18, 0.18, pHeight - 1.0, 8),
+          new THREE.MeshBasicMaterial({ color: colHex })
+        );
+        inlay.position.set(x, pillar.position.y, -10.55);
+        scene.add(inlay);
+
+        if (x % 20 === 0) {
+          const arch = new THREE.Mesh(
+            new THREE.TorusGeometry(9.5, 0.22, 10, 36, Math.PI),
+            new THREE.MeshStandardMaterial({ color: colHex, emissive: colHex, emissiveIntensity: 0.65, metalness: 0.85, roughness: 0.18 })
+          );
+          arch.position.set(x + 5, 2.5, -9.0);
+          scene.add(arch);
+
+          // Revolving Engraved Gold Astrolabe Gears
+          const gearGrp = new THREE.Group();
+          gearGrp.position.set(x + 4, 6.2 + (x % 40 === 0 ? 2.4 : -1.4), -16.5);
+          const ringOuter = new THREE.Mesh(new THREE.TorusGeometry(4.6, 0.30, 14, 40), goldMat);
+          const ringInner = new THREE.Mesh(new THREE.TorusGeometry(2.8, 0.20, 12, 32), ivoryTopMat);
+          gearGrp.add(ringOuter, ringInner);
+          for (let sp = 0; sp < 8; sp++) {
+            const spoke = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 9.0, 8), goldMat);
+            spoke.rotation.z = (sp * Math.PI) / 8;
+            gearGrp.add(spoke);
+          }
+          scene.add(gearGrp);
+          loomGears.push(gearGrp);
+        }
+
+        if (x >= 20 && x <= 560 && x % 14 === 0) {
+          const shuttle = new THREE.Mesh(
+            new THREE.OctahedronGeometry(1.15, 1),
+            new THREE.MeshStandardMaterial({ color: colHex, emissive: colHex, emissiveIntensity: 0.72, metalness: 0.85, roughness: 0.15 })
+          );
+          shuttle.scale.set(0.7, 2.1, 0.7);
+          shuttle.position.set(x, 5.0, -6.2);
+          scene.add(shuttle);
+          loomShuttles.push({ mesh: shuttle, baseY: 5.0, phase: x * 0.18 });
+        }
+      }
+
+      // Luminous Sub-Floor Cyber Grid & Obsidian-Gold Track
+      const subGrid = new THREE.GridHelper(680, 136, 0x00f2fe, 0x3b0764);
+      subGrid.position.set(300, -2.4, 0);
+      scene.add(subGrid);
+
+      const baseDeck = new THREE.Mesh(new THREE.BoxGeometry(660, 2.0, 4.6), obsidianMat);
+      baseDeck.position.set(300, -1.0, 0);
+      scene.add(baseDeck);
+
+      const goldRail = new THREE.Mesh(new THREE.BoxGeometry(660, 0.18, 4.8), goldMat);
+      goldRail.position.set(300, -0.04, 0);
+      scene.add(goldRail);
+    })();
+
+    // =========================================================================
+    // 3. SIX CONTRASTING LEVEL PASSAGES (572m = 24.6s NON-STOP ACTION!)
+    // =========================================================================
+    const platforms = [];
+    const hazards = [];
+    const jumpOrbs = [];
+    const portals = [];
+
+    function addPlatform(x, yTop, w, h = 1.1) {
+      const grp = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, 2.4), obsidianMat);
+      body.position.set(x, yTop - h * 0.5, 0);
+      const cap = new THREE.Mesh(new THREE.BoxGeometry(w + 0.12, 0.20, 2.56), ivoryTopMat);
+      cap.position.set(x, yTop - 0.06, 0);
+      const trim = new THREE.Mesh(new THREE.BoxGeometry(w - 0.15, 0.14, 2.60), goldMat);
+      trim.position.set(x, yTop - h + 0.14, 0);
+      const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.32, 0), goldMat);
+      crystal.position.set(x, yTop - h * 0.5, 1.28);
+      grp.add(body, cap, trim, crystal);
+      scene.add(grp);
+      platforms.push({ xMin: x - w * 0.5, xMax: x + w * 0.5, yBottom: yTop - h, yTop: yTop });
+    }
+
+    function addSpike(x, yBase, invert = false) {
+      const grp = new THREE.Group();
+      const cone = new THREE.Mesh(new THREE.ConeGeometry(0.48, 1.12, 6), spikeMat);
+      const baseRing = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.07, 8, 16), goldMat);
+      baseRing.rotation.x = Math.PI / 2;
+      baseRing.position.y = -0.50;
+      grp.add(cone, baseRing);
+      if (invert) {
+        grp.rotation.x = Math.PI;
+        grp.position.set(x, yBase - 0.54, 0);
+        hazards.push({ x: x, y: yBase - 0.54, hw: 0.24, hh: 0.36 });
+      } else {
+        grp.position.set(x, yBase + 0.54, 0);
+        hazards.push({ x: x, y: yBase + 0.44, hw: 0.24, hh: 0.36 });
+      }
+      scene.add(grp);
+    }
+
+    function addOrb(x, y) {
+      const grp = new THREE.Group();
+      grp.position.set(x, y, 0);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.58, 0.12, 12, 28), orbMat);
+      const core = new THREE.Mesh(new THREE.OctahedronGeometry(0.34, 1), goldMat);
+      grp.add(ring, core);
+      scene.add(grp);
+      jumpOrbs.push({ x: x, y: y, mesh: grp, usedInJump: false });
+    }
+
+    function addModePortal(x, y, targetMode, colorHex) {
+      const grp = new THREE.Group();
+      grp.position.set(x, y, 0);
+      const pMat = new THREE.MeshStandardMaterial({ color: colorHex, emissive: colorHex, emissiveIntensity: 1.05, metalness: 0.75, roughness: 0.12 });
+      const outer = new THREE.Mesh(new THREE.TorusGeometry(2.3, 0.22, 14, 36), pMat);
+      outer.rotation.y = Math.PI / 2;
+      const inner = new THREE.Mesh(new THREE.TorusGeometry(1.65, 0.12, 12, 32), goldMat);
+      inner.rotation.y = Math.PI / 2;
+      grp.add(outer, inner);
+      scene.add(grp);
+      portals.push({ x: x, y: y, mode: targetMode, mesh: grp, colorHex: colorHex, triggered: false });
+    }
+
+    function spawnShockwave(x, y, colorHex, scaleTarget = 3.2) {
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(0.45, 0.09, 10, 28),
+        new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 0.92 })
+      );
+      ring.position.set(x, y, 0.2);
+      scene.add(ring);
+      shockwaves.push({ mesh: ring, life: 1.0, scaleTarget });
+    }
+
+    // Helper to build sight-readable Cube staircase + orb sections
+    function buildCubeSection(startX) {
+      addSpike(startX + 12.0, 0.0);
+      addPlatform(startX + 20.5, 1.5, 5.5, 1.5);
+      addPlatform(startX + 28.5, 2.9, 5.5, 1.4);
+      addSpike(startX + 35.0, 0.0);
+      addOrb(startX + 36.0, 2.6);
+      addPlatform(startX + 43.0, 2.3, 6.5, 2.3);
+      addSpike(startX + 50.5, 0.0);
+      addOrb(startX + 51.2, 2.5);
+      addPlatform(startX + 58.5, 3.1, 7.0, 1.3);
+      addSpike(startX + 66.0, 0.0);
+    }
+
+    // PASSAGE 1: THRESHOLD CUBE (0 .. 76)
+    buildCubeSection(4.0);
+
+    // PASSAGE 2: EMERALD SHIP CORRIDOR (76 .. 168)
+    addModePortal(76.0, 3.4, 'ship', 0x10b981);
+    for (let sx = 88; sx <= 158; sx += 14) {
+      const gateY = sx % 28 === 0 ? 2.3 : 4.3;
+      addPlatform(sx, gateY, 4.8, 1.2);
+      addPlatform(sx, gateY + 6.4, 4.8, 1.4);
+      addSpike(sx, gateY, false);
+      addSpike(sx, gateY + 5.0, true);
+    }
+
+    // PASSAGE 3: ULTRAVIOLET WAVE TUNNEL (168 .. 256)
+    addModePortal(168.0, 4.2, 'wave', 0xd946ef);
+    for (let wx = 178; wx <= 248; wx += 10) {
+      const lowH = wx % 20 === 0 ? 1.8 : 3.3;
+      addPlatform(wx, lowH, 3.8, lowH);
+      addPlatform(wx, lowH + 5.6, 3.8, 1.4);
+    }
+
+    // PASSAGE 4: GOLDEN ASTROLABE CUBE VAULT (256 .. 346)
+    addModePortal(256.0, 3.2, 'cube', 0xfbbf24);
+    buildCubeSection(262.0);
+
+    // PASSAGE 5: SOLAR HYPER-SHIP & WAVE DUAL SPIRE (346 .. 468)
+    addModePortal(346.0, 3.6, 'ship', 0x00f2fe);
+    for (let sx = 358; sx <= 406; sx += 16) {
+      const gateY = sx % 32 === 0 ? 2.5 : 4.4;
+      addPlatform(sx, gateY, 5.0, 1.2);
+      addPlatform(sx, gateY + 6.4, 5.0, 1.4);
+      addSpike(sx, gateY, false);
+    }
+    addModePortal(416.0, 4.2, 'wave', 0xf43f5e);
+    for (let wx = 426; wx <= 458; wx += 8) {
+      const lowH = wx % 16 === 0 ? 1.9 : 3.1;
+      addPlatform(wx, lowH, 3.6, lowH);
+      addPlatform(wx, lowH + 5.7, 3.6, 1.4);
+    }
+
+    // PASSAGE 6: MECHANICAL ALL-SEEING EYE SANCTUM FINALE (468 .. 572)
+    addModePortal(468.0, 3.2, 'cube', 0x2dd4bf);
+    buildCubeSection(476.0);
+    addPlatform(554.0, 2.4, 8.0, 2.4);
+    addPlatform(565.0, 3.6, 8.0, 1.5);
+
+    const eyeGuardian = new THREE.Group();
+    eyeGuardian.position.set(LEVEL_END_X, 4.6, 0);
+    scene.add(eyeGuardian);
+
+    const eyeRings = [];
+    const irisColors = [0xf43f5e, 0xfbbf24, 0x10b981, 0x00f2fe, 0xd946ef];
+    for (let r = 0; r < 5; r++) {
+      const irMat = new THREE.MeshStandardMaterial({
+        color: irisColors[r],
+        emissive: irisColors[r],
+        emissiveIntensity: 0.92,
+        metalness: 0.85,
+        roughness: 0.14
+      });
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(4.2 - r * 0.52, 0.18, 16, 44), irMat);
+      ring.rotation.y = Math.PI / 2;
+      eyeGuardian.add(ring);
+      eyeRings.push(ring);
+    }
+    const telegraphBeam = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.20, 0.20, 48, 12),
+      new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.38 })
+    );
+    telegraphBeam.rotation.z = Math.PI / 2;
+    telegraphBeam.position.set(-24, 2.0, -1.2);
+    eyeGuardian.add(telegraphBeam);
+
+    // =========================================================================
+    // 4. SCULPTED 3D PLAYER RIG, RIBBON TRAIL & PHYSICS CONTROLLER
+    // =========================================================================
+    const playerGroup = new THREE.Group();
+    scene.add(playerGroup);
+
+    const cubeMesh = new THREE.Group();
+    const cubeCore = new THREE.Mesh(new THREE.BoxGeometry(0.94, 0.94, 0.94), goldMat);
+    const cubeInlay = new THREE.Mesh(new THREE.OctahedronGeometry(0.62, 1), ivoryTopMat);
+    const cubeHalo = new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.06, 10, 24), orbMat);
+    cubeMesh.add(cubeCore, cubeInlay, cubeHalo);
+    playerGroup.add(cubeMesh);
+
+    const shipMesh = new THREE.Group();
+    const shipHull = new THREE.Mesh(new THREE.ConeGeometry(0.56, 1.48, 8), ivoryTopMat);
+    shipHull.rotation.z = -Math.PI / 2;
+    const shipWings = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.12, 1.55), goldMat);
+    const shipThruster = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.36, 0.42, 12), spikeMat);
+    shipThruster.rotation.z = Math.PI / 2;
+    shipThruster.position.x = -0.78;
+    shipMesh.add(shipHull, shipWings, shipThruster);
+    shipMesh.visible = false;
+    playerGroup.add(shipMesh);
+
+    const trailParticles = [];
+    const trailGeo = new THREE.OctahedronGeometry(0.20, 0);
+
+    function spawnTrailMote(x, y, colorHex) {
+      const m = new THREE.Mesh(trailGeo, new THREE.MeshBasicMaterial({ color: colorHex }));
+      m.position.set(x - 0.50, y + (Math.random() - 0.5) * 0.28, (Math.random() - 0.5) * 0.24);
+      scene.add(m);
+      trailParticles.push({ mesh: m, life: 22 });
+    }
+
+    const state = {
+      x: 4.5,
+      y: 0.5,
+      vy: 0.0,
+      rotZ: 0.0,
+      mode: 'cube',
+      onGround: true,
+      inputHeld: false,
+      jumpJustPressed: false,
+      attempts: 1,
+      practiceMode: false,
+      autoPilot: IS_PROMO_MODE,
+      checkpoint: null,
+      completed: false
+    };
+
+    const SPEED_X = 23.2;
+
+    function setModeVisuals(m) {
+      state.mode = m;
+      cubeMesh.visible = (m === 'cube');
+      shipMesh.visible = (m !== 'cube');
+      shipMesh.scale.set(m === 'wave' ? 0.72 : 1.0, m === 'wave' ? 0.72 : 1.0, 1.0);
+    }
+
+    function resetRun(clearVictory = false) {
+      if (state.practiceMode && state.checkpoint && !clearVictory) {
+        state.x = state.checkpoint.x;
+        state.y = state.checkpoint.y;
+        state.vy = 0;
+        setModeVisuals(state.checkpoint.mode);
+      } else {
+        state.x = 4.5;
+        state.y = 0.5;
+        state.vy = 0.0;
+        state.rotZ = 0.0;
+        setModeVisuals('cube');
+      }
+      state.completed = false;
+      jumpOrbs.forEach(o => { o.usedInJump = false; });
+      portals.forEach(p => { p.triggered = false; });
+    }
+
+    function togglePractice() {
+      state.practiceMode = !state.practiceMode;
+      document.getElementById('btn-practice').classList.toggle('active', state.practiceMode);
+    }
+
+    function toggleAutoPilot() {
+      state.autoPilot = !state.autoPilot;
+      document.getElementById('btn-autopilot').classList.toggle('active', state.autoPilot);
+    }
+
+    window.addEventListener('keydown', (e) => {
+      ensureAudio();
+      if (['Space', 'KeyW', 'ArrowUp'].includes(e.code)) {
+        if (!state.inputHeld) state.jumpJustPressed = true;
+        state.inputHeld = true;
+      } else if (e.code === 'KeyP') {
+        togglePractice();
+      } else if (e.code === 'KeyA') {
+        toggleAutoPilot();
+      } else if (e.code === 'KeyR') {
+        state.attempts++;
+        resetRun(true);
+      } else if (e.code === 'KeyZ' && state.practiceMode) {
+        state.checkpoint = { x: state.x, y: state.y, mode: state.mode };
+      } else if (e.code === 'KeyX') {
+        state.checkpoint = null;
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (['Space', 'KeyW', 'ArrowUp'].includes(e.code)) state.inputHeld = false;
+    });
+
+    window.addEventListener('pointerdown', () => {
+      ensureAudio();
+      state.jumpJustPressed = true;
+      state.inputHeld = true;
+    });
+    window.addEventListener('pointerup', () => { state.inputHeld = false; });
+
+    function evaluateAutoPilotInput() {
+      if (state.mode === 'cube') {
+        for (const orb of jumpOrbs) {
+          if (!orb.usedInJump && Math.abs(state.x - orb.x) < 1.05 && Math.abs(state.y - orb.y) < 1.75) {
+            state.jumpJustPressed = true;
+            return true;
+          }
+        }
+        for (const hz of hazards) {
+          const dx = hz.x - state.x;
+          if (dx > 0.2 && dx < 2.9 && Math.abs(hz.y - state.y) < 1.2) {
+            return true;
+          }
+        }
+        for (const pl of platforms) {
+          const dx = pl.xMin - state.x;
+          if (dx > 0.1 && dx < 2.8 && pl.yTop > state.y + 0.2 && pl.yTop < state.y + 2.6) {
+            return true;
+          }
+        }
+        return false;
+      } else if (state.mode === 'ship') {
+        const targetY = 5.3 + Math.sin(state.x * 0.14) * 1.15;
+        return state.y < targetY;
+      } else {
+        const targetWaveY = 4.6 + Math.sin(state.x * 0.25) * 1.15;
+        return state.y < targetWaveY;
+      }
+    }
+
+    // =========================================================================
+    // 5. MAIN 60FPS / 30FPS FIXED-STEP SIMULATION & DYNAMIC 3D CAMERA
+    // =========================================================================
+    const clock = new THREE.Clock();
+    function animate() {
+      requestAnimationFrame(animate);
+      const dt = Math.min(0.04, clock.getDelta());
+      const elapsed = clock.getElapsedTime();
+
+      const asp = window.innerWidth / Math.max(1, window.innerHeight);
+      const targetFov = asp < 1.0 ? 70 : 52;
+      if (Math.abs(camera.fov - targetFov) > 0.1) {
+        camera.fov = targetFov;
+        camera.updateProjectionMatrix();
+      }
+
+      const beatIdx = Math.floor(elapsed / BEAT_SEC);
+      if (beatIdx !== lastBeatIndex) {
+        lastBeatIndex = beatIdx;
+        playBeatPulse(beatIdx);
+      }
+
+      loomGears.forEach((g, idx) => {
+        g.rotation.z += dt * (idx % 2 === 0 ? 0.65 : -0.55);
+      });
+      loomShuttles.forEach(sh => {
+        sh.mesh.position.y = sh.baseY + Math.sin(elapsed * 3.5 + sh.phase) * 1.75;
+        sh.mesh.rotation.y += dt * 2.1;
+      });
+      eyeRings.forEach((er, idx) => {
+        er.rotation.x += dt * (idx % 2 === 0 ? 1.5 : -1.9);
+        const dilate = state.x > 530 ? 1.0 + Math.min(0.45, (state.x - 530) * 0.015) : 1.0;
+        er.scale.setScalar(dilate);
+      });
+      telegraphBeam.position.y = 4.2 + Math.sin(elapsed * 3.8) * 1.8;
+      telegraphBeam.material.opacity = 0.25 + 0.28 * Math.abs(Math.sin(elapsed * 6.0));
+
+      const hold = state.autoPilot ? evaluateAutoPilotInput() : state.inputHeld;
+      state.x += SPEED_X * dt;
+
+      for (const p of portals) {
+        p.mesh.rotation.x += dt * 2.4;
+        if (!p.triggered && Math.abs(state.x - p.x) < 0.95) {
+          p.triggered = true;
+          setModeVisuals(p.mode);
+          spawnShockwave(p.x, p.y, p.colorHex, 4.2);
+        }
+      }
+
+      if (state.mode === 'cube') {
+        if (state.jumpJustPressed || (state.autoPilot && hold)) {
+          for (const orb of jumpOrbs) {
+            if (!orb.usedInJump && Math.abs(state.x - orb.x) < 1.25 && Math.abs(state.y - orb.y) < 1.75) {
+              orb.usedInJump = true;
+              state.vy = 13.8;
+              state.onGround = false;
+              spawnShockwave(orb.x, orb.y, 0x00f2fe, 2.8);
+              break;
+            }
+          }
+        }
+        if (state.onGround && hold) {
+          state.vy = 13.6;
+          state.onGround = false;
+          spawnShockwave(state.x, state.y, 0xfbbf24, 2.2);
+        }
+        state.vy -= 38.0 * dt;
+        state.y += state.vy * dt;
+        state.onGround = false;
+
+        if (state.y <= 0.48) {
+          state.y = 0.48;
+          state.vy = 0;
+          state.onGround = true;
+        }
+        for (const pl of platforms) {
+          if (state.x + 0.38 > pl.xMin && state.x - 0.38 < pl.xMax) {
+            if (state.vy <= 0 && state.y - 0.48 <= pl.yTop + 0.28 && state.y - 0.48 >= pl.yTop - 0.65) {
+              state.y = pl.yTop + 0.48;
+              state.vy = 0;
+              state.onGround = true;
+            }
+          }
+        }
+
+        if (state.onGround) {
+          const snapped = Math.round(state.rotZ / (Math.PI / 2)) * (Math.PI / 2);
+          state.rotZ += (snapped - state.rotZ) * 0.35;
+        } else {
+          state.rotZ -= dt * 7.4;
+        }
+      } else if (state.mode === 'ship') {
+        state.vy += (hold ? 34.0 : -28.0) * dt;
+        state.vy = Math.max(-11.0, Math.min(11.0, state.vy));
+        state.y = Math.max(0.8, Math.min(8.8, state.y + state.vy * dt));
+        state.rotZ = state.vy * 0.055;
+      } else if (state.mode === 'wave') {
+        state.vy = hold ? 11.5 : -11.5;
+        state.y = Math.max(0.8, Math.min(8.6, state.y + state.vy * dt));
+        state.rotZ = hold ? 0.62 : -0.62;
+      }
+
+      state.jumpJustPressed = false;
+
+      if (!state.autoPilot) {
+        for (const hz of hazards) {
+          if (Math.abs(state.x - hz.x) < (0.34 + hz.hw) && Math.abs(state.y - hz.y) < (0.34 + hz.hh)) {
+            state.attempts++;
+            resetRun(false);
+            break;
+          }
+        }
+      }
+
+      if (state.x >= LEVEL_END_X + 6.0) {
+        resetRun(true);
+      }
+
+      playerGroup.position.set(state.x, state.y, 0);
+      playerGroup.rotation.z = state.rotZ;
+      playerGlow.position.set(state.x, state.y + 0.9, 2.4);
+      skyDome.position.set(state.x, 4.0, 0);
+      skyDome.rotation.y = elapsed * 0.06;
+
+      spawnTrailMote(state.x, state.y, state.mode === 'cube' ? 0x2dd4bf : (state.mode === 'ship' ? 0x10b981 : 0xd946ef));
+      for (let i = trailParticles.length - 1; i >= 0; i--) {
+        const tp = trailParticles[i];
+        tp.life--;
+        tp.mesh.scale.multiplyScalar(0.89);
+        if (tp.life <= 0) {
+          scene.remove(tp.mesh);
+          trailParticles.splice(i, 1);
+        }
+      }
+      for (let i = shockwaves.length - 1; i >= 0; i--) {
+        const sw = shockwaves[i];
+        sw.life -= dt * 2.6;
+        const prog = 1.0 - Math.max(0, sw.life);
+        sw.mesh.scale.setScalar(1.0 + prog * sw.scaleTarget);
+        sw.mesh.material.opacity = Math.max(0, sw.life * 0.9);
+        if (sw.life <= 0) {
+          scene.remove(sw.mesh);
+          shockwaves.splice(i, 1);
+        }
+      }
+
+      // Dynamic 3D Angled Perspective Chase Camera (shows true 3D depth of platforms, arches & astrolabes!)
+      const passageIdx = Math.min(5, Math.floor((state.x / LEVEL_END_X) * 6));
+      const baseZ = asp < 1.0 ? 15.2 : 12.6;
+      const camZ = baseZ + Math.sin(elapsed * 1.1) * 1.4;
+      const camY = 3.1 + state.y * 0.48 + Math.sin(elapsed * 1.7) * 0.42;
+      const camLeadX = state.x - 2.6 + Math.cos(elapsed * 0.9) * 1.6;
+      camera.position.lerp(new THREE.Vector3(camLeadX, camY, camZ), 0.20);
+      camera.lookAt(state.x + 3.8, 2.2 + state.y * 0.38, -2.8);
+
+      if (!IS_PROMO_MODE) {
+        const pct = Math.min(100, Math.max(0, Math.round((state.x / LEVEL_END_X) * 100)));
+        document.getElementById('progress-fill').style.width = pct + '%';
+        document.getElementById('progress-pct').textContent = pct + '%';
+        const pNames = [
+          'PASSAGE I: THRESHOLD',
+          'PASSAGE II: SHUTTLE',
+          'PASSAGE III: EYE CHAMBER',
+          'PASSAGE IV: ASTROLABE VAULT',
+          'PASSAGE V: SOLAR HYPER-SPIRE',
+          'PASSAGE VI: EYE GATEWAY'
+        ];
+        document.getElementById('passage-label').textContent = `${pNames[passageIdx]} • ${state.mode.toUpperCase()} MODE • ATTEMPT ${state.attempts}`;
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      const a = window.innerWidth / Math.max(1, window.innerHeight);
+      camera.fov = a < 1.0 ? 70 : 52;
+      camera.aspect = a;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    resetRun(true);
+    animate();
+  </script>
+
+<div class="nsp-hub-return-bar">
+  <a class="nsp-hub-return" href="/games/" target="_top">← 3D Games Hub</a>
+  <a class="nsp-hub-return" href="/arcade/" target="_top">Arcade (60)</a>
+</div>
+
+</body>
+</html>

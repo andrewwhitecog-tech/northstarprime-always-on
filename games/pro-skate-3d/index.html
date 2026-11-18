@@ -1,0 +1,1627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="nsp-analytics" content="none">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="author" content="Andrew White" />
+  <title>NorthStar Plaza: 3D Free-Roam Skate &amp; Mural — NorthStar IDG</title>
+  <script src="../three.min.js"></script>
+  <style>
+    :root {
+      --cyan: #2cf2ff;
+      --magenta: #ff2a85;
+      --gold: #ffd24c;
+      --lime: #44ff99;
+      --copper: #eb8c46;
+      --ink: rgba(9, 11, 22, 0.80);
+      --text: #f8faff;
+      --muted: #9aa8c2;
+    }
+    * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      overflow: hidden; background: #090714; color: var(--text);
+      font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+    }
+    #skate-canvas {
+      position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 1;
+      touch-action: none;
+    }
+    .hud-shell {
+      position: fixed; inset: 0; z-index: 10; pointer-events: none;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      grid-template-columns: 295px 1fr 280px;
+      padding: 10px 14px; gap: 10px;
+    }
+    .neon-card {
+      pointer-events: auto;
+      background: linear-gradient(160deg, rgba(14, 16, 32, 0.84), rgba(8, 9, 19, 0.88));
+      border: 1px solid rgba(44, 242, 255, 0.36);
+      clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.6), inset 0 0 22px rgba(255, 42, 133, 0.08);
+      backdrop-filter: blur(8px);
+    }
+    #top-bar {
+      grid-column: 1 / 4; grid-row: 1;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 7px 16px; gap: 12px; flex-wrap: wrap;
+    }
+    .brand-neon {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .ns-tag {
+      padding: 4px 10px; font-weight: 900; font-style: italic; font-size: 0.82rem;
+      letter-spacing: 0.08em; color: #060812;
+      background: linear-gradient(90deg, var(--cyan), var(--gold), var(--magenta));
+      clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+    }
+    .brand-neon h1 {
+      margin: 0; font-size: 1.02rem; font-weight: 900; letter-spacing: 0.07em;
+      text-transform: uppercase; font-style: italic;
+      text-shadow: 0 0 14px rgba(44, 242, 255, 0.6), 0 0 26px rgba(255, 42, 133, 0.4);
+    }
+    .score-cluster {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    .metric-pill {
+      padding: 4px 11px; border: 1px solid rgba(255, 210, 76, 0.38);
+      background: rgba(255, 210, 76, 0.08);
+      clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+      font-size: 0.75rem; font-weight: 800; letter-spacing: 0.05em;
+    }
+    .metric-pill b { color: var(--gold); font-size: 0.92rem; }
+    .metric-pill.cyan { border-color: rgba(44, 242, 255, 0.45); background: rgba(44, 242, 255, 0.09); }
+    .metric-pill.cyan b { color: var(--cyan); }
+
+    #career-panel {
+      grid-column: 1; grid-row: 2;
+      padding: 10px 12px; display: flex; flex-direction: column; gap: 6px;
+      max-height: calc(100vh - 175px); overflow-y: auto;
+    }
+    #shop-panel {
+      grid-column: 3; grid-row: 2;
+      padding: 10px 12px; display: flex; flex-direction: column; gap: 7px;
+      max-height: calc(100vh - 175px); overflow-y: auto;
+    }
+    .p-head {
+      font-size: 0.75rem; font-weight: 900; font-style: italic; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--cyan);
+      border-bottom: 1px solid rgba(44, 242, 255, 0.25); padding-bottom: 4px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .obj-item {
+      display: flex; align-items: center; justify-content: space-between; gap: 6px;
+      font-size: 0.71rem; padding: 5px 7px;
+      background: rgba(255, 255, 255, 0.04);
+      border-left: 3px solid rgba(255, 255, 255, 0.2);
+    }
+    .obj-item.done {
+      border-left-color: var(--lime);
+      background: rgba(68, 255, 153, 0.11);
+      color: #d8ffea;
+    }
+    .skate-letters {
+      display: flex; gap: 5px; justify-content: center; margin: 3px 0;
+    }
+    .sk-char {
+      width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
+      font-weight: 900; font-style: italic; font-size: 0.9rem;
+      border: 1px solid rgba(255, 210, 76, 0.35); color: rgba(255, 255, 255, 0.24);
+      background: rgba(0, 0, 0, 0.35);
+    }
+    .sk-char.lit {
+      color: #100c02; background: var(--gold);
+      box-shadow: 0 0 12px rgba(255, 210, 76, 0.75);
+    }
+
+    .s-btn {
+      cursor: pointer; font-family: inherit; font-weight: 800; font-size: 0.7rem;
+      letter-spacing: 0.05em; text-transform: uppercase;
+      padding: 6px 9px; color: var(--text);
+      background: linear-gradient(180deg, rgba(35, 42, 74, 0.8), rgba(16, 18, 36, 0.92));
+      border: 1px solid rgba(44, 242, 255, 0.4);
+      clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+      transition: all 0.14s ease;
+    }
+    .s-btn:hover { border-color: var(--magenta); box-shadow: 0 0 12px rgba(255, 42, 133, 0.45); }
+    .s-btn.active {
+      background: linear-gradient(90deg, rgba(255, 42, 133, 0.45), rgba(44, 242, 255, 0.35));
+      border-color: var(--gold);
+    }
+
+    /* Center Live Combo & Balance Meter Overlay */
+    #combo-stage {
+      grid-column: 2; grid-row: 2;
+      display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
+      padding-bottom: 12px; pointer-events: none;
+    }
+    #balance-wrap {
+      width: 220px; height: 14px; margin-bottom: 8px; display: none;
+      border: 1px solid var(--gold); background: rgba(6, 8, 18, 0.82);
+      position: relative; clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+    }
+    #balance-needle {
+      position: absolute; top: 0; bottom: 0; width: 8px; left: 50%;
+      background: var(--lime); box-shadow: 0 0 10px var(--lime);
+      transform: translateX(-50%);
+    }
+    #combo-banner {
+      text-align: center; min-height: 54px;
+    }
+    #combo-pts {
+      font-size: 1.65rem; font-weight: 900; font-style: italic;
+      color: var(--gold);
+      text-shadow: 0 0 16px rgba(255, 210, 76, 0.7), 0 2px 0 #000;
+    }
+    #combo-chain {
+      font-size: 0.84rem; font-weight: 800; color: var(--cyan);
+      text-shadow: 0 0 10px rgba(44, 242, 255, 0.65), 0 1px 2px #000;
+      max-width: 540px;
+    }
+
+    #bottom-controls {
+      grid-column: 1 / 4; grid-row: 3;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 7px 14px; gap: 8px; flex-wrap: wrap;
+    }
+    .key-legend {
+      font-size: 0.71rem; color: #d8e3f8; display: flex; gap: 10px; flex-wrap: wrap;
+    }
+    .key-legend span b { color: var(--gold); }
+
+    #touch-pad {
+      display: none; gap: 6px; width: 100%; justify-content: space-between; pointer-events: auto;
+    }
+    .t-pad-cluster { display: flex; gap: 5px; flex-wrap: wrap; }
+
+    @media (max-width: 900px) {
+      .hud-shell {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto 1fr auto;
+        padding: 6px; gap: 6px;
+      }
+      #top-bar { grid-column: 1; padding: 5px 8px; }
+      .brand-neon h1 { font-size: 0.82rem; }
+      #career-panel {
+        grid-column: 1; grid-row: 2; max-height: 98px; padding: 6px 8px;
+      }
+      #shop-panel { display: none; }
+      #shop-panel.mobile-open {
+        display: flex; position: fixed; top: 56px; left: 6px; right: 6px; z-index: 30; max-height: 58vh;
+      }
+      #combo-stage { grid-column: 1; grid-row: 3; }
+      #bottom-controls { grid-column: 1; grid-row: 4; padding: 6px 8px; }
+      .key-legend { display: none; }
+      #touch-pad { display: flex; }
+    }
+  </style>
+
+<style data-nsp-vorath="games-zero-flat">
+@media (forced-colors: none) {
+  button, [role="button"], select, a, summary {
+    border-radius: 0 !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-width: 6px 12px !important;
+    border-image: url("/warband/art/vorath_btn_obsidian.webp") 44 66 fill / 6px 12px stretch !important;
+    background-image: none !important;
+    background-color: transparent !important;
+    color: #fef3c7 !important;
+    text-shadow: 0 1px 3px #000 !important;
+    box-shadow: none !important;
+  }
+  button.active, button.primary, .play-btn, .launch-btn, a.nsp-hub-return {
+    border-image-source: url("/warband/art/vorath_btn_primary.webp") !important;
+    color: #fffdf5 !important;
+  }
+  input[type="search"], input[type="text"], input[type="number"], textarea {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    border-radius: 0 !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-width: 7px 14px !important;
+    border-image: url("/warband/art/vorath_stat_plaque_v01.webp") 18 36 fill / 7px 14px stretch !important;
+    background: none !important;
+    color: #fef3c7 !important;
+  }
+  input[type="range"], input[type="checkbox"], input[type="radio"] {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    border-radius: 0 !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-width: 4px 8px !important;
+    border-image: url("/warband/art/vorath_stat_plaque_v01.webp") 18 36 fill / 4px 8px stretch !important;
+    background: none !important;
+  }
+  .cw-pill, .xp-pill, .metric-pill, .ns-tag, .brand-pill, .meter-pill, .tier-crest, .star-crest,
+  .cab-medal, .cab-stats-row, .stat-chip, .dmd-cell, .part-chip, #chrono-box {
+    border-radius: 0 !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-width: 5px 10px !important;
+    border-image: url("/warband/art/vorath_stat_plaque_v01.webp") 18 36 fill / 5px 10px stretch !important;
+    background: none !important;
+    clip-path: none !important;
+    color: #fef3c7 !important;
+  }
+}
+.nsp-hub-return-bar {
+  position: fixed;
+  bottom: 10px;
+  right: 12px;
+  z-index: 9999;
+  display: flex;
+  gap: 6px;
+}
+.nsp-hub-return {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 3px 10px;
+  font: 700 12px/1.2 system-ui, sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+</style>
+
+</head>
+<body>
+  <div id="skate-canvas"></div>
+
+  <div class="hud-shell">
+    <header id="top-bar" class="neon-card">
+      <div class="brand-neon">
+        <span class="ns-tag">NORTHSTAR PLAZA</span>
+        <h1>3D Free-Roam Skate &amp; Mural</h1>
+      </div>
+      <div class="score-cluster">
+        <div class="metric-pill">SCORE <b id="hud-score">0</b></div>
+        <div class="metric-pill cyan">BEST <b id="hud-best">0</b></div>
+        <div class="metric-pill">TIME <b id="hud-timer">02:00</b></div>
+        <div class="metric-pill cyan">CRED <b id="hud-cred">$250</b></div>
+        <button class="s-btn" id="btn-mode-toggle">MODE: CAREER 2:00</button>
+        <button class="s-btn" id="btn-shop-mobile">SKATE SHOP</button>
+      </div>
+    </header>
+
+    <!-- Left: 8-Objective Career Tracker -->
+    <aside id="career-panel" class="neon-card">
+      <div class="p-head">
+        <span>8 Plaza Career Goals</span>
+        <span id="goals-count">0 / 8</span>
+      </div>
+      <div class="skate-letters" id="skate-letters">
+        <div class="sk-char" data-l="S">S</div>
+        <div class="sk-char" data-l="K">K</div>
+        <div class="sk-char" data-l="A">A</div>
+        <div class="sk-char" data-l="T">T</div>
+        <div class="sk-char" data-l="E">E</div>
+      </div>
+      <div id="obj-list" style="display:flex;flex-direction:column;gap:4px;"></div>
+    </aside>
+
+    <!-- Center: Live Balance Meter & Trick Combo Readout -->
+    <main id="combo-stage">
+      <div id="balance-wrap"><div id="balance-needle"></div></div>
+      <div id="combo-banner">
+        <div id="combo-pts"></div>
+        <div id="combo-chain"></div>
+      </div>
+    </main>
+
+    <!-- Right: Skate Shop Customizer & Stat Upgrades -->
+    <aside id="shop-panel" class="neon-card">
+      <div class="p-head">
+        <span>Vinyl &amp; Skate Shop</span>
+        <span style="color:var(--gold)" id="shop-cred">$250</span>
+      </div>
+      <div style="font-size:0.68rem;color:var(--muted);">Custom 3D Deck Graphic:</div>
+      <div id="deck-list" style="display:grid;grid-template-columns:1fr 1fr;gap:4px;"></div>
+
+      <div style="font-size:0.68rem;color:var(--muted);margin-top:4px;">Urethane Wheel Neon:</div>
+      <div id="wheel-list" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
+
+      <div class="p-head" style="margin-top:4px;"><span>Pro Stat Tuning ($120)</span></div>
+      <div id="stat-upgrades" style="display:flex;flex-direction:column;gap:4px;"></div>
+    </aside>
+
+    <!-- Bottom: Controls & Mobile Touch Rig -->
+    <footer id="bottom-controls" class="neon-card">
+      <div class="key-legend">
+        <span><b>W/A/S/D</b> Carve &amp; Balance</span>
+        <span><b>SPACE</b> Ollie</span>
+        <span><b>J</b> Kickflip / 360 Flip</span>
+        <span><b>K</b> Melon / Indy Grab</span>
+        <span><b>L</b> 50-50 / Boardslide Grind</span>
+        <span><b>C</b> Manual Link</span>
+        <span><b>R</b> Spine Transfer</span>
+        <span><b>F</b> Spray Mural</span>
+      </div>
+      <div id="touch-pad">
+        <div class="t-pad-cluster">
+          <button class="s-btn" data-hold="left">&#9664;</button>
+          <button class="s-btn" data-hold="up">PUSH</button>
+          <button class="s-btn" data-hold="right">&#9654;</button>
+        </div>
+        <div class="t-pad-cluster">
+          <button class="s-btn active" id="t-ollie">OLLIE</button>
+          <button class="s-btn" id="t-flip">FLIP</button>
+          <button class="s-btn" id="t-grind">GRIND</button>
+          <button class="s-btn" id="t-spray">SPRAY</button>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+  (function() {
+    'use strict';
+
+    const jsErrors = [];
+    window.addEventListener('error', (e) => jsErrors.push(e.message || 'error'));
+
+    // --- Procedural Skate & Street-Art WebAudio SFX ---
+    let audioCtx = null;
+    function ensureAudio() {
+      if (!audioCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) audioCtx = new AC();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    }
+    function sfx(kind) {
+      try {
+        ensureAudio();
+        if (!audioCtx) return;
+        const t = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.connect(g); g.connect(audioCtx.destination);
+        if (kind === 'ollie') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(150, t);
+          osc.frequency.exponentialRampToValueAtTime(420, t + 0.11);
+          g.gain.setValueAtTime(0.11, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+          osc.start(t); osc.stop(t + 0.12);
+        } else if (kind === 'flip') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(480, t);
+          osc.frequency.exponentialRampToValueAtTime(860, t + 0.13);
+          g.gain.setValueAtTime(0.08, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+          osc.start(t); osc.stop(t + 0.14);
+        } else if (kind === 'grind') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(240, t);
+          osc.frequency.linearRampToValueAtTime(310, t + 0.18);
+          g.gain.setValueAtTime(0.07, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 0.19);
+          osc.start(t); osc.stop(t + 0.19);
+        } else if (kind === 'spray') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(920, t);
+          osc.frequency.exponentialRampToValueAtTime(1680, t + 0.25);
+          g.gain.setValueAtTime(0.08, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 0.26);
+          osc.start(t); osc.stop(t + 0.26);
+        } else if (kind === 'bank') {
+          [523, 659, 784, 1046].forEach((f, idx) => {
+            const o2 = audioCtx.createOscillator();
+            const g2 = audioCtx.createGain();
+            o2.type = 'triangle';
+            o2.frequency.setValueAtTime(f, t + idx * 0.045);
+            g2.gain.setValueAtTime(0.07, t + idx * 0.045);
+            g2.gain.exponentialRampToValueAtTime(0.001, t + idx * 0.045 + 0.16);
+            o2.connect(g2); g2.connect(audioCtx.destination);
+            o2.start(t + idx * 0.045); o2.stop(t + idx * 0.045 + 0.16);
+          });
+        }
+      } catch (_) {}
+    }
+
+    // --- Persistent Career & Skate Shop Save State ---
+    const SAVE_KEY = 'nsp_plaza_skate_3d_20261115';
+    const DECKS = [
+      { id: 'gold_star', name: 'NorthStar Gold', c1: '#121629', c2: '#ffd24c', cost: 0 },
+      { id: 'cyber_magenta', name: 'Neon Vinyl', c1: '#230926', c2: '#ff2a85', cost: 150 },
+      { id: 'cryo_zero', name: 'Cryo 15mK', c1: '#072233', c2: '#2cf2ff', cost: 200 },
+      { id: 'vorath_prism', name: 'Prism Relic', c1: '#261d0a', c2: '#ff9436', cost: 250 },
+      { id: 'emerald_jet', name: 'Jet District', c1: '#072419', c2: '#44ff99', cost: 300 },
+      { id: 'umbral_hex', name: 'Umbral Crown', c1: '#1a0b2e', c2: '#b86bff', cost: 350 }
+    ];
+    const WHEELS = [
+      { id: 'cyan', col: 0x2cf2ff, css: '#2cf2ff' },
+      { id: 'gold', col: 0xffd24c, css: '#ffd24c' },
+      { id: 'pink', col: 0xff2a85, css: '#ff2a85' },
+      { id: 'lime', col: 0x44ff99, css: '#44ff99' },
+      { id: 'white', col: 0xf5f7ff, css: '#f5f7ff' }
+    ];
+
+    let profile = {
+      bestScore: 0,
+      cred: 320,
+      unlockedDecks: ['gold_star'],
+      activeDeck: 'gold_star',
+      activeWheel: 'cyan',
+      stats: { speed: 1, pop: 1, spin: 1, balance: 1 },
+      goalsDone: {}
+    };
+    try {
+      const saved = localStorage.getItem(SAVE_KEY);
+      if (saved) Object.assign(profile, JSON.parse(saved));
+    } catch (_) {}
+    function saveProfile() {
+      try { localStorage.setItem(SAVE_KEY, JSON.stringify(profile)); } catch (_) {}
+    }
+
+    // --- 512x512 Rain-Slick Asphalt & Brick PBR Generator ---
+    function createPlazaPBR(kind) {
+      const s = 512;
+      const alb = document.createElement('canvas'); alb.width = alb.height = s;
+      const rgh = document.createElement('canvas'); rgh.width = rgh.height = s;
+      const nrm = document.createElement('canvas'); nrm.width = nrm.height = s;
+      const actx = alb.getContext('2d'), rctx = rgh.getContext('2d'), nctx = nrm.getContext('2d');
+      const h = new Float32Array(s * s);
+
+      if (kind === 'wet_asphalt') {
+        actx.fillStyle = '#151822'; actx.fillRect(0, 0, s, s);
+        rctx.fillStyle = '#a8a8a8'; rctx.fillRect(0, 0, s, s);
+
+        // Seamless organic asphalt aggregate & subtle wet streaks
+        for (let i = 0; i < 6000; i++) {
+          const x = (i * 79 + (i % 17) * 13) % s, y = (i * 131 + (i % 23) * 7) % s;
+          const v = 18 + (i % 20);
+          actx.fillStyle = `rgb(${v},${v + 3},${v + 10})`;
+          actx.fillRect(x, y, 2, 2);
+        }
+        // Subtle architectural stone plaza tile seams & brass expansion joints
+        actx.strokeStyle = 'rgba(44, 242, 255, 0.09)';
+        actx.lineWidth = 2;
+        for (let k = 0; k < s; k += 128) {
+          actx.beginPath(); actx.moveTo(k, 0); actx.lineTo(k, s); actx.stroke();
+          actx.beginPath(); actx.moveTo(0, k); actx.lineTo(s, k); actx.stroke();
+        }
+        // Feathered organic rain-sheen zones (smooth transitions, zero polka-dots)
+        for (let i = 0; i < 18; i++) {
+          const px = (i * 137 + 40) % s, py = (i * 193 + 60) % s, pr = 95 + (i % 4) * 35;
+          const gr = rctx.createRadialGradient(px, py, 4, px, py, pr);
+          gr.addColorStop(0, 'rgba(24,24,24,0.85)');
+          gr.addColorStop(0.55, 'rgba(68,68,68,0.45)');
+          gr.addColorStop(1, 'rgba(168,168,168,0)');
+          rctx.fillStyle = gr;
+          rctx.beginPath(); rctx.arc(px, py, pr, 0, Math.PI * 2); rctx.fill();
+        }
+
+        for (let y = 0; y < s; y++) {
+          for (let x = 0; x < s; x++) {
+            const seam = (x % 128 < 2 || y % 128 < 2) ? -0.35 : 0;
+            h[y * s + x] = seam + (Math.sin(x * 0.55) * Math.cos(y * 0.55)) * 0.10;
+          }
+        }
+      } else if (kind === 'warehouse_brick') {
+        actx.fillStyle = '#362226'; actx.fillRect(0, 0, s, s);
+        rctx.fillStyle = '#b8b8b8'; rctx.fillRect(0, 0, s, s);
+        const bw = 64, bh = 32;
+        for (let y = 0; y < s; y += bh) {
+          const off = (y / bh) % 2 === 0 ? 0 : 32;
+          for (let x = 0; x < s; x += bw) {
+            const bx = (x + off) % s;
+            const r = 92 + ((x * 3 + y * 7) % 38);
+            actx.fillStyle = `rgb(${r}, ${Math.floor(r * 0.44)}, ${Math.floor(r * 0.42)})`;
+            actx.fillRect(bx + 2, y + 2, bw - 4, bh - 4);
+          }
+        }
+        for (let y = 0; y < s; y++) {
+          const off = Math.floor(y / bh) % 2 === 0 ? 0 : 32;
+          for (let x = 0; x < s; x++) {
+            const gx = (x + off) % bw, gy = y % bh;
+            h[y * s + x] = (gx < 2 || gy < 2) ? -0.6 : 0.1;
+          }
+        }
+      } else if (kind === 'concrete_ramp') {
+        actx.fillStyle = '#474e63'; actx.fillRect(0, 0, s, s);
+        rctx.fillStyle = '#787878'; rctx.fillRect(0, 0, s, s);
+        actx.strokeStyle = 'rgba(44, 242, 255, 0.28)';
+        actx.lineWidth = 6;
+        actx.strokeRect(8, 8, s - 16, s - 16);
+        for (let y = 0; y < s; y++) {
+          for (let x = 0; x < s; x++) {
+            h[y * s + x] = Math.sin(x * 0.2) * 0.08 + Math.cos(y * 0.2) * 0.08;
+          }
+        }
+      }
+
+      const img = nctx.createImageData(s, s);
+      const d = img.data;
+      for (let y = 0; y < s; y++) {
+        const ym = (y - 1 + s) % s, yp = (y + 1) % s;
+        for (let x = 0; x < s; x++) {
+          const xm = (x - 1 + s) % s, xp = (x + 1) % s;
+          const dx = (h[y * s + xp] - h[y * s + xm]) * 2.4;
+          const dy = (h[yp * s + x] - h[ym * s + x]) * 2.4;
+          const inv = 1 / Math.sqrt(dx * dx + dy * dy + 1);
+          const i = (y * s + x) * 4;
+          d[i] = ((-dx * inv * 0.5 + 0.5) * 255) | 0;
+          d[i + 1] = ((-dy * inv * 0.5 + 0.5) * 255) | 0;
+          d[i + 2] = ((inv * 0.5 + 0.5) * 255) | 0;
+          d[i + 3] = 255;
+        }
+      }
+      nctx.putImageData(img, 0, 0);
+
+      const map = new THREE.CanvasTexture(alb);
+      const roughnessMap = new THREE.CanvasTexture(rgh);
+      const normalMap = new THREE.CanvasTexture(nrm);
+      [map, roughnessMap, normalMap].forEach((t) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; });
+      map.encoding = THREE.sRGBEncoding;
+      return { map, roughnessMap, normalMap };
+    }
+
+    // --- Three.js Renderer, Dusk Sky & Neon IBL Environment ---
+    const wrap = document.getElementById('skate-canvas');
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.24;
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    wrap.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x130e29);
+    scene.fog = new THREE.FogExp2(0x16102e, 0.0105);
+
+    const camera = new THREE.PerspectiveCamera(56, window.innerWidth / window.innerHeight, 0.25, 220);
+
+    // Dusk Sunset + Neon Reflections Environment via PMREMGenerator
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    const envScene = new THREE.Scene();
+    envScene.background = new THREE.Color(0x1b1338);
+    const addGlowStrip = (col, x, y, z, sx, sy, sz) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), new THREE.MeshBasicMaterial({ color: col }));
+      m.position.set(x, y, z);
+      envScene.add(m);
+    };
+    addGlowStrip(0xff7744, 0, 16, -28, 36, 6, 1);
+    addGlowStrip(0x2cf2ff, -20, 8, 0, 1, 6, 26);
+    addGlowStrip(0xff2a85, 20, 8, 0, 1, 6, 26);
+    addGlowStrip(0xffd24c, 0, 22, 10, 18, 1, 18);
+    scene.environment = pmrem.fromScene(envScene, 0.035).texture;
+
+    // Dusk Gradient Sky Dome
+    const skyCanvas = document.createElement('canvas');
+    skyCanvas.width = 256; skyCanvas.height = 256;
+    const sctx = skyCanvas.getContext('2d');
+    const skyGrad = sctx.createLinearGradient(0, 0, 0, 256);
+    skyGrad.addColorStop(0, '#0a081c');
+    skyGrad.addColorStop(0.52, '#241547');
+    skyGrad.addColorStop(0.78, '#7c285d');
+    skyGrad.addColorStop(1.0, '#eb7a44');
+    sctx.fillStyle = skyGrad; sctx.fillRect(0, 0, 256, 256);
+    const skyTex = new THREE.CanvasTexture(skyCanvas);
+    skyTex.encoding = THREE.sRGBEncoding;
+    const skyDome = new THREE.Mesh(
+      new THREE.SphereGeometry(155, 28, 18),
+      new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide, fog: false })
+    );
+    scene.add(skyDome);
+
+    // Lighting
+    scene.add(new THREE.HemisphereLight(0x8c7aff, 0x241926, 0.65));
+    const duskSun = new THREE.DirectionalLight(0xffb478, 1.45);
+    duskSun.position.set(-28, 34, -32);
+    duskSun.castShadow = true;
+    duskSun.shadow.mapSize.set(2048, 2048);
+    duskSun.shadow.camera.near = 4; duskSun.shadow.camera.far = 120;
+    const dsc = 46;
+    duskSun.shadow.camera.left = -dsc; duskSun.shadow.camera.right = dsc;
+    duskSun.shadow.camera.top = dsc; duskSun.shadow.camera.bottom = -dsc;
+    scene.add(duskSun);
+
+    // --- Plaza Ground, Warehouse, Neon Sign, Ramps, Spine Bowl & Grind Rails ---
+    const asphaltPBR = createPlazaPBR('wet_asphalt');
+    asphaltPBR.map.repeat.set(5, 5);
+    asphaltPBR.roughnessMap.repeat.set(5, 5);
+    asphaltPBR.normalMap.repeat.set(5, 5);
+
+    const brickPBR = createPlazaPBR('warehouse_brick');
+    brickPBR.map.repeat.set(6, 3);
+    brickPBR.normalMap.repeat.set(6, 3);
+
+    const rampPBR = createPlazaPBR('concrete_ramp');
+    rampPBR.map.repeat.set(3, 3);
+    rampPBR.normalMap.repeat.set(3, 3);
+
+    const plazaFloor = new THREE.Mesh(
+      new THREE.PlaneGeometry(120, 120),
+      new THREE.MeshStandardMaterial({
+        map: asphaltPBR.map,
+        roughnessMap: asphaltPBR.roughnessMap,
+        normalMap: asphaltPBR.normalMap,
+        metalness: 0.22,
+        roughness: 0.85
+      })
+    );
+    plazaFloor.rotation.x = -Math.PI / 2;
+    plazaFloor.receiveShadow = true;
+    scene.add(plazaFloor);
+
+    const brickMat = new THREE.MeshStandardMaterial({
+      map: brickPBR.map, normalMap: brickPBR.normalMap, roughness: 0.78, metalness: 0.08
+    });
+    const rampMat = new THREE.MeshStandardMaterial({
+      map: rampPBR.map, normalMap: rampPBR.normalMap, roughness: 0.42, metalness: 0.25
+    });
+    const copperMat = new THREE.MeshStandardMaterial({
+      color: 0xf09348, metalness: 0.92, roughness: 0.16
+    });
+
+    // NorthStar Record-Shop Brick Warehouse (North Z = -28)
+    const warehouse = new THREE.Mesh(new THREE.BoxGeometry(34, 10.5, 12), brickMat);
+    warehouse.position.set(0, 5.25, -28);
+    warehouse.castShadow = true; warehouse.receiveShadow = true;
+    scene.add(warehouse);
+
+    // Physical 3D Glowing Neon Tube Sign: "NORTHSTAR PLAZA"
+    function build3DNeonSign() {
+      const signGroup = new THREE.Group();
+      signGroup.position.set(0, 8.6, -21.8);
+      const backing = new THREE.Mesh(
+        new THREE.BoxGeometry(22.5, 3.1, 0.3),
+        new THREE.MeshStandardMaterial({ color: 0x0e101c, metalness: 0.7, roughness: 0.3 })
+      );
+      signGroup.add(backing);
+
+      // Glowing 3D neon border tubes
+      const cyanTubeMat = new THREE.MeshStandardMaterial({ color: 0x2cf2ff, emissive: 0x2cf2ff, emissiveIntensity: 2.6, roughness: 0.1 });
+      const pinkTubeMat = new THREE.MeshStandardMaterial({ color: 0xff2a85, emissive: 0xff2a85, emissiveIntensity: 2.6, roughness: 0.1 });
+
+      const topTube = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 22.0, 12), cyanTubeMat);
+      topTube.rotation.z = Math.PI / 2; topTube.position.set(0, 1.38, 0.22);
+      const botTube = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 22.0, 12), pinkTubeMat);
+      botTube.rotation.z = Math.PI / 2; botTube.position.set(0, -1.38, 0.22);
+      signGroup.add(topTube, botTube);
+
+      // High-res glowing neon glass lettering mesh + 3D relief bars
+      const nc = document.createElement('canvas'); nc.width = 1024; nc.height = 160;
+      const nctx = nc.getContext('2d');
+      nctx.clearRect(0, 0, 1024, 160);
+      nctx.font = 'italic 900 78px "Trebuchet MS", sans-serif';
+      nctx.textAlign = 'center'; nctx.textBaseline = 'middle';
+      nctx.shadowColor = '#2cf2ff'; nctx.shadowBlur = 24;
+      nctx.strokeStyle = '#2cf2ff'; nctx.lineWidth = 6;
+      nctx.strokeText('NORTHSTAR PLAZA', 512, 82);
+      nctx.fillStyle = '#ffffff';
+      nctx.fillText('NORTHSTAR PLAZA', 512, 82);
+      const neonTex = new THREE.CanvasTexture(nc);
+      neonTex.encoding = THREE.sRGBEncoding;
+
+      const neonPlane = new THREE.Mesh(
+        new THREE.PlaneGeometry(21.2, 2.5),
+        new THREE.MeshBasicMaterial({ map: neonTex, transparent: true })
+      );
+      neonPlane.position.z = 0.24;
+      signGroup.add(neonPlane);
+
+      const neonLightA = new THREE.PointLight(0x2cf2ff, 2.4, 28);
+      neonLightA.position.set(-5, 0, 3.0);
+      const neonLightB = new THREE.PointLight(0xff2a85, 2.2, 28);
+      neonLightB.position.set(5, 0, 3.0);
+      signGroup.add(neonLightA, neonLightB);
+      scene.add(signGroup);
+    }
+    build3DNeonSign();
+
+    // Surrounding Dusk City Skyline Silhouettes (Zero empty horizon!)
+    for (let i = 0; i < 24; i++) {
+      const ang = (i / 24) * Math.PI * 2;
+      const rad = 56 + (i % 3) * 6;
+      const bh = 12 + (i * 7) % 22;
+      const bw = 9 + (i % 4) * 3;
+      const bld = new THREE.Mesh(
+        new THREE.BoxGeometry(bw, bh, bw),
+        new THREE.MeshStandardMaterial({ color: 0x121528, roughness: 0.85, metalness: 0.2 })
+      );
+      bld.position.set(Math.cos(ang) * rad, bh / 2, Math.sin(ang) * rad);
+      scene.add(bld);
+    }
+
+    // Streetlights around Plaza
+    [[-18, -14], [18, -14], [-18, 14], [18, 14]].forEach(([lx, lz], i) => {
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 7.5, 10), copperMat);
+      pole.position.set(lx, 3.75, lz); pole.castShadow = true;
+      const bulbCol = i % 2 === 0 ? 0xffbe6b : 0x2cf2ff;
+      const lamp = new THREE.Mesh(
+        new THREE.SphereGeometry(0.36, 12, 10),
+        new THREE.MeshBasicMaterial({ color: bulbCol })
+      );
+      lamp.position.set(lx, 7.6, lz);
+      const pl = new THREE.PointLight(bulbCol, 1.35, 24);
+      pl.position.set(lx, 7.2, lz);
+      scene.add(pole, lamp, pl);
+    });
+
+    // Ramps, Quarter-Pipes, Central Spine-Transfer Bowl & Roof-Gap Launch
+    const ramps = [
+      // Central Spine-Transfer Twin Wedges (at X = 0, Z = 4.5 and Z = 8.5 -> Spine at Z = 6.5!)
+      { x: 0, z: 3.0, w: 11, d: 3.8, h: 2.35, dir: 'north_up', isSpine: true },
+      { x: 0, z: 9.8, w: 11, d: 3.8, h: 2.35, dir: 'south_up', isSpine: true },
+      // West & East Quarter-Pipes
+      { x: -24, z: 0, w: 5.5, d: 18, h: 3.1, dir: 'west_up', isQP: true },
+      { x: 24, z: 0, w: 5.5, d: 18, h: 3.1, dir: 'east_up', isQP: true },
+      // Warehouse Roof-Gap Kicker Ramp (near Z = -15)
+      { x: -9.5, z: -15.5, w: 5.2, d: 5.5, h: 3.2, dir: 'north_up', isRoofGap: true },
+      { x: 9.5, z: -15.5, w: 5.2, d: 5.5, h: 3.2, dir: 'north_up', isRoofGap: true }
+    ];
+
+    ramps.forEach((r) => {
+      // Build sloped wedge prism via ExtrudeGeometry
+      const shape = new THREE.Shape();
+      shape.moveTo(0, 0);
+      shape.lineTo(r.d, 0);
+      shape.lineTo(r.d, r.h);
+      shape.quadraticCurveTo(r.d * 0.45, r.h * 0.28, 0, 0);
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: r.w, bevelEnabled: false });
+      geo.center();
+      const mesh = new THREE.Mesh(geo, rampMat);
+      mesh.position.set(r.x, r.h / 2, r.z);
+      if (r.dir === 'north_up') mesh.rotation.y = Math.PI / 2;
+      if (r.dir === 'south_up') mesh.rotation.y = -Math.PI / 2;
+      if (r.dir === 'west_up') mesh.rotation.y = Math.PI;
+      if (r.dir === 'east_up') mesh.rotation.y = 0;
+      mesh.castShadow = true; mesh.receiveShadow = true;
+      scene.add(mesh);
+    });
+
+    // Central Tiered Plaza Fountain (at X = 0, Z = -6)
+    const fountainGroup = new THREE.Group();
+    fountainGroup.position.set(0, 0, -6);
+    const basinOuter = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 4.5, 0.75, 28), rampMat);
+    basinOuter.position.y = 0.375; basinOuter.castShadow = true; basinOuter.receiveShadow = true;
+    const waterDisc = new THREE.Mesh(
+      new THREE.CylinderGeometry(3.85, 3.85, 0.68, 28),
+      new THREE.MeshStandardMaterial({ color: 0x16a8d8, emissive: 0x0a4866, roughness: 0.06, metalness: 0.35 })
+    );
+    waterDisc.position.y = 0.42;
+    const spire = new THREE.Mesh(new THREE.OctahedronGeometry(0.95, 0), copperMat);
+    spire.position.y = 1.95;
+    fountainGroup.add(basinOuter, waterDisc, spire);
+    scene.add(fountainGroup);
+
+    // 6 Waxed-Copper Grind Rails (Spline Curves!)
+    const grindRails = [];
+    const railDefs = [
+      { id: 'fountain_ring', loop: true, pts: [[-4.3, 0.85, -6], [0, 0.85, -10.3], [4.3, 0.85, -6], [0, 0.85, -1.7]] },
+      { id: 'plaza_loop_west', isPlazaLoop: true, pts: [[-15, 0.75, -12], [-15, 0.95, 0], [-15, 0.75, 14]] },
+      { id: 'plaza_loop_south', isPlazaLoop: true, pts: [[-14, 0.75, 16], [0, 1.05, 17.5], [14, 0.75, 16]] },
+      { id: 'plaza_loop_east', isPlazaLoop: true, pts: [[15, 0.75, 14], [15, 0.95, 0], [15, 0.75, -12]] },
+      { id: 'warehouse_awning', isRoofRail: true, pts: [[-9.5, 3.1, -18.5], [0, 3.35, -19.2], [9.5, 3.1, -18.5]] },
+      { id: 'spine_coping', pts: [[-5.4, 2.42, 6.4], [0, 2.45, 6.4], [5.4, 2.42, 6.4]] }
+    ];
+    railDefs.forEach((rd) => {
+      const curve = new THREE.CatmullRomCurve3(
+        rd.pts.map((p) => new THREE.Vector3(p[0], p[1], p[2])),
+        !!rd.loop
+      );
+      const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 36, 0.09, 10, !!rd.loop), copperMat);
+      tube.castShadow = true;
+      scene.add(tube);
+      // Support posts
+      rd.pts.forEach((p) => {
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, p[1], 8), copperMat);
+        post.position.set(p[0], p[1] / 2, p[2]);
+        scene.add(post);
+      });
+      grindRails.push({ id: rd.id, curve, isPlazaLoop: !!rd.isPlazaLoop, isRoofRail: !!rd.isRoofRail });
+    });
+
+    // --- 6 Sprayable District Mural Canvases ---
+    const murals = [];
+    const muralPlacements = [
+      { x: -11, y: 2.3, z: -21.9, rotY: 0, title: 'SOLAR CROWN' },
+      { x: 11, y: 2.3, z: -21.9, rotY: 0, title: 'CRYO WAVE' },
+      { x: -26.9, y: 2.1, z: -6, rotY: Math.PI / 2, title: 'JET RADIO' },
+      { x: -26.9, y: 2.1, z: 6, rotY: Math.PI / 2, title: 'VINYL SOUL' },
+      { x: 26.9, y: 2.1, z: -6, rotY: -Math.PI / 2, title: 'PRISM SAINT' },
+      { x: 26.9, y: 2.1, z: 6, rotY: -Math.PI / 2, title: 'NORTHSTAR 99' }
+    ];
+    function paintMuralCanvas(ctx, title, painted) {
+      ctx.fillStyle = painted ? '#101326' : '#2a2630';
+      ctx.fillRect(0, 0, 256, 128);
+      ctx.strokeStyle = painted ? '#2cf2ff' : 'rgba(255,255,255,0.28)';
+      ctx.lineWidth = 5;
+      ctx.strokeRect(6, 6, 244, 116);
+      if (!painted) {
+        ctx.fillStyle = 'rgba(255, 210, 76, 0.65)';
+        ctx.font = 'bold 20px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('SPRAY ZONE [F]', 128, 70);
+      } else {
+        const g = ctx.createLinearGradient(0, 0, 256, 128);
+        g.addColorStop(0, '#ff2a85'); g.addColorStop(0.5, '#ffd24c'); g.addColorStop(1, '#2cf2ff');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(18, 108); ctx.lineTo(75, 20); ctx.lineTo(145, 96); ctx.lineTo(238, 22); ctx.lineTo(238, 108);
+        ctx.closePath(); ctx.fill();
+        ctx.font = 'italic 900 28px "Trebuchet MS", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(title, 128, 74);
+      }
+    }
+    muralPlacements.forEach((mp, idx) => {
+      const c = document.createElement('canvas'); c.width = 256; c.height = 128;
+      const ctx = c.getContext('2d');
+      paintMuralCanvas(ctx, mp.title, false);
+      const tex = new THREE.CanvasTexture(c);
+      tex.encoding = THREE.sRGBEncoding;
+      const mat = new THREE.MeshStandardMaterial({
+        map: tex, emissiveMap: tex, emissive: 0xffffff, emissiveIntensity: 0.25, roughness: 0.4
+      });
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(5.2, 2.6, 0.25), brickMat);
+      wall.position.set(mp.x, mp.y, mp.z);
+      wall.rotation.y = mp.rotY;
+      const art = new THREE.Mesh(new THREE.PlaneGeometry(4.8, 2.3), mat);
+      art.position.z = 0.14;
+      wall.add(art);
+      scene.add(wall);
+      murals.push({ id: idx, x: mp.x, z: mp.z, title: mp.title, painted: false, ctx, tex, mat });
+    });
+
+    // --- Collectible Golden S-K-A-T-E Letters & Secret Gold Vinyl ---
+    const skatePickups = [
+      { ch: 'S', x: -15, y: 1.7, z: -8, got: false },
+      { ch: 'K', x: 0, y: 1.8, z: -10.3, got: false },
+      { ch: 'A', x: 0, y: 3.4, z: 6.4, got: false },
+      { ch: 'T', x: 15, y: 1.7, z: 8, got: false },
+      { ch: 'E', x: -9.5, y: 3.9, z: -18.5, got: false }
+    ];
+    const goldMat = new THREE.MeshStandardMaterial({
+      color: 0xffd24c, emissive: 0xff9d1c, emissiveIntensity: 0.85, metalness: 0.9, roughness: 0.15
+    });
+    skatePickups.forEach((sp) => {
+      const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.55, 0), goldMat);
+      m.position.set(sp.x, sp.y, sp.z);
+      scene.add(m);
+      sp.mesh = m;
+    });
+
+    const secretVinyl = { x: 0, y: 4.1, z: -19.2, got: false };
+    const vinylMesh = new THREE.Mesh(
+      new THREE.TorusGeometry(0.68, 0.22, 12, 28),
+      new THREE.MeshStandardMaterial({ color: 0xffe066, emissive: 0xff2a85, emissiveIntensity: 0.9, metalness: 0.95, roughness: 0.1 })
+    );
+    vinylMesh.position.set(secretVinyl.x, secretVinyl.y, secretVinyl.z);
+    scene.add(vinylMesh);
+
+    // --- Articulated 3D Skater + Customizable 3D Skateboard ---
+    const skaterRoot = new THREE.Group();
+    skaterRoot.position.set(0, 0, 14);
+    skaterRoot.rotation.y = Math.PI;
+    scene.add(skaterRoot);
+
+    const boardRig = new THREE.Group();
+    skaterRoot.add(boardRig);
+
+    const deckCanvas = document.createElement('canvas'); deckCanvas.width = 256; deckCanvas.height = 128;
+    const deckCtx = deckCanvas.getContext('2d');
+    const deckTex = new THREE.CanvasTexture(deckCanvas);
+    deckTex.encoding = THREE.sRGBEncoding;
+
+    function refreshDeckGraphic() {
+      const d = DECKS.find((x) => x.id === profile.activeDeck) || DECKS[0];
+      deckCtx.fillStyle = d.c1;
+      deckCtx.fillRect(0, 0, 256, 128);
+      deckCtx.strokeStyle = d.c2;
+      deckCtx.lineWidth = 8;
+      deckCtx.strokeRect(8, 8, 240, 112);
+      deckCtx.fillStyle = d.c2;
+      deckCtx.font = 'italic 900 30px sans-serif';
+      deckCtx.textAlign = 'center';
+      deckCtx.fillText('NORTHSTAR', 128, 74);
+      deckTex.needsUpdate = true;
+    }
+    refreshDeckGraphic();
+
+    const deckMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(0.58, 0.055, 1.82),
+      new THREE.MeshStandardMaterial({ map: deckTex, roughness: 0.32, metalness: 0.25 })
+    );
+    deckMesh.position.y = 0.22;
+    deckMesh.castShadow = true;
+    boardRig.add(deckMesh);
+
+    const wheelMat = new THREE.MeshStandardMaterial({
+      color: 0x2cf2ff, emissive: 0x2cf2ff, emissiveIntensity: 0.55, roughness: 0.25
+    });
+    const wheelMeshes = [];
+    [[-0.27, -0.58], [0.27, -0.58], [-0.27, 0.58], [0.27, 0.58]].forEach(([wx, wz]) => {
+      const w = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.10, 14), wheelMat);
+      w.rotation.z = Math.PI / 2;
+      w.position.set(wx, 0.11, wz);
+      boardRig.add(w);
+      wheelMeshes.push(w);
+    });
+
+    function refreshWheelColor() {
+      const w = WHEELS.find((x) => x.id === profile.activeWheel) || WHEELS[0];
+      wheelMat.color.setHex(w.col);
+      wheelMat.emissive.setHex(w.col);
+    }
+    refreshWheelColor();
+
+    // Articulated Skater Body (planted squarely in athletic skate stance on grip tape)
+    const riderRig = new THREE.Group();
+    riderRig.position.y = 0.25;
+    riderRig.rotation.y = 0.28; // Authentic sideways skate stance!
+    skaterRoot.add(riderRig);
+
+    const pantsMat = new THREE.MeshStandardMaterial({ color: 0x1d2538, roughness: 0.78 });
+    const hoodieMat = new THREE.MeshStandardMaterial({ color: 0x12172b, roughness: 0.58 });
+    const shoeMat = new THREE.MeshStandardMaterial({ color: 0xf5f7ff, roughness: 0.4 });
+    const trimCyanMat = new THREE.MeshStandardMaterial({ color: 0x2cf2ff, emissive: 0x2cf2ff, emissiveIntensity: 0.85 });
+    const goldAccentMat = new THREE.MeshStandardMaterial({ color: 0xffd24c, emissive: 0xff9900, emissiveIntensity: 0.5 });
+
+    [[-0.08, -0.34], [0.08, 0.34]].forEach(([lx, lz]) => {
+      const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.10, 0.16), shoeMat);
+      shoe.position.set(lx, 0.05, lz);
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.085, 0.68, 10), pantsMat);
+      leg.position.set(lx, 0.38, lz * 0.85);
+      leg.rotation.x = lz < 0 ? 0.14 : -0.14;
+      leg.castShadow = true;
+      riderRig.add(shoe, leg);
+    });
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.64, 0.28), hoodieMat);
+    torso.position.y = 0.98; torso.castShadow = true;
+    const chestStripe = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.10, 0.30), trimCyanMat);
+    chestStripe.position.y = 1.04;
+    const hoodCollar = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.055, 8, 16), goldAccentMat);
+    hoodCollar.rotation.x = Math.PI / 2; hoodCollar.position.y = 1.31;
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.17, 14, 12), new THREE.MeshStandardMaterial({ color: 0xd9a986, roughness: 0.6 }));
+    head.position.y = 1.48;
+    const beanie = new THREE.Mesh(new THREE.SphereGeometry(0.18, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.58), goldAccentMat);
+    beanie.position.y = 1.51;
+    const headphoneBand = new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.025, 8, 16, Math.PI), trimCyanMat);
+    headphoneBand.position.y = 1.49;
+    const leftArm = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.055, 0.56, 8), hoodieMat);
+    leftArm.position.set(-0.31, 0.98, -0.14); leftArm.rotation.z = 0.55;
+    const rightArm = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.055, 0.56, 8), hoodieMat);
+    rightArm.position.set(0.31, 0.98, 0.14); rightArm.rotation.z = -0.55;
+    riderRig.add(torso, chestStripe, hoodCollar, head, beanie, headphoneBand, leftArm, rightArm);
+
+    // Spark & Spray Particle Pool
+    const particles = [];
+    const partGeo = new THREE.SphereGeometry(0.09, 6, 6);
+    function emitParticles(pos, count, colorHex, spread) {
+      for (let i = 0; i < count; i++) {
+        const pm = new THREE.Mesh(partGeo, new THREE.MeshBasicMaterial({ color: colorHex }));
+        pm.position.copy(pos);
+        scene.add(pm);
+        particles.push({
+          mesh: pm,
+          vel: new THREE.Vector3((Math.random() - 0.5) * spread, Math.random() * spread * 0.8 + 1.2, (Math.random() - 0.5) * spread),
+          life: 0.42
+        });
+      }
+    }
+
+    // --- Skater Physics & Trick-Combo State Machine ---
+    const skater = {
+      x: 0, y: 0, z: 14,
+      vx: 0, vy: 0, vz: 0,
+      speed: 0,
+      heading: Math.PI,
+      state: 'ground', // 'ground' | 'air' | 'grind' | 'manual'
+      activeRail: null,
+      railT: 0,
+      railDir: 1,
+      balance: 0, // -1 .. +1
+      flipSpinX: 0,
+      flipSpinY: 0,
+      grabPose: 0,
+      score: 0,
+      comboBase: 0,
+      comboMult: 0,
+      comboTricks: [],
+      plazaLoopRailsHit: new Set(),
+      sessionTime: 120,
+      careerMode: true
+    };
+
+    const keys = {};
+    window.addEventListener('keydown', (e) => {
+      const k = e.key.toLowerCase();
+      keys[k] = true;
+      if (e.code === 'Space') { e.preventDefault(); triggerOllie(); }
+      if (k === 'j') triggerFlipTrick();
+      if (k === 'k') triggerGrabTrick();
+      if (k === 'l') trySnapGrind();
+      if (k === 'c') toggleManual();
+      if (k === 'r') triggerSpineTransfer();
+      if (k === 'f') triggerSprayMural();
+    });
+    window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+
+    function addTrickToCombo(name, pts) {
+      skater.comboBase += pts;
+      skater.comboMult += 1;
+      skater.comboTricks.push(name);
+      updateComboHUD();
+    }
+
+    function bankCombo() {
+      if (skater.comboMult > 0) {
+        const total = skater.comboBase * skater.comboMult;
+        skater.score += total;
+        profile.cred += Math.max(5, Math.floor(total / 450));
+        if (skater.score > profile.bestScore) profile.bestScore = skater.score;
+        sfx('bank');
+        checkCareerGoals();
+        saveProfile();
+      }
+      skater.comboBase = 0;
+      skater.comboMult = 0;
+      skater.comboTricks = [];
+      skater.plazaLoopRailsHit.clear();
+      updateComboHUD();
+      refreshTopAndShop();
+    }
+
+    function bailCombo() {
+      skater.comboBase = 0;
+      skater.comboMult = 0;
+      skater.comboTricks = ['BAILED!'];
+      skater.state = 'ground';
+      skater.speed *= 0.25;
+      updateComboHUD();
+      setTimeout(() => { if (skater.comboMult === 0) { skater.comboTricks = []; updateComboHUD(); } }, 900);
+    }
+
+    function getSurfaceHeight(x, z) {
+      let h = 0;
+      for (const r of ramps) {
+        if (Math.abs(x - r.x) <= r.w / 2 && Math.abs(z - r.z) <= r.d / 2) {
+          let t = 0;
+          if (r.dir === 'north_up') t = (r.z + r.d / 2 - z) / r.d;
+          if (r.dir === 'south_up') t = (z - (r.z - r.d / 2)) / r.d;
+          if (r.dir === 'west_up') t = (r.x + r.w / 2 - x) / r.w;
+          if (r.dir === 'east_up') t = (x - (r.x - r.w / 2)) / r.w;
+          t = Math.max(0, Math.min(1, t));
+          h = Math.max(h, t * t * r.h);
+        }
+      }
+      return h;
+    }
+
+    function triggerOllie() {
+      const popBoost = 8.4 + profile.stats.pop * 0.65;
+      if (skater.state === 'ground' || skater.state === 'manual' || skater.state === 'grind') {
+        const wasGrind = skater.state === 'grind';
+        skater.state = 'air';
+        skater.activeRail = null;
+        skater.vy = popBoost;
+        sfx('ollie');
+        addTrickToCombo(wasGrind ? 'Rail Pop-Out' : 'Ollie', 250);
+      }
+    }
+
+    const FLIP_NAMES = ['Kickflip', 'Heelflip', 'Pop Shuvit', '360 Varial Flip'];
+    let flipIdx = 0;
+    function triggerFlipTrick() {
+      if (skater.state !== 'air') triggerOllie();
+      const trick = FLIP_NAMES[flipIdx % FLIP_NAMES.length];
+      flipIdx++;
+      skater.flipSpinX = Math.PI * 2;
+      if (trick.includes('360') || trick.includes('Shuvit')) skater.flipSpinY = Math.PI * 2;
+      sfx('flip');
+      addTrickToCombo(trick, trick.includes('360') ? 950 : 550);
+    }
+
+    function triggerGrabTrick() {
+      if (skater.state !== 'air') triggerOllie();
+      skater.grabPose = 0.45;
+      sfx('flip');
+      addTrickToCombo(skater.vy > 2 ? 'Melon Grab' : 'Indy Air', 650);
+    }
+
+    function trySnapGrind() {
+      const p = new THREE.Vector3(skater.x, skater.y + 0.3, skater.z);
+      let bestRail = null, bestT = 0, bestDist = 2.85;
+      grindRails.forEach((gr) => {
+        for (let i = 0; i <= 24; i++) {
+          const t = i / 24;
+          const rp = gr.curve.getPoint(t);
+          const d = rp.distanceTo(p);
+          if (d < bestDist) { bestDist = d; bestRail = gr; bestT = t; }
+        }
+      });
+      if (bestRail) {
+        skater.state = 'grind';
+        skater.activeRail = bestRail;
+        skater.railT = bestT;
+        skater.balance = (Math.random() - 0.5) * 0.25;
+        const tan = bestRail.curve.getTangent(bestT);
+        const fwd = new THREE.Vector3(Math.sin(skater.heading), 0, Math.cos(skater.heading));
+        skater.railDir = fwd.dot(tan) >= 0 ? 1 : -1;
+        sfx('grind');
+        if (bestRail.isPlazaLoop) skater.plazaLoopRailsHit.add(bestRail.id);
+        if (bestRail.isRoofRail) completeGoal('roof_gap');
+        if (skater.plazaLoopRailsHit.size >= 2) completeGoal('plaza_loop');
+        addTrickToCombo(Math.random() > 0.45 ? '50-50 Grind' : 'Boardslide', 800);
+        return true;
+      }
+      return false;
+    }
+
+    function toggleManual() {
+      if (skater.state === 'ground') {
+        skater.state = 'manual';
+        skater.balance = 0.08;
+        addTrickToCombo('Manual Link', 400);
+      } else if (skater.state === 'air') {
+        skater.wantManualOnLand = true;
+      }
+    }
+
+    function triggerSpineTransfer() {
+      if (Math.abs(skater.x) < 6.5 && Math.abs(skater.z - 6.4) < 5.2) {
+        skater.state = 'air';
+        skater.vy = 11.2;
+        skater.z = skater.z < 6.4 ? 8.2 : 4.6;
+        sfx('ollie');
+        addTrickToCombo('Spine Transfer!', 1600);
+      }
+    }
+
+    function triggerSprayMural() {
+      let sprayedAny = false;
+      murals.forEach((m) => {
+        if (!m.painted && Math.hypot(skater.x - m.x, skater.z - m.z) < 7.5) {
+          m.painted = true;
+          paintMuralCanvas(m.ctx, m.title, true);
+          m.tex.needsUpdate = true;
+          m.mat.emissiveIntensity = 0.95;
+          emitParticles(new THREE.Vector3(m.x, 2.2, m.z), 26, 0xff2a85, 5.5);
+          sfx('spray');
+          addTrickToCombo(`Mural: ${m.title}`, 2500);
+          sprayedAny = true;
+        }
+      });
+      if (!sprayedAny) {
+        emitParticles(new THREE.Vector3(skater.x, skater.y + 1.0, skater.z), 12, 0x2cf2ff, 3.2);
+        sfx('spray');
+      }
+      checkCareerGoals();
+    }
+
+    // --- 8 Career Goals ---
+    const GOALS = [
+      { id: 'score_25k', label: 'High Score: 25,000 pts' },
+      { id: 'score_75k', label: 'Pro Score: 75,000 pts' },
+      { id: 'score_150k', label: 'Sick Score: 150,000 pts' },
+      { id: 'skate_letters', label: 'Collect S-K-A-T-E (5)' },
+      { id: 'spray_6', label: 'Spray 6 District Murals' },
+      { id: 'roof_gap', label: 'Warehouse Roof-Gap Rail' },
+      { id: 'plaza_loop', label: 'Grind Plaza Loop Chain' },
+      { id: 'secret_vinyl', label: 'Secret Gold Vinyl Master' }
+    ];
+
+    function completeGoal(id) {
+      if (!profile.goalsDone[id]) {
+        profile.goalsDone[id] = true;
+        profile.cred += 200;
+        saveProfile();
+        renderGoals();
+        refreshTopAndShop();
+      }
+    }
+
+    function checkCareerGoals() {
+      if (skater.score >= 25000) completeGoal('score_25k');
+      if (skater.score >= 75000) completeGoal('score_75k');
+      if (skater.score >= 150000) completeGoal('score_150k');
+      if (skatePickups.every((p) => p.got)) completeGoal('skate_letters');
+      if (murals.every((m) => m.painted)) completeGoal('spray_6');
+      if (secretVinyl.got) completeGoal('secret_vinyl');
+      renderGoals();
+    }
+
+    function renderGoals() {
+      const box = document.getElementById('obj-list');
+      box.innerHTML = '';
+      let doneCount = 0;
+      GOALS.forEach((g) => {
+        const done = !!profile.goalsDone[g.id];
+        if (done) doneCount++;
+        const div = document.createElement('div');
+        div.className = 'obj-item' + (done ? ' done' : '');
+        const extra = g.id === 'spray_6' ? ` (${murals.filter((m) => m.painted).length}/6)` : '';
+        div.innerHTML = `<span>${g.label}${extra}</span><b>${done ? 'DONE' : 'LIVE'}</b>`;
+        box.appendChild(div);
+      });
+      document.getElementById('goals-count').textContent = `${doneCount} / 8`;
+
+      document.querySelectorAll('.sk-char').forEach((el) => {
+        const sp = skatePickups.find((x) => x.ch === el.dataset.l);
+        el.classList.toggle('lit', !!(sp && sp.got));
+      });
+    }
+
+    function updateComboHUD() {
+      const bw = document.getElementById('balance-wrap');
+      const bn = document.getElementById('balance-needle');
+      if (skater.state === 'grind' || skater.state === 'manual') {
+        bw.style.display = 'block';
+        bn.style.left = `${50 + skater.balance * 46}%`;
+        bn.style.background = Math.abs(skater.balance) > 0.72 ? '#ff2a85' : '#44ff99';
+      } else {
+        bw.style.display = 'none';
+      }
+
+      const ptsEl = document.getElementById('combo-pts');
+      const chEl = document.getElementById('combo-chain');
+      if (skater.comboMult > 0) {
+        ptsEl.textContent = `${(skater.comboBase * skater.comboMult).toLocaleString()} (${skater.comboBase} x ${skater.comboMult})`;
+        chEl.textContent = skater.comboTricks.slice(-6).join(' + ');
+      } else {
+        ptsEl.textContent = '';
+        chEl.textContent = skater.comboTricks[0] || '';
+      }
+    }
+
+    function refreshTopAndShop() {
+      document.getElementById('hud-score').textContent = skater.score.toLocaleString();
+      document.getElementById('hud-best').textContent = profile.bestScore.toLocaleString();
+      document.getElementById('hud-cred').textContent = '$' + profile.cred;
+      document.getElementById('shop-cred').textContent = '$' + profile.cred;
+
+      // Decks
+      const dl = document.getElementById('deck-list');
+      dl.innerHTML = '';
+      DECKS.forEach((d) => {
+        const owned = profile.unlockedDecks.includes(d.id);
+        const btn = document.createElement('button');
+        btn.className = 's-btn' + (profile.activeDeck === d.id ? ' active' : '');
+        btn.textContent = owned ? d.name : `${d.name} ($${d.cost})`;
+        btn.onclick = () => {
+          if (owned) {
+            profile.activeDeck = d.id;
+          } else if (profile.cred >= d.cost) {
+            profile.cred -= d.cost;
+            profile.unlockedDecks.push(d.id);
+            profile.activeDeck = d.id;
+          }
+          refreshDeckGraphic(); saveProfile(); refreshTopAndShop();
+        };
+        dl.appendChild(btn);
+      });
+
+      // Wheels
+      const wl = document.getElementById('wheel-list');
+      wl.innerHTML = '';
+      WHEELS.forEach((w) => {
+        const b = document.createElement('button');
+        b.className = 's-btn' + (profile.activeWheel === w.id ? ' active' : '');
+        b.style.borderColor = w.css;
+        b.textContent = w.id;
+        b.onclick = () => { profile.activeWheel = w.id; refreshWheelColor(); saveProfile(); refreshTopAndShop(); };
+        wl.appendChild(b);
+      });
+
+      // Stats
+      const su = document.getElementById('stat-upgrades');
+      su.innerHTML = '';
+      [['speed', 'Top Speed'], ['pop', 'Ollie Pop'], ['spin', 'Flip Spin'], ['balance', 'Rail Balance']].forEach(([k, label]) => {
+        const lv = profile.stats[k] || 1;
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;font-size:0.7rem;';
+        row.innerHTML = `<span>${label} (Lv.${lv}/5)</span><button class="s-btn" style="padding:3px 8px;">+UP</button>`;
+        row.querySelector('button').onclick = () => {
+          if (lv < 5 && profile.cred >= 120) {
+            profile.cred -= 120;
+            profile.stats[k] = lv + 1;
+            saveProfile(); refreshTopAndShop();
+          }
+        };
+        su.appendChild(row);
+      });
+    }
+
+    // Mode & Touch Controls
+    document.getElementById('btn-mode-toggle').onclick = () => {
+      skater.careerMode = !skater.careerMode;
+      skater.sessionTime = 120;
+      document.getElementById('btn-mode-toggle').textContent = skater.careerMode ? 'MODE: CAREER 2:00' : 'MODE: FREE-SKATE';
+    };
+    document.getElementById('btn-shop-mobile').onclick = () => {
+      document.getElementById('shop-panel').classList.toggle('mobile-open');
+    };
+    document.querySelectorAll('[data-hold]').forEach((btn) => {
+      const dir = btn.dataset.hold;
+      const mapKey = dir === 'up' ? 'w' : (dir === 'left' ? 'a' : 'd');
+      btn.addEventListener('pointerdown', () => { keys[mapKey] = true; });
+      btn.addEventListener('pointerup', () => { keys[mapKey] = false; });
+      btn.addEventListener('pointerleave', () => { keys[mapKey] = false; });
+    });
+    document.getElementById('t-ollie').onclick = triggerOllie;
+    document.getElementById('t-flip').onclick = triggerFlipTrick;
+    document.getElementById('t-grind').onclick = trySnapGrind;
+    document.getElementById('t-spray').onclick = triggerSprayMural;
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    renderGoals();
+    refreshTopAndShop();
+
+    // --- Main 60 FPS Skate Simulation Loop ---
+    let lastT = performance.now();
+    let fpsFrames = 0, fpsAcc = 0, measuredFps = 60;
+
+    function tick(now) {
+      requestAnimationFrame(tick);
+      const dt = Math.min(0.045, (now - lastT) / 1000);
+      lastT = now;
+
+      fpsFrames++; fpsAcc += dt;
+      if (fpsAcc >= 0.5) { measuredFps = Math.round(fpsFrames / fpsAcc); fpsFrames = 0; fpsAcc = 0; }
+
+      // Gamepad support
+      let gpSteer = 0, gpPush = 0;
+      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      if (pads && pads[0]) {
+        const gp = pads[0];
+        if (Math.abs(gp.axes[0] || 0) > 0.16) gpSteer = -gp.axes[0];
+        if ((gp.axes[1] || 0) < -0.2 || (gp.buttons[0] && gp.buttons[0].pressed)) gpPush = 1;
+      }
+
+      const steerInput = (keys['a'] || keys['arrowleft'] ? 1 : 0) - (keys['d'] || keys['arrowright'] ? 1 : 0) + gpSteer;
+      const pushInput = (keys['w'] || keys['arrowup'] ? 1 : 0) + gpPush;
+      const brakeInput = (keys['s'] || keys['arrowdown'] ? 1 : 0);
+
+      // Session Timer
+      if (skater.careerMode) {
+        skater.sessionTime = Math.max(0, skater.sessionTime - dt);
+        const mins = Math.floor(skater.sessionTime / 60);
+        const secs = Math.floor(skater.sessionTime % 60);
+        document.getElementById('hud-timer').textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        if (skater.sessionTime <= 0) skater.sessionTime = 120;
+      } else {
+        document.getElementById('hud-timer').textContent = 'FREE';
+      }
+
+      const maxSpd = 18.5 + profile.stats.speed * 1.4;
+
+      if (skater.state === 'grind' && skater.activeRail) {
+        const railLen = skater.activeRail.curve.getLength() || 12;
+        const grindSpd = Math.max(11.5, Math.abs(skater.speed));
+        skater.railT += (skater.railDir * grindSpd * dt) / railLen;
+
+        // Balance meter drift & player counter-steer
+        const stab = 1 - profile.stats.balance * 0.11;
+        skater.balance += (Math.sin(now * 0.009) * 0.85 * stab - steerInput * 2.1) * dt;
+        skater.comboBase += Math.round(280 * dt);
+        updateComboHUD();
+
+        if (Math.abs(skater.balance) > 1.0) {
+          bailCombo();
+        } else if (skater.railT > 1 || skater.railT < 0) {
+          if (skater.activeRail.curve.closed) {
+            skater.railT = (skater.railT + 1) % 1;
+          } else {
+            skater.state = 'air';
+            skater.vy = 4.2;
+            skater.activeRail = null;
+          }
+        }
+        if (skater.activeRail) {
+          const pt = skater.activeRail.curve.getPoint(Math.max(0, Math.min(1, skater.railT)));
+          const tan = skater.activeRail.curve.getTangent(Math.max(0, Math.min(1, skater.railT))).multiplyScalar(skater.railDir);
+          skater.x = pt.x; skater.y = pt.y; skater.z = pt.z;
+          skater.heading = Math.atan2(tan.x, tan.z);
+          if (Math.random() < 0.55) emitParticles(pt, 1, 0xffaa44, 2.4);
+        }
+      } else {
+        // Ground, Manual or Air movement
+        skater.heading += steerInput * (skater.state === 'air' ? 3.2 : 2.35) * dt;
+        if (pushInput > 0 && skater.state !== 'air') {
+          skater.speed = Math.min(maxSpd, skater.speed + 15.5 * dt);
+        } else if (brakeInput > 0 && skater.state === 'ground') {
+          skater.speed = Math.max(-5, skater.speed - 18 * dt);
+        } else {
+          skater.speed *= (1 - 0.35 * dt);
+        }
+
+        skater.x = Math.max(-52, Math.min(52, skater.x + Math.sin(skater.heading) * skater.speed * dt));
+        skater.z = Math.max(-52, Math.min(52, skater.z + Math.cos(skater.heading) * skater.speed * dt));
+
+        // Warehouse solid wall collision
+        if (Math.abs(skater.x) < 17.4 && skater.z < -21.4 && skater.y < 9.5) {
+          skater.z = -21.4;
+        }
+
+        const surfY = getSurfaceHeight(skater.x, skater.z);
+        if (skater.state === 'air') {
+          skater.vy -= 22.0 * dt;
+          skater.y += skater.vy * dt;
+          // Auto-snap grind when descending onto rail while holding L
+          if (keys['l'] && skater.vy <= 1.0) trySnapGrind();
+          if (skater.y <= surfY) {
+            skater.y = surfY;
+            skater.vy = 0;
+            if (skater.wantManualOnLand) {
+              skater.state = 'manual';
+              skater.wantManualOnLand = false;
+              addTrickToCombo('Manual Revert', 450);
+            } else {
+              skater.state = 'ground';
+              bankCombo();
+            }
+          }
+        } else {
+          // Launch into air off steep ramp lips!
+          if (surfY > 1.8 && skater.speed > 11.5) {
+            skater.state = 'air';
+            skater.vy = skater.speed * 0.58;
+            addTrickToCombo('Vert Launch', 400);
+          } else {
+            skater.y = surfY;
+          }
+          if (skater.state === 'manual') {
+            skater.balance += (Math.cos(now * 0.008) * 0.75 - steerInput * 2.0) * dt;
+            skater.comboBase += Math.round(180 * dt);
+            updateComboHUD();
+            if (Math.abs(skater.balance) > 1.0) bailCombo();
+            if (skater.speed < 1.2) { skater.state = 'ground'; bankCombo(); }
+          }
+        }
+      }
+
+      // Deck & Skater Visual Pose Animation
+      skaterRoot.position.set(skater.x, skater.y, skater.z);
+      skaterRoot.rotation.y = skater.heading;
+
+      const spinRate = 11.5 + profile.stats.spin * 1.4;
+      if (skater.flipSpinX > 0) {
+        const dSpin = Math.min(skater.flipSpinX, spinRate * dt);
+        skater.flipSpinX -= dSpin;
+        boardRig.rotation.z += dSpin;
+      } else {
+        boardRig.rotation.z = skater.state === 'grind' ? skater.balance * 0.35 : 0;
+      }
+      if (skater.flipSpinY > 0) {
+        const dYaw = Math.min(skater.flipSpinY, spinRate * dt);
+        skater.flipSpinY -= dYaw;
+        boardRig.rotation.y += dYaw;
+      } else {
+        boardRig.rotation.y = skater.state === 'grind' ? 0.32 : 0;
+      }
+      boardRig.rotation.x = skater.state === 'manual' ? -0.28 : 0;
+
+      if (skater.grabPose > 0) {
+        skater.grabPose -= dt;
+        riderRig.position.y = 0.12;
+        leftArm.rotation.z = 1.2;
+      } else {
+        riderRig.position.y = 0.25;
+        leftArm.rotation.z = 0.48 + (skater.state === 'grind' ? skater.balance * 0.6 : 0);
+        rightArm.rotation.z = -0.48 + (skater.state === 'grind' ? skater.balance * 0.6 : 0);
+      }
+
+      wheelMeshes.forEach((w) => { w.rotation.x += skater.speed * dt * 3.5; });
+
+      // Pickups: S-K-A-T-E & Secret Gold Vinyl
+      skatePickups.forEach((sp, i) => {
+        if (sp.got) return;
+        sp.mesh.rotation.y += dt * 2.2;
+        sp.mesh.position.y = sp.y + Math.sin(now * 0.004 + i) * 0.15;
+        if (Math.hypot(skater.x - sp.x, skater.z - sp.z) < 2.1 && Math.abs(skater.y - sp.y) < 2.2) {
+          sp.got = true;
+          sp.mesh.visible = false;
+          sfx('bank');
+          addTrickToCombo(`Letter [${sp.ch}]`, 1200);
+          checkCareerGoals();
+        }
+      });
+
+      if (!secretVinyl.got) {
+        vinylMesh.rotation.y += dt * 2.8;
+        if (Math.hypot(skater.x - secretVinyl.x, skater.z - secretVinyl.z) < 2.5 && Math.abs(skater.y - secretVinyl.y) < 2.5) {
+          secretVinyl.got = true;
+          vinylMesh.visible = false;
+          sfx('bank');
+          addTrickToCombo('SECRET GOLD VINYL!', 5000);
+          checkCareerGoals();
+        }
+      }
+
+      // Particles update
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.life -= dt;
+        p.vel.y -= 9.8 * dt;
+        p.mesh.position.addScaledVector(p.vel, dt);
+        p.mesh.scale.setScalar(Math.max(0.01, p.life * 2.2));
+        if (p.life <= 0) {
+          scene.remove(p.mesh);
+          particles.splice(i, 1);
+        }
+      }
+
+      // Smooth Chase Camera
+      const desiredCam = new THREE.Vector3(
+        skater.x - Math.sin(skater.heading) * 7.8,
+        skater.y + 3.65,
+        skater.z - Math.cos(skater.heading) * 7.8
+      );
+      camera.position.lerp(desiredCam, Math.min(1, dt * 7.5));
+      camera.lookAt(skater.x + Math.sin(skater.heading) * 3.0, skater.y + 1.45, skater.z + Math.cos(skater.heading) * 3.0);
+
+      renderer.render(scene, camera);
+    }
+    requestAnimationFrame(tick);
+
+    // Expose Truthful Engine Diagnostic & Automation API
+    window.__NSP_GAME__ = {
+      id: 'northstar_pro_skate_and_spray_3d',
+      title: 'NorthStar Plaza: 3D Free-Roam Skate & Mural',
+      getState: () => ({
+        fps: measuredFps,
+        jsErrors: jsErrors.slice(),
+        score: skater.score,
+        bestScore: profile.bestScore,
+        cred: profile.cred,
+        skaterState: skater.state,
+        comboMult: skater.comboMult,
+        muralsPainted: murals.filter((m) => m.painted).length,
+        skateLettersCollected: skatePickups.filter((s) => s.got).length,
+        goalsCompleted: Object.keys(profile.goalsDone).length
+      }),
+      performShowcaseCombo: () => {
+        // Paint both warehouse murals and grind the fountain rail facing NORTHSTAR PLAZA neon!
+        [0, 1].forEach((idx) => {
+          murals[idx].painted = true;
+          paintMuralCanvas(murals[idx].ctx, murals[idx].title, true);
+          murals[idx].tex.needsUpdate = true;
+          murals[idx].mat.emissiveIntensity = 1.1;
+        });
+        skater.x = 0.0; skater.z = -1.7; skater.y = 0.85;
+        skater.heading = Math.PI * 0.92;
+        skater.speed = 15.0;
+        triggerOllie();
+        triggerFlipTrick();
+        trySnapGrind();
+        skater.heading = Math.PI; // Face North toward glowing NORTHSTAR PLAZA warehouse & painted murals!
+        camera.position.set(0.5, 4.2, 5.8);
+        camera.lookAt(0, 2.4, -18);
+        emitParticles(new THREE.Vector3(skater.x, skater.y + 0.3, skater.z), 28, 0xffaa44, 4.5);
+        checkCareerGoals();
+        return window.__NSP_GAME__.getState();
+      },
+      bankShowcaseCombo: () => {
+        skater.state = 'ground';
+        bankCombo();
+        return window.__NSP_GAME__.getState();
+      }
+    };
+  })();
+  </script>
+
+<div class="nsp-hub-return-bar">
+  <a class="nsp-hub-return" href="/games/" target="_top">← 3D Games Hub</a>
+  <a class="nsp-hub-return" href="/arcade/" target="_top">Arcade (60)</a>
+</div>
+
+</body>
+</html>

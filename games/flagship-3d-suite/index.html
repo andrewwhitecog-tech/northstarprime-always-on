@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="nsp-analytics" content="none">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="author" content="Andrew White" />
+  <title>NorthStar Flagship 3D Custom Games Suite — Interactive PBR Showroom</title>
+  <script src="../three.min.js"></script>
+  <style>
+    :root {
+      --gold: #f5c85c;
+      --cyan: #2cf2ff;
+      --magenta: #ff2e82;
+      --emerald: #34f5a6;
+      --text: #f7faff;
+      --muted: #9aaac4;
+    }
+    * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      overflow: hidden; background: #050711; color: var(--text);
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    }
+    #hub-canvas {
+      position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 1;
+    }
+    #suite-ui {
+      position: fixed; inset: 0; z-index: 10; pointer-events: none;
+      display: flex; flex-direction: column; justify-content: space-between;
+      padding: 14px 18px;
+    }
+    .hub-frame {
+      pointer-events: auto;
+      background: linear-gradient(160deg, rgba(12, 16, 30, 0.85), rgba(6, 9, 18, 0.92));
+      border: 1px solid rgba(245, 200, 92, 0.36);
+      clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0 calc(100% - 12px), 0 12px);
+      box-shadow: 0 14px 36px rgba(0,0,0,0.68), inset 0 0 26px rgba(44, 242, 255, 0.07);
+      backdrop-filter: blur(10px);
+    }
+    header.hub-frame {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 18px; gap: 12px; flex-wrap: wrap;
+    }
+    .suite-brand { display: flex; align-items: center; gap: 12px; }
+    .ns-crest {
+      padding: 5px 12px; font-weight: 900; font-size: 0.76rem; letter-spacing: 0.1em;
+      background: linear-gradient(90deg, var(--gold), var(--cyan)); color: #050812;
+      clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+    }
+    .suite-brand h1 {
+      margin: 0; font-size: 1.08rem; letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--gold); text-shadow: 0 0 16px rgba(245, 200, 92, 0.45);
+    }
+    .suite-brand span { font-size: 0.72rem; color: var(--muted); }
+
+    #cards-dock {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+      pointer-events: auto;
+    }
+    .game-card {
+      padding: 12px 14px; cursor: pointer;
+      background: linear-gradient(170deg, rgba(15, 20, 38, 0.84), rgba(8, 10, 20, 0.94));
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+      transition: all 0.18s ease;
+      display: flex; flex-direction: column; justify-content: space-between; gap: 8px;
+    }
+    .game-card:hover, .game-card.focused {
+      border-color: var(--gold);
+      box-shadow: 0 0 24px rgba(245, 200, 92, 0.32), inset 0 0 18px rgba(44, 242, 255, 0.12);
+      transform: translateY(-3px);
+    }
+    .card-tag {
+      font-size: 0.65rem; font-weight: 900; letter-spacing: 0.1em; color: var(--cyan);
+      text-transform: uppercase;
+    }
+    .game-card h2 {
+      margin: 2px 0; font-size: 0.92rem; color: var(--gold); letter-spacing: 0.04em;
+    }
+    .game-card p {
+      margin: 0; font-size: 0.7rem; color: #cbd5e1; line-height: 1.36;
+    }
+    .save-stat {
+      font-size: 0.68rem; font-weight: 800; color: var(--emerald);
+      padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.08);
+    }
+    .launch-row { display: flex; gap: 6px; margin-top: 4px; }
+    .h-btn {
+      flex: 1; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 0.68rem;
+      letter-spacing: 0.05em; text-transform: uppercase; text-align: center; text-decoration: none;
+      padding: 6px 8px; color: #050812;
+      background: linear-gradient(90deg, var(--gold), #ffe08a);
+      clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+      border: none;
+    }
+    .h-btn.alt {
+      background: rgba(44, 242, 255, 0.16); color: var(--cyan);
+      border: 1px solid rgba(44, 242, 255, 0.5);
+    }
+
+    /* Seamless Embedded Cabinet Overlay */
+    #cabinet-runner {
+      display: none; position: fixed; inset: 0; z-index: 50; background: #000;
+    }
+    #cabinet-runner iframe { width: 100%; height: 100%; border: none; }
+    #btn-exit-cabinet {
+      position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 60;
+      padding: 6px 16px; cursor: pointer; font-weight: 900; font-size: 0.72rem;
+      background: rgba(8, 12, 24, 0.92); color: var(--gold); border: 1px solid var(--gold);
+      clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+    }
+
+    @media (max-width: 960px) {
+      #suite-ui { padding: 8px; }
+      #cards-dock {
+        grid-template-columns: 1fr 1fr; gap: 6px; max-height: 54vh; overflow-y: auto;
+      }
+      .game-card p { display: none; }
+      .game-card { padding: 8px 10px; }
+      .game-card h2 { font-size: 0.78rem; }
+    }
+  </style>
+
+<style data-nsp-vorath="games-zero-flat">
+@media (forced-colors: none) {
+  button, [role="button"], select, a, summary {
+    border-radius: 0 !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-width: 6px 12px !important;
+    border-image: url("/warband/art/vorath_btn_obsidian.webp") 44 66 fill / 6px 12px stretch !important;
+    background-image: none !important;
+    background-color: transparent !important;
+    color: #fef3c7 !important;
+    text-shadow: 0 1px 3px #000 !important;
+    box-shadow: none !important;
+  }
+  button.active, button.primary, .play-btn, .launch-btn, a.nsp-hub-return {
+    border-image-source: url("/warband/art/vorath_btn_primary.webp") !important;
+    color: #fffdf5 !important;
+  }
+  input[type="search"], input[type="text"], input[type="number"], textarea {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    border-radius: 0 !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-width: 7px 14px !important;
+    border-image: url("/warband/art/vorath_stat_plaque_v01.webp") 18 36 fill / 7px 14px stretch !important;
+    background: none !important;
+    color: #fef3c7 !important;
+  }
+  input[type="range"], input[type="checkbox"], input[type="radio"] {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    border-radius: 0 !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-width: 4px 8px !important;
+    border-image: url("/warband/art/vorath_stat_plaque_v01.webp") 18 36 fill / 4px 8px stretch !important;
+    background: none !important;
+  }
+  .cw-pill, .xp-pill, .metric-pill, .ns-tag, .brand-pill, .meter-pill, .tier-crest, .star-crest,
+  .cab-medal, .cab-stats-row, .stat-chip, .dmd-cell, .part-chip, #chrono-box {
+    border-radius: 0 !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-width: 5px 10px !important;
+    border-image: url("/warband/art/vorath_stat_plaque_v01.webp") 18 36 fill / 5px 10px stretch !important;
+    background: none !important;
+    clip-path: none !important;
+    color: #fef3c7 !important;
+  }
+}
+.nsp-hub-return-bar {
+  position: fixed;
+  bottom: 10px;
+  right: 12px;
+  z-index: 9999;
+  display: flex;
+  gap: 6px;
+}
+.nsp-hub-return {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 3px 10px;
+  font: 700 12px/1.2 system-ui, sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+</style>
+
+</head>
+<body>
+  <div id="hub-canvas"></div>
+
+  <div id="suite-ui">
+    <header class="hub-frame">
+      <div class="suite-brand">
+        <span class="ns-crest">NORTHSTAR IDG // AA 3D SUITE</span>
+        <div>
+          <h1>Flagship Custom 3D Games Showroom</h1>
+          <span>Executive Direction &amp; Architecture by Andrew White &bull; Offline 60 FPS Three.js PBR</span>
+        </div>
+      </div>
+      <div style="font-size:0.74rem;font-weight:800;color:var(--cyan);">
+        4 STANDALONE 3D TITLES &bull; DESKTOP + GAMEPAD + MOBILE
+      </div>
+    </header>
+
+    <section id="cards-dock"></section>
+  </div>
+
+  <div id="cabinet-runner">
+    <button id="btn-exit-cabinet">&#9664; RETURN TO 3D SHOWROOM [ESC]</button>
+    <iframe id="cabinet-iframe" src="about:blank" allow="autoplay; gamepad"></iframe>
+  </div>
+
+  <script>
+  (function() {
+    'use strict';
+
+    const jsErrors = [];
+    window.addEventListener('error', (e) => jsErrors.push(e.message || 'error'));
+
+    const GAMES = [
+      {
+        id: 'wargame',
+        tag: 'CABINET 01 // 3D TABLETOP SKIRMISH',
+        title: 'The Vorathic Procession 3D',
+        desc: '5-Covenant single-slit masked 28mm miniatures on a basalt & stained-glass gothic cathedral board. 500pt Muster, 15mK/5000K toggle & 5-Mission Crusade.',
+        file: './../vorath-wargame-3d/',
+        saveKey: 'nsp_vorath_5cov_crusade_20261115',
+        readStat: (s) => `Crusade XP: ${s && s.xp ? s.xp : 140} • Relic Bound`
+      },
+      {
+        id: 'skate',
+        tag: 'CABINET 02 // 360° FREE-ROAM PARK',
+        title: 'NorthStar Plaza: Skate & Mural',
+        desc: 'Rain-slick dusk 3D skate plaza with glowing neon warehouse, spine-transfer bowl, copper grind loop, 6 spraypaint murals & Skate Shop customizer.',
+        file: './../pro-skate-3d/',
+        saveKey: 'nsp_plaza_skate_3d_20261115',
+        readStat: (s) => `Best Score: ${(s && s.bestScore ? s.bestScore : 0).toLocaleString()} • Cred: $${s && s.cred ? s.cred : 320}`
+      },
+      {
+        id: 'armory',
+        tag: 'CABINET 03 // MECHANICAL WORKBENCH',
+        title: 'Precision Armory & Relic Sim',
+        desc: '4 multi-part 3D precision mechanisms (40 machined parts), dynamic UV grime-to-mirror scrubbing, ultrasonic bath & live 3D Ballistics Range.',
+        file: './../precision-armory-3d/',
+        saveKey: 'nsp_precision_armory_3d_20261115',
+        readStat: (s) => `Shop Funds: $${s && s.credits ? s.credits : 480} • Contracts: ${s && s.contractsDone ? s.contractsDone : 0}`
+      },
+      {
+        id: 'pinball',
+        tag: 'CABINET 04 // 720HZ 3D PINBALL FX',
+        title: 'Quantum Chandelier Pinball FX',
+        desc: '5-Tier 24K-Gold Dilution Chandelier centerpiece, 5 ceramic spark bumpers, chrome wireform ramps, 6 cryostat missions & 3-Ball Zero-Kelvin Multiball.',
+        file: './../quantum-pinball-3d/',
+        saveKey: 'nsp_quantum_chandelier_pinball_hs_20261115',
+        readStat: (s) => `Grand Champion: ${(Array.isArray(s) && s[0] ? s[0].score : 4850000).toLocaleString()}`
+      }
+    ];
+
+    let focusedIdx = 0;
+
+    function renderCards() {
+      const dock = document.getElementById('cards-dock');
+      dock.innerHTML = '';
+      GAMES.forEach((g, idx) => {
+        let parsed = null;
+        try { parsed = JSON.parse(localStorage.getItem(g.saveKey) || 'null'); } catch (_) {}
+        const card = document.createElement('div');
+        card.className = 'game-card' + (idx === focusedIdx ? ' focused' : '');
+        card.innerHTML = `
+          <div>
+            <div class="card-tag">${g.tag}</div>
+            <h2>${g.title}</h2>
+            <p>${g.desc}</p>
+          </div>
+          <div>
+            <div class="save-stat">${g.readStat(parsed)}</div>
+            <div class="launch-row">
+              <button class="h-btn" data-embed="${idx}">PLAY IN SUITE</button>
+              <a class="h-btn alt" href="${g.file}">STANDALONE</a>
+            </div>
+          </div>
+        `;
+        card.onmouseenter = () => { focusedIdx = idx; highlightFocus(); };
+        card.onclick = (e) => {
+          if (e.target.tagName === 'A') return;
+          focusedIdx = idx;
+          highlightFocus();
+        };
+        card.querySelector('[data-embed]').onclick = (e) => {
+          e.stopPropagation();
+          openEmbedded(idx);
+        };
+        dock.appendChild(card);
+      });
+    }
+
+    function highlightFocus() {
+      document.querySelectorAll('.game-card').forEach((c, i) => c.classList.toggle('focused', i === focusedIdx));
+    }
+
+    function openEmbedded(idx) {
+      const runner = document.getElementById('cabinet-runner');
+      const frame = document.getElementById('cabinet-iframe');
+      frame.src = GAMES[idx].file;
+      runner.style.display = 'block';
+    }
+
+    function closeEmbedded() {
+      const runner = document.getElementById('cabinet-runner');
+      const frame = document.getElementById('cabinet-iframe');
+      frame.src = 'about:blank';
+      runner.style.display = 'none';
+      renderCards();
+    }
+    document.getElementById('btn-exit-cabinet').onclick = closeEmbedded;
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeEmbedded();
+      if (e.key === 'ArrowRight') { focusedIdx = (focusedIdx + 1) % 4; highlightFocus(); }
+      if (e.key === 'ArrowLeft') { focusedIdx = (focusedIdx + 3) % 4; highlightFocus(); }
+    });
+
+    // --- Three.js 3D Interactive Trophy Diorama Showroom ---
+    const wrap = document.getElementById('hub-canvas');
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.25;
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    wrap.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x060914);
+    scene.fog = new THREE.FogExp2(0x060914, 0.022);
+
+    const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.2, 100);
+    camera.position.set(0, 3.8, 12.5);
+
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    const envScene = new THREE.Scene();
+    envScene.background = new THREE.Color(0x0c1328);
+    const addLight = (col, x, y, z, sx, sy, sz) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), new THREE.MeshBasicMaterial({ color: col }));
+      m.position.set(x, y, z); envScene.add(m);
+    };
+    addLight(0xffe6a3, 0, 14, 4, 18, 1, 12);
+    addLight(0x2cf2ff, -14, 6, 0, 1, 8, 14);
+    addLight(0xff2e82, 14, 6, 0, 1, 8, 14);
+    scene.environment = pmrem.fromScene(envScene, 0.035).texture;
+
+    scene.add(new THREE.HemisphereLight(0x9cb8ff, 0x1b120b, 0.65));
+    const key = new THREE.DirectionalLight(0xfff0cc, 1.55);
+    key.position.set(6, 14, 9);
+    key.castShadow = true;
+    scene.add(key);
+
+    // Showroom Reflective Marble Floor
+    const floor = new THREE.Mesh(
+      new THREE.CylinderGeometry(22, 22, 0.4, 64),
+      new THREE.MeshStandardMaterial({ color: 0x0e1424, metalness: 0.65, roughness: 0.18 })
+    );
+    floor.position.y = -0.2;
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    const goldMat = new THREE.MeshStandardMaterial({ color: 0xf5c85c, metalness: 0.94, roughness: 0.14 });
+    const cyanMat = new THREE.MeshStandardMaterial({ color: 0x2cf2ff, emissive: 0x0b5866, metalness: 0.5, roughness: 0.15 });
+    const darkSteel = new THREE.MeshStandardMaterial({ color: 0x273248, metalness: 0.85, roughness: 0.25 });
+
+    // 4 Illuminated 3D Pedestal Dioramas
+    const pedestals = [];
+    const xs = [-5.4, -1.8, 1.8, 5.4];
+    xs.forEach((px, idx) => {
+      const g = new THREE.Group();
+      g.position.set(px, 0, 0);
+      const plinth = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.32, 0.55, 24), darkSteel);
+      plinth.position.y = 0.28; plinth.castShadow = true; plinth.receiveShadow = true;
+      const halo = new THREE.Mesh(new THREE.TorusGeometry(1.22, 0.04, 10, 32), idx === 0 ? goldMat : cyanMat);
+      halo.rotation.x = Math.PI / 2; halo.position.y = 0.56;
+      g.add(plinth, halo);
+
+      const trophy = new THREE.Group();
+      trophy.position.y = 1.45;
+      if (idx === 0) {
+        // 1. Single-Vertical-Slit Masked Vorathic Bust & Halo
+        const helm = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.44, 0.95, 16), goldMat);
+        const slit = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.72, 0.12), new THREE.MeshBasicMaterial({ color: 0x2cf2ff }));
+        slit.position.z = 0.41;
+        const crown = new THREE.Mesh(new THREE.TorusGeometry(0.68, 0.05, 8, 24), goldMat);
+        crown.position.z = -0.15;
+        trophy.add(helm, slit, crown);
+      } else if (idx === 1) {
+        // 2. 3D Skateboard on Waxed Copper Rail
+        const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.8, 12), goldMat);
+        rail.rotation.z = 0.35;
+        const deck = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.06, 1.45), cyanMat);
+        deck.position.y = 0.16; deck.rotation.y = 0.5;
+        trophy.add(rail, deck);
+      } else if (idx === 2) {
+        // 3. Exploded Precision Barrel & Slide Assembly
+        const slide = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.36, 1.65), darkSteel);
+        slide.position.y = 0.28;
+        const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 1.85, 16), goldMat);
+        barrel.rotation.x = Math.PI / 2; barrel.position.y = -0.14;
+        trophy.add(slide, barrel);
+      } else {
+        // 4. 5-Tier 24K Gold Dilution Chandelier
+        [0.78, 0.62, 0.46, 0.30].forEach((r, tIdx) => {
+          const fl = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.07, 24), goldMat);
+          fl.position.y = 0.55 - tIdx * 0.32;
+          trophy.add(fl);
+        });
+        const orb = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 14), cyanMat);
+        orb.position.set(0.55, 0.15, 0);
+        trophy.add(orb);
+      }
+      g.add(trophy);
+      scene.add(g);
+      pedestals.push({ group: g, trophy, halo, x: px });
+    });
+
+    renderCards();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    let lastT = performance.now();
+    let fpsFrames = 0, fpsAcc = 0, measuredFps = 60;
+    function animate(now) {
+      requestAnimationFrame(animate);
+      const dt = Math.min(0.05, (now - lastT) / 1000);
+      lastT = now;
+      fpsFrames++; fpsAcc += dt;
+      if (fpsAcc >= 0.5) { measuredFps = Math.round(fpsFrames / fpsAcc); fpsFrames = 0; fpsAcc = 0; }
+
+      const targetX = pedestals[focusedIdx].x * 0.38;
+      camera.position.x += (targetX - camera.position.x) * Math.min(1, dt * 4.5);
+      camera.lookAt(targetX * 0.6, 1.05, 0);
+
+      pedestals.forEach((p, i) => {
+        p.trophy.rotation.y += dt * (i === focusedIdx ? 1.45 : 0.55);
+        p.trophy.position.y = 1.45 + Math.sin(now * 0.003 + i) * 0.08 + (i === focusedIdx ? 0.16 : 0);
+        p.halo.scale.setScalar(i === focusedIdx ? 1.12 : 1.0);
+      });
+
+      renderer.render(scene, camera);
+    }
+    requestAnimationFrame(animate);
+
+    window.__NSP_SUITE__ = {
+      id: 'northstar_flagship_3d_games_suite_20261115',
+      getState: () => ({
+        fps: measuredFps,
+        jsErrors: jsErrors.slice(),
+        gamesCount: GAMES.length,
+        focusedGame: GAMES[focusedIdx].id
+      })
+    };
+  })();
+  </script>
+
+<div class="nsp-hub-return-bar">
+  <a class="nsp-hub-return" href="/games/" target="_top">← 3D Games Hub</a>
+  <a class="nsp-hub-return" href="/arcade/" target="_top">Arcade (60)</a>
+</div>
+
+</body>
+</html>

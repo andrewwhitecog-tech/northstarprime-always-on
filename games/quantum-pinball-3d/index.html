@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="nsp-analytics" content="none">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="author" content="Andrew White" />
+  <title>Quantum Chandelier Pinball FX 3D — NorthStar IDG</title>
+  <script src="../three.min.js"></script>
+  <style>
+    :root {
+      --gold: #f7c957;
+      --cyan: #2cf2ff;
+      --violet: #b666ff;
+      --emerald: #36f5a7;
+      --crimson: #ff3366;
+      --ink: rgba(8, 11, 22, 0.85);
+      --text: #f6f9ff;
+      --muted: #98a8c4;
+    }
+    * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      overflow: hidden; background: #050711; color: var(--text);
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    }
+    #pinball-viewport {
+      position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 1;
+      touch-action: none;
+    }
+    .fx-hud {
+      position: fixed; inset: 0; z-index: 10; pointer-events: none;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      grid-template-columns: 295px 1fr 285px;
+      gap: 10px; padding: 10px 14px;
+    }
+    .gold-glass {
+      pointer-events: auto;
+      background: linear-gradient(165deg, rgba(12, 16, 30, 0.86), rgba(6, 8, 18, 0.92));
+      border: 1px solid rgba(247, 201, 87, 0.36);
+      clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px), 0 10px);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.65), inset 0 0 24px rgba(44, 242, 255, 0.07);
+      backdrop-filter: blur(8px);
+    }
+    #top-dmd {
+      grid-column: 1 / 4; grid-row: 1;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 7px 16px; gap: 12px; flex-wrap: wrap;
+    }
+    .cab-brand { display: flex; align-items: center; gap: 10px; }
+    .kelvin-pill {
+      padding: 4px 10px; font-weight: 900; font-size: 0.76rem; letter-spacing: 0.08em;
+      background: linear-gradient(90deg, var(--gold), var(--cyan)); color: #060913;
+      clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+    }
+    .cab-brand h1 {
+      margin: 0; font-size: 1.0rem; letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--gold); text-shadow: 0 0 14px rgba(247, 201, 87, 0.45);
+    }
+    .dmd-strip { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .dmd-cell {
+      padding: 4px 11px; background: rgba(44, 242, 255, 0.08);
+      border: 1px solid rgba(44, 242, 255, 0.35);
+      clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+      font-size: 0.74rem; font-weight: 800;
+    }
+    .dmd-cell b { color: var(--gold); font-size: 0.96rem; margin-left: 4px; }
+
+    #missions-pane {
+      grid-column: 1; grid-row: 2;
+      padding: 10px 12px; display: flex; flex-direction: column; gap: 6px;
+      max-height: calc(100vh - 165px); overflow-y: auto;
+    }
+    #telemetry-pane {
+      grid-column: 3; grid-row: 2;
+      padding: 10px 12px; display: flex; flex-direction: column; gap: 7px;
+      max-height: calc(100vh - 165px); overflow-y: auto;
+    }
+    .sec-hdr {
+      font-size: 0.73rem; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--gold); border-bottom: 1px solid rgba(247, 201, 87, 0.25); padding-bottom: 4px;
+      display: flex; justify-content: space-between;
+    }
+    .mission-card {
+      padding: 5px 8px; font-size: 0.7rem;
+      background: rgba(255,255,255,0.035); border-left: 3px solid rgba(247, 201, 87, 0.35);
+      display: flex; justify-content: space-between; align-items: center; gap: 6px;
+    }
+    .mission-card.done {
+      border-left-color: var(--emerald);
+      background: rgba(54, 245, 167, 0.12);
+    }
+    .p-btn {
+      cursor: pointer; font-family: inherit; font-weight: 800; font-size: 0.7rem;
+      letter-spacing: 0.06em; text-transform: uppercase; padding: 6px 10px;
+      color: var(--text); background: linear-gradient(180deg, rgba(32, 42, 68, 0.85), rgba(14, 18, 34, 0.94));
+      border: 1px solid rgba(247, 201, 87, 0.4);
+      clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+      transition: all 0.13s ease;
+    }
+    .p-btn:hover { border-color: var(--cyan); box-shadow: 0 0 12px rgba(44, 242, 255, 0.4); }
+    .p-btn.active { background: linear-gradient(90deg, rgba(247, 201, 87, 0.35), rgba(44, 242, 255, 0.28)); border-color: var(--gold); }
+
+    #callout-center {
+      grid-column: 2; grid-row: 2;
+      display: flex; flex-direction: column; justify-content: flex-start; align-items: center;
+      pointer-events: none; padding-top: 6px;
+    }
+    #jackpot-banner {
+      font-size: 1.25rem; font-weight: 900; letter-spacing: 0.1em;
+      color: var(--cyan); text-shadow: 0 0 18px rgba(44, 242, 255, 0.8), 0 2px 3px #000;
+      min-height: 28px; text-align: center;
+    }
+
+    #bottom-bar {
+      grid-column: 1 / 4; grid-row: 3;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 7px 14px; gap: 8px; flex-wrap: wrap;
+    }
+    .flipper-touch-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+    .hs-row {
+      display: flex; justify-content: space-between; font-size: 0.71rem;
+      padding: 3px 6px; background: rgba(255,255,255,0.03);
+    }
+
+    @media (max-width: 900px) {
+      .fx-hud {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto 1fr auto;
+        padding: 6px; gap: 6px;
+      }
+      #top-dmd { grid-column: 1; padding: 5px 8px; }
+      .cab-brand h1 { font-size: 0.8rem; }
+      #missions-pane { grid-column: 1; grid-row: 2; max-height: 92px; padding: 5px 8px; }
+      #telemetry-pane { display: none; }
+      #telemetry-pane.mobile-open {
+        display: flex; position: fixed; top: 58px; left: 6px; right: 6px; z-index: 30; max-height: 56vh;
+      }
+      #callout-center { grid-column: 1; grid-row: 3; }
+      #bottom-bar { grid-column: 1; grid-row: 4; padding: 6px 8px; justify-content: center; }
+    }
+  </style>
+
+<style data-nsp-vorath="games-zero-flat">
+@media (forced-colors: none) {
+  button, [role="button"], select, a, summary {
+    border-radius: 0 !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-width: 6px 12px !important;
+    border-image: url("/warband/art/vorath_btn_obsidian.webp") 44 66 fill / 6px 12px stretch !important;
+    background-image: none !important;
+    background-color: transparent !important;
+    color: #fef3c7 !important;
+    text-shadow: 0 1px 3px #000 !important;
+    box-shadow: none !important;
+  }
+  button.active, button.primary, .play-btn, .launch-btn, a.nsp-hub-return {
+    border-image-source: url("/warband/art/vorath_btn_primary.webp") !important;
+    color: #fffdf5 !important;
+  }
+  input[type="search"], input[type="text"], input[type="number"], textarea {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    border-radius: 0 !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-width: 7px 14px !important;
+    border-image: url("/warband/art/vorath_stat_plaque_v01.webp") 18 36 fill / 7px 14px stretch !important;
+    background: none !important;
+    color: #fef3c7 !important;
+  }
+  input[type="range"], input[type="checkbox"], input[type="radio"] {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    border-radius: 0 !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-width: 4px 8px !important;
+    border-image: url("/warband/art/vorath_stat_plaque_v01.webp") 18 36 fill / 4px 8px stretch !important;
+    background: none !important;
+  }
+  .cw-pill, .xp-pill, .metric-pill, .ns-tag, .brand-pill, .meter-pill, .tier-crest, .star-crest,
+  .cab-medal, .cab-stats-row, .stat-chip, .dmd-cell, .part-chip, #chrono-box {
+    border-radius: 0 !important;
+    border-style: solid !important;
+    border-color: transparent !important;
+    border-width: 5px 10px !important;
+    border-image: url("/warband/art/vorath_stat_plaque_v01.webp") 18 36 fill / 5px 10px stretch !important;
+    background: none !important;
+    clip-path: none !important;
+    color: #fef3c7 !important;
+  }
+}
+.nsp-hub-return-bar {
+  position: fixed;
+  bottom: 10px;
+  right: 12px;
+  z-index: 9999;
+  display: flex;
+  gap: 6px;
+}
+.nsp-hub-return {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 3px 10px;
+  font: 700 12px/1.2 system-ui, sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+</style>
+
+</head>
+<body>
+  <div id="pinball-viewport"></div>
+
+  <div class="fx-hud">
+    <header id="top-dmd" class="gold-glass">
+      <div class="cab-brand">
+        <span class="kelvin-pill" id="hud-temp">15 mK CRYO</span>
+        <h1>Quantum Chandelier Pinball FX 3D</h1>
+      </div>
+      <div class="dmd-strip">
+        <div class="dmd-cell">SCORE <b id="hud-score">0</b></div>
+        <div class="dmd-cell">BALL <b id="hud-ball">1 / 3</b></div>
+        <div class="dmd-cell">MULT <b id="hud-mult">1X</b></div>
+        <div class="dmd-cell">LOCKS <b id="hud-locks">0 / 3</b></div>
+        <button class="p-btn" id="btn-cam">CAM: CLASSIC</button>
+        <button class="p-btn" id="btn-mobile-scores">HIGH SCORES</button>
+      </div>
+    </header>
+
+    <!-- Left: 6 Structured Quantum Missions -->
+    <aside id="missions-pane" class="gold-glass">
+      <div class="sec-hdr">
+        <span>6 Cryostat Table Missions</span>
+        <span id="mission-prog">0 / 6</span>
+      </div>
+      <div id="mission-list" style="display:flex;flex-direction:column;gap:4px;"></div>
+    </aside>
+
+    <!-- Center Live Callout -->
+    <main id="callout-center">
+      <div id="jackpot-banner">HOLD [ENTER / PLUNGE] TO LAUNCH QUANTUM SPHERE</div>
+    </main>
+
+    <!-- Right: Tilt Bob, Ball Save & Persistent High-Score Initials -->
+    <aside id="telemetry-pane" class="gold-glass">
+      <div class="sec-hdr">
+        <span>Cabinet Diagnostics</span>
+        <span id="ball-save-lbl" style="color:var(--emerald)">BALL SAVE ON</span>
+      </div>
+      <div style="font-size:0.7rem;display:flex;justify-content:space-between;">
+        <span>Tilt Pendulum Warning:</span>
+        <b id="tilt-lbl" style="color:var(--cyan)">0 / 3</b>
+      </div>
+      <div style="font-size:0.7rem;display:flex;justify-content:space-between;">
+        <span>Kickback Solenoid:</span>
+        <b id="kickback-lbl" style="color:var(--emerald)">ARMED</b>
+      </div>
+      <div style="font-size:0.7rem;display:flex;justify-content:space-between;">
+        <span>Physics Substeps:</span>
+        <b style="color:var(--gold)">12x (720 Hz)</b>
+      </div>
+
+      <div class="sec-hdr" style="margin-top:4px;"><span>Grand Champion Initials</span></div>
+      <div id="highscore-list" style="display:flex;flex-direction:column;gap:3px;"></div>
+      <div style="display:flex;gap:4px;margin-top:4px;">
+        <input id="initials-input" maxlength="3" value="AJW" style="width:58px;background:#0a1020;color:var(--gold);border:1px solid var(--gold);padding:4px;font-weight:900;text-align:center;text-transform:uppercase;" />
+        <button class="p-btn" id="btn-save-hs" style="flex:1;">RECORD SCORE</button>
+      </div>
+      <button class="p-btn active" id="btn-new-game" style="margin-top:4px;">NEW 3-BALL GAME</button>
+    </aside>
+
+    <!-- Bottom Controls & Touch Flippers -->
+    <footer id="bottom-bar" class="gold-glass">
+      <div class="flipper-touch-row">
+        <button class="p-btn active" id="btn-left-flip">&#9664; L-FLIP [Z / L-SHIFT]</button>
+        <button class="p-btn" id="btn-nudge">NUDGE [SPACE]</button>
+        <button class="p-btn active" id="btn-plunge">PLUNGE [ENTER]</button>
+        <button class="p-btn active" id="btn-right-flip">R-FLIP [/ / R-SHIFT] &#9654;</button>
+      </div>
+      <div style="font-size:0.69rem;color:var(--muted);">
+        Designed by Andrew White &bull; 5-Tier 24K-Gold Dilution Chandelier Multiball
+      </div>
+    </footer>
+  </div>
+
+  <script>
+  (function() {
+    'use strict';
+
+    const jsErrors = [];
+    window.addEventListener('error', (e) => jsErrors.push(e.message || 'error'));
+
+    // --- Pinball Solenoid & Quantum Chime WebAudio ---
+    let audioCtx = null;
+    function ensureAudio() {
+      if (!audioCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) audioCtx = new AC();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    }
+    function sfxPin(kind) {
+      try {
+        ensureAudio();
+        if (!audioCtx) return;
+        const t = audioCtx.currentTime;
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.connect(g); g.connect(audioCtx.destination);
+        if (kind === 'flipper') {
+          o.type = 'triangle'; o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(340, t + 0.055);
+          g.gain.setValueAtTime(0.11, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+          o.start(t); o.stop(t + 0.06);
+        } else if (kind === 'bumper') {
+          o.type = 'sawtooth'; o.frequency.setValueAtTime(580 + Math.random() * 240, t); o.frequency.exponentialRampToValueAtTime(190, t + 0.11);
+          g.gain.setValueAtTime(0.10, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+          o.start(t); o.stop(t + 0.12);
+        } else if (kind === 'spinner') {
+          o.type = 'sine'; o.frequency.setValueAtTime(1180, t); o.frequency.exponentialRampToValueAtTime(1620, t + 0.04);
+          g.gain.setValueAtTime(0.05, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.045);
+          o.start(t); o.stop(t + 0.045);
+        } else if (kind === 'multiball') {
+          [440, 554, 659, 880, 1108].forEach((f, i) => {
+            const o2 = audioCtx.createOscillator(); const g2 = audioCtx.createGain();
+            o2.type = 'triangle'; o2.frequency.setValueAtTime(f, t + i * 0.055);
+            g2.gain.setValueAtTime(0.09, t + i * 0.055); g2.gain.exponentialRampToValueAtTime(0.001, t + i * 0.055 + 0.22);
+            o2.connect(g2); g2.connect(audioCtx.destination);
+            o2.start(t + i * 0.055); o2.stop(t + i * 0.055 + 0.22);
+          });
+        }
+      } catch (_) {}
+    }
+
+    // --- Persistent High-Score Table ---
+    const HS_KEY = 'nsp_quantum_chandelier_pinball_hs_20261115';
+    let highScores = [
+      { initials: 'AJW', score: 4850000 },
+      { initials: 'NSP', score: 3200000 },
+      { initials: 'QPU', score: 2150000 },
+      { initials: 'VRT', score: 1400000 }
+    ];
+    try {
+      const saved = localStorage.getItem(HS_KEY);
+      if (saved) highScores = JSON.parse(saved);
+    } catch (_) {}
+    function persistHighScores() {
+      try { localStorage.setItem(HS_KEY, JSON.stringify(highScores)); } catch (_) {}
+    }
+
+    // --- Three.js PBR Scene & High-Contrast Showroom IBL ---
+    const wrap = document.getElementById('pinball-viewport');
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.25;
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    wrap.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x060914);
+    scene.fog = new THREE.FogExp2(0x060914, 0.012);
+
+    const camera = new THREE.PerspectiveCamera(44, window.innerWidth / window.innerHeight, 0.2, 120);
+
+    // PMREM Mirror Reflection Environment (Makes 24K Gold & Chrome Steel Balls Gleam!)
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    const envScene = new THREE.Scene();
+    envScene.background = new THREE.Color(0x0b1022);
+    const addBoxLight = (col, x, y, z, sx, sy, sz) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), new THREE.MeshBasicMaterial({ color: col }));
+      m.position.set(x, y, z); envScene.add(m);
+    };
+    addBoxLight(0xfff3d1, 0, 18, 0, 16, 1, 24);
+    addBoxLight(0x2cf2ff, -14, 9, -4, 1, 8, 22);
+    addBoxLight(0xff3388, 14, 9, -4, 1, 8, 22);
+    addBoxLight(0xf7c957, 0, 12, -18, 16, 8, 1);
+    scene.environment = pmrem.fromScene(envScene, 0.03).texture;
+
+    scene.add(new THREE.HemisphereLight(0x9cb8ff, 0x24170c, 0.6));
+    const cabSpot = new THREE.DirectionalLight(0xfff2d6, 1.5);
+    cabSpot.position.set(6, 22, 12);
+    cabSpot.castShadow = true;
+    cabSpot.shadow.mapSize.set(2048, 2048);
+    cabSpot.shadow.camera.left = -12; cabSpot.shadow.camera.right = 12;
+    cabSpot.shadow.camera.top = 18; cabSpot.shadow.camera.bottom = -18;
+    scene.add(cabSpot);
+
+    // --- Playfield Coordinate System: X in [-6.0, +6.0], Z in [-11.5 (top), +11.5 (bottom)] ---
+    const TABLE_W = 12.0;
+    const TABLE_H = 23.0;
+    const PLUNGER_X = 5.25; // Right shooter lane X
+
+    function buildPlayfieldArtTexture() {
+      const c = document.createElement('canvas'); c.width = 1024; c.height = 2048;
+      const ctx = c.getContext('2d');
+      const bg = ctx.createLinearGradient(0, 0, 0, 2048);
+      bg.addColorStop(0, '#091126');
+      bg.addColorStop(0.5, '#121b3b');
+      bg.addColorStop(1, '#080c1c');
+      ctx.fillStyle = bg; ctx.fillRect(0, 0, 1024, 2048);
+
+      // Concentric 24K Gold Quantum Dilution Orbitals
+      [180, 290, 410, 540].forEach((r, idx) => {
+        ctx.strokeStyle = idx % 2 === 0 ? 'rgba(247, 201, 87, 0.42)' : 'rgba(44, 242, 255, 0.32)';
+        ctx.lineWidth = 6;
+        ctx.beginPath(); ctx.arc(470, 760, r, 0, Math.PI * 2); ctx.stroke();
+      });
+
+      // Gold Superconducting Bus Traces
+      ctx.strokeStyle = 'rgba(247, 201, 87, 0.55)';
+      ctx.lineWidth = 8;
+      for (let i = 0; i < 8; i++) {
+        ctx.beginPath();
+        ctx.moveTo(120 + i * 95, 1950);
+        ctx.lineTo(250 + i * 65, 1220);
+        ctx.lineTo(470, 760);
+        ctx.stroke();
+      }
+
+      // Center Sapphire Emblem & Title Art on Playfield
+      ctx.fillStyle = 'rgba(44, 242, 255, 0.16)';
+      ctx.beginPath(); ctx.arc(470, 1320, 195, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#f7c957'; ctx.lineWidth = 7; ctx.stroke();
+
+      ctx.fillStyle = '#f7c957';
+      ctx.font = '900 54px "Segoe UI", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('15 mK DILUTION', 470, 1305);
+      ctx.fillStyle = '#2cf2ff';
+      ctx.font = '800 38px "Segoe UI", sans-serif';
+      ctx.fillText('ZERO-KELVIN MULTIBALL', 470, 1360);
+
+      // Shooter Lane Stripe
+      ctx.fillStyle = 'rgba(247, 201, 87, 0.14)';
+      ctx.fillRect(905, 220, 105, 1800);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.encoding = THREE.sRGBEncoding;
+      return tex;
+    }
+
+    const cabinetGroup = new THREE.Group();
+    cabinetGroup.rotation.x = 0.11; // Authentic 6.5-degree pinball incline!
+    scene.add(cabinetGroup);
+
+    const gold24Mat = new THREE.MeshStandardMaterial({ color: 0xffcf54, metalness: 0.96, roughness: 0.12 });
+    const copperCoilMat = new THREE.MeshStandardMaterial({ color: 0xe37c3b, metalness: 0.90, roughness: 0.18 });
+    const chromeMat = new THREE.MeshStandardMaterial({ color: 0xf2f7ff, metalness: 0.98, roughness: 0.05 });
+    const ceramicMat = new THREE.MeshStandardMaterial({ color: 0xf4f8ff, metalness: 0.12, roughness: 0.16 });
+    const cabinetWoodMat = new THREE.MeshStandardMaterial({ color: 0x161c2e, metalness: 0.55, roughness: 0.32 });
+
+    // Playfield Clearcoated Board
+    const playfieldMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(TABLE_W, 0.5, TABLE_H),
+      new THREE.MeshStandardMaterial({
+        map: buildPlayfieldArtTexture(),
+        roughness: 0.14,
+        metalness: 0.18
+      })
+    );
+    playfieldMesh.position.y = -0.25;
+    playfieldMesh.receiveShadow = true;
+    cabinetGroup.add(playfieldMesh);
+
+    // Cabinet Side Rails, Top Arch & Brushed Gold Lockdown Bar
+    [
+      [-TABLE_W / 2 - 0.35, 0.45, 0, 0.7, 1.3, TABLE_H + 1.2],
+      [TABLE_W / 2 + 0.35, 0.45, 0, 0.7, 1.3, TABLE_H + 1.2],
+      [0, 0.45, -TABLE_H / 2 - 0.35, TABLE_W + 1.4, 1.3, 0.7]
+    ].forEach((b) => {
+      const w = new THREE.Mesh(new THREE.BoxGeometry(b[3], b[4], b[5]), cabinetWoodMat);
+      w.position.set(b[0], b[1], b[2]);
+      w.castShadow = true; w.receiveShadow = true;
+      cabinetGroup.add(w);
+    });
+    const lockdownBar = new THREE.Mesh(new THREE.BoxGeometry(TABLE_W + 1.45, 0.85, 0.85), gold24Mat);
+    lockdownBar.position.set(0, 0.48, TABLE_H / 2 + 0.38);
+    cabinetGroup.add(lockdownBar);
+
+    // Shooter Lane Divider Wall (X = 4.55, from Z = -6.5 to +11.5)
+    const shooterWall = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.65, 17.5), chromeMat);
+    shooterWall.position.set(4.55, 0.32, 2.75);
+    shooterWall.castShadow = true;
+    cabinetGroup.add(shooterWall);
+
+    // Plunger Rod & Spring in Shooter Lane
+    const plungerMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 2.2, 14), gold24Mat);
+    plungerMesh.rotation.x = Math.PI / 2;
+    plungerMesh.position.set(PLUNGER_X, 0.28, 10.6);
+    cabinetGroup.add(plungerMesh);
+
+    // --- CENTERPIECE: Physical 3D 5-Tier 24K-Gold Dilution Chandelier ---
+    const chandelierGroup = new THREE.Group();
+    chandelierGroup.position.set(-0.6, 0.1, -3.6);
+    cabinetGroup.add(chandelierGroup);
+
+    // Central Superconducting Cryo Spine
+    const centralSpine = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.14, 3.6, 16), gold24Mat);
+    centralSpine.position.y = 1.8;
+    chandelierGroup.add(centralSpine);
+
+    // Pyramid-tapered 5-tier open-ring 24K-Gold Dilution Stages (visible from every camera angle!)
+    const tierRadii = [0.72, 1.02, 1.32, 1.62, 1.92];
+    const tierHeights = [3.45, 2.75, 2.05, 1.38, 0.72];
+    tierRadii.forEach((r, idx) => {
+      // Open-center 24K Gold Annular Flange + Beveled Rim + 4 Radial Gold Spokes
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(r, 0.085, 12, 36), gold24Mat);
+      rim.rotation.x = Math.PI / 2;
+      rim.position.y = tierHeights[idx];
+      rim.castShadow = true;
+      chandelierGroup.add(rim);
+
+      for (let sp = 0; sp < 4; sp++) {
+        const sa = (sp / 4) * Math.PI * 2 + idx * 0.4;
+        const spoke = new THREE.Mesh(new THREE.BoxGeometry(r * 1.92, 0.06, 0.12), gold24Mat);
+        spoke.position.y = tierHeights[idx];
+        spoke.rotation.y = sa;
+        chandelierGroup.add(spoke);
+      }
+
+      // 3 Vertical Copper Tie-Rods + Cryogenic Capillary Loops
+      for (let k = 0; k < 3; k++) {
+        const a = (k / 3) * Math.PI * 2 + idx * 0.35;
+        const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.68, 8), copperCoilMat);
+        rod.position.set(Math.cos(a) * (r * 0.76), tierHeights[idx] - 0.34, Math.sin(a) * (r * 0.76));
+        chandelierGroup.add(rod);
+      }
+      const coil = new THREE.Mesh(new THREE.TorusGeometry(r * 0.56, 0.038, 8, 24), copperCoilMat);
+      coil.rotation.x = Math.PI / 2;
+      coil.position.y = tierHeights[idx] - 0.20;
+      chandelierGroup.add(coil);
+    });
+    // Crown & Lower Sapphire 15 mK Mixing Chamber Cores + Glowing PointLight
+    const cryoCore = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.46, 1),
+      new THREE.MeshStandardMaterial({ color: 0x2cf2ff, emissive: 0x2cf2ff, emissiveIntensity: 2.5, roughness: 0.08 })
+    );
+    cryoCore.position.y = 3.92;
+    const chandelierLight = new THREE.PointLight(0x2cf2ff, 2.4, 14);
+    chandelierLight.position.y = 2.2;
+    chandelierGroup.add(cryoCore, chandelierLight);
+
+    // Visual Locked Chrome Spheres orbiting on the Chandelier!
+    const lockedBallVisuals = [];
+    for (let i = 0; i < 3; i++) {
+      const lb = new THREE.Mesh(new THREE.SphereGeometry(0.26, 20, 16), chromeMat);
+      lb.visible = false;
+      chandelierGroup.add(lb);
+      lockedBallVisuals.push(lb);
+    }
+
+    // --- 5 Ribbed White-Ceramic High-Voltage Pop Bumpers ---
+    const bumpers = [
+      { x: -2.4, z: -6.6, r: 0.62, flash: 0 },
+      { x: 1.3, z: -6.8, r: 0.62, flash: 0 },
+      { x: -0.6, z: -8.3, r: 0.62, flash: 0 },
+      { x: -3.2, z: -3.8, r: 0.56, flash: 0 },
+      { x: 2.2, z: -4.1, r: 0.56, flash: 0 }
+    ];
+    bumpers.forEach((b, idx) => {
+      const bg = new THREE.Group();
+      bg.position.set(b.x, 0, b.z);
+      // 3 stacked ribbed white ceramic insulator rings
+      [0.14, 0.30, 0.46].forEach((y) => {
+        const rib = new THREE.Mesh(new THREE.TorusGeometry(b.r * 0.72, 0.09, 10, 20), ceramicMat);
+        rib.rotation.x = Math.PI / 2;
+        rib.position.y = y;
+        rib.castShadow = true;
+        bg.add(rib);
+      });
+      const cap = new THREE.Mesh(
+        new THREE.CylinderGeometry(b.r * 0.85, b.r * 0.7, 0.14, 20),
+        new THREE.MeshStandardMaterial({ color: 0xffc857, emissive: 0x000000, metalness: 0.85, roughness: 0.2 })
+      );
+      cap.position.y = 0.58;
+      const bLight = new THREE.PointLight(idx % 2 === 0 ? 0x2cf2ff : 0xff3388, 0.35, 5.5);
+      bLight.position.y = 0.85;
+      bg.add(cap, bLight);
+      cabinetGroup.add(bg);
+      b.group = bg; b.cap = cap; b.light = bLight;
+    });
+
+    // --- 2 Sweeping 3D Chrome Wireform Ramps ---
+    function addWireformRamp(pts) {
+      const curve = new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(p[0], p[1], p[2])));
+      [-0.22, 0.22].forEach((off) => {
+        const offsetPts = pts.map((p) => new THREE.Vector3(p[0] + off, p[1], p[2]));
+        const c2 = new THREE.CatmullRomCurve3(offsetPts);
+        const rail = new THREE.Mesh(new THREE.TubeGeometry(c2, 36, 0.045, 8, false), chromeMat);
+        rail.castShadow = true;
+        cabinetGroup.add(rail);
+      });
+      for (let i = 1; i < 8; i++) {
+        const p = curve.getPoint(i / 8);
+        const hoop = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.03, 8, 16, Math.PI), gold24Mat);
+        hoop.position.copy(p);
+        cabinetGroup.add(hoop);
+      }
+      return curve;
+    }
+    const leftRampCurve = addWireformRamp([
+      [-4.1, 0.28, -1.5], [-4.8, 1.35, -6.2], [-4.9, 1.65, -9.2], [-5.2, 0.95, 1.5], [-4.5, 0.30, 7.2]
+    ]);
+    const rightRampCurve = addWireformRamp([
+      [3.1, 0.28, -1.5], [3.8, 1.35, -6.2], [3.7, 1.65, -9.0], [3.9, 0.95, 1.5], [3.6, 0.30, 7.2]
+    ]);
+
+    // --- 6 Physical Drop Targets (Left S-A-P & Right Q-B-T Banks) ---
+    const dropTargets = [
+      { x: -5.2, z: -0.2, up: true }, { x: -5.2, z: 0.7, up: true }, { x: -5.2, z: 1.6, up: true },
+      { x: 4.1, z: -0.2, up: true }, { x: 4.1, z: 0.7, up: true }, { x: 4.1, z: 1.6, up: true }
+    ];
+    dropTargets.forEach((dt) => {
+      const m = new THREE.Mesh(
+        new THREE.BoxGeometry(0.22, 0.52, 0.62),
+        new THREE.MeshStandardMaterial({ color: 0x2cf2ff, emissive: 0x0b5866, roughness: 0.2 })
+      );
+      m.position.set(dt.x, 0.26, dt.z);
+      m.castShadow = true;
+      cabinetGroup.add(m);
+      dt.mesh = m;
+    });
+
+    // --- Whirring Cryo Spinner Gate (Left Orbit X = -3.8, Z = -2.2) ---
+    const spinnerGate = { x: -3.8, z: -2.2, spinVel: 0, totalRevs: 0 };
+    const spinnerPlate = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.55, 0.05), gold24Mat);
+    spinnerPlate.position.set(spinnerGate.x, 0.52, spinnerGate.z);
+    cabinetGroup.add(spinnerPlate);
+
+    // --- Upper Rollover Multiplier Lanes (Z = -9.6) ---
+    const rolloverLanes = [
+      { x: -2.4, z: -9.6, lit: false },
+      { x: -0.6, z: -9.6, lit: true }, // Flashing Skill-Shot Lane!
+      { x: 1.2, z: -9.6, lit: false }
+    ];
+    rolloverLanes.forEach((rl) => {
+      const m = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.24, 0.24, 0.06, 16),
+        new THREE.MeshBasicMaterial({ color: rl.lit ? 0xf7c957 : 0x1b3348 })
+      );
+      m.position.set(rl.x, 0.04, rl.z);
+      cabinetGroup.add(m);
+      rl.mesh = m;
+    });
+
+    // --- Guide Walls, Slingshots & Precision Swept 3D Flippers ---
+    const wallSegments = [
+      // Top curve arch segments
+      [-6.0, -7.5, -4.2, -10.4], [-4.2, -10.4, 0.5, -11.3], [0.5, -11.3, 4.4, -10.2], [4.4, -10.2, 5.95, -7.2],
+      // Outer cabinet walls
+      [-5.95, -7.5, -5.95, 7.8], [5.95, -7.2, 5.95, 11.4],
+      // Shooter lane inner wall (leaves top open above Z = -6.0!)
+      [4.55, -6.0, 4.55, 11.4],
+      // Left & Right Inlane Guides feeding flippers cleanly
+      [-5.95, 6.2, -2.55, 9.15],
+      [4.55, 6.2, 1.35, 9.15],
+      // Slingshot diagonal kickers
+      [-4.2, 5.6, -2.6, 8.0],
+      [2.9, 5.6, 1.4, 8.0]
+    ];
+    wallSegments.forEach(([x1, z1, x2, z2], idx) => {
+      if (idx < 7) return; // Visual guide rails for lower guides & slingshots
+      const len = Math.hypot(x2 - x1, z2 - z1);
+      const midX = (x1 + x2) / 2, midZ = (z1 + z2) / 2;
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.45, len), idx >= 9 ? gold24Mat : chromeMat);
+      bar.position.set(midX, 0.22, midZ);
+      bar.rotation.y = Math.atan2(x2 - x1, z2 - z1);
+      bar.castShadow = true;
+      cabinetGroup.add(bar);
+    });
+
+    // Left & Right 3D Flippers
+    // Pivot positions symmetric around playfield center X = -0.6!
+    const flippers = [
+      { side: 'left', px: -2.45, pz: 9.25, len: 1.68, restAng: 0.46, activeAng: -0.52, ang: 0.46, prevAng: 0.46, held: false },
+      { side: 'right', px: 1.25, pz: 9.25, len: 1.68, restAng: Math.PI - 0.46, activeAng: Math.PI + 0.52, ang: Math.PI - 0.46, prevAng: Math.PI - 0.46, held: false }
+    ];
+    flippers.forEach((f) => {
+      const piv = new THREE.Group();
+      piv.position.set(f.px, 0.26, f.pz);
+      const bat = new THREE.Mesh(
+        new THREE.BoxGeometry(f.len, 0.36, 0.28),
+        new THREE.MeshStandardMaterial({ color: 0xf7c957, emissive: 0x3b2804, metalness: 0.65, roughness: 0.22 })
+      );
+      bat.position.x = f.len / 2;
+      bat.castShadow = true;
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.20, 0.38, 16), chromeMat);
+      piv.add(cap, bat);
+      cabinetGroup.add(piv);
+      f.pivot = piv;
+    });
+
+    // --- Mirror-Chrome Steel Balls Pool (Supports 3-Ball Multiball!) ---
+    const BALL_R = 0.26;
+    const balls = [];
+    function spawnBall(inPlunger) {
+      const m = new THREE.Mesh(new THREE.SphereGeometry(BALL_R, 24, 20), chromeMat);
+      m.castShadow = true;
+      cabinetGroup.add(m);
+      const b = {
+        x: inPlunger ? PLUNGER_X : -0.6 + (Math.random() - 0.5) * 1.4,
+        y: BALL_R,
+        z: inPlunger ? 9.1 : -2.2,
+        vx: inPlunger ? 0 : (Math.random() - 0.5) * 9,
+        vy: 0,
+        vz: inPlunger ? 0 : 6.5,
+        mesh: m,
+        onRamp: null,
+        rampT: 0
+      };
+      m.position.set(b.x, b.y, b.z);
+      balls.push(b);
+      return b;
+    }
+
+    // --- Game Ruleset, 6 Structured Missions & Multiball State ---
+    const MISSIONS = [
+      { id: 'skill_shot', title: '1. Tunneling Skill-Shot', done: false },
+      { id: 'cool_800mk', title: '2. Cool Still to 800mK (Spinner)', done: false },
+      { id: 'cap_40kv', title: '3. Charge 40kV Pop Bumpers', done: false },
+      { id: 'sapphire_cal', title: '4. Sapphire Drop-Target Bank', done: false },
+      { id: 'spark_frenzy', title: '5. Wireform Ramp Combo', done: false },
+      { id: 'zero_kelvin_mb', title: '6. Zero-Kelvin Wizard Multiball', done: false }
+    ];
+
+    const game = {
+      score: 0,
+      ballNum: 1,
+      multiplier: 1,
+      locks: 0,
+      bumperHits: 0,
+      rampComboTimer: 0,
+      lastRampSide: '',
+      ballSaveTimer: 16.0,
+      kickbackArmed: true,
+      tiltWarnings: 0,
+      tilted: false,
+      kelvinLabel: '4.0 K',
+      plungerCharge: 0,
+      plunging: false,
+      camMode: 0 // 0 Classic, 1 Ball-Follow, 2 Plunger/Chandelier Zoom
+    };
+
+    function setCallout(msg) {
+      document.getElementById('jackpot-banner').textContent = msg;
+    }
+
+    function addScore(pts, msg) {
+      if (game.tilted) return;
+      game.score += pts * game.multiplier;
+      if (msg) setCallout(`${msg} (+${(pts * game.multiplier).toLocaleString()})`);
+      refreshPinballUI();
+    }
+
+    function completeMission(id, bonusPts, banner) {
+      const m = MISSIONS.find((x) => x.id === id);
+      if (m && !m.done) {
+        m.done = true;
+        addScore(bonusPts, banner);
+        game.kelvinLabel = MISSIONS.filter((x) => x.done).length >= 3 ? '15 mK' : '800 mK';
+        renderMissions();
+      }
+    }
+
+    function triggerZeroKelvinMultiball() {
+      completeMission('zero_kelvin_mb', 250000, 'ZERO-KELVIN 3-BALL MULTIBALL!');
+      sfxPin('multiball');
+      game.locks = 0;
+      game.ballSaveTimer = 20.0;
+      lockedBallVisuals.forEach((v) => { v.visible = false; });
+      while (balls.length < 3) {
+        spawnBall(false);
+      }
+      refreshPinballUI();
+    }
+
+    function lockBallInChandelier() {
+      game.locks = Math.min(3, game.locks + 1);
+      lockedBallVisuals.forEach((v, i) => { v.visible = i < game.locks; });
+      addScore(75000, `CHANDELIER BALL LOCK ${game.locks}/3!`);
+      sfxPin('multiball');
+      if (game.locks >= 3) {
+        triggerZeroKelvinMultiball();
+      }
+    }
+
+    function resetNewGame() {
+      balls.forEach((b) => cabinetGroup.remove(b.mesh));
+      balls.length = 0;
+      MISSIONS.forEach((m) => { m.done = false; });
+      dropTargets.forEach((dt) => { dt.up = true; dt.mesh.position.y = 0.26; });
+      game.score = 0;
+      game.ballNum = 1;
+      game.multiplier = 1;
+      game.locks = 0;
+      game.bumperHits = 0;
+      spinnerGate.totalRevs = 0;
+      game.ballSaveTimer = 18.0;
+      game.kickbackArmed = true;
+      game.tiltWarnings = 0;
+      game.tilted = false;
+      game.kelvinLabel = '4.0 K';
+      lockedBallVisuals.forEach((v) => { v.visible = false; });
+      spawnBall(true);
+      setCallout('BALL 1 READY — PRESS [ENTER / PLUNGE]!');
+      renderMissions();
+      refreshPinballUI();
+    }
+
+    function launchPlunger(power) {
+      balls.forEach((b) => {
+        if (b.x > 4.6 && b.z > 7.5) {
+          b.vz = -(23.5 + power * 12.0);
+          b.vx = -0.8;
+          game.ballSaveTimer = 16.0;
+          sfxPin('flipper');
+          setCallout('QUANTUM SPHERE LAUNCHED!');
+        }
+      });
+    }
+
+    function nudgeTable() {
+      if (game.tilted) return;
+      game.tiltWarnings += 1;
+      balls.forEach((b) => { b.vz -= 3.2; b.vx += (Math.random() - 0.5) * 4.5; });
+      cabinetGroup.position.x = (Math.random() - 0.5) * 0.22;
+      sfxPin('bumper');
+      if (game.tiltWarnings >= 3) {
+        game.tilted = true;
+        setCallout('TILT! FLIPPERS OFFLINE UNTIL DRAIN!');
+      } else {
+        setCallout(`NUDGE! TILT WARNING ${game.tiltWarnings}/3`);
+      }
+      refreshPinballUI();
+    }
+
+    // --- 12-Substeps/Frame Continuous Pinball Physics Engine ---
+    function stepPhysics(dt) {
+      const SUBSTEPS = 12;
+      const h = dt / SUBSTEPS;
+      const GRAVITY_Z = 15.8; // Down-slope pinball gravity
+
+      for (let s = 0; s < SUBSTEPS; s++) {
+        // Update flipper angles smoothly & record angular velocity
+        flippers.forEach((f) => {
+          f.prevAng = f.ang;
+          const target = (f.held && !game.tilted) ? f.activeAng : f.restAng;
+          const rate = 24.0 * h;
+          f.ang += Math.max(-rate, Math.min(rate, target - f.ang));
+          f.pivot.rotation.y = -f.ang;
+        });
+
+        for (let bi = balls.length - 1; bi >= 0; bi--) {
+          const b = balls[bi];
+
+          // Wireform Ramp Elevated Travel!
+          if (b.onRamp) {
+            b.rampT += h * 0.68;
+            if (b.rampT >= 1.0) {
+              const endPt = b.onRamp.getPoint(1.0);
+              b.x = endPt.x; b.y = BALL_R; b.z = endPt.z;
+              b.vx = 0; b.vz = 5.5;
+              b.onRamp = null;
+            } else {
+              const pt = b.onRamp.getPoint(b.rampT);
+              b.x = pt.x; b.y = pt.y; b.z = pt.z;
+            }
+            b.mesh.position.set(b.x, b.y, b.z);
+            continue;
+          }
+
+          // Gravity & mild rolling drag
+          b.vz += GRAVITY_Z * h;
+          b.vx *= (1 - 0.08 * h);
+          b.vz *= (1 - 0.08 * h);
+
+          b.x += b.vx * h;
+          b.z += b.vz * h;
+
+          // Shooter Plunger Rest Stop
+          if (b.x > 4.6 && b.z > 9.35) {
+            b.z = 9.35;
+            if (b.vz > 0) b.vz = 0;
+          }
+
+          // Segment Wall Collisions
+          for (let wi = 0; wi < wallSegments.length; wi++) {
+            const [x1, z1, x2, z2] = wallSegments[wi];
+            const dx = x2 - x1, dz = z2 - z1;
+            const lenSq = dx * dx + dz * dz;
+            const t = Math.max(0, Math.min(1, ((b.x - x1) * dx + (b.z - z1) * dz) / lenSq));
+            const cx = x1 + t * dx, cz = z1 + t * dz;
+            const nx = b.x - cx, nz = b.z - cz;
+            const dist = Math.hypot(nx, nz);
+            if (dist < BALL_R + 0.08 && dist > 0.0001) {
+              const unx = nx / dist, unz = nz / dist;
+              b.x = cx + unx * (BALL_R + 0.082);
+              b.z = cz + unz * (BALL_R + 0.082);
+              const vn = b.vx * unx + b.vz * unz;
+              if (vn < 0) {
+                const slingshotBoost = wi >= 9 ? 7.5 : 0;
+                const rest = wi >= 9 ? 0.92 : 0.68;
+                b.vx -= (1 + rest) * vn * unx;
+                b.vz -= (1 + rest) * vn * unz;
+                if (slingshotBoost > 0) {
+                  b.vx += unx * slingshotBoost;
+                  b.vz += unz * slingshotBoost;
+                  addScore(2500, '');
+                  sfxPin('bumper');
+                }
+              }
+            }
+          }
+
+          // Flipper Swept Segment Collisions
+          flippers.forEach((f) => {
+            const ex = f.px + Math.cos(f.ang) * f.len;
+            const ez = f.pz + Math.sin(f.ang) * f.len;
+            const dx = ex - f.px, dz = ez - f.pz;
+            const lenSq = dx * dx + dz * dz;
+            const t = Math.max(0, Math.min(1, ((b.x - f.px) * dx + (b.z - f.pz) * dz) / lenSq));
+            const cx = f.px + t * dx, cz = f.pz + t * dz;
+            const nx = b.x - cx, nz = b.z - cz;
+            const dist = Math.hypot(nx, nz);
+            const minSep = BALL_R + 0.16;
+            if (dist < minSep && dist > 0.0001) {
+              const unx = nx / dist, unz = nz / dist;
+              b.x = cx + unx * (minSep + 0.01);
+              b.z = cz + unz * (minSep + 0.01);
+              const angVel = (f.ang - f.prevAng) / h;
+              const surfSpeed = Math.abs(angVel) * (t * f.len);
+              const vn = b.vx * unx + b.vz * unz;
+              if (vn < 0) {
+                b.vx -= 1.55 * vn * unx;
+                b.vz -= 1.55 * vn * unz;
+              }
+              if (surfSpeed > 2.0 && unz < 0) {
+                b.vz -= Math.min(26.0, surfSpeed * 1.15);
+                b.vx += unx * 5.5 + (f.side === 'left' ? 1.5 : -1.5);
+              }
+            }
+          });
+
+          // 5 High-Voltage Ceramic Pop Bumpers
+          bumpers.forEach((bmp) => {
+            const nx = b.x - bmp.x, nz = b.z - bmp.z;
+            const dist = Math.hypot(nx, nz);
+            const minR = bmp.r + BALL_R;
+            if (dist < minR && dist > 0.0001) {
+              const unx = nx / dist, unz = nz / dist;
+              b.x = bmp.x + unx * (minR + 0.02);
+              b.z = bmp.z + unz * (minR + 0.02);
+              b.vx = unx * 16.5;
+              b.vz = unz * 16.5;
+              bmp.flash = 0.22;
+              game.bumperHits += 1;
+              sfxPin('bumper');
+              addScore(5000, '40kV SPARK BUMPER!');
+              if (game.bumperHits >= 12) completeMission('cap_40kv', 85000, '40kV CAPACITOR CHARGED!');
+            }
+          });
+
+          // Center Chandelier Magnetic Lock Capture Ring
+          if (Math.hypot(b.x - (-0.6), b.z - (-3.6)) < 0.78 && b.vz < -2.0) {
+            b.vz = 11.5;
+            b.vx = (Math.random() - 0.5) * 9.0;
+            lockBallInChandelier();
+          }
+
+          // Left & Right Chrome Wireform Ramp Entrances
+          if (Math.hypot(b.x - (-4.1), b.z - (-1.5)) < 0.52 && b.vz < -5.5) {
+            b.onRamp = leftRampCurve; b.rampT = 0.02;
+            addScore(35000, 'LEFT CRYO RAMP!');
+            if (game.rampComboTimer > 0 && game.lastRampSide === 'right') {
+              completeMission('spark_frenzy', 120000, 'SPARK-GAP RAMP FRENZY!');
+            }
+            game.lastRampSide = 'left'; game.rampComboTimer = 12.0;
+          } else if (Math.hypot(b.x - 3.1, b.z - (-1.5)) < 0.52 && b.vz < -5.5) {
+            b.onRamp = rightRampCurve; b.rampT = 0.02;
+            addScore(35000, 'RIGHT CRYO RAMP!');
+            if (game.rampComboTimer > 0 && game.lastRampSide === 'left') {
+              completeMission('spark_frenzy', 120000, 'SPARK-GAP RAMP FRENZY!');
+            }
+            game.lastRampSide = 'right'; game.rampComboTimer = 12.0;
+          }
+
+          // 6 Drop Targets
+          dropTargets.forEach((dtObj) => {
+            if (!dtObj.up) return;
+            if (Math.abs(b.x - dtObj.x) < 0.38 && Math.abs(b.z - dtObj.z) < 0.42) {
+              dtObj.up = false;
+              dtObj.mesh.position.y = -0.18;
+              b.vx = -b.vx * 0.85;
+              sfxPin('bumper');
+              addScore(15000, 'SAPPHIRE TARGET DOWN!');
+              if (dropTargets.every((x) => !x.up)) {
+                completeMission('sapphire_cal', 110000, 'SAPPHIRE WAFER CALIBRATED!');
+                game.kickbackArmed = true;
+                setTimeout(() => dropTargets.forEach((x) => { x.up = true; x.mesh.position.y = 0.26; }), 1500);
+              }
+            }
+          });
+
+          // Whirring Cryo Spinner Gate
+          if (Math.hypot(b.x - spinnerGate.x, b.z - spinnerGate.z) < 0.58 && Math.abs(b.vz) > 3.5) {
+            spinnerGate.spinVel = Math.max(spinnerGate.spinVel, Math.abs(b.vz) * 2.4);
+          }
+
+          // Upper Rollover Multiplier & Skill-Shot Lanes
+          rolloverLanes.forEach((rl, idx) => {
+            if (Math.hypot(b.x - rl.x, b.z - rl.z) < 0.42) {
+              if (!rl.hitCooldown) {
+                rl.hitCooldown = 0.6;
+                rl.lit = true;
+                rl.mesh.material.color.setHex(0xf7c957);
+                if (idx === 1) completeMission('skill_shot', 60000, 'TUNNELING SKILL-SHOT!');
+                if (rolloverLanes.every((x) => x.lit)) {
+                  game.multiplier = Math.min(8, game.multiplier + 1);
+                  rolloverLanes.forEach((x) => { x.lit = false; x.mesh.material.color.setHex(0x1b3348); });
+                  addScore(40000, `PLAYFIELD ${game.multiplier}X MULTIPLIER!`);
+                }
+              }
+            }
+          });
+
+          // Left Outlane Kickback Solenoid
+          if (b.x < -5.1 && b.z > 6.8 && game.kickbackArmed) {
+            game.kickbackArmed = false;
+            b.vz = -21.0; b.vx = 2.5;
+            sfxPin('flipper');
+            setCallout('KICKBACK SOLENOID FIRED!');
+            refreshPinballUI();
+          }
+
+          // Center Drain Handling
+          if (b.z > 11.4 && b.x < 4.5) {
+            cabinetGroup.remove(b.mesh);
+            balls.splice(bi, 1);
+            if (balls.length === 0) {
+              if (game.ballSaveTimer > 0 && !game.tilted) {
+                spawnBall(false);
+                setCallout('15 mK BALL SAVE — RE-INJECTED!');
+                sfxPin('multiball');
+              } else if (game.ballNum < 3) {
+                game.ballNum += 1;
+                game.tilted = false;
+                game.tiltWarnings = 0;
+                game.ballSaveTimer = 15.0;
+                spawnBall(true);
+                setCallout(`BALL ${game.ballNum} READY — PRESS PLUNGE!`);
+              } else {
+                setCallout(`GAME OVER — FINAL SCORE: ${game.score.toLocaleString()}`);
+                spawnBall(true);
+                game.ballNum = 1;
+              }
+              refreshPinballUI();
+            }
+            continue;
+          }
+
+          b.mesh.position.set(b.x, b.y, b.z);
+        }
+      }
+    }
+
+    // --- UI & Input Bindings ---
+    function renderMissions() {
+      const list = document.getElementById('mission-list');
+      list.innerHTML = '';
+      let doneCnt = 0;
+      MISSIONS.forEach((m) => {
+        if (m.done) doneCnt++;
+        const div = document.createElement('div');
+        div.className = 'mission-card' + (m.done ? ' done' : '');
+        div.innerHTML = `<span>${m.title}</span><b>${m.done ? 'LIT' : 'ACTIVE'}</b>`;
+        list.appendChild(div);
+      });
+      document.getElementById('mission-prog').textContent = `${doneCnt} / 6`;
+    }
+
+    function refreshPinballUI() {
+      document.getElementById('hud-temp').textContent = `${game.kelvinLabel} CRYO`;
+      document.getElementById('hud-score').textContent = game.score.toLocaleString();
+      document.getElementById('hud-ball').textContent = `${game.ballNum} / 3`;
+      document.getElementById('hud-mult').textContent = `${game.multiplier}X`;
+      document.getElementById('hud-locks').textContent = `${game.locks} / 3`;
+      document.getElementById('ball-save-lbl').textContent = game.ballSaveTimer > 0 ? `BALL SAVE (${Math.ceil(game.ballSaveTimer)}s)` : 'SAVE OFF';
+      document.getElementById('tilt-lbl').textContent = game.tilted ? 'TILTED!' : `${game.tiltWarnings} / 3`;
+      document.getElementById('kickback-lbl').textContent = game.kickbackArmed ? 'ARMED' : 'SPENT';
+
+      const hsList = document.getElementById('highscore-list');
+      hsList.innerHTML = '';
+      highScores.slice(0, 5).forEach((row, i) => {
+        const d = document.createElement('div');
+        d.className = 'hs-row';
+        d.innerHTML = `<span>#${i + 1} <b>${row.initials}</b></span><span style="color:var(--gold)">${row.score.toLocaleString()}</span>`;
+        hsList.appendChild(d);
+      });
+    }
+
+    function setFlipper(side, down) {
+      const f = flippers.find((x) => x.side === side);
+      if (f && f.held !== down) {
+        f.held = down;
+        if (down) sfxPin('flipper');
+      }
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'z' || e.key === 'Z' || e.code === 'ShiftLeft' || e.key === 'ArrowLeft') setFlipper('left', true);
+      if (e.key === '/' || e.code === 'ShiftRight' || e.key === 'ArrowRight') setFlipper('right', true);
+      if (e.key === 'Enter' || e.key === 'ArrowDown') { game.plunging = true; }
+      if (e.code === 'Space') { e.preventDefault(); nudgeTable(); }
+      if (e.key === 'c' || e.key === 'C') document.getElementById('btn-cam').click();
+    });
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'z' || e.key === 'Z' || e.code === 'ShiftLeft' || e.key === 'ArrowLeft') setFlipper('left', false);
+      if (e.key === '/' || e.code === 'ShiftRight' || e.key === 'ArrowRight') setFlipper('right', false);
+      if (e.key === 'Enter' || e.key === 'ArrowDown') {
+        launchPlunger(Math.max(0.45, game.plungerCharge));
+        game.plunging = false; game.plungerCharge = 0;
+      }
+    });
+
+    const bindTouchHold = (id, fnDown, fnUp) => {
+      const el = document.getElementById(id);
+      el.addEventListener('pointerdown', () => { ensureAudio(); fnDown(); });
+      el.addEventListener('pointerup', fnUp);
+      el.addEventListener('pointerleave', fnUp);
+    };
+    bindTouchHold('btn-left-flip', () => setFlipper('left', true), () => setFlipper('left', false));
+    bindTouchHold('btn-right-flip', () => setFlipper('right', true), () => setFlipper('right', false));
+    bindTouchHold('btn-plunge', () => { game.plunging = true; }, () => {
+      launchPlunger(Math.max(0.65, game.plungerCharge));
+      game.plunging = false; game.plungerCharge = 0;
+    });
+    document.getElementById('btn-nudge').onclick = nudgeTable;
+    document.getElementById('btn-new-game').onclick = resetNewGame;
+    document.getElementById('btn-save-hs').onclick = () => {
+      const init = (document.getElementById('initials-input').value || 'AJW').toUpperCase().slice(0, 3);
+      highScores.push({ initials: init, score: Math.max(game.score, 250000) });
+      highScores.sort((a, b) => b.score - a.score);
+      highScores = highScores.slice(0, 6);
+      persistHighScores();
+      refreshPinballUI();
+    };
+    const camNames = ['CAM: CLASSIC', 'CAM: BALL FOLLOW', 'CAM: CHANDELIER'];
+    document.getElementById('btn-cam').onclick = () => {
+      game.camMode = (game.camMode + 1) % 3;
+      document.getElementById('btn-cam').textContent = camNames[game.camMode];
+    };
+    document.getElementById('btn-mobile-scores').onclick = () => {
+      document.getElementById('telemetry-pane').classList.toggle('mobile-open');
+    };
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    resetNewGame();
+
+    // --- 60 FPS Main Render & 12-Substep Physics Loop ---
+    let lastT = performance.now();
+    let fpsFrames = 0, fpsAcc = 0, measuredFps = 60;
+
+    function animate(now) {
+      requestAnimationFrame(animate);
+      const dt = Math.min(0.04, (now - lastT) / 1000);
+      lastT = now;
+
+      fpsFrames++; fpsAcc += dt;
+      if (fpsAcc >= 0.5) { measuredFps = Math.round(fpsFrames / fpsAcc); fpsFrames = 0; fpsAcc = 0; }
+
+      // Gamepad Flippers & Plunger
+      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      if (pads && pads[0]) {
+        const gp = pads[0];
+        if (gp.buttons[4]) setFlipper('left', gp.buttons[4].pressed);
+        if (gp.buttons[5]) setFlipper('right', gp.buttons[5].pressed);
+        if (gp.buttons[0] && gp.buttons[0].pressed) launchPlunger(0.75);
+      }
+
+      if (game.plunging) {
+        game.plungerCharge = Math.min(1.0, game.plungerCharge + dt * 1.4);
+        plungerMesh.position.z = 10.6 + game.plungerCharge * 0.9;
+      } else {
+        plungerMesh.position.z += (10.6 - plungerMesh.position.z) * Math.min(1, dt * 15);
+      }
+
+      if (game.ballSaveTimer > 0) game.ballSaveTimer = Math.max(0, game.ballSaveTimer - dt);
+      if (game.rampComboTimer > 0) game.rampComboTimer = Math.max(0, game.rampComboTimer - dt);
+      rolloverLanes.forEach((rl) => { if (rl.hitCooldown > 0) rl.hitCooldown = Math.max(0, rl.hitCooldown - dt); });
+
+      stepPhysics(dt);
+
+      // Spin 5-Tier 24K Gold Chandelier & Locked Chrome Spheres!
+      const mbSpeed = balls.length > 1 ? 2.6 : 0.75;
+      chandelierGroup.rotation.y += dt * mbSpeed;
+      cryoCore.rotation.x += dt * 1.8;
+      lockedBallVisuals.forEach((lb, i) => {
+        const a = now * 0.003 + (i * Math.PI * 2) / 3;
+        lb.position.set(Math.cos(a) * 1.15, 2.1, Math.sin(a) * 1.15);
+      });
+
+      // Spinner Gate Rotation
+      if (spinnerGate.spinVel > 0.1) {
+        const dAng = spinnerGate.spinVel * dt;
+        spinnerPlate.rotation.x += dAng;
+        const prevRevs = Math.floor(spinnerGate.totalRevs);
+        spinnerGate.totalRevs += dAng / (Math.PI * 2);
+        if (Math.floor(spinnerGate.totalRevs) > prevRevs) {
+          sfxPin('spinner');
+          addScore(3000, '');
+          if (spinnerGate.totalRevs >= 15) completeMission('cool_800mk', 90000, 'CRYO STILL COOLED TO 800 mK!');
+        }
+        spinnerGate.spinVel *= (1 - 1.8 * dt);
+      }
+
+      // Pop Bumper OSL Flash Decay
+      bumpers.forEach((bmp) => {
+        if (bmp.flash > 0) {
+          bmp.flash = Math.max(0, bmp.flash - dt);
+          bmp.light.intensity = 3.2;
+          bmp.cap.position.y = 0.48;
+        } else {
+          bmp.light.intensity = 0.45;
+          bmp.cap.position.y = 0.58;
+        }
+      });
+
+      cabinetGroup.position.x *= 0.84;
+
+      // Dynamic Camera Modes
+      const leadBall = balls[0];
+      if (game.camMode === 0) {
+        camera.position.lerp(new THREE.Vector3(0, 21.5, 19.2), Math.min(1, dt * 6));
+        camera.lookAt(0, 0.2, 0.6);
+      } else if (game.camMode === 1 && leadBall) {
+        camera.position.lerp(new THREE.Vector3(leadBall.x * 0.55, 12.5, leadBall.z + 10.5), Math.min(1, dt * 7));
+        camera.lookAt(leadBall.x * 0.4, 0.5, leadBall.z - 2.2);
+      } else {
+        camera.position.lerp(new THREE.Vector3(1.8, 7.6, 5.2), Math.min(1, dt * 6));
+        camera.lookAt(-0.6, 1.85, -3.6);
+      }
+
+      renderer.render(scene, camera);
+    }
+    requestAnimationFrame(animate);
+
+    // Expose Truthful Engine Diagnostic & Automation API
+    window.__NSP_GAME__ = {
+      id: 'northstar_quantum_chandelier_pinball_fx_3d',
+      title: 'Quantum Chandelier Pinball FX 3D',
+      getState: () => ({
+        fps: measuredFps,
+        jsErrors: jsErrors.slice(),
+        score: game.score,
+        activeBalls: balls.length,
+        multiplier: game.multiplier,
+        locks: game.locks,
+        missionsCompleted: MISSIONS.filter((m) => m.done).length,
+        totalMissions: MISSIONS.length,
+        camMode: game.camMode,
+        substepsPerFrame: 12
+      }),
+      launchAndTriggerMultiballAction: () => {
+        launchPlunger(0.85);
+        lockBallInChandelier();
+        lockBallInChandelier();
+        lockBallInChandelier(); // Unleashes 3-ball Zero-Kelvin Multiball!
+        bumpers[0].flash = 0.25;
+        bumpers[1].flash = 0.25;
+        return window.__NSP_GAME__.getState();
+      }
+    };
+  })();
+  </script>
+
+<div class="nsp-hub-return-bar">
+  <a class="nsp-hub-return" href="/games/" target="_top">← 3D Games Hub</a>
+  <a class="nsp-hub-return" href="/arcade/" target="_top">Arcade (60)</a>
+</div>
+
+</body>
+</html>

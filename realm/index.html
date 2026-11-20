@@ -35,8 +35,7 @@
   "gameServer": {
     "@type": "GameServer",
     "name": "play.northstarprime.net",
-    "url": "https://northstarprime.net/realm/",
-    "serverStatus": "https://schema.org/Online"
+    "url": "https://northstarprime.net/realm/"
   },
   "offers": {
     "@type": "Offer",
@@ -231,9 +230,10 @@ figcaption{margin-top:10px;color:var(--dim);font-size:15px}
 <main>
 <p class="eyebrow">NorthStar · Public Minecraft world</p>
 <h1>Enter the living realm.</h1>
-<p class="intro">Explore the NorthStar survival world free with Minecraft Java Edition 26.3. Bedrock and Xbox steps are below. A Bedrock join through the Xbox Friends route was seen on November 4, 2026.</p>
-<p class="status" id="live-status" aria-live="polite">Java 26.3 is open. Bedrock (port 25130) and Xbox Friends (via UncleVorath): a Bedrock join through the Friends route was seen on November 4, 2026. Choose your device below.</p>
+<p class="intro">Fly a saucer over Arrival Plaza or visit the Safari Zoo. Join free on Java Edition 26.3, or choose your device below for connection details.</p>
+<p class="status" id="live-status" aria-live="polite">Java server status is unavailable. You can use the joining instructions below.</p>
 <p><button type="button" id="copy-invite">Copy friend invite for Discord or chat</button> <span id="invite-result" class="fine" role="status" aria-live="polite"></span></p>
+<p class="fine action-links"><a href="#java">Java setup</a><a href="#bedrock">Bedrock setup</a><a href="#xbox">Xbox Friends</a><a href="#consoles">Other consoles</a></p>
 <p class="fine action-links"><a href="/map/">Landmark list</a><a href="/minecraft/voice/">Optional Java voice setup</a></p>
 <figure>
 <img src="/static/front/realm/mushroom-island.webp" width="1920" height="1009" alt="A rainy island in the public Minecraft world, with giant mushrooms and willow trees.">
@@ -365,14 +365,38 @@ if (quickAdd) {
     window.location.href = 'minecraft://?addExternalServer=NorthStar|play.northstarprime.net:25130';
   });
 }
-fetch('https://api.mcsrvstat.us/3/play.northstarprime.net').then((r) => r.json()).then((d) => {
-  const el = document.getElementById('live-status');
-  if (el && d && d.online) {
-    const online = d.players && typeof d.players.online === 'number' ? d.players.online : 0;
-    const max = d.players && typeof d.players.max === 'number' ? d.players.max : 100;
-    el.textContent = 'Server ONLINE right now (' + online + ' / ' + max + ' slots active) · Java 26.3 is open. Bedrock and Xbox: see the steps below.';
+async function showJavaStatus() {
+  const status = document.getElementById('live-status');
+  const unavailable = status.textContent;
+  status.textContent = 'Checking Java server status…';
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  try {
+    const response = await fetch('https://api.mcsrvstat.us/3/play.northstarprime.net', {signal: controller.signal});
+    if (!response.ok) throw new Error('Status request failed');
+    const data = await response.json();
+    if (data?.online === false) {
+      status.textContent = 'The latest Java server check reports it offline. Try again later.';
+    } else if (data?.online === true) {
+      const online = data.players?.online;
+      const max = data.players?.max;
+      let detail = '';
+      if (Number.isSafeInteger(online) && online >= 0) {
+        detail = Number.isSafeInteger(max) && max >= online
+          ? ` · ${online} of ${max} players`
+          : ` · ${online} ${online === 1 ? 'player' : 'players'}`;
+      }
+      status.textContent = 'Latest Java server check: online' + detail + '.';
+    } else {
+      status.textContent = unavailable;
+    }
+  } catch {
+    status.textContent = unavailable;
+  } finally {
+    clearTimeout(timeout);
   }
-}).catch(() => {});
+}
+showJavaStatus();
 </script>
 </body>
 </html>

@@ -144,6 +144,21 @@ def route_only(value: str) -> str:
     return value.split("#", 1)[0].split("?", 1)[0]
 
 
+def public_archive_html(html: str) -> str:
+    """Remove the workstation-only path list from the public archive cabinet."""
+    html = re.sub(
+        r'^[ \t]*<section class="panel">\s*<div class="kicker">Roots</div>\s*'
+        r'<h2>Local Paths</h2>\s*<div[^>]*\bid="rootList"[^>]*></div>\s*</section>\n',
+        "", html, flags=re.M,
+    )
+    html = re.sub(r'^[ \t]*const roots = \[\s*(?:"[^"\n]*",?\s*)*\];\n', "", html, flags=re.M)
+    return re.sub(
+        r'^[ \t]*document\.querySelector\("#rootList"\)\.innerHTML = roots\.map\(root =>\n'
+        r'[^\n]*escapeText\(root\)[^\n]*\n[ \t]*\)\.join\(""\);\n',
+        "", html, flags=re.M,
+    )
+
+
 def rewrite_routes(html: str, mirrored: set[str]) -> tuple[str, list[str]]:
     fallbacks: set[str] = set()
 
@@ -253,6 +268,10 @@ def main() -> None:
         source = next((root / name for _, root in roots if (root / name).is_file()), None)
         reason = "local source file unavailable" if source is None else None
         html = "" if source is None else source.read_text(encoding="utf-8")
+        if slug == "super-arcade-archive" and source is not None:
+            html = public_archive_html(html)
+            if "rootList" in html or re.search(r"\bconst roots\b", html):
+                raise SystemExit(f"Unrecognized private path list in {slug}")
         if source is not None and LOCAL_LEAK.search(html):
             reason = "contains private local filesystem inventory"
         elif source is not None and EXTERNAL_RESOURCE.search(html):
@@ -446,7 +465,7 @@ def main() -> None:
         lines.append(f"| `{game['route']}` | {disposition} | {provenance} |")
     lines += ["", "## Limits", "",
               "- Server telemetry, live radio selection, prediction-bot APIs, activation, purchases, and smoke dashboards remain on the dynamic app origin.",
-              "- The private Super Arcade Archive is intentionally not copied because its source enumerates local drive paths.",
+              "- Public archive exports omit workstation directory paths.",
               "- Static pages cannot reproduce server-side account, payment, or mutation flows.", ""]
     write_changed(destination / "ARCADE_ROUTE_PROVENANCE.md", "\n".join(lines).encode("utf-8"))
     print("OK: deterministic arcade freeze built")

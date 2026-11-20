@@ -2,9 +2,9 @@
 
 This deterministic static freeze comes from the healthy local public catalog. Dynamic-only routes are explicit fallbacks to `https://app.northstarprime.net`.
 
-- Catalog routes: 49
-- Static mirrored games: 48
-- Delegated routes: 1
+- Catalog routes: 60
+- Static mirrored games: 60
+- Delegated routes: 0
 - Hashed assets: 370 (317185521 bytes)
 - Optimized motion plates: 8 (saved 88810171 bytes)
 - Public provenance redactions: 1
@@ -40,7 +40,7 @@ This deterministic static freeze comes from the healthy local public catalog. Dy
 | `/arcade/custom/snake-dimension` | static mirror | `workshop_arcade:snake_dimension.html` |
 | `/arcade/custom/static-house` | static mirror | `nsp_repo_arcade:static_house.html` |
 | `/arcade/custom/subject-000999` | static mirror | `nsp_repo_arcade:subject_000999.html` |
-| `/arcade/custom/super-arcade-archive` | [dynamic fallback](https://app.northstarprime.net/arcade/custom/super-arcade-archive) | contains private local filesystem inventory |
+| `/arcade/custom/super-arcade-archive` | [static mirror](/arcade/custom/super-arcade-archive/) | `nsp_repo_arcade:super_arcade_archive.html` (workstation paths removed) |
 | `/arcade/custom/super-vorath-bros` | static mirror | `nsp_repo_arcade:super_vorath_bros.html` |
 | `/arcade/custom/tai-chi-flow` | static mirror | `nsp_repo_arcade:tai_chi_flow.html` |
 | `/arcade/custom/tetris-plus` | static mirror | `workshop_arcade:tetris_plus_scifi.html` |
@@ -64,7 +64,7 @@ This deterministic static freeze comes from the healthy local public catalog. Dy
 ## Limits
 
 - Server telemetry, live radio selection, prediction-bot APIs, activation, purchases, and smoke dashboards remain on the dynamic app origin.
-- The private Super Arcade Archive is intentionally not copied because its source enumerates local drive paths.
+- The public Super Arcade Archive omits workstation directory paths.
 - Static pages cannot reproduce server-side account, payment, or mutation flows.
 
 Four existing text-asset output hashes were reconciled to Git's canonical LF representation on September 9, 2026. Reconstructing CRLF reproduced each prior manifest hash exactly; original source hashes were retained and asset contents were not changed. The per-asset manifest entries preserve the prior identities.

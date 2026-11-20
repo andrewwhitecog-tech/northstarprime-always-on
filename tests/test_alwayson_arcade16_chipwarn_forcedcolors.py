@@ -123,7 +123,7 @@ def test_manifests_match_updated_html_hashes():
                 walk(item)
 
     walk(afm)
-    assert matched == 15
+    assert matched == 16  # PR #344 promoted super-arcade-archive to local_catalog (all 16 cabinets matched)
 
 
 @pytest.mark.parametrize("viewport", [(390, 844), (1280, 800)])

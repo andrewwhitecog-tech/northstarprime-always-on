@@ -393,6 +393,7 @@
           </div>
         </div>
 
+        <div id="playback-status" role="status" aria-atomic="true"></div>
         <div class="transport-bar">
           <button type="button" class="button" id="btn-prev">◀ Prev</button>
           <button type="button" class="button primary" id="btn-play">▶ Play Track</button>
@@ -469,6 +470,8 @@
     var npSub = document.getElementById("np-sub");
     var npXref = document.getElementById("np-xref");
     var btnPlay = document.getElementById("btn-play");
+    var playbackStatus = document.getElementById("playback-status");
+    var playAttempt = 0;
     var btnPrev = document.getElementById("btn-prev");
     var btnNext = document.getElementById("btn-next");
     var btnViz = document.getElementById("btn-viz-mode");
@@ -570,7 +573,10 @@
         var pbtn = cards[i].querySelector(".play-track-btn");
         if (idx === currentIndex) {
           cards[i].classList.add("is-playing");
-          if (pbtn) pbtn.textContent = (!audio.paused) ? "❚❚ Playing" : "▶ Selected";
+          if (pbtn) {
+            pbtn.textContent = playbackStatus.textContent ? "Retry track" :
+              audio.paused ? "▶ Selected" : "❚❚ Playing";
+          }
         } else {
           cards[i].classList.remove("is-playing");
           if (pbtn) pbtn.textContent = "▶ Stream Track";
@@ -578,7 +584,28 @@
       }
     }
 
+    function showPlaybackError(blocked) {
+      playbackStatus.textContent = blocked
+        ? "Your browser paused playback. Select Retry track to start."
+        : "This track couldn’t load. Retry it or choose another track.";
+      btnPlay.textContent = "Retry track";
+      syncHighlight();
+    }
+
+    function playSelected() {
+      var attempt = ++playAttempt;
+      var player = audio;
+      playbackStatus.textContent = "";
+      player.play().catch(function (error) {
+        if (attempt !== playAttempt || error.name === "AbortError") return;
+        showPlaybackError(error.name === "NotAllowedError");
+      });
+    }
+
     function loadTrack(idx, autoplay) {
+      ++playAttempt;
+      playbackStatus.textContent = "";
+      btnPlay.textContent = "▶ Play Track";
       if (idx < 0) idx = TRACKS.length - 1;
       if (idx >= TRACKS.length) idx = 0;
       currentIndex = idx;
@@ -613,13 +640,13 @@
         if (useCors && audioCtx && audioCtx.state === "suspended") {
           audioCtx.resume().catch(function () {});
         }
-        audio.play().catch(function () {});
+        playSelected();
       }
       syncHighlight();
     }
 
     btnPlay.addEventListener("click", function () {
-      if (!audio.src) {
+      if (!audio.src || audio.error) {
         loadTrack(currentIndex, true);
         return;
       }
@@ -631,8 +658,9 @@
         if (audioCtx && audioCtx.state === "suspended") {
           audioCtx.resume().catch(function () {});
         }
-        audio.play().catch(function () {});
+        playSelected();
       } else {
+        ++playAttempt;
         audio.pause();
       }
     });
@@ -651,13 +679,16 @@
     });
 
     [audioCors, audioR2].forEach(function (el) {
+      el.addEventListener("error", function () {
+        if (el === audio && el.error) showPlaybackError(false);
+      });
       el.addEventListener("play", function () {
-        if (el !== audio) return;
+        if (el !== audio || el.paused || playbackStatus.textContent) return;
         btnPlay.textContent = "❚❚ Pause";
         syncHighlight();
       });
       el.addEventListener("pause", function () {
-        if (el !== audio) return;
+        if (el !== audio || !el.paused || playbackStatus.textContent) return;
         btnPlay.textContent = "▶ Play Track";
         syncHighlight();
       });

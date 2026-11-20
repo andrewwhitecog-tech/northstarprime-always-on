@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from arcade_card_art import illustrate_arcade
+
 import argparse
 import hashlib
 import json
@@ -270,7 +272,7 @@ def main() -> None:
     rewritten_landing, landing_fallbacks = rewrite_routes(landing, mirrored)
     header = ("<!-- FROZEN NSP ARCADE | deterministic digests: "
               f"landing={digest_bytes(landing_raw)} inventory={digest_bytes(inventory_raw)} -->\n")
-    landing_bytes = normalize_generated_text(header + rewritten_landing).encode("utf-8")
+    landing_bytes = normalize_generated_text(header + illustrate_arcade(rewritten_landing, destination)).encode("utf-8")
     write_changed(destination / "arcade" / "index.html", landing_bytes)
     contexts: dict[str, set[str]] = {}
     for token in tokens(rewritten_landing):

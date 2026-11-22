@@ -16,7 +16,7 @@ import pages_art_quality
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_ARTIFACT = ROOT / "output" / "pages-artifact"
-RAW_VIDEO_RE = re.compile(r"https://raw\.githubusercontent\.com/andrewwhitecog-tech/northstarprime-always-on/[0-9a-f]{40}/static/idc_video/[^\"'\s<>)]+")
+RAW_VIDEO_RE = re.compile(r"https://raw\.githubusercontent\.com/andrewwhitecog-tech/northstarprime-always-on/[0-9a-f]{40}/static/idc_video/[^\"'\s<>)]*")
 LOCAL_VIDEO_RE = re.compile(r"(?<![0-9a-f]{8})/static/idc_video/")
 # 2026-11-06: curated artifact must stay under 500 MiB (deploy-pages sync timeout).
 RELEASE_GUARD_BYTES = 500_000_000

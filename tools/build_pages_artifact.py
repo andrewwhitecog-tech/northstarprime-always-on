@@ -27,7 +27,7 @@ import pages_art_quality
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = ROOT / "output" / "pages-artifact"
-APP_VIDEO_BASE = "https://app.northstarprime.net/static/idc_video/"
+RAW_VIDEO_BASE_TMPL = "https://raw.githubusercontent.com/andrewwhitecog-tech/northstarprime-always-on/{commit}/static/idc_video/"
 LOCAL_VIDEO_BASE = "/static/idc_video/"
 PUBLISHED_LIMIT_BYTES = 1_000_000_000
 # 2026-11-06 slim: tip/download zips, GLBs, large art shelves → raw.githubusercontent.com
@@ -473,7 +473,7 @@ def copy_artifact_source(source: Path, relative: Path, destination: Path,
             ROOT, relative, source.read_text(encoding="utf-8"))
         count = raw.count(LOCAL_VIDEO_BASE)
         if count:
-            raw = raw.replace(LOCAL_VIDEO_BASE, APP_VIDEO_BASE)
+            raw = raw.replace(LOCAL_VIDEO_BASE, RAW_VIDEO_BASE_TMPL.format(commit=media_commit))
         raw = pages_art_quality.rewrite_reviewed_art_urls(raw, relative)
         raw = rewrite_sticker_refs(raw, relative)
         raw = rewrite_release_media_refs(raw, relative, selected_media, media_commit)
@@ -573,7 +573,7 @@ def build(output: Path) -> dict:
             "path": "static/idc_video",
             "file_count": len(video_files),
             "bytes": omitted_video_bytes,
-            "replacement_base_url": APP_VIDEO_BASE,
+            "replacement_base_url": RAW_VIDEO_BASE_TMPL.format(commit=media_commit),
             "rewritten_references": rewrites,
         },
         "external_release_media": {

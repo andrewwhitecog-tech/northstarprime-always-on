@@ -21,7 +21,7 @@ let AC=null,master=null,drone=null,soundOn=true,sensorySafe=false,padLatch={a:fa
 const SND=(typeof HQAudio==='function')?HQAudio({base:'/static/games/sfx/',muteKey:'nsp_dark_below_muted',master:.8,
  files:{bell:['bell'],shard:['shard_catch'],gate:['gate'],whisper:['static_rupture'],heart:['stomp'],sting:['nova_explode'],chime:['rose_chime'],hurt:['hurt']},
  vol:{bell:.85,shard:.7,gate:.7,whisper:.35,heart:.5,sting:.7,chime:.6,hurt:.6}}):null;
-const BED=(typeof HQAudio==='function')?HQAudio({base:(location.hostname==='app.northstarprime.net'?'':'https://app.northstarprime.net')+'/static/games/hq/the_dark_below/',
+const BED=(typeof HQAudio==='function')?HQAudio({base:(location.hostname==='northstarprime.net'?'':'https://northstarprime.net')+'/static/games/hq/the_dark_below/',
  muteKey:'nsp_dark_below_muted',master:.8,files:{drone:['drone']},loops:{drone:true},vol:{drone:.5}}):null;
 function snd(k,o){if(!soundOn||!SND)return;try{SND.play(k,o||{limit:60})}catch(e){}}
 function audio(){try{if(SND)SND.unlock();if(BED)BED.unlock()}catch(e){}return null}

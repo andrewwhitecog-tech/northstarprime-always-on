@@ -163,8 +163,7 @@ def main() -> None:
     path = ROOT / "index.html"
     page = read_page(path)
     check_identity(page, "NorthStar Prime — Music, Games & Films", ORIGIN + "/")
-    app = "https://app.northstarprime.net"
-    required = {app + "/idc-programming", app + "/idr", app + "/arcade", app + "/chromatic", app + "/mystery-school", app + "/services", app + "/literature",
+    required = {"/idc-programming/", "/idr/", "/arcade/", "/chromatic/", "/mystery-school/", "/hire/", "/literature/", "/rich-yn/", "/unc-v/",
                 "/ckd-kitchen/", "/renalshield/", "/software/", "/links/", "/harm-reduction/", "/continuity-atlas/",
                 "/sitemap.xml", "mailto:contact@northstarprime.net"}
     if not required.issubset(page.links):

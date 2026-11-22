@@ -72,8 +72,8 @@ def test_oracle_lenses_synthesis_and_storefront_conversion_funnel():
         assert position in html
 
     for product_url in (
-        "https://app.northstarprime.net/chromatic/products/vorath-tarot-v2-pdf-deck",
-        "https://app.northstarprime.net/chromatic/products/acid-voxel-halloween-45-pack",
+        "https://northstarprime.net/tarot/",
+        "https://andrewcog.gumroad.com/l/acid-voxel-halloween-45-pack",
         "https://andrewcog.gumroad.com/l/vdquzp",
         "/acid-voxel-halloween/downloads/NorthStar_Acid_Voxel_Halloween_Free_Sticker_Sheet.pdf",
         "/vorath-x-icp-dark-carnival/downloads/NorthStar_Vorath_x_ICP_Dark_Carnival_Free_Sticker_Sheet.pdf",

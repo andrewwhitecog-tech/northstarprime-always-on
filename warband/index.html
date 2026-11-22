@@ -732,7 +732,7 @@ footer { padding: 28px 6%; border-top: 1px solid var(--line); color: var(--muted
   <div class="footer-plaques">
     <a class="vorath-plaque" href="/shattered-mirror/">3D Prism Forge</a>
     <a class="vorath-plaque" href="/links/">Signal Directory</a>
-    <a class="vorath-plaque" href="https://app.northstarprime.net/membership/privacy">Privacy</a>
+    <a class="vorath-plaque" href="/contact/">Privacy</a>
     <a class="vorath-plaque" href="mailto:contact@northstarprime.net">Contact</a>
   </div>
 </footer>
@@ -747,15 +747,11 @@ form.addEventListener('submit',async event=>{
  event.preventDefault();
  if(!form.reportValidity())return;
  button.disabled=true;button.textContent='Joining…';status.classList.remove('error');status.textContent='';
- const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),15000);
- try{
-  const response=await fetch('https://app.northstarprime.net/api/warband/notify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:document.getElementById('email').value.trim(),src:'relaunch-seventh-veil-20261115',company:document.getElementById('company').value}),signal:controller.signal});
-  const data=await response.json();
-  if(!response.ok||!data.ok)throw new Error('signup-rejected');
-  status.textContent=data.status==='already_registered'?'You’re already on the list. Thanks for following the Warband.':'You’re on the list. We’ll email you when there’s relaunch news.';
-  form.reset();
- }catch(error){status.classList.add('error');status.textContent='We couldn’t confirm your signup. Please try again, or email contact@northstarprime.net. If an earlier attempt reached us, trying again won’t add you twice.';}
- finally{clearTimeout(timer);button.disabled=false;button.textContent='Join the relaunch list';}
+ const addr=document.getElementById('email').value.trim();
+ const mailto='mailto:contact@northstarprime.net?subject='+encodeURIComponent('VORATH Warband Relaunch List')+'&body='+encodeURIComponent('Please add '+addr+' to the VORATH Warband relaunch list (source: relaunch-seventh-veil-20261115).');
+ window.location.href=mailto;
+ status.textContent='Opening your email client to send your Warband signup to contact@northstarprime.net (zero external tracking).';
+ button.disabled=false;button.textContent='Join the relaunch list';
 });
 
 (function initBuilder(){

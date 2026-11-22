@@ -36,11 +36,10 @@ CHECKS = [
     ("minecraft_voice", APEX + "/minecraft/voice/", "html"),
     ("sticker_image", RAW_STICKER_BASE + "stickerforge/assets/01_uncle_vorath_portal.png", "image"),
     ("radio_audio", "https://assets.northstarprime.net/idr_audio/hiphop/hiphop_ident.wav", "audio"),
-    ("watch_video", APP + "/static/idc_video/idc_anthology_e08_final_transmission.mp4", "video"),
-    ("app_health", APP + "/health", "health"),
-    ("storefront", APP + "/api/nsp/storefront/status", "json"),
-    ("membership", APP + "/api/nsp/membership/stripe/status", "json"),
-    ("redemption", APP + "/api/nsp/redeem/health", "redeem"),
+    ("rich_yn", APEX + "/rich-yn/", "html"),
+    ("unc_v", APEX + "/unc-v/", "html"),
+    ("store", APEX + "/store/", "html"),
+    ("watch_video", RAW_STICKER_BASE + "static/idc_video/idc_anthology_e08_final_transmission.mp4", "video"),
 ]
 
 

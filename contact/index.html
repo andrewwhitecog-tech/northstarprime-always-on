@@ -472,11 +472,11 @@ html:not(#__fc0):not(#__fc1):not(#__fc2):not(#__fc3),
     <div class="preset-chips-wrap">
       <div class="preset-label">Choose your inquiry topic:</div>
       <div class="preset-chips">
-        <button class="chip active" onclick="applyPreset('regalia')">✦ VORATH Regalia Commission</button>
-        <button class="chip" onclick="applyPreset('repair')">✦ 48-Hour Website Repair Sprint</button>
+        <button class="chip active" data-preset="regalia">✦ VORATH Regalia Commission</button>
+        <button class="chip" data-preset="repair">✦ 48-Hour Website Repair Sprint</button>
 
-        <button class="chip" onclick="applyPreset('solarium')">✦ Solarium: no longer offered</button>
-        <button class="chip" onclick="applyPreset('enterprise')">✦ Licensing &amp; Institutional</button>
+        <button class="chip" data-preset="solarium">✦ Solarium: no longer offered</button>
+        <button class="chip" data-preset="enterprise">✦ Licensing &amp; Institutional</button>
       </div>
     </div>
 
@@ -564,13 +564,18 @@ Best regards,</div>
     function updateDesk(subject, body) {
       document.querySelector('#subject-preview').textContent = subject;
       document.querySelector('#message-preview').textContent = body;
-      const query = new URLSearchParams({ subject, body });
-      document.querySelector('#draft-link').href = 'mailto:contact@northstarprime.net?' + query.toString();
+      const mailSubject = encodeURIComponent(subject.replace(/[\r\n]+/g, ' '));
+      const mailBody = encodeURIComponent(body.replace(/\r\n|\r|\n/g, '\r\n'));
+      document.querySelector('#draft-link').href =
+        'mailto:contact@northstarprime.net?subject=' + mailSubject + '&body=' + mailBody;
     }
 
     function applyPreset(key) {
-      document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-      event.target.classList.add('active');
+      document.querySelectorAll('[data-preset]').forEach(button => {
+        const selected = button.dataset.preset === key;
+        button.classList.toggle('active', selected);
+        button.setAttribute('aria-pressed', String(selected));
+      });
       const p = presets[key];
       if (p) updateDesk(p.subject, p.body);
     }
@@ -600,10 +605,14 @@ Best regards,</div>
 
     // Initialize from URL parameters if present
     (() => {
+      document.querySelectorAll('[data-preset]').forEach(button => {
+        button.addEventListener('click', () => applyPreset(button.dataset.preset));
+      });
       const params = new URLSearchParams(location.search);
       const urlSubject = params.get('subject');
       const urlBody = params.get('body');
       if (urlSubject || urlBody) {
+        applyPreset(null);
         updateDesk(
           urlSubject || 'NorthStar Prime inquiry',
           urlBody || 'Greetings NorthStar Prime,\n\nPlease let me know availability and fulfillment parameters.\n\nBest regards,'

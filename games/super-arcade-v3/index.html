@@ -3,7 +3,7 @@
 <head>
   <meta name="nsp-analytics" content="none">
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NORTHSTAR AAA 3D PBR SUPER ARCADE V3 — 12 Deluxe Cabinets + Pro AI + Daily Gauntlet (Andrew White)</title>
   <script src="../three.min.js"></script>
   <style>
@@ -789,7 +789,83 @@
   text-decoration: none;
 }
 </style>
-
+<style id="nsp-ag-8arcade-viewport-a11y-20261122">
+.nsp-webgl-fallback {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 18px 22px;
+  background: rgba(6, 9, 22, 0.94);
+  color: #f8fafc;
+  gap: 8px;
+  pointer-events: auto;
+}
+.nsp-webgl-fallback--hall {
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: auto;
+  min-height: 118px;
+  z-index: 6;
+  justify-content: flex-start;
+  align-items: flex-start;
+  text-align: left;
+  background: linear-gradient(180deg, rgba(6, 9, 22, 0.92) 0%, rgba(6, 9, 22, 0.65) 100%);
+}
+.nsp-webgl-fallback h2 {
+  margin: 0;
+  font-size: 0.98rem;
+  color: #f5c85c;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.nsp-webgl-fallback p {
+  margin: 0;
+  max-width: 560px;
+  font-size: 0.82rem;
+  color: #cbd5e1;
+  line-height: 1.45;
+}
+.nsp-webgl-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 4px;
+}
+:focus-visible {
+  outline: 2px solid #f5c451 !important;
+  outline-offset: 2px !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+@media (forced-colors: active) {
+  .hall-title {
+    -webkit-text-fill-color: CanvasText !important;
+    background: none !important;
+    color: CanvasText !important;
+    filter: none !important;
+  }
+  .nsp-webgl-fallback {
+    background: Canvas !important;
+    color: CanvasText !important;
+    border: 1px solid CanvasText !important;
+  }
+  :focus-visible {
+    outline: 2px solid Highlight !important;
+  }
+}
+</style>
 </head>
 <body>
 
@@ -1660,27 +1736,33 @@
     _initRenderer() {
       const THREE = this.THREE;
       if (!THREE || !this.canvas) return;
-      this.renderer = new THREE.WebGLRenderer({
-        canvas: this.canvas,
-        antialias: true,
-        alpha: false,
-        powerPreference: 'high-performance',
-        preserveDrawingBuffer: true
-      });
-      if (THREE.ACESFilmicToneMapping !== undefined) {
-        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 1.32;
-      }
-      if (THREE.sRGBEncoding !== undefined) {
-        this.renderer.outputEncoding = THREE.sRGBEncoding;
-      }
-      this.renderer.shadowMap.enabled = true;
-      if (THREE.PCFSoftShadowMap !== undefined) {
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-      }
-      if (THREE.PMREMGenerator) {
-        this.pmrem = new THREE.PMREMGenerator(this.renderer);
-        this.pmrem.compileEquirectangularShader();
+      try {
+        this.renderer = new THREE.WebGLRenderer({
+          canvas: this.canvas,
+          antialias: true,
+          alpha: false,
+          powerPreference: 'high-performance',
+          preserveDrawingBuffer: true
+        });
+        if (THREE.ACESFilmicToneMapping !== undefined) {
+          this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+          this.renderer.toneMappingExposure = 1.32;
+        }
+        if (THREE.sRGBEncoding !== undefined) {
+          this.renderer.outputEncoding = THREE.sRGBEncoding;
+        }
+        this.renderer.shadowMap.enabled = true;
+        if (THREE.PCFSoftShadowMap !== undefined) {
+          this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        }
+        if (THREE.PMREMGenerator) {
+          this.pmrem = new THREE.PMREMGenerator(this.renderer);
+          this.pmrem.compileEquirectangularShader();
+        }
+      } catch (err) {
+        this.renderer = null;
+        this.pmrem = null;
+        this.initError = err && err.message ? err.message : String(err);
       }
     }
 
@@ -8923,7 +9005,38 @@
         });
       } catch (_e) {
         hallRenderer = null;
+        __nspShowArcadeWebGLFallback(dom.hallCanvas && dom.hallCanvas.parentElement, '3D hall preview unavailable without WebGL — choose any of the 12 arcade cabinets below.', false);
       }
+    }
+
+    function __nspShowArcadeWebGLFallback(hostEl, message, isStage) {
+      if (!hostEl) return;
+      var existing = hostEl.querySelector('.nsp-webgl-fallback');
+      if (existing) {
+        existing.style.display = 'flex';
+        return;
+      }
+      var box = document.createElement('div');
+      box.className = 'nsp-webgl-fallback' + (isStage ? '' : ' nsp-webgl-fallback--hall');
+      box.setAttribute('role', 'status');
+      var h2 = document.createElement('h2');
+      h2.textContent = isStage ? '3D WebGL stage unavailable' : '3D WebGL lobby preview unavailable';
+      var p = document.createElement('p');
+      p.textContent = message;
+      box.appendChild(h2);
+      box.appendChild(p);
+      if (isStage) {
+        var actions = document.createElement('div');
+        actions.className = 'nsp-webgl-actions';
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'cab-play-btn';
+        btn.textContent = 'Return to Arcade Hall';
+        btn.addEventListener('click', function () { returnToHall(); });
+        actions.appendChild(btn);
+        box.appendChild(actions);
+      }
+      hostEl.appendChild(box);
     }
 
     function renderHall3D(dt) {
@@ -9356,6 +9469,12 @@
 
       juice.reset();
       resizePlayCanvas();
+      if (!stage3D.renderer) {
+        __nspShowArcadeWebGLFallback(dom.stageWrap, 'WebGL context is unavailable on this browser or device. The 2D HUD and cabinet roster remain accessible.', true);
+      } else {
+        var stFb = dom.stageWrap && dom.stageWrap.querySelector('.nsp-webgl-fallback');
+        if (stFb) stFb.style.display = 'none';
+      }
       cab.init(sysBundle, logicalW, logicalH);
       renderLiveLoadoutStrip();
       updateMobileDeckVisibility();

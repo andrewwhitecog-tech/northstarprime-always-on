@@ -122,10 +122,10 @@ class CustomerStaticTests(unittest.TestCase):
                 arcade.check_workshop_links(mutation, games, delegated)
 
     def test_all_hire_offers_need_exact_campaign_and_destination(self):
-        links = [f"https://app.northstarprime.net{route}?utm_source=northstarprime.net&utm_medium=owned_hire&utm_campaign=institutional_pilot&utm_content={content}" for route, content in hire.OFFER_ROUTES.items()]
+        links = [f"https://northstarprime.net{route}?utm_source=northstarprime.net&utm_medium=owned_hire&utm_campaign=institutional_pilot&utm_content={content}" for route, content in hire.OFFER_ROUTES.items()]
         hire.check_offer_links(links)
         for mutation in (links[:-1], [s.replace("institutional_pilot", "old_campaign") for s in links],
-                         [s.replace("/hire/failure-map?", "/hire/unknown?") for s in links]):
+                         [s.replace("/hire/failure-map/?", "/hire/unknown?") for s in links]):
             with self.subTest(mutation=mutation), self.assertRaises(SystemExit):
                 hire.check_offer_links(mutation)
 
@@ -148,8 +148,8 @@ class CustomerStaticTests(unittest.TestCase):
         for lens in ("Creative Forge &amp; Mastery", "Shadow &amp; Transmutation", "Horizon &amp; Sovereign Path", "Dark Carnival &amp; Voxel Alchemy"):
             self.assertIn(lens, html)
         for cta in (
-            "https://app.northstarprime.net/chromatic/products/vorath-tarot-v2-pdf-deck",
-            "https://app.northstarprime.net/chromatic/products/acid-voxel-halloween-45-pack",
+            "https://northstarprime.net/tarot/",
+            "https://andrewcog.gumroad.com/l/acid-voxel-halloween-45-pack",
             "https://andrewcog.gumroad.com/l/vdquzp",
             "/store/",
             "/tarot/oracle/",

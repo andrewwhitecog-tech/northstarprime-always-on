@@ -22,8 +22,8 @@ def verify(network: bool = False) -> dict:
     checks = {
         "xmr_addresses_present": DONATIONS in xmr and PAYMENTS in xmr,
         "spacecash_boundary_present": "no XMR-to-SPACE exchange" in xmr,
-        "warband_uses_durable_app": "https://app.northstarprime.net/api/warband/notify" in warband,
-        "warband_waits_for_response": "await fetch" in warband and re.search(r"if\(!response\.ok\|\|!(?:body|data)\.ok\)", warband) is not None,
+        "warband_uses_zero_render_mailto": "mailto:contact@northstarprime.net" in warband and "app.northstarprime.net" not in warband,
+        "warband_honest_handoff": "Opening" in warband,
         "warband_no_false_local_fallback": "localStorage.setItem" not in warband,
     }
     for lane in ("donations", "payments"):
@@ -33,7 +33,7 @@ def verify(network: bool = False) -> dict:
         checks[f"{lane}_sha256"] = bool(hashlib.sha256(asset.read_bytes()).hexdigest())
     if network:
         request = urllib.request.Request(
-            "https://app.northstarprime.net/api/warband/notify",
+            "https://northstarprime.net/warband/",
             method="OPTIONS",
             headers={"Origin": "https://northstarprime.net", "Access-Control-Request-Method": "POST"},
         )

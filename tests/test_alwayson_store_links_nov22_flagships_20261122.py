@@ -60,7 +60,7 @@ def test_store_and_links_surface_all_nov22_live_flagships():
         assert not re.search(r"[\U00010000-\U0010ffff]", html), f"{rel} must contain 0 emojis"
     store_html = (ROOT / "store" / "index.html").read_text(encoding="utf-8")
     assert 'id="nov22-live-flagships"' in store_html
-    assert "Brick Alchemy CAD Studio v2.0" in store_html
+    assert "Brick Alchemy CAD Studio v2.1" in store_html
     assert "RICH YN" in store_html
     assert "Unc V (Uncle Vorath)" in store_html
     assert "Custom Games &amp; 3D Showcase" in store_html

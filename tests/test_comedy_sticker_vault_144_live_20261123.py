@@ -54,6 +54,9 @@ def test_html_accessibility_seo_zero_local_paths_and_live_gumroad_links() -> Non
     text = HTML_PATH.read_text(encoding="utf-8")
     assert '<main>' in text and '<header class="site-header">' in text and '<footer>' in text
     assert '@media (forced-colors: active)' in text
+    assert '@media (prefers-reduced-motion: reduce)' in text
+    assert 'vorath_btn_obsidian.webp' in text and 'vorath_btn_primary.webp' in text
+    assert 'vorath_stat_plaque_v01.webp' in text and 'vorath_card_frame_v01.webp' in text
     assert 'application/ld+json' in text
     assert 'https://northstarprime.net/stickerforge/comedy-vault/' in text
     assert 'about:blank' not in text

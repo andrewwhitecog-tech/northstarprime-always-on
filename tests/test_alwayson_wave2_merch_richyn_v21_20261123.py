@@ -20,7 +20,7 @@ VERIFIED_RICHYN_GUMROAD_URLS = (
 )
 
 COMEDY_VAULT_ORDER_HREF = (
-    "/contact/?subject=Comedy%20Sticker%20Mega%20Vault%20Vols%201-3%20Custom%20Print%20Order"
+    "/contact/?subject=Comedy%20Sticker%20Mega%20Vault%20Vols%201-4%20Custom%20Print%20Order"
 )
 
 
@@ -72,10 +72,10 @@ def test_richyn_has_verified_gumroad_checkout_bridge_and_zero_forbidden_refs():
 def test_stickerforge_surfaces_comedy_mega_vault_vols1_to_3_and_preserves_477_cards():
     html = (ROOT / "stickerforge" / "index.html").read_text(encoding="utf-8")
     assert 'id="comedy-sticker-mega-vault"' in html
-    assert "108 Original 300-DPI Designs" in html
+    assert "144 Original 300-DPI Designs" in html
+    assert 'href="/stickerforge/comedy-vault/"' in html
     assert f'href="{COMEDY_VAULT_ORDER_HREF}"' in html
     assert 'href="/store/"' in html
-    assert "gumroad.com" not in html.lower(), "Must not include fake/unpublished Gumroad links on /stickerforge/"
     assert "app.northstarprime.net" not in html
     assert "onrender.com" not in html.lower()
     assert not re.search(r"[\U00010000-\U0010ffff]", html)

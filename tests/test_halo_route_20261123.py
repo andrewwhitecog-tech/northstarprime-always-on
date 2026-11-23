@@ -153,12 +153,12 @@ def test_halo_route_responsive_zero_overflow_zero_broken_images_and_shimmer_js(s
                 assert console_errs == [], f"Console errors at {width}x{height}: {console_errs}"
                 assert page_errs == [], f"Page errors at {width}x{height}: {page_errs}"
 
-                # Verify interactive 300s shimmer explorer updates stage at t=250s
+                # Verify interactive 300s shimmer explorer updates at t=250s and shows no mode stage
                 if width == 1280:
                     page.locator("#shimmer-slider").fill("250")
                     page.locator("#shimmer-slider").dispatch_event("input")
                     assert "250 s / 300 s" in page.locator("#sh-t").inner_text()
-                    assert "Stage 5" in page.locator("#sh-stage").inner_text()
+                    assert page.locator("#sh-stage").count() == 0
                 ctx.close()
         finally:
             browser.close()

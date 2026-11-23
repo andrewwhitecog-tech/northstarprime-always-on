@@ -54,8 +54,12 @@ def test_studio_html_static_invariants():
         "generateRebrickableCSV",
         "importLDrawText",
         "loadSampleLDraw",
+        "parseLDrawColor",
+        "escapeXml",
+        "formatLDrawMatrix",
         "MAX_CUSTOM_PARTS",
         "MAX_IMPORT_PARTS",
+        "MAX_IMPORT_BYTES",
     ):
         assert required_sym in cad_js, f"CAD engine missing {required_sym}"
     # Verify expanded >= 20 sculpted placeable parts in BUILDER_PARTS

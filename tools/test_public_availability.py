@@ -34,6 +34,37 @@ class AvailabilityTests(unittest.TestCase):
         with patch.object(monitor.urllib.request, "urlopen", return_value=Response(b"<html>error</html>")):
             self.assertFalse(monitor.probe(("video", "https://northstarprime.net/", "video"))["ok"])
 
+    def test_video_raw_github_octet_stream_with_mp4_ftyp_passes(self):
+        url = "https://raw.githubusercontent.com/andrewwhitecog-tech/northstarprime-always-on/main/static/idc_video/sample.mp4"
+
+        class RawMp4Response(io.BytesIO):
+            status = 206
+            headers = {"Content-Type": "application/octet-stream"}
+
+            def geturl(self):
+                return url
+
+        mp4_head = b"\x00\x00\x00\x20ftypisom\x00\x00\x02\x00isomiso2"
+        with patch.object(monitor.urllib.request, "urlopen", return_value=RawMp4Response(mp4_head)):
+            result = monitor.probe(("watch_video", url, "video"))
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["status"], 206)
+
+    def test_video_octet_stream_lfs_pointer_or_garbage_is_failure(self):
+        url = "https://raw.githubusercontent.com/andrewwhitecog-tech/northstarprime-always-on/main/static/idc_video/sample.mp4"
+
+        class RawLfsResponse(io.BytesIO):
+            status = 206
+            headers = {"Content-Type": "application/octet-stream"}
+
+            def geturl(self):
+                return url
+
+        lfs_pointer = b"version https://git-lfs.github.com/spec/v1\noid sha256:deadbeef\nsize 12345\n"
+        with patch.object(monitor.urllib.request, "urlopen", return_value=RawLfsResponse(lfs_pointer)):
+            result = monitor.probe(("watch_video", url, "video"))
+        self.assertFalse(result["ok"])
+
     def test_healthy_request_is_anonymous_get_with_bounded_timeout(self):
         with patch.object(monitor.urllib.request, "urlopen", return_value=Response(b"<html>NorthStar</html>")) as request:
             self.assertTrue(monitor.probe(monitor.CHECKS[0])["ok"])

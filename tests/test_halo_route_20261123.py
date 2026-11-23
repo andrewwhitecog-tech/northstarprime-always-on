@@ -52,6 +52,9 @@ def test_halo_static_html_landmarks_no_emojis_and_links_entry():
     assert "forced-colors:active" in html or "forced-colors: active" in html
     assert "Game Content Usage Rules" in html
     assert "app.northstarprime.net" not in html
+    assert "our own compiled" not in html
+    assert "recoloured from the game's own texture" in html
+    assert "16 / 16 SHA-256" in html and "22 / 22" not in html and "22/22" not in html
     assert not re.search(r"[\U00010000-\U0010ffff]", html), "/halo/index.html must contain 0 emojis"
 
     links_html = (ROOT / "links" / "index.html").read_text(encoding="utf-8")
@@ -71,7 +74,36 @@ def test_halo_mod_pack_v2_downloads_and_sha256_integrity():
 
     with zipfile.ZipFile(zip_path, "r") as zf:
         names = set(zf.namelist())
-    assert len(names) >= 22
+        zip_bytes = {n: zf.read(n) for n in names}
+    # 16 release files plus SHA256SUMS.txt (six third-party-named scripts removed 2026-11-23)
+    assert len(names) == 17
+    assert sum(1 for n in names if n.endswith(".bitmap")) == 4
+    assert sorted(n for n in names if n.endswith(".hsc")) == [
+        "scenarios_hsc/nsp_digon_sanctum_arena.hsc",
+        "scenarios_hsc/shrine_digon_shimmer_director.hsc",
+    ]
+    # No local folder paths or third-party property names anywhere in the archive
+    for n, b in zip_bytes.items():
+        low = b.lower()
+        for needle in (b"c:\\", b"f:\\", b"northstar_os", b"steamapps", b"quidditch", b"minecraft", b"cortana"):
+            assert needle not in low, f"{needle!r} found in ZIP member {n}"
+    # Every SHA256SUMS.txt line matches its ZIP member, and every other member is listed
+    zip_sums = dict(
+        (rel, hx) for hx, rel in (ln.split("  ", 1) for ln in zip_bytes["SHA256SUMS.txt"].decode("utf-8").splitlines())
+    )
+    assert set(zip_sums) == names - {"SHA256SUMS.txt"}
+    for rel, hx in zip_sums.items():
+        assert hashlib.sha256(zip_bytes[rel]).hexdigest() == hx, rel
+    # Standalone files the page offers are byte-identical to the copies inside the ZIP
+    for standalone, member in (
+        ("ModInfo.json", "ModInfo.json"),
+        ("README.md", "README.md"),
+        ("SHA256SUMS.txt", "SHA256SUMS.txt"),
+        ("V2_ENGINE_VERIFICATION_RECEIPT.json", "roundtrip_proofs/V2_ENGINE_VERIFICATION_RECEIPT.json"),
+        ("hsc_scripts/nsp_digon_sanctum_arena.hsc", "scenarios_hsc/nsp_digon_sanctum_arena.hsc"),
+        ("hsc_scripts/shrine_digon_shimmer_director.hsc", "scenarios_hsc/shrine_digon_shimmer_director.hsc"),
+    ):
+        assert (DL_DIR / standalone).read_bytes() == zip_bytes[member], standalone
     assert "SHA256SUMS.txt" in names
     assert "ModInfo.json" in names
     assert "reclaimer_modes/northstar-digon-overload.json" in names
@@ -85,7 +117,7 @@ def test_halo_mod_pack_v2_downloads_and_sha256_integrity():
         if ln.strip():
             hx, rel = ln.split("  ", 1)
             sum_map[rel] = hx
-    assert len(sum_map) == 22
+    assert len(sum_map) == 16
 
     for mode_name in (
         "northstar-digon-overload.json",
@@ -153,12 +185,12 @@ def test_halo_route_responsive_zero_overflow_zero_broken_images_and_shimmer_js(s
                 assert console_errs == [], f"Console errors at {width}x{height}: {console_errs}"
                 assert page_errs == [], f"Page errors at {width}x{height}: {page_errs}"
 
-                # Verify interactive 300s shimmer explorer updates stage at t=250s
+                # Verify interactive 300s shimmer explorer updates at t=250s and shows no mode stage
                 if width == 1280:
                     page.locator("#shimmer-slider").fill("250")
                     page.locator("#shimmer-slider").dispatch_event("input")
                     assert "250 s / 300 s" in page.locator("#sh-t").inner_text()
-                    assert "Stage 5" in page.locator("#sh-stage").inner_text()
+                    assert page.locator("#sh-stage").count() == 0
                 ctx.close()
         finally:
             browser.close()

@@ -881,7 +881,7 @@
           </div>
           <div class="cad-group">
             <span class="cad-group-lbl">LDraw</span>
-            <input type="file" id="cad-ldr-input" accept=".ldr,.mpd,.dat,text/plain" hidden>
+            <input type="file" id="cad-ldr-input" accept=".ldr,.mpd,.dat,.txt,text/plain" hidden>
             <button type="button" class="cad-btn" id="btn-import-ldr" onclick="cadTriggerImportLDraw()" title="Import any LDraw .ldr or .mpd file into the 3D workbench">Import .LDR</button>
             <button type="button" class="cad-btn" id="btn-sample-ldr" onclick="cadLoadSampleLDraw()" title="Load built-in 24-piece multi-step GBC Gearbox .ldr sample">Sample .LDR</button>
           </div>
@@ -1646,6 +1646,12 @@
 
     function cadHandleLDrawFile(file) {
       if (!file || !cadEngine) return;
+      const maxBytes = (window.BrickCAD && window.BrickCAD.MAX_IMPORT_BYTES) || (5 * 1024 * 1024);
+      if (typeof file.size === "number" && file.size > maxBytes) {
+        const selEl = document.getElementById("cad-selected-readout");
+        if (selEl) selEl.textContent = `File too large (${(file.size / (1024 * 1024)).toFixed(1)} MB). Max LDraw import size is ${Math.round(maxBytes / (1024 * 1024))} MB.`;
+        return;
+      }
       const reader = new FileReader();
       reader.onload = () => {
         cadEngine.importLDrawText(String(reader.result || ""), file.name);

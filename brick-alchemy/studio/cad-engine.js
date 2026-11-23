@@ -1,4 +1,4 @@
-/* NorthStar Brick Alchemy — CAD Studio v2.1 Engine
+/* NorthStar Brick Alchemy — CAD Studio v2.2 Engine
  * Genuine LDraw-proportioned procedural 3D Brick & Mechanical CAD engine:
  * - 1 stud = 1.0 unit = 8.0 mm = 20 LDU | 1 plate = 0.4 unit = 3.2 mm = 8 LDU | 1 brick = 1.2 units = 9.6 mm = 24 LDU
  * - Procedural HDR softbox studio environment map (PMREMGenerator) + PCFSoftShadowMap + ACESFilmicToneMapping
@@ -7,7 +7,8 @@
  *   perforated liftarms (7L/11L/15L), cruciform cross-axles (4L/6L/8L), friction pins (2780), and 45-deg slopes
  * - Orthographic/Perspective camera toggle, CAD views (Iso/Front/Top/Side), Studio/Edges/Wireframe/X-Ray modes
  * - Step-by-step Build Instructions sequencer, Raycast Part Inspector, Interactive Stud-Snap Builder (500-part cap)
- * - Real LDraw (.ldr/.mpd) IMPORT + Export, BrickLink Wanted List (.xml), Rebrickable BOM (.csv), and HD PNG exports
+ * - Real LDraw (.ldr/.mpd) IMPORT + Full 3x3 Matrix Export (with 0x2RRGGBB hex colors), XML-escaped BrickLink (.xml),
+ *   quoted Rebrickable BOM (.csv), and HD PNG exports
  */
 (function (global) {
   "use strict";
@@ -20,6 +21,7 @@
   const STUD_H = 0.21;
   const MAX_CUSTOM_PARTS = 500;
   const MAX_IMPORT_PARTS = 2500;
+  const MAX_IMPORT_BYTES = 5 * 1024 * 1024;
 
   // Official Rebrickable / LDraw Color Palette (color_id -> physical properties)
   const LDRAW_COLORS = {
@@ -860,6 +862,7 @@
         y: opts.y || 0,
         z: opts.z || 0,
         rotY: opts.rotEuler ? opts.rotEuler.y : (opts.rotY || 0),
+        ldrawMatrix: Array.isArray(opts.ldrawMatrix) && opts.ldrawMatrix.length === 9 ? opts.ldrawMatrix.slice() : null,
         dimsStuds,
         heightWorld,
         grams: opts.grams || (dimsStuds[0] * dimsStuds[1] * dimsStuds[2] * 0.14),
@@ -1527,14 +1530,40 @@
     }
 
     // --- REAL LDRAW (.LDR / .MPD) IMPORTER ---
+    function parseLDrawColor(token) {
+      const raw = String(token || "").trim();
+      const hexMatch = /^0x2([0-9a-f]{6})$/i.exec(raw);
+      if (hexMatch) {
+        const hexUpper = hexMatch[1].toUpperCase();
+        return {
+          id: 16,
+          bl: 0,
+          name: `Custom #${hexUpper}`,
+          hex: `#${hexUpper}`,
+          trans: false,
+          metal: false,
+          ldrawColorToken: `0x2${hexUpper}`
+        };
+      }
+      const cid = parseInt(raw, 10);
+      if (Number.isFinite(cid) && LDRAW_COLORS[cid]) return LDRAW_COLORS[cid];
+      return LDRAW_COLORS[71];
+    }
+
     function importLDrawText(ldrText, sourceName) {
       if (useFallback2D || !scene) {
         return { ok: false, error: "WebGL 3D viewport unavailable" };
       }
-      const rawLines = String(ldrText || "").split(/\r?\n/);
+      const rawText = String(ldrText || "");
+      if (rawText.length > MAX_IMPORT_BYTES) {
+        const msg = `LDraw file exceeds ${Math.round(MAX_IMPORT_BYTES / (1024 * 1024))} MB safety limit.`;
+        onStatusMessage(msg);
+        return { ok: false, error: msg };
+      }
+      const rawLines = rawText.split(/\r?\n/);
       let modelTitle = String(sourceName || "Imported LDraw Model")
         .replace(/^.*[\\/]/, "")
-        .replace(/\.(ldr|mpd|dat)$/i, "")
+        .replace(/\.(ldr|mpd|dat|txt)$/i, "")
         .replace(/[\r\n]+/g, " ")
         .trim() || "Imported LDraw Model";
 
@@ -1553,7 +1582,7 @@
           if (upper.startsWith("FILE ")) {
             if (sawFileHeader && parsed.length > 0) break; // stop after main MPD model
             sawFileHeader = true;
-            const fn = rest.slice(5).trim().replace(/\.(ldr|mpd|dat)$/i, "");
+            const fn = rest.slice(5).trim().replace(/\.(ldr|mpd|dat|txt)$/i, "");
             if (fn) modelTitle = fn;
           } else if (upper === "STEP") {
             stepIdx += 1;
@@ -1567,12 +1596,12 @@
         if (!line.startsWith("1 ")) continue;
         const toks = line.split(/\s+/);
         if (toks.length < 15) continue;
-        const colorId = parseInt(toks[1], 10);
+        const colorToken = toks[1];
         const lx = parseFloat(toks[2]);
         const ly = parseFloat(toks[3]);
         const lz = parseFloat(toks[4]);
         const matVals = toks.slice(5, 14).map(parseFloat);
-        if ([lx, ly, lz].some(Number.isNaN) || matVals.some(Number.isNaN)) continue;
+        if (![lx, ly, lz].every(Number.isFinite) || !matVals.every(Number.isFinite)) continue;
 
         if (parsed.length >= MAX_IMPORT_PARTS) {
           truncated = true;
@@ -1582,7 +1611,7 @@
         const cleanFile = rawDat.replace(/^.*[\\/]/, "");
         const partNum = cleanFile.replace(/\.dat$/i, "") || "3001";
         parsed.push({
-          colorId: Number.isNaN(colorId) ? 71 : colorId,
+          colorObj: parseLDrawColor(colorToken),
           x: lx / 20.0,
           y: -ly / 20.0,
           z: lz / 20.0,
@@ -1629,7 +1658,7 @@
         if (spec) mappedCount += 1;
         else proxyCount += 1;
 
-        const cObj = LDRAW_COLORS[p.colorId] || LDRAW_COLORS[71];
+        const cObj = p.colorObj || LDRAW_COLORS[71];
         // Convert LDraw 3x3 rotation matrix (row-major a b c / d e f / g h i) to Three.js Euler
         // Accounting for LDraw -Y up -> Three.js +Y up similarity transform S * M * S where S = diag(1, -1, 1)
         const [a, b, c, d, e, f, g, h, k] = p.m;
@@ -1659,6 +1688,7 @@
           y: +(p.y + liftY).toFixed(3),
           z: +(p.z - cz).toFixed(3),
           rotEuler,
+          ldrawMatrix: p.m,
           step: p.step,
           layer: Math.max(0, p.step - 1),
           role: spec ? "ldraw_mapped" : "ldraw_proxy",
@@ -1978,6 +2008,31 @@
       return `"${String(val == null ? "" : val).replace(/"/g, '""')}"`;
     }
 
+    function escapeXml(val) {
+      return String(val == null ? "" : val)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;");
+    }
+
+    function formatLDrawMatrix(rec) {
+      if (Array.isArray(rec.ldrawMatrix) && rec.ldrawMatrix.length === 9 && rec.ldrawMatrix.every(Number.isFinite)) {
+        return rec.ldrawMatrix.map(v => (+v).toFixed(4)).join(" ");
+      }
+      if (typeof THREE !== "undefined" && rec.mesh && rec.mesh.rotation) {
+        const m4 = new THREE.Matrix4().makeRotationFromEuler(rec.mesh.rotation);
+        const e = m4.elements;
+        // Convert Three.js +Y-up column-major matrix back to LDraw -Y-up row-major via S * R * S
+        const vals = [e[0], -e[4], e[8], -e[1], e[5], -e[9], e[2], -e[6], e[10]];
+        return vals.map(v => (Math.abs(v) < 1e-6 ? 0 : v).toFixed(4)).join(" ");
+      }
+      const c = Math.cos(rec.rotY || 0);
+      const s = Math.sin(rec.rotY || 0);
+      return `${c.toFixed(4)} 0 ${s.toFixed(4)} 0 1 0 ${(-s).toFixed(4)} 0 ${c.toFixed(4)}`;
+    }
+
     function generateLDrawText() {
       const rawTitle = currentBlueprint ? currentBlueprint.name : "Brick Alchemy Assembly";
       const title = String(rawTitle || "Brick Alchemy Assembly").replace(/[\r\n]+/g, " ").trim() || "Brick Alchemy Assembly";
@@ -1991,7 +2046,7 @@
       const lines = [
         `0 ${title}`,
         `0 Name: ${title.toLowerCase().replace(/[^a-z0-9]+/g, "_")}.ldr`,
-        "0 Author: NorthStar Brick Alchemy CAD Studio v2.1 (northstarprime.net/brick-alchemy/studio/)",
+        "0 Author: NorthStar Brick Alchemy CAD Studio v2.2 (northstarprime.net/brick-alchemy/studio/)",
         "0 !LDRAW_ORG Unofficial_Model",
         "0 BFC CERTIFY CCW",
         ""
@@ -2007,11 +2062,9 @@
           const lx = (r.x * 20).toFixed(2);
           const ly = (-r.y * 20).toFixed(2);
           const lz = (r.z * 20).toFixed(2);
-          const c = Math.cos(r.rotY || 0);
-          const s = Math.sin(r.rotY || 0);
-          // 3x3 LDraw rotation matrix around Y
-          const m = `${c.toFixed(4)} 0 ${s.toFixed(4)} 0 1 0 ${(-s).toFixed(4)} 0 ${c.toFixed(4)}`;
-          lines.push(`1 ${r.colorObj.id} ${lx} ${ly} ${lz} ${m} ${r.ldrawFile}`);
+          const m = formatLDrawMatrix(r);
+          const colTok = r.colorObj.ldrawColorToken || r.colorObj.id;
+          lines.push(`1 ${colTok} ${lx} ${ly} ${lz} ${m} ${r.ldrawFile}`);
         }
       }
       lines.push("0 NOFILE");
@@ -2032,8 +2085,8 @@
       counts.forEach(item => {
         lines.push("  <ITEM>");
         lines.push("    <ITEMTYPE>P</ITEMTYPE>");
-        lines.push(`    <ITEMID>${item.partNum}</ITEMID>`);
-        lines.push(`    <COLOR>${item.blColor}</COLOR>`);
+        lines.push(`    <ITEMID>${escapeXml(item.partNum)}</ITEMID>`);
+        lines.push(`    <COLOR>${escapeXml(item.blColor)}</COLOR>`);
         lines.push(`    <MINQTY>${item.qty}</MINQTY>`);
         lines.push("  </ITEM>");
       });
@@ -2503,7 +2556,8 @@
       BUILDER_SWATCH_IDS,
       LDRAW_COLORS,
       MAX_CUSTOM_PARTS,
-      MAX_IMPORT_PARTS
+      MAX_IMPORT_PARTS,
+      MAX_IMPORT_BYTES
     };
   }
 
@@ -2513,6 +2567,7 @@
     BUILDER_SWATCH_IDS,
     LDRAW_COLORS,
     MAX_CUSTOM_PARTS,
-    MAX_IMPORT_PARTS
+    MAX_IMPORT_PARTS,
+    MAX_IMPORT_BYTES
   };
 })(window);

@@ -343,6 +343,10 @@
       min-height: 360px;
       background: radial-gradient(circle at 50% 45%, #161d3a 0%, #070914 78%);
       overflow: hidden;
+      transition: box-shadow 0.18s ease;
+    }
+    .viewport-wrap.drag-over {
+      box-shadow: inset 0 0 0 2px var(--cyan), inset 0 0 28px rgba(47, 228, 255, 0.25);
     }
     #webgl-canvas, #fallback-canvas {
       display: block;
@@ -874,6 +878,12 @@
             <button type="button" class="cad-btn" id="cad-tool-place" onclick="cadSetTool('place')">+ Place Brick</button>
             <button type="button" class="cad-btn" id="cad-tool-erase" onclick="cadSetTool('erase')">Erase</button>
             <button type="button" class="cad-btn" onclick="cadUndoCustom()">Undo</button>
+          </div>
+          <div class="cad-group">
+            <span class="cad-group-lbl">LDraw</span>
+            <input type="file" id="cad-ldr-input" accept=".ldr,.mpd,.dat,text/plain" hidden>
+            <button type="button" class="cad-btn" id="btn-import-ldr" onclick="cadTriggerImportLDraw()" title="Import any LDraw .ldr or .mpd file into the 3D workbench">Import .LDR</button>
+            <button type="button" class="cad-btn" id="btn-sample-ldr" onclick="cadLoadSampleLDraw()" title="Load built-in 24-piece multi-step GBC Gearbox .ldr sample">Sample .LDR</button>
           </div>
         </div>
         <div class="cad-builder-tray" id="cad-builder-tray" aria-label="Interactive Brick Placement Palette">
@@ -1622,6 +1632,27 @@
       if (cadEngine) cadEngine.exportSnapshotPNG();
     }
 
+    function cadTriggerImportLDraw() {
+      const inp = document.getElementById("cad-ldr-input");
+      if (inp) {
+        inp.value = "";
+        inp.click();
+      }
+    }
+
+    function cadLoadSampleLDraw() {
+      if (cadEngine) cadEngine.loadSampleLDraw();
+    }
+
+    function cadHandleLDrawFile(file) {
+      if (!file || !cadEngine) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        cadEngine.importLDrawText(String(reader.result || ""), file.name);
+      };
+      reader.readAsText(file);
+    }
+
     function populateBuilderTray() {
       if (!window.BrickCAD) return;
       const sel = document.getElementById("cad-part-select");
@@ -1707,8 +1738,48 @@
             const b = document.getElementById(`cad-mode-${m}`);
             if (b) b.classList.toggle("active", m === mode);
           });
+        },
+        onImportComplete(info) {
+          const titleEl = document.getElementById("hud-bp-title");
+          const prinEl = document.getElementById("hud-bp-principle");
+          const selEl = document.getElementById("cad-selected-readout");
+          if (titleEl) titleEl.textContent = info.name;
+          if (prinEl) prinEl.textContent = `Imported LDraw (.ldr) · ${info.partCount} parts · ${info.steps} build steps (${info.mappedCount} sculpted, ${info.proxyCount} proxy)`;
+          if (selEl) {
+            const note = info.truncated ? ` (capped at ${window.BrickCAD.MAX_IMPORT_PARTS} parts)` : "";
+            selEl.textContent = `Imported ${info.name}: ${info.partCount} pcs across ${info.steps} steps${note}`;
+          }
+        },
+        onStatusMessage(msg) {
+          const selEl = document.getElementById("cad-selected-readout");
+          if (selEl && msg) selEl.textContent = msg;
         }
       });
+
+      const ldrInput = document.getElementById("cad-ldr-input");
+      if (ldrInput) {
+        ldrInput.addEventListener("change", ev => {
+          const f = ev.target.files && ev.target.files[0];
+          if (f) cadHandleLDrawFile(f);
+        });
+      }
+      if (container) {
+        container.addEventListener("dragover", ev => {
+          ev.preventDefault();
+          container.classList.add("drag-over");
+        });
+        container.addEventListener("dragleave", () => {
+          container.classList.remove("drag-over");
+        });
+        container.addEventListener("drop", ev => {
+          ev.preventDefault();
+          container.classList.remove("drag-over");
+          const f = ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files[0];
+          if (f && /\.(ldr|mpd|dat|txt)$/i.test(f.name)) {
+            cadHandleLDrawFile(f);
+          }
+        });
+      }
 
       window.studioCadEngine = cadEngine;
       cadEngine.init();

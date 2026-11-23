@@ -38,6 +38,7 @@ def test_studio_html_static_invariants():
     assert 'onclick="addSetToTote(' not in html and 'onclick="removeSetFromTote(' not in html
     assert "cadExportLDraw()" in html and "cadExportBrickLink()" in html and "cadExportCSV()" in html
     assert "cad-step-slider" in html and "cad-builder-tray" in html
+    assert "cad-ldr-input" in html and "btn-import-ldr" in html and "btn-sample-ldr" in html
     assert "ardentilaterum_eye" in html
 
     assert CAD_ENGINE_JS.is_file(), f"Missing CAD engine script: {CAD_ENGINE_JS}"
@@ -51,8 +52,15 @@ def test_studio_html_static_invariants():
         "generateLDrawText",
         "generateBrickLinkXML",
         "generateRebrickableCSV",
+        "importLDrawText",
+        "loadSampleLDraw",
+        "MAX_CUSTOM_PARTS",
+        "MAX_IMPORT_PARTS",
     ):
         assert required_sym in cad_js, f"CAD engine missing {required_sym}"
+    # Verify expanded >= 20 sculpted placeable parts in BUILDER_PARTS
+    builder_part_keys = re.findall(r'\{\s*key:\s*"([a-z0-9_]+)",\s*partNum:', cad_js)
+    assert len(builder_part_keys) >= 20, f"Expected >= 20 sculpted builder parts, found {len(builder_part_keys)}"
     assert not re.search(r"[A-Za-z]:\\", cad_js), "Local Windows drive paths must never appear in cad-engine.js"
 
     # Every referenced local image under /brick-alchemy/assets/ must exist on disk

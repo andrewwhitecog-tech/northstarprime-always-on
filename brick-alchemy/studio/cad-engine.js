@@ -1,13 +1,13 @@
-/* NorthStar Brick Alchemy — CAD Studio v2.0 Engine
- * Genuine LDraw-proportioned procedural 3D Brick & Technic CAD engine:
+/* NorthStar Brick Alchemy — CAD Studio v2.1 Engine
+ * Genuine LDraw-proportioned procedural 3D Brick & Mechanical CAD engine:
  * - 1 stud = 1.0 unit = 8.0 mm = 20 LDU | 1 plate = 0.4 unit = 3.2 mm = 8 LDU | 1 brick = 1.2 units = 9.6 mm = 24 LDU
  * - Procedural HDR softbox studio environment map (PMREMGenerator) + PCFSoftShadowMap + ACESFilmicToneMapping
- * - Sculpted beveled bricks/plates, round translucent tiles (98138), 24-facet gems (30153),
- *   true involute meshing Technic gears (8T/12T/16T/24T/36T/40T) with spoked holes & cross-axle bores,
- *   perforated Technic liftarms with punched pinholes, cruciform cross-axles, and slopes
+ * - 25 sculpted placeable parts: beveled bricks/plates/tiles, round plates/tiles (6141/98138), 24-facet gems (30153),
+ *   involute meshing gears (8T/12T/16T/24T/36T/40T) with spoked holes & cross-axle bores,
+ *   perforated liftarms (7L/11L/15L), cruciform cross-axles (4L/6L/8L), friction pins (2780), and 45-deg slopes
  * - Orthographic/Perspective camera toggle, CAD views (Iso/Front/Top/Side), Studio/Edges/Wireframe/X-Ray modes
- * - Step-by-step Build Instructions sequencer, Raycast Part Inspector, Interactive Stud-Snap Builder
- * - Real LDraw (.ldr), BrickLink Wanted List (.xml), Rebrickable BOM (.csv), and HD PNG exports
+ * - Step-by-step Build Instructions sequencer, Raycast Part Inspector, Interactive Stud-Snap Builder (500-part cap)
+ * - Real LDraw (.ldr/.mpd) IMPORT + Export, BrickLink Wanted List (.xml), Rebrickable BOM (.csv), and HD PNG exports
  */
 (function (global) {
   "use strict";
@@ -18,6 +18,8 @@
   const SEAM = 0.024;
   const STUD_R = 0.295;
   const STUD_H = 0.21;
+  const MAX_CUSTOM_PARTS = 500;
+  const MAX_IMPORT_PARTS = 2500;
 
   // Official Rebrickable / LDraw Color Palette (color_id -> physical properties)
   const LDRAW_COLORS = {
@@ -44,19 +46,99 @@
     143: { id: 143, bl: 74,  name: "Trans-Medium Blue",  hex: "#2B9BFF", trans: true,  metal: false }
   };
 
-  // Interactive Sandbox Placeable Catalog
+  // Interactive Sandbox Placeable Catalog (25 sculpted LDraw parts)
   const BUILDER_PARTS = [
     { key: "brick_2x4",  partNum: "3001",  name: "Brick 2 x 4",              kind: "brick",   sx: 2, plates: 3, sz: 4, grams: 2.32 },
     { key: "brick_2x2",  partNum: "3003",  name: "Brick 2 x 2",              kind: "brick",   sx: 2, plates: 3, sz: 2, grams: 1.15 },
     { key: "brick_1x2",  partNum: "3004",  name: "Brick 1 x 2",              kind: "brick",   sx: 1, plates: 3, sz: 2, grams: 0.78 },
     { key: "brick_1x1",  partNum: "3005",  name: "Brick 1 x 1",              kind: "brick",   sx: 1, plates: 3, sz: 1, grams: 0.43 },
     { key: "plate_2x4",  partNum: "3020",  name: "Plate 2 x 4",              kind: "brick",   sx: 2, plates: 1, sz: 4, grams: 1.08 },
+    { key: "plate_2x2",  partNum: "3022",  name: "Plate 2 x 2",              kind: "brick",   sx: 2, plates: 1, sz: 2, grams: 0.57 },
+    { key: "plate_1x2",  partNum: "3023",  name: "Plate 1 x 2",              kind: "brick",   sx: 1, plates: 1, sz: 2, grams: 0.30 },
+    { key: "plate_1x1",  partNum: "3024",  name: "Plate 1 x 1",              kind: "brick",   sx: 1, plates: 1, sz: 1, grams: 0.17 },
+    { key: "tile_1x2",   partNum: "3069b", name: "Tile 1 x 2 Smooth",        kind: "brick",   sx: 1, plates: 1, sz: 2, smoothTop: true, grams: 0.28 },
     { key: "slope_2x2",  partNum: "3039",  name: "Slope 45 deg 2 x 2",       kind: "slope",   sx: 2, plates: 3, sz: 2, grams: 1.02 },
+    { key: "slope_1x2",  partNum: "3040",  name: "Slope 45 deg 1 x 2",       kind: "slope",   sx: 1, plates: 3, sz: 2, grams: 0.56 },
+    { key: "plate_r1",   partNum: "6141",  name: "Plate Round 1 x 1",        kind: "rplate",  sx: 1, plates: 1, sz: 1, grams: 0.16 },
     { key: "tile_r1",    partNum: "98138", name: "Tile Round 1 x 1",         kind: "rtile",   sx: 1, plates: 1, sz: 1, grams: 0.14 },
     { key: "gem_1x1",    partNum: "30153", name: "Rock 1 x 1 Crystal Gem",   kind: "gem",     sx: 1, plates: 3, sz: 1, grams: 0.31 },
-    { key: "gear_24",    partNum: "3648",  name: "Technic Gear 24 Tooth",    kind: "gear",    teeth: 24, sx: 3, plates: 2, sz: 3, grams: 1.38 },
-    { key: "liftarm_7",  partNum: "32524", name: "Technic Liftarm Thick 7L", kind: "liftarm", len: 7, sx: 7, plates: 2, sz: 1, grams: 1.85 }
+    { key: "gear_8",     partNum: "3647",  name: "Gear 8 Tooth",             kind: "gear",    teeth: 8,  sx: 1, plates: 2, sz: 1, grams: 0.28 },
+    { key: "gear_12",    partNum: "32270", name: "Gear 12 Tooth Bevel",      kind: "gear",    teeth: 12, sx: 2, plates: 2, sz: 2, grams: 0.45 },
+    { key: "gear_16",    partNum: "94925", name: "Gear 16 Tooth",            kind: "gear",    teeth: 16, sx: 2, plates: 2, sz: 2, grams: 0.68 },
+    { key: "gear_24",    partNum: "3648",  name: "Gear 24 Tooth",            kind: "gear",    teeth: 24, sx: 3, plates: 2, sz: 3, grams: 1.38 },
+    { key: "gear_36",    partNum: "32498", name: "Gear 36 Tooth Double",     kind: "gear",    teeth: 36, sx: 5, plates: 2, sz: 5, grams: 2.42 },
+    { key: "gear_40",    partNum: "3649",  name: "Gear 40 Tooth",            kind: "gear",    teeth: 40, sx: 5, plates: 2, sz: 5, grams: 3.15 },
+    { key: "liftarm_7",  partNum: "32524", name: "Liftarm Thick 7L",         kind: "liftarm", len: 7,  sx: 7,  plates: 2, sz: 1, grams: 1.85 },
+    { key: "liftarm_11", partNum: "32525", name: "Liftarm Thick 11L",        kind: "liftarm", len: 11, sx: 11, plates: 2, sz: 1, grams: 2.95 },
+    { key: "liftarm_15", partNum: "32278", name: "Liftarm Thick 15L",        kind: "liftarm", len: 15, sx: 15, plates: 2, sz: 1, grams: 4.10 },
+    { key: "axle_6",     partNum: "3706",  name: "Cross-Axle 6L",            kind: "axle",    len: 6,  sx: 1,  plates: 1, sz: 6, grams: 0.72 },
+    { key: "pin_fric",   partNum: "2780",  name: "Friction Pin w/ Ridges",   kind: "pin",     sx: 1,  plates: 1, sz: 1, grams: 0.21 }
   ];
+
+  // LDraw .dat -> procedural CAD geometry spec lookup for real .ldr / .mpd import
+  const LDRAW_PART_SPECS = (function () {
+    const map = {};
+    BUILDER_PARTS.forEach(p => { map[p.partNum.toLowerCase()] = p; });
+    const extras = [
+      { partNum: "3002",  name: "Brick 2 x 3",        kind: "brick", sx: 2, plates: 3, sz: 3, grams: 1.72 },
+      { partNum: "3008",  name: "Brick 1 x 8",        kind: "brick", sx: 1, plates: 3, sz: 8, grams: 3.10 },
+      { partNum: "3009",  name: "Brick 1 x 6",        kind: "brick", sx: 1, plates: 3, sz: 6, grams: 2.34 },
+      { partNum: "3010",  name: "Brick 1 x 4",        kind: "brick", sx: 1, plates: 3, sz: 4, grams: 1.56 },
+      { partNum: "3622",  name: "Brick 1 x 3",        kind: "brick", sx: 1, plates: 3, sz: 3, grams: 1.18 },
+      { partNum: "3021",  name: "Plate 2 x 3",        kind: "brick", sx: 2, plates: 1, sz: 3, grams: 0.82 },
+      { partNum: "3666",  name: "Plate 1 x 6",        kind: "brick", sx: 1, plates: 1, sz: 6, grams: 0.85 },
+      { partNum: "3710",  name: "Plate 1 x 4",        kind: "brick", sx: 1, plates: 1, sz: 4, grams: 0.56 },
+      { partNum: "3069",  name: "Tile 1 x 2 Smooth",  kind: "brick", sx: 1, plates: 1, sz: 2, smoothTop: true, grams: 0.28 },
+      { partNum: "3070",  name: "Tile 1 x 1 Smooth",  kind: "brick", sx: 1, plates: 1, sz: 1, smoothTop: true, grams: 0.14 },
+      { partNum: "3070b", name: "Tile 1 x 1 Smooth",  kind: "brick", sx: 1, plates: 1, sz: 1, smoothTop: true, grams: 0.14 },
+      { partNum: "3068b", name: "Tile 2 x 2 Smooth",  kind: "brick", sx: 2, plates: 1, sz: 2, smoothTop: true, grams: 0.48 },
+      { partNum: "3040b", name: "Slope 45 deg 1 x 2", kind: "slope", sx: 1, plates: 3, sz: 2, grams: 0.56 },
+      { partNum: "4073",  name: "Plate Round 1 x 1",  kind: "rplate", sx: 1, plates: 1, sz: 1, grams: 0.16 },
+      { partNum: "3705",  name: "Cross-Axle 4L",      kind: "axle",  len: 4, sx: 1, plates: 1, sz: 4, grams: 0.48 },
+      { partNum: "3707",  name: "Cross-Axle 8L",      kind: "axle",  len: 8, sx: 1, plates: 1, sz: 8, grams: 0.96 },
+      { partNum: "32062", name: "Cross-Axle 2L",      kind: "axle",  len: 2, sx: 1, plates: 1, sz: 2, grams: 0.25 }
+    ];
+    extras.forEach(p => { map[p.partNum.toLowerCase()] = p; });
+    return map;
+  })();
+
+  const SAMPLE_LDRAW_GEARBOX = [
+    "0 NorthStar 3-Stage Compound GBC Gearbox Sample",
+    "0 Name: northstar_sample_gbc_gearbox.ldr",
+    "0 Author: NorthStar Brick Alchemy CAD Studio v2.1",
+    "0 // Step 1: Dark Slate Plinth & Rail Base",
+    "1 72 -80 -12 -40 1 0 0 0 1 0 0 0 1 3001.dat",
+    "1 72 0 -12 -40 1 0 0 0 1 0 0 0 1 3001.dat",
+    "1 72 80 -12 -40 1 0 0 0 1 0 0 0 1 3001.dat",
+    "1 72 -80 -12 40 1 0 0 0 1 0 0 0 1 3001.dat",
+    "1 72 0 -12 40 1 0 0 0 1 0 0 0 1 3001.dat",
+    "1 72 80 -12 40 1 0 0 0 1 0 0 0 1 3001.dat",
+    "0 STEP",
+    "0 // Step 2: Perforated Liftarm Bearing Towers",
+    "1 0 -90 -64 -40 0 -1 0 1 0 0 0 0 1 32524.dat",
+    "1 0 90 -64 -40 0 -1 0 1 0 0 0 0 1 32524.dat",
+    "1 0 -90 -64 40 0 -1 0 1 0 0 0 0 1 32524.dat",
+    "1 0 90 -64 40 0 -1 0 1 0 0 0 0 1 32524.dat",
+    "1 71 0 -44 -40 1 0 0 0 1 0 0 0 1 32525.dat",
+    "1 71 0 -44 40 1 0 0 0 1 0 0 0 1 32525.dat",
+    "0 STEP",
+    "0 // Step 3: Cross-Axles & Meshing Brass/Cyan Reduction Gear Train",
+    "1 0 -60 -84 0 1 0 0 0 1 0 0 0 1 3706.dat",
+    "1 0 -20 -84 0 1 0 0 0 1 0 0 0 1 3706.dat",
+    "1 0 40 -84 0 1 0 0 0 1 0 0 0 1 3706.dat",
+    "1 297 -60 -84 0 1 0 0 0 1 0 0 0 1 3647.dat",
+    "1 297 -20 -84 0 1 0 0 0 1 0 0 0 1 3648.dat",
+    "1 383 40 -84 0 1 0 0 0 1 0 0 0 1 3649.dat",
+    "0 STEP",
+    "0 // Step 4: Backlit Crystal Beacon Caps & Sloped Shrouds",
+    "1 41 -90 -138 -40 1 0 0 0 1 0 0 0 1 30153.dat",
+    "1 35 90 -138 -40 1 0 0 0 1 0 0 0 1 30153.dat",
+    "1 45 -90 -138 40 1 0 0 0 1 0 0 0 1 30153.dat",
+    "1 57 90 -138 40 1 0 0 0 1 0 0 0 1 30153.dat",
+    "1 297 -40 -28 0 1 0 0 0 1 0 0 0 1 3039.dat",
+    "1 297 40 -28 0 0 0 -1 0 1 0 1 0 0 3039.dat",
+    "0 NOFILE"
+  ].join("\r\n");
 
   const BUILDER_SWATCH_IDS = [0, 72, 71, 297, 1, 4, 15, 35, 41, 52, 57, 45];
 
@@ -92,6 +174,9 @@
     const onStepChange = options.onStepChange || function () {};
     const onToolChange = options.onToolChange || function () {};
     const onRenderModeChange = options.onRenderModeChange || function () {};
+    const onImportComplete = options.onImportComplete || function () {};
+    const onStatusMessage = options.onStatusMessage || function () {};
+    const reducedMotion = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     let renderer = null;
     let scene = null;
@@ -661,6 +746,19 @@
             }
           }
         }
+      } else if (opts.kind === "rplate") {
+        const geo = getRoundTileGeo();
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        attachEdgeOverlay(mesh, geo);
+        group.add(mesh);
+        const sMesh = new THREE.Mesh(getStudGeo(), mat);
+        sMesh.position.set(0, PLATE / 2 - 0.01, 0);
+        sMesh.castShadow = true;
+        group.add(sMesh);
+        heightWorld = PLATE;
+        dimsStuds = [1, 1, 1];
       } else if (opts.kind === "rtile") {
         const geo = getRoundTileGeo();
         const mesh = new THREE.Mesh(geo, mat);
@@ -739,15 +837,19 @@
       }
 
       group.position.set(opts.x || 0, opts.y || 0, opts.z || 0);
-      if (opts.rotX) group.rotation.x += opts.rotX;
-      if (opts.rotY) group.rotation.y += opts.rotY;
-      if (opts.rotZ) group.rotation.z += opts.rotZ;
+      if (opts.rotEuler) {
+        group.rotation.copy(opts.rotEuler);
+      } else {
+        if (opts.rotX) group.rotation.x += opts.rotX;
+        if (opts.rotY) group.rotation.y += opts.rotY;
+        if (opts.rotZ) group.rotation.z += opts.rotZ;
+      }
 
       const rec = {
         id: partIdSeq++,
         partNum: opts.partNum || "3001",
         partName: opts.partName || "Brick 2 x 4",
-        ldrawFile: `${opts.partNum || "3001"}.dat`,
+        ldrawFile: opts.ldrawFile || `${opts.partNum || "3001"}.dat`,
         kind: opts.kind,
         colorObj: cObj,
         backlit: Boolean(opts.backlit),
@@ -757,7 +859,7 @@
         x: opts.x || 0,
         y: opts.y || 0,
         z: opts.z || 0,
-        rotY: opts.rotY || 0,
+        rotY: opts.rotEuler ? opts.rotEuler.y : (opts.rotY || 0),
         dimsStuds,
         heightWorld,
         grams: opts.grams || (dimsStuds[0] * dimsStuds[1] * dimsStuds[2] * 0.14),
@@ -1424,6 +1526,182 @@
       computeAndEmitTelemetry();
     }
 
+    // --- REAL LDRAW (.LDR / .MPD) IMPORTER ---
+    function importLDrawText(ldrText, sourceName) {
+      if (useFallback2D || !scene) {
+        return { ok: false, error: "WebGL 3D viewport unavailable" };
+      }
+      const rawLines = String(ldrText || "").split(/\r?\n/);
+      let modelTitle = String(sourceName || "Imported LDraw Model")
+        .replace(/^.*[\\/]/, "")
+        .replace(/\.(ldr|mpd|dat)$/i, "")
+        .replace(/[\r\n]+/g, " ")
+        .trim() || "Imported LDraw Model";
+
+      const parsed = [];
+      let stepIdx = 1;
+      let sawFileHeader = false;
+      let truncated = false;
+      const stepNotes = {};
+
+      for (let i = 0; i < rawLines.length; i++) {
+        const line = rawLines[i].trim();
+        if (!line) continue;
+        if (line.startsWith("0")) {
+          const rest = line.slice(1).trim();
+          const upper = rest.toUpperCase();
+          if (upper.startsWith("FILE ")) {
+            if (sawFileHeader && parsed.length > 0) break; // stop after main MPD model
+            sawFileHeader = true;
+            const fn = rest.slice(5).trim().replace(/\.(ldr|mpd|dat)$/i, "");
+            if (fn) modelTitle = fn;
+          } else if (upper === "STEP") {
+            stepIdx += 1;
+          } else if (upper.startsWith("// STEP") || upper.startsWith("// BUILD STEP")) {
+            stepNotes[stepIdx] = rest.replace(/^\/\/\s*/, "").trim();
+          } else if (parsed.length === 0 && i === 0 && rest && !upper.startsWith("NAME:") && !upper.startsWith("AUTHOR:") && !upper.startsWith("!")) {
+            modelTitle = rest.replace(/[\r\n]+/g, " ").trim();
+          }
+          continue;
+        }
+        if (!line.startsWith("1 ")) continue;
+        const toks = line.split(/\s+/);
+        if (toks.length < 15) continue;
+        const colorId = parseInt(toks[1], 10);
+        const lx = parseFloat(toks[2]);
+        const ly = parseFloat(toks[3]);
+        const lz = parseFloat(toks[4]);
+        const matVals = toks.slice(5, 14).map(parseFloat);
+        if ([lx, ly, lz].some(Number.isNaN) || matVals.some(Number.isNaN)) continue;
+
+        if (parsed.length >= MAX_IMPORT_PARTS) {
+          truncated = true;
+          break;
+        }
+        const rawDat = toks.slice(14).join(" ").trim();
+        const cleanFile = rawDat.replace(/^.*[\\/]/, "");
+        const partNum = cleanFile.replace(/\.dat$/i, "") || "3001";
+        parsed.push({
+          colorId: Number.isNaN(colorId) ? 71 : colorId,
+          x: lx / 20.0,
+          y: -ly / 20.0,
+          z: lz / 20.0,
+          m: matVals,
+          partNum,
+          ldrawFile: cleanFile.toLowerCase().endsWith(".dat") ? cleanFile : `${partNum}.dat`,
+          step: stepIdx
+        });
+      }
+
+      if (!parsed.length) {
+        onStatusMessage("No valid LDraw Type-1 part lines found in file.");
+        return { ok: false, error: "No valid LDraw Type-1 part lines found." };
+      }
+
+      // Auto-center X/Z around workbench origin and lift Y flush onto studio floor (minY >= 0)
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minZ = Infinity, maxZ = -Infinity;
+      for (let i = 0; i < parsed.length; i++) {
+        const p = parsed[i];
+        minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+        minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+        minZ = Math.min(minZ, p.z); maxZ = Math.max(maxZ, p.z);
+      }
+      const cx = (minX + maxX) * 0.5;
+      const cz = (minZ + maxZ) * 0.5;
+      const liftY = Math.max(0, 0.6 - minY);
+
+      clearAssembly();
+      currentBlueprint = {
+        id: "ldr_" + modelTitle.toLowerCase().replace(/[^a-z0-9]+/g, "_").slice(0, 36),
+        name: modelTitle,
+        mechanism_type: "ldraw_import",
+        principle: "Imported LDraw (.ldr) CAD Assembly"
+      };
+
+      let mappedCount = 0;
+      let proxyCount = 0;
+      let actualMaxStep = 1;
+
+      for (let i = 0; i < parsed.length; i++) {
+        const p = parsed[i];
+        actualMaxStep = Math.max(actualMaxStep, p.step);
+        const spec = LDRAW_PART_SPECS[p.partNum.toLowerCase()] || null;
+        if (spec) mappedCount += 1;
+        else proxyCount += 1;
+
+        const cObj = LDRAW_COLORS[p.colorId] || LDRAW_COLORS[71];
+        // Convert LDraw 3x3 rotation matrix (row-major a b c / d e f / g h i) to Three.js Euler
+        // Accounting for LDraw -Y up -> Three.js +Y up similarity transform S * M * S where S = diag(1, -1, 1)
+        const [a, b, c, d, e, f, g, h, k] = p.m;
+        const m4 = new THREE.Matrix4().set(
+          a, -b, c, 0,
+          -d, e, -f, 0,
+          g, -h, k, 0,
+          0, 0, 0, 1
+        );
+        const rotOnly = new THREE.Matrix4().extractRotation(m4);
+        const rotEuler = new THREE.Euler().setFromRotationMatrix(rotOnly, "YXZ");
+
+        const recOpts = {
+          kind: spec ? spec.kind : "brick",
+          partNum: p.partNum,
+          ldrawFile: p.ldrawFile,
+          partName: spec ? spec.name : `LDraw Part ${p.partNum}`,
+          sx: spec ? spec.sx : 1,
+          plates: spec ? spec.plates : 3,
+          sz: spec ? spec.sz : 1,
+          smoothTop: spec ? Boolean(spec.smoothTop) : false,
+          teeth: spec ? spec.teeth : undefined,
+          len: spec ? spec.len : undefined,
+          color: cObj,
+          backlit: Boolean(cObj.trans),
+          x: +(p.x - cx).toFixed(3),
+          y: +(p.y + liftY).toFixed(3),
+          z: +(p.z - cz).toFixed(3),
+          rotEuler,
+          step: p.step,
+          layer: Math.max(0, p.step - 1),
+          role: spec ? "ldraw_mapped" : "ldraw_proxy",
+          grams: spec ? spec.grams : 0.48
+        };
+        registerPart(recOpts);
+      }
+
+      maxStep = actualMaxStep;
+      currentStep = maxStep;
+      stepPlayActive = false;
+      stepDescriptions = [];
+      for (let s = 1; s <= maxStep; s++) {
+        stepDescriptions.push(stepNotes[s] || `Step ${s}/${maxStep}: Imported LDraw sub-assembly`);
+      }
+
+      const span = Math.max(10, maxX - minX, maxZ - minZ, (maxY - minY) * 1.4);
+      camTarget = { x: 0, y: Math.max(2.0, (maxY - minY + liftY) * 0.45), z: 0 };
+      camSpherical = { radius: Math.min(44, Math.max(14, span * 1.75)), theta: 0.65, phi: 1.04 };
+      targetSpherical = null;
+      targetLook = null;
+
+      updateCameraPos();
+      applyStepVisibility();
+      computeAndEmitTelemetry();
+
+      const summary = {
+        ok: true,
+        name: modelTitle,
+        partCount: parsed.length,
+        steps: maxStep,
+        mappedCount,
+        proxyCount,
+        truncated
+      };
+      onImportComplete(summary);
+      return summary;
+    }
+
+    function loadSampleLDraw() {
+      return importLDrawText(SAMPLE_LDRAW_GEARBOX, "NorthStar 3-Stage Compound GBC Gearbox Sample.ldr");
+    }
+
     // --- CAMERA & VIEW CONTROLS ---
     function updateCameraPos() {
       if (!perspCam || !orthoCam) return;
@@ -1504,9 +1782,11 @@
       let geo;
       if (spec.kind === "brick") geo = getBeveledBodyGeo(spec.sx, spec.plates, spec.sz);
       else if (spec.kind === "slope") geo = getSlopeGeo(spec.sx, spec.plates, spec.sz);
-      else if (spec.kind === "rtile") geo = getRoundTileGeo();
+      else if (spec.kind === "rtile" || spec.kind === "rplate") geo = getRoundTileGeo();
       else if (spec.kind === "gem") geo = getCrystalGemGeo();
       else if (spec.kind === "gear") geo = getInvoluteGearGeo(spec.teeth || 24, 0.48);
+      else if (spec.kind === "axle") geo = getCrossAxleGeo(spec.len || 6);
+      else if (spec.kind === "pin") geo = getPinGeo();
       else geo = getTechnicLiftarmGeo(spec.len || 7);
 
       ghostMesh = new THREE.Mesh(geo, gMat);
@@ -1572,16 +1852,16 @@
       const spec = BUILDER_PARTS.find(p => p.key === builderPartKey) || BUILDER_PARTS[0];
       const hWorld = (spec.plates || 3) * PLATE;
 
-      // Check existing bricks first so user can stack cleanly onto any top surface
+      // Check existing bricks first so user can stack cleanly onto any top surface (clamped to 32x32x24 workbench)
       const targets = [machineGroup, customGroup];
       const hits = raycaster.intersectObjects(targets, true).filter(h => h.object.isMesh && h.object.visible);
       if (hits.length) {
         const hit = hits[0];
         const pt = hit.point;
         const n = hit.face ? hit.face.normal.clone().transformDirection(hit.object.matrixWorld) : new THREE.Vector3(0, 1, 0);
-        const sx = Math.round(pt.x + n.x * 0.45);
-        const sz = Math.round(pt.z + n.z * 0.45);
-        const baseY = Math.max(0, Math.round((pt.y + Math.max(0, n.y) * 0.05) / PLATE) * PLATE);
+        const sx = Math.max(-16, Math.min(16, Math.round(pt.x + n.x * 0.45)));
+        const sz = Math.max(-16, Math.min(16, Math.round(pt.z + n.z * 0.45)));
+        const baseY = Math.max(0, Math.min(24 * STUD, Math.round((pt.y + Math.max(0, n.y) * 0.05) / PLATE) * PLATE));
         return { x: sx, y: baseY + hWorld / 2, z: sz };
       }
 
@@ -1589,8 +1869,8 @@
         const fHits = raycaster.intersectObject(floorPlane, false);
         if (fHits.length) {
           const p = fHits[0].point;
-          const sx = Math.max(-14, Math.min(14, Math.round(p.x)));
-          const sz = Math.max(-14, Math.min(14, Math.round(p.z)));
+          const sx = Math.max(-16, Math.min(16, Math.round(p.x)));
+          const sz = Math.max(-16, Math.min(16, Math.round(p.z)));
           return { x: sx, y: hWorld / 2, z: sz };
         }
       }
@@ -1605,6 +1885,10 @@
       raycaster.setFromCamera(pointerNDC, activeCam);
 
       if (activeTool === "place") {
+        if (customRecords.length >= MAX_CUSTOM_PARTS) {
+          onStatusMessage(`Workbench limit reached (${MAX_CUSTOM_PARTS} placed parts). Undo or Clear Placed to add more.`);
+          return;
+        }
         const snap = computeSnapPoint(ev);
         if (!snap) return;
         const spec = BUILDER_PARTS.find(p => p.key === builderPartKey) || BUILDER_PARTS[0];
@@ -1616,6 +1900,7 @@
           sx: spec.sx,
           plates: spec.plates,
           sz: spec.sz,
+          smoothTop: Boolean(spec.smoothTop),
           teeth: spec.teeth,
           len: spec.len,
           color: cObj,
@@ -1689,8 +1974,13 @@
     }
 
     // --- REAL INDUSTRY-STANDARD CAD EXPORTERS ---
+    function csvField(val) {
+      return `"${String(val == null ? "" : val).replace(/"/g, '""')}"`;
+    }
+
     function generateLDrawText() {
-      const title = currentBlueprint ? currentBlueprint.name : "Brick Alchemy Assembly";
+      const rawTitle = currentBlueprint ? currentBlueprint.name : "Brick Alchemy Assembly";
+      const title = String(rawTitle || "Brick Alchemy Assembly").replace(/[\r\n]+/g, " ").trim() || "Brick Alchemy Assembly";
       const all = partRecords.concat(customRecords);
       const byStep = new Map();
       for (let i = 0; i < all.length; i++) {
@@ -1701,7 +1991,7 @@
       const lines = [
         `0 ${title}`,
         `0 Name: ${title.toLowerCase().replace(/[^a-z0-9]+/g, "_")}.ldr`,
-        "0 Author: NorthStar Brick Alchemy CAD Studio v2.0 (northstarprime.net/brick-alchemy/studio/)",
+        "0 Author: NorthStar Brick Alchemy CAD Studio v2.1 (northstarprime.net/brick-alchemy/studio/)",
         "0 !LDRAW_ORG Unofficial_Model",
         "0 BFC CERTIFY CCW",
         ""
@@ -1763,7 +2053,7 @@
       }
       const lines = ["Part,Color,Quantity,PartName,ColorName"];
       counts.forEach(item => {
-        lines.push(`${item.partNum},${item.colorId},${item.qty},"${item.partName.replace(/"/g, '""')}","${item.colorName}"`);
+        lines.push(`${csvField(item.partNum)},${item.colorId},${item.qty},${csvField(item.partName)},${csvField(item.colorName)}`);
       });
       return lines.join("\n") + "\n";
     }
@@ -1816,8 +2106,8 @@
           fallbackCanvas.width = w;
           fallbackCanvas.height = h;
         }
-        const t = performance.now() * 0.001;
-        const speed = (driveRPM / 60) * 1.4;
+        const t = reducedMotion ? 0 : performance.now() * 0.001;
+        const speed = reducedMotion ? 0 : (driveRPM / 60) * 1.4;
         ctx.fillStyle = "#090d1e";
         ctx.fillRect(0, 0, w, h);
         // CAD blueprint grid
@@ -1846,9 +2136,14 @@
           }
           ctx.restore();
         });
-        requestAnimationFrame(draw);
+        if (!reducedMotion) {
+          requestAnimationFrame(draw);
+        }
       }
       draw();
+      if (reducedMotion) {
+        window.addEventListener("resize", draw);
+      }
     }
 
     // --- INIT THREE.JS CAD STUDIO ---
@@ -2025,7 +2320,6 @@
       updateCameraPos();
     }
 
-    const reducedMotion = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let lastTime = performance.now();
 
     function animate() {
@@ -2137,6 +2431,8 @@
     return {
       init,
       rebuildScene,
+      importLDrawText,
+      loadSampleLDraw,
       setView,
       setProjection,
       setRenderMode,
@@ -2205,7 +2501,9 @@
       },
       BUILDER_PARTS,
       BUILDER_SWATCH_IDS,
-      LDRAW_COLORS
+      LDRAW_COLORS,
+      MAX_CUSTOM_PARTS,
+      MAX_IMPORT_PARTS
     };
   }
 
@@ -2213,6 +2511,8 @@
     createEngine: createBrickCADEngine,
     BUILDER_PARTS,
     BUILDER_SWATCH_IDS,
-    LDRAW_COLORS
+    LDRAW_COLORS,
+    MAX_CUSTOM_PARTS,
+    MAX_IMPORT_PARTS
   };
 })(window);

@@ -19,6 +19,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"Tote Alchemist 3D Brick Visual Calculator & GBC Studio","url":"https://northstarprime.net/brick-alchemy/studio/","applicationCategory":"DesignApplication","operatingSystem":"Any","isAccessibleForFree":true,"publisher":{"@type":"Organization","name":"NorthStar Prime","url":"https://northstarprime.net/"},"description":"Interactive 3D WebGL interlocking brick set combiner, compound gear-ratio simulator, Great Ball Contraption kinematics workbench, and Ardentilaterum stained-glass mosaic viewer indexing 28,544 sets from 1949 to 2026."}</script>
   <script src="/games/three.min.js" defer></script>
+  <script src="/brick-alchemy/studio/cad-engine.js" defer></script>
   <style>
     :root {
       --bg-deep: #06060f;
@@ -339,7 +340,7 @@
     .viewport-wrap {
       position: relative;
       flex: 1;
-      min-height: 440px;
+      min-height: 360px;
       background: radial-gradient(circle at 50% 45%, #161d3a 0%, #070914 78%);
       overflow: hidden;
     }
@@ -388,6 +389,151 @@
     }
     .ctrl-label strong { color: var(--cyan); }
     .ctrl-group input[type="range"] { width: 100%; accent-color: var(--cyan); cursor: pointer; }
+
+    /* CAD Studio v2.0 Toolbar, Builder Tray, Step Sequencer & Part Inspector */
+    .cad-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 10px;
+      background: rgba(7, 10, 22, 0.96);
+      border-bottom: 1px solid var(--border);
+    }
+    .cad-group {
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 3px;
+      padding-right: 7px;
+      margin-right: 1px;
+      border-right: 1px solid rgba(114, 245, 255, 0.16);
+    }
+    .cad-group:last-child { border-right: none; padding-right: 0; }
+    .cad-group-lbl {
+      font-size: 0.62rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-right: 2px;
+      font-weight: 700;
+    }
+    .cad-btn {
+      min-height: 26px;
+      padding: 3px 8px;
+      border-radius: 5px;
+      border: 1px solid rgba(114, 245, 255, 0.22);
+      background: #131930;
+      color: var(--text);
+      font-size: 0.70rem;
+      font-weight: 650;
+      cursor: pointer;
+    }
+    .cad-btn:hover { border-color: var(--cyan); background: #1d2648; }
+    .cad-btn.active {
+      border-color: var(--gold);
+      background: rgba(245, 196, 81, 0.16);
+      color: var(--gold);
+    }
+    .cad-btn.place-on {
+      border-color: var(--emerald);
+      background: rgba(52, 232, 158, 0.18);
+      color: var(--emerald);
+    }
+    .cad-btn.erase-on {
+      border-color: var(--crimson);
+      background: rgba(255, 77, 109, 0.18);
+      color: #ff99ac;
+    }
+    .cad-builder-tray {
+      display: none;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: rgba(16, 24, 46, 0.96);
+      border-bottom: 1px solid rgba(52, 232, 158, 0.35);
+    }
+    .cad-builder-tray.open { display: flex; }
+    .cad-builder-tray select {
+      min-height: 32px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #080b18;
+      color: var(--text);
+      font-size: 0.76rem;
+    }
+    .cad-swatch-row {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      align-items: center;
+    }
+    .cad-color-btn {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      cursor: pointer;
+      padding: 0;
+    }
+    .cad-color-btn.active {
+      border-color: #fff;
+      box-shadow: 0 0 0 2px var(--gold);
+    }
+    .cad-bottom-bar {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px 14px;
+      background: rgba(7, 10, 22, 0.96);
+      border-top: 1px solid var(--border);
+    }
+    .cad-step-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+    .cad-step-row input[type="range"] {
+      flex: 1;
+      min-width: 110px;
+      accent-color: var(--gold);
+      cursor: pointer;
+    }
+    .cad-step-desc {
+      font-size: 0.74rem;
+      color: var(--gold);
+      font-weight: 600;
+      width: 100%;
+    }
+    .cad-inspector-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.72rem;
+      color: var(--muted);
+      padding-top: 6px;
+      border-top: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    .cad-dims-pill {
+      color: var(--cyan);
+      font-weight: 650;
+    }
+    .cad-selected-pill {
+      color: var(--emerald);
+      font-weight: 600;
+      overflow-wrap: anywhere;
+    }
+    .cad-export-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
 
     /* Right panel metrics & blueprints */
     .parts-grid {
@@ -564,6 +710,7 @@
       html body .tab-btn,
       html body .nav-link-btn,
       html body .btn-small,
+      html body .cad-btn,
       html body input,
       html body select {
         background: ButtonFace !important;
@@ -571,9 +718,21 @@
         color: ButtonText !important;
         border: 1px solid ButtonText !important;
       }
+      html body .cad-toolbar,
+      html body .cad-builder-tray,
+      html body .cad-bottom-bar {
+        background: Canvas !important;
+        color: CanvasText !important;
+        border-color: CanvasText !important;
+      }
+      html body .cad-color-btn {
+        forced-color-adjust: none !important;
+      }
       html body .tab-btn[aria-selected="true"],
       html body .preset-btn.active,
-      html body .bp-card.active {
+      html body .bp-card.active,
+      html body .cad-btn.active,
+      html body .cad-btn.place-on {
         forced-color-adjust: none !important;
         background: Highlight !important;
         color: HighlightText !important;
@@ -663,14 +822,14 @@
         </div>
       </section>
 
-      <!-- CENTER: 3D KINEMATIC & STAINED-GLASS VIEWPORT -->
+      <!-- CENTER: 3D CAD KINEMATIC & STAINED-GLASS VIEWPORT -->
       <section class="panel" aria-labelledby="h-viewport">
         <div class="panel-header">
-          <h2 id="h-viewport">2. Live 3D Kinematic &amp; Optical Viewport</h2>
+          <h2 id="h-viewport">2. Live 3D Brick CAD &amp; Kinematic Studio</h2>
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
             <button type="button" class="btn-small active" id="btn-auto-orbit" onclick="toggleAutoOrbit()">Auto-Orbit: ON</button>
             <button type="button" class="btn-small" id="btn-color-mode" onclick="toggleColorMode()">Palette: Authentic</button>
-            <button type="button" class="btn-small" onclick="resetCamera()">Reset View</button>
+            <button type="button" class="btn-small" onclick="cadExportSnapshot()">Snap PNG</button>
           </div>
         </div>
         <div class="viewport-hud-strip" aria-live="polite">
@@ -688,9 +847,61 @@
             <div class="hud-kpi">Foil<strong id="hud-wrappers" style="color:var(--violet);">0</strong></div>
           </div>
         </div>
+        <div class="cad-toolbar" role="toolbar" aria-label="3D CAD Viewport Controls">
+          <div class="cad-group">
+            <span class="cad-group-lbl">View</span>
+            <button type="button" class="cad-btn" onclick="cadSetView('iso')">Iso</button>
+            <button type="button" class="cad-btn" onclick="cadSetView('front')">Front</button>
+            <button type="button" class="cad-btn" onclick="cadSetView('side')">Side</button>
+            <button type="button" class="cad-btn" onclick="cadSetView('top')">Top</button>
+            <button type="button" class="cad-btn" onclick="cadSetView('closeup')">Close</button>
+          </div>
+          <div class="cad-group">
+            <span class="cad-group-lbl">Cam</span>
+            <button type="button" class="cad-btn active" id="cad-proj-persp" onclick="cadSetProjection('persp')">Persp</button>
+            <button type="button" class="cad-btn" id="cad-proj-ortho" onclick="cadSetProjection('ortho')">Ortho</button>
+          </div>
+          <div class="cad-group">
+            <span class="cad-group-lbl">Shade</span>
+            <button type="button" class="cad-btn active" id="cad-mode-studio" onclick="cadSetRenderMode('studio')">Studio</button>
+            <button type="button" class="cad-btn" id="cad-mode-edges" onclick="cadSetRenderMode('edges')">CAD Edges</button>
+            <button type="button" class="cad-btn" id="cad-mode-wireframe" onclick="cadSetRenderMode('wireframe')">Wire</button>
+            <button type="button" class="cad-btn" id="cad-mode-xray" onclick="cadSetRenderMode('xray')">X-Ray</button>
+          </div>
+          <div class="cad-group">
+            <span class="cad-group-lbl">Tool</span>
+            <button type="button" class="cad-btn active" id="cad-tool-inspect" onclick="cadSetTool('inspect')">Inspect</button>
+            <button type="button" class="cad-btn" id="cad-tool-place" onclick="cadSetTool('place')">+ Place Brick</button>
+            <button type="button" class="cad-btn" id="cad-tool-erase" onclick="cadSetTool('erase')">Erase</button>
+            <button type="button" class="cad-btn" onclick="cadUndoCustom()">Undo</button>
+          </div>
+        </div>
+        <div class="cad-builder-tray" id="cad-builder-tray" aria-label="Interactive Brick Placement Palette">
+          <label for="cad-part-select" class="cad-group-lbl" style="color:var(--emerald);">Part</label>
+          <select id="cad-part-select" onchange="cadSelectPart(this.value)"></select>
+          <div class="cad-swatch-row" id="cad-color-swatches" aria-label="LDraw part colors"></div>
+          <button type="button" class="cad-btn" id="cad-rotate-btn" onclick="cadRotatePart()">Rotate 90 (R)</button>
+          <button type="button" class="cad-btn" onclick="cadClearCustom()">Clear Placed</button>
+        </div>
         <div class="viewport-wrap" id="viewport-container">
-          <canvas id="webgl-canvas" aria-label="Interactive 3D interlocking brick mechanism viewport"></canvas>
+          <canvas id="webgl-canvas" aria-label="Interactive 3D interlocking brick CAD viewport"></canvas>
           <canvas id="fallback-canvas" aria-label="2D kinematic fallback canvas"></canvas>
+        </div>
+        <div class="cad-bottom-bar">
+          <div class="cad-step-row">
+            <span class="cad-group-lbl" style="color:var(--gold);">Build Steps</span>
+            <button type="button" class="cad-btn" onclick="cadStepDelta(-1)">Prev</button>
+            <label for="cad-step-slider" class="skip-link">Build instruction step</label>
+            <input type="range" id="cad-step-slider" min="1" max="5" value="5" oninput="cadSetStep(this.value)">
+            <button type="button" class="cad-btn" onclick="cadStepDelta(1)">Next</button>
+            <button type="button" class="cad-btn" id="cad-step-play" onclick="cadToggleStepPlay()">Auto-Build</button>
+            <span id="cad-step-count" style="font-size:0.74rem;color:var(--cyan);font-weight:700;">Step 5/5</span>
+          </div>
+          <div class="cad-step-desc" id="cad-step-desc">Step 5/5: Full assembly ready (click any brick to inspect LDraw part telemetry)</div>
+          <div class="cad-inspector-row">
+            <span class="cad-dims-pill" id="cad-dims-readout">CAD Model: loading dimensions...</span>
+            <span class="cad-selected-pill" id="cad-selected-readout">Click any brick/gear to inspect LDraw ID &amp; LDU coords</span>
+          </div>
         </div>
         <div class="viewport-controls">
           <div class="ctrl-group">
@@ -720,8 +931,13 @@
       <!-- RIGHT: COMBINED PART MATRIX & FUNCTIONAL BLUEPRINTS -->
       <section class="panel" aria-labelledby="h-blueprints">
         <div class="panel-header">
-          <h2 id="h-blueprints">3. Part Matrix &amp; 3D Blueprints</h2>
-          <button type="button" class="btn-small" onclick="exportBlueprintJSON()">Export JSON</button>
+          <h2 id="h-blueprints">3. Part Matrix, CAD Exports &amp; Blueprints</h2>
+          <div class="cad-export-row">
+            <button type="button" class="btn-small" id="btn-export-ldr" onclick="cadExportLDraw()" title="Download LDraw .ldr for BrickLink Studio / LeoCAD">Export .LDR</button>
+            <button type="button" class="btn-small" id="btn-export-xml" onclick="cadExportBrickLink()" title="Download BrickLink Wanted List XML">BrickLink .XML</button>
+            <button type="button" class="btn-small" id="btn-export-csv" onclick="cadExportCSV()" title="Download Rebrickable CSV BOM">BOM .CSV</button>
+            <button type="button" class="btn-small" onclick="exportBlueprintJSON()">JSON</button>
+          </div>
         </div>
         <div class="panel-body">
           <div class="parts-grid">
@@ -1089,8 +1305,14 @@
               <span class="mini-tag gold">${s.gears}G / ${s.axles}A</span>
             </div>
           </div>
-          <button type="button" class="btn-small btn-remove" aria-label="Remove ${escapeHtml(s.set_num)}" onclick="removeSetFromTote('${escapeAttr(s.set_num)}')">Remove</button>
         `;
+        const remBtn = document.createElement("button");
+        remBtn.type = "button";
+        remBtn.className = "btn-small btn-remove";
+        remBtn.setAttribute("aria-label", `Remove ${s.set_num}`);
+        remBtn.textContent = "Remove";
+        remBtn.addEventListener("click", () => removeSetFromTote(s.set_num));
+        el.appendChild(remBtn);
         cont.appendChild(el);
       });
     }
@@ -1142,10 +1364,6 @@
         `;
         card.onclick = () => {
           activeBlueprintIdx = idx;
-          if (bp.mechanism_type === "ardentilaterum_eye") {
-            camSpherical = {radius: 19.5, theta: 0.14, phi: 1.42};
-            updateCameraPos();
-          }
           renderRightPanelUI();
           rebuild3DScene();
         };
@@ -1220,8 +1438,13 @@
               ${s.trans_neon_parts > 0 ? `<span class="mini-tag violet">${s.trans_neon_parts} trans</span>` : ""}
             </div>
           </div>
-          <button type="button" class="btn-small" onclick="addSetToTote('${escapeAttr(s.set_num)}')">${inTote ? "In Tote" : "+ Add"}</button>
         `;
+        const addBtn = document.createElement("button");
+        addBtn.type = "button";
+        addBtn.className = "btn-small";
+        addBtn.textContent = inTote ? "In Tote" : "+ Add";
+        addBtn.addEventListener("click", () => addSetToTote(s.set_num));
+        row.appendChild(addBtn);
         cont.appendChild(row);
       });
     }
@@ -1261,30 +1484,6 @@
       runSearch();
     }
 
-    function onControlChange() {
-      const sep = document.getElementById("slider-separatio").value;
-      const rpm = document.getElementById("slider-rpm").value;
-      const exp = document.getElementById("slider-explode").value;
-      document.getElementById("val-separatio").textContent = `${sep}% Sorted`;
-      document.getElementById("val-rpm").textContent = `${rpm} RPM`;
-      document.getElementById("val-explode").textContent = `${exp}%`;
-      updateHUDFromControls();
-    }
-
-    function toggleColorMode() {
-      colorMode = colorMode === "authentic" ? "provenance" : "authentic";
-      document.getElementById("btn-color-mode").textContent =
-        colorMode === "authentic" ? "Palette: Authentic" : "Palette: Donor Provenance";
-      rebuild3DScene();
-    }
-
-    function toggleAutoOrbit() {
-      autoOrbit = !autoOrbit;
-      const btn = document.getElementById("btn-auto-orbit");
-      btn.textContent = autoOrbit ? "Auto-Orbit: ON" : "Auto-Orbit: OFF";
-      btn.classList.toggle("active", autoOrbit);
-    }
-
     function exportBlueprintJSON() {
       if (!synthesisData) return;
       const blob = new Blob([JSON.stringify(synthesisData, null, 2)], {type: "application/json"});
@@ -1305,491 +1504,223 @@
       return escapeHtml(s).replace(/'/g, "&#39;");
     }
 
-    // --- THREE.JS 3D KINEMATIC & ARDENTILATERUM ENGINE (WITH 2D FALLBACK) ---
-    let scene, camera, renderer, useFallback2D = false;
-    let machineGroup, clutterGroup, ballsGroup;
-    let gearsList = [], movingLinkages = [], gbcBalls = [];
-    let isDragging = false, prevMouse = {x: 0, y: 0};
-    let camSpherical = {radius: 26, theta: 0.62, phi: 1.04};
+    // --- CAD STUDIO v2.0 ENGINE BRIDGE (POWERED BY /brick-alchemy/studio/cad-engine.js) ---
+    let cadEngine = null;
+
+    function syncControlsToCAD() {
+      if (!cadEngine) return;
+      const sep = parseFloat(document.getElementById("slider-separatio").value) / 100;
+      const rpm = parseFloat(document.getElementById("slider-rpm").value);
+      const exp = parseFloat(document.getElementById("slider-explode").value) / 100;
+      cadEngine.setControls({ separatio: sep, rpm, explode: exp, colorMode });
+    }
+
+    function onControlChange() {
+      const sep = document.getElementById("slider-separatio").value;
+      const rpm = document.getElementById("slider-rpm").value;
+      const exp = document.getElementById("slider-explode").value;
+      document.getElementById("val-separatio").textContent = `${sep}% Sorted`;
+      document.getElementById("val-rpm").textContent = `${rpm} RPM`;
+      document.getElementById("val-explode").textContent = `${exp}%`;
+      syncControlsToCAD();
+      updateHUDFromControls();
+    }
+
+    function toggleColorMode() {
+      colorMode = colorMode === "authentic" ? "provenance" : "authentic";
+      document.getElementById("btn-color-mode").textContent =
+        colorMode === "authentic" ? "Palette: Authentic" : "Palette: Donor Provenance";
+      syncControlsToCAD();
+      rebuild3DScene();
+    }
+
+    function toggleAutoOrbit() {
+      autoOrbit = !autoOrbit;
+      if (cadEngine) cadEngine.setAutoOrbit(autoOrbit);
+      const btn = document.getElementById("btn-auto-orbit");
+      btn.textContent = autoOrbit ? "Auto-Orbit: ON" : "Auto-Orbit: OFF";
+      btn.classList.toggle("active", autoOrbit);
+    }
+
+    function resetCamera() {
+      if (cadEngine) cadEngine.setView("iso");
+    }
+
+    function cadSetView(preset) {
+      if (!cadEngine) return;
+      autoOrbit = false;
+      const btn = document.getElementById("btn-auto-orbit");
+      if (btn) { btn.textContent = "Auto-Orbit: OFF"; btn.classList.remove("active"); }
+      cadEngine.setView(preset);
+    }
+
+    function cadSetProjection(mode) {
+      if (!cadEngine) return;
+      cadEngine.setProjection(mode);
+      document.getElementById("cad-proj-persp").classList.toggle("active", mode === "persp");
+      document.getElementById("cad-proj-ortho").classList.toggle("active", mode === "ortho");
+    }
+
+    function cadSetRenderMode(mode) {
+      if (!cadEngine) return;
+      cadEngine.setRenderMode(mode);
+    }
+
+    function cadSetTool(tool) {
+      if (!cadEngine) return;
+      cadEngine.setTool(tool);
+    }
+
+    function cadSelectPart(partKey) {
+      if (cadEngine) cadEngine.setBuilderPart(partKey);
+    }
+
+    function cadSelectColor(colorId) {
+      if (cadEngine) cadEngine.setBuilderColor(colorId);
+      document.querySelectorAll(".cad-color-btn").forEach(b => {
+        b.classList.toggle("active", Number(b.dataset.colorId) === Number(colorId));
+      });
+    }
+
+    function cadRotatePart() {
+      if (cadEngine) cadEngine.rotateBuilderPart();
+    }
+
+    function cadUndoCustom() {
+      if (cadEngine) cadEngine.undoCustomPart();
+    }
+
+    function cadClearCustom() {
+      if (cadEngine) cadEngine.clearCustomParts();
+    }
+
+    function cadSetStep(val) {
+      if (cadEngine) cadEngine.setBuildStep(Number(val));
+    }
+
+    function cadStepDelta(delta) {
+      if (cadEngine) cadEngine.stepDelta(delta);
+    }
+
+    function cadToggleStepPlay() {
+      if (cadEngine) cadEngine.toggleStepPlay();
+    }
+
+    function cadExportLDraw() {
+      if (cadEngine) cadEngine.exportLDraw();
+    }
+
+    function cadExportBrickLink() {
+      if (cadEngine) cadEngine.exportBrickLinkXML();
+    }
+
+    function cadExportCSV() {
+      if (cadEngine) cadEngine.exportRebrickableCSV();
+    }
+
+    function cadExportSnapshot() {
+      if (cadEngine) cadEngine.exportSnapshotPNG();
+    }
+
+    function populateBuilderTray() {
+      if (!window.BrickCAD) return;
+      const sel = document.getElementById("cad-part-select");
+      if (sel && !sel.options.length) {
+        window.BrickCAD.BUILDER_PARTS.forEach(p => {
+          const opt = document.createElement("option");
+          opt.value = p.key;
+          opt.textContent = `${p.partNum} · ${p.name}`;
+          sel.appendChild(opt);
+        });
+      }
+      const swRow = document.getElementById("cad-color-swatches");
+      if (swRow && !swRow.children.length) {
+        window.BrickCAD.BUILDER_SWATCH_IDS.forEach(cid => {
+          const c = window.BrickCAD.LDRAW_COLORS[cid];
+          if (!c) return;
+          const b = document.createElement("button");
+          b.type = "button";
+          b.className = "cad-color-btn" + (cid === 297 ? " active" : "");
+          b.dataset.colorId = String(cid);
+          b.title = `${c.id} · ${c.name}`;
+          b.setAttribute("aria-label", `Select color ${c.name}`);
+          b.style.background = c.hex;
+          b.addEventListener("click", () => cadSelectColor(cid));
+          swRow.appendChild(b);
+        });
+      }
+    }
 
     function init3DEngine() {
       const container = document.getElementById("viewport-container");
       const canvas = document.getElementById("webgl-canvas");
       const fbCanvas = document.getElementById("fallback-canvas");
 
-      try {
-        if (typeof THREE === "undefined") throw new Error("Three.js unavailable");
-        const probe = document.createElement("canvas");
-        const gl = probe.getContext("webgl2") || probe.getContext("webgl") || probe.getContext("experimental-webgl");
-        if (!gl) throw new Error("WebGL context unavailable");
-        renderer = new THREE.WebGLRenderer({canvas, antialias: true, alpha: true, preserveDrawingBuffer: true});
-        renderer.setSize(container.clientWidth || 640, container.clientHeight || 430);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.15;
-      } catch (err) {
-        useFallback2D = true;
-        canvas.style.display = "none";
-        fbCanvas.style.display = "block";
-        startFallback2D(fbCanvas, container);
-        return;
-      }
+      if (!window.BrickCAD) return;
+      populateBuilderTray();
 
-      scene = new THREE.Scene();
-      camera = new THREE.PerspectiveCamera(44, (container.clientWidth || 640) / (container.clientHeight || 430), 0.1, 500);
-      updateCameraPos();
-
-      scene.add(new THREE.AmbientLight(0xdbe8ff, 0.72));
-      const keyLight = new THREE.DirectionalLight(0xfff1cc, 1.35);
-      keyLight.position.set(16, 26, 18);
-      scene.add(keyLight);
-      const cyanRim = new THREE.PointLight(0x2fe4ff, 1.3, 65);
-      cyanRim.position.set(-14, 12, -10);
-      scene.add(cyanRim);
-      const violetRim = new THREE.PointLight(0xb678ff, 1.0, 55);
-      violetRim.position.set(14, 8, -14);
-      scene.add(violetRim);
-      const emeraldCore = new THREE.PointLight(0x34e89e, 0.9, 40);
-      emeraldCore.position.set(0, 3, 6);
-      scene.add(emeraldCore);
-
-      const grid = new THREE.GridHelper(36, 36, 0x2fe4ff, 0x1b2444);
-      grid.position.y = -5.5;
-      scene.add(grid);
-
-      // Spilled 55-Gallon Warehouse Tote on the left workbench edge
-      const toteGroup = new THREE.Group();
-      const toteBody = new THREE.Mesh(
-        new THREE.BoxGeometry(6.2, 4.4, 4.6),
-        new THREE.MeshStandardMaterial({color: 0x1c2438, roughness: 0.42, metalness: 0.35})
-      );
-      const toteRim = new THREE.Mesh(
-        new THREE.BoxGeometry(6.6, 0.42, 5.0),
-        new THREE.MeshStandardMaterial({color: 0xf5c451, roughness: 0.25, metalness: 0.65})
-      );
-      toteRim.position.y = 2.05;
-      toteGroup.add(toteBody, toteRim);
-      toteGroup.position.set(-12.2, -2.6, 0);
-      toteGroup.rotation.z = -0.78;
-      scene.add(toteGroup);
-
-      machineGroup = new THREE.Group();
-      clutterGroup = new THREE.Group();
-      ballsGroup = new THREE.Group();
-      scene.add(machineGroup, clutterGroup, ballsGroup);
-
-      canvas.addEventListener("pointerdown", e => {
-        isDragging = true;
-        autoOrbit = false;
-        const btn = document.getElementById("btn-auto-orbit");
-        if (btn) { btn.textContent = "Auto-Orbit: OFF"; btn.classList.remove("active"); }
-        prevMouse = {x: e.clientX, y: e.clientY};
-      });
-      window.addEventListener("pointerup", () => { isDragging = false; });
-      window.addEventListener("pointermove", e => {
-        if (!isDragging) return;
-        const dx = e.clientX - prevMouse.x;
-        const dy = e.clientY - prevMouse.y;
-        prevMouse = {x: e.clientX, y: e.clientY};
-        camSpherical.theta -= dx * 0.007;
-        camSpherical.phi = Math.max(0.28, Math.min(Math.PI / 2 - 0.04, camSpherical.phi - dy * 0.007));
-        updateCameraPos();
-      });
-      canvas.addEventListener("wheel", e => {
-        e.preventDefault();
-        camSpherical.radius = Math.max(12, Math.min(52, camSpherical.radius + e.deltaY * 0.02));
-        updateCameraPos();
-      }, {passive: false});
-
-      window.addEventListener("resize", onWindowResize);
-      animate3D();
-    }
-
-    function startFallback2D(canvas, container) {
-      const ctx = canvas.getContext("2d");
-      function draw() {
-        const w = container.clientWidth || 640;
-        const h = container.clientHeight || 430;
-        if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
-        const t = performance.now() * 0.001;
-        const rpm = parseFloat(document.getElementById("slider-rpm")?.value || 120);
-        const speed = (rpm / 60) * 1.4;
-        ctx.fillStyle = "#080b18";
-        ctx.fillRect(0, 0, w, h);
-        const gears = [
-          {x: w * 0.36, y: h * 0.56, r: 58, teeth: 16, col: "#f5c451", dir: 1},
-          {x: w * 0.36 + 104, y: h * 0.56, r: 44, teeth: 12, col: "#2fe4ff", dir: -1.33},
-          {x: w * 0.36 + 186, y: h * 0.56 - 38, r: 52, teeth: 14, col: "#34e89e", dir: 1.14}
-        ];
-        gears.forEach(g => {
-          ctx.save();
-          ctx.translate(g.x, g.y);
-          ctx.rotate(t * speed * g.dir);
-          ctx.strokeStyle = g.col;
-          ctx.lineWidth = 4;
-          ctx.beginPath();
-          ctx.arc(0, 0, g.r * 0.78, 0, Math.PI * 2);
-          ctx.stroke();
-          for (let i = 0; i < g.teeth; i++) {
-            const a = (i / g.teeth) * Math.PI * 2;
-            ctx.save();
-            ctx.rotate(a);
-            ctx.fillStyle = g.col;
-            ctx.fillRect(g.r * 0.78, -5, g.r * 0.22, 10);
-            ctx.restore();
+      cadEngine = window.BrickCAD.createEngine({
+        container,
+        canvas,
+        fallbackCanvas: fbCanvas,
+        onTelemetry(t) {
+          const el = document.getElementById("cad-dims-readout");
+          if (el) {
+            el.textContent = `CAD Model: ${t.partCount} pcs (${t.uniqueLots} BOM lots) · ${t.studsW}x${t.studsD}x${t.studsH} studs (${t.mmW}x${t.mmD}x${t.mmH} mm) · ~${t.grams} g`;
           }
-          ctx.restore();
-        });
-        requestAnimationFrame(draw);
-      }
-      draw();
-    }
-
-    function updateCameraPos() {
-      if (!camera) return;
-      camera.position.x = camSpherical.radius * Math.sin(camSpherical.phi) * Math.sin(camSpherical.theta);
-      camera.position.y = camSpherical.radius * Math.cos(camSpherical.phi);
-      camera.position.z = camSpherical.radius * Math.sin(camSpherical.phi) * Math.cos(camSpherical.theta);
-      camera.lookAt(0, 0.2, 0);
-    }
-
-    function resetCamera() {
-      camSpherical = {radius: 26, theta: 0.62, phi: 1.04};
-      updateCameraPos();
-    }
-
-    function onWindowResize() {
-      if (useFallback2D || !renderer || !camera) return;
-      const container = document.getElementById("viewport-container");
-      if (!container || container.clientWidth === 0) return;
-      camera.aspect = container.clientWidth / container.clientHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(container.clientWidth, container.clientHeight);
-    }
-
-    function createStuddedBrick(w, h, d, hexColor, isTrans, layerIndex) {
-      const group = new THREE.Group();
-      const mat = new THREE.MeshStandardMaterial({
-        color: new THREE.Color(hexColor),
-        roughness: isTrans ? 0.1 : 0.28,
-        metalness: isTrans ? 0.15 : 0.2,
-        transparent: Boolean(isTrans),
-        opacity: isTrans ? 0.84 : 1.0,
-        emissive: isTrans ? new THREE.Color(hexColor) : new THREE.Color(0x000000),
-        emissiveIntensity: isTrans ? 0.45 : 0.0
-      });
-      group.add(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat));
-      const studGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.18, 12);
-      const cols = Math.max(1, Math.min(8, Math.floor(w)));
-      const rows = Math.max(1, Math.min(8, Math.floor(d)));
-      for (let ix = 0; ix < cols; ix++) {
-        for (let iz = 0; iz < rows; iz++) {
-          const stud = new THREE.Mesh(studGeo, mat);
-          stud.position.set(-w / 2 + 0.5 + ix, h / 2 + 0.09, -d / 2 + 0.5 + iz);
-          group.add(stud);
+        },
+        onPartSelected(p) {
+          const el = document.getElementById("cad-selected-readout");
+          if (!el) return;
+          if (!p) {
+            el.textContent = "Click any brick/gear to inspect LDraw ID & LDU coords";
+            return;
+          }
+          el.textContent = `Selected: ${p.partNum} (${p.partName}) · Color ${p.colorId} ${p.colorName} · Step ${p.step} · LDU (${p.lduX}, ${p.lduY}, ${p.lduZ})`;
+        },
+        onStepChange(st) {
+          const sl = document.getElementById("cad-step-slider");
+          const cnt = document.getElementById("cad-step-count");
+          const desc = document.getElementById("cad-step-desc");
+          const playBtn = document.getElementById("cad-step-play");
+          if (sl) { sl.max = String(st.maxStep); sl.value = String(st.currentStep); }
+          if (cnt) cnt.textContent = `Step ${st.currentStep}/${st.maxStep} (${st.visibleParts}/${st.totalParts} pcs)`;
+          if (desc) desc.textContent = st.description;
+          if (playBtn) {
+            playBtn.textContent = st.isPlaying ? "Pause Build" : "Auto-Build";
+            playBtn.classList.toggle("active", st.isPlaying);
+          }
+        },
+        onToolChange(info) {
+          document.getElementById("cad-tool-inspect").classList.toggle("active", info.tool === "inspect");
+          const pBtn = document.getElementById("cad-tool-place");
+          pBtn.classList.toggle("place-on", info.tool === "place");
+          const eBtn = document.getElementById("cad-tool-erase");
+          eBtn.classList.toggle("erase-on", info.tool === "erase");
+          const tray = document.getElementById("cad-builder-tray");
+          if (tray) tray.classList.toggle("open", info.tool === "place");
+          const rBtn = document.getElementById("cad-rotate-btn");
+          if (rBtn) rBtn.textContent = `Rotate 90 (${info.rotDeg} deg)`;
+        },
+        onRenderModeChange(mode) {
+          ["studio", "edges", "wireframe", "xray"].forEach(m => {
+            const b = document.getElementById(`cad-mode-${m}`);
+            if (b) b.classList.toggle("active", m === mode);
+          });
         }
-      }
-      group.userData = {layer: layerIndex, basePosY: 0};
-      return group;
-    }
+      });
 
-    function createTechnicGear(teeth, radius, colorHex, ratioFactor, axis = "z") {
-      const group = new THREE.Group();
-      const mat = new THREE.MeshStandardMaterial({color: new THREE.Color(colorHex), roughness: 0.22, metalness: 0.72});
-      const disc = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.85, radius * 0.85, 0.42, 24), mat);
-      disc.rotation.x = Math.PI / 2;
-      group.add(disc);
-      const hub = new THREE.Mesh(
-        new THREE.CylinderGeometry(radius * 0.34, radius * 0.34, 0.58, 16),
-        new THREE.MeshStandardMaterial({color: 0x161c2c, roughness: 0.35, metalness: 0.8})
-      );
-      hub.rotation.x = Math.PI / 2;
-      group.add(hub);
-      const toothGeo = new THREE.BoxGeometry(0.28, 0.36, 0.38);
-      for (let i = 0; i < teeth; i++) {
-        const ang = (i / teeth) * Math.PI * 2;
-        const tooth = new THREE.Mesh(toothGeo, mat);
-        tooth.position.set(Math.cos(ang) * radius * 0.92, Math.sin(ang) * radius * 0.92, 0);
-        tooth.rotation.z = ang;
-        group.add(tooth);
-      }
-      if (axis === "y") group.rotation.x = Math.PI / 2;
-      group.userData = {ratioFactor, axis, layer: 1, basePosY: 0};
-      return group;
+      window.studioCadEngine = cadEngine;
+      cadEngine.init();
+      cadEngine.setAutoOrbit(autoOrbit);
+      syncControlsToCAD();
     }
 
     function rebuild3DScene() {
-      if (useFallback2D || !scene || !synthesisData) return;
-      while (machineGroup.children.length) machineGroup.remove(machineGroup.children[0]);
-      while (clutterGroup.children.length) clutterGroup.remove(clutterGroup.children[0]);
-      while (ballsGroup.children.length) ballsGroup.remove(ballsGroup.children[0]);
-      gearsList = [];
-      movingLinkages = [];
-      gbcBalls = [];
-
-      const bp = synthesisData.blueprints[activeBlueprintIdx] || synthesisData.blueprints[0];
-      const donorPalette = ["#2fe4ff", "#f5c451", "#ff4d6d", "#34e89e", "#b678ff", "#ff8c3b"];
-      const authColors = synthesisData.merged_colors.length ? synthesisData.merged_colors : DEFAULT_COLORS;
-
-      const pickColor = (idx, forceTrans = false) => {
-        if (colorMode === "provenance") return {hex: donorPalette[idx % donorPalette.length], trans: forceTrans};
-        const c = authColors[idx % authColors.length];
-        return {hex: c.hex, trans: forceTrans || c.trans};
-      };
-
-      // LAYER 0: Base Technic Frame
-      for (let i = -3; i <= 3; i += 2) {
-        const c = pickColor(i + 3);
-        const beam = createStuddedBrick(8, 0.85, 1.2, c.hex, false, 0);
-        beam.position.set(0, -4.6, i * 1.15);
-        beam.userData.basePosY = beam.position.y;
-        machineGroup.add(beam);
-      }
-
-      // LAYER 1: Real Meshing Compound Gear Train
-      const gearColors = [0xf5c451, 0x2fe4ff, 0xff8c3b, 0xb678ff, 0x34e89e];
-      let gx = -3.8;
-      let cumulative = 1.0;
-      let sign = 1;
-      bp.stages.forEach((st, idx) => {
-        const r1 = Math.max(0.75, Math.min(2.1, st.driver / 10));
-        const r2 = Math.max(0.95, Math.min(2.6, st.driven / 10));
-        const g1 = createTechnicGear(Math.max(8, st.driver), r1, gearColors[idx % gearColors.length], sign / cumulative, "z");
-        g1.position.set(gx, -1.7 + idx * 1.1, 2.3);
-        g1.userData.basePosY = g1.position.y;
-        machineGroup.add(g1);
-        gearsList.push(g1);
-
-        cumulative *= st.ratio;
-        sign *= -1;
-        const g2 = createTechnicGear(Math.max(12, st.driven), r2, gearColors[(idx + 1) % gearColors.length], sign / cumulative, "z");
-        g2.position.set(gx + r1 + r2 + 0.14, -1.7 + idx * 1.1, 2.3);
-        g2.userData.basePosY = g2.position.y;
-        machineGroup.add(g2);
-        gearsList.push(g2);
-        gx += r1 + r2 + 0.4;
-      });
-
-      // LAYER 2: Mechanism-Specific Assembly
-      const mType = bp.mechanism_type;
-      if (mType === "ardentilaterum_eye") {
-        // Backlit 3D Stained-Glass Beholder's Prism Eye Window + Rotating Brass Iris Ring
-        const irisGear = createTechnicGear(36, 4.6, 0xf5c451, 0.35, "z");
-        irisGear.position.set(0, 1.8, -0.4);
-        irisGear.userData.basePosY = 1.8;
-        irisGear.userData.layer = 2;
-        machineGroup.add(irisGear);
-        gearsList.push(irisGear);
-
-        const cellGeo = new THREE.BoxGeometry(0.66, 0.66, 0.35);
-        for (let row = -5; row <= 5; row++) {
-          for (let col = -5; col <= 5; col++) {
-            const dist = Math.hypot(col, row);
-            if (dist > 5.4) continue;
-            let hex = "#101422", trans = false;
-            if (dist > 4.7) { hex = "#111624"; trans = false; }
-            else if (dist < 1.15 && Math.abs(col) < 0.6) { hex = "#070912"; trans = false; }
-            else if (dist < 2.2) { hex = "#34e89e"; trans = true; }
-            else if (dist < 3.2) { hex = "#2fe4ff"; trans = true; }
-            else if ((Math.abs(col) + Math.abs(row)) % 2 === 0) { hex = "#b678ff"; trans = true; }
-            else { hex = "#ff4d6d"; trans = true; }
-            const mat = new THREE.MeshStandardMaterial({
-              color: new THREE.Color(hex),
-              roughness: trans ? 0.08 : 0.45,
-              metalness: trans ? 0.1 : 0.3,
-              transparent: trans,
-              opacity: trans ? 0.88 : 1.0,
-              emissive: trans ? new THREE.Color(hex) : new THREE.Color(0x000000),
-              emissiveIntensity: trans ? 0.85 : 0.0
-            });
-            const tile = new THREE.Mesh(cellGeo, mat);
-            tile.position.set(col * 0.72, 1.8 + row * 0.72, 0.0);
-            tile.userData = {layer: 2, basePosY: tile.position.y};
-            machineGroup.add(tile);
-          }
-        }
-      } else if (mType === "planetary_orrery") {
-        const ring = createTechnicGear(36, 3.8, 0xf5c451, 0.25, "y");
-        ring.position.set(0, 0.5, 0);
-        ring.userData.basePosY = 0.5;
-        ring.userData.layer = 2;
-        machineGroup.add(ring);
-        gearsList.push(ring);
-        for (let a = 0; a < 3; a++) {
-          const arm = new THREE.Group();
-          const c = pickColor(a, true);
-          const orb = createStuddedBrick(1.8, 1.8, 1.8, c.hex, true, 2);
-          orb.position.set(4.5, 1.8 + a * 0.7, 0);
-          arm.add(orb);
-          arm.rotation.y = (a * Math.PI * 2) / 3;
-          arm.userData = {type: "orbit", speed: (a + 1) * 0.45, layer: 2, basePosY: 0};
-          machineGroup.add(arm);
-          movingLinkages.push(arm);
-        }
-      } else if (mType === "walking_hexapod") {
-        for (let leg = 0; leg < 6; leg++) {
-          const side = leg < 3 ? -1 : 1;
-          const zOff = ((leg % 3) - 1) * 2.6;
-          const legGroup = new THREE.Group();
-          const c = pickColor(leg);
-          const femur = createStuddedBrick(3.2, 0.6, 0.6, c.hex, false, 2);
-          femur.position.set(side * 2.2, 0, 0);
-          const tibia = createStuddedBrick(0.7, 3.2, 0.7, "#2fe4ff", true, 2);
-          tibia.position.set(side * 3.6, -1.6, 0);
-          legGroup.add(femur, tibia);
-          legGroup.position.set(side * 2.0, -2.2, zOff);
-          legGroup.userData = {type: "leg", phase: leg * (Math.PI / 3), side, layer: 2, basePosY: -2.2};
-          machineGroup.add(legGroup);
-          movingLinkages.push(legGroup);
-        }
-      } else if (mType === "swing_wing") {
-        [-1, 1].forEach((side, idx) => {
-          const wing = new THREE.Group();
-          const c = pickColor(idx);
-          const blade = createStuddedBrick(6.5, 0.45, 2.4, c.hex, false, 2);
-          blade.position.set(side * 3.5, 0, 0);
-          const tip = createStuddedBrick(2.2, 0.45, 1.2, "#2fe4ff", true, 2);
-          tip.position.set(side * 6.8, 0, -0.6);
-          wing.add(blade, tip);
-          wing.position.set(side * 1.5, 0.2, 0);
-          wing.userData = {type: "wing", side, layer: 2, basePosY: 0.2};
-          machineGroup.add(wing);
-          movingLinkages.push(wing);
-        });
-      } else if (mType === "cam_wave") {
-        for (let i = 0; i < 12; i++) {
-          const c = pickColor(i, i % 2 === 0);
-          const bar = createStuddedBrick(0.8, 3.2, 1.4, c.hex, c.trans, 2);
-          bar.position.set(-5.5 + i * 1.0, 0.5, 0);
-          bar.userData = {type: "wave_bar", phase: i * 0.55, layer: 2, basePosY: 0.5};
-          machineGroup.add(bar);
-          movingLinkages.push(bar);
-        }
-      } else {
-        const wheel = createTechnicGear(16, 2.7, 0x2fe4ff, -0.5, "z");
-        wheel.position.set(0, 0.9, -1.4);
-        wheel.userData.basePosY = 0.9;
-        wheel.userData.layer = 2;
-        machineGroup.add(wheel);
-        gearsList.push(wheel);
-        const chute = createStuddedBrick(7.5, 0.6, 2.6, pickColor(1).hex, false, 2);
-        chute.position.set(-1.5, -0.5, -1.4);
-        chute.rotation.z = -0.25;
-        chute.userData = {type: "shaker", layer: 2, basePosY: -0.5};
-        machineGroup.add(chute);
-        movingLinkages.push(chute);
-
-        // Live GBC 14mm Spheres cycling through the contraption!
-        const ballGeo = new THREE.SphereGeometry(0.42, 16, 16);
-        const ballColors = [0xff8c3b, 0x2fe4ff, 0xf5c451, 0x34e89e, 0xff4d6d, 0xb678ff];
-        for (let b = 0; b < 8; b++) {
-          const bMat = new THREE.MeshStandardMaterial({
-            color: ballColors[b % ballColors.length],
-            roughness: 0.14,
-            metalness: 0.6,
-            emissive: ballColors[b % ballColors.length],
-            emissiveIntensity: 0.25
-          });
-          const sphere = new THREE.Mesh(ballGeo, bMat);
-          sphere.userData = {phase: (b / 8) * Math.PI * 2};
-          ballsGroup.add(sphere);
-          gbcBalls.push(sphere);
-        }
-      }
-
-      // LAYER 3: Translucent Crystal Spire Crown (skipped for mosaic face so eye stays unobstructed)
-      if (mType !== "ardentilaterum_eye") {
-        for (let s = 0; s < 5; s++) {
-          const c = pickColor(s, true);
-          const spire = createStuddedBrick(4.2 - s * 0.7, 1.1, 3.2 - s * 0.5, c.hex, true, 3);
-          spire.position.set(0, 2.2 + s * 1.15, 0);
-          spire.userData.basePosY = spire.position.y;
-          machineGroup.add(spire);
-        }
-      }
-
-      // Spilled 55-Gallon Tote Clutter
-      for (let i = 0; i < 48; i++) {
-        const isNoise = i % 2 === 0;
-        let mesh;
-        if (isNoise) {
-          mesh = new THREE.Mesh(
-            new THREE.DodecahedronGeometry(0.32, 0),
-            new THREE.MeshStandardMaterial({color: i % 4 === 0 ? 0xff8c3b : 0xd0dced, metalness: 0.85, roughness: 0.2})
-          );
-        } else {
-          const c = pickColor(i);
-          mesh = createStuddedBrick(1.2, 0.7, 1.0, c.hex, c.trans, 0);
-        }
-        const rx = -9.2 + ((i * 37) % 160) / 10;
-        const rz = -5.2 + ((i * 53) % 104) / 10;
-        mesh.position.set(rx, -4.9 + (i % 5) * 0.2, rz);
-        mesh.rotation.set(i * 0.4, i * 0.7, i * 0.3);
-        mesh.userData = {isNoise};
-        clutterGroup.add(mesh);
-      }
-    }
-
-    function animate3D() {
-      requestAnimationFrame(animate3D);
-      const rpm = parseFloat(document.getElementById("slider-rpm")?.value || 120);
-      const sep = parseFloat(document.getElementById("slider-separatio")?.value || 85) / 100.0;
-      const exp = parseFloat(document.getElementById("slider-explode")?.value || 0) / 100.0;
-      const t = performance.now() * 0.001;
-      const baseOmega = (rpm / 60) * Math.PI * 2 * 0.016;
-
-      if (autoOrbit && !isDragging) {
-        camSpherical.theta += 0.0045;
-        updateCameraPos();
-      }
-
-      gearsList.forEach(g => { g.rotation.z += baseOmega * g.userData.ratioFactor; });
-
-      const drivePhase = t * (rpm / 35);
-      movingLinkages.forEach(m => {
-        const u = m.userData;
-        if (u.type === "orbit") {
-          m.rotation.y += baseOmega * u.speed;
-        } else if (u.type === "leg") {
-          m.rotation.z = Math.sin(drivePhase + u.phase) * 0.35 * u.side;
-          m.position.y = u.basePosY + Math.max(0, Math.cos(drivePhase + u.phase)) * 0.65 + (u.layer * exp * 2.6);
-        } else if (u.type === "wing") {
-          m.rotation.y = Math.sin(drivePhase * 0.5) * 0.42 * u.side;
-        } else if (u.type === "wave_bar") {
-          m.position.y = u.basePosY + Math.sin(drivePhase + u.phase) * 1.35 + (u.layer * exp * 2.6);
-        } else if (u.type === "shaker") {
-          m.position.x = -1.5 + Math.sin(drivePhase * 2.0) * 0.35;
-        }
-      });
-
-      gbcBalls.forEach(ball => {
-        const p = (t * (rpm / 80) + ball.userData.phase) % (Math.PI * 2);
-        const u = p / (Math.PI * 2);
-        if (u < 0.5) {
-          const ang = u * Math.PI * 2;
-          ball.position.set(Math.cos(ang) * 2.8, 0.9 + Math.sin(ang) * 2.8, -1.4);
-        } else {
-          const s = (u - 0.5) * 2;
-          ball.position.set(2.8 - s * 7.6, 0.9 - s * 1.8, -1.4 + Math.sin(s * 6) * 0.3);
-        }
-      });
-
-      machineGroup.children.forEach(ch => {
-        if (ch.userData && typeof ch.userData.layer === "number" && ch.userData.type !== "leg" && ch.userData.type !== "wave_bar") {
-          ch.position.y = (ch.userData.basePosY || 0) + ch.userData.layer * exp * 2.6;
-        }
-      });
-
-      clutterGroup.children.forEach((item, idx) => {
-        const threshold = idx / clutterGroup.children.length;
-        if (item.userData.isNoise) {
-          item.visible = threshold >= sep;
-        } else {
-          item.position.y = -4.9 + sep * 1.3 + Math.sin(t * 2 + idx) * 0.14;
-        }
-      });
-
-      if (renderer && scene && camera) renderer.render(scene, camera);
+      if (!cadEngine || !synthesisData || !synthesisData.blueprints.length) return;
+      const bp = synthesisData.blueprints[activeBlueprintIdx];
+      syncControlsToCAD();
+      cadEngine.rebuildScene(bp, synthesisData.merged_colors || []);
     }
 
     async function initApp() {
@@ -1820,7 +1751,7 @@
         pCont.appendChild(btn);
       });
 
-      // Apply optional query params for shareable deep links / showcase capture
+      // Apply optional query params for shareable CAD views / showcase capture
       const params = new URLSearchParams(window.location.search);
       const qBp = params.get("blueprint");
       if (qBp) {
@@ -1834,11 +1765,19 @@
         document.getElementById("slider-rpm").value = params.get("rpm");
       }
       if (params.get("orbit") === "1") autoOrbit = true;
+      if (params.get("orbit") === "0") autoOrbit = false;
       onControlChange();
 
       init3DEngine();
       runSearch();
       runSynthesize();
+
+      if (cadEngine) {
+        if (params.get("render")) cadSetRenderMode(params.get("render"));
+        if (params.get("proj")) cadSetProjection(params.get("proj"));
+        if (params.get("view")) cadSetView(params.get("view"));
+        if (params.get("step")) cadSetStep(params.get("step"));
+      }
 
       // Async hydrate the complete 28,544-set historical database
       try {
@@ -1854,6 +1793,7 @@
     }
 
     window.addEventListener("DOMContentLoaded", initApp);
+
   </script>
 </body>
 </html>

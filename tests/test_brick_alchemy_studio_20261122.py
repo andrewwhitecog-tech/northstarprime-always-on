@@ -8,6 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 HUB_HTML = ROOT / "brick-alchemy" / "index.html"
 STUDIO_HTML = ROOT / "brick-alchemy" / "studio" / "index.html"
+CAD_ENGINE_JS = ROOT / "brick-alchemy" / "studio" / "cad-engine.js"
 CATALOG_JSON = ROOT / "brick-alchemy" / "studio" / "data" / "lego_universe_28544.json"
 SITEMAP_XML = ROOT / "sitemap.xml"
 
@@ -33,8 +34,26 @@ def test_studio_html_static_invariants():
     assert "8208067319114903" not in html, "Private AliExpress order IDs must never appear in public HTML"
     assert "@media (forced-colors: active)" in html
     assert "@media (prefers-reduced-motion: reduce)" in html
-    assert "startFallback2D" in html, "Graceful 2D fallback required when WebGL is disabled"
+    assert 'src="/brick-alchemy/studio/cad-engine.js"' in html
+    assert 'onclick="addSetToTote(' not in html and 'onclick="removeSetFromTote(' not in html
+    assert "cadExportLDraw()" in html and "cadExportBrickLink()" in html and "cadExportCSV()" in html
+    assert "cad-step-slider" in html and "cad-builder-tray" in html
     assert "ardentilaterum_eye" in html
+
+    assert CAD_ENGINE_JS.is_file(), f"Missing CAD engine script: {CAD_ENGINE_JS}"
+    cad_js = CAD_ENGINE_JS.read_text(encoding="utf-8")
+    for required_sym in (
+        "startFallback2D",
+        "buildStudioEnvMap",
+        "getInvoluteGearGeo",
+        "getTechnicLiftarmGeo",
+        "OrthographicCamera",
+        "generateLDrawText",
+        "generateBrickLinkXML",
+        "generateRebrickableCSV",
+    ):
+        assert required_sym in cad_js, f"CAD engine missing {required_sym}"
+    assert not re.search(r"[A-Za-z]:\\", cad_js), "Local Windows drive paths must never appear in cad-engine.js"
 
     # Every referenced local image under /brick-alchemy/assets/ must exist on disk
     for img_path in re.findall(r'(/brick-alchemy/assets/[A-Za-z0-9_./-]+\.(?:webp|png|jpg|mp4))', html):

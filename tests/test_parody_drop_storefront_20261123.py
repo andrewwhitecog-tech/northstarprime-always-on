@@ -38,7 +38,7 @@ def test_parody_drop_html_structure_a11y_and_ip_hygiene() -> None:
 def test_parody_drop_local_assets_exist_and_within_budget() -> None:
     html = PAGE.read_text(encoding="utf-8")
     refs = sorted(set(re.findall(r"/parody-drop/assets/([a-zA-Z0-9_.-]+\.webp)", html)))
-    assert len(refs) >= 25, f"Expected >=25 WebP storefront assets, found {len(refs)}"
+    assert len(refs) >= 48, f"Expected >=48 WebP storefront assets (all 40 mockups + covers + proofs + 3D stills), found {len(refs)}"
     total_bytes = 0
     for name in refs:
         p = ROOT / "parody-drop" / "assets" / name
@@ -47,3 +47,9 @@ def test_parody_drop_local_assets_exist_and_within_budget() -> None:
         assert sz > 5_000, f"Suspiciously small WebP asset: {p} ({sz} B)"
         total_bytes += sz
     assert total_bytes < 8_000_000, f"Parody drop WebP payload exceeded 8 MB budget: {total_bytes}"
+
+    vid_refs = sorted(set(re.findall(r"/static/videos/parody_drop/([a-zA-Z0-9_.-]+\.mp4)", html)))
+    assert len(vid_refs) == 2, f"Expected 2 embedded 3D promo commercial MP4s (16:9 + 9:16), found {vid_refs}"
+    for vname in vid_refs:
+        vp = ROOT / "static" / "videos" / "parody_drop" / vname
+        assert vp.is_file() and vp.stat().st_size > 1_000_000, f"Missing/corrupt 3D video asset: {vp}"

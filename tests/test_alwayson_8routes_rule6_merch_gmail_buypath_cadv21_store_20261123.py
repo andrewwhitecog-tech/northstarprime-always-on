@@ -6,7 +6,7 @@ Verifies:
 2. Zero mislabeled `"Buy Direct on Chromatic"` copy remains anywhere in public HTML (`merch/index.html`
    `#dig-sacred-calendar-2027` updated in both `data-item` JSON and `.merch-actions` to pair Gumroad + `/holidays/`).
 3. Zero stale Stripe checkout copy on `bill-of-rights-v2/index.html`.
-4. Brick Alchemy CAD Studio `v2.1` version parity across `brick-alchemy/studio/index.html`, `store/index.html`,
+4. Brick Alchemy CAD Studio `v2.2` version parity across `brick-alchemy/studio/index.html`, `store/index.html`,
    and `links/index.html` (`0` stale `CAD Studio v2.0` strings).
 5. `store/index.html` no longer hides overflow with `overflow-x:hidden` on `html,body`, and mobile `.top .menu`
    wraps cleanly at `390x844` & `320x568` with every nav link inside viewport bounds (zero right-edge clipping).
@@ -100,11 +100,11 @@ def test_static_sitewide_gmail_buydirect_and_wave4_invariants():
     bor_html = (ROOT / "bill-of-rights-v2/index.html").read_text(encoding="utf-8")
     assert not re.search(r"stripe\s+checkout", bor_html, re.I)
 
-    # 4. CAD Studio v2.1 parity across store, links, brick-alchemy/studio
+    # 4. CAD Studio v2.2 parity (matches cad-engine.js) across store, links, brick-alchemy/studio
     for rel in ("store/index.html", "links/index.html", "brick-alchemy/studio/index.html"):
         html = (ROOT / rel).read_text(encoding="utf-8")
         assert "CAD Studio v2.0" not in html, f"Stale CAD Studio v2.0 string in {rel}"
-        assert "v2.1" in html, f"Missing v2.1 parity in {rel}"
+        assert "v2.2" in html, f"Missing v2.2 parity in {rel}"
 
     # 5. store/index.html no longer masks overflow with overflow-x:hidden on html,body
     store_html = (ROOT / "store/index.html").read_text(encoding="utf-8")

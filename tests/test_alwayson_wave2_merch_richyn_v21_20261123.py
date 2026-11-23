@@ -61,6 +61,8 @@ def test_richyn_has_verified_gumroad_checkout_bridge_and_zero_forbidden_refs():
         assert url in store_html, f"URL {url} must match verified live /store/ catalog"
     gumroad_links = re.findall(r'https://andrewcog\.gumroad\.com/l/[a-zA-Z0-9_-]+', html)
     assert len(gumroad_links) >= 4, f"Expected >=4 Gumroad links on /rich-yn/, found {len(gumroad_links)}"
+    assert "220 MB ZIP" not in html, "Acid-Voxel card must match live Gumroad 62-page printable PDF, not stale 220 MB ZIP copy"
+    assert "62-page printable PDF" in html
     assert "app.northstarprime.net" not in html
     assert "onrender.com" not in html.lower()
     assert not re.search(r"\bstripe\b", html, re.IGNORECASE)

@@ -88,14 +88,24 @@ def test_merch_wires_real_surface_mockups_and_only_verified_live_zazzle_urls():
     for bad_id in FORBIDDEN_ZAZZLE_IDS:
         assert bad_id not in txt, f"Forbidden gone/403 Zazzle ID leaked onto /merch/: {bad_id}"
 
-    # Card tally, button label, and JSON-LD numberOfItems stay 100% synced
+    # Card tally, button label, and JSON-LD numberOfItems + itemListElement stay 100% synced
     card_count = len(re.findall(r'<article class="merch-card"', txt))
     assert f"All Archive Pieces ({card_count})" in txt
     assert f"Showing {card_count} of {card_count} pieces" in txt
     m = re.search(r'<script type="application/ld\+json">(\{.*?\})</script>', txt)
     assert m
     ld = json.loads(m.group(1))
+    items = ld["mainEntity"]["itemListElement"]
     assert ld["mainEntity"]["numberOfItems"] == card_count
+    assert len(items) == card_count, f"JSON-LD itemListElement length {len(items)} != card_count {card_count}"
+    assert [el["position"] for el in items] == list(range(1, card_count + 1))
+
+    # Buyer-truth copy precision checks (Finding 3 / N2, N4, N5)
+    assert "144 designs (120 die-cuts, 24 bumpers) plus 24 ready-to-press 12x18 gang sheets" in txt
+    assert "Priced individually ($16 each; studio photo shows Star of Bethlehem alongside the Snowy Owl ornament)." in txt
+    assert "Weather-resistant physical vinyl stickers shipped directly by Zazzle" not in txt
+    assert "Standard Semi-Gloss" in txt
+    assert "Shipped Directly by Zazzle Worldwide" not in txt
 
 
 def test_chromatic_wires_print_canon_and_foil_previews():
@@ -110,4 +120,40 @@ def test_chromatic_wires_print_canon_and_foil_previews():
     assert "https://www.zazzle.com/vorath_chromatic_eye_art_print-256017845782558629" in txt
     assert "https://www.zazzle.com/vorath_sacred_geometry_mandala_gold_foil_card-256390820282213594" in txt
     assert "https://andrewcog.gumroad.com/l/vorath-colorized-print-canon-proof-pack" in txt
+    assert "plus the Mandala 5x7 card in real stamped metallic gold foil" in txt
+    assert "Standard Semi-Gloss" in txt
     assert "showcase-card" in txt and "forced-colors: active" in txt
+
+
+def test_cycles_mockups_preserve_black_point_and_color_saturation():
+    """Guard against AgX/specular glare washout on re-rendered Cycles mockups (01, 02, 05, 06, 10)."""
+    from PIL import Image
+
+    def crop_tone_stats(webp_name: str, box: tuple[float, float, float, float]) -> tuple[float, float]:
+        im = Image.open(ASSET_DIR / webp_name).convert("RGB")
+        w, h = im.size
+        cr = im.crop((int(box[0] * w), int(box[1] * h), int(box[2] * w), int(box[3] * h)))
+        raw = cr.tobytes()
+        n = len(raw) // 3
+        lums = sorted((0.2126 * raw[i] + 0.7152 * raw[i + 1] + 0.0722 * raw[i + 2]) / 255.0 for i in range(0, len(raw), 3))
+        p5l = lums[max(0, int(0.05 * n))]
+        s_sum = 0.0
+        for i in range(0, len(raw), 3):
+            r, g, b = raw[i], raw[i + 1], raw[i + 2]
+            mx = max(r, g, b)
+            mn = min(r, g, b)
+            s_sum += (mx - mn) / mx if mx > 0 else 0.0
+        return p5l, s_sum / n
+
+    # Checked against source masters (p5L ceiling prevents black-lift washout; saturation floor prevents pastel drain)
+    checks = [
+        ("01_comedy_vault_laptop_walnut_desk.webp", (0.11, 0.26, 0.26, 0.45), 0.10, 0.28),
+        ("02_comedy_vault_insulated_bottle_slate.webp", (0.58, 0.39, 0.69, 0.56), 0.12, 0.35),
+        ("05_vorath_print_canon_gallery_trio_wall.webp", (0.40, 0.39, 0.60, 0.57), 0.12, 0.30),
+        ("06_vorath_chromatic_eye_18x12_framed_credenza.webp", (0.33, 0.27, 0.67, 0.57), 0.13, 0.32),
+        ("10_zazzle_1104_sovereign_and_idg_stickers_laptop.webp", (0.27, 0.26, 0.44, 0.48), 0.13, 0.50),
+    ]
+    for fn, box, max_p5l, min_sat in checks:
+        p5l, mean_s = crop_tone_stats(fn, box)
+        assert p5l <= max_p5l, f"Washout black-lift on {fn}: p5L={p5l:.3f} > {max_p5l:.3f}"
+        assert mean_s >= min_sat, f"Desaturated artwork on {fn}: S={mean_s:.3f} < {min_sat:.3f}"

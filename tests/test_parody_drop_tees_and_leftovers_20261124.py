@@ -21,10 +21,19 @@ POSTER_IN_PACK_TEES = {
     "tee_14_alterego.webp": "https://andrewcog.gumroad.com/l/rich-yn-y2k-primetime-pack",
 }
 
+TRAY_PANEL_ONLY_TEES = {
+    "tee_05_swamp_graffiti.webp": (
+        "https://andrewcog.gumroad.com/l/rich-yn-swamp-dynasty-pack",
+        "rolling-tray print file (3300×2100 JPG)",
+    ),
+    "tee_09_skyline.webp": (
+        "https://andrewcog.gumroad.com/l/crimson-haze-worldwide-pack",
+        "rolling-tray (3300×2100) and 36×16 desk-mat (5400×2400) print files",
+    ),
+}
+
 CONCEPT_ONLY_TEES = [
-    "tee_05_swamp_graffiti.webp",
     "tee_06_swamp_buggy.webp",
-    "tee_09_skyline.webp",
     "tee_13_brownstone.webp",
 ]
 
@@ -59,7 +68,22 @@ def test_parody_drop_14_tee_cards_match_verified_gumroad_zips() -> None:
         assert f'href="{expected_url}"' in card
         assert "Get Print Files" not in card
 
-    # 4 tee cards whose art is NOT in any live Gumroad ZIP — clearly Lookbook Concept with zero buy link
+    # Showroom intro accurately reflects 10 poster-in-pack + 2 tray/desk-mat panel + 2 concept-only tees
+    assert "2 appear only as composite panels on rolling-tray / desk-mat print files" in txt
+    assert "2 are lookbook concepts not included in current packs" in txt
+    assert "4 tee mockups are lookbook concepts" not in txt
+
+    # 2 tee cards whose art appears ONLY as one composite panel of the tray / desk-mat print file
+    for asset, (expected_url, expected_phrase) in TRAY_PANEL_ONLY_TEES.items():
+        card = _extract_card_for_asset(txt, asset)
+        assert 'data-tee-delivery="tray-panel"' in card
+        assert "No standalone tee or poster file" in card
+        assert expected_phrase in card
+        assert f'href="{expected_url}"' in card
+        assert "not included in any current live Gumroad pack" not in card
+        assert "Get Print Files" not in card
+
+    # 2 tee cards whose art is NOT in any live Gumroad ZIP — clearly Lookbook Concept with zero buy link
     for asset in CONCEPT_ONLY_TEES:
         card = _extract_card_for_asset(txt, asset)
         assert 'data-tee-delivery="lookbook-concept"' in card

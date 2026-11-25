@@ -108,23 +108,45 @@ def test_wave8_gumroad_vaults_covers_copy_and_jsonld():
         raw = (ROOT / rel).read_text(encoding="utf-8")
         assert "rich-yn-vol3-vol4-300dpi-vault" not in raw, f"{rel} must not pre-link queued rank #5"
 
-    # Mature 18+ disclosure preserved for Calendar & Issue #01
-    assert "18+" in store_html and "18+" in hol_html
+    # Mature 18+ & AI-assisted provenance assertions scoped per Wave 8 card and JSON-LD item
+    card_checks = [
+        (store_html, 'id="card-wave8-collector-calendar-2027"', ["$10", "18+", "AI-assisted art"]),
+        (store_html, 'id="card-wave8-free-mega-sampler"', ["$0+", "AI-assisted art"]),
+        (store_html, 'id="card-wave8-vorath-codex-compendium"', ["$9", "AI-assisted art"]),
+        (store_html, 'id="card-wave8-vorath-beaver-issue01"', ["$7", "18+", "AI-assisted comic art + Suno AI soundtrack"]),
+        (hol_html, 'id="collector-calendar-2027"', ["$10", "18+", "AI-assisted art"]),
+        (hol_html, 'id="free-mega-sampler-2026"', ["$0+", "AI-assisted art"]),
+    ]
+    for doc, marker, needles in card_checks:
+        start = doc.index(marker)
+        end = doc.find("</a>", start) if "card-wave8-" in marker else doc.find("</article>", start)
+        snippet = doc[start:end]
+        for needle in needles:
+            assert needle in snippet, f"Missing {needle!r} inside {marker}"
+
     comics_html = (ROOT / "comics" / "index.html").read_text(encoding="utf-8")
-    assert "18+" in comics_html
+    c_start = comics_html.index('id="vorath-beaver-issue-01"')
+    c_end = comics_html.index("</main>", c_start)
+    c_snippet = comics_html[c_start:c_end]
+    for needle in ("$7", "18+", "AI-assisted comic art + Suno AI soundtrack"):
+        assert needle in c_snippet, f"Missing {needle!r} inside comics Issue #01 card"
     assert "All Arcs (8)" in comics_html
 
-    # JSON-LD ItemList sync
+    # JSON-LD ItemList sync + AI-assisted provenance on every Wave 8 ListItem
     expected_counts = {
-        "store/index.html": 46,
-        "holidays/index.html": 18,
+        "store/index.html": (46, {43: ("18+", "AI-assisted art"), 44: ("AI-assisted art",), 45: ("AI-assisted art",), 46: ("18+", "AI-assisted comic art + Suno AI soundtrack")}),
+        "holidays/index.html": (18, {17: ("18+", "AI-assisted art"), 18: ("AI-assisted art",)}),
     }
-    for rel, exp_n in expected_counts.items():
+    for rel, (exp_n, pos_checks) in expected_counts.items():
         raw = (ROOT / rel).read_text(encoding="utf-8")
         ld = _extract_itemlist_ldjson(raw)
         items = ld["itemListElement"]
         assert ld["numberOfItems"] == len(items) == exp_n, f"{rel}: {ld['numberOfItems']} / {len(items)} != {exp_n}"
         assert [el["position"] for el in items] == list(range(1, exp_n + 1))
+        for pos, needles in pos_checks.items():
+            desc = items[pos - 1]["item"]["description"]
+            for needle in needles:
+                assert needle in desc, f"{rel} JSON-LD pos {pos} missing {needle!r}"
 
 
 def test_wave8_5_routes_playwright_desktop_mobile_and_forced_colors(static_site_url):

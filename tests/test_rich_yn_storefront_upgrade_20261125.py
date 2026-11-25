@@ -25,7 +25,7 @@ EXPECTED_WEBPS = [
     "07_ryn_v3_silk_twill_scarf_brass_table.webp",
     "08_ryn_collector_lookbook_coffee_table.webp",
     "09_ryn_bad_manners_palace_y2k_atelier.webp",
-    "10_ryn_gta6_vice_reality_penthouse.webp",
+    "10_ryn_vice_reality_sunset_penthouse.webp",
     "11_bad_manners_street_skate_lineup.webp",
 ]
 
@@ -68,6 +68,8 @@ def test_rich_yn_mockup_webps_exist_and_are_compact():
 def test_rich_yn_wires_vault_checkouts_badmanners_palace_and_vice_mockups():
     html = RICHYN_HTML.read_text(encoding="utf-8")
     assert not re.search(r"[\U00010000-\U0010ffff]", html), "No emojis allowed"
+    assert "gta6" not in html.lower() and "grand theft" not in html.lower(), "Zero third-party trademark strings allowed"
+    assert 'height="560"' in html
     for fn in EXPECTED_WEBPS:
         assert f"/assets/rich_yn_mockups_20261125/{fn}" in html, f"Missing mockup ref {fn}"
     # Newly published Wave 7 $24 Combined Vault + individual live packs

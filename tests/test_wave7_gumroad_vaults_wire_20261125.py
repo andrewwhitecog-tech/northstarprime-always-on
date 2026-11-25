@@ -34,7 +34,7 @@ LIVE_GUMROAD_VAULTS = [
         "price_str": "$9",
         "price_num": 9.0,
         "cover": "/static/front/store/northstar-idg-5game-html5-arcade-cover.webp",
-        "routes": ["/games/", "/arcade/", "/store/"],
+        "routes": ["/games/", "/store/"],
     },
     {
         "url": "https://andrewcog.gumroad.com/l/northstar-godot4-6game-core-bundle",
@@ -48,7 +48,7 @@ LIVE_GUMROAD_VAULTS = [
         "price_str": "$15",
         "price_num": 15.0,
         "cover": "/static/front/store/northstar-godot4-9game-clean-vault-cover.webp",
-        "routes": ["/games/", "/arcade/", "/store/"],
+        "routes": ["/games/", "/store/"],
     },
     {
         "url": "https://andrewcog.gumroad.com/l/anodized-empires-and-anomalies-collector-vault",
@@ -148,7 +148,6 @@ def test_wave7_all_7_routes_playwright_desktop_mobile_and_forced_colors(static_s
             "/static/front/store/northstar-godot4-6game-core-bundle-cover.webp",
             "/static/front/store/northstar-godot4-9game-clean-vault-cover.webp",
         ],
-        "/arcade/": [],
         "/chromatic/": [],
         "/merch/": [
             "/parody-drop/assets/cover_vault_pack.webp",
@@ -170,10 +169,6 @@ def test_wave7_all_7_routes_playwright_desktop_mobile_and_forced_colors(static_s
         "/games/": [
             "https://andrewcog.gumroad.com/l/northstar-idg-5game-html5-webgl-arcade-pack",
             "https://andrewcog.gumroad.com/l/northstar-godot4-6game-core-bundle",
-            "https://andrewcog.gumroad.com/l/northstar-godot4-9game-clean-vault",
-        ],
-        "/arcade/": [
-            "https://andrewcog.gumroad.com/l/northstar-idg-5game-html5-webgl-arcade-pack",
             "https://andrewcog.gumroad.com/l/northstar-godot4-9game-clean-vault",
         ],
         "/chromatic/": ["https://andrewcog.gumroad.com/l/anodized-empires-and-anomalies-collector-vault"],

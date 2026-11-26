@@ -54,6 +54,7 @@ def test_community_funnel_markup_and_links():
     comm = (ROOT / "community" / "index.html").read_text(encoding="utf-8")
     assert FREE_SAMPLER_URL in comm
     assert "play.northstarprime.net" in comm
+    assert "mc.northstarprime.net" in comm
     assert "/trigger feast_hall" in comm
     assert "/trigger turkey_hunt" in comm
 
@@ -104,8 +105,8 @@ def test_community_interactive_portal_and_responsive_a11y(static_site_url):
             page.goto(f"{static_site_url}/community/", wait_until="load", timeout=60000)
             expected_titles = {
                 "free": "NorthStar Prime 2026 FREE Mega Sampler Bundle",
-                "minecraft": "Join play.northstarprime.net & Thanksgiving Quests",
-                "games": "Play 63 Browser Games or Grab Offline Desktop Packs",
+                "minecraft": "Join NorthStar Minecraft World & Thanksgiving Quests",
+                "games": "Play 60+ Browser Games & 3D Worlds or Grab Offline Packs",
                 "vaults": "Unlock $7-$10 Collector Vaults & 144 Comedy Stickers",
                 "services": "Hire NorthStar Digital ($350-$750 Fixed Sprints)",
             }

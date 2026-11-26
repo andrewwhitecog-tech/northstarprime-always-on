@@ -39,6 +39,12 @@ WAVE8_GUMROAD_VAULTS = [
         "cover": "/static/front/store/vorath-beaver-issue01-cover.webp",
         "routes": ["/store/", "/comics/", "/links/"],
     },
+    {
+        "url": "https://andrewcog.gumroad.com/l/rich-yn-vol3-vol4-300dpi-vault",
+        "price_str": "$19",
+        "cover": "/static/front/store/rich-yn-vol3-vol4-300dpi-vault-cover.webp",
+        "routes": ["/store/", "/links/", "/rich-yn/"],
+    },
 ]
 
 
@@ -103,10 +109,9 @@ def test_wave8_gumroad_vaults_covers_copy_and_jsonld():
             assert v["url"] in raw, f"{rel} missing {v['url']}"
             assert v["price_str"] in raw, f"{rel} missing {v['price_str']}"
 
-    # Rank #5 RICH YN Vol 3/4 checkout must NOT be linked until after 23:20 PST publish
-    for rel in ("store/index.html", "holidays/index.html", "comics/index.html", "links/index.html", "rich-yn/index.html"):
-        raw = (ROOT / rel).read_text(encoding="utf-8")
-        assert "rich-yn-vol3-vol4-300dpi-vault" not in raw, f"{rel} must not pre-link queued rank #5"
+    # Rank #5 RICH YN Vol 3/4 is now live and wired on /store/, /links/, and /rich-yn/
+    rich_html = (ROOT / "rich-yn" / "index.html").read_text(encoding="utf-8")
+    assert "https://andrewcog.gumroad.com/l/rich-yn-vol3-vol4-300dpi-vault" in rich_html
 
     # Mature 18+ & AI-assisted provenance assertions scoped per Wave 8 card and JSON-LD item
     card_checks = [
@@ -114,6 +119,8 @@ def test_wave8_gumroad_vaults_covers_copy_and_jsonld():
         (store_html, 'id="card-wave8-free-mega-sampler"', ["$0+", "AI-assisted art"]),
         (store_html, 'id="card-wave8-vorath-codex-compendium"', ["$9", "AI-assisted art"]),
         (store_html, 'id="card-wave8-vorath-beaver-issue01"', ["$7", "18+", "AI-assisted comic art + Suno AI soundtrack"]),
+        (store_html, 'id="card-wave8-rich-yn-vol3-vol4-vault"', ["$19", "AI-assisted digital illustration"]),
+        (rich_html, 'id="bridge-wave8-rich-yn-vol3-vol4-vault"', ["$19.00", "AI-assisted digital illustration"]),
         (hol_html, 'id="collector-calendar-2027"', ["$10", "18+", "AI-assisted art"]),
         (hol_html, 'id="free-mega-sampler-2026"', ["$0+", "AI-assisted art"]),
     ]
@@ -134,7 +141,7 @@ def test_wave8_gumroad_vaults_covers_copy_and_jsonld():
 
     # JSON-LD ItemList sync + AI-assisted provenance on every Wave 8 ListItem
     expected_counts = {
-        "store/index.html": (46, {43: ("18+", "AI-assisted art"), 44: ("AI-assisted art",), 45: ("AI-assisted art",), 46: ("18+", "AI-assisted comic art + Suno AI soundtrack")}),
+        "store/index.html": (47, {43: ("18+", "AI-assisted art"), 44: ("AI-assisted art",), 45: ("AI-assisted art",), 46: ("18+", "AI-assisted comic art + Suno AI soundtrack"), 47: ("AI-assisted digital illustration",)}),
         "holidays/index.html": (18, {17: ("18+", "AI-assisted art"), 18: ("AI-assisted art",)}),
     }
     for rel, (exp_n, pos_checks) in expected_counts.items():
@@ -169,6 +176,7 @@ def test_wave8_5_routes_playwright_desktop_mobile_and_forced_colors(static_site_
         "/comics/": ["https://andrewcog.gumroad.com/l/uncle-vorath-blazin-beaver-issue-01"],
         "/links/": [v["url"] for v in WAVE8_GUMROAD_VAULTS],
         "/rich-yn/": [
+            "https://andrewcog.gumroad.com/l/rich-yn-vol3-vol4-300dpi-vault",
             "https://andrewcog.gumroad.com/l/northstar-2027-collector-wall-calendar-pdf",
             "https://andrewcog.gumroad.com/l/northstar-2026-free-mega-sampler",
         ],

@@ -58,6 +58,9 @@ def test_community_funnel_markup_and_links():
     assert "/trigger feast_hall" in comm
     assert "/trigger turkey_hunt" in comm
     assert "direct links in your messages" not in comm.lower()
+    assert "daily" not in comm.lower()
+    assert "lossless" not in comm.lower()
+    assert "email lock" not in comm.lower()
 
     store_html = (ROOT / "store" / "index.html").read_text(encoding="utf-8")
     assert FREE_SAMPLER_URL in store_html

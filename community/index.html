@@ -27,19 +27,34 @@
     .portal-list{margin:.6rem 0 0;padding-left:1.2rem;color:var(--ns-muted)}
     .portal-list li{margin-top:.3rem}
     .fine{color:var(--ns-muted);font-size:14px;margin-top:.4rem}
+    .share-box{margin-top:.75rem;padding:1.4rem 1.6rem;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:1.25rem;align-items:start}
+    .share-preview{margin-top:.75rem;padding:1rem 1.15rem;border:1px solid var(--ns-line);border-radius:12px;background:var(--ns-bg-2);color:var(--ns-ink);font-size:15px;line-height:1.55;overflow-wrap:anywhere}
+    .share-input-wrap{margin-top:.85rem}
+    .share-input-wrap label{display:block;font-size:14px;font-weight:650;color:var(--ns-gold);margin-bottom:.35rem}
+    .share-input-wrap input[type="text"]{width:100%;min-height:46px;-webkit-appearance:none;appearance:none;background:none;background-color:#080915;border-style:solid;border-color:transparent;border-radius:0;border-width:8px 16px;border-image:url("/warband/art/vorath_stat_plaque_v01.webp") 18 36 fill / 8px 16px stretch;padding:6px 12px;color:var(--ns-ink);font:inherit}
+    .quest-board{margin-top:.75rem;padding:1.4rem 1.6rem}
+    .quest-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:.75rem 1.25rem}
+    .quest-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.85rem;margin-top:1rem}
+    .quest-row{display:flex;flex-direction:column;justify-content:space-between;gap:.65rem;padding:1rem 1.15rem;border:1px solid var(--ns-line);border-radius:14px;background:var(--ns-bg-2)}
+    .quest-row strong{display:block;font-size:17px;color:var(--ns-ink)}
+    .quest-row p{color:var(--ns-muted);font-size:14.5px;margin-top:.2rem}
+    .quest-controls{display:flex;flex-wrap:wrap;align-items:center;gap:.55rem}
+    .quest-toggle.active{border-image-source:url("/warband/art/vorath_btn_primary.webp");color:#fffdf5;font-weight:750}
+    .free-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem;margin-top:1rem}
     @media (max-width:960px){
-      .journey-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-      .portal-panel{grid-template-columns:minmax(0,1fr)}
+      .journey-grid,.free-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .portal-panel,.share-box{grid-template-columns:minmax(0,1fr)}
     }
     @media (max-width:620px){
-      .journey-grid{grid-template-columns:minmax(0,1fr)}
-      .portal-panel{padding:1.05rem}
+      .journey-grid,.free-grid,.quest-grid{grid-template-columns:minmax(0,1fr)}
+      .portal-panel,.share-box,.quest-board{padding:1.05rem}
     }
     @media (prefers-reduced-motion:reduce){
       *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
     }
     @media (forced-colors:active){
-      .card,a.card,.button,.menu a,.foot a,.filter-btn{border-image:none!important;background:Canvas!important;color:CanvasText!important;border:1px solid LinkText!important;text-shadow:none!important}
+      .card,a.card,.button,.menu a,.foot a,.filter-btn,.share-preview,.quest-row{border-image:none!important;background:Canvas!important;color:CanvasText!important;border:1px solid LinkText!important;text-shadow:none!important}
+      .share-input-wrap input[type="text"]{border-image:none!important;background:Field!important;color:FieldText!important;border:1px solid ButtonText!important}
     }
   </style>
 </head>
@@ -69,6 +84,8 @@
         </div>
         <div class="actions" style="margin-top:0">
           <a class="button primary" href="https://andrewcog.gumroad.com/l/northstar-2026-free-mega-sampler" target="_blank" rel="noopener">Grab Free 7-PDF Mega Sampler ($0+) <span aria-hidden="true">&rarr;</span></a>
+          <a class="button" href="#share-hub">Share &amp; Invite Friends <span aria-hidden="true">&rarr;</span></a>
+          <a class="button" href="#quest-board">Explorer Quest Checklist <span aria-hidden="true">&rarr;</span></a>
           <a class="button" href="/realm/">Join Minecraft Thanksgiving Event <span aria-hidden="true">&rarr;</span></a>
           <a class="button" href="/play/">Play 60+ Browser Games <span aria-hidden="true">&rarr;</span></a>
         </div>
@@ -170,9 +187,183 @@
       </div>
     </section>
 
+    <section class="section wrap" aria-labelledby="share-hub-heading" id="share-hub">
+      <h2 class="eyebrow" id="share-hub-heading">Squad Invite &amp; Social Share Studio &middot; Ready in One Click</h2>
+      <div class="card share-box">
+        <div>
+          <p class="eyebrow">Pick a Share Card &middot; Bring Friends Into the World</p>
+          <div class="filter-bar" role="group" aria-label="Choose a share topic">
+            <button type="button" class="filter-btn active" data-share="realm" aria-pressed="true">Minecraft Squad Invite</button>
+            <button type="button" class="filter-btn" data-share="sampler" aria-pressed="false">Free 7-PDF Gift Drop</button>
+            <button type="button" class="filter-btn" data-share="arcade" aria-pressed="false">3D Arcade Challenge</button>
+            <button type="button" class="filter-btn" data-share="oracle" aria-pressed="false">Oracle &amp; Beat Lounge</button>
+          </div>
+          <div class="share-input-wrap">
+            <label for="share-custom-note">Optional personal note or gamertag (added to your post &amp; invite)</label>
+            <input type="text" id="share-custom-note" maxlength="120" placeholder="Example: Hop on Java or Bedrock tonight at 8pm">
+          </div>
+          <div class="share-preview" id="share-preview" aria-live="polite"></div>
+        </div>
+        <div class="portal-meta">
+          <button type="button" class="button primary" id="native-share-btn">Share Invite Now</button>
+          <button type="button" class="button" id="copy-share-btn">Copy Post &amp; Link</button>
+          <a class="button" id="share-x-link" href="https://x.com/intent/tweet?text=Join%20NorthStar%20Prime%20free&amp;url=https%3A%2F%2Fnorthstarprime.net%2Fcommunity%2F" target="_blank" rel="noopener">Post on X <span aria-hidden="true">&rarr;</span></a>
+          <a class="button" id="share-reddit-link" href="https://www.reddit.com/submit?url=https%3A%2F%2Fnorthstarprime.net%2Fcommunity%2F&amp;title=NorthStar%20Prime%20Free%20Minecraft%20World%20%26%207-PDF%20Sampler" target="_blank" rel="noopener">Share on Reddit <span aria-hidden="true">&rarr;</span></a>
+          <a class="button" id="share-fb-link" href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fnorthstarprime.net%2Fcommunity%2F" target="_blank" rel="noopener">Share on Facebook <span aria-hidden="true">&rarr;</span></a>
+          <p class="fine" id="share-status" role="status" aria-live="polite"></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section wrap" aria-labelledby="quest-board-heading" id="quest-board">
+      <h2 class="eyebrow" id="quest-board-heading">Explorer Quest Checklist &middot; Track Your Progress Locally</h2>
+      <div class="card quest-board">
+        <div class="quest-head">
+          <div>
+            <h3>Six Free Adventures Waiting Right Now</h3>
+            <p class="fine" id="quest-progress" role="status" aria-live="polite">0 of 6 quests completed in this browser.</p>
+          </div>
+          <div class="quest-controls">
+            <button type="button" class="button primary" id="copy-quest-card">Copy My Quest Progress</button>
+            <button type="button" class="button" id="reset-quests">Reset Checklist</button>
+          </div>
+        </div>
+        <div class="quest-grid" id="quest-list">
+          <div class="quest-row">
+            <div>
+              <strong>1. Claim the Free 7-PDF Mega Sampler</strong>
+              <p>Enter $0 on Gumroad for the 12-card print-and-play deck, coloring sheets, and Start Here guide.</p>
+            </div>
+            <div class="quest-controls">
+              <a class="button" href="https://andrewcog.gumroad.com/l/northstar-2026-free-mega-sampler" target="_blank" rel="noopener">Open Sampler <span aria-hidden="true">&rarr;</span></a>
+              <button type="button" class="button quest-toggle" data-quest="sampler" aria-pressed="false">Mark Complete</button>
+            </div>
+          </div>
+          <div class="quest-row">
+            <div>
+              <strong>2. Visit Thanksgiving Feast Hall or Fly a UFO</strong>
+              <p>Join Java <code>play.northstarprime.net</code> or Bedrock <code>mc.northstarprime.net:25130</code> and run <code>/trigger feast_hall</code> or <code>/trigger saucer</code>.</p>
+            </div>
+            <div class="quest-controls">
+              <a class="button" href="/realm/">Join Guide <span aria-hidden="true">&rarr;</span></a>
+              <button type="button" class="button quest-toggle" data-quest="realm" aria-pressed="false">Mark Complete</button>
+            </div>
+          </div>
+          <div class="quest-row">
+            <div>
+              <strong>3. Play a 3D World or Arcade Cabinet</strong>
+              <p>Launch Pro Skate &amp; Spray 3D, Super Arcade v3, or any of the 60 browser cabinets with zero sign-up.</p>
+            </div>
+            <div class="quest-controls">
+              <a class="button" href="/play/">Open /play/ <span aria-hidden="true">&rarr;</span></a>
+              <button type="button" class="button quest-toggle" data-quest="arcade" aria-pressed="false">Mark Complete</button>
+            </div>
+          </div>
+          <div class="quest-row">
+            <div>
+              <strong>4. Pull a 3-Card Story Seed in the Oracle</strong>
+              <p>Flip three cards in the interactive VORATH Oracle and generate a custom relic &amp; story prompt.</p>
+            </div>
+            <div class="quest-controls">
+              <a class="button" href="/oracle/">Open Oracle <span aria-hidden="true">&rarr;</span></a>
+              <button type="button" class="button quest-toggle" data-quest="oracle" aria-pressed="false">Mark Complete</button>
+            </div>
+          </div>
+          <div class="quest-row">
+            <div>
+              <strong>5. Stream the Beat Lounge or Read a Story</strong>
+              <p>Queue a track in the 70-stream Music Lounge or read any of the 50 free Little Light Library books.</p>
+            </div>
+            <div class="quest-controls">
+              <a class="button" href="/music/">Open /music/ <span aria-hidden="true">&rarr;</span></a>
+              <button type="button" class="button quest-toggle" data-quest="music" aria-pressed="false">Mark Complete</button>
+            </div>
+          </div>
+          <div class="quest-row">
+            <div>
+              <strong>6. Invite a Friend or Follow a Live Channel</strong>
+              <p>Send a Squad Invite above or connect on YouTube, TikTok, X, Instagram, or Twitch.</p>
+            </div>
+            <div class="quest-controls">
+              <a class="button" href="#channels-heading">See Channels <span aria-hidden="true">&rarr;</span></a>
+              <button type="button" class="button quest-toggle" data-quest="social" aria-pressed="false">Mark Complete</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section wrap" aria-labelledby="free-value-heading" id="free-value">
+      <h2 class="eyebrow" id="free-value-heading">100% Free Value Library &middot; Zero Account, Zero Paywall</h2>
+      <div class="free-grid">
+        <a class="card journey-card" href="/oracle/">
+          <img class="journey-art" src="/static/front/store/vorath-tarot-deluxe-bundle-cover.webp" width="1280" height="720" alt="VORATH Interactive Oracle 3-card Tarot reading cover" loading="lazy" decoding="async">
+          <div class="card-body">
+            <p class="eyebrow">Free Interactive Tool</p>
+            <h3>VORATH Interactive Oracle</h3>
+            <p>Draw a 3-card reading, hear Solfeggio chimes, and generate a custom Relic &amp; Story Seed in your browser.</p>
+            <span class="go">Draw 3 Cards Free <span aria-hidden="true">&rarr;</span></span>
+          </div>
+        </a>
+        <a class="card journey-card" href="/brick-alchemy/studio/">
+          <img class="journey-art" src="/brick-alchemy/assets/vorath-crystal-cavern-gbc.webp" width="1344" height="768" alt="Brick Alchemy 3D CAD Studio crystal cavern build" loading="lazy" decoding="async">
+          <div class="card-body">
+            <p class="eyebrow">Free 3D STEM Studio</p>
+            <h3>Brick Alchemy CAD Studio</h3>
+            <p>Build with 28,544 sets in WebGL 3D, test meshing gear ratios, and export LDraw, BrickLink, or CSV parts lists.</p>
+            <span class="go">Open 3D CAD Studio <span aria-hidden="true">&rarr;</span></span>
+          </div>
+        </a>
+        <a class="card journey-card" href="/shattered-mirror/">
+          <img class="journey-art" src="/shattered-mirror/presets/og_prism_forge_1200x630.jpg" width="1200" height="630" alt="Prism Forge 3D Shattered-Mirror spatial puzzle" loading="lazy" decoding="async">
+          <div class="card-body">
+            <p class="eyebrow">Free WebGL Art Toy</p>
+            <h3>3D Prism Shattered-Mirror Studio</h3>
+            <p>Turn any emblem or photo into a 1,088-shard 3D spatial perspective puzzle and export a standalone HTML scene.</p>
+            <span class="go">Launch Prism Forge <span aria-hidden="true">&rarr;</span></span>
+          </div>
+        </a>
+        <a class="card journey-card" href="/little-light-library/">
+          <img class="journey-art" src="/little-light-library/covers/50.webp" width="800" height="800" alt="Little Light Library illustrated storybook cover" loading="lazy" decoding="async">
+          <div class="card-body">
+            <p class="eyebrow">All-Ages Free Library</p>
+            <h3>50 Illustrated Storybooks</h3>
+            <p>Read fifty gentle illustrated bedtime books and poems online or download printable PDFs at zero cost.</p>
+            <span class="go">Read Free Books <span aria-hidden="true">&rarr;</span></span>
+          </div>
+        </a>
+        <a class="card journey-card" href="/music/">
+          <img class="journey-art" src="/static/front/journeys_20261018/listen.webp" width="1672" height="941" alt="NorthStar Music and Beat Lounge golden listening chamber" loading="lazy" decoding="async">
+          <div class="card-body">
+            <p class="eyebrow">70 Full Streams</p>
+            <h3>Music &amp; Hip-Hop Beat Lounge</h3>
+            <p>Stream 10 mastered Hip-Hop instrumentals and 60 Interdimensional Radio tracks with live spectrum visuals.</p>
+            <span class="go">Listen Free Now <span aria-hidden="true">&rarr;</span></span>
+          </div>
+        </a>
+        <a class="card journey-card" href="/renalshield/">
+          <img class="journey-art" src="/static/front/store/renalwise-printable-bundle-cover.webp" width="1005" height="670" alt="RenalShield printable kidney health label guide" loading="lazy" decoding="async">
+          <div class="card-body">
+            <p class="eyebrow">Free Public Health Guide</p>
+            <h3>RenalShield &amp; Holiday Printables</h3>
+            <p>Evidence-checked CKD food label guide plus free printable holiday stencils, bookmarks, and 2026 calendars.</p>
+            <span class="go">Open Free Guides <span aria-hidden="true">&rarr;</span></span>
+          </div>
+        </a>
+      </div>
+    </section>
+
     <section class="section wrap" aria-labelledby="channels-heading">
       <h2 class="eyebrow" id="channels-heading">Follow &amp; Build Across Every Live Channel</h2>
       <div class="journey-grid">
+        <a class="card journey-card" href="https://www.youtube.com/@northstarprimenet" target="_blank" rel="noopener">
+          <div class="card-body">
+            <p class="eyebrow">YouTube &middot; Minecraft Builds &amp; Shorts</p>
+            <h3>@northstarprimenet</h3>
+            <p>Live Minecraft realm builds, redstone tests, skeleton crash-test Shorts, and Community tab polls.</p>
+            <span class="go">Open YouTube <span aria-hidden="true">&rarr;</span></span>
+          </div>
+        </a>
         <a class="card journey-card" href="https://www.tiktok.com/@northstarprimenet" target="_blank" rel="noopener">
           <div class="card-body">
             <p class="eyebrow">TikTok &middot; Comedy &amp; Skate Cuts</p>
@@ -183,18 +374,42 @@
         </a>
         <a class="card journey-card" href="https://x.com/xNorthstarprime" target="_blank" rel="noopener">
           <div class="card-body">
-            <p class="eyebrow">X &middot; Studio Log &amp; Clips</p>
+            <p class="eyebrow">X &middot; Studio Build Log &amp; Clips</p>
             <h3>@xNorthstarprime</h3>
             <p>Studio engineering notes, behind-the-scenes renders, and direct conversation threads.</p>
             <span class="go">Open X <span aria-hidden="true">&rarr;</span></span>
           </div>
         </a>
-        <a class="card journey-card" href="https://www.youtube.com/@northstarprimenet" target="_blank" rel="noopener">
+        <a class="card journey-card" href="https://www.instagram.com/northstarprimenet/" target="_blank" rel="noopener">
           <div class="card-body">
-            <p class="eyebrow">YouTube &middot; Shorts &amp; Polls</p>
+            <p class="eyebrow">Instagram &middot; Art Plates &amp; Reels</p>
             <h3>@northstarprimenet</h3>
-            <p>Minecraft realm Shorts, build highlights, and Community tab polls for upcoming builds.</p>
-            <span class="go">Open YouTube <span aria-hidden="true">&rarr;</span></span>
+            <p>Chromatic art plates, macro eye studies, 3D renders, and studio preview reels.</p>
+            <span class="go">Open Instagram <span aria-hidden="true">&rarr;</span></span>
+          </div>
+        </a>
+        <a class="card journey-card" href="https://www.pinterest.com/swagblackandrew/" target="_blank" rel="noopener">
+          <div class="card-body">
+            <p class="eyebrow">Pinterest &middot; Printable &amp; Merch Boards</p>
+            <h3>NorthStar Prime Boards</h3>
+            <p>Saveable holiday printables, sticker walls, sacred geometry plates, and gift lookbooks.</p>
+            <span class="go">Open Pinterest <span aria-hidden="true">&rarr;</span></span>
+          </div>
+        </a>
+        <a class="card journey-card" href="https://www.facebook.com/61593232914654" target="_blank" rel="noopener">
+          <div class="card-body">
+            <p class="eyebrow">Facebook &middot; Community Reels &amp; Events</p>
+            <h3>NorthStar Prime Page</h3>
+            <p>Full-length showcase reels, holiday drops, and community event updates.</p>
+            <span class="go">Open Facebook <span aria-hidden="true">&rarr;</span></span>
+          </div>
+        </a>
+        <a class="card journey-card" href="https://www.twitch.tv/unclevorath420" target="_blank" rel="noopener">
+          <div class="card-body">
+            <p class="eyebrow">Twitch &middot; Live Wizard &amp; Realm Streams</p>
+            <h3>@unclevorath420</h3>
+            <p>Live Minecraft multiverse walks, game testing, and studio sessions hosted by Uncle Vorath.</p>
+            <span class="go">Open Twitch <span aria-hidden="true">&rarr;</span></span>
           </div>
         </a>
       </div>
@@ -368,6 +583,168 @@
           }
         });
       }
+
+      var SHARE_PRESETS = {
+        realm: {
+          title: "Join NorthStar Prime 24/7 Minecraft World (Java 26.3 & Bedrock)",
+          url: "https://northstarprime.net/realm/",
+          text: "Hop on the NorthStar Prime Minecraft server free (zero mods): Java play.northstarprime.net | Bedrock mc.northstarprime.net port 25130. Try /trigger feast_hall or /trigger saucer."
+        },
+        sampler: {
+          title: "Free 7-PDF 2026 Mega Sampler Bundle ($0+ PWYW) — NorthStar Prime",
+          url: "https://andrewcog.gumroad.com/l/northstar-2026-free-mega-sampler",
+          text: "Grab the free 7-PDF NorthStar 2026 Mega Sampler ($0+): 12-card print-and-play trading deck, coloring sheets, bookmarks, and 16-world guide."
+        },
+        arcade: {
+          title: "Play 60+ Free Browser Games & 3D Worlds — NorthStar Prime",
+          url: "https://northstarprime.net/play/",
+          text: "No install, no login: play Super Arcade v3, Pro Skate & Spray 3D, Quantum Pinball FX, and 60 browser cabinets free."
+        },
+        oracle: {
+          title: "Free 3-Card Tarot Oracle & 70-Track Beat Lounge — NorthStar Prime",
+          url: "https://northstarprime.net/oracle/",
+          text: "Draw a free 3-card VORATH Oracle reading and stream 70 original tracks in the NorthStar Beat Lounge."
+        }
+      };
+
+      var activeShare = "realm";
+      var shareBtns = document.querySelectorAll(".filter-btn[data-share]");
+      var shareNote = document.getElementById("share-custom-note");
+      var sharePreview = document.getElementById("share-preview");
+      var shareStatus = document.getElementById("share-status");
+      var shareX = document.getElementById("share-x-link");
+      var shareReddit = document.getElementById("share-reddit-link");
+      var shareFb = document.getElementById("share-fb-link");
+
+      function buildSharePayload() {
+        var preset = SHARE_PRESETS[activeShare] || SHARE_PRESETS.realm;
+        var note = shareNote ? shareNote.value.trim() : "";
+        var message = note ? preset.text + " — " + note : preset.text;
+        return { title: preset.title, url: preset.url, message: message, full: message + " " + preset.url };
+      }
+
+      function renderShare() {
+        var p = buildSharePayload();
+        if (sharePreview) sharePreview.textContent = p.full;
+        if (shareX) shareX.href = "https://x.com/intent/tweet?text=" + encodeURIComponent(p.message) + "&url=" + encodeURIComponent(p.url);
+        if (shareReddit) shareReddit.href = "https://www.reddit.com/submit?url=" + encodeURIComponent(p.url) + "&title=" + encodeURIComponent(p.title);
+        if (shareFb) shareFb.href = "https://www.facebook.com/sharer/sharer.php?u=" + encodeURIComponent(p.url);
+      }
+
+      shareBtns.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          activeShare = btn.getAttribute("data-share") || "realm";
+          shareBtns.forEach(function (b) {
+            var on = b === btn;
+            b.classList.toggle("active", on);
+            b.setAttribute("aria-pressed", on ? "true" : "false");
+          });
+          renderShare();
+        });
+      });
+
+      if (shareNote) shareNote.addEventListener("input", renderShare);
+
+      function copyWithStatus(text, targetEl, okMsg, fallbackMsg) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () {
+            if (targetEl) targetEl.textContent = okMsg;
+          }, function () {
+            if (targetEl) targetEl.textContent = fallbackMsg;
+          });
+        } else if (targetEl) {
+          targetEl.textContent = fallbackMsg;
+        }
+      }
+
+      var copyShareBtn = document.getElementById("copy-share-btn");
+      if (copyShareBtn) {
+        copyShareBtn.addEventListener("click", function () {
+          var p = buildSharePayload();
+          copyWithStatus(p.full, shareStatus, "Share post copied to clipboard.", "Ready to paste: " + p.full);
+        });
+      }
+
+      var nativeShareBtn = document.getElementById("native-share-btn");
+      if (nativeShareBtn) {
+        nativeShareBtn.addEventListener("click", function () {
+          var p = buildSharePayload();
+          if (navigator.share) {
+            navigator.share({ title: p.title, text: p.message, url: p.url }).then(function () {
+              if (shareStatus) shareStatus.textContent = "Share sheet opened.";
+            }, function () {
+              copyWithStatus(p.full, shareStatus, "Share post copied to clipboard.", "Ready to paste: " + p.full);
+            });
+          } else {
+            copyWithStatus(p.full, shareStatus, "Share post copied to clipboard.", "Ready to paste: " + p.full);
+          }
+        });
+      }
+
+      renderShare();
+
+      var QUEST_KEY = "nsp_community_quests_v1";
+      var questBtns = document.querySelectorAll(".quest-toggle[data-quest]");
+      var questProgress = document.getElementById("quest-progress");
+      var completed = {};
+      try {
+        var saved = window.localStorage ? window.localStorage.getItem(QUEST_KEY) : null;
+        if (saved) completed = JSON.parse(saved) || {};
+      } catch (_err) {
+        completed = {};
+      }
+
+      function saveQuests() {
+        try {
+          if (window.localStorage) window.localStorage.setItem(QUEST_KEY, JSON.stringify(completed));
+        } catch (_err) {}
+      }
+
+      function renderQuests() {
+        var count = 0;
+        questBtns.forEach(function (btn) {
+          var id = btn.getAttribute("data-quest");
+          var done = Boolean(id && completed[id]);
+          if (done) count += 1;
+          btn.classList.toggle("active", done);
+          btn.setAttribute("aria-pressed", done ? "true" : "false");
+          btn.textContent = done ? "Done (Completed)" : "Mark Complete";
+        });
+        if (questProgress) {
+          questProgress.textContent = count + " of " + questBtns.length + " quests completed in this browser.";
+        }
+      }
+
+      questBtns.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var id = btn.getAttribute("data-quest");
+          if (!id) return;
+          completed[id] = !completed[id];
+          saveQuests();
+          renderQuests();
+        });
+      });
+
+      var copyQuestBtn = document.getElementById("copy-quest-card");
+      if (copyQuestBtn) {
+        copyQuestBtn.addEventListener("click", function () {
+          var doneCount = 0;
+          questBtns.forEach(function (b) { if (completed[b.getAttribute("data-quest")]) doneCount += 1; });
+          var txt = "I completed " + doneCount + " of " + questBtns.length + " free NorthStar Prime quests (Minecraft Java/Bedrock, 60+ browser games, 7-PDF Mega Sampler, VORATH Oracle). Join in at https://northstarprime.net/community/";
+          copyWithStatus(txt, questProgress, "Quest progress copied (" + doneCount + " of " + questBtns.length + ").", txt);
+        });
+      }
+
+      var resetQuestBtn = document.getElementById("reset-quests");
+      if (resetQuestBtn) {
+        resetQuestBtn.addEventListener("click", function () {
+          completed = {};
+          saveQuests();
+          renderQuests();
+        });
+      }
+
+      renderQuests();
     })();
   </script>
 </body>

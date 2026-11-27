@@ -26,6 +26,17 @@ CABINETS = [
     ("northstar-chrono-defender", "NorthStar Chrono Defender", "/static/games/marquees_aaa/northstar-chrono-defender.webp", True),
     ("vorath-cabinet-row", "Vorath Cabinet Row", "/static/games/marquees_aaa/vorath-cabinet-row.webp", False),
     ("vorath-prism-runner", "Vorath Prism Runner", "/static/games/marquees_aaa/vorath-prism-runner.webp", True),
+    # Wave 4 (10 more iconic cabinets -> 31 total!)
+    ("tetris-void", "Gravity Monolith", "/static/games/marquees_aaa/gravity-monolith.webp", False),
+    ("prism-masonry", "Prism Masonry", "/static/games/marquees_aaa/prism-masonry.webp", False),
+    ("vorath-arena", "Vorath Arena", "/static/games/marquees_aaa/vorath-arena.webp", True),
+    ("vorath-delve", "Vorath Delve", "/static/games/marquees_aaa/vorath-delve.webp", False),
+    ("vorath-reliquary-gacha-shrine", "Vorath Reliquary: Gacha Shrine", "/static/games/marquees_aaa/vorath-reliquary.webp", False),
+    ("vorath-dominion", "Vorath Dominion", "/static/games/marquees_aaa/vorath-dominion.webp", False),
+    ("vorath-incursion", "Vorath Incursion", "/static/games/marquees_aaa/vorath-incursion.webp", True),
+    ("vorath-circus", "Vorath Circus", "/static/games/marquees_aaa/vorath-circus.webp", True),
+    ("vorath-circus-midnight", "Vorath Circus: Mutant Midnight", "/static/games/marquees_aaa/vorath-circus-midnight.webp", True),
+    ("vorath-signal-crown", "Vorath Signal Crown", "/static/games/marquees_aaa/vorath-signal-crown.webp", True),
 ]
 
 
@@ -59,6 +70,10 @@ def test_legacy_trademarks_cleaned_and_hub_wired():
 
     tp_html = (REPO / "arcade" / "custom" / "tetris-plus" / "index.html").read_text(encoding="utf-8")
     assert "Prism Monolith" in tp_html
+
+    tv_html = (REPO / "arcade" / "custom" / "tetris-void" / "index.html").read_text(encoding="utf-8")
+    assert "TETRIS VOID" not in tv_html
+    assert "Gravity Monolith" in tv_html
 
     hub_html = (REPO / "arcade" / "index.html").read_text(encoding="utf-8")
     for slug, _, marquee, _ in CABINETS:

@@ -211,6 +211,9 @@ def omit_unlinked_pages_payload(relative: Path) -> bool:
     """
     parts = relative.parts
     name = relative.name
+    # The recovered game and its asset pack await visual release approval.
+    if parts[:3] in {("arcade", "custom", "kosher-lines"), ("arcade", "custom", "crib-recovered-assets")}:
+        return True
     if len(parts) >= 2 and parts[0] == "static" and parts[1] == "downloads":
         if name.endswith(".zip.b64") or ".zip.b64.part" in name:
             return True

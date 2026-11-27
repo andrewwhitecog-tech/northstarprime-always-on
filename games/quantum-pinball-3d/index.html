@@ -951,6 +951,7 @@
     }
 
     function lockBallInChandelier() {
+      if (!balls.length) return;
       game.locks = Math.min(3, game.locks + 1);
       lockedBallVisuals.forEach((v, i) => { v.visible = i < game.locks; });
       addScore(75000, `CHANDELIER BALL LOCK ${game.locks}/3!`);
@@ -971,6 +972,9 @@
       game.locks = 0;
       game.bumperHits = 0;
       spinnerGate.totalRevs = 0;
+      spinnerGate.spinVel = 0;
+      game.plunging = false;
+      game.plungerCharge = 0;
       game.ballSaveTimer = 18.0;
       game.kickbackArmed = true;
       game.tiltWarnings = 0;
@@ -996,7 +1000,7 @@
     }
 
     function nudgeTable() {
-      if (game.tilted) return;
+      if (game.tilted || !balls.length) return;
       game.tiltWarnings += 1;
       balls.forEach((b) => { b.vz -= 3.2; b.vx += (Math.random() - 0.5) * 4.5; });
       cabinetGroup.position.x = (Math.random() - 0.5) * 0.22;
@@ -1226,8 +1230,7 @@
                 setCallout(`BALL ${game.ballNum} READY — PRESS PLUNGE!`);
               } else {
                 setCallout(`GAME OVER — FINAL SCORE: ${game.score.toLocaleString()}`);
-                spawnBall(true);
-                game.ballNum = 1;
+                spinnerGate.spinVel = 0;
               }
               refreshPinballUI();
             }

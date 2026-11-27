@@ -41,7 +41,7 @@ LOCAL_ROUTES = (
     "/software/",
 )
 STOREFRONT_LINKS = (
-    "https://app.northstarprime.net/chromatic",
+    "/chromatic/",
     "https://andrewcog.gumroad.com/",
     "https://www.etsy.com/shop/UncleVorath420",
     "https://www.zazzle.com/store/unclevorath420",
@@ -51,7 +51,7 @@ RETIRED_LINKS = (
     "https://www.patreon.com/cw/northstarprimenet",
     "https://www.patreon.com/northstarprimenet",
 )
-CANONICAL_SERVICE_LINK = "https://app.northstarprime.net/services"
+CANONICAL_SERVICE_LINK = "/hire/"
 
 
 def check_retired_links_sitewide(root: Path) -> int:

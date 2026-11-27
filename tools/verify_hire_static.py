@@ -14,21 +14,21 @@ ROOT = Path(__file__).resolve().parents[1]
 HIRE = ROOT / "hire" / "index.html"
 SITEMAP = ROOT / "sitemap.xml"
 OFFER_ROUTES = {
-    "/hire/failure-map": "failure_map",
-    "/hire/release-confidence-audit": "release_audit",
-    "/hire/ai-incident-readiness": "free_scorecard",
-    "/hire/commerce-activation": "commerce_activation",
+    "/hire/failure-map/": "failure_map",
+    "/hire/release-confidence-audit/": "release_audit",
+    "/hire/ai-incident-readiness/": "free_scorecard",
+    "/hire/commerce-activation/": "commerce_activation",
 }
 
 def check_offer_links(links: list[str]) -> None:
     found = set()
     for link in links:
         url = urlsplit(link)
-        if url.netloc != "app.northstarprime.net" or url.path not in OFFER_ROUTES: continue
+        if url.netloc not in {"northstarprime.net", ""} or url.path not in OFFER_ROUTES: continue
         expected = {"utm_source": ["northstarprime.net"], "utm_medium": ["owned_hire"],
                     "utm_campaign": ["institutional_pilot"], "utm_content": [OFFER_ROUTES[url.path]]}
         query = parse_qs(url.query)
-        if url.scheme != "https" or any(query.get(k) != v for k, v in expected.items()):
+        if (url.scheme and url.scheme != "https") or any(query.get(k) != v for k, v in expected.items()):
             raise SystemExit(f"Hire offer attribution mismatch: {url.path}")
         found.add(url.path)
     if found != set(OFFER_ROUTES):
@@ -56,8 +56,8 @@ def main() -> None:
         raise SystemExit("Hire doorway structured service identity mismatch")
     offers = payload.get("hasOfferCatalog", {}).get("itemListElement", [])
     actual = {(row.get("price"), row.get("priceCurrency"), row.get("url")) for row in offers}
-    expected = {("2500", "USD", "https://app.northstarprime.net/hire/failure-map"),
-                ("5000", "USD", "https://app.northstarprime.net/hire/release-confidence-audit")}
+    expected = {("2500", "USD", "https://northstarprime.net/hire/failure-map/"),
+                ("5000", "USD", "https://northstarprime.net/hire/release-confidence-audit/")}
     if len(offers) != 2 or actual != expected:
         raise SystemExit("Hire doorway structured prices/destinations mismatch")
     if "https://northstarprime.net/hire/</loc>" not in SITEMAP.read_text(encoding="utf-8"):

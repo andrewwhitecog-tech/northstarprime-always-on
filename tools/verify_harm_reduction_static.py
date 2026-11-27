@@ -11,7 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 ROUTE = ROOT / "harm-reduction"
 FREEZE = ROOT / "HARM_REDUCTION_FREEZE_MANIFEST.json"
-CANONICAL = "https://app.northstarprime.net/harm-reduction"
+CANONICAL = "https://northstarprime.net/harm-reduction/"
 
 
 def main() -> None:
@@ -43,10 +43,7 @@ def main() -> None:
 
     for required in (
         f'<link rel="canonical" href="{CANONICAL}">',
-        f'content="0;url={CANONICAL}"',
-        "reviewed safety guide",
         "illustrated draft remains offline pending clinical review",
-        "location.search+location.hash",
     ):
         if required not in html:
             raise SystemExit(f"Fail-closed bridge marker missing: {required}")

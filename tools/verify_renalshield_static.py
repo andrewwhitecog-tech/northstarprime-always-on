@@ -114,12 +114,12 @@ def main() -> None:
             raise SystemExit(f"RenalShield icon missing: {icon}")
     if 'href="/renalshield/"' not in home:
         raise SystemExit("Homepage does not pass internal authority to the RenalShield project page")
-    if 'href="https://www.renalshield.com"' not in home:
-        raise SystemExit("Homepage no longer preserves a direct free-app route")
+    if 'href="/ckd-kitchen/"' not in home:
+        raise SystemExit("Homepage no longer preserves the free kidney-safe CKD kitchen reader")
 
     print("OK: NorthStar-to-RenalShield discovery bridge (indexable, draft pending clinical review)")
     print("OK: tagged free-app route, draft banner, label-tool warning, reviewer call, references")
-    print("OK: homepage authority path and direct free-app route")
+    print("OK: homepage authority path and free CKD kitchen route")
     print("OK: medical boundary, tracker-free page, and free-offer structured data")
     print("OK: MedicalWebPage/Article/Organization/BreadcrumbList, press page, sitemap and icon set")
 

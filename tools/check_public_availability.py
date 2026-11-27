@@ -36,16 +36,20 @@ CHECKS = [
     ("minecraft_voice", APEX + "/minecraft/voice/", "html"),
     ("sticker_image", RAW_STICKER_BASE + "stickerforge/assets/01_uncle_vorath_portal.png", "image"),
     ("radio_audio", "https://assets.northstarprime.net/idr_audio/hiphop/hiphop_ident.wav", "audio"),
-    ("watch_video", APP + "/static/idc_video/idc_anthology_e08_final_transmission.mp4", "video"),
-    ("app_health", APP + "/health", "health"),
-    ("storefront", APP + "/api/nsp/storefront/status", "json"),
-    ("membership", APP + "/api/nsp/membership/stripe/status", "json"),
-    ("redemption", APP + "/api/nsp/redeem/health", "redeem"),
+    ("rich_yn", APEX + "/rich-yn/", "html"),
+    ("unc_v", APEX + "/unc-v/", "html"),
+    ("store", APEX + "/store/", "html"),
+    ("watch_video", RAW_STICKER_BASE + "static/idc_video/idc_anthology_e08_final_transmission.mp4", "video"),
 ]
 
 
 def now():
     return datetime.now(timezone.utc).isoformat()
+
+
+def _has_valid_video_bytes(data: bytes) -> bool:
+    """Verify binary video magic bytes (ISO-BMFF MP4/MOV ftyp or EBML WebM)."""
+    return (len(data) >= 12 and data[4:8] == b"ftyp") or data.startswith(b"\x1a\x45\xdf\xa3")
 
 
 def probe(check):
@@ -66,8 +70,13 @@ def probe(check):
             if response.status not in ({200, 206} if media else {200}) or response.geturl() != url:
                 raise ValueError("unexpected status or destination")
             if media:
-                content_type = response.headers.get("Content-Type", "")
-                if not data or not content_type.startswith(kind + "/"):
+                content_type = response.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
+                is_raw_video = (
+                    kind == "video"
+                    and content_type == "application/octet-stream"
+                    and _has_valid_video_bytes(data)
+                )
+                if not data or (not content_type.startswith(kind + "/") and not is_raw_video):
                     raise ValueError("expected media bytes/content type missing")
             elif kind == "html":
                 if "northstar" not in raw.lower() or "<html" not in raw.lower():

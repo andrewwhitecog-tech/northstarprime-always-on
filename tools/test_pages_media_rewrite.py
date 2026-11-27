@@ -312,8 +312,8 @@ class SigilForwardingRelease(unittest.TestCase):
  def test_existing_sigil_routes_forward_without_old_generators(self):
   for name in ['index.html','cover.html','visualizer.html']:
    text=(ROOT.parent/'sigil-forge'/name).read_text(encoding='utf-8')
-   self.assertIn('href="https://app.northstarprime.net/sigil-forge"',text)
-   self.assertIn("location.replace('https://app.northstarprime.net/sigil-forge'+location.search+location.hash)",text)
+   self.assertIn('href="https://northstarprime.net/forge/"',text)
+   self.assertIn("location.replace('https://northstarprime.net/forge/'+location.search+location.hash)",text)
    self.assertIn('name="robots" content="noindex,follow"',text)
    self.assertNotIn('<canvas',text)
    self.assertNotIn('getContext(',text)

@@ -10,8 +10,8 @@ import urllib.request
 from pathlib import Path
 
 
-APP_ORIGIN = "https://app.northstarprime.net"
-CANONICAL_URL = f"{APP_ORIGIN}/services"
+APP_ORIGIN = "https://northstarprime.net"
+CANONICAL_URL = f"{APP_ORIGIN}/hire/"
 
 
 def get_status(url: str) -> int:
@@ -45,7 +45,7 @@ def verify(repo_root: Path, network: bool) -> dict:
         "See the Failure Map",
         "Free readiness scorecard",
         "utm_campaign=services_visibility",
-        'location.replace("https://app.northstarprime.net/services"+location.search+location.hash)',
+        'location.replace("https://northstarprime.net/hire/"+location.search+location.hash)',
     )
     missing = [marker for marker in required if marker not in html]
     if missing:

@@ -13,9 +13,9 @@ from pathlib import Path
 
 APEX_ROUTE = "https://northstarprime.net/meet-the-creator/"
 APEX_CANONICAL = "https://northstarprime.net/meet-the-creator"
-APP_ROUTE = "https://app.northstarprime.net/meet-the-creator"
+APP_ROUTE = "https://northstarprime.net/portfolio/"
 APEX_OG_IMAGE = "https://northstarprime.net/static/creator/meet-the-creator-og.jpg"
-APP_OG_SOURCE = "https://app.northstarprime.net/static/creator/meet-the-creator-og.jpg"
+APP_OG_SOURCE = "https://northstarprime.net/og-image.png"
 OG_SHA256 = "359d633d503b83d4c98a2e3c1d29c5c266668d026308bd7221c3c75b06418d67"
 OG_BYTES = 157_127
 

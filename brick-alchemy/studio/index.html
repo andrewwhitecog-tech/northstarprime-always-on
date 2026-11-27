@@ -1,0 +1,1886 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Tote Alchemist 3D Studio v2.2 — 28,544-Set Brick Visual Calculator &amp; GBC Lab | NorthStar Prime</title>
+  <meta name="description" content="Search and combine all 28,544 historical interlocking brick sets (1949-2026) in real-time 3D WebGL. Simulate compound gear ratios, Klann walking hexapods, GBC sorters, and backlit Ardentilaterum stained-glass mosaics directly in your browser.">
+  <link rel="canonical" href="https://northstarprime.net/brick-alchemy/studio/">
+  <meta name="robots" content="index,follow">
+  <meta name="theme-color" content="#06060f">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="NorthStar Prime">
+  <meta property="og:title" content="Tote Alchemist 3D Studio — 28,544-Set Brick Visual Calculator &amp; GBC Lab">
+  <meta property="og:description" content="Free browser-based 3D kinematic set combiner indexing 28,544 historical brick sets, meshing Technic gear trains, and Ardentilaterum stained-glass mosaics.">
+  <meta property="og:url" content="https://northstarprime.net/brick-alchemy/studio/">
+  <meta property="og:image" content="https://northstarprime.net/brick-alchemy/assets/brick-alchemy-hero.webp">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"Tote Alchemist 3D Brick Visual Calculator & GBC Studio","url":"https://northstarprime.net/brick-alchemy/studio/","applicationCategory":"DesignApplication","operatingSystem":"Any","isAccessibleForFree":true,"publisher":{"@type":"Organization","name":"NorthStar Prime","url":"https://northstarprime.net/"},"description":"Interactive 3D WebGL interlocking brick set combiner, compound gear-ratio simulator, Great Ball Contraption kinematics workbench, and Ardentilaterum stained-glass mosaic viewer indexing 28,544 sets from 1949 to 2026."}</script>
+  <script src="/games/three.min.js" defer></script>
+  <script src="/brick-alchemy/studio/cad-engine.js" defer></script>
+  <style>
+    :root {
+      --bg-deep: #06060f;
+      --bg-panel: #0e1120;
+      --bg-card: #151a2e;
+      --bg-card-hover: #1d2440;
+      --border: rgba(114, 245, 255, 0.22);
+      --border-gold: rgba(245, 196, 81, 0.42);
+      --gold: #f5c451;
+      --amber: #ff8c3b;
+      --cyan: #2fe4ff;
+      --violet: #b678ff;
+      --emerald: #34e89e;
+      --crimson: #ff4d6d;
+      --text: #f3f6ff;
+      --muted: #a6b2d4;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      max-width: 100%;
+      overflow-x: hidden;
+      background: radial-gradient(ellipse at 50% 0%, #171d38 0%, var(--bg-deep) 68%);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      line-height: 1.45;
+      min-height: 100vh;
+    }
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      background: var(--gold);
+      color: #06060f;
+      padding: 10px 16px;
+      font-weight: 700;
+      z-index: 999;
+      text-decoration: none;
+    }
+    .skip-link:focus { left: 12px; top: 12px; }
+    a { color: var(--cyan); }
+    a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
+      outline: 2px solid var(--cyan);
+      outline-offset: 2px;
+    }
+
+    header.studio-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 12px 18px;
+      background: rgba(8, 10, 22, 0.95);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 60;
+    }
+    .brand-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .brand-mark {
+      width: 40px;
+      height: 40px;
+      flex-shrink: 0;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--gold), var(--cyan), var(--violet));
+      display: grid;
+      place-items: center;
+      color: #06060f;
+      font-weight: 900;
+      font-size: 18px;
+      text-decoration: none;
+      box-shadow: 0 0 18px rgba(47, 228, 255, 0.35);
+    }
+    .brand-copy { min-width: 0; }
+    .brand-copy h1 {
+      font-size: clamp(1rem, 2.2vw, 1.25rem);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--gold);
+      line-height: 1.2;
+    }
+    .brand-copy p {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .telemetry-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .metric-chip {
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      font-size: 0.76rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .metric-chip strong { color: var(--cyan); }
+    .metric-chip.live strong { color: var(--emerald); }
+
+    .studio-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .tab-btn, .nav-link-btn {
+      min-height: 40px;
+      padding: 7px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text);
+      font-weight: 650;
+      font-size: 0.82rem;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: border-color 0.16s ease, background 0.16s ease;
+    }
+    .tab-btn:hover, .tab-btn[aria-selected="true"], .nav-link-btn:hover {
+      background: linear-gradient(135deg, rgba(47, 228, 255, 0.18), rgba(182, 120, 255, 0.22));
+      border-color: var(--cyan);
+      color: #fff;
+    }
+    .nav-link-btn.gold {
+      border-color: var(--border-gold);
+      color: var(--gold);
+    }
+
+    /* Main 3-column workbench */
+    .workbench {
+      display: grid;
+      grid-template-columns: minmax(0, 355px) minmax(0, 1fr) minmax(0, 405px);
+      gap: 14px;
+      padding: 14px;
+      min-height: calc(100vh - 110px);
+    }
+    @media (max-width: 1240px) {
+      .workbench {
+        grid-template-columns: minmax(0, 1fr);
+        min-height: auto;
+      }
+    }
+    .panel {
+      background: rgba(14, 17, 32, 0.94);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+      min-width: 0;
+    }
+    .panel-header {
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.025);
+    }
+    .panel-header h2 {
+      font-size: 0.82rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+    .panel-body {
+      padding: 12px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: calc(100vh - 175px);
+    }
+    @media (max-width: 1240px) {
+      .panel-body { max-height: none; }
+    }
+
+    .btn-small {
+      min-height: 36px;
+      padding: 6px 11px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text);
+      font-size: 0.78rem;
+      font-weight: 650;
+      cursor: pointer;
+    }
+    .btn-small:hover { border-color: var(--cyan); background: var(--bg-card-hover); }
+    .btn-small.active { border-color: var(--emerald); color: var(--emerald); }
+    .btn-remove { border-color: rgba(255, 77, 109, 0.45); color: #ff8fa3; }
+    .btn-remove:hover { border-color: var(--crimson); color: #fff; }
+
+    .section-kicker {
+      font-size: 0.72rem;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--gold);
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .preset-grid { display: flex; flex-direction: column; gap: 7px; }
+    .preset-btn {
+      text-align: left;
+      padding: 9px 11px;
+      border-radius: 10px;
+      background: var(--bg-card);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text);
+      cursor: pointer;
+      width: 100%;
+    }
+    .preset-btn:hover, .preset-btn.active {
+      background: var(--bg-card-hover);
+      border-color: var(--gold);
+    }
+    .p-title { font-size: 0.84rem; font-weight: 700; color: #fff; }
+    .p-sub { font-size: 0.74rem; color: var(--cyan); margin-top: 2px; }
+    .p-desc { font-size: 0.74rem; color: var(--muted); margin-top: 3px; }
+
+    .search-box {
+      padding: 10px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .search-row { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+    .search-box input[type="text"], .search-box select {
+      min-height: 38px;
+      padding: 6px 10px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      background: #080a16;
+      color: var(--text);
+      font: inherit;
+      font-size: 0.82rem;
+      min-width: 0;
+    }
+    .search-results {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 240px;
+      overflow-y: auto;
+    }
+    .set-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: var(--bg-card);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .set-item-info { min-width: 0; flex: 1; }
+    .set-item-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #fff;
+      overflow-wrap: anywhere;
+    }
+    .set-item-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .mini-tag {
+      padding: 1px 6px;
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+    }
+    .mini-tag.gold { color: var(--gold); }
+    .mini-tag.violet { color: var(--violet); }
+
+    /* Center 3D viewport */
+    .viewport-hud-strip {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 9px 14px;
+      background: rgba(8, 11, 24, 0.96);
+      border-bottom: 1px solid var(--border);
+    }
+    .hud-title-block h3 {
+      font-size: 0.86rem;
+      color: var(--gold);
+      margin-bottom: 2px;
+    }
+    .hud-title-block p {
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+    .viewport-wrap {
+      position: relative;
+      flex: 1;
+      min-height: 360px;
+      background: radial-gradient(circle at 50% 45%, #161d3a 0%, #070914 78%);
+      overflow: hidden;
+      transition: box-shadow 0.18s ease;
+    }
+    .viewport-wrap.drag-over {
+      box-shadow: inset 0 0 0 2px var(--cyan), inset 0 0 28px rgba(47, 228, 255, 0.25);
+    }
+    #webgl-canvas, #fallback-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    #fallback-canvas { display: none; }
+    .hud-kpi-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+    .hud-kpi {
+      font-size: 0.68rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .hud-kpi strong {
+      display: block;
+      font-size: 0.9rem;
+      color: var(--cyan);
+      margin-top: 1px;
+    }
+    .viewport-controls {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      padding: 12px 14px;
+      border-top: 1px solid var(--border);
+      background: rgba(9, 12, 24, 0.95);
+    }
+    @media (max-width: 680px) {
+      .viewport-controls { grid-template-columns: minmax(0, 1fr); }
+    }
+    .ctrl-label {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+    .ctrl-label strong { color: var(--cyan); }
+    .ctrl-group input[type="range"] { width: 100%; accent-color: var(--cyan); cursor: pointer; }
+
+    /* CAD Studio v2.2 Toolbar, Builder Tray, Step Sequencer & Part Inspector */
+    .cad-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 10px;
+      background: rgba(7, 10, 22, 0.96);
+      border-bottom: 1px solid var(--border);
+    }
+    .cad-group {
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 3px;
+      padding-right: 7px;
+      margin-right: 1px;
+      border-right: 1px solid rgba(114, 245, 255, 0.16);
+    }
+    .cad-group:last-child { border-right: none; padding-right: 0; }
+    .cad-group-lbl {
+      font-size: 0.62rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-right: 2px;
+      font-weight: 700;
+    }
+    .cad-btn {
+      min-height: 26px;
+      padding: 3px 8px;
+      border-radius: 5px;
+      border: 1px solid rgba(114, 245, 255, 0.22);
+      background: #131930;
+      color: var(--text);
+      font-size: 0.70rem;
+      font-weight: 650;
+      cursor: pointer;
+    }
+    .cad-btn:hover { border-color: var(--cyan); background: #1d2648; }
+    .cad-btn.active {
+      border-color: var(--gold);
+      background: rgba(245, 196, 81, 0.16);
+      color: var(--gold);
+    }
+    .cad-btn.place-on {
+      border-color: var(--emerald);
+      background: rgba(52, 232, 158, 0.18);
+      color: var(--emerald);
+    }
+    .cad-btn.erase-on {
+      border-color: var(--crimson);
+      background: rgba(255, 77, 109, 0.18);
+      color: #ff99ac;
+    }
+    .cad-builder-tray {
+      display: none;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: rgba(16, 24, 46, 0.96);
+      border-bottom: 1px solid rgba(52, 232, 158, 0.35);
+    }
+    .cad-builder-tray.open { display: flex; }
+    .cad-builder-tray select {
+      min-height: 32px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #080b18;
+      color: var(--text);
+      font-size: 0.76rem;
+    }
+    .cad-swatch-row {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      align-items: center;
+    }
+    .cad-color-btn {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      cursor: pointer;
+      padding: 0;
+    }
+    .cad-color-btn.active {
+      border-color: #fff;
+      box-shadow: 0 0 0 2px var(--gold);
+    }
+    .cad-bottom-bar {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px 14px;
+      background: rgba(7, 10, 22, 0.96);
+      border-top: 1px solid var(--border);
+    }
+    .cad-step-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+    .cad-step-row input[type="range"] {
+      flex: 1;
+      min-width: 110px;
+      accent-color: var(--gold);
+      cursor: pointer;
+    }
+    .cad-step-desc {
+      font-size: 0.74rem;
+      color: var(--gold);
+      font-weight: 600;
+      width: 100%;
+    }
+    .cad-inspector-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.72rem;
+      color: var(--muted);
+      padding-top: 6px;
+      border-top: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    .cad-dims-pill {
+      color: var(--cyan);
+      font-weight: 650;
+    }
+    .cad-selected-pill {
+      color: var(--emerald);
+      font-weight: 600;
+      overflow-wrap: anywhere;
+    }
+    .cad-export-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+
+    /* Right panel metrics & blueprints */
+    .parts-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .stat-tile {
+      padding: 9px 10px;
+      border-radius: 9px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+    }
+    .stat-tile.highlight { border-color: var(--border-gold); }
+    .stat-tile.cyan { border-color: var(--border); }
+    .s-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .s-val { font-size: 1.15rem; font-weight: 800; color: #fff; margin-top: 2px; }
+    .stat-tile.highlight .s-val { color: var(--gold); }
+    .stat-tile.cyan .s-val { color: var(--cyan); }
+
+    .swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+    .swatch {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 0.72rem;
+      color: var(--text);
+    }
+    .swatch-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+    }
+
+    .blueprint-list { display: flex; flex-direction: column; gap: 10px; }
+    .bp-card {
+      text-align: left;
+      width: 100%;
+      padding: 11px;
+      border-radius: 11px;
+      background: var(--bg-card);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text);
+      cursor: pointer;
+    }
+    .bp-card:hover, .bp-card.active {
+      border-color: var(--cyan);
+      background: var(--bg-card-hover);
+      box-shadow: 0 0 18px rgba(47, 228, 255, 0.16);
+    }
+    .bp-card img {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+      border-radius: 7px;
+      margin-bottom: 8px;
+      display: block;
+      border: 1px solid rgba(47, 228, 255, 0.22);
+    }
+    .bp-top { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+    .bp-name { font-size: 0.88rem; font-weight: 750; color: var(--gold); }
+    .bp-score {
+      font-size: 0.74rem;
+      font-weight: 800;
+      color: var(--emerald);
+      white-space: nowrap;
+    }
+    .bp-cat { font-size: 0.74rem; color: var(--cyan); margin: 3px 0 5px; }
+    .bp-desc { font-size: 0.76rem; color: var(--muted); margin-bottom: 7px; }
+    .gear-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.72rem;
+      margin-bottom: 6px;
+    }
+    .gear-table th, .gear-table td {
+      padding: 4px 5px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .gear-table th { color: var(--gold); font-size: 0.68rem; text-transform: uppercase; }
+    .donor-box {
+      font-size: 0.72rem;
+      color: var(--muted);
+      padding-top: 4px;
+    }
+
+    /* Secondary views */
+    .secondary-view {
+      display: none;
+      max-width: 1260px;
+      margin: 0 auto;
+      padding: 18px 16px 36px;
+    }
+    .secondary-view.active { display: block; }
+    .intro-banner {
+      padding: 20px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(14, 17, 32, 0.92);
+      margin-bottom: 18px;
+    }
+    .intro-banner h2 { color: var(--gold); font-size: 1.35rem; margin-bottom: 8px; }
+    .intro-banner p { color: var(--muted); font-size: 0.92rem; }
+    .art-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .art-card {
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--bg-panel);
+      display: flex;
+      flex-direction: column;
+    }
+    .art-card img {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+      display: block;
+      border-bottom: 1px solid var(--border);
+    }
+    .art-card-body { padding: 14px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+    .art-pillar { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--cyan); font-weight: 700; }
+    .art-title { font-size: 1rem; font-weight: 750; color: var(--gold); }
+    .art-lore { font-size: 0.84rem; color: var(--muted); }
+
+    footer.studio-foot {
+      padding: 18px 20px 28px;
+      border-top: 1px solid var(--border);
+      background: rgba(8, 10, 22, 0.94);
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .foot-inner {
+      max-width: 1360px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .foot-links { display: flex; flex-wrap: wrap; gap: 14px; }
+    .foot-links a { color: var(--gold); text-decoration: none; font-weight: 600; }
+    .foot-links a:hover { text-decoration: underline; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition: none !important; animation: none !important; }
+    }
+    @media (forced-colors: active) {
+      html body .panel,
+      html body .preset-btn,
+      html body .set-item,
+      html body .viewport-hud-strip,
+      html body .stat-tile,
+      html body .bp-card,
+      html body .art-card,
+      html body .intro-banner,
+      html body .search-box,
+      html body .metric-chip,
+      html body .swatch,
+      html body .mini-tag {
+        background: Canvas !important;
+        background-image: none !important;
+        color: CanvasText !important;
+        border: 1px solid CanvasText !important;
+      }
+      html body .tab-btn,
+      html body .nav-link-btn,
+      html body .btn-small,
+      html body .cad-btn,
+      html body input,
+      html body select {
+        background: ButtonFace !important;
+        background-image: none !important;
+        color: ButtonText !important;
+        border: 1px solid ButtonText !important;
+      }
+      html body .cad-toolbar,
+      html body .cad-builder-tray,
+      html body .cad-bottom-bar {
+        background: Canvas !important;
+        color: CanvasText !important;
+        border-color: CanvasText !important;
+      }
+      html body .cad-color-btn {
+        forced-color-adjust: none !important;
+      }
+      html body .tab-btn[aria-selected="true"],
+      html body .preset-btn.active,
+      html body .bp-card.active,
+      html body .cad-btn.active,
+      html body .cad-btn.place-on {
+        forced-color-adjust: none !important;
+        background: Highlight !important;
+        color: HighlightText !important;
+        border: 2px solid HighlightText !important;
+      }
+      html body .preset-btn.active *,
+      html body .bp-card.active * {
+        color: HighlightText !important;
+        background: transparent !important;
+      }
+    }
+  </style>
+<style id="nsp-ag-8routes-rule6-merch-gmail-buypath-cadv21-store-a11y-20261123">
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+</style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to 3D Workbench</a>
+
+  <header class="studio-top">
+    <div class="brand-row">
+      <a class="brand-mark" href="/brick-alchemy/" aria-label="Back to Brick Alchemy Hub">55</a>
+      <div class="brand-copy">
+        <h1>Tote Alchemist 3D Studio (CAD v2.2)</h1>
+        <p>Universal 28,544-Set Brick Visual Calculator · GBC Kinematics · Ardentilaterum Optics</p>
+      </div>
+    </div>
+
+    <div class="telemetry-strip" aria-label="Catalog statistics">
+      <div class="metric-chip live">Catalog: <strong id="stat-catalog-mode">28,544 Sets (1949-2026)</strong></div>
+      <div class="metric-chip">Parts Indexed: <strong id="stat-parts">64,897</strong></div>
+      <div class="metric-chip">Themes: <strong id="stat-themes">496</strong></div>
+    </div>
+
+    <nav class="studio-nav" aria-label="Studio sections">
+      <button type="button" class="tab-btn" id="tab-workbench" aria-selected="true" onclick="switchTab('workbench')">3D Set Combiner</button>
+      <button type="button" class="tab-btn" id="tab-codex" aria-selected="false" onclick="switchTab('codex')">5-Pillar Gallery</button>
+      <button type="button" class="tab-btn" id="tab-editions" aria-selected="false" onclick="switchTab('editions')">Editions &amp; Free BOMs</button>
+      <a class="nav-link-btn gold" href="/brick-alchemy/">Brick Alchemy Hub</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <!-- VIEW 1: 3D WORKBENCH -->
+    <div id="view-workbench" class="workbench">
+      <!-- LEFT: TOTE MIXER & FULL 28,544-SET SEARCH -->
+      <section class="panel" aria-labelledby="h-tote-mixer">
+        <div class="panel-header">
+          <h2 id="h-tote-mixer">1. 55-Gallon Tote Mixer</h2>
+          <button type="button" class="btn-small" id="btn-random-scoop" onclick="scoopRandomTote()">Random Scoop</button>
+        </div>
+        <div class="panel-body">
+          <div>
+            <div class="section-kicker">Curated Signature Totes (1-Click Load)</div>
+            <div id="preset-container" class="preset-grid"></div>
+          </div>
+
+          <div class="search-box">
+            <div class="section-kicker" style="margin-bottom:0;">Search All 28,544 Historical Sets</div>
+            <div class="search-row">
+              <label for="search-q" class="skip-link">Search set name, theme, or set number</label>
+              <input type="text" id="search-q" placeholder="Search 8880, Space, Castle, GBC, Star..." style="flex:1;" oninput="debouncedSearch()">
+            </div>
+            <div class="search-row">
+              <label for="search-decade" class="skip-link">Filter by decade</label>
+              <select id="search-decade" onchange="runSearch()" style="flex:1;">
+                <option value="">All Decades (1949-2026)</option>
+                <option value="1970s">1970s Classic</option>
+                <option value="1980s">1980s Golden Age</option>
+                <option value="1990s">1990s Neon &amp; Technic</option>
+                <option value="2000s">2000s Bionicle &amp; Robotics</option>
+                <option value="2010s">2010s Modern Master</option>
+                <option value="2020s">2020s Icons &amp; Orreries</option>
+              </select>
+              <label style="display:flex;align-items:center;gap:5px;font-size:0.75rem;color:var(--cyan);cursor:pointer;">
+                <input type="checkbox" id="search-mech" onchange="runSearch()"> Gears Only
+              </label>
+            </div>
+            <div id="search-status" style="font-size:0.72rem;color:var(--muted);">Loading full 28,544-set index...</div>
+            <div id="search-results" class="search-results"></div>
+          </div>
+
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <span class="section-kicker" style="margin-bottom:0;">Sets Inside Active Tote</span>
+              <button type="button" class="btn-small btn-remove" onclick="clearTote()">Clear Tote</button>
+            </div>
+            <div id="active-tote-sets" style="display:flex;flex-direction:column;gap:6px;"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CENTER: 3D CAD KINEMATIC & STAINED-GLASS VIEWPORT -->
+      <section class="panel" aria-labelledby="h-viewport">
+        <div class="panel-header">
+          <h2 id="h-viewport">2. Live 3D Brick CAD &amp; Kinematic Studio</h2>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button type="button" class="btn-small active" id="btn-auto-orbit" onclick="toggleAutoOrbit()">Auto-Orbit: ON</button>
+            <button type="button" class="btn-small" id="btn-color-mode" onclick="toggleColorMode()">Palette: Authentic</button>
+            <button type="button" class="btn-small" onclick="cadExportSnapshot()">Snap PNG</button>
+          </div>
+        </div>
+        <div class="viewport-hud-strip" aria-live="polite">
+          <div class="hud-title-block">
+            <h3 id="hud-bp-title">MEGA-GBC Festive Village &amp; Train Circuit</h3>
+            <p id="hud-bp-principle">Ferris Rotary Lift + Reciprocating Crank Slider</p>
+            <p id="hud-tote-summary" style="color:var(--cyan);margin-top:2px;">4 Sets Mixed · 85% Wrappers Filtered</p>
+          </div>
+          <div class="hud-kpi-row">
+            <div class="hud-kpi">Ratio<strong id="hud-ratio">10.0 : 1</strong></div>
+            <div class="hud-kpi">Output<strong id="hud-out-rpm">12.0 RPM</strong></div>
+            <div class="hud-kpi">Torque<strong id="hud-torque">8.57x</strong></div>
+            <div class="hud-kpi">Match<strong id="hud-synergy">100%</strong></div>
+            <div class="hud-kpi">Bricks<strong id="hud-pure-bricks">0</strong></div>
+            <div class="hud-kpi">Foil<strong id="hud-wrappers" style="color:var(--violet);">0</strong></div>
+          </div>
+        </div>
+        <div class="cad-toolbar" role="toolbar" aria-label="3D CAD Viewport Controls">
+          <div class="cad-group">
+            <span class="cad-group-lbl">View</span>
+            <button type="button" class="cad-btn" onclick="cadSetView('iso')">Iso</button>
+            <button type="button" class="cad-btn" onclick="cadSetView('front')">Front</button>
+            <button type="button" class="cad-btn" onclick="cadSetView('side')">Side</button>
+            <button type="button" class="cad-btn" onclick="cadSetView('top')">Top</button>
+            <button type="button" class="cad-btn" onclick="cadSetView('closeup')">Close</button>
+          </div>
+          <div class="cad-group">
+            <span class="cad-group-lbl">Cam</span>
+            <button type="button" class="cad-btn active" id="cad-proj-persp" onclick="cadSetProjection('persp')">Persp</button>
+            <button type="button" class="cad-btn" id="cad-proj-ortho" onclick="cadSetProjection('ortho')">Ortho</button>
+          </div>
+          <div class="cad-group">
+            <span class="cad-group-lbl">Shade</span>
+            <button type="button" class="cad-btn active" id="cad-mode-studio" onclick="cadSetRenderMode('studio')">Studio</button>
+            <button type="button" class="cad-btn" id="cad-mode-edges" onclick="cadSetRenderMode('edges')">CAD Edges</button>
+            <button type="button" class="cad-btn" id="cad-mode-wireframe" onclick="cadSetRenderMode('wireframe')">Wire</button>
+            <button type="button" class="cad-btn" id="cad-mode-xray" onclick="cadSetRenderMode('xray')">X-Ray</button>
+          </div>
+          <div class="cad-group">
+            <span class="cad-group-lbl">Tool</span>
+            <button type="button" class="cad-btn active" id="cad-tool-inspect" onclick="cadSetTool('inspect')">Inspect</button>
+            <button type="button" class="cad-btn" id="cad-tool-place" onclick="cadSetTool('place')">+ Place Brick</button>
+            <button type="button" class="cad-btn" id="cad-tool-erase" onclick="cadSetTool('erase')">Erase</button>
+            <button type="button" class="cad-btn" onclick="cadUndoCustom()">Undo</button>
+          </div>
+          <div class="cad-group">
+            <span class="cad-group-lbl">LDraw</span>
+            <input type="file" id="cad-ldr-input" accept=".ldr,.mpd,.dat,.txt,text/plain" hidden>
+            <button type="button" class="cad-btn" id="btn-import-ldr" onclick="cadTriggerImportLDraw()" title="Import any LDraw .ldr or .mpd file into the 3D workbench">Import .LDR</button>
+            <button type="button" class="cad-btn" id="btn-sample-ldr" onclick="cadLoadSampleLDraw()" title="Load built-in 24-piece multi-step GBC Gearbox .ldr sample">Sample .LDR</button>
+          </div>
+        </div>
+        <div class="cad-builder-tray" id="cad-builder-tray" aria-label="Interactive Brick Placement Palette">
+          <label for="cad-part-select" class="cad-group-lbl" style="color:var(--emerald);">Part</label>
+          <select id="cad-part-select" onchange="cadSelectPart(this.value)"></select>
+          <div class="cad-swatch-row" id="cad-color-swatches" aria-label="LDraw part colors"></div>
+          <button type="button" class="cad-btn" id="cad-rotate-btn" onclick="cadRotatePart()">Rotate 90 (R)</button>
+          <button type="button" class="cad-btn" onclick="cadClearCustom()">Clear Placed</button>
+        </div>
+        <div class="viewport-wrap" id="viewport-container">
+          <canvas id="webgl-canvas" aria-label="Interactive 3D interlocking brick CAD viewport"></canvas>
+          <canvas id="fallback-canvas" aria-label="2D kinematic fallback canvas"></canvas>
+        </div>
+        <div class="cad-bottom-bar">
+          <div class="cad-step-row">
+            <span class="cad-group-lbl" style="color:var(--gold);">Build Steps</span>
+            <button type="button" class="cad-btn" onclick="cadStepDelta(-1)">Prev</button>
+            <label for="cad-step-slider" class="skip-link">Build instruction step</label>
+            <input type="range" id="cad-step-slider" min="1" max="5" value="5" oninput="cadSetStep(this.value)">
+            <button type="button" class="cad-btn" onclick="cadStepDelta(1)">Next</button>
+            <button type="button" class="cad-btn" id="cad-step-play" onclick="cadToggleStepPlay()">Auto-Build</button>
+            <span id="cad-step-count" style="font-size:0.74rem;color:var(--cyan);font-weight:700;">Step 5/5</span>
+          </div>
+          <div class="cad-step-desc" id="cad-step-desc">Step 5/5: Full assembly ready (click any brick to inspect LDraw part telemetry)</div>
+          <div class="cad-inspector-row">
+            <span class="cad-dims-pill" id="cad-dims-readout">CAD Model: loading dimensions...</span>
+            <span class="cad-selected-pill" id="cad-selected-readout">Click any brick/gear to inspect LDraw ID &amp; LDU coords</span>
+          </div>
+        </div>
+        <div class="viewport-controls">
+          <div class="ctrl-group">
+            <div class="ctrl-label">
+              <label for="slider-separatio">Separatio (Filter Noise)</label>
+              <strong id="val-separatio">85% Sorted</strong>
+            </div>
+            <input type="range" id="slider-separatio" min="0" max="100" value="85" oninput="onControlChange()">
+          </div>
+          <div class="ctrl-group">
+            <div class="ctrl-label">
+              <label for="slider-rpm">Drive Motor RPM</label>
+              <strong id="val-rpm">120 RPM</strong>
+            </div>
+            <input type="range" id="slider-rpm" min="0" max="300" value="120" oninput="onControlChange()">
+          </div>
+          <div class="ctrl-group">
+            <div class="ctrl-label">
+              <label for="slider-explode">Exploded Layer View</label>
+              <strong id="val-explode">0%</strong>
+            </div>
+            <input type="range" id="slider-explode" min="0" max="100" value="0" oninput="onControlChange()">
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT: COMBINED PART MATRIX & FUNCTIONAL BLUEPRINTS -->
+      <section class="panel" aria-labelledby="h-blueprints">
+        <div class="panel-header">
+          <h2 id="h-blueprints">3. Part Matrix, CAD Exports &amp; Blueprints</h2>
+          <div class="cad-export-row">
+            <button type="button" class="btn-small" id="btn-export-ldr" onclick="cadExportLDraw()" title="Download LDraw .ldr for BrickLink Studio / LeoCAD">Export .LDR</button>
+            <button type="button" class="btn-small" id="btn-export-xml" onclick="cadExportBrickLink()" title="Download BrickLink Wanted List XML">BrickLink .XML</button>
+            <button type="button" class="btn-small" id="btn-export-csv" onclick="cadExportCSV()" title="Download Rebrickable CSV BOM">BOM .CSV</button>
+            <button type="button" class="btn-small" onclick="exportBlueprintJSON()">JSON</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="parts-grid">
+            <div class="stat-tile highlight">
+              <div class="s-label">Total Parts</div>
+              <div class="s-val" id="tot-parts">0</div>
+            </div>
+            <div class="stat-tile cyan">
+              <div class="s-label">Technic Gears</div>
+              <div class="s-val" id="tot-gears">0</div>
+            </div>
+            <div class="stat-tile cyan">
+              <div class="s-label">Axles &amp; Shafts</div>
+              <div class="s-val" id="tot-axles">0</div>
+            </div>
+            <div class="stat-tile">
+              <div class="s-label">Pins &amp; Joints</div>
+              <div class="s-val" id="tot-pins">0</div>
+            </div>
+            <div class="stat-tile">
+              <div class="s-label">Beams &amp; Liftarms</div>
+              <div class="s-val" id="tot-beams">0</div>
+            </div>
+            <div class="stat-tile">
+              <div class="s-label">Hinges &amp; Turntables</div>
+              <div class="s-val" id="tot-hinges">0</div>
+            </div>
+            <div class="stat-tile">
+              <div class="s-label">Trans-Neon Optics</div>
+              <div class="s-val" id="tot-neon">0</div>
+            </div>
+            <div class="stat-tile">
+              <div class="s-label">Wheels &amp; Motors</div>
+              <div class="s-val" id="tot-wheels">0</div>
+            </div>
+          </div>
+
+          <div>
+            <div class="section-kicker">Dominant Merged Palette</div>
+            <div id="palette-swatches" class="swatches"></div>
+          </div>
+
+          <div>
+            <div class="section-kicker">Click Any Blueprint To Simulate In 3D</div>
+            <div id="blueprints-container" class="blueprint-list"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- VIEW 2: 5-PILLAR CODEX GALLERY -->
+    <section id="view-codex" class="secondary-view" aria-labelledby="h-codex">
+      <div class="intro-banner">
+        <h2 id="h-codex">The 55-Gallon Warehouse Tote Codex · Five-Pillar Studio Gallery</h2>
+        <p>Every mixed bin of bricks holds both the original sets it came from and hundreds of unforeseen cross-era machines. Explore the visual pillars uniting Interdimensional Cinema, Records, Games, Library, and Hermetic Separatio.</p>
+      </div>
+      <div class="art-grid">
+        <article class="art-card">
+          <img src="/brick-alchemy/assets/studio/01_warehouse_metaphor_master.webp" alt="Twilight warehouse lined with 55-gallon totes spilling bricks and gears into a luminous cathedral" loading="lazy" decoding="async">
+          <div class="art-card-body">
+            <div class="art-pillar">Core Metaphor · The 55-Gallon Warehouse</div>
+            <div class="art-title">Unsorted Potential Into Living Geometry</div>
+            <div class="art-lore">Decades of Space canopies, Castle masonry, and Technic gears tumbled together become a combinatorial discovery engine once sorted by function.</div>
+          </div>
+        </article>
+        <article class="art-card">
+          <img src="/brick-alchemy/assets/studio/02_idc_unsorted_treasure.webp" alt="Cinema frame of hands sorting metallic wrappers from glowing translucent bricks and gears" loading="lazy" decoding="async">
+          <div class="art-card-body">
+            <div class="art-pillar">IDC · Interdimensional Cinema</div>
+            <div class="art-title">Unsorted Treasure</div>
+            <div class="art-lore">Tactile macro foley of ABS studs clattering across concrete as noise gives way to brick-built kinetic choreography.</div>
+          </div>
+        </article>
+        <article class="art-card">
+          <img src="/brick-alchemy/assets/studio/03_idr_tote_55.webp" alt="Vinyl console and neon gears pulsing in rhythm with brick percussion" loading="lazy" decoding="async">
+          <div class="art-card-body">
+            <div class="art-pillar">IDR · Interdimensional Records</div>
+            <div class="art-title">Tote 55 Found-Sound Rhythms</div>
+            <div class="art-lore">Polyrhythmic grooves locked to compound gear ratios: 24-tooth to 8-tooth 3:1 tempo divisions and mechanical ratchet pulses.</div>
+          </div>
+        </article>
+        <article class="art-card">
+          <img src="/brick-alchemy/assets/studio/04_idg_tote_alchemist.webp" alt="Interactive engineering workbench turning mixed bricks into motorized machines" loading="lazy" decoding="async">
+          <div class="art-card-body">
+            <div class="art-pillar">IDG · Interdimensional Games</div>
+            <div class="art-title">Tote Alchemist Kinematic Lab</div>
+            <div class="art-lore">The live 28,544-set browser simulator powering real-time gear ratios, Klann walking linkages, and Great Ball Contraption design.</div>
+          </div>
+        </article>
+        <article class="art-card">
+          <img src="/brick-alchemy/assets/studio/05_idl_the_infinite_tote.webp" alt="Illuminated engineering compendium rising from translucent glowing bricks" loading="lazy" decoding="async">
+          <div class="art-card-body">
+            <div class="art-pillar">IDL · Interdimensional Library</div>
+            <div class="art-title">The Infinite Tote Monograph</div>
+            <div class="art-lore">Why sorting by mechanical and optical role reveals cross-era combinations hidden by rigid color-only filing.</div>
+          </div>
+        </article>
+        <article class="art-card">
+          <img src="/brick-alchemy/assets/studio/06_mystery_school_prima_materia.webp" alt="Hermetic glowing prism geometry uniting gears and stained glass bricks" loading="lazy" decoding="async">
+          <div class="art-card-body">
+            <div class="art-pillar">Mystery School · Prima Materia</div>
+            <div class="art-title">Solve et Coagula</div>
+            <div class="art-lore">Discerning structural signal from wrapper noise, then locking purified parts into higher-order synthesis.</div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- VIEW 3: EDITIONS & FREE BOMS -->
+    <section id="view-editions" class="secondary-view" aria-labelledby="h-editions-view">
+      <div class="intro-banner">
+        <h2 id="h-editions-view">Printable Handbooks, Validated BOMs &amp; Complete Studio Editions</h2>
+        <p>Start free with our printable Technic gear-spacing chart and catalog-confirmed CSV/JSON Bills of Materials, or pick up the complete US Letter + A4 illustrated engineering bundles on Gumroad.</p>
+      </div>
+      <div class="art-grid">
+        <article class="art-card">
+          <img src="/brick-alchemy/assets/tote-alchemist-handbook-cover.webp" alt="The Tote Alchemist Handbook cover" loading="lazy" decoding="async" style="aspect-ratio:4/5;object-fit:cover;">
+          <div class="art-card-body">
+            <div class="art-pillar">21-Page Handbook + 4 Charts</div>
+            <div class="art-title">The Tote Alchemist's Handbook ($12)</div>
+            <div class="art-lore">Module m=1.0mm gear law, worm winches, Willis planetary differentials, Geneva indexers, Klann spiders, and the 48x48 GBC standard.</div>
+            <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;">
+              <a class="nav-link-btn gold" href="https://andrewcog.gumroad.com/l/llkspo?utm_source=northstarprime.net&amp;utm_medium=brick_studio&amp;utm_campaign=brick_alchemy_2026">Get Full Bundle ($12)</a>
+              <a class="nav-link-btn" href="/brick-alchemy/downloads/NorthStar_Technic_Gear_Ratio_and_Stud_Spacing_Chart.png" download>Free Gear Chart</a>
+            </div>
+          </div>
+        </article>
+        <article class="art-card">
+          <img src="/brick-alchemy/assets/ardentilaterum-mosaic-studio-cover.webp" alt="Ardentilaterum Illuminated Mosaic Studio cover" loading="lazy" decoding="async" style="aspect-ratio:4/5;object-fit:cover;">
+          <div class="art-card-body">
+            <div class="art-pillar">30-Page Studio Guide + 12 Confirmed BOMs</div>
+            <div class="art-title">Ardentilaterum Stained-Glass Studio ($14)</div>
+            <div class="art-lore">Backlit cathedral rose windows and freestanding below-5V USB shrine lanterns validated against Rebrickable part+color history.</div>
+            <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;">
+              <a class="nav-link-btn gold" href="https://andrewcog.gumroad.com/l/fsltx?utm_source=northstarprime.net&amp;utm_medium=brick_studio&amp;utm_campaign=brick_alchemy_2026">Get 12-Blueprint Pack ($14)</a>
+              <a class="nav-link-btn" href="/brick-alchemy/downloads/Ardentilaterum_01_Beholders_Prism_Eye_BOM.csv" download>Free Eye BOM (CSV)</a>
+            </div>
+          </div>
+        </article>
+        <article class="art-card">
+          <img src="/brick-alchemy/assets/wheel-of-light-almanac-cover.webp" alt="The Wheel of Light Almanac cover" loading="lazy" decoding="async" style="aspect-ratio:4/5;object-fit:cover;">
+          <div class="art-card-body">
+            <div class="art-pillar">36-Page Almanac + 6 STEM Labs</div>
+            <div class="art-title">The Wheel of Light Solstice Almanac ($12)</div>
+            <div class="art-lore">Solstice astronomy, solar gnomon geometry, prism optics, and eight world traditions of light for families and makers.</div>
+            <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;">
+              <a class="nav-link-btn gold" href="https://andrewcog.gumroad.com/l/sefgfx?utm_source=northstarprime.net&amp;utm_medium=brick_studio&amp;utm_campaign=brick_alchemy_2026">Get Almanac ($12)</a>
+              <a class="nav-link-btn" href="/brick-alchemy/downloads/NorthStar_Latitude_Sundial_and_Gnomon_Lab.png" download>Free Sundial Lab</a>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="studio-foot">
+    <div class="foot-inner">
+      <div class="foot-links">
+        <a href="/brick-alchemy/">Brick Alchemy Hub</a>
+        <a href="/">NorthStar Prime Home</a>
+        <a href="/store/">Digital Store</a>
+        <a href="https://andrewcog.gumroad.com/" rel="noopener">Gumroad Catalog</a>
+        <a href="/links/">All Links</a>
+      </div>
+      <p>Independent studio creation by NorthStar Prime. LEGO® is a trademark of the LEGO Group of companies which does not sponsor, authorize, or endorse this site, simulator, or these guides. Part and set numbers follow the open Rebrickable / LDraw community catalog.</p>
+    </div>
+  </footer>
+
+  <script>
+    const SEED_DATA = {"stats":{"total_sets":28544,"total_parts":64897,"total_themes":496,"inventory_rows":1567180},"themes":{"133":"Ice Planet 2002","134":"Insectoids","312":"Hydronauts","308":"Aquanauts","132":"Futuron","228":"Creator","227":"Christmas","1":"Technic","442":"Rock Raiders","439":"Power Miners","186":"Castle","315":"Atlantis","437":"Pharaoh's Quest","600":"Elves","494":"Friends","139":"Space Police I","136":"M:Tron","188":"Black Knights","194":"Forestmen","324":"Bionicle","260":"RCX","721":"Icons","709":"LEGO Art","571":"Legends of Chima","171":"Ultimate Collector Series","776":"Pokémon","435":"Ninjago","246":"Harry Potter","673":"Creator Expert","510":"Serious Play","158":"Star Wars","702":"Avengers","616":"The LEGO Ninjago Movie","608":"Disney","576":"LEGO Ideas and CUUSOO","607":"Ghostbusters","277":"Mosaic","252":"Architecture","697":"Batman","719":"BrickLink Designer Program","781":"The Infinity Saga","155":"Modular Buildings"},"colors":{"6983-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":123},{"name":"Blue","hex":"#0055BF","trans":false,"qty":77},{"name":"White","hex":"#FFFFFF","trans":false,"qty":75},{"name":"Trans-Neon Orange","hex":"#FF800D","trans":true,"qty":36},{"name":"Light Gray","hex":"#9BA19D","trans":false,"qty":16}],"6977-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":121},{"name":"Blue","hex":"#0055BF","trans":false,"qty":116},{"name":"Dark Gray","hex":"#6D6E5C","trans":false,"qty":113},{"name":"Trans-Neon Green","hex":"#F8F184","trans":true,"qty":50},{"name":"Trans-Green","hex":"#84B68D","trans":true,"qty":9},{"name":"[No Color/Any Color]","hex":"#05131D","trans":false,"qty":4}],"6199-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":131},{"name":"Yellow","hex":"#F2CD37","trans":false,"qty":120},{"name":"Light Gray","hex":"#9BA19D","trans":false,"qty":72},{"name":"Trans-Green","hex":"#84B68D","trans":true,"qty":50},{"name":"Blue","hex":"#0055BF","trans":false,"qty":35},{"name":"Trans-Neon Orange","hex":"#FF800D","trans":true,"qty":20}],"6195-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":223},{"name":"Yellow","hex":"#F2CD37","trans":false,"qty":194},{"name":"Trans-Neon Orange","hex":"#FF800D","trans":true,"qty":24},{"name":"Light Gray","hex":"#9BA19D","trans":false,"qty":16},{"name":"Trans-Dark Blue","hex":"#0020A0","trans":true,"qty":13},{"name":"Chrome Silver","hex":"#E0E0E0","trans":false,"qty":11}],"6990-1":[{"name":"White","hex":"#FFFFFF","trans":false,"qty":399},{"name":"Black","hex":"#05131D","trans":false,"qty":191},{"name":"Light Gray","hex":"#9BA19D","trans":false,"qty":44},{"name":"Trans-Red","hex":"#C91A09","trans":true,"qty":38},{"name":"Trans-Dark Blue","hex":"#0020A0","trans":true,"qty":29}],"10254-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":206},{"name":"Pearl Gold","hex":"#AA7F2E","trans":false,"qty":85},{"name":"Red","hex":"#C91A09","trans":false,"qty":82},{"name":"White","hex":"#FFFFFF","trans":false,"qty":60},{"name":"Green","hex":"#237841","trans":false,"qty":49},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":42}],"10293-1":[{"name":"White","hex":"#FFFFFF","trans":false,"qty":300},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":209},{"name":"Bright Light Blue","hex":"#9FC3E9","trans":false,"qty":170},{"name":"Reddish Brown","hex":"#582A12","trans":false,"qty":118},{"name":"Green","hex":"#237841","trans":false,"qty":109}],"42055-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":1047},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":786},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":762},{"name":"Blue","hex":"#0055BF","trans":false,"qty":623},{"name":"Yellow","hex":"#F2CD37","trans":false,"qty":334}],"42082-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":1561},{"name":"Red","hex":"#C91A09","trans":false,"qty":698},{"name":"Blue","hex":"#0055BF","trans":false,"qty":550},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":528},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":329}],"4990-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":83},{"name":"Yellow","hex":"#F2CD37","trans":false,"qty":79},{"name":"Light Gray","hex":"#9BA19D","trans":false,"qty":79},{"name":"Dark Gray","hex":"#6D6E5C","trans":false,"qty":66},{"name":"Trans-Neon Green","hex":"#F8F184","trans":true,"qty":36},{"name":"Dark Turquoise","hex":"#008F9B","trans":false,"qty":35}],"4970-1":[{"name":"Light Gray","hex":"#9BA19D","trans":false,"qty":39},{"name":"Black","hex":"#05131D","trans":false,"qty":38},{"name":"Dark Turquoise","hex":"#008F9B","trans":false,"qty":23},{"name":"Dark Gray","hex":"#6D6E5C","trans":false,"qty":22},{"name":"Yellow","hex":"#F2CD37","trans":false,"qty":17},{"name":"Trans-Neon Green","hex":"#F8F184","trans":true,"qty":12}],"8962-1":[{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":62},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":58},{"name":"Lime","hex":"#BBE90B","trans":false,"qty":15},{"name":"Trans-Neon Green","hex":"#F8F184","trans":true,"qty":12},{"name":"Black","hex":"#05131D","trans":false,"qty":9},{"name":"Orange","hex":"#FE8A18","trans":false,"qty":3}],"8964-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":258},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":146},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":121},{"name":"Lime","hex":"#BBE90B","trans":false,"qty":82},{"name":"Trans-Clear","hex":"#FCFCFC","trans":true,"qty":19},{"name":"Blue","hex":"#0055BF","trans":false,"qty":18}],"8960-1":[{"name":"Lime","hex":"#BBE90B","trans":false,"qty":54},{"name":"Black","hex":"#05131D","trans":false,"qty":54},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":48},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":46},{"name":"Tan","hex":"#E4CD9E","trans":false,"qty":8},{"name":"White","hex":"#FFFFFF","trans":false,"qty":7}],"70404-1":[{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":320},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":201},{"name":"Reddish Brown","hex":"#582A12","trans":false,"qty":132},{"name":"Blue","hex":"#0055BF","trans":false,"qty":85},{"name":"Black","hex":"#05131D","trans":false,"qty":63},{"name":"Dark Tan","hex":"#958A73","trans":false,"qty":50}],"8078-1":[{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":254},{"name":"Black","hex":"#05131D","trans":false,"qty":245},{"name":"Pearl Gold","hex":"#AA7F2E","trans":false,"qty":85},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":84},{"name":"Dark Tan","hex":"#958A73","trans":false,"qty":70},{"name":"Dark Red","hex":"#720E0F","trans":false,"qty":61}],"8061-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":92},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":73},{"name":"White","hex":"#FFFFFF","trans":false,"qty":42},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":32},{"name":"Tan","hex":"#E4CD9E","trans":false,"qty":26},{"name":"Pearl Gold","hex":"#AA7F2E","trans":false,"qty":22}],"7327-1":[{"name":"Tan","hex":"#E4CD9E","trans":false,"qty":232},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":115},{"name":"Black","hex":"#05131D","trans":false,"qty":103},{"name":"Dark Tan","hex":"#958A73","trans":false,"qty":93},{"name":"Dark Blue","hex":"#0A3463","trans":false,"qty":56},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":53}],"41180-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":263},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":186},{"name":"Dark Purple","hex":"#3F3691","trans":false,"qty":93},{"name":"Reddish Brown","hex":"#582A12","trans":false,"qty":66},{"name":"Lime","hex":"#BBE90B","trans":false,"qty":57},{"name":"Magenta","hex":"#923978","trans":false,"qty":44}],"41757-1":[{"name":"White","hex":"#FFFFFF","trans":false,"qty":320},{"name":"Reddish Brown","hex":"#582A12","trans":false,"qty":73},{"name":"Trans-Clear","hex":"#FCFCFC","trans":true,"qty":61},{"name":"Bright Green","hex":"#4B9F4A","trans":false,"qty":55},{"name":"Green","hex":"#237841","trans":false,"qty":51},{"name":"Trans-Light Blue","hex":"#AEEFEC","trans":true,"qty":47}],"6986-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":254},{"name":"Blue","hex":"#0055BF","trans":false,"qty":158},{"name":"Trans-Red","hex":"#C91A09","trans":true,"qty":44},{"name":"White","hex":"#FFFFFF","trans":false,"qty":4}],"6989-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":238},{"name":"Red","hex":"#C91A09","trans":false,"qty":186},{"name":"Light Gray","hex":"#9BA19D","trans":false,"qty":26},{"name":"Trans-Neon Green","hex":"#F8F184","trans":true,"qty":20},{"name":"White","hex":"#FFFFFF","trans":false,"qty":18}],"6973-1":[{"name":"Blue","hex":"#0055BF","trans":false,"qty":171},{"name":"White","hex":"#FFFFFF","trans":false,"qty":106},{"name":"Black","hex":"#05131D","trans":false,"qty":82},{"name":"Trans-Neon Orange","hex":"#FF800D","trans":true,"qty":39},{"name":"Light Gray","hex":"#9BA19D","trans":false,"qty":1}],"8880-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":706},{"name":"Light Gray","hex":"#9BA19D","trans":false,"qty":461},{"name":"White","hex":"#FFFFFF","trans":false,"qty":84},{"name":"Yellow","hex":"#F2CD37","trans":false,"qty":36},{"name":"Dark Gray","hex":"#6D6E5C","trans":false,"qty":30}],"6086-1":[{"name":"Light Gray","hex":"#9BA19D","trans":false,"qty":270},{"name":"Black","hex":"#05131D","trans":false,"qty":179},{"name":"Red","hex":"#C91A09","trans":false,"qty":22},{"name":"Brown","hex":"#583927","trans":false,"qty":19},{"name":"Dark Gray","hex":"#6D6E5C","trans":false,"qty":12},{"name":"Yellow","hex":"#F2CD37","trans":false,"qty":10}],"6077-2":[{"name":"Light Gray","hex":"#9BA19D","trans":false,"qty":155},{"name":"Black","hex":"#05131D","trans":false,"qty":128},{"name":"Brown","hex":"#583927","trans":false,"qty":18},{"name":"Green","hex":"#237841","trans":false,"qty":15},{"name":"Yellow","hex":"#F2CD37","trans":false,"qty":6},{"name":"Dark Gray","hex":"#6D6E5C","trans":false,"qty":4}],"8868-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":417},{"name":"Light Gray","hex":"#9BA19D","trans":false,"qty":383},{"name":"Yellow","hex":"#F2CD37","trans":false,"qty":80},{"name":"White","hex":"#FFFFFF","trans":false,"qty":71},{"name":"Dark Gray","hex":"#6D6E5C","trans":false,"qty":12},{"name":"Red","hex":"#C91A09","trans":false,"qty":3}],"8480-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":556},{"name":"Light Gray","hex":"#9BA19D","trans":false,"qty":391},{"name":"White","hex":"#FFFFFF","trans":false,"qty":363},{"name":"Yellow","hex":"#F2CD37","trans":false,"qty":27},{"name":"Dark Gray","hex":"#6D6E5C","trans":false,"qty":20}],"8534-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":16},{"name":"Red","hex":"#C91A09","trans":false,"qty":6},{"name":"Light Gray","hex":"#9BA19D","trans":false,"qty":6},{"name":"Orange","hex":"#FE8A18","trans":false,"qty":4},{"name":"Trans-Neon Red","hex":"#FF0040","trans":true,"qty":1}],"8558-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":244},{"name":"Dark Gray","hex":"#6D6E5C","trans":false,"qty":144},{"name":"Light Gray","hex":"#9BA19D","trans":false,"qty":66},{"name":"Red","hex":"#C91A09","trans":false,"qty":58},{"name":"Blue","hex":"#0055BF","trans":false,"qty":58},{"name":"White","hex":"#FFFFFF","trans":false,"qty":50}],"9719-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":296},{"name":"Light Gray","hex":"#9BA19D","trans":false,"qty":289},{"name":"Yellow","hex":"#F2CD37","trans":false,"qty":48},{"name":"Green","hex":"#237841","trans":false,"qty":30},{"name":"White","hex":"#FFFFFF","trans":false,"qty":23},{"name":"Dark Gray","hex":"#6D6E5C","trans":false,"qty":21}],"10283-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":676},{"name":"White","hex":"#FFFFFF","trans":false,"qty":638},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":341},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":150},{"name":"Yellow","hex":"#F2CD37","trans":false,"qty":131}],"42179-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":190},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":106},{"name":"Blue","hex":"#0055BF","trans":false,"qty":69},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":46},{"name":"Red","hex":"#C91A09","trans":false,"qty":39},{"name":"White","hex":"#FFFFFF","trans":false,"qty":36}],"10497-1":[{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":521},{"name":"Blue","hex":"#0055BF","trans":false,"qty":289},{"name":"White","hex":"#FFFFFF","trans":false,"qty":128},{"name":"Black","hex":"#05131D","trans":false,"qty":113},{"name":"Yellow","hex":"#F2CD37","trans":false,"qty":79}],"10307-1":[{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":7587},{"name":"Black","hex":"#05131D","trans":false,"qty":517},{"name":"Tan","hex":"#E4CD9E","trans":false,"qty":375},{"name":"Green","hex":"#237841","trans":false,"qty":314},{"name":"Dark Tan","hex":"#958A73","trans":false,"qty":241}],"BIGBOX-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":1619},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":1254},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":1219},{"name":"White","hex":"#FFFFFF","trans":false,"qty":679},{"name":"Trans-Light Blue","hex":"#AEEFEC","trans":true,"qty":650}],"10294-1":[{"name":"White","hex":"#FFFFFF","trans":false,"qty":2298},{"name":"Black","hex":"#05131D","trans":false,"qty":1579},{"name":"Tan","hex":"#E4CD9E","trans":false,"qty":1307},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":971},{"name":"Dark Red","hex":"#720E0F","trans":false,"qty":621}],"10276-1":[{"name":"Tan","hex":"#E4CD9E","trans":false,"qty":5347},{"name":"Dark Tan","hex":"#958A73","trans":false,"qty":1803},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":684},{"name":"Black","hex":"#05131D","trans":false,"qty":543},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":264}],"75419-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":2954},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":2918},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":1492},{"name":"White","hex":"#FFFFFF","trans":false,"qty":525},{"name":"Reddish Brown","hex":"#582A12","trans":false,"qty":199}],"11377-1":[{"name":"White","hex":"#FFFFFF","trans":false,"qty":3769},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":1596},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":821},{"name":"Black","hex":"#05131D","trans":false,"qty":616},{"name":"Dark Tan","hex":"#958A73","trans":false,"qty":525}],"75192-1":[{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":3299},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":1731},{"name":"Black","hex":"#05131D","trans":false,"qty":819},{"name":"Dark Tan","hex":"#958A73","trans":false,"qty":505},{"name":"Tan","hex":"#E4CD9E","trans":false,"qty":326}],"72153-1":[{"name":"Medium Azure","hex":"#36AEBF","trans":false,"qty":796},{"name":"Black","hex":"#05131D","trans":false,"qty":615},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":589},{"name":"Orange","hex":"#FE8A18","trans":false,"qty":549},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":457}],"75313-1":[{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":2410},{"name":"Black","hex":"#05131D","trans":false,"qty":1314},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":1012},{"name":"Blue","hex":"#0055BF","trans":false,"qty":625},{"name":"White","hex":"#FFFFFF","trans":false,"qty":243}],"75331-1":[{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":3140},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":1054},{"name":"Black","hex":"#05131D","trans":false,"qty":656},{"name":"Dark Tan","hex":"#958A73","trans":false,"qty":269},{"name":"Tan","hex":"#E4CD9E","trans":false,"qty":168}],"10316-1":[{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":1574},{"name":"White","hex":"#FFFFFF","trans":false,"qty":672},{"name":"Sand Green","hex":"#A0BCAC","trans":false,"qty":419},{"name":"Tan","hex":"#E4CD9E","trans":false,"qty":397},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":396}],"71799-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":908},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":827},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":747},{"name":"Reddish Brown","hex":"#582A12","trans":false,"qty":705},{"name":"White","hex":"#FFFFFF","trans":false,"qty":419}],"75457-1":[{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":2866},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":804},{"name":"Black","hex":"#05131D","trans":false,"qty":561},{"name":"Blue","hex":"#0055BF","trans":false,"qty":307},{"name":"Yellow","hex":"#F2CD37","trans":false,"qty":270}],"71043-1":[{"name":"Tan","hex":"#E4CD9E","trans":false,"qty":1922},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":900},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":673},{"name":"Dark Tan","hex":"#958A73","trans":false,"qty":658},{"name":"Reddish Brown","hex":"#582A12","trans":false,"qty":414}],"10256-1":[{"name":"White","hex":"#FFFFFF","trans":false,"qty":3532},{"name":"Tan","hex":"#E4CD9E","trans":false,"qty":984},{"name":"Trans-Clear","hex":"#FCFCFC","trans":true,"qty":404},{"name":"Yellow","hex":"#F2CD37","trans":false,"qty":225},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":173}],"10189-1":[{"name":"White","hex":"#FFFFFF","trans":false,"qty":3548},{"name":"Tan","hex":"#E4CD9E","trans":false,"qty":985},{"name":"Trans-Clear","hex":"#FCFCFC","trans":true,"qty":408},{"name":"Yellow","hex":"#F2CD37","trans":false,"qty":223},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":173}],"10299-1":[{"name":"Tan","hex":"#E4CD9E","trans":false,"qty":1203},{"name":"White","hex":"#FFFFFF","trans":false,"qty":1065},{"name":"Blue","hex":"#0055BF","trans":false,"qty":902},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":684},{"name":"Black","hex":"#05131D","trans":false,"qty":392}],"71741-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":961},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":644},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":596},{"name":"Reddish Brown","hex":"#582A12","trans":false,"qty":439},{"name":"Trans-Light Blue","hex":"#AEEFEC","trans":true,"qty":340}],"75978-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":808},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":668},{"name":"Reddish Brown","hex":"#582A12","trans":false,"qty":483},{"name":"Dark Tan","hex":"#958A73","trans":false,"qty":461},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":459}],"10284-1":[{"name":"Tan","hex":"#E4CD9E","trans":false,"qty":1212},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":1104},{"name":"Red","hex":"#C91A09","trans":false,"qty":811},{"name":"Black","hex":"#05131D","trans":false,"qty":799},{"name":"White","hex":"#FFFFFF","trans":false,"qty":515}],"10333-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":2085},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":1027},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":479},{"name":"Reddish Brown","hex":"#582A12","trans":false,"qty":467},{"name":"Dark Orange","hex":"#A95500","trans":false,"qty":216}],"75367-1":[{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":1926},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":1466},{"name":"Black","hex":"#05131D","trans":false,"qty":558},{"name":"Dark Red","hex":"#720E0F","trans":false,"qty":403},{"name":"Tan","hex":"#E4CD9E","trans":false,"qty":288}],"2000400-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":728},{"name":"Orange","hex":"#FE8A18","trans":false,"qty":589},{"name":"White","hex":"#FFFFFF","trans":false,"qty":424},{"name":"Chrome Gold","hex":"#BBA53D","trans":false,"qty":406},{"name":"Dark Turquoise","hex":"#008F9B","trans":false,"qty":400}],"76269-1":[{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":1678},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":1071},{"name":"Trans-Light Blue","hex":"#AEEFEC","trans":true,"qty":435},{"name":"Black","hex":"#05131D","trans":false,"qty":393},{"name":"Trans-Black","hex":"#635F52","trans":true,"qty":315}],"10179-1":[{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":2836},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":1437},{"name":"Black","hex":"#05131D","trans":false,"qty":538},{"name":"White","hex":"#FFFFFF","trans":false,"qty":77},{"name":"Red","hex":"#C91A09","trans":false,"qty":72}],"76405-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":1414},{"name":"Red","hex":"#C91A09","trans":false,"qty":908},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":565},{"name":"Tan","hex":"#E4CD9E","trans":false,"qty":526},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":413}],"70620-1":[{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":844},{"name":"Black","hex":"#05131D","trans":false,"qty":722},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":572},{"name":"Reddish Brown","hex":"#582A12","trans":false,"qty":361},{"name":"White","hex":"#FFFFFF","trans":false,"qty":255}],"71861-1":[{"name":"Reddish Brown","hex":"#582A12","trans":false,"qty":927},{"name":"Black","hex":"#05131D","trans":false,"qty":759},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":492},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":478},{"name":"White","hex":"#FFFFFF","trans":false,"qty":319}],"43222-1":[{"name":"Pearl Gold","hex":"#AA7F2E","trans":false,"qty":1168},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":641},{"name":"Sand Blue","hex":"#6074A1","trans":false,"qty":509},{"name":"Light Nougat","hex":"#F6D7B3","trans":false,"qty":475},{"name":"Tan","hex":"#E4CD9E","trans":false,"qty":383}],"76417-1":[{"name":"White","hex":"#FFFFFF","trans":false,"qty":954},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":744},{"name":"Dark Tan","hex":"#958A73","trans":false,"qty":690},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":651},{"name":"Tan","hex":"#E4CD9E","trans":false,"qty":529}],"75252-1":[{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":2986},{"name":"Black","hex":"#05131D","trans":false,"qty":380},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":321},{"name":"Blue","hex":"#0055BF","trans":false,"qty":314},{"name":"Red","hex":"#C91A09","trans":false,"qty":192}],"21373-1":[{"name":"Tan","hex":"#E4CD9E","trans":false,"qty":1747},{"name":"Dark Tan","hex":"#958A73","trans":false,"qty":690},{"name":"Reddish Brown","hex":"#582A12","trans":false,"qty":518},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":356},{"name":"White","hex":"#FFFFFF","trans":false,"qty":258}],"75827-1":[{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":1946},{"name":"Dark Red","hex":"#720E0F","trans":false,"qty":555},{"name":"Black","hex":"#05131D","trans":false,"qty":487},{"name":"White","hex":"#FFFFFF","trans":false,"qty":390},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":337}],"10305-1":[{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":1980},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":650},{"name":"Reddish Brown","hex":"#582A12","trans":false,"qty":364},{"name":"Black","hex":"#05131D","trans":false,"qty":330},{"name":"White","hex":"#FFFFFF","trans":false,"qty":208}],"21061-1":[{"name":"Tan","hex":"#E4CD9E","trans":false,"qty":2534},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":509},{"name":"Dark Tan","hex":"#958A73","trans":false,"qty":449},{"name":"Black","hex":"#05131D","trans":false,"qty":373},{"name":"Trans-Clear","hex":"#FCFCFC","trans":true,"qty":143}],"10214-1":[{"name":"Tan","hex":"#E4CD9E","trans":false,"qty":1937},{"name":"White","hex":"#FFFFFF","trans":false,"qty":950},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":498},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":335},{"name":"Medium Blue","hex":"#5A93DB","trans":false,"qty":229}],"76271-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":815},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":655},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":472},{"name":"Reddish Brown","hex":"#582A12","trans":false,"qty":428},{"name":"Dark Red","hex":"#720E0F","trans":false,"qty":291}],"10253-1":[{"name":"Tan","hex":"#E4CD9E","trans":false,"qty":2002},{"name":"Trans-Brown","hex":"#635F52","trans":true,"qty":564},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":480},{"name":"Dark Tan","hex":"#958A73","trans":false,"qty":416},{"name":"Black","hex":"#05131D","trans":false,"qty":159}],"10366-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":661},{"name":"Dark Tan","hex":"#958A73","trans":false,"qty":416},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":378},{"name":"Tan","hex":"#E4CD9E","trans":false,"qty":333},{"name":"Medium Azure","hex":"#36AEBF","trans":false,"qty":243}],"10261-1":[{"name":"White","hex":"#FFFFFF","trans":false,"qty":1465},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":769},{"name":"Black","hex":"#05131D","trans":false,"qty":503},{"name":"Green","hex":"#237841","trans":false,"qty":303},{"name":"Red","hex":"#C91A09","trans":false,"qty":178}],"42100-1":[{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":1079},{"name":"Black","hex":"#05131D","trans":false,"qty":846},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":620},{"name":"Blue","hex":"#0055BF","trans":false,"qty":612},{"name":"White","hex":"#FFFFFF","trans":false,"qty":490}],"42232-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":2007},{"name":"Blue","hex":"#0055BF","trans":false,"qty":569},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":492},{"name":"Red","hex":"#C91A09","trans":false,"qty":436},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":146}],"21356-1":[{"name":"White","hex":"#FFFFFF","trans":false,"qty":1172},{"name":"Black","hex":"#05131D","trans":false,"qty":626},{"name":"Reddish Brown","hex":"#582A12","trans":false,"qty":553},{"name":"Tan","hex":"#E4CD9E","trans":false,"qty":389},{"name":"Dark Tan","hex":"#958A73","trans":false,"qty":361}],"910059-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":1374},{"name":"Reddish Brown","hex":"#582A12","trans":false,"qty":596},{"name":"Dark Tan","hex":"#958A73","trans":false,"qty":433},{"name":"Dark Blue","hex":"#0A3463","trans":false,"qty":371},{"name":"Medium Nougat","hex":"#AA7D55","trans":false,"qty":338}],"71040-1":[{"name":"White","hex":"#FFFFFF","trans":false,"qty":1158},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":1001},{"name":"Tan","hex":"#E4CD9E","trans":false,"qty":515},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":260},{"name":"Pearl Gold","hex":"#AA7F2E","trans":false,"qty":239}],"910002-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":2101},{"name":"Tan","hex":"#E4CD9E","trans":false,"qty":680},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":257},{"name":"Trans-Clear","hex":"#FCFCFC","trans":true,"qty":198},{"name":"Red","hex":"#C91A09","trans":false,"qty":169}],"910049-1":[{"name":"Black","hex":"#05131D","trans":false,"qty":2514},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":590},{"name":"Dark Red","hex":"#720E0F","trans":false,"qty":314},{"name":"Reddish Brown","hex":"#582A12","trans":false,"qty":208},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":118}],"76210-1":[{"name":"Dark Red","hex":"#720E0F","trans":false,"qty":1226},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":902},{"name":"Black","hex":"#05131D","trans":false,"qty":474},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":362},{"name":"Dark Tan","hex":"#958A73","trans":false,"qty":335}],"75159-1":[{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":1386},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":1047},{"name":"Black","hex":"#05131D","trans":false,"qty":774},{"name":"Red","hex":"#C91A09","trans":false,"qty":141},{"name":"Blue","hex":"#0055BF","trans":false,"qty":98}],"10326-1":[{"name":"Olive Green","hex":"#9B9A5A","trans":false,"qty":684},{"name":"White","hex":"#FFFFFF","trans":false,"qty":673},{"name":"Tan","hex":"#E4CD9E","trans":false,"qty":525},{"name":"Dark Bluish Gray","hex":"#6C6E68","trans":false,"qty":452},{"name":"Black","hex":"#05131D","trans":false,"qty":434}],"910053-1":[{"name":"Reddish Brown","hex":"#582A12","trans":false,"qty":796},{"name":"Dark Tan","hex":"#958A73","trans":false,"qty":616},{"name":"Tan","hex":"#E4CD9E","trans":false,"qty":540},{"name":"Light Bluish Gray","hex":"#A0A5A9","trans":false,"qty":281},{"name":"Medium Nougat","hex":"#AA7D55","trans":false,"qty":273}]},"sets":[["6983-1","Ice Station Odyssey",1993,133,344,3,19,27,0,38,10,0,36,24,206],["6977-1","Arachnoid Star Base",1998,134,438,4,11,29,0,35,6,1,61,45,289],["6199-1","Hydro Crystallization Station",1998,312,485,1,46,18,0,15,0,3,71,64,319],["6195-1","Neptune Discovery Lab",1995,308,509,4,25,36,0,43,1,0,37,56,332],["6990-1","Monorail Transport System",1988,132,731,33,27,8,0,40,0,4,67,60,529],["10254-1","Winter Holiday Train",2016,228,735,47,67,25,7,11,12,2,82,69,528],["10293-1","Santa's Visit",2021,227,1445,26,29,60,9,17,1,1,59,221,1128],["42055-1","Bucket Wheel Excavator",2016,1,3929,161,906,1830,819,0,55,4,28,29,177],["42082-1","Rough Terrain Crane",2018,1,4056,159,1330,1612,717,8,21,4,37,16,220],["4990-1","Rock Raiders HQ",1999,442,411,0,19,19,0,5,9,2,48,55,287],["4970-1","Chrome Crusher",1999,442,168,1,4,7,0,7,6,2,18,26,113],["8962-1","Crystal King",2009,439,169,2,19,12,5,8,0,0,12,52,68],["8964-1","Titanium Command Rig",2009,439,707,24,160,160,26,7,35,1,30,55,240],["8960-1","Thunder Driller",2009,439,236,10,38,40,2,0,18,0,5,15,116],["70404-1","King's Castle",2013,186,1003,0,53,124,1,11,0,0,18,167,637],["8078-1","Portal of Atlantis",2010,315,1008,8,69,99,2,36,0,0,51,204,568],["8061-1","Gateway of the Squid",2010,315,356,2,43,60,6,5,0,0,10,50,187],["7327-1","Scorpion Pyramid",2011,437,795,4,29,91,3,34,7,0,6,165,441],["41180-1","Ragana's Magic Shadow Castle",2016,600,1016,13,32,73,0,15,0,0,106,185,744],["41757-1","Botanical Garden",2023,494,1072,5,33,79,0,1,1,0,108,48,969],["6986-1","Mission Commander",1989,139,477,7,8,7,0,42,11,0,44,38,347],["6989-1","Mega Core Magnetizer",1990,136,506,6,23,34,0,43,26,0,20,39,317],["6973-1","Deep Freeze Defender",1993,133,417,1,15,30,0,21,0,0,39,52,280],["8880-1","Super Car",1994,1,1346,64,166,459,8,76,15,8,10,55,503],["6086-1","Black Knight's Castle",1992,188,590,0,2,40,0,13,1,0,3,70,406],["6077-2","Forestmen's River Fortress",1989,194,359,1,8,8,0,12,0,0,0,58,245],["8868-1","Airtech Claw Rig",1992,1,954,29,142,383,11,31,14,6,1,26,326],["8480-1","Space Shuttle",1996,1,1366,67,316,462,42,31,13,22,8,40,383],["8534-1","Tahu",2001,324,33,4,16,11,0,0,0,0,1,0,2],["8558-1","Cahdok and Gahdok",2002,324,630,4,250,204,136,0,0,0,4,0,50],["9719-1","Robotics Invention System, Version 1.0",1998,260,737,45,121,211,10,14,33,14,2,23,266],["10283-1","NASA Space Shuttle Discovery",2021,721,2355,94,217,172,11,25,16,3,9,536,1340],["42179-1","Planet Earth and Moon in Orbit",2024,1,526,37,152,236,75,0,4,0,0,14,19],["10497-1","Galaxy Explorer",2022,721,1254,26,76,160,6,12,13,0,60,244,722],["31203-1","World Map",2021,709,11695,0,0,304,0,0,1,0,0,40,11762],["10307-1","Eiffel Tower",2022,721,10001,108,345,261,16,104,0,0,118,489,8740],["BIGBOX-1","The Ultimate Battle for Chima",2015,571,10001,341,1097,1554,256,103,134,9,1015,1608,4270],["10294-1","Titanic",2021,721,9092,471,293,403,4,64,4,0,152,796,7150],["10276-1","Colosseum",2020,721,9036,198,119,591,32,32,0,0,0,1298,6855],["75419-1","Death Star",2025,171,9031,251,234,379,6,108,2,0,300,847,7190],["11377-1","The Lord of the Rings: Minas Tirith",2026,721,8278,199,293,242,10,134,4,0,67,1402,6174],["75192-1","Millennium Falcon",2017,171,7541,101,448,1135,187,175,17,1,26,1004,4581],["72153-1","Venusaur, Charizard and Blastoise",2026,776,6838,297,368,377,43,44,11,0,191,1277,4539],["75313-1","AT-AT",2021,171,6785,248,466,1236,231,82,17,0,19,851,3677],["75331-1","The Razor Crest",2022,171,6187,383,163,333,50,66,9,0,55,852,4438],["10316-1","Lord of the Rings: Rivendell",2023,721,6181,151,264,218,13,25,11,0,93,775,4751],["71799-1","NINJAGO City Markets",2023,435,6163,197,131,369,39,40,7,0,472,652,4873],["75457-1","Executor Super Star Destroyer",2026,171,6130,360,268,885,119,71,0,0,122,696,3697],["71043-1","Hogwarts Castle",2018,246,6020,132,108,426,22,37,0,0,424,1115,4310],["10256-1","Taj Mahal",2017,673,5923,16,80,242,17,344,0,0,404,241,5004],["10189-1","Taj Mahal",2008,673,5922,16,127,241,17,344,0,0,408,245,4972],["10299-1","Real Madrid – Santiago Bernabéu Stadium",2022,721,5876,387,26,227,2,108,0,0,253,1083,4107],["71741-1","NINJAGO City Gardens",2021,435,5710,131,86,256,4,69,14,0,479,626,4628],["75978-1","Diagon Alley",2020,246,5548,66,46,214,5,35,1,0,247,561,4691],["10284-1","Camp Nou - FC Barcelona",2021,721,5509,42,17,34,0,16,0,0,131,318,5119],["2000409-2","Window Exploration Bag",2024,510,5500,0,100,600,0,0,0,0,400,800,3900],["10333-1","The Lord of the Rings: Barad-dûr",2024,721,5478,68,109,203,7,111,2,1,290,1090,3933],["SWMP-1","Star Wars / M&M Mosaic - Promo Set",2005,158,5462,0,0,0,0,0,0,0,0,0,5462],["75367-1","Venator-Class Republic Attack Cruiser",2023,171,5381,130,234,620,77,92,10,0,122,717,3546],["2000400-1","Enterprise RTS",2003,510,5255,26,525,649,6,20,63,7,408,519,3440],["76269-1","Avengers Tower",2023,702,5202,118,76,194,7,104,9,0,971,521,4178],["2000409-1","Window Exploration Bag",2010,510,5200,0,100,400,0,0,0,0,500,800,3600],["10179-1","Millennium Falcon",2007,171,5198,17,355,657,114,272,5,0,56,715,3065],["76405-1","Hogwarts Express - Collectors' Edition",2022,246,5139,371,255,285,56,50,9,3,78,702,3409],["70620-1","NINJAGO City",2017,616,4873,125,145,332,38,48,7,1,408,376,3863],["71861-1","The Old Town 15th Anniversary",2026,435,4852,193,73,179,2,92,5,0,120,1066,3301],["43222-1","Disney Castle",2023,608,4837,50,99,132,17,27,8,0,102,985,3593],["76417-1","Gringotts Wizarding Bank – Collectors' Edition",2023,246,4809,137,117,143,6,19,10,0,103,774,3652],["75252-1","Imperial Star Destroyer",2019,171,4784,67,118,462,148,109,4,0,39,750,3180],["21373-1","Downton Abbey",2026,576,4712,363,51,57,0,0,0,0,119,228,4109],["75827-1","Firehouse Headquarters",2016,607,4642,44,32,190,9,37,0,0,156,169,4266],["10305-1","Lion Knights' Castle",2022,721,4515,66,111,217,1,48,1,0,42,685,3392],["40179-1","Personalised Mosaic Portrait",2016,277,4502,0,1,0,0,0,0,0,0,0,4501],["21061-1","Notre-Dame de Paris",2024,252,4382,11,16,26,0,40,2,0,254,751,3582],["10214-1","Tower Bridge",2010,673,4295,12,30,154,4,0,64,0,112,864,3218],["31201-1","Harry Potter Hogwarts Crests",2021,709,4249,0,0,87,0,0,1,0,0,0,4282],["76271-1","Batman: The Animated Series Gotham City",2024,697,4210,208,32,77,6,13,0,0,22,606,3405],["31205-1","Jim Lee Batman Collection",2022,709,4167,0,0,81,0,0,2,0,0,0,4084],["10253-1","Big Ben",2016,673,4167,47,30,38,0,0,0,0,587,214,3932],["10366-1","Tropical Aquarium",2025,721,4154,101,269,314,10,33,2,0,224,595,2901],["21226-1","Art Project - Create Together",2021,709,4138,0,0,88,0,0,1,0,0,0,4253],["10261-1","Roller Coaster",2018,673,4124,105,937,189,53,31,26,0,57,162,2643],["42100-1","Liebherr R 9800 Excavator",2019,1,4108,138,1395,1615,577,0,24,39,22,23,323],["42232-1","Koenigsegg Sadair's Spear Megacar",2026,1,4104,94,1196,1812,668,8,16,9,14,70,283],["21356-1","River Steamboat",2025,576,4090,159,364,235,8,13,22,0,100,177,3211],["910059-1","Privateer Frigate Fortuna",2026,719,4086,213,298,307,37,52,0,0,11,504,2796],["71040-1","Disney Castle",2016,608,4081,44,60,138,13,43,5,0,47,553,3319],["910002-1","Studgate Train Station",2023,719,4074,86,414,304,39,48,6,8,292,361,2889],["910049-1","Adventure in Transylvania",2025,719,4060,50,257,208,12,52,5,0,35,408,3243],["76210-1","Hulkbuster",2022,781,4049,158,280,450,82,47,18,3,18,1082,1967],["75159-1","Death Star",2016,171,4024,50,244,298,27,126,4,6,205,393,2826],["10326-1","Natural History Museum",2023,155,4015,85,23,121,4,15,1,0,127,259,3620],["910053-1","The Thieves of Tortuga",2025,719,4002,4,34,112,0,17,4,0,54,246,3793]],"presets":[{"id":"sig_space_domes_insectoids","name":"Signature Tote #1: Retro Space Quarter-Domes & Insectoid Citadel","subtitle":"Ice Station Odyssey (6983) + Arachnoid Star Base (6977) + Aquazone (6199 & 6195) + Futuron (6990)","description":"Unites giant 10x10x12 quarter domes (Part 2409), trans-neon orange canopies, and bioluminescent insectoid wing linkages into coaxial pressurized biospheres.","set_nums":["6983-1","6977-1","6199-1","6195-1","6990-1"]},{"id":"sig_festive_gbc_village_train","name":"Signature Tote #2: Festive GBC Ball Circuit & Winter Holiday Train","subtitle":"Winter Holiday Train (10254) + Santa's Visit (10293) + Bucket Wheel (42055) + Heavy Crane (42082)","description":"Connects multi-stage Great Ball Contraption stepper lifts and rotary conveyors with a motorized Winter Holiday Train catching and ferrying 14mm spheres.","set_nums":["10254-1","10293-1","42055-1","42082-1"]},{"id":"sig_crystal_cavern_miners_foundry","name":"Signature Tote #3: Crystal Cavern Golems & Glitter Rock Foundry","subtitle":"Rock Raiders HQ (4990) + Chrome Crusher (4970) + Crystal King (8962) + Command Rig (8964)","description":"Combines twin-gear tunnel drillers, translucent glitter rock panels, and inclined crystal bucket hoists for subterranean excavation loops.","set_nums":["4990-1","4970-1","8962-1","8964-1","8960-1"]},{"id":"sig_castle_spires_stained_glass_vault","name":"Signature Tote #4: Castle Spires, Atlantis Portal & Stained-Glass Vault","subtitle":"King's Castle (70404) + Portal of Atlantis (8078) + Scorpion Pyramid (7327) + Botanical Dome (41757)","description":"Fuses medieval battlements, gear-linked Atlantis portal rings, translucent arches, and backlit Ardentilaterum cathedral rose windows.","set_nums":["70404-1","8078-1","8061-1","7327-1","41180-1","41757-1"]},{"id":"tote_90s_neon_supercar","name":"Tote #05: 1989-1994 Neon Space & Technic Supercar Mixer","subtitle":"Space Police (6986) + M:Tron (6989) + Ice Planet (6973) + 8880 Super Car","description":"Late-80s and early-90s trans-neon canopies mixed with a 4-speed synchronized Technic gearbox and differential suspension.","set_nums":["6986-1","6989-1","6973-1","8880-1"]},{"id":"tote_castle_clockwork","name":"Tote #06: Black Knight's Castle & Pneumatic Claw Rig","subtitle":"Black Knight's Castle (6086) + Air Tech Claw Rig (8868) + Technic Space Shuttle (8480)","description":"Gothic battlements and octagonal castle towers combined with pneumatic actuators, turntables, and fiber-optic drive shafts.","set_nums":["6086-1","6077-2","8868-1","8480-1"]},{"id":"tote_bionicle_robotics","name":"Tote #07: Bionicle, Rock Raiders & Robotics Automaton","subtitle":"Toa Tahu (8534) + Bahrag Queens (8558) + Mindstorms RIS (9719) + Chrome Crusher (4970)","description":"Ball-and-socket biomechanical joints and dual-gear punching linkages ready to synthesize into a six-legged Klann walking fortress.","set_nums":["8534-1","8558-1","9719-1","4970-1"]},{"id":"tote_celestial_orrery_gantry","name":"Tote #08: Grand Celestial Orrery & Heavy Gantry","subtitle":"Rough Terrain Crane (42082) + NASA Discovery (10283) + Earth & Moon Orrery (42179) + Galaxy Explorer (10497)","description":"Over 7,500 pieces of planetary epicyclic gear trains, worm-drive winches, outrigger linkages, and classic delta-wing panels.","set_nums":["42082-1","10283-1","42179-1","10497-1"]}],"blueprints":[{"id":"festive_gbc_village_train","name":"MEGA-GBC Festive Village & Holiday Train Ball Circuit","category":"Multi-Module GBC + Train Hopper Escapement","mechanism_type":"gbc_sorter","image_url":"/brick-alchemy/assets/studio/sig_01_festive_gbc_village_train.webp","summary":"Links rotary Ferris-wheel ball lifts, stepped reciprocating ramps, and a spiral coaster tube around a Winter Village with open train hoppers catching 14mm spheres in rhythm.","kinematic_principle":"Ferris Rotary Lift + Reciprocating Crank Slider + Timed Train Escapement","reqs":{"gears":12,"axles":16,"pins_connectors":45,"beams_liftarms":35,"wheels_treads":8,"bricks_plates":250},"gear_train_spec":[{"stage":1,"driver":8,"driven":40,"type":"Ferris Ring Reduction","ratio":5.0},{"stage":2,"driver":12,"driven":24,"type":"Stepped Stair Crank","ratio":2.0},{"stage":3,"driver":16,"driven":16,"type":"Hopper Trigger Indexer","ratio":1.0}]},{"id":"ardentilaterum_beholders_prism_eye","name":"ARDENTILATERUM Backlit Beholder's Prism Eye & Shrine Lantern","category":"Backlit Stained-Glass Optical Mosaic + Rotating Brass Aperture","mechanism_type":"ardentilaterum_eye","image_url":"/brick-alchemy/assets/01_beholders_prism_eye_preview.webp","summary":"Pairs 1,144 catalog-confirmed translucent 1x1 tiles (98138) and plates (3024) in matte-black leading with a motorized coaxial brass iris ring and isolated below-5V USB diffuser.","kinematic_principle":"Coaxial Iris Ring Gear (1:24 Worm Slew) + 20mm Lambertian Optical Diffuser","reqs":{"gears":4,"axles":6,"hinges_turntables":2,"trans_neon_parts":30,"bricks_plates":180},"gear_train_spec":[{"stage":1,"driver":1,"driven":24,"type":"Self-Locking Worm Aperture Drive","ratio":24.0},{"stage":2,"driver":16,"driven":24,"type":"Outer Optical Ring Coupler","ratio":1.5}]},{"id":"space_quarter_dome_insectoid_citadel","name":"QUAD-DOME Retro Space & Insectoid Biosphere Citadel","category":"Geodesic Quarter-Dome Biosphere + Wing Oscillator","mechanism_type":"planetary_orrery","image_url":"/brick-alchemy/assets/studio/sig_02_space_quarter_domes_citadel.webp","summary":"Locks four giant 10x10x12 quarter domes (Part 2409) into a pressurized neon-lit geodesic biosphere crowned by a motorized oscillating insectoid wing ring.","kinematic_principle":"Coaxial Turntable Dome Ring + Dual-Crank Wing Oscillator","reqs":{"gears":6,"axles":8,"hinges_turntables":6,"trans_neon_parts":25,"slopes_wedges":35,"bricks_plates":200},"gear_train_spec":[{"stage":1,"driver":1,"driven":24,"type":"Worm-Drive Crown Slew","ratio":24.0},{"stage":2,"driver":12,"driven":20,"type":"Wing Oscillator Crank","ratio":1.67}]},{"id":"crystal_cavern_golem_excavator","name":"CRYSTAL CAVERN Golem Rig & Glitter Rock Excavator","category":"Subterranean Bucket-Wheel Hoist & Drill Rig","mechanism_type":"gantry_crane","image_url":"/brick-alchemy/assets/studio/sig_03_crystal_cavern_foundry.webp","summary":"Twin-gear chrome tunnel driller and inclined bucket conveyor lifting glowing translucent crystals through reinforced cavern arches.","kinematic_principle":"Counter-Rotating Planetary Drill + Inclined Chain Bucket Elevator","reqs":{"gears":8,"axles":10,"wheels_treads":6,"trans_neon_parts":15,"bricks_plates":180},"gear_train_spec":[{"stage":1,"driver":12,"driven":36,"type":"Drill Cone Torque Reduction","ratio":3.0},{"stage":2,"driver":8,"driven":24,"type":"Bucket Chain Hoist Drive","ratio":3.0}]},{"id":"castle_spire_translucent_vault","name":"SANCTUARY SPIRE Castle & Rotating Atlantis Portal","category":"Illuminated Spire Fortress + Synchronized Portal Gear","mechanism_type":"cam_wave","image_url":"/brick-alchemy/assets/studio/sig_04_fantasy_spire_vault.webp","summary":"Unites medieval battlements, Atlantis gear-linked portal arches, translucent ivy windows, and a spinning backlit conservatory turntable.","kinematic_principle":"Synchronized Portal Ring Gear + Illuminated Turntable Stage","reqs":{"gears":4,"axles":6,"hinges_turntables":4,"trans_neon_parts":20,"slopes_wedges":40,"bricks_plates":220},"gear_train_spec":[{"stage":1,"driver":12,"driven":36,"type":"Golden Portal Ring Drive","ratio":3.0},{"stage":2,"driver":16,"driven":16,"type":"Pedestal Turntable Coupler","ratio":1.0}]},{"id":"gbc_candy_brick_sorter","name":"GBC-55 Automated Warehouse Tote Sorter","category":"Great Ball Contraption (GBC) / Rotary Sieve","mechanism_type":"gbc_sorter","image_url":"/brick-alchemy/assets/studio/bp_01_gbc_candy_brick_sorter.webp","summary":"Multi-stage mechanical sorter dumping mixed tote contents onto an inclined vibrating liftarm grate, sweeping wrappers aside with a rotary paddle wheel.","kinematic_principle":"Genevan Intermittent Indexer + Inclined Gravity Sieve + Paddle Wheel","reqs":{"gears":8,"axles":12,"pins_connectors":30,"beams_liftarms":25,"slopes_wedges":20,"bricks_plates":120},"gear_train_spec":[{"stage":1,"driver":12,"driven":36,"type":"Double-Bevel Agitator","ratio":3.0},{"stage":2,"driver":8,"driven":24,"type":"Spur Sorter Wheel","ratio":3.0},{"stage":3,"driver":16,"driven":16,"type":"90-Deg Bevel Transfer","ratio":1.0}]},{"id":"chrono_orrery_astrolabe","name":"CHRONO-ORRERY Planetary Astrolabe Cathedral","category":"Coaxial Clockwork Orrery & Illuminated Spire","mechanism_type":"planetary_orrery","image_url":"/brick-alchemy/assets/studio/bp_02_chrono_orrery_astrolabe.webp","summary":"Gothic structural arches and translucent canopies orbiting a coaxial Technic turntable drive at harmonic planetary ratios.","kinematic_principle":"Epicyclic Planetary Gear Train + Coaxial Turntable Slew","reqs":{"gears":10,"axles":10,"hinges_turntables":4,"trans_neon_parts":15,"bricks_plates":150,"slopes_wedges":25},"gear_train_spec":[{"stage":1,"driver":1,"driven":24,"type":"Self-Locking Worm Base","ratio":24.0},{"stage":2,"driver":20,"driven":12,"type":"Inner Ring Step-Up","ratio":0.6},{"stage":3,"driver":16,"driven":40,"type":"Outer Turntable Crown","ratio":2.5}]},{"id":"strider_klann_hexapod","name":"STRIDER-VI Klann Linkage Walking Fortress","category":"Six-Legged Mechanical Automaton","mechanism_type":"walking_hexapod","image_url":"/brick-alchemy/assets/studio/bp_03_strider_klann_hexapod.webp","summary":"A fortified space-and-castle citadel mounted on six phase-offset Klann four-bar walking legs (0/120/240 deg) driven by a single central crankshaft.","kinematic_principle":"Phase-Coupled 4-Bar Crank-Rocker Walking Linkage","reqs":{"gears":6,"axles":14,"pins_connectors":50,"beams_liftarms":35,"bricks_plates":100},"gear_train_spec":[{"stage":1,"driver":12,"driven":20,"type":"Primary Bevel Crankshaft","ratio":1.67},{"stage":2,"driver":8,"driven":24,"type":"Port/Starboard Leg Sync","ratio":3.0},{"stage":3,"driver":16,"driven":24,"type":"Final Stride Torque","ratio":1.5}]},{"id":"vortex_swing_wing_cruiser","name":"VORTEX-WING Variable-Geometry Star-Cathedral","category":"Synchronized Scissor-Linkage Interceptor","mechanism_type":"swing_wing","image_url":"/brick-alchemy/assets/studio/bp_04_vortex_swing_wing_cruiser.webp","summary":"Delta wedges, translucent canopies, and spires linked to a worm-driven rack that sweeps both wings synchronously in lockstep.","kinematic_principle":"Worm-Driven Linear Rack + Symmetric Scissor Linkage","reqs":{"gears":4,"axles":8,"hinges_turntables":8,"slopes_wedges":40,"trans_neon_parts":12,"bricks_plates":140},"gear_train_spec":[{"stage":1,"driver":1,"driven":8,"type":"Self-Locking Worm Rack","ratio":8.0},{"stage":2,"driver":12,"driven":24,"type":"Wing Pivot Synchronizer","ratio":2.0}]},{"id":"titan_differential_gantry","name":"TITAN-55 Differential Overhead Gantry Crane","category":"Dual-Axis Bevel Differential Hoist","mechanism_type":"gantry_crane","image_url":"/brick-alchemy/assets/studio/bp_05_titan_differential_gantry.webp","summary":"Heavy Technic crane bridge using a bevel differential to split drive between trolley travel and self-locking worm cable hoisting.","kinematic_principle":"Bevel Differential Torque Split + Worm Winch Lock","reqs":{"gears":8,"axles":12,"pins_connectors":40,"beams_liftarms":30,"wheels_treads":4,"bricks_plates":120},"gear_train_spec":[{"stage":1,"driver":8,"driven":24,"type":"Primary Gantry Reduction","ratio":3.0},{"stage":2,"driver":12,"driven":36,"type":"Differential Hoist Stage","ratio":3.0}]},{"id":"soundwave_cam_loom","name":"SOUNDWAVE-16 Harmonic Cam Wave Loom","category":"16-Stage Helical Camshaft Kinetic Sculpture","mechanism_type":"cam_wave","image_url":"/brick-alchemy/assets/studio/bp_06_soundwave_cam_loom.webp","summary":"Twelve phase-shifted translucent columns driven by a helical Technic camshaft to generate a continuous traveling sine wave.","kinematic_principle":"Helical Cam-Follower Array (30-Deg Phase Step)","reqs":{"gears":4,"axles":14,"pins_connectors":28,"beams_liftarms":20,"trans_neon_parts":16,"bricks_plates":100},"gear_train_spec":[{"stage":1,"driver":8,"driven":24,"type":"Camshaft Torque Drive","ratio":3.0}]}]};
+    const FULL_CATALOG_URL = "/brick-alchemy/studio/data/lego_universe_28544.json";
+
+    const DEFAULT_COLORS = [
+      {name: "Gold", hex: "#F5C451", trans: false, qty: 140},
+      {name: "Trans-Cyan", hex: "#2FE4FF", trans: true, qty: 90},
+      {name: "Obsidian Black", hex: "#1B2234", trans: false, qty: 180},
+      {name: "Trans-Emerald", hex: "#34E89E", trans: true, qty: 75},
+      {name: "Trans-Violet", hex: "#B678FF", trans: true, qty: 65},
+      {name: "Amber Orange", hex: "#FF8C3B", trans: true, qty: 55}
+    ];
+
+    let allSets = [];
+    let themesMap = {};
+    let colorsMap = {};
+    let bySetNum = new Map();
+    let fullCatalogLoaded = false;
+    let activeSetNums = [...SEED_DATA.presets[0].set_nums];
+    let activeBlueprintIdx = 0;
+    let synthesisData = null;
+    let colorMode = "authentic";
+    let autoOrbit = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let searchTimer = null;
+
+    function unpackSet(arr) {
+      const sn = arr[0];
+      return {
+        set_num: sn,
+        name: arr[1],
+        year: arr[2],
+        theme_id: arr[3],
+        theme_name: themesMap[String(arr[3])] || themesMap[arr[3]] || "Classic",
+        num_parts: arr[4] || 0,
+        gears: arr[5] || 0,
+        axles: arr[6] || 0,
+        pins_connectors: arr[7] || 0,
+        beams_liftarms: arr[8] || 0,
+        hinges_turntables: arr[9] || 0,
+        wheels_treads: arr[10] || 0,
+        pneumatics_motors: arr[11] || 0,
+        trans_neon_parts: arr[12] || 0,
+        slopes_wedges: arr[13] || 0,
+        bricks_plates: arr[14] || 0,
+        top_colors: colorsMap[sn] || []
+      };
+    }
+
+    function hydrateCatalog(rawData, isFull) {
+      themesMap = rawData.themes || themesMap;
+      colorsMap = Object.assign({}, colorsMap, rawData.colors || {});
+      allSets = rawData.sets || [];
+      bySetNum = new Map();
+      for (let i = 0; i < allSets.length; i++) {
+        bySetNum.set(allSets[i][0], allSets[i]);
+      }
+      if (isFull) {
+        fullCatalogLoaded = true;
+        document.getElementById("search-status").textContent =
+          `Full catalog live: ${allSets.length.toLocaleString()} official sets (1949-2026) ready to search.`;
+        document.getElementById("stat-catalog-mode").textContent =
+          `${allSets.length.toLocaleString()} Sets LIVE`;
+        runSearch();
+        runSynthesize();
+      } else {
+        document.getElementById("search-status").textContent =
+          `Showing ${allSets.length} featured sets while full 28,544-set index loads...`;
+      }
+    }
+
+    function switchTab(tab) {
+      const views = {
+        workbench: document.getElementById("view-workbench"),
+        codex: document.getElementById("view-codex"),
+        editions: document.getElementById("view-editions")
+      };
+      Object.keys(views).forEach(k => {
+        const el = views[k];
+        if (k === "workbench") {
+          el.style.display = tab === "workbench" ? "grid" : "none";
+        } else {
+          el.classList.toggle("active", tab === k);
+        }
+        const btn = document.getElementById("tab-" + k);
+        if (btn) btn.setAttribute("aria-selected", tab === k ? "true" : "false");
+      });
+      if (tab === "workbench") setTimeout(onWindowResize, 40);
+    }
+
+    function synthesizeTote(setNums, motorRpm, separatioPct) {
+      const sets = setNums.map(sn => bySetNum.get(sn)).filter(Boolean).map(unpackSet);
+      const sum = k => sets.reduce((a, s) => a + (s[k] || 0), 0);
+      const totals = {
+        total_parts: sum("num_parts"),
+        gears: sum("gears"),
+        axles: sum("axles"),
+        pins_connectors: sum("pins_connectors"),
+        beams_liftarms: sum("beams_liftarms"),
+        hinges_turntables: sum("hinges_turntables"),
+        wheels_treads: sum("wheels_treads"),
+        pneumatics_motors: sum("pneumatics_motors"),
+        trans_neon_parts: sum("trans_neon_parts"),
+        slopes_wedges: sum("slopes_wedges"),
+        bricks_plates: sum("bricks_plates")
+      };
+
+      const years = sets.map(s => s.year).filter(y => y > 0);
+      const minY = years.length ? Math.min(...years) : 1990;
+      const maxY = years.length ? Math.max(...years) : 2026;
+      const rawWrappers = Math.max(32, Math.floor(totals.total_parts * 0.12));
+
+      const colorAcc = new Map();
+      sets.forEach(s => {
+        (s.top_colors || []).forEach(c => {
+          const hex = c.hex || (c.rgb ? "#" + c.rgb : "#F5C451");
+          const key = `${c.name || "Brick"}|${hex}|${c.trans || c.is_trans ? 1 : 0}`;
+          colorAcc.set(key, (colorAcc.get(key) || 0) + (c.qty || 10));
+        });
+      });
+      let mergedColors = Array.from(colorAcc.entries()).map(([k, qty]) => {
+        const [name, hex, tr] = k.split("|");
+        return {name, hex, trans: tr === "1", qty};
+      }).sort((a, b) => b.qty - a.qty).slice(0, 10);
+      if (!mergedColors.length) mergedColors = DEFAULT_COLORS;
+
+      const bestDonor = field => {
+        if (!sets.length) return "Warehouse Reserve";
+        const best = [...sets].sort((a, b) => ((b[field] || 0) - (a[field] || 0)) || (b.num_parts - a.num_parts))[0];
+        return `${best.set_num} ${best.name} (${best.year})`;
+      };
+      const donors = {
+        gearbox: bestDonor("gears"),
+        optics: bestDonor("trans_neon_parts"),
+        chassis: bestDonor("bricks_plates")
+      };
+
+      const blueprints = SEED_DATA.blueprints.map(bp => {
+        const reqEntries = Object.entries(bp.reqs || {});
+        const ratios = reqEntries.map(([k, need]) => Math.min(1, (totals[k] || 0) / Math.max(1, need)));
+        const matchPct = Math.round((ratios.reduce((a, b) => a + b, 0) / Math.max(1, ratios.length)) * 1000) / 10;
+        let totalRatio = 1.0;
+        let currRpm = motorRpm;
+        const stages = (bp.gear_train_spec || []).map(st => {
+          totalRatio *= st.ratio;
+          const nextRpm = currRpm / st.ratio;
+          const row = {...st, in_rpm: Number(currRpm.toFixed(1)), out_rpm: Number(nextRpm.toFixed(1))};
+          currRpm = nextRpm;
+          return row;
+        });
+        const eff = Math.pow(0.95, stages.length);
+        const torqueMult = Number((totalRatio * eff).toFixed(2));
+        return {
+          ...bp,
+          compatibility_pct: matchPct,
+          compound_ratio: Number(totalRatio.toFixed(2)),
+          output_rpm: Number(currRpm.toFixed(1)),
+          torque_multiplier: torqueMult,
+          stages,
+          donors
+        };
+      });
+
+      return {
+        sets,
+        totals,
+        year_range: `${minY}-${maxY}`,
+        raw_wrappers: rawWrappers,
+        separatio_pct: separatioPct,
+        merged_colors: mergedColors,
+        blueprints
+      };
+    }
+
+    function runSynthesize() {
+      const sep = parseFloat(document.getElementById("slider-separatio").value);
+      const rpm = parseFloat(document.getElementById("slider-rpm").value);
+      synthesisData = synthesizeTote(activeSetNums.length ? activeSetNums : SEED_DATA.presets[0].set_nums, rpm, sep);
+      renderActiveToteUI();
+      renderRightPanelUI();
+      rebuild3DScene();
+    }
+
+    function renderActiveToteUI() {
+      const cont = document.getElementById("active-tote-sets");
+      cont.innerHTML = "";
+      const accents = ["#2fe4ff", "#f5c451", "#ff4d6d", "#34e89e", "#b678ff", "#ff8c3b"];
+      synthesisData.sets.forEach((s, i) => {
+        const el = document.createElement("div");
+        el.className = "set-item";
+        el.style.borderLeft = `4px solid ${accents[i % accents.length]}`;
+        el.innerHTML = `
+          <div class="set-item-info">
+            <div class="set-item-title">${escapeHtml(s.set_num)} · ${escapeHtml(s.name)}</div>
+            <div class="set-item-meta">
+              <span>${s.year} (${escapeHtml(s.theme_name)})</span>
+              <span class="mini-tag">${s.num_parts} pcs</span>
+              <span class="mini-tag gold">${s.gears}G / ${s.axles}A</span>
+            </div>
+          </div>
+        `;
+        const remBtn = document.createElement("button");
+        remBtn.type = "button";
+        remBtn.className = "btn-small btn-remove";
+        remBtn.setAttribute("aria-label", `Remove ${s.set_num}`);
+        remBtn.textContent = "Remove";
+        remBtn.addEventListener("click", () => removeSetFromTote(s.set_num));
+        el.appendChild(remBtn);
+        cont.appendChild(el);
+      });
+    }
+
+    function renderRightPanelUI() {
+      const t = synthesisData.totals;
+      document.getElementById("tot-parts").textContent = t.total_parts.toLocaleString();
+      document.getElementById("tot-gears").textContent = t.gears.toLocaleString();
+      document.getElementById("tot-axles").textContent = t.axles.toLocaleString();
+      document.getElementById("tot-pins").textContent = t.pins_connectors.toLocaleString();
+      document.getElementById("tot-beams").textContent = t.beams_liftarms.toLocaleString();
+      document.getElementById("tot-hinges").textContent = t.hinges_turntables.toLocaleString();
+      document.getElementById("tot-neon").textContent = t.trans_neon_parts.toLocaleString();
+      document.getElementById("tot-wheels").textContent = (t.wheels_treads + t.pneumatics_motors).toLocaleString();
+
+      const swCont = document.getElementById("palette-swatches");
+      swCont.innerHTML = "";
+      synthesisData.merged_colors.slice(0, 8).forEach(c => {
+        const el = document.createElement("div");
+        el.className = "swatch";
+        el.innerHTML = `<span class="swatch-dot" style="background:${escapeAttr(c.hex)};"></span><span>${escapeHtml(c.name)}</span>`;
+        swCont.appendChild(el);
+      });
+
+      const bpCont = document.getElementById("blueprints-container");
+      bpCont.innerHTML = "";
+      if (activeBlueprintIdx >= synthesisData.blueprints.length) activeBlueprintIdx = 0;
+
+      synthesisData.blueprints.forEach((bp, idx) => {
+        const card = document.createElement("button");
+        card.type = "button";
+        card.className = "bp-card" + (idx === activeBlueprintIdx ? " active" : "");
+        const stageRows = bp.stages.map(st =>
+          `<tr><td>S${st.stage}: ${st.driver}T-${st.driven}T</td><td>${escapeHtml(st.type)}</td><td>${st.ratio}:1</td><td>${st.out_rpm}</td></tr>`
+        ).join("");
+        card.innerHTML = `
+          <img src="${escapeAttr(bp.image_url)}" alt="${escapeAttr(bp.name)}" loading="lazy" decoding="async">
+          <div class="bp-top">
+            <div class="bp-name">${escapeHtml(bp.name)}</div>
+            <div class="bp-score">${bp.compatibility_pct}% Match</div>
+          </div>
+          <div class="bp-cat">${escapeHtml(bp.category)} · ${bp.compound_ratio}:1 · ${bp.torque_multiplier}x Torque</div>
+          <div class="bp-desc">${escapeHtml(bp.summary)}</div>
+          <table class="gear-table">
+            <thead><tr><th>Mesh</th><th>Stage</th><th>Ratio</th><th>RPM</th></tr></thead>
+            <tbody>${stageRows}</tbody>
+          </table>
+          <div class="donor-box">Drive Donor: ${escapeHtml(bp.donors.gearbox)} · Optics: ${escapeHtml(bp.donors.optics)}</div>
+        `;
+        card.onclick = () => {
+          activeBlueprintIdx = idx;
+          renderRightPanelUI();
+          rebuild3DScene();
+        };
+        bpCont.appendChild(card);
+      });
+
+      updateHUDFromControls();
+    }
+
+    function updateHUDFromControls() {
+      if (!synthesisData || !synthesisData.blueprints.length) return;
+      const bp = synthesisData.blueprints[activeBlueprintIdx];
+      const sep = parseFloat(document.getElementById("slider-separatio").value);
+      const rpm = parseFloat(document.getElementById("slider-rpm").value);
+      const outRpm = (rpm / bp.compound_ratio).toFixed(1);
+      const remWrap = Math.round(synthesisData.raw_wrappers * Math.max(0, (100 - sep) / 100));
+
+      document.getElementById("hud-bp-title").textContent = bp.name;
+      document.getElementById("hud-bp-principle").textContent = bp.kinematic_principle;
+      document.getElementById("hud-ratio").textContent = `${bp.compound_ratio} : 1`;
+      document.getElementById("hud-out-rpm").textContent = `${outRpm} RPM`;
+      document.getElementById("hud-torque").textContent = `${bp.torque_multiplier}x`;
+      document.getElementById("hud-synergy").textContent = `${bp.compatibility_pct}%`;
+      document.getElementById("hud-tote-summary").textContent =
+        `${synthesisData.sets.length} Sets (${synthesisData.year_range}) · ${sep}% Sorted`;
+      document.getElementById("hud-pure-bricks").textContent = synthesisData.totals.total_parts.toLocaleString();
+      document.getElementById("hud-wrappers").textContent = remWrap.toLocaleString();
+    }
+
+    function debouncedSearch() {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(runSearch, 140);
+    }
+
+    function runSearch() {
+      const q = (document.getElementById("search-q").value || "").trim().toLowerCase();
+      const decade = document.getElementById("search-decade").value;
+      const mechOnly = document.getElementById("search-mech").checked;
+      const d0 = decade && decade.endsWith("s") ? parseInt(decade.slice(0, -1), 10) : 0;
+
+      const matches = [];
+      for (let i = 0; i < allSets.length; i++) {
+        const a = allSets[i];
+        if (d0 && (a[2] < d0 || a[2] > d0 + 9)) continue;
+        if (mechOnly && !(a[5] >= 2 || a[6] >= 4)) continue;
+        if (q) {
+          const tName = (themesMap[String(a[3])] || "").toLowerCase();
+          if (!a[1].toLowerCase().includes(q) && !a[0].toLowerCase().includes(q) && !tName.includes(q)) continue;
+        }
+        matches.push(a);
+        if (matches.length >= 40) break;
+      }
+
+      const cont = document.getElementById("search-results");
+      cont.innerHTML = "";
+      if (!matches.length) {
+        cont.innerHTML = `<div style="font-size:0.78rem;color:var(--muted);padding:8px;">No matching sets found for current filter.</div>`;
+        return;
+      }
+      matches.forEach(a => {
+        const s = unpackSet(a);
+        const inTote = activeSetNums.includes(s.set_num);
+        const row = document.createElement("div");
+        row.className = "set-item";
+        row.innerHTML = `
+          <div class="set-item-info">
+            <div class="set-item-title">${escapeHtml(s.set_num)} · ${escapeHtml(s.name)}</div>
+            <div class="set-item-meta">
+              <span>${s.year} · ${escapeHtml(s.theme_name)}</span>
+              <span class="mini-tag">${s.num_parts} pcs</span>
+              ${s.gears > 0 ? `<span class="mini-tag gold">${s.gears} gears</span>` : ""}
+              ${s.trans_neon_parts > 0 ? `<span class="mini-tag violet">${s.trans_neon_parts} trans</span>` : ""}
+            </div>
+          </div>
+        `;
+        const addBtn = document.createElement("button");
+        addBtn.type = "button";
+        addBtn.className = "btn-small";
+        addBtn.textContent = inTote ? "In Tote" : "+ Add";
+        addBtn.addEventListener("click", () => addSetToTote(s.set_num));
+        row.appendChild(addBtn);
+        cont.appendChild(row);
+      });
+    }
+
+    function addSetToTote(sn) {
+      if (!activeSetNums.includes(sn)) {
+        activeSetNums.push(sn);
+        runSynthesize();
+        runSearch();
+      }
+    }
+
+    function removeSetFromTote(sn) {
+      activeSetNums = activeSetNums.filter(x => x !== sn);
+      runSynthesize();
+      runSearch();
+    }
+
+    function clearTote() {
+      activeSetNums = [];
+      runSynthesize();
+      runSearch();
+    }
+
+    function scoopRandomTote() {
+      if (!allSets.length) return;
+      const mechPool = allSets.filter(a => a[4] >= 120 && (a[5] >= 4 || a[12] >= 8));
+      const pool = mechPool.length >= 20 ? mechPool : allSets;
+      const picks = [];
+      for (let i = 0; i < 4; i++) {
+        const item = pool[Math.floor(Math.random() * pool.length)];
+        if (item && !picks.includes(item[0])) picks.push(item[0]);
+      }
+      activeSetNums = picks;
+      document.querySelectorAll(".preset-btn").forEach(b => b.classList.remove("active"));
+      runSynthesize();
+      runSearch();
+    }
+
+    function exportBlueprintJSON() {
+      if (!synthesisData) return;
+      const blob = new Blob([JSON.stringify(synthesisData, null, 2)], {type: "application/json"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `NorthStar_Brick_Alchemy_Spec_${Date.now()}.json`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function escapeHtml(s) {
+      return String(s == null ? "" : s)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+    function escapeAttr(s) {
+      return escapeHtml(s).replace(/'/g, "&#39;");
+    }
+
+    // --- CAD STUDIO v2.2 ENGINE BRIDGE (POWERED BY /brick-alchemy/studio/cad-engine.js) ---
+    let cadEngine = null;
+
+    function syncControlsToCAD() {
+      if (!cadEngine) return;
+      const sep = parseFloat(document.getElementById("slider-separatio").value) / 100;
+      const rpm = parseFloat(document.getElementById("slider-rpm").value);
+      const exp = parseFloat(document.getElementById("slider-explode").value) / 100;
+      cadEngine.setControls({ separatio: sep, rpm, explode: exp, colorMode });
+    }
+
+    function onControlChange() {
+      const sep = document.getElementById("slider-separatio").value;
+      const rpm = document.getElementById("slider-rpm").value;
+      const exp = document.getElementById("slider-explode").value;
+      document.getElementById("val-separatio").textContent = `${sep}% Sorted`;
+      document.getElementById("val-rpm").textContent = `${rpm} RPM`;
+      document.getElementById("val-explode").textContent = `${exp}%`;
+      syncControlsToCAD();
+      updateHUDFromControls();
+    }
+
+    function toggleColorMode() {
+      colorMode = colorMode === "authentic" ? "provenance" : "authentic";
+      document.getElementById("btn-color-mode").textContent =
+        colorMode === "authentic" ? "Palette: Authentic" : "Palette: Donor Provenance";
+      syncControlsToCAD();
+      rebuild3DScene();
+    }
+
+    function toggleAutoOrbit() {
+      autoOrbit = !autoOrbit;
+      if (cadEngine) cadEngine.setAutoOrbit(autoOrbit);
+      const btn = document.getElementById("btn-auto-orbit");
+      btn.textContent = autoOrbit ? "Auto-Orbit: ON" : "Auto-Orbit: OFF";
+      btn.classList.toggle("active", autoOrbit);
+    }
+
+    function resetCamera() {
+      if (cadEngine) cadEngine.setView("iso");
+    }
+
+    function cadSetView(preset) {
+      if (!cadEngine) return;
+      autoOrbit = false;
+      const btn = document.getElementById("btn-auto-orbit");
+      if (btn) { btn.textContent = "Auto-Orbit: OFF"; btn.classList.remove("active"); }
+      cadEngine.setView(preset);
+    }
+
+    function cadSetProjection(mode) {
+      if (!cadEngine) return;
+      cadEngine.setProjection(mode);
+      document.getElementById("cad-proj-persp").classList.toggle("active", mode === "persp");
+      document.getElementById("cad-proj-ortho").classList.toggle("active", mode === "ortho");
+    }
+
+    function cadSetRenderMode(mode) {
+      if (!cadEngine) return;
+      cadEngine.setRenderMode(mode);
+    }
+
+    function cadSetTool(tool) {
+      if (!cadEngine) return;
+      cadEngine.setTool(tool);
+    }
+
+    function cadSelectPart(partKey) {
+      if (cadEngine) cadEngine.setBuilderPart(partKey);
+    }
+
+    function cadSelectColor(colorId) {
+      if (cadEngine) cadEngine.setBuilderColor(colorId);
+      document.querySelectorAll(".cad-color-btn").forEach(b => {
+        b.classList.toggle("active", Number(b.dataset.colorId) === Number(colorId));
+      });
+    }
+
+    function cadRotatePart() {
+      if (cadEngine) cadEngine.rotateBuilderPart();
+    }
+
+    function cadUndoCustom() {
+      if (cadEngine) cadEngine.undoCustomPart();
+    }
+
+    function cadClearCustom() {
+      if (cadEngine) cadEngine.clearCustomParts();
+    }
+
+    function cadSetStep(val) {
+      if (cadEngine) cadEngine.setBuildStep(Number(val));
+    }
+
+    function cadStepDelta(delta) {
+      if (cadEngine) cadEngine.stepDelta(delta);
+    }
+
+    function cadToggleStepPlay() {
+      if (cadEngine) cadEngine.toggleStepPlay();
+    }
+
+    function cadExportLDraw() {
+      if (cadEngine) cadEngine.exportLDraw();
+    }
+
+    function cadExportBrickLink() {
+      if (cadEngine) cadEngine.exportBrickLinkXML();
+    }
+
+    function cadExportCSV() {
+      if (cadEngine) cadEngine.exportRebrickableCSV();
+    }
+
+    function cadExportSnapshot() {
+      if (cadEngine) cadEngine.exportSnapshotPNG();
+    }
+
+    function cadTriggerImportLDraw() {
+      const inp = document.getElementById("cad-ldr-input");
+      if (inp) {
+        inp.value = "";
+        inp.click();
+      }
+    }
+
+    function cadLoadSampleLDraw() {
+      if (cadEngine) cadEngine.loadSampleLDraw();
+    }
+
+    function cadHandleLDrawFile(file) {
+      if (!file || !cadEngine) return;
+      const maxBytes = (window.BrickCAD && window.BrickCAD.MAX_IMPORT_BYTES) || (5 * 1024 * 1024);
+      if (typeof file.size === "number" && file.size > maxBytes) {
+        const selEl = document.getElementById("cad-selected-readout");
+        if (selEl) selEl.textContent = `File too large (${(file.size / (1024 * 1024)).toFixed(1)} MB). Max LDraw import size is ${Math.round(maxBytes / (1024 * 1024))} MB.`;
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        cadEngine.importLDrawText(String(reader.result || ""), file.name);
+      };
+      reader.readAsText(file);
+    }
+
+    function populateBuilderTray() {
+      if (!window.BrickCAD) return;
+      const sel = document.getElementById("cad-part-select");
+      if (sel && !sel.options.length) {
+        window.BrickCAD.BUILDER_PARTS.forEach(p => {
+          const opt = document.createElement("option");
+          opt.value = p.key;
+          opt.textContent = `${p.partNum} · ${p.name}`;
+          sel.appendChild(opt);
+        });
+      }
+      const swRow = document.getElementById("cad-color-swatches");
+      if (swRow && !swRow.children.length) {
+        window.BrickCAD.BUILDER_SWATCH_IDS.forEach(cid => {
+          const c = window.BrickCAD.LDRAW_COLORS[cid];
+          if (!c) return;
+          const b = document.createElement("button");
+          b.type = "button";
+          b.className = "cad-color-btn" + (cid === 297 ? " active" : "");
+          b.dataset.colorId = String(cid);
+          b.title = `${c.id} · ${c.name}`;
+          b.setAttribute("aria-label", `Select color ${c.name}`);
+          b.style.background = c.hex;
+          b.addEventListener("click", () => cadSelectColor(cid));
+          swRow.appendChild(b);
+        });
+      }
+    }
+
+    function init3DEngine() {
+      const container = document.getElementById("viewport-container");
+      const canvas = document.getElementById("webgl-canvas");
+      const fbCanvas = document.getElementById("fallback-canvas");
+
+      if (!window.BrickCAD) return;
+      populateBuilderTray();
+
+      cadEngine = window.BrickCAD.createEngine({
+        container,
+        canvas,
+        fallbackCanvas: fbCanvas,
+        onTelemetry(t) {
+          const el = document.getElementById("cad-dims-readout");
+          if (el) {
+            el.textContent = `CAD Model: ${t.partCount} pcs (${t.uniqueLots} BOM lots) · ${t.studsW}x${t.studsD}x${t.studsH} studs (${t.mmW}x${t.mmD}x${t.mmH} mm) · ~${t.grams} g`;
+          }
+        },
+        onPartSelected(p) {
+          const el = document.getElementById("cad-selected-readout");
+          if (!el) return;
+          if (!p) {
+            el.textContent = "Click any brick/gear to inspect LDraw ID & LDU coords";
+            return;
+          }
+          el.textContent = `Selected: ${p.partNum} (${p.partName}) · Color ${p.colorId} ${p.colorName} · Step ${p.step} · LDU (${p.lduX}, ${p.lduY}, ${p.lduZ})`;
+        },
+        onStepChange(st) {
+          const sl = document.getElementById("cad-step-slider");
+          const cnt = document.getElementById("cad-step-count");
+          const desc = document.getElementById("cad-step-desc");
+          const playBtn = document.getElementById("cad-step-play");
+          if (sl) { sl.max = String(st.maxStep); sl.value = String(st.currentStep); }
+          if (cnt) cnt.textContent = `Step ${st.currentStep}/${st.maxStep} (${st.visibleParts}/${st.totalParts} pcs)`;
+          if (desc) desc.textContent = st.description;
+          if (playBtn) {
+            playBtn.textContent = st.isPlaying ? "Pause Build" : "Auto-Build";
+            playBtn.classList.toggle("active", st.isPlaying);
+          }
+        },
+        onToolChange(info) {
+          document.getElementById("cad-tool-inspect").classList.toggle("active", info.tool === "inspect");
+          const pBtn = document.getElementById("cad-tool-place");
+          pBtn.classList.toggle("place-on", info.tool === "place");
+          const eBtn = document.getElementById("cad-tool-erase");
+          eBtn.classList.toggle("erase-on", info.tool === "erase");
+          const tray = document.getElementById("cad-builder-tray");
+          if (tray) tray.classList.toggle("open", info.tool === "place");
+          const rBtn = document.getElementById("cad-rotate-btn");
+          if (rBtn) rBtn.textContent = `Rotate 90 (${info.rotDeg} deg)`;
+        },
+        onRenderModeChange(mode) {
+          ["studio", "edges", "wireframe", "xray"].forEach(m => {
+            const b = document.getElementById(`cad-mode-${m}`);
+            if (b) b.classList.toggle("active", m === mode);
+          });
+        },
+        onImportComplete(info) {
+          const titleEl = document.getElementById("hud-bp-title");
+          const prinEl = document.getElementById("hud-bp-principle");
+          const selEl = document.getElementById("cad-selected-readout");
+          if (titleEl) titleEl.textContent = info.name;
+          if (prinEl) prinEl.textContent = `Imported LDraw (.ldr) · ${info.partCount} parts · ${info.steps} build steps (${info.mappedCount} sculpted, ${info.proxyCount} proxy)`;
+          if (selEl) {
+            const note = info.truncated ? ` (capped at ${window.BrickCAD.MAX_IMPORT_PARTS} parts)` : "";
+            selEl.textContent = `Imported ${info.name}: ${info.partCount} pcs across ${info.steps} steps${note}`;
+          }
+        },
+        onStatusMessage(msg) {
+          const selEl = document.getElementById("cad-selected-readout");
+          if (selEl && msg) selEl.textContent = msg;
+        }
+      });
+
+      const ldrInput = document.getElementById("cad-ldr-input");
+      if (ldrInput) {
+        ldrInput.addEventListener("change", ev => {
+          const f = ev.target.files && ev.target.files[0];
+          if (f) cadHandleLDrawFile(f);
+        });
+      }
+      if (container) {
+        container.addEventListener("dragover", ev => {
+          ev.preventDefault();
+          container.classList.add("drag-over");
+        });
+        container.addEventListener("dragleave", () => {
+          container.classList.remove("drag-over");
+        });
+        container.addEventListener("drop", ev => {
+          ev.preventDefault();
+          container.classList.remove("drag-over");
+          const f = ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files[0];
+          if (f && /\.(ldr|mpd|dat|txt)$/i.test(f.name)) {
+            cadHandleLDrawFile(f);
+          }
+        });
+      }
+
+      window.studioCadEngine = cadEngine;
+      cadEngine.init();
+      cadEngine.setAutoOrbit(autoOrbit);
+      syncControlsToCAD();
+    }
+
+    function rebuild3DScene() {
+      if (!cadEngine || !synthesisData || !synthesisData.blueprints.length) return;
+      const bp = synthesisData.blueprints[activeBlueprintIdx];
+      syncControlsToCAD();
+      cadEngine.rebuildScene(bp, synthesisData.merged_colors || []);
+    }
+
+    async function initApp() {
+      hydrateCatalog(SEED_DATA, false);
+
+      document.getElementById("stat-parts").textContent = SEED_DATA.stats.total_parts.toLocaleString();
+      document.getElementById("stat-themes").textContent = SEED_DATA.stats.total_themes.toLocaleString();
+
+      const pCont = document.getElementById("preset-container");
+      pCont.innerHTML = "";
+      SEED_DATA.presets.forEach((p, idx) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "preset-btn" + (idx === 0 ? " active" : "");
+        btn.dataset.presetId = p.id;
+        btn.innerHTML = `
+          <div class="p-title">${escapeHtml(p.name)}</div>
+          <div class="p-sub">${escapeHtml(p.subtitle)}</div>
+          <div class="p-desc">${escapeHtml(p.description)}</div>
+        `;
+        btn.onclick = () => {
+          document.querySelectorAll(".preset-btn").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          activeSetNums = [...p.set_nums];
+          runSynthesize();
+          runSearch();
+        };
+        pCont.appendChild(btn);
+      });
+
+      // Apply optional query params for shareable CAD views / showcase capture
+      const params = new URLSearchParams(window.location.search);
+      const qBp = params.get("blueprint");
+      if (qBp) {
+        const found = SEED_DATA.blueprints.findIndex(b => b.id === qBp || b.mechanism_type === qBp);
+        if (found >= 0) activeBlueprintIdx = found;
+      }
+      if (params.get("explode")) {
+        document.getElementById("slider-explode").value = params.get("explode");
+      }
+      if (params.get("rpm")) {
+        document.getElementById("slider-rpm").value = params.get("rpm");
+      }
+      if (params.get("orbit") === "1") autoOrbit = true;
+      if (params.get("orbit") === "0") autoOrbit = false;
+      onControlChange();
+
+      init3DEngine();
+      runSearch();
+      runSynthesize();
+
+      if (cadEngine) {
+        if (params.get("render")) cadSetRenderMode(params.get("render"));
+        if (params.get("proj")) cadSetProjection(params.get("proj"));
+        if (params.get("view")) cadSetView(params.get("view"));
+        if (params.get("step")) cadSetStep(params.get("step"));
+      }
+
+      // Async hydrate the complete 28,544-set historical database
+      try {
+        const resp = await fetch(FULL_CATALOG_URL);
+        if (resp.ok) {
+          const full = await resp.json();
+          hydrateCatalog(full, true);
+        }
+      } catch (err) {
+        document.getElementById("search-status").textContent =
+          `Offline seed active (${allSets.length} curated sets loaded).`;
+      }
+    }
+
+    window.addEventListener("DOMContentLoaded", initApp);
+
+  </script>
+</body>
+</html>

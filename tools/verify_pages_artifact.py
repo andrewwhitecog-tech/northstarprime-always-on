@@ -16,9 +16,8 @@ import pages_art_quality
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_ARTIFACT = ROOT / "output" / "pages-artifact"
-APP_ORIGIN = "https://app.northstarprime.net"
-APP_VIDEO_BASE = f"{APP_ORIGIN}/static/idc_video/"
-LOCAL_VIDEO_RE = re.compile(r"(?<!https://app\.northstarprime\.net)/static/idc_video/")
+RAW_VIDEO_RE = re.compile(r"https://raw\.githubusercontent\.com/andrewwhitecog-tech/northstarprime-always-on/[0-9a-f]{40}/static/idc_video/[^\"'\s<>)]*")
+LOCAL_VIDEO_RE = re.compile(r"(?<![0-9a-f]{8})/static/idc_video/")
 # 2026-11-06: curated artifact must stay under 500 MiB (deploy-pages sync timeout).
 RELEASE_GUARD_BYTES = 500_000_000
 FILE_LIMIT_BYTES = 100_000_000
@@ -155,13 +154,13 @@ def verify(artifact: Path, network: bool) -> dict:
             continue
         text = path.read_text(encoding="utf-8", errors="strict")
         relative = path.relative_to(artifact).as_posix()
-        if LOCAL_VIDEO_RE.search(text):
+        if "/static/idc_video/" in RAW_VIDEO_RE.sub("", text):
             local_video_refs.append(relative)
         if path.suffix.lower() == ".html" and re.search(
             r"(?:href|src|poster)\s*=\s*[\"'](?:file://|[A-Z]:\\)", text, re.IGNORECASE
         ):
             local_drive_refs.append(relative)
-        externalized_videos.update(re.findall(re.escape(APP_VIDEO_BASE) + r"[^\"'\s<>)]+", text))
+        externalized_videos.update(RAW_VIDEO_RE.findall(text))
         if path.suffix.lower() != ".html":
             continue
         parser = ReferenceParser()
@@ -220,15 +219,15 @@ def verify(artifact: Path, network: bool) -> dict:
         checks.append("all HTML href, src, and poster references resolve")
 
     services = (artifact / "services" / "index.html").read_text(encoding="utf-8") if (artifact / "services" / "index.html").is_file() else ""
-    if '<link rel="canonical" href="https://app.northstarprime.net/services">' not in services:
+    if '<link rel="canonical" href="https://northstarprime.net/hire/">' not in services:
         failures.append("Services bridge canonical is missing")
     if "utm_campaign=services_visibility" not in services:
         failures.append("Services bridge attribution is missing")
 
     if network:
         try:
-            if network_status(f"{APP_ORIGIN}/health") != 200:
-                failures.append("Canonical app health did not return 200")
+            if network_status("https://northstarprime.net/") != 200:
+                failures.append("Canonical apex homepage did not return 200")
             sample_urls = sorted(externalized_videos)[:3]
             for url in sample_urls:
                 if network_status(url) != 200:

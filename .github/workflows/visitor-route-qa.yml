@@ -28,13 +28,18 @@ jobs:
               p=ctx.new_page()
               def accessible_resources(r):
                   h=urlsplit(r.request.url).hostname or ''
-                  if r.request.method in ('GET','HEAD') and (h in ['andrewcog.gumroad.com','gumroad.com','assets.gumroad.com','assets.gumroad.net','public-files.gumroad.com','static-2.gumroad.com','static.gumroad.com']) and not any(x in r.request.url.lower() for x in ('telemetry','/tracking','analytics')):
+                  path=urlsplit(r.request.url).path
+                  if r.request.method in ('GET','HEAD') and ((h=='assets.gumroad.com' and path.startswith('/vite/assets/') and r.request.resource_type in ('script','stylesheet','font','other')) or (h in ('andrewcog.gumroad.com','gumroad.com') and (path=='/l/pshjy' or path.rstrip('/').endswith('/checkout')) and r.request.resource_type=='document')):
                       r.continue_()
                   else:r.abort()
               ctx.route('**/*',accessible_resources)
               p.goto('https://andrewcog.gumroad.com/l/pshjy',wait_until='domcontentloaded')
+              print('CHECKOUT_SOURCE',p.title(),p.url,flush=True)
               buy=p.get_by_text('I want this!',exact=True).first
-              buy.wait_for(state='visible',timeout=18000)
+              try:buy.wait_for(state='visible',timeout=18000)
+              except Exception:
+                  print('CHECKOUT_ENTRY_LIMIT',p.locator('body').inner_text()[-500:],flush=True)
+                  raise
               print('BILLING_ENTRY',buy.evaluate("e=>[e.tagName,e.closest('a')?.href,e.getAttribute('type')]"),flush=True)
               buy.click()
               p.wait_for_timeout(1800)

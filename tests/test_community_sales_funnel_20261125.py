@@ -12,7 +12,7 @@ import pytest
 from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-ROUTES = ["/community/", "/play/", "/store/", "/links/"]
+ROUTES = ["/", "/community/", "/play/", "/store/", "/links/"]
 FREE_SAMPLER_URL = "https://andrewcog.gumroad.com/l/northstar-2026-free-mega-sampler"
 
 
@@ -44,12 +44,17 @@ def static_site_url():
 
 
 def test_community_funnel_markup_and_links():
-    for rel in ("community/index.html", "play/index.html", "store/index.html", "links/index.html"):
+    for rel in ("index.html", "community/index.html", "play/index.html", "store/index.html", "links/index.html"):
         raw = (ROOT / rel).read_text(encoding="utf-8")
         assert not re.search(r"[\U00010000-\U0010ffff]", raw), f"Emoji found in {rel}"
         assert "patreon.com" not in raw.lower(), f"Retired Patreon link in {rel}"
         assert "redbubble.com" not in raw.lower(), f"Retired Redbubble link in {rel}"
         assert "/community/" in raw, f"Missing /community/ route in {rel}"
+
+    home = (ROOT / "index.html").read_text(encoding="utf-8")
+    assert "One app." not in home
+    assert "Welcome to NorthStar" in home
+    assert FREE_SAMPLER_URL in home
 
     comm = (ROOT / "community" / "index.html").read_text(encoding="utf-8")
     assert FREE_SAMPLER_URL in comm
@@ -61,6 +66,16 @@ def test_community_funnel_markup_and_links():
     assert "daily" not in comm.lower()
     assert "lossless" not in comm.lower()
     assert "email lock" not in comm.lower()
+    for social in (
+        "https://www.youtube.com/@northstarprimenet",
+        "https://www.tiktok.com/@northstarprimenet",
+        "https://x.com/xNorthstarprime",
+        "https://www.instagram.com/northstarprimenet/",
+        "https://www.pinterest.com/swagblackandrew/",
+        "https://www.facebook.com/61593232914654",
+        "https://www.twitch.tv/unclevorath420",
+    ):
+        assert social in comm, f"Missing active social link {social} on /community/"
 
     store_html = (ROOT / "store" / "index.html").read_text(encoding="utf-8")
     assert FREE_SAMPLER_URL in store_html
@@ -120,13 +135,37 @@ def test_community_interactive_portal_and_responsive_a11y(static_site_url):
             page.locator("#copy-community-invite").click()
             status_txt = page.locator("#invite-status").inner_text().strip()
             assert "Invite" in status_txt
+
+            # Share Studio preset switching, custom note & copy feedback
+            page.locator('.filter-btn[data-share="sampler"]').click()
+            page.locator("#share-custom-note").fill("Squad up at 8pm")
+            preview_txt = page.locator("#share-preview").inner_text().strip()
+            assert "7-PDF" in preview_txt and "Squad up at 8pm" in preview_txt
+            x_href = page.locator("#share-x-link").get_attribute("href") or ""
+            assert "Squad%20up%20at%208pm" in x_href
+            page.locator("#copy-share-btn").click()
+            page.wait_for_timeout(150)
+            share_status = page.locator("#share-status").inner_text().strip()
+            assert share_status
+
+            # Explorer Quest Checklist toggles, reload persistence & reset
+            page.locator('.quest-toggle[data-quest="sampler"]').click()
+            page.locator('.quest-toggle[data-quest="realm"]').click()
+            assert "2 of 6 quests completed" in page.locator("#quest-progress").inner_text()
+            page.reload(wait_until="load", timeout=60000)
+            assert "2 of 6 quests completed" in page.locator("#quest-progress").inner_text()
+            page.locator("#copy-quest-card").click()
+            page.wait_for_timeout(150)
+            assert "2 of 6" in page.locator("#quest-progress").inner_text()
+            page.locator("#reset-quests").click()
+            assert "0 of 6 quests completed" in page.locator("#quest-progress").inner_text()
             ctx.close()
 
-            # Forced-colors check on /community/ and /play/
+            # Forced-colors check on /, /community/, and /play/
             ctx_fc = browser.new_context(viewport={"width": 390, "height": 844}, forced_colors="active")
             ctx_fc.route(re.compile(r"^https?://(?!127\.0\.0\.1)"), lambda route, _req=None: route.abort())
             page_fc = ctx_fc.new_page()
-            for route in ("/community/", "/play/"):
+            for route in ("/", "/community/", "/play/"):
                 page_fc.goto(f"{static_site_url}{route}", wait_until="load", timeout=60000)
                 page_fc.evaluate("document.fonts && document.fonts.ready")
                 overflow = page_fc.evaluate("document.documentElement.scrollWidth > window.innerWidth")

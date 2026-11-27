@@ -47,6 +47,14 @@ async function checkCabinetKeys(browser, base) {
     assert.deepEqual(await page.evaluate(() => window.cabinetKeyEvents), [
       ['keydown', 'ArrowRight'], ['keyup', 'ArrowRight']
     ]);
+    await page.keyboard.down('ArrowLeft');
+    await page.locator('.nsp-aaa-dock [data-act="credits"]').click();
+    await credits.waitFor({state: 'visible'});
+    await page.keyboard.down('ArrowLeft');
+    await page.keyboard.up('ArrowLeft');
+    assert.deepEqual(await page.evaluate(() => window.cabinetKeyEvents.slice(2)), [
+      ['keydown', 'ArrowLeft'], ['keyup', 'ArrowLeft']
+    ]);
     console.log('PASS cabinet keyboard: marquee, focused credits, dismiss, repeat, release, fresh gameplay');
   } finally {
     await page.close();

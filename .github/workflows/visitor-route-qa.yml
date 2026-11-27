@@ -11,71 +11,68 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: 0848cbef8fca76f6fb806c65d35351015ece01f3
+          ref: 3da8a799bbbd3eb90d9188496f3b8a6f0a344a07
           sparse-checkout: |
-            arcade/custom
+            arcade/custom/kosher-lines
+            arcade/custom/crib-recovered-assets
+            static/vendor/three
+            static/fonts
+            tests
+            tools
           persist-credentials: false
       - run: python -m pip -q install playwright beautifulsoup4 pillow pytest requests
-
+      - name: Exercise gameplay and mechanics
+        run: node --test tests/kosher-*.test.mjs
       - name: Browser verification
         shell: python
         run: |
-          import requests,time
-          target='https://northstarprime.net/arcade/custom/xbla_blades_dashboard_omniverse.html'
-          for i in range(48):
-              r=requests.get(target+'?catalog_release='+str(int(time.time())),timeout=20)
-              if r.ok and 'data-unreleased-game=' in r.text: break
-              time.sleep(12)
-          else: raise AssertionError('Dashboard deployment did not propagate')
           from pathlib import Path
-          from urllib.parse import urljoin,urlsplit
-          from bs4 import BeautifulSoup
+          import sys
+          sys.path.insert(0,'tools')
+          import build_pages_artifact as build
+          eligible=list(build.iter_source_files())
+          for root in ['arcade/custom/kosher-lines','arcade/custom/crib-recovered-assets']:
+              tracked=list(Path(root).rglob('*'))
+              assert any(p.is_file() for p in tracked)
+              assert not any(rel.is_relative_to(root) for _,rel in eligible)
+              print('PAGES EXCLUSION',root,flush=True)
+          import http.server,threading,json,time,base64,io
           from playwright.sync_api import sync_playwright
-          from concurrent.futures import ThreadPoolExecutor
-          import requests
-          preview=False
-          path='arcade/custom/xbla_blades_dashboard_omniverse.html'
-          url='https://northstarprime.net/'+path
-          html=Path(path).read_bytes() if preview else requests.get(url,timeout=20).content
-          s=BeautifulSoup(html,'html.parser')
-          games=s.select('.game-card[data-game]'); held=s.select('.game-card[data-unreleased-game]')
-          assert len(games)==7 and len(held)==15
-          def status(x):
-              target=x.get('data-game') or x['data-unreleased-game']
-              result=requests.get(urljoin(url,target),timeout=25)
-              assert result.status_code==(200 if x.has_attr('data-game') else 404),(target,result.status_code)
-          with ThreadPoolExecutor(max_workers=3) as pool:list(pool.map(status,games+held))
+          from PIL import Image,ImageDraw
+          class Quiet(http.server.SimpleHTTPRequestHandler):
+              def log_message(self,*args): pass
+          h=http.server.ThreadingHTTPServer(('127.0.0.1',0),Quiet)
+          threading.Thread(target=h.serve_forever,daemon=True).start()
+          sheet=Image.new('RGB',(640,490),'#171717')
           with sync_playwright() as p:
-              b=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu','--mute-audio'])
-              for w in (390,1280):
-                  page=b.new_page(viewport={'width':w,'height':840},reduced_motion='reduce')
-                  page.add_init_script("""window.padButtons=Array.from({length:17},()=>({pressed:false}));Object.defineProperty(navigator,'getGamepads',{value:()=>[{id:'QA emulated pad',buttons:window.padButtons}]})""")
-                  if preview: page.route(url,lambda route:route.fulfill(content_type='text/html',body=html))
-                  page.goto(url,wait_until='domcontentloaded')
-                  active=page.locator('.game-card[data-game]')
-                  col=active.first.evaluate("e=>getComputedStyle(e.parentElement).gridTemplateColumns.split(' ').length")
-                  assert col==(1 if w==390 else 2),(w,col)
-                  page.keyboard.press('ArrowDown')
-                  assert active.nth(col).evaluate("e=>e.classList.contains('focused')")
-                  page.keyboard.press('ArrowUp')
-                  assert active.first.evaluate("e=>e.classList.contains('focused')")
-                  def button(n):
-                      page.evaluate('n=>window.padButtons[n].pressed=true',n)
-                      page.evaluate('()=>new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done)))')
-                      page.evaluate('n=>window.padButtons[n].pressed=false',n)
-                      page.evaluate('()=>new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done)))')
-                  button(13);assert active.nth(col).evaluate("e=>e.classList.contains('focused')")
-                  button(12);assert active.first.evaluate("e=>e.classList.contains('focused')")
-                  dest=urljoin(url,active.first.get_attribute('data-game'))
-                  with page.expect_response(lambda r:r.url==dest) as nav: page.keyboard.press('Enter')
-                  assert nav.value.status==200 and page.locator('#game-modal').evaluate("e=>e.classList.contains('active')")
-                  page.get_by_role('button',name='EXIT GAME [B]').click()
-                  disabled=page.locator('.game-card[aria-disabled="true"]').first
-                  disabled.scroll_into_view_if_needed()
-                  assert disabled.locator('.launch-badge').inner_text().strip().casefold()=='unavailable'
-                  pos=disabled.bounding_box();page.mouse.click(pos['x']+pos['width']/2,pos['y']+pos['height']/2)
-                  assert page.locator('#game-frame').get_attribute('src')=='about:blank'
-                  print('CATALOG',w,col,'columns, 7 playable URLs, 15 unavailable records, real keyboard launch',flush=True)
+              b=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'])
+              for width,height,mobile in [(1280,800,False),(390,844,True)]:
+                  page=b.new_page(viewport={'width':width,'height':height},is_mobile=mobile,has_touch=mobile)
+                  errors=[];failed=[]
+                  page.on('pageerror',lambda e:errors.append(str(e)))
+                  page.on('response',lambda r:failed.append([r.status,r.url.split('/')[-1]]) if r.status>=400 else None)
+                  page.goto(f'http://127.0.0.1:{h.server_port}/arcade/custom/kosher-lines/?mode=rival')
+                  page.wait_for_function('()=>{let s=window.__KOSHER_LINES__?.snapshot();return s?.renderer.modelLoaded&&s.renderer.city.npcRigs.loaded&&s.action.enabled}',timeout=90000)
+                  d=page.locator('summary',has_text='Your deck & graphics')
+                  (d.tap if mobile else d.click)()
+                  page.select_option('#quality','low')
+                  (d.tap if mobile else d.click)()
+                  start=page.locator('#start')
+                  (start.tap if mobile else start.click)()
+                  canvas=page.locator('#plaza')
+                  canvas.evaluate("c=>c.scrollIntoView({block:'center'})")
+                  assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
+                  if not mobile:
+                      page.keyboard.down('ArrowUp');page.wait_for_timeout(1200);page.keyboard.up('ArrowUp')
+                  frame=Image.open(io.BytesIO(canvas.screenshot(timeout=45000))).convert('RGB')
+                  frame.thumbnail((400,270) if not mobile else (235,360))
+                  assert len(frame.resize((60,45)).getcolors(2701))>30
+                  sheet.paste(frame,(0,20) if not mobile else (403,20))
+                  print('KOSHER',width,frame.size,errors,failed,flush=True)
+                  assert not errors and not failed
                   page.close()
               b.close()
-          
+          buf=io.BytesIO();sheet.crop((0,0,640,300)).save(buf,format='JPEG',quality=70)
+          data=base64.b64encode(buf.getvalue()).decode()
+          for i in range(0,len(data),2500):print('FRAME '+data[i:i+2500])
+          h.shutdown()

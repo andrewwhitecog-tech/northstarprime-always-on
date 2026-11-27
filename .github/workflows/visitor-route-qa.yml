@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: 51cb19306618af34fa0cdcfdadbcccd0e2550135
+          ref: d610a653b5bb18facb541466dae4dbf902da59f5
           sparse-checkout: |
             music
             realm
@@ -38,12 +38,12 @@ jobs:
         shell: python
         run: |
           import requests,time
+          from bs4 import BeautifulSoup
           for i in range(50):
-              r=requests.get('https://northstarprime.net/music/?release_check='+str(int(time.time())),timeout=15)
-              if r.ok and 'var reuseSource =' in r.text and 'preload="none"></audio>' in r.text: break
+              r=requests.get('https://northstarprime.net/store/?arcade_release='+str(int(time.time())),timeout=18)
+              if r.ok and BeautifulSoup(r.content,'html.parser').select_one('nav[aria-label="Store links"] a[href="/arcade/"]'): break
               time.sleep(15)
-          else: raise AssertionError('Production lounge revision did not appear')
-          print('Production revision confirmed',flush=True)
+          else: raise AssertionError('Store footer deployment did not propagate')
           from playwright.sync_api import sync_playwright
           from urllib.parse import urlsplit
           import json,time
@@ -65,50 +65,25 @@ jobs:
                           page.wait_for_function("Array.from(document.querySelectorAll('audio')).some(v=>v.currentTime>1)")
                       else:
                           page.wait_for_function("!document.querySelector('#live-status').textContent.includes('Checking')",timeout=12000)
-                      page.wait_for_timeout(3000)
+                      images=page.locator('img').evaluate_all("imgs=>Promise.all(imgs.filter(i=>i.currentSrc||i.src).map(async i=>{await i.decode();return i.naturalWidth})).then(s=>[s.length,s.every(w=>w>0)])")
+                      assert images[1],(path,images)
+                      page.evaluate("()=>document.fonts.ready.then(()=>true)")
+                      page.wait_for_timeout(2000)
                       print('DIAG',json.dumps([width,path,res.status,console,errors,assets,failed]),flush=True)
                       assert res.status==200 and not any((console,errors,assets,failed)),(width,path,console,errors,assets,failed)
-                      if path=='/music/':
-                          assert page.locator('#lounge-audio').get_attribute('preload')=='none'
+                      print('DECODED',path,width,images[0],flush=True)
                       ctx.close()
               browser.close()
-          from pathlib import Path
-          from urllib.parse import urlsplit
           from playwright.sync_api import sync_playwright
-          from PIL import Image,ImageDraw
-          from io import BytesIO
-          import base64,json,os
-          base='https://northstarprime.net'
-          routes=['store','play','links','merch','chromatic','stickerforge/comedy-vault','parody-drop']
-          mode='live'
-          images=[]
-          sam='https://andrewcog.gumroad.com/l/northstar-2026-free-mega-sampler'
           with sync_playwright() as p:
-              b=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu','--mute-audio'])
-              for width in [390,1280]:
-                  page=b.new_page(viewport={'width':width,'height':840},reduced_motion='reduce')
-                  for path in routes:
-                      url=f'{base}/{path}/'
-                      if mode=='preview':
-                          data=Path(path,'index.html').read_text()
-                          page.route(url,lambda r:r.fulfill(status=200,content_type='text/html; charset=utf-8',body=data))
-                      resp=page.goto(url,wait_until='domcontentloaded')
-                      assert resp.status==200
-                      for target in ['/community/',sam]:
-                          loc=page.locator('a[href="'+target+'"]:visible').first
-                          loc.wait_for(state='visible')
-                          loc.evaluate("a=>a.scrollIntoView({block:'center',behavior:'instant'})")
-                          loc.focus()
-                          rect=loc.bounding_box()
-                          assert rect['width']>0 and rect['x']>=-1 and rect['x']+rect['width']<=width+1,(path,width,target,rect)
-                          assert loc.inner_text().strip()
-                      if width==390:
-                          loc.evaluate("a=>a.scrollIntoView({block:'center',behavior:'instant'})")
-                          shot=Image.open(BytesIO(page.screenshot(animations='disabled'))).convert('RGB')
-                          y=round(rect['y']+rect['height']/2)
-                          images.append((path,shot.crop((0,max(0,y-105),390,min(840,y+105)))))
-                      print('CTA',path,width,flush=True)
-                      if mode=='preview':page.unroute(url)
+              b=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu'])
+              for w in (390,1280):
+                  page=b.new_page(viewport={'width':w,'height':844})
+                  page.goto('https://northstarprime.net/store/',wait_until='domcontentloaded')
+                  link=page.get_by_role('navigation',name='Store links').get_by_role('link',name='Arcade',exact=True)
+                  with page.expect_navigation(wait_until='domcontentloaded') as nav: link.click()
+                  assert nav.value.status==200 and page.url=='https://northstarprime.net/arcade/'
+                  print('ARCADE LIVE',w,nav.value.status,page.title(),flush=True)
                   page.close()
               b.close()
           

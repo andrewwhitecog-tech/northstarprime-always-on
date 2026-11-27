@@ -1,0 +1,131 @@
+name: Check NorthStar release routes
+on:
+  push:
+    branches: [qa/340-347-343-live-release]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    env:
+      TEST_MODE: realm-music
+      TEST_BASE: http://127.0.0.1:8127
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 6a0041ed66d7846af20c27b879fb7913959cb426
+          persist-credentials: false
+          sparse-checkout: |
+            music
+            realm
+            minecraft
+            static/front
+            static/idc_covers
+            static/idg
+            static/games
+            static/css
+            static/js
+            games/assets
+            arcade/custom
+            comics
+            contact
+            literature
+            idc-programming
+            tools
+            tests
+      - run: python -m pip -q install playwright pillow pytest beautifulsoup4
+      - run: python -m playwright install chromium
+      - name: Run applicable regression and painted-control guards
+        if: true
+        run: |
+          python -m pytest -q tests/test_alwayson_11routes_core_player_xbla_realm_fc_20261120.py
+          for width in 390 1280; do
+            python tools/flat_control_scan.py --root . --page /music/ --page /realm/ --width "$width" --height 844 --settle 450 --out "$RUNNER_TEMP/flat-$width"
+          done
+      - name: Start candidate preview
+        run: python -m http.server 8127 --bind 127.0.0.1 > "$RUNNER_TEMP/preview.log" 2>&1 &
+      - name: Verify controls and capture mobile and desktop views
+        shell: python
+        run: |
+          import base64, io, json, os, re
+          from urllib.parse import urlsplit
+          from PIL import Image, ImageDraw
+          from playwright.sync_api import sync_playwright
+          base=os.environ['TEST_BASE'].rstrip('/')
+          mode=os.environ['TEST_MODE']
+          shots=[]
+          with sync_playwright() as pw:
+              browser=pw.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu','--mute-audio'])
+              for width,height in [(390,844),(1280,800)]:
+                  page=browser.new_page(viewport={'width':width,'height':height},reduced_motion='reduce')
+                  def visit(route):
+                      res=page.goto(base+route, wait_until='domcontentloaded')
+                      assert res and res.status==200,(route,res)
+                      page.wait_for_function('document.readyState!=="loading"')
+                  def picture(route):
+                      assert page.evaluate('Math.max(document.body.scrollWidth,document.documentElement.scrollWidth)')<=width,(route,width)
+                      raw=page.screenshot(timeout=12000,animations='disabled')
+                      im=Image.open(io.BytesIO(raw)).convert('RGB')
+                      im.thumbnail((512,420))
+                      shots.append((route+' '+str(width),im))
+                  if mode=='realm-music':
+                      visit('/realm/')
+                      assert page.locator('#live-status').count()==1
+                      assert page.locator('a[href="#bedrock"]').count()
+                      assert page.locator('img[src*="mushroom-island"]').evaluate('(i)=>i.decode().then(()=>i.naturalWidth>0)')
+                      picture('/realm/')
+                      page.route('**/api.mcsrvstat.us/**',lambda r:r.fulfill(json={'online':False}))
+                      visit('/realm/')
+                      page.wait_for_function('document.querySelector("#live-status").textContent.includes("offline")')
+                      page.unroute('**/api.mcsrvstat.us/**')
+                      page.route('**/api.mcsrvstat.us/**',lambda r:r.fulfill(json={'online':True,'players':{'online':0}}))
+                      visit('/minecraft/')
+                      page.wait_for_function('document.querySelector("#live-status").textContent.includes("0 players")')
+                      assert '100' not in page.locator('#live-status').inner_text()
+                      visit('/music/')
+                      page.wait_for_selector('.play-track-btn')
+                      picture('/music/')
+                      page.evaluate("window.retries=0;HTMLMediaElement.prototype.play=function(){window.retries++;return Promise.reject(new DOMException('blocked','NotAllowedError'))}")
+                      page.locator('#hero-play-beats').click()
+                      page.wait_for_function('document.querySelector("#btn-play").textContent==="Retry track"')
+                      assert 'Retry' in page.locator('#playback-status').inner_text()
+                      page.locator('#btn-play').click()
+                      assert page.evaluate('window.retries')>=2
+                      page.locator('#track-search').fill('unmatched-name-zzzzzz')
+                      assert page.locator('#btn-next').is_disabled() and page.locator('#btn-prev').is_disabled()
+                  elif mode=='sugar':
+                      visit('/idc-programming/')
+                      btn=page.get_by_role('button',name=re.compile('Sugar Fuzz Monolith'))
+                      btn.evaluate("b=>b.scrollIntoView({block:'center',behavior:'instant'})")
+                      btn.click()
+                      assert 'Pink guitar' in page.locator('#idc-theater-sub').inner_text()
+                      assert 'Translucent Desert Obelisk' not in page.content()
+                      assert 'idc_sugar_fuzz_monolith_720p.mp4' in page.locator('#idc-theater-source').get_attribute('src')
+                      if base.startswith('https'):
+                          page.wait_for_function('document.querySelector("#idc-theater-player").readyState>=2')
+                          page.locator('#idc-theater-player').evaluate('v=>{v.muted=true;v.currentTime=30;v.play()}')
+                          page.wait_for_function('document.querySelector("#idc-theater-player").currentTime>31')
+                      picture('/idc-programming/')
+                  elif mode=='arcade':
+                      for route,sel in [('/arcade/','.game-card'),('/games/','.world-card')]:
+                          visit(route)
+                          results=page.locator(sel).evaluate_all("""async cards=>Promise.all(cards.map(async c=>{const i=c.querySelector('img');if(!i)return false;i.loading='eager';try{await i.decode();return i.naturalWidth>0}catch{return false}}))""")
+                          assert len(results)>=(65 if route=='/arcade/' else 8) and all(results),(route,len(results),results.count(False))
+                          print('decoded card art',route,len(results),width,flush=True)
+                          picture(route)
+                  page.close()
+              browser.close()
+          sheet=Image.new('RGB',(max(im.width for _,im in shots),sum(im.height+20 for _,im in shots)),(25,25,25))
+          draw=ImageDraw.Draw(sheet)
+          y=0
+          for name,im in shots:
+              draw.text((2,y+2),name,fill='white')
+              sheet.paste(im,(0,y+18))
+              y+=im.height+20
+          f=io.BytesIO()
+          sheet.save(f,format='JPEG',quality=73)
+          encoded=base64.b64encode(f.getvalue()).decode()
+          for i in range(0,len(encoded),3000):
+              print("VISUAL_DATA "+encoded[i:i+3000])
+          print('Verified',mode,base,'desktop and mobile')

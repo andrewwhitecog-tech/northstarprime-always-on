@@ -1,0 +1,60 @@
+name: NorthStar visitor route checks
+on:
+  push:
+    branches: [qa/visitor-release-20261127]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 3b0164f1b7323825b645de2eb4cee35b6f815ff5
+          sparse-checkout: |
+            store
+            play
+            links
+            merch
+            chromatic
+            stickerforge
+            parody-drop
+            community
+            idc-programming
+            tools
+            tests
+            static/front
+            static/cards
+            warband/art
+          persist-credentials: false
+      - run: python -m pip -q install playwright beautifulsoup4 pillow pytest requests
+
+      - name: Browser verification
+        shell: python
+        run: |
+          from playwright.sync_api import sync_playwright
+          from urllib.parse import urlsplit
+          import json,time
+          with sync_playwright() as p:
+              browser=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu','--mute-audio'])
+              for width,height in [(390,844),(1280,800)]:
+                  for path in ['/music/','/realm/']:
+                      ctx=browser.new_context(viewport={'width':width,'height':height})
+                      page=ctx.new_page()
+                      console=[]; errors=[]; assets=[]; failed=[]
+                      page.on('console',lambda m:console.append([m.text[:280],m.location.get('url','').split('?')[0]]) if m.type=='error' else None)
+                      page.on('pageerror',lambda e:errors.append(str(e)))
+                      page.on('response',lambda r: assets.append([r.status,r.url.split('?')[0]]) if r.status>=400 else None)
+                      page.on('requestfailed',lambda r:failed.append([r.failure,r.resource_type,r.url.split('?')[0]]) )
+                      res=page.goto('https://northstarprime.net'+path,wait_until='load',timeout=45000)
+                      page.locator('img').evaluate_all("xs=>xs.forEach(x=>x.loading='eager')")
+                      if path=='/music/':
+                          page.locator('#hero-play-beats').click()
+                          page.wait_for_function("Array.from(document.querySelectorAll('audio')).some(v=>v.currentTime>1)")
+                      else:
+                          page.wait_for_function("!document.querySelector('#live-status').textContent.includes('Checking')",timeout=12000)
+                      page.wait_for_timeout(3000)
+                      print('DIAG',json.dumps([width,path,res.status,console,errors,assets,failed]),flush=True)
+                      ctx.close()
+              browser.close()

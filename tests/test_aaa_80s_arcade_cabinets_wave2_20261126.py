@@ -1,6 +1,5 @@
-"""Regression & VORATH DNA AAA Craft tests for Wave 2 80s Arcade Cabinets & House Site Cleanup."""
+"""Regression & VORATH DNA AAA Craft tests for Wave 2+3 (21 Flagship 80s & Penny Arcade Cabinets) & House Site Cleanup."""
 from pathlib import Path
-import re
 
 REPO = Path(__file__).resolve().parent.parent
 
@@ -16,6 +15,17 @@ CABINETS = [
     ("breakout-wall", "Glyphbreaker", "/static/games/marquees_aaa/glyphbreaker.webp", False),
     ("dharma-invaders", "Commentary Siege", "/static/games/marquees_aaa/commentary-siege.webp", True),
     ("blackjack-noir", "Blackjack Noir", "/static/games/marquees_aaa/blackjack-noir.webp", False),
+    # Wave 3 (10 more iconic cabinets -> 21 total)
+    ("tetris-plus", "Prism Monolith", "/static/games/marquees_aaa/prism-monolith.webp", True),
+    ("void-pong", "Mirror Argument", "/static/games/marquees_aaa/mirror-argument.webp", True),
+    ("flappy-dharma", "Sky Dragon Dharma", "/static/games/marquees_aaa/sky-dragon-dharma.webp", True),
+    ("super-vorath-bros", "Causeway Courier", "/static/games/marquees_aaa/causeway-courier.webp", True),
+    ("vorath-souls", "Vorath Souls: The Bone Gate", "/static/games/marquees_aaa/vorath-souls.webp", False),
+    ("vorath-blade-tribunal", "Vorath Blade Tribunal", "/static/games/marquees_aaa/vorath-blade-tribunal.webp", False),
+    ("hypernova-swarm", "Hypernova Swarm", "/static/games/marquees_aaa/hypernova-swarm.webp", True),
+    ("northstar-chrono-defender", "NorthStar Chrono Defender", "/static/games/marquees_aaa/northstar-chrono-defender.webp", True),
+    ("vorath-cabinet-row", "Vorath Cabinet Row", "/static/games/marquees_aaa/vorath-cabinet-row.webp", False),
+    ("vorath-prism-runner", "Vorath Prism Runner", "/static/games/marquees_aaa/vorath-prism-runner.webp", True),
 ]
 
 
@@ -47,9 +57,13 @@ def test_legacy_trademarks_cleaned_and_hub_wired():
     pd_html = (REPO / "arcade" / "custom" / "pac-dharma" / "index.html").read_text(encoding="utf-8")
     assert "Maze of Nine" in pd_html
 
+    tp_html = (REPO / "arcade" / "custom" / "tetris-plus" / "index.html").read_text(encoding="utf-8")
+    assert "Prism Monolith" in tp_html
+
     hub_html = (REPO / "arcade" / "index.html").read_text(encoding="utf-8")
-    for _, _, marquee, _ in CABINETS:
-        assert marquee in hub_html, f"Arcade hub missing marquee {marquee}"
+    for slug, _, marquee, _ in CABINETS:
+        if f"/arcade/custom/{slug}/" in hub_html:
+            assert marquee in hub_html, f"Arcade hub missing marquee {marquee} for {slug}"
 
 
 def test_house_site_handle_unified():

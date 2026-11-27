@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: 5ea94cc9a0d68ab7cb7d3bafe364f8ebf46e1bba
+          ref: 837ea7dc5e49cb126a92e9ef9d8d407e7f5b46ed
           sparse-checkout: |
             music
             realm
@@ -33,63 +33,30 @@ jobs:
             warband/art
           persist-credentials: false
       - run: python -m pip -q install playwright beautifulsoup4 pillow pytest requests
-      - run: git sparse-checkout add pnw-lost-tables-2020 raven-and-rose-1883
+
       - name: Browser verification
         shell: python
         run: |
           from pathlib import Path
-          from urllib.parse import urljoin,urlsplit,parse_qs
+          from urllib.parse import urlsplit
+          import json
+          import requests
           from bs4 import BeautifulSoup
           from playwright.sync_api import sync_playwright
-          import requests
-          base='https://northstarprime.net'
-          preview=True
-          routes={'pnw-lost-tables-2020':20,'raven-and-rose-1883':4}
+          url='https://andrewcog.gumroad.com/l/ouklmz'
+          r=requests.get(url,timeout=20)
+          r.raise_for_status()
+          product=json.loads(BeautifulSoup(r.content,'html.parser').select_one('[data-page]')['data-page'])['props']['product']
+          assert product['is_published'] and product['price_cents']==0 and product['currency_code']=='usd'
           with sync_playwright() as p:
-              browser=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu'])
-              for width in (390,1280):
-                  page=browser.new_page(viewport={'width':width,'height':850},reduced_motion='reduce')
-                  errors=[]
-                  page.on('pageerror',lambda err:errors.append(str(err)))
-                  if preview:
-                      def candidate_document(r):
-                          route=urlsplit(r.request.url).path.strip('/')
-                          r.fulfill(content_type='text/html',body=Path(route+'/index.html').read_bytes())
-                      for route in [*routes,'store']:
-                          page.route(base+'/'+route+'/',candidate_document)
-                  page.goto(base+'/store/',wait_until='domcontentloaded')
-                  shelf=page.locator('a[href="/pnw-lost-tables-2020/"]').filter(has_text='Physical order inquiries').first
-                  assert shelf.count()==1
-                  shelf.click()
-                  for route,expected in routes.items():
-                      page.goto(base+'/'+route+'/',wait_until='domcontentloaded')
-                      cards=page.locator('article[data-wave]')
-                      assert cards.count()==expected
-                      assert page.locator('a[download]').count()>0
-                      offers=[]
-                      for card in cards.all():
-                          link=card.get_by_role('link',name='Ask about a physical order',exact=False)
-                          assert link.is_visible()
-                          link.scroll_into_view_if_needed()
-                          pos=link.bounding_box()
-                          assert pos and pos['x']>=0 and pos['x']+pos['width']<=width+1,pos
-                          src=link.get_attribute('href')
-                          import re
-                          sku=re.search(r'PNW-\d+',card.locator('.eyebrow').inner_text())[0]
-                          query=parse_qs(urlsplit(src).query)
-                          assert sku in query['subject'][0] and card.locator('h3').inner_text() in query['body'][0]
-                          offers.append(src)
-                      for index,src in enumerate(offers):
-                          if index==0:
-                              cards.first.get_by_role('link',name='Ask about a physical order',exact=False).click()
-                          else:
-                              page.goto(urljoin(base,src),wait_until='domcontentloaded')
-                          page.wait_for_load_state('domcontentloaded')
-                          page.wait_for_function("() => document.querySelector('#subject-preview')?.textContent === new URLSearchParams(location.search).get('subject')",timeout=10000)
-                          draft=urlsplit(page.locator('#draft-link').get_attribute('href'))
-                          assert draft.scheme=='mailto' and draft.path=='contact@northstarprime.net'
-                          assert parse_qs(draft.query)==parse_qs(urlsplit(src).query),(page.url,src,draft)
-                      print('GALLERY',route,width,len(offers),'physical product drafts and free PDF link verified',flush=True)
-                  assert not errors,errors
+              b=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu'])
+              for route,width in [('store',1280),('links',390)]:
+                  page=b.new_page(viewport={'width':width,'height':850})
+                  site='https://northstarprime.net/'+route+'/'
+                  page.route(site,lambda r:r.fulfill(content_type='text/html',body=Path(route+'/index.html').read_bytes()))
+                  page.goto(site,wait_until='domcontentloaded')
+                  link=page.get_by_role('link',name='Leave a tip',exact=False)
+                  assert link.count()==1 and link.is_visible() and link.get_attribute('href').split('?')[0]==url
+                  print('TIP',route,width,product['price_cents'],link.inner_text(),flush=True)
                   page.close()
-              browser.close()
+              b.close()

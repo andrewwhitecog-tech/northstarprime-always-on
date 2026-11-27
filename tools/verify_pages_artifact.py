@@ -25,12 +25,15 @@ TEXT_SUFFIXES = {".html", ".css", ".js", ".json", ".xml", ".txt", ".webmanifest"
 
 
 class ReferenceParser(HTMLParser):
-    def __init__(self):
+    def __init__(self, *, dashboard: bool = False):
         super().__init__(convert_charrefs=True)
+        self.dashboard = dashboard
         self.references: list[str] = []
 
     def handle_starttag(self, tag, attrs):
         values = dict(attrs)
+        if self.dashboard and "game-card" in (values.get("class") or "").split() and values.get("data-game"):
+            self.references.append(values["data-game"])
         for name in ("href", "src", "poster"):
             value = values.get(name)
             if value:
@@ -167,7 +170,7 @@ def verify(artifact: Path, network: bool) -> dict:
         externalized_videos.update(RAW_VIDEO_RE.findall(text))
         if path.suffix.lower() != ".html":
             continue
-        parser = ReferenceParser()
+        parser = ReferenceParser(dashboard=relative == "arcade/custom/xbla_blades_dashboard_omniverse.html")
         parser.feed(text)
         for reference in parser.references:
             ref = reference.strip()

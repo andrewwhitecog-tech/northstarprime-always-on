@@ -16,7 +16,7 @@ def test_holidays_winter_lead_and_lookbook():
     assert "Yule Dynasty Wave-Knit Concept Study" in html
     assert "Not On Sale" in html
     assert 'id="holiday-tarot-relic-gifts"' in html
-    assert "/assets/holiday_coogi_20261127/H01_Yule_Dynasty_Wave_Knit_Pullover.webp" in html
+    assert "/assets/holiday_waveknit_20261127/H01_Yule_Dynasty_Wave_Knit_Pullover.webp" in html
     assert "H04_Cranberry_Evergreen_COOGI_Atelier_Crewneck.webp" not in html
     assert "COOGI" not in html.split('id="holiday-printables"')[0]
     assert "/assets/merch_gallery/optb_ornament_snowy_owl.webp" in html

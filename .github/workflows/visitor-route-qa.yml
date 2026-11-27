@@ -15,40 +15,142 @@ jobs:
     env:
       WIDTH: ${{ matrix.width }}
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: c179074b4c5ba2dc75ad86581f4cba6e449714c9
+          path: merch
+          sparse-checkout: merch
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: a8ffc3104fd64ab8afb1a0c7879c5b0c2b97507a
+          path: holidays
+          sparse-checkout: holidays
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 9d04b7cf82d4507951b2c3536977bc478cf02b08
+          path: rich-yn
+          sparse-checkout: rich-yn
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 552b11a8cfb02736be2795903ef4c9a6a7a8abfc
+          path: store
+          sparse-checkout: store
+          persist-credentials: false
       - run: python -m pip -q install playwright requests beautifulsoup4
       - shell: python
         run: |
-          import os,re,json
-          from urllib.parse import urlsplit
+          import json,os,re
+          from pathlib import Path
+          from urllib.parse import urlsplit,parse_qs
           from playwright.sync_api import sync_playwright
-          origin='https://northstarprime.net'
           width=int(os.environ['WIDTH'])
+          origin='https://northstarprime.net'
+          routes=['merch','rich-yn','holidays','store']
           with sync_playwright() as pw:
-              b=pw.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu'])
-              ctx=b.new_context(viewport={'width':width,'height':840})
+              browser=pw.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu'])
+              ctx=browser.new_context(viewport={'width':width,'height':840},reduced_motion='reduce')
               page=ctx.new_page()
-              page.goto(origin+'/merch/',wait_until='domcontentloaded')
-              print('LIVE_ARCHIVE',page.locator('article[data-item]').count(),flush=True)
-              page.locator('#bm-tarot-78 .zoom-trigger').click()
-              for k in ['Shift+Tab','Tab','Tab','Tab','Tab']:
-                  page.keyboard.press(k)
-                  print('FOCUS',k,page.evaluate("()=>({id:document.activeElement.id,dialog:!!document.activeElement.closest('[role=dialog]'),name:(document.activeElement.innerText||'').trim().slice(0,50)})"),flush=True)
-              page.keyboard.press('Escape')
-              page.goto(origin+'/holidays/',wait_until='domcontentloaded')
-              nav=page.locator('nav .nav-links a').last
-              if nav.count():
-                  nav.scroll_into_view_if_needed()
-                  print('NAV_RANGE',nav.inner_text(),nav.bounding_box(),flush=True)
-              links=page.locator('a[href*="www.zazzle.com/"]').evaluate_all("aa=>Array.from(new Set(aa.map(a=>a.href)))")
-              dest=ctx.new_page()
-              def restrict(r):
-                  host=urlsplit(r.request.url).hostname or ''
-                  if host=='www.zazzle.com' and r.request.resource_type=='document':r.continue_()
-                  else:r.abort()
-              dest.route('**/*',restrict)
-              for u in links:
-                  try:
-                      r=dest.goto(u,wait_until='domcontentloaded',timeout=16000)
-                      print('CARD_MARKET',r.status if r else None,u,dest.title()[:110],flush=True)
-                  except Exception as e:print('MARKET_READ_LIMIT',u,str(e)[:100],flush=True)
-              b.close()
+              page.set_default_timeout(16000)
+              for route in routes:
+                  file=Path(route,route,'index.html')
+                  if file.is_file():
+                      def serve(r):
+                          name=urlsplit(r.request.url).path.strip('/')
+                          r.fulfill(content_type='text/html; charset=utf-8',body=Path(name,name,'index.html').read_bytes())
+                      ctx.route(re.compile(r'^https://northstarprime\.net/'+re.escape(route)+r'/(?:\?.*)?$'),serve)
+              def visit(rt):
+                  assert page.goto(origin+'/'+rt+'/',wait_until='domcontentloaded').ok
+                  page.evaluate("document.fonts.ready")
+                  page.wait_for_timeout(300)
+                  size=page.evaluate("()=>[document.documentElement.scrollWidth,innerWidth]")
+                  if size[0]>size[1]+1:
+                      print('LAYOUT_DIAGNOSTIC',rt,size,page.locator('main *').evaluate_all("els=>els.filter(e=>e.getBoundingClientRect().right>innerWidth+1).slice(0,12).map(e=>[e.tagName,e.className,Math.round(e.getBoundingClientRect().right)])"),flush=True)
+                  assert size[0]<=size[1]+1,(rt,size)
+              def store_folio():
+                  visit('store')
+                  page.get_by_role('link',name=re.compile('Ask about the Print Folio')).click()
+                  page.wait_for_function("document.querySelector('#message-preview')?.textContent.includes('20 archival plates')")
+                  assert 'Bill of Rights v2' in parse_qs(urlsplit(page.locator('#draft-link').get_attribute('href')).query)['subject'][0]
+                  print('PASS folio purchase inquiry',width,flush=True)
+              def rich_yn():
+                  for label,keyword in [('Ask about a custom print','sizes'),('Request a drop alert','next RICH YN')]:
+                      visit('rich-yn')
+                      a=page.get_by_role('link',name=label,exact=True)
+                      expected=parse_qs(urlsplit(a.get_attribute('href')).query)
+                      a.click()
+                      page.wait_for_function("v=>document.querySelector('#message-preview')?.textContent.includes(v)",arg=keyword)
+                      mail=urlsplit(page.locator('#draft-link').get_attribute('href'))
+                      assert mail.scheme=='mailto' and mail.path=='contact@northstarprime.net'
+                      q=parse_qs(mail.query)
+                      assert q==expected and keyword in q['body'][0],q
+                  print('PASS distinct print and drop alert drafts',width,flush=True)
+              def physical():
+                  visit('holidays')
+                  assert page.locator('#idr-dock,#idr-toggle').count()==0
+                  page.get_by_role('link',name='Browse ornaments and calendars').click()
+                  assert page.locator('[data-tab="ornaments-calendars"]').get_attribute('aria-pressed')=='true'
+                  for item in ['orn-star-bethlehem','cal-2027-horiz']:
+                      assert page.locator('#'+item).is_visible()
+                  page.locator('#orn-star-bethlehem a.button.primary').click()
+                  page.wait_for_function("document.querySelector('#message-preview')?.textContent.includes('NS-XMAS26-ORN901-LL01')")
+                  q=parse_qs(urlsplit(page.locator('#draft-link').get_attribute('href')).query)
+                  assert '$16.00' in q['body'][0] and 'shipping total' in q['body'][0]
+                  print('PASS holiday ornament to Printful invoice inquiry',width,flush=True)
+              def station():
+                  visit('holidays')
+                  page.get_by_role('link',name='Listen to Interdimensional Radio',exact=True).click()
+                  assert page.url.endswith('/idr/#idr-station-player')
+                  assert page.locator('#idr-station-audio').is_visible()
+                  tracks=page.locator('.track-row button')
+                  print('Station track buttons',tracks.count(),flush=True)
+                  assert tracks.count()>0
+                  tracks.first.click()
+                  page.wait_for_function("document.querySelector('#idr-station-audio').currentTime>0",timeout=35000)
+                  print('PASS station plays after holiday click',width,flush=True)
+              def tarot():
+                  visit('merch')
+                  card=page.locator('#bm-tarot-78')
+                  url='https://andrewcog.gumroad.com/l/pshjy'
+                  for idx in (0,1):
+                      btn=card.locator('a').nth(idx)
+                      assert btn.get_attribute('href')==[url,'/tarot/'][idx]
+                  ld=' '.join(page.locator('script[type="application/ld+json"]').all_text_contents())
+                  def walk(node):
+                      if isinstance(node,dict):
+                          if node.get('sku')=='NSP-TAROT-78':yield node
+                          for value in node.values():yield from walk(value)
+                      if isinstance(node,list):
+                          for value in node:yield from walk(value)
+                  assert [p['offers']['url'] for p in walk(json.loads(ld))]==[url]
+                  card.locator('.zoom-trigger').click()
+                  assert page.locator('#lb-cta1').get_attribute('href')==url
+                  assert page.locator('#lb-cta2').get_attribute('href')=='/tarot/'
+                  if width==390:
+                      page.locator('#lb-cta1').click()
+                      dest=page
+                  else:
+                      page.locator('#lb-close').click()
+                      with page.expect_popup() as new:card.locator('a').first.click()
+                      dest=new.value
+                  dest.wait_for_url(url+'*')
+                  pr=json.loads(dest.locator('[data-page]').get_attribute('data-page'))['props']['product']
+                  assert pr['is_published'] and pr['price_cents']==1200 and '78-card' in pr['name']
+                  print('PASS Tarot buy link, provider listing, price and offer',width,flush=True)
+                  dest.wait_for_timeout(2200)
+                  print('Gumroad visitor controls',dest.locator('button:visible,a[href]:visible,[role=button]:visible').all_inner_texts()[-30:],flush=True)
+                  print('Gumroad listing status text',dest.locator('body').inner_text()[-1200:],flush=True)
+                  visit('merch')
+                  card.locator('a').nth(1).click()
+                  assert page.url.rstrip('/').endswith('/tarot')
+                  print('PASS free reader',width,flush=True)
+              failures=[]
+              for case in [store_folio,rich_yn,physical,station,tarot]:
+                  try:case()
+                  except Exception as exc:
+                      print('CASE_FAILURE',case.__name__,type(exc).__name__,str(exc)[:700],page.url,flush=True)
+                      failures.append(case.__name__)
+              browser.close()
+              assert not failures,failures

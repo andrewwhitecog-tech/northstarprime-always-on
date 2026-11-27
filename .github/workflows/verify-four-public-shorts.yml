@@ -25,6 +25,7 @@ jobs:
           options.binary_location = shutil.which("google-chrome")
           options.add_argument("--headless=new")
           options.add_argument("--disable-gpu")
+          options.add_argument("--window-size=1440,900")
           options.add_argument("--mute-audio")
           options.add_argument("--autoplay-policy=no-user-gesture-required")
           titles = {
@@ -39,6 +40,8 @@ jobs:
               wait = WebDriverWait(driver, 25)
               for title, slug in titles.items():
                   button = driver.find_element(By.XPATH, f'//button[contains(@onclick,"loadTrailer")][contains(., "{title}")]')
+                  driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", button)
+                  wait.until(lambda _: driver.execute_script("const b=arguments[0], r=b.getBoundingClientRect(); return b.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))",button))
                   button.click()
                   player = driver.find_element(By.ID, "idc-theater-player")
                   def read(expression, *args):

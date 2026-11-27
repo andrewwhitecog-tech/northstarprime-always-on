@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: 521f12d6626ad8610a4041ba2e6ed531fbdc0d52
+          ref: fdc11dc91fff27509f0f4a3f628555c2a5801d54
           sparse-checkout: |
             join/first-light
             idc-programming
@@ -26,7 +26,7 @@ jobs:
           from urllib.parse import urlsplit,parse_qs,urljoin
           import time,requests
           from playwright.sync_api import sync_playwright
-          preview=True
+          preview=False
           origin='https://northstarprime.net'
           route='/join/first-light/'
           sources={'/holidays/':1,'/idc-programming/':1,'/literature/the-null-calendar/':2}
@@ -53,9 +53,17 @@ jobs:
                       assert page.locator('a[href="/#tiers"]').count()==0
                       incoming=page.locator('a[href="'+route+'"]')
                       assert incoming.count()==count
-                      if path=='/holidays/' and width==1280:
+                      if width==1280:
+                          if path.startswith('/literature/'):
+                              page.locator('.nsp-nav-more summary').click()
                           incoming.first.click()
                           page.wait_for_url(origin+route)
+                          if path.startswith('/literature/'):
+                              page.goto(origin+path,wait_until='domcontentloaded')
+                              page.locator('[data-nsp-command-open]').click()
+                              page.locator('.nsp-command-head input[type=search]').fill('membership')
+                              page.locator('.nsp-command-item[href="'+route+'"]').click()
+                              page.wait_for_url(origin+route)
                   for suffix,label in [('', 'First Signal'),('?v=holy-hippies&code=QA-CANARY-411','Holy Hippies'),('?v=unknown&email=qa%40example.invalid','First Signal')]:
                       page.goto(origin+route+suffix,wait_until='domcontentloaded')
                       assert page.locator('#variant-label').text_content()==label,(suffix,page.locator('#variant-label').text_content())

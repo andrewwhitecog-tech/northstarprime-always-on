@@ -9,45 +9,68 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: da0e9f370e14df04c7bf9b170a2eee3098cb6edb
+          sparse-checkout: |
+            join/first-light
+            idc-programming
+            holidays
+            literature/the-null-calendar
+          persist-credentials: false
       - run: python -m pip -q install playwright requests
-      - name: Verify deployed showroom controls
+      - name: Verify membership journeys
         shell: python
         run: |
-          import time
-          from urllib.parse import urljoin,urlsplit
-          import requests
+          from pathlib import Path
+          from urllib.parse import urlsplit,parse_qs,urljoin
+          import time,requests
           from playwright.sync_api import sync_playwright
-          site = 'https://northstarprime.net/games/flagship-3d-suite/'
-          for attempt in range(60):
-              response = requests.get(site,params={'release':'410','attempt':attempt},timeout=20)
-              if response.ok and "getElementById('cards-dock').before(box)" in response.text:
-                  break
-              time.sleep(8)
-          else: raise AssertionError('production has not served #410')
+          preview=True
+          origin='https://northstarprime.net'
+          route='/join/first-light/'
+          sources={'/holidays/':1,'/idc-programming/':1,'/literature/the-null-calendar/':2}
+          if not preview:
+              for attempt in range(60):
+                  r=requests.get(origin+route,params={'proof':'membership411','attempt':attempt},timeout=20)
+                  if r.ok and 'Ask about membership' in r.text and 'Start Free Trial' not in r.text: break
+                  time.sleep(8)
+              else: raise AssertionError('Updated flyer page has not reached production')
           with sync_playwright() as p:
-              for mode,flags in [('fallback',['--disable-webgl','--disable-gpu']),('software',['--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'])]:
-                  browser=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=flags)
-                  for w,h in [(390,844),(1280,720)]:
-                      page=browser.new_page(viewport={'width':w,'height':h})
-                      page.set_default_timeout(45000)
-                      page.goto(site+'?release=410',wait_until='domcontentloaded')
-                      cards=page.locator('#cards-dock .game-card')
-                      cards.last.wait_for()
-                      assert cards.count()==4
-                      if mode=='fallback':
-                          page.locator('.nsp-webgl-fallback').wait_for()
-                      else:
-                          assert not page.locator('.nsp-webgl-fallback').count()
-                      for card in cards.all():
-                          dest=urljoin(page.url,card.locator('a').get_attribute('href'))
-                          button=card.get_by_role('button')
-                          with page.expect_response(lambda r:r.request.resource_type=='document' and urlsplit(r.url).path==urlsplit(dest).path) as nav:
-                              button.click()
-                          assert nav.value.status==200,(dest,nav.value.status)
-                          assert page.locator('#cabinet-runner').is_visible()
-                          assert urljoin(page.url,page.locator('#cabinet-iframe').get_attribute('src'))==dest
-                          page.keyboard.press('Escape')
-                          page.locator('#cabinet-runner').wait_for(state='hidden')
-                      print('LIVE CABINETS',mode,w,'4/4 games opened and exited',flush=True)
-                      page.close()
-                  browser.close()
+              browser=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu'])
+              for width in (390,1280):
+                  page=browser.new_page(viewport={'width':width,'height':840})
+                  page.set_default_timeout(20000)
+                  errors=[]
+                  page.on('pageerror',lambda e:errors.append(str(e)))
+                  if preview:
+                      def source(r):
+                          path=urlsplit(r.request.url).path.strip('/')
+                          r.fulfill(content_type='text/html',body=Path(path+'/index.html').read_bytes())
+                      for path in (route,*sources): page.route(origin+path+'*',source)
+                  for path,count in sources.items():
+                      page.goto(origin+path,wait_until='domcontentloaded')
+                      assert page.locator('a[href="/#tiers"]').count()==0
+                      incoming=page.locator('a[href="'+route+'"]')
+                      assert incoming.count()==count
+                      if path=='/holidays/' and width==1280:
+                          incoming.first.click()
+                          page.wait_for_url(origin+route)
+                  for suffix,label in [('', 'First Signal'),('?v=holy-hippies&code=QA-CANARY-411','Holy Hippies'),('?v=unknown&email=qa%40example.invalid','First Signal')]:
+                      page.goto(origin+route+suffix,wait_until='domcontentloaded')
+                      assert page.locator('#variant-label').inner_text()==label
+                      assert page.locator('form,input,button[type="submit"]').count()==0
+                      assert 'Online enrollment is currently unavailable.' in page.locator('main').inner_text()
+                      assert page.locator('a[href="/renalshield/"]').is_visible()
+                      link=page.get_by_role('link',name='Ask about membership',exact=True)
+                      target=link.get_attribute('href')
+                      assert urlsplit(target).path=='/contact/' and 'CANARY' not in target and 'example.invalid' not in target
+                      link.click()
+                      page.wait_for_function("()=>document.querySelector('#subject-preview')?.textContent==='First Signal membership inquiry'")
+                      draft=urlsplit(page.locator('#draft-link').get_attribute('href'))
+                      assert draft.scheme=='mailto' and draft.path=='contact@northstarprime.net'
+                      assert parse_qs(draft.query)==parse_qs(urlsplit(target).query)
+                  print('MEMBERSHIP',width,'four incoming links, three flyer variants, populated draft',flush=True)
+                  if errors: print('JS_ERRORS',errors,flush=True)
+                  page.close()
+              browser.close()

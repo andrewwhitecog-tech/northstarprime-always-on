@@ -18,6 +18,7 @@
   var gameTitle = (scriptEl && scriptEl.getAttribute("data-nsp-title")) || document.title || "NorthStar Arcade";
   var creditsSrc = (scriptEl && scriptEl.getAttribute("data-nsp-credits")) || "/static/games/marquees_aaa/northstar-studios-credits.webp";
   var realSfxMode = (scriptEl && scriptEl.getAttribute("data-nsp-real-sfx")) === "true";
+  var attractMode = (scriptEl && scriptEl.getAttribute("data-nsp-attract")) || "overlay";
 
   // -------------------------------------------------------------------------
   // 1. Real Mastered SFX Bank (/static/games/sfx/*.mp3) + Oscillator Upgrade
@@ -146,7 +147,7 @@
     var attract = null;
     if (marqueeSrc) {
       attract = document.createElement("div");
-      attract.className = "nsp-aaa-attract";
+      attract.className = "nsp-aaa-attract" + (attractMode === "dock" ? " nsp-hidden" : "");
       attract.setAttribute("role", "dialog");
       attract.setAttribute("aria-label", gameTitle + " Cabinet Title Screen");
       attract.innerHTML =

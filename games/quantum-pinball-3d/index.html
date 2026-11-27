@@ -951,6 +951,7 @@
     }
 
     function lockBallInChandelier() {
+      if (!balls.length) return;
       game.locks = Math.min(3, game.locks + 1);
       lockedBallVisuals.forEach((v, i) => { v.visible = i < game.locks; });
       addScore(75000, `CHANDELIER BALL LOCK ${game.locks}/3!`);
@@ -971,6 +972,9 @@
       game.locks = 0;
       game.bumperHits = 0;
       spinnerGate.totalRevs = 0;
+      spinnerGate.spinVel = 0;
+      game.plunging = false;
+      game.plungerCharge = 0;
       game.ballSaveTimer = 18.0;
       game.kickbackArmed = true;
       game.tiltWarnings = 0;
@@ -996,7 +1000,7 @@
     }
 
     function nudgeTable() {
-      if (game.tilted) return;
+      if (game.tilted || !balls.length) return;
       game.tiltWarnings += 1;
       balls.forEach((b) => { b.vz -= 3.2; b.vx += (Math.random() - 0.5) * 4.5; });
       cabinetGroup.position.x = (Math.random() - 0.5) * 0.22;
@@ -1226,8 +1230,7 @@
                 setCallout(`BALL ${game.ballNum} READY — PRESS PLUNGE!`);
               } else {
                 setCallout(`GAME OVER — FINAL SCORE: ${game.score.toLocaleString()}`);
-                spawnBall(true);
-                game.ballNum = 1;
+                spinnerGate.spinVel = 0;
               }
               refreshPinballUI();
             }
@@ -1269,7 +1272,9 @@
       highScores.slice(0, 5).forEach((row, i) => {
         const d = document.createElement('div');
         d.className = 'hs-row';
-        d.innerHTML = `<span>#${i + 1} <b>${row.initials}</b></span><span style="color:var(--gold)">${row.score.toLocaleString()}</span>`;
+        d.innerHTML = `<span>#${i + 1} <b></b></span><span style="color:var(--gold)"></span>`;
+        d.querySelector('b').textContent = row.initials;
+        d.lastElementChild.textContent = row.score.toLocaleString();
         hsList.appendChild(d);
       });
     }
@@ -1281,6 +1286,10 @@
         if (down) sfxPin('flipper');
       }
     }
+
+    const initialsInput = document.getElementById('initials-input');
+    initialsInput.addEventListener('keydown', (event) => event.stopPropagation());
+    initialsInput.addEventListener('keyup', (event) => event.stopPropagation());
 
     window.addEventListener('keydown', (e) => {
       if (e.key === 'z' || e.key === 'Z' || e.code === 'ShiftLeft' || e.key === 'ArrowLeft') setFlipper('left', true);
@@ -1313,8 +1322,8 @@
     document.getElementById('btn-nudge').onclick = nudgeTable;
     document.getElementById('btn-new-game').onclick = resetNewGame;
     document.getElementById('btn-save-hs').onclick = () => {
-      const init = (document.getElementById('initials-input').value || 'AJW').toUpperCase().slice(0, 3);
-      highScores.push({ initials: init, score: Math.max(game.score, 250000) });
+      const init = (initialsInput.value || 'AJW').toUpperCase().slice(0, 3);
+      highScores.push({ initials: init, score: game.score });
       highScores.sort((a, b) => b.score - a.score);
       highScores = highScores.slice(0, 6);
       persistHighScores();

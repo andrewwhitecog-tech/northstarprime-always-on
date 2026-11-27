@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: f6fb46bc38c76bdaae827837de8ea93725c6905f
+          ref: 7fabdb6822b8554a61fae90e11f2273d5f9d607a
           sparse-checkout: |
             music
             realm
@@ -33,39 +33,57 @@ jobs:
             warband/art
           persist-credentials: false
       - run: python -m pip -q install playwright beautifulsoup4 pillow pytest requests
-      - run: git sparse-checkout add arcade/custom/kosher-lines arcade/custom/crib-recovered-assets static/vendor/three static/fonts && node --test tests/kosher-*.test.mjs
+      - run: git sparse-checkout add 3d-prints && cd tools && python -m unittest test_customer_static.CustomerStaticTests.test_merch_lookbook_links_point_to_model_specs
       - name: Browser verification
         shell: python
         run: |
-          import re,sys,json
           from pathlib import Path
-          from playwright.sync_api import sync_playwright
+          from urllib.parse import urlsplit,parse_qs
           from bs4 import BeautifulSoup
-          import requests
-          sys.path.insert(0,'tools')
-          import build_pages_artifact as build
-          roots=['arcade/custom/kosher-lines','arcade/custom/crib-recovered-assets']
-          included=[rel for _,rel in build.iter_source_files()]
-          for root in roots:
-              assert any(p.is_file() for p in Path(root).rglob('*'))
-              assert not any(p.is_relative_to(root) for p in included)
-          print('MAIN Pages exclusions verified')
-          products={'northstar-7icon-parody-vault':2400,'northstar-12pack-watertight-stl-vault':2900,'northstar-idg-5game-html5-webgl-arcade-pack':900,'northstar-godot4-6game-core-bundle':1200,'northstar-godot4-9game-clean-vault':1500,'anodized-empires-and-anomalies-collector-vault':1900}
+          from playwright.sync_api import sync_playwright
+          import json,requests
+          preview=True
+          origin='https://northstarprime.net'
+          store=origin+'/merch/'
+          dest='/3d-prints/#wb-reveler-75'
+          if preview: html=Path('merch/index.html').read_text(encoding='utf-8')
+          else:
+              res=requests.get(store,timeout=20)
+              res.raise_for_status()
+              html=res.text
+          doc=BeautifulSoup(html,'html.parser')
+          spec=BeautifulSoup(requests.get(origin+'/3d-prints/',timeout=20).content,'html.parser')
+          cards=doc.select('article[data-item]')
+          lookbook=[a for card in cards for a in card.select('a[href^="/3d-prints/#"]')]
+          assert len(lookbook)==6
+          for a in lookbook: assert spec.find(id=urlsplit(a['href']).fragment) is not None,a['href']
+          assert dest in json.dumps(json.loads(doc.select_one('script[type="application/ld+json"]').string))
           with sync_playwright() as p:
               b=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu'])
-              for slug,cents in products.items():
-                  page=b.new_page(viewport={'width':390,'height':840})
-                  r=page.goto('https://andrewcog.gumroad.com/l/'+slug,wait_until='domcontentloaded')
-                  assert r.status==200
-                  details=json.loads(page.locator('[data-page]').get_attribute('data-page'))['props']['product']
-                  assert details['is_published'] and details['price_cents']==cents and details['currency_code']=='usd'
-                  control=page.get_by_text(re.compile(r'^(I want this!|Buy now|Add to cart|Buy this)$',re.I)).first
-                  try:
-                      control.wait_for(state='visible',timeout=15000)
-                  except Exception:
-                      print('VISIBLE CONTROLS',page.locator('button:visible,a:visible,[role=button]:visible').all_inner_texts()[:35],flush=True)
-                      raise
-                  assert control.is_enabled()
-                  print('WAVE6',slug,cents,control.inner_text(),flush=True)
+              for width,modal in [(390,True),(1280,False)]:
+                  page=b.new_page(viewport={'width':width,'height':840},reduced_motion='reduce')
+                  if preview: page.route(store,lambda r:r.fulfill(content_type='text/html',body=html))
+                  page.goto(store,wait_until='domcontentloaded')
+                  card=page.locator('[id="3dp-warband-reveler"]')
+                  if modal:
+                      card.locator('.zoom-trigger').click()
+                      link=page.locator('#lb-cta1')
+                  else: link=card.locator('a[href^="/3d-prints/#"]')
+                  assert link.get_attribute('href')==dest
+                  link.click()
+                  page.wait_for_url(origin+dest)
+                  model=page.locator(':target')
+                  assert model.count()==1 and model.is_visible()
+                  assert 'Vorath Reveler' in model.inner_text()
+                  assert model.evaluate("e=>e.getBoundingClientRect().top < innerHeight && e.getBoundingClientRect().bottom>0")
+                  quote=model.locator('a[href^="/contact/?"]')
+                  query=parse_qs(urlsplit(quote.get_attribute('href')).query)
+                  assert 'WB-MINI-01' in query['subject'][0]
+                  quote.click()
+                  page.wait_for_function("() => document.querySelector('#subject-preview')?.textContent?.includes('WB-MINI-01')")
+                  draft=urlsplit(page.locator('#draft-link').get_attribute('href'))
+                  assert draft.scheme=='mailto' and draft.path=='contact@northstarprime.net'
+                  assert 'WB-MINI-01' in parse_qs(draft.query)['subject'][0]
+                  print('REVELER',width,'modal' if modal else 'card','model specs to populated quote passed',flush=True)
                   page.close()
               b.close()

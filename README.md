@@ -3,15 +3,13 @@ Always-on NorthStar Prime mirror for northstarprime.net.
 
 The apex and www hostnames are served by GitHub Pages and do not depend on
 Andrew's computer. The homepage is a lightweight guest entrance with original still art,
-clear listening, viewing and workshop routes. Links that still need server-side
-behavior go to app.northstarprime.net, the verified Render service.
+clear listening, viewing and workshop routes.
 
-The /idc-programming/ route contains the complete Season One catalogue, nine
-verified YouTube players, direct MP4 backups, and sixteen channel bumpers. The
-repository preserves the video source copies; the curated Pages artifact omits
-those duplicate 384 MB and routes playback to the identical files on
-app.northstarprime.net. The owner-review anthology packet is deliberately
-withheld from the public tree until it receives a separate release decision.
+The /idc-programming/ cinema queue plays the Season One teaser, the Arrival
+cold open and four performance shorts. The Pages build pins large media links
+to the corresponding public repository revision. The nine historical Season
+One mappings and 25 MP4s remain in the source archive. The anthology packet
+remains held for owner review.
 
 The `/continuity-atlas/` route is a self-contained, source-linked film,
 television, and Jeopardy evidence graph. Its HTML, CSS, graph snapshot, and
@@ -105,8 +103,7 @@ branch. Build and verify the exact artifact locally with:
 it is expected to reject legacy whole-branch publishing. The curated artifact
 verifier is the release capacity gate.
 
-Add --network to the IDC verifier to test every YouTube oEmbed endpoint as
-well. See ROUTE_MANIFEST.md, the route-specific freeze manifests, and
+Add --network to the IDC verifier to check the deployed cinema lineup and read the MP4 headers. See ROUTE_MANIFEST.md, the route-specific freeze manifests, and
 PAGES_CAPACITY_BUDGET.json for routing, provenance, hashes, failover details,
 and the enforced GitHub Pages capacity ceiling.
 

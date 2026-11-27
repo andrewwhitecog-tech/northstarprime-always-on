@@ -30,16 +30,7 @@ crypto_html = """<!doctype html>
 (crypto_dir / "index.html").write_text(crypto_html, encoding="utf-8")
 print("Created crypto/index.html")
 
-# 2. Fix prediction-arena links
-pred_file = ROOT / "arcade" / "custom" / "prediction-arena" / "index.html"
-if pred_file.exists():
-    txt = pred_file.read_text(encoding="utf-8")
-    txt = txt.replace('href="/arcade/prediction-arena/bots"', 'href="https://app.northstarprime.net/arcade/prediction-arena/bots"')
-    txt = txt.replace('href="/api/arcade/prediction-arena/report', 'href="https://app.northstarprime.net/api/arcade/prediction-arena/report')
-    pred_file.write_text(txt, encoding="utf-8")
-    print("Fixed prediction-arena external links")
-
-# 3. Purify emojis in the 3 arcade files
+# 2. Purify emojis in the 3 arcade files
 emoji_pattern = re.compile(r'[\U00010000-\U0010ffff]', flags=re.UNICODE)
 emoji_files = [
     ROOT / "arcade" / "custom" / "system1-arena" / "index.html",

@@ -381,8 +381,8 @@
           </div>
         </div>
 
-        <audio id="lounge-audio" crossorigin="anonymous" preload="metadata"></audio>
-        <audio id="lounge-audio-r2" preload="metadata"></audio>
+        <audio id="lounge-audio" crossorigin="anonymous" preload="none"></audio>
+        <audio id="lounge-audio-r2" preload="none"></audio>
 
         <div class="scrub-row">
           <span class="time-readout" id="time-cur">0:00</span>
@@ -393,6 +393,7 @@
           </div>
         </div>
 
+        <div id="playback-status" role="status" aria-atomic="true"></div>
         <div class="transport-bar">
           <button type="button" class="button" id="btn-prev">◀ Prev</button>
           <button type="button" class="button primary" id="btn-play">▶ Play Track</button>
@@ -412,7 +413,7 @@
           <label class="eyebrow" for="track-search">Search by Title, BPM, Key, Genre, or Producer XREF</label>
           <input type="search" id="track-search" class="vorath-search" placeholder="Search Rhodes, 152 BPM, DJ Premier, Mac Miller, BLP Kosher, Ambient, Dub…" autocomplete="off">
         </div>
-        <div class="eyebrow" id="track-tally">Showing 70 of 70 tracks</div>
+        <div class="eyebrow" id="track-tally" role="status">Showing 70 of 70 tracks</div>
       </div>
 
       <div class="shelf-tabs" role="group" aria-label="Filter music shelf">
@@ -469,6 +470,8 @@
     var npSub = document.getElementById("np-sub");
     var npXref = document.getElementById("np-xref");
     var btnPlay = document.getElementById("btn-play");
+    var playbackStatus = document.getElementById("playback-status");
+    var playAttempt = 0;
     var btnPrev = document.getElementById("btn-prev");
     var btnNext = document.getElementById("btn-next");
     var btnViz = document.getElementById("btn-viz-mode");
@@ -484,6 +487,7 @@
 
     var currentIndex = 0;
     var activeShelf = "all";
+    var visibleTrackIndices = [];
     var vizMode = "bars"; // "bars" | "wave"
     var audioCtx = null;
     var analyser = null;
@@ -570,7 +574,10 @@
         var pbtn = cards[i].querySelector(".play-track-btn");
         if (idx === currentIndex) {
           cards[i].classList.add("is-playing");
-          if (pbtn) pbtn.textContent = (!audio.paused) ? "❚❚ Playing" : "▶ Selected";
+          if (pbtn) {
+            pbtn.textContent = playbackStatus.textContent ? "Retry track" :
+              audio.paused ? "▶ Selected" : "❚❚ Playing";
+          }
         } else {
           cards[i].classList.remove("is-playing");
           if (pbtn) pbtn.textContent = "▶ Stream Track";
@@ -578,7 +585,28 @@
       }
     }
 
+    function showPlaybackError(blocked) {
+      playbackStatus.textContent = blocked
+        ? "Your browser paused playback. Select Retry track to start."
+        : "This track couldn’t load. Retry it or choose another track.";
+      btnPlay.textContent = "Retry track";
+      syncHighlight();
+    }
+
+    function playSelected() {
+      var attempt = ++playAttempt;
+      var player = audio;
+      playbackStatus.textContent = "";
+      player.play().catch(function (error) {
+        if (attempt !== playAttempt || error.name === "AbortError") return;
+        showPlaybackError(error.name === "NotAllowedError");
+      });
+    }
+
     function loadTrack(idx, autoplay) {
+      ++playAttempt;
+      playbackStatus.textContent = "";
+      btnPlay.textContent = "▶ Play Track";
       if (idx < 0) idx = TRACKS.length - 1;
       if (idx >= TRACKS.length) idx = 0;
       currentIndex = idx;
@@ -600,10 +628,17 @@
       var useCors = !!(t.cors || t.src.indexOf("raw.githubusercontent.com") !== -1 || t.src.charAt(0) === "/");
       audio = useCors ? audioCors : audioR2;
       audio.volume = Math.max(0, Math.min(1, parseFloat(vol.value) / 100));
-      audio.src = t.src;
-      audio.load();
+      var reuseSource = audio.getAttribute("src") === t.src && !audio.error;
+      if (audio.getAttribute("src") !== t.src) {
+        audio.src = t.src;
+      } else if (audio.error) {
+        audio.load();
+      } else if (audio.currentTime > 0) {
+        audio.currentTime = 0;
+      }
       timeCur.textContent = "0:00";
-      timeDur.textContent = t.duration ? fmtTime(t.duration) : "--:--";
+      var duration = reuseSource && isFinite(audio.duration) && audio.duration > 0 ? audio.duration : t.duration;
+      timeDur.textContent = duration ? fmtTime(duration) : "--:--";
       scrub.value = "0";
 
       if (autoplay) {
@@ -613,13 +648,13 @@
         if (useCors && audioCtx && audioCtx.state === "suspended") {
           audioCtx.resume().catch(function () {});
         }
-        audio.play().catch(function () {});
+        playSelected();
       }
       syncHighlight();
     }
 
     btnPlay.addEventListener("click", function () {
-      if (!audio.src) {
+      if (!audio.src || audio.error) {
         loadTrack(currentIndex, true);
         return;
       }
@@ -631,8 +666,9 @@
         if (audioCtx && audioCtx.state === "suspended") {
           audioCtx.resume().catch(function () {});
         }
-        audio.play().catch(function () {});
+        playSelected();
       } else {
+        ++playAttempt;
         audio.pause();
       }
     });
@@ -642,8 +678,21 @@
       document.querySelector(".console-shell").scrollIntoView({ behavior: "smooth", block: "start" });
     });
 
-    btnPrev.addEventListener("click", function () { loadTrack(currentIndex - 1, true); });
-    btnNext.addEventListener("click", function () { loadTrack(currentIndex + 1, true); });
+    function stepTrack(direction) {
+      var count = visibleTrackIndices.length;
+      if (!count) return;
+      var position = visibleTrackIndices.indexOf(currentIndex);
+      var nextPosition;
+      if (position === -1) {
+        nextPosition = direction > 0 ? 0 : count - 1;
+      } else {
+        nextPosition = (position + direction + count) % count;
+      }
+      loadTrack(visibleTrackIndices[nextPosition], true);
+    }
+
+    btnPrev.addEventListener("click", function () { stepTrack(-1); });
+    btnNext.addEventListener("click", function () { stepTrack(1); });
 
     btnViz.addEventListener("click", function () {
       vizMode = vizMode === "bars" ? "wave" : "bars";
@@ -651,13 +700,16 @@
     });
 
     [audioCors, audioR2].forEach(function (el) {
+      el.addEventListener("error", function () {
+        if (el === audio && el.error) showPlaybackError(false);
+      });
       el.addEventListener("play", function () {
-        if (el !== audio) return;
+        if (el !== audio || el.paused || playbackStatus.textContent) return;
         btnPlay.textContent = "❚❚ Pause";
         syncHighlight();
       });
       el.addEventListener("pause", function () {
-        if (el !== audio) return;
+        if (el !== audio || !el.paused || playbackStatus.textContent) return;
         btnPlay.textContent = "▶ Play Track";
         syncHighlight();
       });
@@ -675,8 +727,9 @@
         }
       });
       el.addEventListener("ended", function () {
-        if (el !== audio) return;
-        loadTrack(currentIndex + 1, true);
+        if (el !== audio || !el.ended) return;
+        if (visibleTrackIndices.length === 1 && visibleTrackIndices[0] === currentIndex) return;
+        stepTrack(1);
       });
     });
 
@@ -696,25 +749,29 @@
     function applyFilters() {
       var q = (searchEl.value || "").trim().toLowerCase();
       var cards = grid.querySelectorAll(".track-card");
-      var shown = 0;
+      visibleTrackIndices = [];
       for (var i = 0; i < cards.length; i++) {
         var c = cards[i];
         var sOk = activeShelf === "all" || c.getAttribute("data-shelf") === activeShelf;
         var qOk = !q || c.getAttribute("data-search").indexOf(q) !== -1;
         var vis = sOk && qOk;
         c.hidden = !vis;
-        if (vis) shown++;
+        if (vis) visibleTrackIndices.push(Number(c.dataset.idx));
       }
-      tallyEl.textContent = "Showing " + shown + " of " + TRACKS.length + " tracks";
+      btnPrev.disabled = btnNext.disabled = visibleTrackIndices.length === 0;
+      tallyEl.textContent = visibleTrackIndices.length
+        ? "Showing " + visibleTrackIndices.length + " of " + TRACKS.length + " tracks"
+        : "No tracks match. Change your search or choose another shelf.";
     }
 
     searchEl.addEventListener("input", applyFilters);
     Array.prototype.slice.call(document.querySelectorAll(".shelf-btn")).forEach(function (btn) {
+      btn.setAttribute("aria-pressed", String(btn.dataset.shelf === activeShelf));
       btn.addEventListener("click", function () {
         Array.prototype.slice.call(document.querySelectorAll(".shelf-btn")).forEach(function (b) {
-          b.classList.remove("primary");
+          b.classList.toggle("primary", b === btn);
+          b.setAttribute("aria-pressed", String(b === btn));
         });
-        btn.classList.add("primary");
         activeShelf = btn.getAttribute("data-shelf") || "all";
         applyFilters();
       });

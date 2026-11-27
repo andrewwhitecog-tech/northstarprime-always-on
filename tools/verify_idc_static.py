@@ -4,12 +4,12 @@
 from __future__ import annotations
 
 import argparse
-import concurrent.futures
 import json
 import subprocess
 import sys
 import urllib.parse
 import urllib.request
+from html.parser import HTMLParser
 from pathlib import Path
 
 
@@ -32,10 +32,44 @@ def fail(message: str) -> None:
     raise SystemExit(1)
 
 
+class CinemaPlayers(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.sources: list[str] = []
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag == "video" and "idc-bv" in attrs.get("class", "").split():
+            self.sources.append(attrs.get("src") or "")
+
+
+def cinema_sources(html: str) -> list[str]:
+    parser = CinemaPlayers()
+    parser.feed(html)
+    return parser.sources
+
+
+def verify_live_players(sources: list[str]) -> None:
+    page = "https://northstarprime.net/idc-programming/"
+    with urllib.request.urlopen(page, timeout=30) as response:
+        deployed = cinema_sources(response.read().decode("utf-8"))
+    if len(deployed) != len(sources):
+        fail(f"deployed cinema queue has {len(deployed)} players, expected {len(sources)}")
+    for original, target in zip(sources, deployed):
+        url = urllib.parse.urljoin(page, target)
+        if not urllib.parse.urlsplit(url).path.endswith(original):
+            fail(f"deployed queue source differs from {original}: {url}")
+        request = urllib.request.Request(url, headers={"Range": "bytes=0-31"})
+        with urllib.request.urlopen(request, timeout=30) as response:
+            if response.status not in (200, 206) or response.read(32)[4:8] != b"ftyp":
+                fail(f"invalid MP4 response for {url}")
+        print(f"OK live MP4 {original}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--network", action="store_true", help="verify all YouTube oEmbed URLs"
+        "--network", action="store_true", help="verify the deployed cinema queue and MP4 responses"
     )
     args = parser.parse_args()
 
@@ -43,8 +77,9 @@ def main() -> int:
     manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
     if len(manifest) != 9:
         fail(f"expected 9 Season One YouTube entries, found {len(manifest)}")
-    if "youtube-nocookie.com/embed/" not in html:
-        fail("privacy-enhanced YouTube embed code is missing")
+    sources = cinema_sources(html)
+    if not sources or len(set(sources)) != len(sources):
+        fail("cinema queue is empty or contains duplicate players")
     if "C:/Program Files/Git/" in html:
         fail("frozen Windows paths remain in HTML")
     if PRIVATE_PACKET_ROUTE in html:
@@ -62,9 +97,15 @@ def main() -> int:
         fail("expected 16 one-shot static IDC cover fallbacks")
 
     tracked = set(git_output("ls-tree", "-r", "--name-only", "HEAD").splitlines())
-    for stem, url in manifest.items():
-        if url not in html:
-            fail(f"manifest URL for {stem} is not present in HTML")
+    for source in sources:
+        if not source.startswith("/static/") or not source.endswith(".mp4") or source[1:] not in tracked:
+            fail(f"cinema player needs a tracked MP4 source: {source}")
+    for required in ("idc_anthology_s1_teaser", "idc_anthology_e01_arrival"):
+        if f"/static/idc_video/{required}.mp4" not in sources:
+            fail(f"missing Season One cinema player: {required}")
+    if PRIVATE_PACKET_ROUTE.lstrip("/") in tracked:
+        fail("owner-review IDC packet is tracked")
+    for stem in manifest:
         mp4 = f"static/idc_video/{stem}.mp4"
         if mp4 not in tracked:
             fail(f"missing tracked MP4 backup: {mp4}")
@@ -77,54 +118,19 @@ def main() -> int:
     if len(video_paths) != 25:
         fail(f"expected 25 tracked IDC videos, found {len(video_paths)}")
 
-    materialized = [path for path in video_paths if (ROOT / path).is_file()]
-    sizes = [(path, (ROOT / path).stat().st_size) for path in materialized]
-    if sizes:
-        oversized = [(path, size) for path, size in sizes if size >= MAX_GITHUB_BLOB]
-        if oversized:
-            fail(f"GitHub-size-limit violation: {oversized}")
+    size_rows = git_output("ls-tree", "-rl", "HEAD", "--", "static/idc_video").splitlines()
+    sizes = []
+    for row in size_rows:
+        metadata, path = row.split("\t", 1)
+        if path in video_paths:
+            sizes.append((path, int(metadata.split()[-1])))
+    oversized = [(path, size) for path, size in sizes if size >= MAX_GITHUB_BLOB]
+    if oversized:
+        fail(f"GitHub-size-limit violation: {oversized}")
 
     if args.network:
-        request = urllib.request.Request(
-            "https://api.github.com/repos/andrewwhitecog-tech/"
-            "northstarprime-always-on/git/trees/main?recursive=1",
-            headers={"User-Agent": "NorthStarPrimeStaticVerifier/1.0"},
-        )
-        with urllib.request.urlopen(request, timeout=20) as response:
-            remote_tree = json.load(response)["tree"]
-        remote_sizes = [
-            (item["path"], int(item["size"]))
-            for item in remote_tree
-            if item["path"] in video_paths
-        ]
-        if len(remote_sizes) != 25:
-            fail(f"GitHub API returned {len(remote_sizes)} of 25 video blobs")
-        oversized = [item for item in remote_sizes if item[1] >= MAX_GITHUB_BLOB]
-        if oversized:
-            fail(f"GitHub-size-limit violation: {oversized}")
-        sizes = remote_sizes
-
-        def verify_youtube(item: tuple[str, str]) -> tuple[str, str]:
-            stem, url = item
-            query = urllib.parse.urlencode({"url": url, "format": "json"})
-            request = urllib.request.Request(
-                "https://www.youtube.com/oembed?" + query,
-                headers={"User-Agent": "NorthStarPrimeStaticVerifier/1.0"},
-            )
-            with urllib.request.urlopen(request, timeout=12) as response:
-                if response.status != 200:
-                    fail(f"YouTube oEmbed failed for {stem}: HTTP {response.status}")
-                data = json.load(response)
-                if not data.get("title"):
-                    fail(f"YouTube oEmbed returned no title for {stem}")
-                return stem, data["title"]
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
-            results = executor.map(verify_youtube, manifest.items())
-            for stem, title in results:
-                print(f"OK youtube {stem}: {title}")
-
-    print(f"OK: {len(manifest)} verified YouTube mappings")
+        verify_live_players(sources)
+    print(f"OK: {len(sources)} direct cinema players and {len(manifest)} archived Season One mappings")
     print(f"OK: {len(video_paths)} tracked MP4 backups/bumpers")
     if sizes:
         largest = max(sizes, key=lambda item: item[1])

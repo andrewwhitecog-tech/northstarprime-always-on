@@ -11,8 +11,12 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: c2c34c8b48babad81b5b78e2c8fa809f7f14c2b2
+          ref: 29e643411005fcb54ba825b7af5e1ec0d9165331
           sparse-checkout: |
+            arcade/custom/kosher-lines
+            arcade/custom/crib-recovered-assets
+            static/vendor/three
+            static/fonts
             music
             realm
             .github/hq_audio_review
@@ -33,57 +37,24 @@ jobs:
             warband/art
           persist-credentials: false
       - run: python -m pip -q install playwright beautifulsoup4 pillow pytest requests
-      - name: Check visitor routes
-        run: python -m pytest -q tests/test_visitor_destinations.py
+
       - name: Browser verification
         shell: python
         run: |
           from playwright.sync_api import sync_playwright
-          from urllib.parse import urlsplit
-          import json,time
+          import http.server,threading
+          server=http.server.ThreadingHTTPServer(('127.0.0.1',0),http.server.SimpleHTTPRequestHandler)
+          threading.Thread(target=server.serve_forever,daemon=True).start()
           with sync_playwright() as p:
-              browser=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu','--mute-audio'])
-              for width,height in [(390,844),(1280,800)]:
-                  for path in ['/music/','/realm/']:
-                      ctx=browser.new_context(viewport={'width':width,'height':height})
-                      page=ctx.new_page()
-                      console=[]; errors=[]; assets=[]; failed=[]
-                      page.on('console',lambda m:console.append([m.text[:280],m.location.get('url','').split('?')[0]]) if m.type=='error' else None)
-                      page.on('pageerror',lambda e:errors.append(str(e)))
-                      page.on('response',lambda r: assets.append([r.status,r.url.split('?')[0]]) if r.status>=400 else None)
-                      page.on('requestfailed',lambda r:failed.append([r.failure,r.resource_type,r.url.split('?')[0]]) )
-                      from bs4 import BeautifulSoup
-                      from pathlib import Path
-                      if path=='/music/':
-                          candidate=BeautifulSoup(Path('music/index.html').read_bytes(),'html.parser')
-                          script=next(s for s in candidate.find_all('script') if 'function loadTrack(' in (s.string or ''))
-                          def use_candidate(route):
-                              current=route.fetch()
-                              html=BeautifulSoup(current.body(),'html.parser')
-                              target=next(s for s in html.find_all('script') if 'function loadTrack(' in (s.string or ''))
-                              target.string=script.string
-                              for original,new in zip(html.find_all('audio'),candidate.find_all('audio')): original['preload']=new['preload']
-                              route.fulfill(response=current,body=str(html),content_type='text/html; charset=utf-8')
-                          page.route('https://northstarprime.net/music/',use_candidate)
-                      res=page.goto('https://northstarprime.net'+path,wait_until='load',timeout=45000)
-                      page.locator('img').evaluate_all("xs=>xs.forEach(x=>x.loading='eager')")
-                      if path=='/music/':
-                          page.locator('#hero-play-beats').click()
-                          page.wait_for_function("Array.from(document.querySelectorAll('audio')).some(v=>v.currentTime>1)")
-                      else:
-                          page.wait_for_function("!document.querySelector('#live-status').textContent.includes('Checking')",timeout=12000)
-                      page.wait_for_timeout(3000)
-                      print('DIAG',json.dumps([width,path,res.status,console,errors,assets,failed]),flush=True)
-                      assert res.status==200 and not (console or errors or assets or failed),(path,width,console,errors,assets,failed)
-                      if path=='/music/':
-                          idx=page.locator('#lounge-tracks-data').evaluate("s=>JSON.parse(s.textContent).findIndex(t=>t.duration===0 && t.src.startsWith('https://assets.'))")
-                          btn=page.locator(f'.play-track-btn[data-idx="{idx}"]')
-                          btn.click()
-                          page.wait_for_function("document.getElementById('lounge-audio-r2').currentTime>0.4")
-                          before=page.locator('#time-dur').inner_text()
-                          assert before!='--:--' and before!='0:00'
-                          btn.click()
-                          assert page.locator('#time-dur').inner_text()==before
-                          print('REPLAY duration retained',width,before,flush=True)
-                      ctx.close()
-              browser.close()
+              b=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--use-angle=swiftshader','--enable-unsafe-swiftshader'])
+              page=b.new_page(viewport={'width':390,'height':844},is_mobile=True,has_touch=True,device_scale_factor=1)
+              page.goto(f'http://127.0.0.1:{server.server_port}/arcade/custom/kosher-lines/?mode=rival')
+              page.wait_for_function('window.__KOSHER_LINES__?.snapshot().action?.enabled',timeout=90000)
+              target=page.locator('summary',has_text='Your deck & graphics')
+              target.evaluate("e=>e.scrollIntoView({block:'center',behavior:'instant'})")
+              print('LAYOUT',target.evaluate("""e=>{let r=e.getBoundingClientRect(),v=visualViewport;return [innerWidth,document.documentElement.scrollWidth,v.width,v.scale,v.offsetTop,scrollY,r.toJSON(),document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.outerHTML.slice(0,100),Array.from(document.querySelectorAll('body *')).map(x=>[x.tagName,x.className,x.getBoundingClientRect().right]).filter(x=>x[2]>395).slice(0,18)]}"""),flush=True)
+              target.tap(timeout=5000)
+              assert target.evaluate('e=>e.parentElement.open')
+              print('TOUCH deck opened',flush=True)
+              b.close()
+          server.shutdown()

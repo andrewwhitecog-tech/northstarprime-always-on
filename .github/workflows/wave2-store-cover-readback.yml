@@ -66,6 +66,38 @@ jobs:
                   browser.close()
                   srv.shutdown()
           print("PASS 24 buyer-facing cover placements, decoded dimensions, destinations and crop geometry")
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: 1d41c7a050b2bdcd32b8b1db3cc636089d9e70cc
+          path: prism-source
+          sparse-checkout: |
+            arcade/custom/prism-drift
+            static/games
+            warband/art
+      - name: Measure the mobile race panel from AG's combined revision
+        shell: python
+        run: |
+          from functools import partial
+          from http.server import SimpleHTTPRequestHandler,ThreadingHTTPServer
+          from threading import Thread
+          from playwright.sync_api import sync_playwright
+          import json
+          with ThreadingHTTPServer(("127.0.0.1",0),partial(SimpleHTTPRequestHandler,directory="prism-source")) as s, sync_playwright() as pw:
+              Thread(target=s.serve_forever,daemon=True).start()
+              browser=pw.chromium.launch()
+              try:
+                  page=browser.new_page(viewport={"width":390,"height":844},device_scale_factor=1,is_mobile=True,has_touch=True)
+                  page.goto(f"http://127.0.0.1:{s.server_port}/arcade/custom/prism-drift/")
+                  frame="""() => {const get=id=>document.getElementById(id); const r=id=>{const e=get(id),b=e.getBoundingClientRect();return [b.y,b.height,b.bottom,e.clientHeight,e.scrollHeight]};return {stage:r('stageWrap'),panel:r('overlay'),title:r('overlayTitle'),copy:r('overlayText'),button:r('overlayBtn'),view:[innerWidth,innerHeight,document.documentElement.scrollHeight],controls:[...document.querySelectorAll('.controls button,.controls select')].map(e=>Math.round(e.getBoundingClientRect().height))}}"""
+                  print("ORIGINAL",json.dumps(page.evaluate(frame)),flush=True)
+                  for css in [".race-message{align-content:start}",".race-message{gap:2px;padding-block:0}.race-message-copy{gap:2px}",".race-message{block-size:180px;gap:2px;padding-block:0}.race-message-copy{gap:2px}",".race-message{grid-template-columns:minmax(0,1fr) auto;gap:6px}.race-message #overlayBtn{max-width:100px;white-space:normal}",".race-message{block-size:auto;min-height:160px;align-content:start}.race-message-copy{gap:2px}.race-message #overlayBtn{min-height:40px}"]:
+                      style=page.add_style_tag(content="@media(max-width:720px){"+css+"}")
+                      print("CANDIDATE",css,json.dumps(page.evaluate(frame)),flush=True)
+                      style.evaluate("e=>e.remove()")
+              finally:
+                  browser.close()
+                  s.shutdown()
       - if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:

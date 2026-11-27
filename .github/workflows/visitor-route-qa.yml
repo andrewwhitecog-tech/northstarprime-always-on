@@ -11,79 +11,27 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: d610a653b5bb18facb541466dae4dbf902da59f5
+          ref: 645bbf5760a5eae0a1cd4312976099c246a4eea6
           sparse-checkout: |
-            music
-            realm
-            .github/hq_audio_review
-            static/games
-            store
-            play
-            links
-            merch
-            chromatic
-            stickerforge
-            parody-drop
-            community
-            idc-programming
-            tools
-            tests
-            static/front
-            static/cards
-            warband/art
+            arcade/custom/northstar-chrono-defender
           persist-credentials: false
       - run: python -m pip -q install playwright beautifulsoup4 pillow pytest requests
-
+      - name: Run real Chrono mechanics and live CDP journeys
+        env:
+          NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/chrono/node_modules/playwright
+          NSP_PLAYTEST_OUT: ${{ runner.temp }}/chrono-live
+        run: |
+          node --test arcade/custom/northstar-chrono-defender/tests/controls.test.cjs arcade/custom/northstar-chrono-defender/tests/contact-fairness.test.cjs arcade/custom/northstar-chrono-defender/tests/weapon_atlas.test.cjs
+          npm install --prefix "$RUNNER_TEMP/chrono" --no-save --package-lock=false --ignore-scripts playwright@1.55.1
+          "$RUNNER_TEMP/chrono/node_modules/.bin/playwright" install chromium
+          node arcade/custom/northstar-chrono-defender/tests/live_visual_smoke.cjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: chrono-cdp
+          path: ${{ runner.temp }}/chrono-live
+          retention-days: 7
       - name: Browser verification
         shell: python
         run: |
-          import requests,time
-          from bs4 import BeautifulSoup
-          for i in range(50):
-              r=requests.get('https://northstarprime.net/store/?arcade_release='+str(int(time.time())),timeout=18)
-              if r.ok and BeautifulSoup(r.content,'html.parser').select_one('nav[aria-label="Store links"] a[href="/arcade/"]'): break
-              time.sleep(15)
-          else: raise AssertionError('Store footer deployment did not propagate')
-          from playwright.sync_api import sync_playwright
-          from urllib.parse import urlsplit
-          import json,time
-          with sync_playwright() as p:
-              browser=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu','--mute-audio'])
-              for width,height in [(390,844),(1280,800)]:
-                  for path in ['/music/','/realm/']:
-                      ctx=browser.new_context(viewport={'width':width,'height':height})
-                      page=ctx.new_page()
-                      console=[]; errors=[]; assets=[]; failed=[]
-                      page.on('console',lambda m:console.append([m.text[:280],m.location.get('url','').split('?')[0]]) if m.type=='error' else None)
-                      page.on('pageerror',lambda e:errors.append(str(e)))
-                      page.on('response',lambda r: assets.append([r.status,r.url.split('?')[0]]) if r.status>=400 else None)
-                      page.on('requestfailed',lambda r:failed.append([r.failure,r.resource_type,r.url.split('?')[0]]) )
-                      res=page.goto('https://northstarprime.net'+path,wait_until='load',timeout=45000)
-                      page.locator('img').evaluate_all("xs=>xs.forEach(x=>x.loading='eager')")
-                      if path=='/music/':
-                          page.locator('#hero-play-beats').click()
-                          page.wait_for_function("Array.from(document.querySelectorAll('audio')).some(v=>v.currentTime>1)")
-                      else:
-                          page.wait_for_function("!document.querySelector('#live-status').textContent.includes('Checking')",timeout=12000)
-                      images=page.locator('img').evaluate_all("imgs=>Promise.all(imgs.filter(i=>i.currentSrc||i.src).map(async i=>{await i.decode();return i.naturalWidth})).then(s=>[s.length,s.every(w=>w>0)])")
-                      assert images[1],(path,images)
-                      page.evaluate("()=>document.fonts.ready.then(()=>true)")
-                      page.wait_for_timeout(2000)
-                      print('DIAG',json.dumps([width,path,res.status,console,errors,assets,failed]),flush=True)
-                      assert res.status==200 and not any((console,errors,assets,failed)),(width,path,console,errors,assets,failed)
-                      print('DECODED',path,width,images[0],flush=True)
-                      ctx.close()
-              browser.close()
-          from playwright.sync_api import sync_playwright
-          with sync_playwright() as p:
-              b=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu'])
-              for w in (390,1280):
-                  page=b.new_page(viewport={'width':w,'height':844})
-                  page.goto('https://northstarprime.net/store/',wait_until='domcontentloaded')
-                  link=page.get_by_role('navigation',name='Store links').get_by_role('link',name='Arcade',exact=True)
-                  with page.expect_navigation(wait_until='domcontentloaded') as nav: link.click()
-                  assert nav.value.status==200 and page.url=='https://northstarprime.net/arcade/'
-                  print('ARCADE LIVE',w,nav.value.status,page.title(),flush=True)
-                  page.close()
-              b.close()
-          
+          print('Chrono production CDP completed')

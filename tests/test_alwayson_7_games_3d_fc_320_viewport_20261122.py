@@ -115,10 +115,14 @@ def test_mobile_desktop_zero_overflow_and_hud_bounds_with_webgl_fallback(static_
             pg.goto(f"{static_base_url}/games/flagship-3d-suite/", wait_until="domcontentloaded", timeout=20000)
             pg.wait_for_timeout(120)
             assert pg.locator("#cards-dock .game-card").count() == 4
-            pg.locator("#cards-dock [data-embed='0']").click()
-            assert pg.locator("#cabinet-runner").is_visible()
-            pg.keyboard.press("Escape")
-            assert not pg.locator("#cabinet-runner").is_visible()
+            for index in range(4):
+                card = pg.locator("#cards-dock .game-card").nth(index)
+                expected_url = card.locator("a").get_attribute("href")
+                card.get_by_role("button").click(timeout=5000)
+                assert pg.locator("#cabinet-runner").is_visible()
+                assert pg.locator("#cabinet-iframe").get_attribute("src") == expected_url
+                pg.keyboard.press("Escape")
+                assert not pg.locator("#cabinet-runner").is_visible()
             ctx_fs.close()
         finally:
             browser.close()

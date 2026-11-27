@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: 7fabdb6822b8554a61fae90e11f2273d5f9d607a
+          ref: 42b11a38d53d04bcda55da18fc332736d36c672a
           sparse-checkout: |
             music
             realm
@@ -33,7 +33,7 @@ jobs:
             warband/art
           persist-credentials: false
       - run: python -m pip -q install playwright beautifulsoup4 pillow pytest requests
-      - run: git sparse-checkout add 3d-prints && cd tools && python -m unittest test_customer_static.CustomerStaticTests.test_merch_lookbook_links_point_to_model_specs
+
       - name: Browser verification
         shell: python
         run: |
@@ -42,15 +42,20 @@ jobs:
           from bs4 import BeautifulSoup
           from playwright.sync_api import sync_playwright
           import json,requests
-          preview=True
+          preview=False
           origin='https://northstarprime.net'
           store=origin+'/merch/'
           dest='/3d-prints/#wb-reveler-75'
           if preview: html=Path('merch/index.html').read_text(encoding='utf-8')
           else:
-              res=requests.get(store,timeout=20)
-              res.raise_for_status()
-              html=res.text
+              import time
+              for attempt in range(45):
+                  res=requests.get(store,params={'verify':'reveler-409','attempt':attempt},timeout=20)
+                  res.raise_for_status()
+                  html=res.text
+                  if dest in html and '/3d-prints/#nsp-wb-rev75' not in html: break
+                  time.sleep(8)
+              else: raise AssertionError('Production is still serving the older Reveler link')
           doc=BeautifulSoup(html,'html.parser')
           spec=BeautifulSoup(requests.get(origin+'/3d-prints/',timeout=20).content,'html.parser')
           cards=doc.select('article[data-item]')

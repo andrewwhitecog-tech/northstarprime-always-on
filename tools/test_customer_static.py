@@ -163,6 +163,15 @@ class CustomerStaticTests(unittest.TestCase):
         self.assertIn('href="/oracle/"', links_html)
         self.assertIn("<loc>https://northstarprime.net/oracle/</loc>", sitemap_xml)
 
+    def test_merch_lookbook_links_point_to_model_specs(self):
+        root = Path(__file__).resolve().parents[1]
+        merch = home.read_page(root / "merch" / "index.html")
+        lookbook = home.read_page(root / "3d-prints" / "index.html")
+        prefix = "/3d-prints/#"
+        fragments = {link.removeprefix(prefix) for link in merch.links if link.startswith(prefix)}
+        self.assertIn("wb-reveler-75", fragments)
+        self.assertEqual(fragments - lookbook.ids, set(), "Missing model specifications")
+
     def test_og_product_covers_store_and_holidays_routes(self):
         repo_root = Path(__file__).resolve().parents[1]
         store_path = repo_root / "store" / "index.html"

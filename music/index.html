@@ -628,14 +628,16 @@
       var useCors = !!(t.cors || t.src.indexOf("raw.githubusercontent.com") !== -1 || t.src.charAt(0) === "/");
       audio = useCors ? audioCors : audioR2;
       audio.volume = Math.max(0, Math.min(1, parseFloat(vol.value) / 100));
-      if (audio.getAttribute("src") !== t.src || audio.error) {
+      var reuseSource = audio.getAttribute("src") === t.src && !audio.error;
+      if (!reuseSource) {
         audio.src = t.src;
         audio.load();
       } else if (audio.currentTime > 0) {
         audio.currentTime = 0;
       }
       timeCur.textContent = "0:00";
-      timeDur.textContent = t.duration ? fmtTime(t.duration) : "--:--";
+      var duration = reuseSource && isFinite(audio.duration) && audio.duration > 0 ? audio.duration : t.duration;
+      timeDur.textContent = duration ? fmtTime(duration) : "--:--";
       scrub.value = "0";
 
       if (autoplay) {

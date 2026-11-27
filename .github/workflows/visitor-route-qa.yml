@@ -52,8 +52,11 @@ jobs:
                   errors=[]
                   page.on('pageerror',lambda err:errors.append(str(err)))
                   if preview:
+                      def candidate_document(r):
+                          route=urlsplit(r.request.url).path.strip('/')
+                          r.fulfill(content_type='text/html',body=Path(route+'/index.html').read_bytes())
                       for route in [*routes,'store']:
-                          page.route(base+'/'+route+'/',lambda r,route=route:r.fulfill(content_type='text/html',body=Path(route+'/index.html').read_bytes()))
+                          page.route(base+'/'+route+'/',candidate_document)
                   page.goto(base+'/store/',wait_until='domcontentloaded')
                   shelf=page.locator('a[href="/pnw-lost-tables-2020/"]').filter(has_text='Physical order inquiries').first
                   assert shelf.count()==1

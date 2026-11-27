@@ -45,7 +45,7 @@ jobs:
           import json,os,re
           from pathlib import Path
           from urllib.parse import urlsplit,parse_qs
-          from playwright.sync_api import sync_playwright
+          from playwright.sync_api import sync_playwright,expect
           width=int(os.environ['WIDTH'])
           origin='https://northstarprime.net'
           routes=['merch','rich-yn','holidays','store']
@@ -91,9 +91,9 @@ jobs:
                   visit('holidays')
                   assert page.locator('#idr-dock,#idr-toggle').count()==0
                   page.get_by_role('link',name='Browse ornaments and calendars').click()
-                  assert page.locator('[data-tab="ornaments-calendars"]').get_attribute('aria-pressed')=='true'
+                  expect(page.locator('[data-tab="ornaments-calendars"]')).to_have_attribute('aria-pressed','true')
                   for item in ['orn-star-bethlehem','cal-2027-horiz']:
-                      assert page.locator('#'+item).is_visible()
+                      expect(page.locator('#'+item)).to_be_visible()
                   page.locator('#orn-star-bethlehem a.button.primary').click()
                   page.wait_for_function("document.querySelector('#message-preview')?.textContent.includes('NS-XMAS26-ORN901-LL01')")
                   q=parse_qs(urlsplit(page.locator('#draft-link').get_attribute('href')).query)
@@ -139,7 +139,7 @@ jobs:
                   pr=json.loads(dest.locator('[data-page]').get_attribute('data-page'))['props']['product']
                   assert pr['is_published'] and pr['price_cents']==1200 and '78-card' in pr['name']
                   print('PASS Tarot buy link, provider listing, price and offer',width,flush=True)
-                  dest.wait_for_timeout(2200)
+                  expect(dest.get_by_text('I want this!',exact=True).first).to_be_visible(timeout=15000)
                   print('Gumroad visitor controls',dest.locator('button:visible,a[href]:visible,[role=button]:visible').all_inner_texts()[-30:],flush=True)
                   print('Gumroad listing status text',dest.locator('body').inner_text()[-1200:],flush=True)
                   visit('merch')
@@ -154,3 +154,46 @@ jobs:
                       failures.append(case.__name__)
               browser.close()
               assert not failures,failures
+
+  keyboard:
+    strategy:
+      fail-fast: false
+      matrix:
+        width: [390, 1280]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      WIDTH: ${{ matrix.width }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 95892aa64cbdc585a8d2ee28877459161135d651
+          path: keyboard
+          sparse-checkout: merch
+          persist-credentials: false
+      - run: python -m pip -q install playwright requests beautifulsoup4
+      - shell: python
+        run: |
+          import os
+          from pathlib import Path
+          from playwright.sync_api import sync_playwright,expect
+          pageurl='https://northstarprime.net/merch/'
+          width=int(os.environ['WIDTH'])
+          with sync_playwright() as pw:
+              b=pw.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu'])
+              p=b.new_page(viewport={'width':width,'height':840},reduced_motion='reduce')
+              if Path('keyboard/merch/index.html').exists():
+                  p.route(pageurl,lambda r:r.fulfill(content_type='text/html; charset=utf-8',body=Path('keyboard/merch/index.html').read_bytes()))
+              p.goto(pageurl,wait_until='domcontentloaded')
+              cards=p.locator('article[data-item]')
+              assert cards.count()==58
+              for c in cards.all():
+                  trigger=c.locator('.zoom-trigger')
+                  trigger.click()
+                  for key,expected in [('Shift+Tab','lb-cta2'),('Tab','lb-close'),('Tab','lb-cta1'),('Tab','lb-cta2'),('Tab','lb-close')]:
+                      p.keyboard.press(key)
+                      expect(p.locator('#'+expected)).to_be_focused()
+                  p.keyboard.press('Escape')
+                  expect(trigger).to_be_focused()
+              print('PASS keyboard cycling, Escape and focus restoration for all',cards.count(),'previews at',width,flush=True)
+              b.close()

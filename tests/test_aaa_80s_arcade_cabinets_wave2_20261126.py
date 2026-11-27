@@ -37,6 +37,17 @@ CABINETS = [
     ("vorath-circus", "Vorath Circus", "/static/games/marquees_aaa/vorath-circus.webp", True),
     ("vorath-circus-midnight", "Vorath Circus: Mutant Midnight", "/static/games/marquees_aaa/vorath-circus-midnight.webp", True),
     ("vorath-signal-crown", "Vorath Signal Crown", "/static/games/marquees_aaa/vorath-signal-crown.webp", True),
+    # Wave 5 (10 more iconic cabinets -> 41 total!)
+    ("logic-foundry", "Logic Foundry", "/static/games/marquees_aaa/logic-foundry.webp", False),
+    ("ladder", "Ladder: The Ninefold Relay", "/static/games/marquees_aaa/ladder-ninefold-relay.webp", False),
+    ("side-street", "Side Street", "/static/games/marquees_aaa/side-street.webp", False),
+    ("prism-drift", "Prism Drift", "/static/games/marquees_aaa/prism-drift.webp", False),
+    ("gem-shark", "Gem Shark", "/static/games/marquees_aaa/gem-shark.webp", True),
+    ("good-news-drive", "Dream Road", "/static/games/marquees_aaa/dream-road.webp", True),
+    ("idr-tracker-cabinet", "IDR Tracker Cabinet", "/static/games/marquees_aaa/idr-tracker-cabinet.webp", False),
+    ("precinct-404", "Precinct 404: Dispatch Queue", "/static/games/marquees_aaa/precinct-404.webp", False),
+    ("precinct-404-signal", "Precinct 404: Signal Board", "/static/games/marquees_aaa/precinct-404-signal.webp", False),
+    ("subject-000999", "Subject 000-999", "/static/games/marquees_aaa/subject-000999.webp", True),
 ]
 
 

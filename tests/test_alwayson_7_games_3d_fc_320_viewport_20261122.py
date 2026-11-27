@@ -104,6 +104,12 @@ def test_mobile_desktop_zero_overflow_and_hud_bounds_with_webgl_fallback(static_
                     assert not m["offscreen"], f"{route} HUD exceeds viewport at {width}x{height}: {m['offscreen']}"
                     assert "3D graphics could not start" in m["fbText"], f"{route} missing fallback banner"
                     assert m["fbLink"], f"{route} missing /games/ fallback link"
+                    if route == "/games/precision-armory-3d/":
+                        dock = page.locator("#tool-dock").bounding_box()
+                        links = page.locator(".nsp-hub-return-bar").bounding_box()
+                        assert dock and links
+                        assert links["y"] >= dock["y"] + dock["height"]
+                        assert links["y"] + links["height"] <= height
                     assert not page_errs, f"{route} page errors at {width}x{height}: {page_errs}"
                     assert not bad_http, f"{route} HTTP>=400 at {width}x{height}: {bad_http}"
                     page.close()

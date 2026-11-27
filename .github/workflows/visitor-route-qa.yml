@@ -1,86 +1,120 @@
-name: NorthStar visitor route checks
+name: Storefront conversion audit
 on:
   push:
     branches: [qa/visitor-release-20261127]
 permissions:
   contents: read
 jobs:
-  verify:
+  audit:
+    strategy:
+      fail-fast: false
+      matrix:
+        width: [390, 1280]
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 40
+    env:
+      WIDTH: ${{ matrix.width }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          ref: fdc11dc91fff27509f0f4a3f628555c2a5801d54
-          sparse-checkout: |
-            join/first-light
-            idc-programming
-            holidays
-            literature/the-null-calendar
-          persist-credentials: false
-      - run: python -m pip -q install playwright requests
-      - name: Verify membership journeys
-        shell: python
+      - run: python -m pip -q install playwright requests beautifulsoup4
+      - shell: python
         run: |
-          from pathlib import Path
-          from urllib.parse import urlsplit,parse_qs,urljoin
-          import time,requests
+          import os,re,json,requests,time
+          from concurrent.futures import ThreadPoolExecutor
+          from urllib.parse import urlsplit,urljoin,parse_qs,urlunsplit,unquote
           from playwright.sync_api import sync_playwright
-          preview=False
+          from bs4 import BeautifulSoup
           origin='https://northstarprime.net'
-          route='/join/first-light/'
-          sources={'/holidays/':1,'/idc-programming/':1,'/literature/the-null-calendar/':2}
-          if not preview:
-              for attempt in range(60):
-                  r=requests.get(origin+route,params={'proof':'membership411','attempt':attempt},timeout=20)
-                  if r.ok and 'Ask about membership' in r.text and 'Start Free Trial' not in r.text: break
-                  time.sleep(8)
-              else: raise AssertionError('Updated flyer page has not reached production')
+          width=int(os.environ['WIDTH'])
+          routes=['rich-yn','store','merch','holidays']
+          def norm(href):
+              u=urlsplit(href)
+              return urlunsplit((u.scheme,u.netloc,u.path,'',''))
+          commerce={}
+          urls=set()
+          def finding(*x): print('FINDING',*x,flush=True)
           with sync_playwright() as p:
               browser=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu'])
-              for width in (390,1280):
-                  page=browser.new_page(viewport={'width':width,'height':840})
-                  page.set_default_timeout(20000)
-                  errors=[]
-                  page.on('pageerror',lambda e:errors.append(str(e)))
-                  if preview:
-                      def source(r):
-                          path=urlsplit(r.request.url).path.strip('/')
-                          r.fulfill(content_type='text/html',body=Path(path+'/index.html').read_bytes())
-                      for path in (route,*sources): page.route(origin+path+'*',source)
-                  for path,count in sources.items():
-                      page.goto(origin+path,wait_until='domcontentloaded')
-                      assert page.locator('a[href="/#tiers"]').count()==0
-                      incoming=page.locator('a[href="'+route+'"]')
-                      assert incoming.count()==count
-                      if width==1280:
-                          if path.startswith('/literature/'):
-                              page.locator('.nsp-nav-more summary').click()
-                          incoming.first.click()
-                          page.wait_for_url(origin+route)
-                          if path.startswith('/literature/'):
-                              page.goto(origin+path,wait_until='domcontentloaded')
-                              page.locator('[data-nsp-command-open]').click()
-                              page.locator('.nsp-command-head input[type=search]').fill('membership')
-                              page.locator('.nsp-command-item[href="'+route+'"]').click()
-                              page.wait_for_url(origin+route)
-                  for suffix,label in [('', 'First Signal'),('?v=holy-hippies&code=QA-CANARY-411','Holy Hippies'),('?v=unknown&email=qa%40example.invalid','First Signal')]:
-                      page.goto(origin+route+suffix,wait_until='domcontentloaded')
-                      assert page.locator('#variant-label').text_content()==label,(suffix,page.locator('#variant-label').text_content())
-                      assert page.locator('form,input,button[type="submit"]').count()==0
-                      assert 'Online enrollment is currently unavailable.' in page.locator('main').inner_text()
-                      assert page.locator('a[href="/renalshield/"]').is_visible()
-                      link=page.get_by_role('link',name='Ask about membership',exact=True)
-                      target=link.get_attribute('href')
-                      assert urlsplit(target).path=='/contact/' and 'CANARY' not in target and 'example.invalid' not in target
-                      with page.expect_request(lambda req:req.is_navigation_request() and urlsplit(req.url).path=='/contact/') as navigation:
-                          link.click()
-                      assert not navigation.value.all_headers().get('referer')
-                      page.wait_for_function("()=>document.querySelector('#subject-preview')?.textContent==='First Signal membership inquiry'")
-                      draft=urlsplit(page.locator('#draft-link').get_attribute('href'))
-                      assert draft.scheme=='mailto' and draft.path=='contact@northstarprime.net'
-                      assert parse_qs(draft.query)==parse_qs(urlsplit(target).query)
-                  print('MEMBERSHIP',width,'four incoming links, three flyer variants, populated draft',flush=True)
-                  if errors: print('JS_ERRORS',errors,flush=True)
-                  page.close()
+              ctx=browser.new_context(viewport={'width':width,'height':840},reduced_motion='reduce')
+              page=ctx.new_page()
+              page.set_default_timeout(8000)
+              for route in routes:
+                  bad=[]
+                  err=[]
+                  def response(r):
+                      if r.status>=400 and r.request.resource_type in ['document','stylesheet','script','image']:bad.append((r.status,r.url))
+                  def pageerror(e):err.append(str(e))
+                  page.on('response',response);page.on('pageerror',pageerror)
+                  page.goto(origin+'/'+route+'/',wait_until='domcontentloaded',timeout=45000)
+                  data=page.locator('a[href]').evaluate_all("""aa=>aa.map(a=>({u:a.href,t:a.innerText.trim(),visible:a.checkVisibility(),x:a.getBoundingClientRect().x,right:a.getBoundingClientRect().right}))""")
+                  if page.evaluate('document.documentElement.scrollWidth>innerWidth'):finding(route,'PAGE_OVERFLOW')
+                  for a in data:
+                      u=a['u'];z=urlsplit(u)
+                      if z.scheme not in ('http','https'):continue
+                      if a['visible'] and (a['right']>width+2 or a['x'] < -2) and a['t'] and not a['t'].lower().startswith('skip'):finding(route,'OFFSCREEN',a['t'][:75],round(a['x']),round(a['right']))
+                      if z.hostname=='northstarprime.net':urls.add(u)
+                      if z.hostname in ('www.zazzle.com','www.etsy.com','andrewcog.gumroad.com') or '/contact/' in z.path and z.query:commerce.setdefault(u if z.hostname=='northstarprime.net' else norm(u),[]).append((route,a['t'][:180]))
+                  if route=='merch':
+                      cards=page.locator('article[data-item]')
+                      for card in cards.all():
+                          d=json.loads(card.get_attribute('data-item'))
+                          try:
+                              card.locator('.zoom-trigger').click()
+                              for n in [1,2]:
+                                  ctl=page.locator('#lb-cta'+str(n))
+                                  if d.get('cta'+str(n)+'_url') and ctl.get_attribute('href')!=d.get('cta'+str(n)+'_url'):finding(route,'MODAL_TARGET',card.get_attribute('id'),n)
+                              page.locator('#lb-close').click()
+                          except Exception as e:
+                              finding(route,'MODAL_CLICK',card.get_attribute('id'),str(e)[:180])
+                              page.keyboard.press('Escape')
+                      tabs=page.locator('[data-tab]')
+                      for tab in tabs.all():
+                          tab.click()
+                          key=tab.get_attribute('data-tab')
+                          vis=page.locator('article[data-item]:visible')
+                          if not vis.count() or key!='all' and any(x.get_attribute('data-cat')!=key for x in vis.all()):finding('filter',key,vis.count())
+                      print('MODALS_FILTERS',cards.count(),tabs.count(),flush=True)
+                  print('PAGE',route,width,len(data),'errors',err,'failed',bad[:15],flush=True)
+                  page.remove_listener('response',response);page.remove_listener('pageerror',pageerror)
+              def http(u):
+                  try:
+                      r=requests.get(u,timeout=(8,18),stream=True)
+                      if r.status_code>=400:return (r.status_code,set())
+                      if 'html' not in r.headers.get('Content-Type',''):r.close();return (r.status_code,set())
+                      doc=BeautifulSoup(r.content,'html.parser')
+                      return r.status_code,{n['id'] for n in doc.select('[id]')}|{n['data-tab'] for n in doc.select('[data-tab]')}
+                  except Exception as e:return str(e)[:120],set()
+              bases=sorted({norm(x) for x in urls})
+              with ThreadPoolExecutor(max_workers=5) as pool: targets=dict(zip(bases,pool.map(http,bases)))
+              for u in sorted(urls):
+                  code,ids=targets[norm(u)];frag=unquote(urlsplit(u).fragment)
+                  if code!=200 or frag and frag not in ids:finding('FIRSTPARTY',code,u)
+              print('INTERNAL',len(urls),len(bases),flush=True)
+              destpage=ctx.new_page()
+              destpage.set_default_timeout(8000)
+              groups={}
+              for u,placements in sorted(commerce.items()):
+                  host=urlsplit(u).hostname
+                  try:
+                      r=destpage.goto(u,wait_until='domcontentloaded',timeout=30000);code=r.status if r else 0
+                      if host=='andrewcog.gumroad.com' and '/l/' in u:
+                          props=json.loads(destpage.locator('[data-page]').get_attribute('data-page'))['props']['product']
+                          c=props['price_cents']
+                          if not props['is_published']:finding('UNPUBLISHED',u)
+                          for rt,l in placements:
+                              values=re.findall(r'\$(\d+(?:\.\d+)?)',l)
+                              if values and c not in [round(float(x)*100) for x in values]:finding('PRICE',rt,u,l[:130],c)
+                          buy=destpage.get_by_text(re.compile(r'^(I want this!|Buy now|Add to cart|Buy this|Get it now|Pay|Donate|Subscribe)$',re.I))
+                          if not buy.count(): print('PROVIDER_CONTROL',u,destpage.locator('button:visible,a[role=button]:visible').all_inner_texts()[:12],flush=True)
+                      elif host=='northstarprime.net':
+                          query=parse_qs(urlsplit(u).query)
+                          destpage.wait_for_function("()=>document.querySelector('#draft-link')?.href.startsWith('mailto:')")
+                          dr=urlsplit(destpage.locator('#draft-link').get_attribute('href'))
+                          q=parse_qs(dr.query)
+                          if dr.path!='contact@northstarprime.net' or any(q.get(k,[''])[0].replace('\r\n','\n')!=v[0].replace('\r\n','\n') for k,v in query.items() if k in ('subject','body')):finding('DRAFT',u[:160])
+                      elif host in ('www.zazzle.com','www.etsy.com'):
+                          print('MARKET',code,u,destpage.title()[:110],flush=True)
+                      if code>=400:finding('DEST_STATUS',code,u)
+                      groups[host]=groups.get(host,0)+1
+                  except Exception as e:finding('DEST_EXCEPTION',u[:160],str(e)[:200])
+              print('DEST_DONE',width,groups,flush=True)
               browser.close()

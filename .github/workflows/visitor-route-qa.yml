@@ -13,6 +13,10 @@ jobs:
         with:
           ref: f19372e829666279257c0e737ec5f9183dc5953b
           sparse-checkout: |
+            music
+            realm
+            .github/hq_audio_review
+            static/games
             store
             play
             links
@@ -29,52 +33,45 @@ jobs:
             warband/art
           persist-credentials: false
       - run: python -m pip -q install playwright beautifulsoup4 pillow pytest requests
-      - run: python -m pytest -q tests/test_visitor_destinations.py
+      - name: Exercise the native audio default fixture
+        shell: bash
+        run: |
+          npm install --prefix "$RUNNER_TEMP/audio" --no-save --package-lock=false --ignore-scripts playwright@1.55.1
+          "$RUNNER_TEMP/audio/node_modules/.bin/playwright" install chromium
+          export NSP_PLAYWRIGHT_PATH="$RUNNER_TEMP/audio/node_modules/playwright"
+          export NSP_HQ_BASELINE="$GITHUB_WORKSPACE/.github/hq_audio_review/fixtures/hq_audio.baseline.js"
+          export NSP_HQ_CANDIDATE="$GITHUB_WORKSPACE/static/games/hq_audio.js"
+          export NSP_PLAYTEST_OUT="$RUNNER_TEMP/audio-results"
+          xvfb-run -a node .github/hq_audio_review/hq_audio_lifecycle.cjs
       - name: Browser verification
         shell: python
         run: |
-          from pathlib import Path
-          from urllib.parse import urlsplit
           from playwright.sync_api import sync_playwright
-          from PIL import Image,ImageDraw
-          from io import BytesIO
-          import base64,json,os
-          base='https://northstarprime.net'
-          routes=['store','play','links','merch','chromatic','stickerforge/comedy-vault','parody-drop']
-          mode=os.environ.get('VISIT_MODE','preview')
-          images=[]
-          sam='https://andrewcog.gumroad.com/l/northstar-2026-free-mega-sampler'
+          from urllib.parse import urlsplit
+          import json,time
           with sync_playwright() as p:
-              b=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu','--mute-audio'])
-              for width in [390,1280]:
-                  page=b.new_page(viewport={'width':width,'height':840},reduced_motion='reduce')
-                  for path in routes:
-                      url=f'{base}/{path}/'
-                      if mode=='preview':
-                          data=Path(path,'index.html').read_text()
-                          page.route(url,lambda r:r.fulfill(status=200,content_type='text/html; charset=utf-8',body=data))
-                      resp=page.goto(url,wait_until='domcontentloaded')
-                      assert resp.status==200
-                      for target in ['/community/',sam]:
-                          loc=page.locator('a[href="'+target+'"]:visible').first
-                          loc.wait_for(state='visible')
-                          loc.evaluate("a=>a.scrollIntoView({block:'center',behavior:'instant'})")
-                          loc.focus()
-                          rect=loc.bounding_box()
-                          assert rect['width']>0 and rect['x']>=-1 and rect['x']+rect['width']<=width+1,(path,width,target,rect)
-                          assert loc.inner_text().strip()
-                      if width==390:
-                          loc.evaluate("a=>a.scrollIntoView({block:'center',behavior:'instant'})")
-                          shot=Image.open(BytesIO(page.screenshot(animations='disabled'))).convert('RGB')
-                          y=round(rect['y']+rect['height']/2)
-                          images.append((path,shot.crop((0,max(0,y-105),390,min(840,y+105)))))
-                      print('CTA',path,width,flush=True)
-                      if mode=='preview':page.unroute(url)
-                  page.close()
-              b.close()
-          sheet=Image.new('RGB',(780,4*238),'#202020');d=ImageDraw.Draw(sheet)
-          for n,(path,im) in enumerate(images):
-              x=n%2*390;y=n//2*238;d.text((x+4,y+3),path,fill='white');sheet.paste(im,(x,y+22))
-          buf=BytesIO();sheet.save(buf,format='JPEG',quality=65)
-          s=base64.b64encode(buf.getvalue()).decode()
-          for i in range(0,len(s),3000):print('SHEET '+s[i:i+3000])
+              browser=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu','--mute-audio'])
+              for width,height in [(390,844),(1280,800)]:
+                  for path in ['/music/','/realm/']:
+                      ctx=browser.new_context(viewport={'width':width,'height':height})
+                      page=ctx.new_page()
+                      console=[]; errors=[]; assets=[]; failed=[]
+                      page.on('console',lambda m:console.append([m.text[:280],m.location.get('url','').split('?')[0]]) if m.type=='error' else None)
+                      page.on('pageerror',lambda e:errors.append(str(e)))
+                      page.on('response',lambda r: assets.append([r.status,r.url.split('?')[0]]) if r.status>=400 else None)
+                      page.on('requestfailed',lambda r:failed.append([r.failure,r.resource_type,r.url.split('?')[0]]) )
+                      dest='https://northstarprime.net'+path
+                      from pathlib import Path
+                      if path=='/music/':
+                          page.route(dest,lambda r:r.fulfill(status=200,content_type='text/html',body=Path('music/index.html').read_bytes()))
+                      res=page.goto('https://northstarprime.net'+path,wait_until='load',timeout=45000)
+                      page.locator('img').evaluate_all("xs=>xs.forEach(x=>x.loading='eager')")
+                      if path=='/music/':
+                          page.locator('#hero-play-beats').click()
+                          page.wait_for_function("Array.from(document.querySelectorAll('audio')).some(v=>v.currentTime>1)")
+                      else:
+                          page.wait_for_function("!document.querySelector('#live-status').textContent.includes('Checking')",timeout=12000)
+                      page.wait_for_timeout(3000)
+                      print('DIAG',json.dumps([width,path,res.status,console,errors,assets,failed]),flush=True)
+                      ctx.close()
+              browser.close()

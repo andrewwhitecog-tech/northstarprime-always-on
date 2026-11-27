@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: d610a653b5bb18facb541466dae4dbf902da59f5
+          ref: 628459b0f3145aa4df9796569acf67c8f6f9f02e
           sparse-checkout: |
             music
             realm
@@ -37,12 +37,42 @@ jobs:
       - name: Browser verification
         shell: python
         run: |
+          from pathlib import Path
           from playwright.sync_api import sync_playwright
+          from bs4 import BeautifulSoup
+          from urllib.parse import urlsplit
+          import requests,json
+          preview=True
+          url='https://northstarprime.net/merch/'
+          candidate=BeautifulSoup(Path('merch/index.html').read_bytes(),'html.parser')
+          offers={'https://andrewcog.gumroad.com/l/mnjog':('Ornament printables ($7)',700),'https://andrewcog.gumroad.com/l/northstar-calendar-2027':('Digital calendar ($10)',1000)}
+          cards={}
+          for node in candidate.select('article[data-item]'):
+              item=json.loads(node['data-item'])
+              if item.get('cta2_url') in offers and item.get('cta1_url','').startswith('/contact/?') and item.get('sku','').startswith('NS-XMAS'):
+                  cards[node['id']]=item
+          assert len(cards)==8,len(cards)
+          for dest,(label,cents) in offers.items():
+              r=requests.get(dest,timeout=25);r.raise_for_status()
+              props=json.loads(BeautifulSoup(r.content,'html.parser').select_one('[data-page]')['data-page'])['props']['product']
+              assert props['is_published'] and props['price_cents']==cents and props['currency_code']=='usd'
           with sync_playwright() as p:
               b=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu'])
-              page=b.new_page()
-              page.goto('https://andrewcog.gumroad.com/l/ouklmz',wait_until='domcontentloaded',timeout=45000)
-              page.wait_for_timeout(2800)
-              print('TIPTEXT',page.locator('body').inner_text()[:1700].replace('\n',' | '))
-              print('INPUTS',page.locator('input,select,button').evaluate_all("""xs=>xs.filter(e=>e.checkVisibility()).map(e=>[e.tagName,e.type,e.min,e.placeholder,e.value,(e.innerText||'').slice(0,60)]).slice(0,30)"""))
+              for w in (390,1280):
+                  page=b.new_page(viewport={'width':w,'height':840},reduced_motion='reduce')
+                  page.set_default_timeout(10000)
+                  if preview: page.route(url,lambda route:route.fulfill(content_type='text/html',body=Path('merch/index.html').read_bytes()))
+                  page.goto(url,wait_until='domcontentloaded')
+                  for cid,item in cards.items():
+                      card=page.locator('[id="'+cid+'"]')
+                      dest=item['cta2_url']; label=offers[dest][0]+' ↗'
+                      a=card.locator('a[href="'+dest+'"]')
+                      assert a.inner_text().strip()==label
+                      card.locator('.zoom-trigger').click()
+                      second=page.locator('#lb-cta2')
+                      assert second.is_visible() and second.inner_text().strip()==label and second.get_attribute('href')==dest
+                      assert page.locator('#lb-cta1').get_attribute('href')==item['cta1_url']
+                      page.locator('#lb-close').click()
+                  print('HOLIDAY',w,len(cards),'cards and dialogs; both provider prices verified',flush=True)
+                  page.close()
               b.close()

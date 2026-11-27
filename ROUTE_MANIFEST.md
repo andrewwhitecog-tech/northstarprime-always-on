@@ -35,10 +35,9 @@ Verified 2026-08-27.
 ## Static recovery route
 
 - Source: idc-programming/index.html
-- Nine Season One broadcasts use privacy-enhanced youtube-nocookie.com embeds.
-- Every embedded broadcast retains a direct static MP4 backup.
-- Sixteen channel bumpers remain direct-hosted in static/idc_video/.
-- YouTube IDs are mirrored in static/idc_video/yt_manifest.json.
+- The cinema queue plays the Season One teaser, Arrival and four performance shorts.
+- The build pins large media links to their public repository revision.
+- The archived Season One mappings are preserved in static/idc_video/yt_manifest.json.
 - All 25 MP4 files are below GitHub's 100 MB per-file limit.
 - The unreleased anthology packet is absent from the public tree; the page
   displays an owner-review withholding notice instead of a download link.
@@ -220,8 +219,8 @@ published-size calculation.
 The home verifier checks the page identity, its required app doors and local
 routes, manifest hashes for every referenced asset, local filesystem leakage,
 and dangling local routes. The IDC verifier
-checks the HTML/manifest mapping, tracked MP4 inventory and sizes, broken local
-Windows paths, embed code, and optionally all nine YouTube oEmbed endpoints.
+checks the cinema queue, archived MP4 inventory and sizes, and frozen Windows
+paths. Network verification checks each deployed player and reads its MP4 header.
 The creator-route verifier checks the app target, canonical/refresh/fallback
 contract, query-and-fragment preservation, sitemap entry, and existing creator
 navigation. The atlas verifier checks the complete self-contained bundle, local references,

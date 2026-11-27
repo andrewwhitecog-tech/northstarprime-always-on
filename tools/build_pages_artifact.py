@@ -3,7 +3,7 @@
 
 The branch remains the complete source archive. The Pages artifact omits the
 large IDC video copies and rewrites their public URLs to the identical files on
-the canonical NorthStar application host. Little Light, cookbook, and StickerForge
+the pinned public repository revision. Little Light, cookbook, and StickerForge
 preview exports stay in the public source repository and out of this artifact.
 Full-resolution StickerForge masters stay in the repository too, and the artifact
 rewrites their URLs to raw.githubusercontent.com so new sticker packs do not

@@ -229,24 +229,54 @@
       }
     });
 
+    // Own the whole key press, even if dismissing the dialog reveals the game
+    // before keyup. Keys first pressed in the game still get their release.
+    var dialogKeys = new Set();
     window.addEventListener("keydown", function (ev) {
-      if (credits.classList.contains("nsp-open")) {
-        if (ev.key === "Escape" || ev.key === "c" || ev.key === "C" || ev.key === "Enter" || ev.key === " ") {
-          ev.preventDefault();
-          closeCredits();
-        }
+      var keyId = ev.code || ev.key;
+      var dialog = credits.classList.contains("nsp-open") ? credits :
+        (attract && !attract.classList.contains("nsp-hidden") ? attract : null);
+      if (!ev.repeat) dialogKeys.delete(keyId);
+      if (!dialog && !dialogKeys.has(keyId)) return;
+
+      ev.stopImmediatePropagation();
+      if (ev.repeat) {
+        // Holding a gameplay key across a mouse-opened dialog must not
+        // transfer its eventual keyup away from the game.
+        if (ev.key !== "Tab") ev.preventDefault();
         return;
       }
-      if (attract && !attract.classList.contains("nsp-hidden")) {
-        if (ev.key === "Enter" || ev.key === " " || ev.key === "Escape") {
-          ev.preventDefault();
+      if (!dialog) return;
+      dialogKeys.add(keyId);
+
+      if (ev.key === "Enter" || ev.key === " ") {
+        ev.preventDefault();
+        var control = ev.target && ev.target.closest && ev.target.closest("button, a[href]");
+        if (control && dialog.contains(control)) {
+          control.click();
+        } else if (dialog === credits) {
+          closeCredits();
+        } else {
           dismissAttract();
-        } else if (ev.key === "c" || ev.key === "C") {
-          ev.preventDefault();
-          openCredits();
         }
+      } else if (ev.key === "Escape") {
+        ev.preventDefault();
+        if (dialog === credits) closeCredits();
+        else dismissAttract();
+      } else if (ev.key.toLowerCase() === "c" && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
+        ev.preventDefault();
+        if (dialog === credits) closeCredits();
+        else openCredits();
       }
     }, true);
+
+    window.addEventListener("keypress", function (ev) {
+      if (dialogKeys.has(ev.code || ev.key)) ev.stopImmediatePropagation();
+    }, true);
+    window.addEventListener("keyup", function (ev) {
+      if (dialogKeys.delete(ev.code || ev.key)) ev.stopImmediatePropagation();
+    }, true);
+    window.addEventListener("blur", function () { dialogKeys.clear(); });
   }
 
   if (document.readyState === "loading") {

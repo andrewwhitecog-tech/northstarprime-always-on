@@ -1,0 +1,93 @@
+name: Public arcade and storefront readback
+on:
+  push:
+    branches: [qa/399-public-readback]
+permissions:
+  contents: read
+jobs:
+  public-pages:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: cff199e83a6ca3dfefcda7c1c7078ae246147f6f
+          persist-credentials: false
+          sparse-checkout: |
+            store/index.html
+            holidays/index.html
+            static/games/nsp_aaa_cabinet_shell.js
+          sparse-checkout-cone-mode: false
+      - name: Check normal and cache-busted public routes against the pinned release
+        shell: python
+        run: |
+          from collections import Counter
+          from hashlib import sha256
+          from html.parser import HTMLParser
+          from pathlib import Path
+          from time import sleep, time_ns
+          from urllib.request import Request, urlopen
+          
+          origin = "https://northstarprime.net"
+          shell = "/static/games/nsp_aaa_cabinet_shell.js"
+          covers = {
+              "anodized-empires-collector-vault-cover.webp",
+              "northstar-12pack-watertight-stl-vault-cover.webp",
+              "northstar-2026-free-mega-sampler-cover.webp",
+              "northstar-godot4-6game-core-bundle-cover.webp",
+              "northstar-godot4-9game-clean-vault-cover.webp",
+              "northstar-idg-5game-html5-arcade-cover.webp",
+              "nsp_signal_eye_v15.webp",
+          }
+          
+          class CoverCards(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.anchor = ""
+                  self.cards = Counter()
+              def handle_starttag(self, tag, attrs):
+                  a = dict(attrs)
+                  if tag == "a":
+                      self.anchor = a.get("href", "")
+                  if tag == "img" and a.get("src", "").split("/")[-1] in covers:
+                      self.cards[(self.anchor, a["src"], a.get("alt"), a.get("width"), a.get("height"))] += 1
+              def handle_endtag(self, tag):
+                  if tag == "a":
+                      self.anchor = ""
+          
+          def cards(data):
+              page = CoverCards()
+              page.feed(data.decode("utf-8"))
+              return page.cards
+          
+          def read(path, fresh):
+              suffix = f"?release_check={time_ns()}" if fresh else ""
+              req = Request(origin + path + suffix, headers={"User-Agent":"NorthStar public release check"})
+              with urlopen(req, timeout=15) as response:
+                  assert response.status == 200
+                  print(path, "fresh" if fresh else "normal", response.status, "ETag", response.headers.get("ETag"), "Age", response.headers.get("Age"), flush=True)
+                  return response.read()
+          
+          paths = {shell:shell.lstrip("/"), "/store/":"store/index.html", "/holidays/":"holidays/index.html"}
+          def verify():
+              for route, file in paths.items():
+                  expected = Path(file).read_bytes()
+                  for fresh in [False, True]:
+                      actual = read(route, fresh)
+                      if route == shell:
+                          assert actual == expected, "shared JS still differs"
+                          print("Shared JS SHA-256", sha256(actual).hexdigest())
+                      else:
+                          reference = cards(expected)
+                          assert reference and cards(actual) == reference, f"{route} cover markup differs"
+                          print(route, "matching image uses", reference.total())
+          for attempt in range(6):
+              try:
+                  verify()
+                  break
+              except (AssertionError, OSError) as error:
+                  print("Readback", attempt+1, str(error), flush=True)
+                  if attempt == 5:
+                      raise
+                  sleep(15)
+          print("PASS normal and cache-busted requests match the release on all three public routes")

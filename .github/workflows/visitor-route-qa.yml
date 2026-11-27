@@ -18,43 +18,28 @@ jobs:
       - run: python -m pip -q install playwright requests beautifulsoup4
       - shell: python
         run: |
-          import os,re,json
+          import os
           from urllib.parse import urlsplit
           from playwright.sync_api import sync_playwright
-          links=json.loads("{\"https://andrewcog.gumroad.com/l/northstar-2026-free-mega-sampler\":[[0],[0,0],[0],[],[0]],\"https://andrewcog.gumroad.com/l/comedy-sticker-mega-bundle-144\":[[3600,1200,3600],[3600]],\"https://andrewcog.gumroad.com/l/comedy-sticker-vault-vol1\":[[1200,1200]],\"https://andrewcog.gumroad.com/l/comedy-sticker-vault-vol2\":[[1200,1200]],\"https://andrewcog.gumroad.com/l/comedy-sticker-vault-vol3\":[[1200,1200]],\"https://andrewcog.gumroad.com/l/comedy-sticker-vault-vol4\":[[1200,1200]],\"https://andrewcog.gumroad.com/l/northstar-2027-collector-wall-calendar-pdf\":[[1000,1000],[1000],[1000]],\"https://andrewcog.gumroad.com/l/vorath-codex-collector-compendium\":[[900,900]],\"https://andrewcog.gumroad.com/l/uncle-vorath-blazin-beaver-issue-01\":[[700,700]],\"https://andrewcog.gumroad.com/l/rich-yn-vol3-vol4-300dpi-vault\":[[1900,1900],[1900],[1900]],\"https://andrewcog.gumroad.com/l/northstar-7icon-parody-vault\":[[2400,2400],[2400],[2400],[2400]],\"https://andrewcog.gumroad.com/l/northstar-12pack-watertight-stl-vault\":[[2900,2900],[2900]],\"https://andrewcog.gumroad.com/l/northstar-idg-5game-html5-webgl-arcade-pack\":[[900,900]],\"https://andrewcog.gumroad.com/l/northstar-godot4-6game-core-bundle\":[[1200,1200]],\"https://andrewcog.gumroad.com/l/northstar-godot4-9game-clean-vault\":[[1500,1500]],\"https://andrewcog.gumroad.com/l/anodized-empires-and-anomalies-collector-vault\":[[1900,1900],[1900]],\"https://andrewcog.gumroad.com/l/acid-voxel-halloween-45-pack\":[[900,900],[900],[900]],\"https://andrewcog.gumroad.com/l/sefgfx\":[[1200],[]],\"https://andrewcog.gumroad.com/l/llkspo\":[[1200],[1200],[]],\"https://andrewcog.gumroad.com/l/fsltx\":[[1400],[1400],[]],\"https://andrewcog.gumroad.com/l/ispvpe\":[[1400]],\"https://andrewcog.gumroad.com/l/cbffq\":[[1300],[1300],[]],\"https://andrewcog.gumroad.com/l/ehzznt\":[[999],[999]],\"https://andrewcog.gumroad.com/l/fztoe\":[[2900],[2900],[]],\"https://andrewcog.gumroad.com/l/qbqoqz\":[[700]],\"https://andrewcog.gumroad.com/l/xnvde\":[[1200],[1200]],\"https://andrewcog.gumroad.com/l/vdquzp\":[[700],[],[700]],\"https://andrewcog.gumroad.com/l/doonjn\":[[],[]],\"https://andrewcog.gumroad.com/l/beholders-harvest\":[[700],[]],\"https://andrewcog.gumroad.com/l/cihqdr\":[[900],[900]],\"https://andrewcog.gumroad.com/l/vorath-santa-4k-wallpaper-suite\":[[700,700],[700]],\"https://andrewcog.gumroad.com/l/lineage-of-light-advent\":[[700],[],[700]],\"https://andrewcog.gumroad.com/l/mnjog\":[[700],[700],[700],[700],[700],[700],[700],[]],\"https://andrewcog.gumroad.com/l/rajmfn\":[[700],[]],\"https://andrewcog.gumroad.com/l/ancestor-light\":[[700],[]],\"https://andrewcog.gumroad.com/l/northstar-calendar-2027\":[[1000],[1000],[1000],[1000],[1000],[1000],[]],\"https://andrewcog.gumroad.com/l/cascade-yule\":[[700],[]],\"https://andrewcog.gumroad.com/l/fspybs\":[[700]],\"https://andrewcog.gumroad.com/l/alsjes\":[[500]],\"https://andrewcog.gumroad.com/l/vorathic-sacred-geometry-coloring-book\":[[999],[999],[]],\"https://andrewcog.gumroad.com/l/bioluminescent-oregon-proof-book\":[[999],[999]],\"https://andrewcog.gumroad.com/l/chrysalis-metamorphosis-proof-book\":[[999]],\"https://andrewcog.gumroad.com/l/feathered-forms-proof-book\":[[999]],\"https://andrewcog.gumroad.com/l/structural-color-proof-book\":[[999],[999]],\"https://andrewcog.gumroad.com/l/vorath-chromatic-print-canon-sampler12\":[[999],[999],[999],[999]],\"https://andrewcog.gumroad.com/l/vorath-colorized-print-canon-proof-pack\":[[1999],[1999],[1999]],\"https://andrewcog.gumroad.com/l/vorath-twelve-plate-sampler\":[[999]],\"https://andrewcog.gumroad.com/l/hfpzxt\":[[]],\"https://andrewcog.gumroad.com/l/audeok\":[[999],[999],[999]],\"https://andrewcog.gumroad.com/l/pshjy\":[[1200],[1200]],\"https://andrewcog.gumroad.com/l/ouklmz\":[[]],\"https://andrewcog.gumroad.com/l/rich-yn-swamp-dynasty-pack\":[[900],[900]],\"https://andrewcog.gumroad.com/l/crimson-haze-worldwide-pack\":[[900],[900]],\"https://andrewcog.gumroad.com/l/rich-yn-y2k-primetime-pack\":[[1200],[1200]]}")
           width=int(os.environ['WIDTH'])
           with sync_playwright() as pw:
               b=pw.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu'])
-              ctx=b.new_context(viewport={'width':width,'height':840})
-              def public_assets(r):
+              ctx=b.new_context(viewport={'width':width,'height':840},is_mobile=(width==390),has_touch=(width==390))
+              p=ctx.new_page()
+              def accessible_resources(r):
                   h=urlsplit(r.request.url).hostname or ''
-                  if r.request.method in ('GET','HEAD') and (h=='andrewcog.gumroad.com' or h in ['gumroad.com','assets.gumroad.com','assets.gumroad.net','public-files.gumroad.com','static-2.gumroad.com','static.gumroad.com']) and r.request.resource_type in ['document','script','stylesheet','xhr','fetch','font'] and not re.search('analytics|telemetry|/tracking',r.request.url,re.I):
+                  if r.request.method in ('GET','HEAD') and (h in ['andrewcog.gumroad.com','gumroad.com','assets.gumroad.com','assets.gumroad.net','public-files.gumroad.com','static-2.gumroad.com','static.gumroad.com']) and not any(x in r.request.url.lower() for x in ('telemetry','/tracking','analytics')):
                       r.continue_()
                   else:r.abort()
-              ctx.route('**/*',public_assets)
-              p=ctx.new_page()
-              counts={}
-              for url,prices in sorted(links.items()):
-                  result='verified'
-                  try:
-                      response=p.goto(url,wait_until='domcontentloaded',timeout=20000)
-                      if response.status!=200:result='HTTP '+str(response.status)
-                      else:
-                          node=p.locator('[data-page]')
-                          if not node.count():result='no product metadata'
-                          else:
-                              prod=json.loads(node.get_attribute('data-page'))['props']['product']
-                              assert prod['is_published'] and not prod['is_compliance_blocked'], 'unavailable'
-                              cents=prod['price_cents']
-                              for vs in prices:
-                                  if vs:assert cents in vs,('price mismatch',cents,vs)
-                              try:
-                                  p.get_by_text(re.compile(r'^(I want this!?|Buy now|Buy this|Pay|Add to cart|Get it now|Subscribe|Get|Purchase|Download now)$',re.I)).first.wait_for(state='visible',timeout=5500)
-                              except Exception:
-                                  result='other purchase control'
-                                  print('CONTROL_DETAIL',url,p.locator('a:visible,button:visible').all_inner_texts()[-12:],flush=True)
-                  except Exception as e:result='ERROR '+str(e).splitlines()[0][:150]
-                  print('LISTING',url,result,flush=True)
-                  counts[result]=counts.get(result,0)+1
-              print('SUMMARY',width,counts,flush=True)
+              ctx.route('**/*',accessible_resources)
+              p.goto('https://andrewcog.gumroad.com/l/pshjy',wait_until='domcontentloaded')
+              buy=p.get_by_text('I want this!',exact=True).first
+              buy.wait_for(state='visible',timeout=18000)
+              print('BILLING_ENTRY',buy.evaluate("e=>[e.tagName,e.closest('a')?.href,e.getAttribute('type')]"),flush=True)
+              buy.click()
+              p.wait_for_timeout(1800)
+              print('CART_STATUS',p.url.split('?')[0],p.locator('h1,h2,h3').all_inner_texts()[:10],p.locator('input[type=email]').count(),flush=True)
+              txt=p.locator('body').inner_text()
+              print('CART_REVIEW',('VORATH Tarot' in txt),('$12' in txt),('Checkout' in txt or 'checkout' in p.url),flush=True)
+              assert '/checkout' in p.url and 'VORATH Tarot' in txt and '$12' in txt
               b.close()

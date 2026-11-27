@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 18
     env:
-      TEST_MODE: arcade
+      TEST_MODE: arcade-trial
       TEST_BASE: https://northstarprime.net
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -57,7 +57,7 @@ jobs:
           shots=[]
           with sync_playwright() as pw:
               browser=pw.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu','--mute-audio'])
-              for width,height in [(390,844),(1280,800)]:
+              for width,height in ([(320,568),(390,844),(1280,800)] if mode.startswith('arcade') else [(390,844),(1280,800)]):
                   page=browser.new_page(viewport={'width':width,'height':height},reduced_motion='reduce')
                   def visit(route):
                       res=page.goto(base+route, wait_until='domcontentloaded')
@@ -107,9 +107,15 @@ jobs:
                           page.locator('#idc-theater-player').evaluate('v=>{v.muted=true;v.currentTime=30;v.play()}')
                           page.wait_for_function('document.querySelector("#idc-theater-player").currentTime>31')
                       picture('/idc-programming/')
-                  elif mode=='arcade':
+                  elif mode.startswith('arcade'):
                       for route,sel in [('/arcade/','.game-card'),('/games/','.world-card')]:
                           visit(route)
+                          if route=='/arcade/' and mode=='arcade-trial':
+                              print('baseline',width,page.evaluate('document.documentElement.scrollWidth'),flush=True)
+                              page.add_style_tag(content="    @media (max-width: 480px) {\n      .arcade-wrap .game-grid { grid-template-columns: minmax(0, 1fr); }\n      .arcade-wrap .flagship-3d-deck > div[style*=\"display:grid\"] { grid-template-columns: minmax(0, 1fr) !important; }\n      .arcade-wrap .game-card { min-width: 0; }\n      .arcade-wrap .game-header { flex-wrap: wrap; }\n      .arcade-wrap .game-title { overflow-wrap: anywhere; }\n      .arcade-wrap .game-tag { white-space: normal; }\n    }")
+                          print('page width',route,width,page.evaluate('document.documentElement.scrollWidth'),flush=True)
+                          if page.evaluate('document.documentElement.scrollWidth')>width:
+                              print('overflow',page.evaluate("() => [...document.querySelectorAll('main *')].filter(e=>e.getBoundingClientRect().right>innerWidth+1).slice(0,8).map(e=>[e.tagName,e.className,Math.round(e.getBoundingClientRect().right)])"),flush=True)
                           results=page.locator(sel).evaluate_all("""async cards=>Promise.all(cards.map(async c=>{const i=c.querySelector('img');if(!i)return false;i.loading='eager';try{await i.decode();return i.naturalWidth>0}catch{return false}}))""")
                           assert len(results)>=(65 if route=='/arcade/' else 8) and all(results),(route,len(results),results.count(False))
                           print('decoded card art',route,len(results),width,flush=True)

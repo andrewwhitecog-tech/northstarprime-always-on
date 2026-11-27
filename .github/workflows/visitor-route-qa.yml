@@ -11,26 +11,9 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: 628459b0f3145aa4df9796569acf67c8f6f9f02e
+          ref: 9e1a756f72a457bd8d411708bee3f6720766a3df
           sparse-checkout: |
-            music
-            realm
-            .github/hq_audio_review
-            static/games
-            store
-            play
-            links
-            merch
-            chromatic
-            stickerforge
-            parody-drop
-            community
-            idc-programming
-            tools
-            tests
-            static/front
-            static/cards
-            warband/art
+            arcade/custom
           persist-credentials: false
       - run: python -m pip -q install playwright beautifulsoup4 pillow pytest requests
 
@@ -38,41 +21,46 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
-          from playwright.sync_api import sync_playwright
+          from urllib.parse import urljoin,urlsplit
           from bs4 import BeautifulSoup
-          from urllib.parse import urlsplit
-          import requests,json
+          from playwright.sync_api import sync_playwright
+          from concurrent.futures import ThreadPoolExecutor
+          import requests
           preview=True
-          url='https://northstarprime.net/merch/'
-          candidate=BeautifulSoup(Path('merch/index.html').read_bytes(),'html.parser')
-          offers={'https://andrewcog.gumroad.com/l/mnjog':('Ornament printables ($7)',700),'https://andrewcog.gumroad.com/l/northstar-calendar-2027':('Digital calendar ($10)',1000)}
-          cards={}
-          for node in candidate.select('article[data-item]'):
-              item=json.loads(node['data-item'])
-              if item.get('cta2_url') in offers and item.get('cta1_url','').startswith('/contact/?') and item.get('sku','').startswith(('NS-XMAS26-ORN','NS-CAL2027-')):
-                  cards[node['id']]=item
-          assert len(cards)==8,len(cards)
-          for dest,(label,cents) in offers.items():
-              r=requests.get(dest,timeout=25);r.raise_for_status()
-              props=json.loads(BeautifulSoup(r.content,'html.parser').select_one('[data-page]')['data-page'])['props']['product']
-              assert props['is_published'] and props['price_cents']==cents and props['currency_code']=='usd'
+          path='arcade/custom/xbla_blades_dashboard_omniverse.html'
+          url='https://northstarprime.net/'+path
+          html=Path(path).read_bytes() if preview else requests.get(url,timeout=20).content
+          s=BeautifulSoup(html,'html.parser')
+          games=s.select('.game-card[data-game]'); held=s.select('.game-card[data-unreleased-game]')
+          assert len(games)==7 and len(held)==15
+          def status(x):
+              target=x.get('data-game') or x['data-unreleased-game']
+              result=requests.get(urljoin(url,target),timeout=25)
+              assert result.status_code==(200 if x.has_attr('data-game') else 404),(target,result.status_code)
+          with ThreadPoolExecutor(max_workers=3) as pool:list(pool.map(status,games+held))
           with sync_playwright() as p:
-              b=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu'])
+              b=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu','--mute-audio'])
               for w in (390,1280):
                   page=b.new_page(viewport={'width':w,'height':840},reduced_motion='reduce')
-                  page.set_default_timeout(10000)
-                  if preview: page.route(url,lambda route:route.fulfill(content_type='text/html',body=Path('merch/index.html').read_bytes()))
+                  if preview: page.route(url,lambda route:route.fulfill(content_type='text/html',body=html))
                   page.goto(url,wait_until='domcontentloaded')
-                  for cid,item in cards.items():
-                      card=page.locator('[id="'+cid+'"]')
-                      dest=item['cta2_url']; label=offers[dest][0]+' ↗'
-                      a=card.locator('a[href="'+dest+'"]')
-                      assert a.inner_text().strip()==label
-                      card.locator('.zoom-trigger').click()
-                      second=page.locator('#lb-cta2')
-                      assert second.is_visible() and second.inner_text().strip()==label and second.get_attribute('href')==dest
-                      assert page.locator('#lb-cta1').get_attribute('href')==item['cta1_url']
-                      page.locator('#lb-close').click()
-                  print('HOLIDAY',w,len(cards),'cards and dialogs; both provider prices verified',flush=True)
+                  active=page.locator('.game-card[data-game]')
+                  col=active.first.evaluate("e=>getComputedStyle(e.parentElement).gridTemplateColumns.split(' ').length")
+                  assert col==(1 if w==390 else 2),(w,col)
+                  page.keyboard.press('ArrowDown')
+                  assert active.nth(col).evaluate("e=>e.classList.contains('focused')")
+                  page.keyboard.press('ArrowUp')
+                  assert active.first.evaluate("e=>e.classList.contains('focused')")
+                  dest=urljoin(url,active.first.get_attribute('data-game'))
+                  with page.expect_response(lambda r:r.url==dest) as nav: page.keyboard.press('Enter')
+                  assert nav.value.status==200 and page.locator('#game-modal').evaluate("e=>e.classList.contains('active')")
+                  page.get_by_role('button',name='EXIT GAME [B]').click()
+                  disabled=page.locator('.game-card[aria-disabled="true"]').first
+                  disabled.scroll_into_view_if_needed()
+                  assert disabled.locator('.launch-badge').inner_text()=='Unavailable'
+                  pos=disabled.bounding_box();page.mouse.click(pos['x']+pos['width']/2,pos['y']+pos['height']/2)
+                  assert page.locator('#game-frame').get_attribute('src')=='about:blank'
+                  print('CATALOG',w,col,'columns, 7 playable URLs, 15 unavailable records, real keyboard launch',flush=True)
                   page.close()
               b.close()
+          

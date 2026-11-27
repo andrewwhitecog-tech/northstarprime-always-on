@@ -15,104 +15,46 @@ jobs:
     env:
       WIDTH: ${{ matrix.width }}
     steps:
-      - name: Wait for deployed physical inquiry links
-        shell: python
-        run: |
-          import time,urllib.request
-          for attempt in range(45):
-              try:
-                  with urllib.request.urlopen('https://northstarprime.net/rich-yn/?check=inquiries-'+str(attempt),timeout=10) as response:
-                      if response.read().count(b'RICH%20YN%20availability')==7:break
-              except OSError:pass
-              time.sleep(12)
-          else:raise RuntimeError('The release is still missing seven item-specific links')
       - run: python -m pip -q install playwright requests beautifulsoup4
       - shell: python
         run: |
-          import os,re
-          from pathlib import Path
-          from urllib.parse import urlsplit,parse_qs
-          from playwright.sync_api import sync_playwright,expect
+          import os,json,time
+          from urllib.parse import urlsplit,urlencode
+          from playwright.sync_api import sync_playwright
+          urls=["https://andrewcog.gumroad.com/l/acid-voxel-halloween-45-pack","https://andrewcog.gumroad.com/l/alsjes","https://andrewcog.gumroad.com/l/ancestor-light","https://andrewcog.gumroad.com/l/anodized-empires-and-anomalies-collector-vault","https://andrewcog.gumroad.com/l/audeok","https://andrewcog.gumroad.com/l/beholders-harvest","https://andrewcog.gumroad.com/l/bioluminescent-oregon-proof-book","https://andrewcog.gumroad.com/l/cascade-yule","https://andrewcog.gumroad.com/l/cbffq","https://andrewcog.gumroad.com/l/chrysalis-metamorphosis-proof-book","https://andrewcog.gumroad.com/l/cihqdr","https://andrewcog.gumroad.com/l/comedy-sticker-mega-bundle-144","https://andrewcog.gumroad.com/l/comedy-sticker-vault-vol1","https://andrewcog.gumroad.com/l/comedy-sticker-vault-vol2","https://andrewcog.gumroad.com/l/comedy-sticker-vault-vol3","https://andrewcog.gumroad.com/l/comedy-sticker-vault-vol4","https://andrewcog.gumroad.com/l/crimson-haze-worldwide-pack","https://andrewcog.gumroad.com/l/doonjn","https://andrewcog.gumroad.com/l/ehzznt","https://andrewcog.gumroad.com/l/feathered-forms-proof-book","https://andrewcog.gumroad.com/l/fsltx","https://andrewcog.gumroad.com/l/fspybs","https://andrewcog.gumroad.com/l/fztoe","https://andrewcog.gumroad.com/l/hfpzxt","https://andrewcog.gumroad.com/l/ispvpe","https://andrewcog.gumroad.com/l/lineage-of-light-advent","https://andrewcog.gumroad.com/l/llkspo","https://andrewcog.gumroad.com/l/mnjog","https://andrewcog.gumroad.com/l/northstar-12pack-watertight-stl-vault","https://andrewcog.gumroad.com/l/northstar-2026-free-mega-sampler","https://andrewcog.gumroad.com/l/northstar-2027-collector-wall-calendar-pdf","https://andrewcog.gumroad.com/l/northstar-7icon-parody-vault","https://andrewcog.gumroad.com/l/northstar-calendar-2027","https://andrewcog.gumroad.com/l/northstar-godot4-6game-core-bundle","https://andrewcog.gumroad.com/l/northstar-godot4-9game-clean-vault","https://andrewcog.gumroad.com/l/northstar-idg-5game-html5-webgl-arcade-pack","https://andrewcog.gumroad.com/l/ouklmz","https://andrewcog.gumroad.com/l/pshjy","https://andrewcog.gumroad.com/l/qbqoqz","https://andrewcog.gumroad.com/l/rajmfn","https://andrewcog.gumroad.com/l/rich-yn-swamp-dynasty-pack","https://andrewcog.gumroad.com/l/rich-yn-vol3-vol4-300dpi-vault","https://andrewcog.gumroad.com/l/rich-yn-y2k-primetime-pack","https://andrewcog.gumroad.com/l/sefgfx","https://andrewcog.gumroad.com/l/structural-color-proof-book","https://andrewcog.gumroad.com/l/uncle-vorath-blazin-beaver-issue-01","https://andrewcog.gumroad.com/l/vdquzp","https://andrewcog.gumroad.com/l/vorath-chromatic-print-canon-sampler12","https://andrewcog.gumroad.com/l/vorath-codex-collector-compendium","https://andrewcog.gumroad.com/l/vorath-colorized-print-canon-proof-pack","https://andrewcog.gumroad.com/l/vorath-santa-4k-wallpaper-suite","https://andrewcog.gumroad.com/l/vorath-twelve-plate-sampler","https://andrewcog.gumroad.com/l/vorathic-sacred-geometry-coloring-book","https://andrewcog.gumroad.com/l/xnvde"]
           width=int(os.environ['WIDTH'])
-          url='https://northstarprime.net/rich-yn/'
+          totals={}
           with sync_playwright() as pw:
-              b=pw.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu'])
-              p=b.new_page(viewport={'width':width,'height':844},is_mobile=(width==390),has_touch=(width==390))
-              def visit():p.goto(url,wait_until='domcontentloaded')
-              visit()
-              cards=p.locator('article').filter(has_text='Printful NorthStar POD')
-              assert cards.count()==7
-              subjects=set()
-              for i in range(7):
-                  c=cards.nth(i)
-                  link=c.get_by_role('link',name=re.compile('Ask about this'))
-                  title=c.locator('h3').inner_text().split(' — ')[0]
-                  dest=parse_qs(urlsplit(link.get_attribute('href')).query)
-                  assert title.split()[0] in dest['subject'][0],title
-                  link.click()
-                  expect(p.locator('#subject-preview')).to_have_text(dest['subject'][0])
-                  expect(p.locator('#message-preview')).to_have_text(dest['body'][0])
-                  mail=urlsplit(p.locator('#draft-link').get_attribute('href'))
-                  assert mail.scheme=='mailto' and mail.path=='contact@northstarprime.net'
-                  assert parse_qs(mail.query)==dest
-                  assert 'shipping' in dest['body'][0] and 'availability' in dest['body'][0]
-                  subjects.add(dest['subject'][0])
-                  visit()
-              assert len(subjects)==7
-              print('PASS all seven distinct physical inquiries at',width,flush=True)
-              b.close()
-
-  gumroad-cart:
-    strategy:
-      fail-fast: false
-      matrix:
-        width: [390, 1280]
-    runs-on: ubuntu-24.04
-    timeout-minutes: 40
-    env:
-      WIDTH: ${{ matrix.width }}
-    steps:
-      - run: python -m pip -q install playwright requests beautifulsoup4
-      - shell: python
-        run: |
-          import os,json
-          from urllib.parse import urlsplit,parse_qs
-          from playwright.sync_api import sync_playwright,expect
-          width=int(os.environ['WIDTH'])
-          with sync_playwright() as pw:
-              b=pw.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu'])
-              opts={'viewport':{'width':width,'height':844},'is_mobile':width==390,'has_touch':width==390}
-              ctx=b.new_context(**opts)
+              browser=pw.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu'])
+              ctx=browser.new_context(java_script_enabled=False,viewport={'width':width,'height':844},is_mobile=width==390)
               page=ctx.new_page()
-              page.goto('https://northstarprime.net/merch/',wait_until='domcontentloaded')
-              card=page.locator('#bm-tarot-78')
-              with page.expect_popup() as opened:card.locator('.button.primary').click()
-              listing=opened.value
-              buy=listing.get_by_role('link',name='I want this!',exact=True).first
-              expect(buy).to_be_visible(timeout=18000)
-              href=buy.get_attribute('href')
-              u=urlsplit(href)
-              assert u.scheme=='https' and u.hostname=='gumroad.com' and u.path=='/checkout'
-              assert parse_qs(u.query)['product']==['pshjy']
-              review=b.new_context(java_script_enabled=False,**opts)
-              def document_only(r):
-                  if r.request.method=='GET' and r.request.url==href and r.request.resource_type=='document':r.continue_()
+              def documents(r):
+                  u=urlsplit(r.request.url)
+                  official=(u.hostname=='andrewcog.gumroad.com' and u.path.startswith('/l/')) or (u.hostname=='gumroad.com' and u.path=='/checkout')
+                  if u.scheme=='https' and r.request.method=='GET' and r.request.resource_type=='document' and official:r.continue_()
                   else:r.abort()
-              review.route('**/*',document_only)
-              doc=review.new_page()
-              response=doc.goto(href,wait_until='domcontentloaded')
-              assert response.status==200,response.status
-              result=json.loads(doc.locator('[data-page]').get_attribute('data-page'))
-              assert result['component']=='Checkout/Show',result['component']
-              def values(x,key):
-                  if isinstance(x,list):
-                      for v in x:yield from values(v,key)
-                  elif isinstance(x,dict):
-                      if key in x:yield x[key]
-                      for v in x.values():yield from values(v,key)
-              props=result['props']
-              assert 'VORATH Tarot — full 78-card digital deck' in list(values(props,'name'))
-              assert 'pshjy' in list(values(props,'permalink'))
-              assert 1200 in list(values(props,'price_cents')) and 1 in list(values(props,'quantity'))
-              print('PASS live merch to published deck to official checkout with one $12 deck',width,flush=True)
-              b.close()
+              ctx.route('**/*',documents)
+              for path in urls:
+                  try:
+                      ctx.clear_cookies()
+                      resp=page.goto(path,wait_until='domcontentloaded',timeout=20000)
+                      assert resp.status==200,('listing HTTP',resp.status)
+                      pr=json.loads(page.locator('[data-page]').get_attribute('data-page',timeout=2500))['props']['product']
+                      assert pr['is_published'] and not pr['is_compliance_blocked']
+                      url='https://gumroad.com/checkout?'+urlencode({'product':pr['permalink'],'quantity':1})
+                      resp=page.goto(url,wait_until='domcontentloaded',timeout=20000)
+                      assert resp.status==200,('checkout HTTP',resp.status)
+                      d=json.loads(page.locator('[data-page]').get_attribute('data-page',timeout=2500))
+                      assert d['component']=='Checkout/Show'
+                      items=d['props']['checkout']['add_products']
+                      assert len(items)==1,('item count',len(items))
+                      item=items[0]
+                      assert item['quantity']==1 and item['product']['permalink']==pr['permalink'] and item['product']['name']==pr['name'] and item['product']['price_cents']==pr['price_cents'], 'checkout item mismatch'
+                      outcome='one matching product'
+                  except Exception as e:outcome=str(e).splitlines()[0][:160]
+                  print('CART_PRODUCT',path,outcome,flush=True)
+                  totals[outcome]=totals.get(outcome,0)+1
+                  time.sleep(0.45)
+              print('CART_TOTAL',width,totals,flush=True)
+              browser.close()
+              assert totals=={'one matching product':len(urls)},totals

@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: da0e9f370e14df04c7bf9b170a2eee3098cb6edb
+          ref: 521f12d6626ad8610a4041ba2e6ed531fbdc0d52
           sparse-checkout: |
             join/first-light
             idc-programming
@@ -65,7 +65,9 @@ jobs:
                       link=page.get_by_role('link',name='Ask about membership',exact=True)
                       target=link.get_attribute('href')
                       assert urlsplit(target).path=='/contact/' and 'CANARY' not in target and 'example.invalid' not in target
-                      link.click()
+                      with page.expect_request(lambda req:req.is_navigation_request() and urlsplit(req.url).path=='/contact/') as navigation:
+                          link.click()
+                      assert not navigation.value.all_headers().get('referer')
                       page.wait_for_function("()=>document.querySelector('#subject-preview')?.textContent==='First Signal membership inquiry'")
                       draft=urlsplit(page.locator('#draft-link').get_attribute('href'))
                       assert draft.scheme=='mailto' and draft.path=='contact@northstarprime.net'

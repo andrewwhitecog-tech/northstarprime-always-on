@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 18
     env:
-      TEST_MODE: store-check
+      TEST_MODE: realm-music
       TEST_BASE: https://northstarprime.net
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -55,6 +55,18 @@ jobs:
           base=os.environ['TEST_BASE'].rstrip('/')
           mode=os.environ['TEST_MODE']
           shots=[]
+          if base.startswith('https') and mode in ('realm-music','sugar','arcade'):
+              import time, urllib.request
+              markers={'realm-music':[('/music/','function playSelected()'),('/realm/','async function showJavaStatus()'),('/minecraft/','async function showJavaStatus()')],'sugar':[('/idc-programming/','Pink guitar and a smoke-filled stage')],'arcade':[('/arcade/','.arcade-wrap .game-header { flex-wrap: wrap; }')]}
+              for attempt in range(45):
+                  try:
+                      good=all(marker in urllib.request.urlopen(base+route,timeout=12).read().decode('utf8') for route,marker in markers[mode])
+                  except OSError:
+                      good=False
+                  if good:break
+                  time.sleep(12)
+              assert good,'Production pages have not yet served the candidate markers'
+          
           with sync_playwright() as pw:
               browser=pw.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu','--mute-audio'])
               for width,height in ([(320,568),(390,844),(1280,800)] if mode.startswith('arcade') else [(390,844),(1280,800)]):

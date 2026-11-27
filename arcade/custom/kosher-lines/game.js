@@ -389,10 +389,21 @@ function frame(time){
 function loadControlAtlas(){for(const [key,file]of [['ui-skate-atlas','vorath-skate-controls-v6.png'],['ui-atlas','vorath-controls-v1.png'],['ui-title','kosher-lines-title-v4.png'],['ui-objectives','kosher-objectives-v4.png'],['ui-peacock','peacock-switch-control-v1.png']]){const image=new Image();assetState[key]='loading';image.onload=()=>{assetState[key]='loaded';};image.onerror=()=>{assetState[key]='failed';loadErrors.push(key);};image.src=ASSETS+file;}}
 function installInput(){
  const clear=()=>{held.clear();touchHeld.clear();touchTricks.clear();queuedOllieTrick=null;presses=[];releases=[];document.querySelectorAll('.touch-controls .pressed').forEach(button=>button.classList.remove('pressed'));};
+ const restartSession = () => {
+  sim.start();
+  if (selectedRide === 'rival') actionMode.start();
+  clear();
+  orbit = 0;
+  cameraTilt = -.85;
+  save();
+  message(selectedRide === 'rival' ? 'Three minutes. Outskate Art, shoot the sentries, land the clip.' : 'Drop in. Build speed, then follow the five lamps.');
+  updateUI();
+  canvas.focus();
+ };
  window.addEventListener('keydown',e=>{
   if(dialogueResident){if(e.code==='Escape'){e.preventDefault();closeConversation();}return;}
   if(!keysOwned.includes(e.code)||e.target.closest?.('input,select,textarea'))return;
-  e.preventDefault();if(!e.repeat){presses.push(e.code);if(e.code==='KeyQ'&&selectedRide==='rival'){actionMode.toggleAim();return;}if(e.code==='KeyT'){useCourierTrial();return;}if(e.code==='KeyE'){openConversation();return;}if(e.code==='KeyR'){sim.reset(true);save();}if(e.code==='KeyP'||e.code==='Escape')sim.togglePause();}
+  e.preventDefault();if(!e.repeat){presses.push(e.code);if(e.code==='KeyQ'&&selectedRide==='rival'){actionMode.toggleAim();return;}if(e.code==='KeyT'){useCourierTrial();return;}if(e.code==='KeyE'){openConversation();return;}if(e.code==='KeyR'){restartSession();return;}if(e.code==='KeyP'||e.code==='Escape')sim.togglePause();}
   held.add(e.code);
  });
  window.addEventListener('keyup',e=>{if(keysOwned.includes(e.code)){e.preventDefault();held.delete(e.code);releases.push(e.code);}});
@@ -421,7 +432,7 @@ function installInput(){
   button.addEventListener('lostpointercapture',e=>{touchTricks.delete(e.pointerId);button.classList.remove('pressed');});
   button.addEventListener('click',e=>{if(e.detail===0)presses.push(code);});
  }
- $('start').addEventListener('click',()=>{sim.start();if(selectedRide==='rival')actionMode.start();clear();orbit=0;cameraTilt=-.85;save();message(selectedRide==='rival'?'Three minutes. Outskate Art, shoot the sentries, land the clip.':'Drop in. Build speed, then follow the five lamps.');updateUI();canvas.focus();});
+ $('start').addEventListener('click',restartSession);
  $('pause').addEventListener('click',()=>{sim.togglePause();clear();updateUI();});
  $('trial-toggle').addEventListener('click',()=>{courierTrial.setEnabled(!courierTrial.enabled);renderCourierTrial();});
  $('trial-start').addEventListener('click',startCourierTrial);

@@ -19,7 +19,15 @@ export class RivalHeat{
   if(this.charging){this.chargeClock+=dt;control.ollieHeld=true;if(this.chargeClock>=.4){control.ollieReleased=true;control.ollieHeld=false;this.charging=false;this.popped=true;this.jumps++;}}
   if(s.mode==='air'&&!s.trick&&s.airTime<.12&&this.popped){control.trick=this.jumps%3===0?'KeyK':'KeyF';this.popped=false;}
   s.step(dt,control);this.lastInput={...control};
-  if(this.elapsed>=this.limit){s.bank();this.active=false;this.finished=true;const human=Math.floor(player.score||0),art=Math.floor(s.score);this.result={player:human,art,winner:human>art?'BLP':human<art?'Art':'Draw'};}
+  if (this.elapsed >= this.limit) {
+   player.bank();
+   s.bank();
+   this.active = false;
+   this.finished = true;
+   const human = Math.floor(player.score);
+   const art = Math.floor(s.score);
+   this.result = {player: human, art, winner: human > art ? 'BLP' : human < art ? 'Art' : 'Draw'};
+  }
   return this.snapshot();
  }
  snapshot(){return {name:'Art',active:this.active,finished:this.finished,elapsed:this.elapsed,remaining:Math.max(0,this.limit-this.elapsed),score:this.sim.score,completedLines:this.sim.completedLines,waypoint:this.waypoint,simulation:this.sim.snapshot(),input:{...this.lastInput},result:this.result?{...this.result}:null,scoreSource:'live-KosherSim-bank-events'};}

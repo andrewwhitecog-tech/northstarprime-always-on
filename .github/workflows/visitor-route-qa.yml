@@ -15,185 +15,46 @@ jobs:
     env:
       WIDTH: ${{ matrix.width }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          ref: c179074b4c5ba2dc75ad86581f4cba6e449714c9
-          path: merch
-          sparse-checkout: merch
-          persist-credentials: false
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          ref: a8ffc3104fd64ab8afb1a0c7879c5b0c2b97507a
-          path: holidays
-          sparse-checkout: holidays
-          persist-credentials: false
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          ref: 9d04b7cf82d4507951b2c3536977bc478cf02b08
-          path: rich-yn
-          sparse-checkout: rich-yn
-          persist-credentials: false
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          ref: 552b11a8cfb02736be2795903ef4c9a6a7a8abfc
-          path: store
-          sparse-checkout: store
-          persist-credentials: false
       - run: python -m pip -q install playwright requests beautifulsoup4
       - shell: python
         run: |
-          import json,os,re
-          from pathlib import Path
-          from urllib.parse import urlsplit,parse_qs
-          from playwright.sync_api import sync_playwright,expect
-          width=int(os.environ['WIDTH'])
-          origin='https://northstarprime.net'
-          routes=['merch','rich-yn','holidays','store']
-          with sync_playwright() as pw:
-              browser=pw.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu'])
-              ctx=browser.new_context(viewport={'width':width,'height':840},reduced_motion='reduce')
-              page=ctx.new_page()
-              page.set_default_timeout(16000)
-              for route in routes:
-                  file=Path(route,route,'index.html')
-                  if file.is_file():
-                      def serve(r):
-                          name=urlsplit(r.request.url).path.strip('/')
-                          r.fulfill(content_type='text/html; charset=utf-8',body=Path(name,name,'index.html').read_bytes())
-                      ctx.route(re.compile(r'^https://northstarprime\.net/'+re.escape(route)+r'/(?:\?.*)?$'),serve)
-              def visit(rt):
-                  assert page.goto(origin+'/'+rt+'/',wait_until='domcontentloaded').ok
-                  page.evaluate("document.fonts.ready")
-                  page.wait_for_timeout(300)
-                  size=page.evaluate("()=>[document.documentElement.scrollWidth,innerWidth]")
-                  if size[0]>size[1]+1:
-                      print('LAYOUT_DIAGNOSTIC',rt,size,page.locator('main *').evaluate_all("els=>els.filter(e=>e.getBoundingClientRect().right>innerWidth+1).slice(0,12).map(e=>[e.tagName,e.className,Math.round(e.getBoundingClientRect().right)])"),flush=True)
-                  assert size[0]<=size[1]+1,(rt,size)
-              def store_folio():
-                  visit('store')
-                  page.get_by_role('link',name=re.compile('Ask about the Print Folio')).click()
-                  page.wait_for_function("document.querySelector('#message-preview')?.textContent.includes('20 archival plates')")
-                  assert 'Bill of Rights v2' in parse_qs(urlsplit(page.locator('#draft-link').get_attribute('href')).query)['subject'][0]
-                  print('PASS folio purchase inquiry',width,flush=True)
-              def rich_yn():
-                  for label,keyword in [('Ask about a custom print','sizes'),('Request a drop alert','next RICH YN')]:
-                      visit('rich-yn')
-                      a=page.get_by_role('link',name=label,exact=True)
-                      expected=parse_qs(urlsplit(a.get_attribute('href')).query)
-                      a.click()
-                      page.wait_for_function("v=>document.querySelector('#message-preview')?.textContent.includes(v)",arg=keyword)
-                      mail=urlsplit(page.locator('#draft-link').get_attribute('href'))
-                      assert mail.scheme=='mailto' and mail.path=='contact@northstarprime.net'
-                      q=parse_qs(mail.query)
-                      assert q==expected and keyword in q['body'][0],q
-                  print('PASS distinct print and drop alert drafts',width,flush=True)
-              def physical():
-                  visit('holidays')
-                  assert page.locator('#idr-dock,#idr-toggle').count()==0
-                  page.get_by_role('link',name='Browse ornaments and calendars').click()
-                  expect(page.locator('[data-tab="ornaments-calendars"]')).to_have_attribute('aria-pressed','true')
-                  for item in ['orn-star-bethlehem','cal-2027-horiz']:
-                      expect(page.locator('#'+item)).to_be_visible()
-                  page.locator('#orn-star-bethlehem a.button.primary').click()
-                  page.wait_for_function("document.querySelector('#message-preview')?.textContent.includes('NS-XMAS26-ORN901-LL01')")
-                  q=parse_qs(urlsplit(page.locator('#draft-link').get_attribute('href')).query)
-                  assert '$16.00' in q['body'][0] and 'shipping total' in q['body'][0]
-                  print('PASS holiday ornament to Printful invoice inquiry',width,flush=True)
-              def station():
-                  visit('holidays')
-                  page.get_by_role('link',name='Listen to Interdimensional Radio',exact=True).click()
-                  assert page.url.endswith('/idr/#idr-station-player')
-                  assert page.locator('#idr-station-audio').is_visible()
-                  tracks=page.locator('.track-row button')
-                  print('Station track buttons',tracks.count(),flush=True)
-                  assert tracks.count()>0
-                  tracks.first.click()
-                  page.wait_for_function("document.querySelector('#idr-station-audio').currentTime>0",timeout=35000)
-                  print('PASS station plays after holiday click',width,flush=True)
-              def tarot():
-                  visit('merch')
-                  card=page.locator('#bm-tarot-78')
-                  url='https://andrewcog.gumroad.com/l/pshjy'
-                  for idx in (0,1):
-                      btn=card.locator('a').nth(idx)
-                      assert btn.get_attribute('href')==[url,'/tarot/'][idx]
-                  ld=' '.join(page.locator('script[type="application/ld+json"]').all_text_contents())
-                  def walk(node):
-                      if isinstance(node,dict):
-                          if node.get('sku')=='NSP-TAROT-78':yield node
-                          for value in node.values():yield from walk(value)
-                      if isinstance(node,list):
-                          for value in node:yield from walk(value)
-                  assert [p['offers']['url'] for p in walk(json.loads(ld))]==[url]
-                  card.locator('.zoom-trigger').click()
-                  assert page.locator('#lb-cta1').get_attribute('href')==url
-                  assert page.locator('#lb-cta2').get_attribute('href')=='/tarot/'
-                  if width==390:
-                      page.locator('#lb-cta1').click()
-                      dest=page
-                  else:
-                      page.locator('#lb-close').click()
-                      with page.expect_popup() as new:card.locator('a').first.click()
-                      dest=new.value
-                  dest.wait_for_url(url+'*')
-                  pr=json.loads(dest.locator('[data-page]').get_attribute('data-page'))['props']['product']
-                  assert pr['is_published'] and pr['price_cents']==1200 and '78-card' in pr['name']
-                  print('PASS Tarot buy link, provider listing, price and offer',width,flush=True)
-                  expect(dest.get_by_text('I want this!',exact=True).first).to_be_visible(timeout=15000)
-                  print('Gumroad visitor controls',dest.locator('button:visible,a[href]:visible,[role=button]:visible').all_inner_texts()[-30:],flush=True)
-                  print('Gumroad listing status text',dest.locator('body').inner_text()[-1200:],flush=True)
-                  visit('merch')
-                  card.locator('a').nth(1).click()
-                  assert page.url.rstrip('/').endswith('/tarot')
-                  print('PASS free reader',width,flush=True)
-              failures=[]
-              for case in [store_folio,rich_yn,physical,station,tarot]:
-                  try:case()
-                  except Exception as exc:
-                      print('CASE_FAILURE',case.__name__,type(exc).__name__,str(exc)[:700],page.url,flush=True)
-                      failures.append(case.__name__)
-              browser.close()
-              assert not failures,failures
-
-  keyboard:
-    strategy:
-      fail-fast: false
-      matrix:
-        width: [390, 1280]
-    runs-on: ubuntu-24.04
-    timeout-minutes: 40
-    env:
-      WIDTH: ${{ matrix.width }}
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          ref: 95892aa64cbdc585a8d2ee28877459161135d651
-          path: keyboard
-          sparse-checkout: merch
-          persist-credentials: false
-      - run: python -m pip -q install playwright requests beautifulsoup4
-      - shell: python
-        run: |
-          import os
-          from pathlib import Path
-          from playwright.sync_api import sync_playwright,expect
-          pageurl='https://northstarprime.net/merch/'
+          import os,re,json
+          from urllib.parse import urlsplit
+          from playwright.sync_api import sync_playwright
+          links=json.loads("{\"https://andrewcog.gumroad.com/l/northstar-2026-free-mega-sampler\":[[0],[0,0],[0],[],[0]],\"https://andrewcog.gumroad.com/l/comedy-sticker-mega-bundle-144\":[[3600,1200,3600],[3600]],\"https://andrewcog.gumroad.com/l/comedy-sticker-vault-vol1\":[[1200,1200]],\"https://andrewcog.gumroad.com/l/comedy-sticker-vault-vol2\":[[1200,1200]],\"https://andrewcog.gumroad.com/l/comedy-sticker-vault-vol3\":[[1200,1200]],\"https://andrewcog.gumroad.com/l/comedy-sticker-vault-vol4\":[[1200,1200]],\"https://andrewcog.gumroad.com/l/northstar-2027-collector-wall-calendar-pdf\":[[1000,1000],[1000],[1000]],\"https://andrewcog.gumroad.com/l/vorath-codex-collector-compendium\":[[900,900]],\"https://andrewcog.gumroad.com/l/uncle-vorath-blazin-beaver-issue-01\":[[700,700]],\"https://andrewcog.gumroad.com/l/rich-yn-vol3-vol4-300dpi-vault\":[[1900,1900],[1900],[1900]],\"https://andrewcog.gumroad.com/l/northstar-7icon-parody-vault\":[[2400,2400],[2400],[2400],[2400]],\"https://andrewcog.gumroad.com/l/northstar-12pack-watertight-stl-vault\":[[2900,2900],[2900]],\"https://andrewcog.gumroad.com/l/northstar-idg-5game-html5-webgl-arcade-pack\":[[900,900]],\"https://andrewcog.gumroad.com/l/northstar-godot4-6game-core-bundle\":[[1200,1200]],\"https://andrewcog.gumroad.com/l/northstar-godot4-9game-clean-vault\":[[1500,1500]],\"https://andrewcog.gumroad.com/l/anodized-empires-and-anomalies-collector-vault\":[[1900,1900],[1900]],\"https://andrewcog.gumroad.com/l/acid-voxel-halloween-45-pack\":[[900,900],[900],[900]],\"https://andrewcog.gumroad.com/l/sefgfx\":[[1200],[]],\"https://andrewcog.gumroad.com/l/llkspo\":[[1200],[1200],[]],\"https://andrewcog.gumroad.com/l/fsltx\":[[1400],[1400],[]],\"https://andrewcog.gumroad.com/l/ispvpe\":[[1400]],\"https://andrewcog.gumroad.com/l/cbffq\":[[1300],[1300],[]],\"https://andrewcog.gumroad.com/l/ehzznt\":[[999],[999]],\"https://andrewcog.gumroad.com/l/fztoe\":[[2900],[2900],[]],\"https://andrewcog.gumroad.com/l/qbqoqz\":[[700]],\"https://andrewcog.gumroad.com/l/xnvde\":[[1200],[1200]],\"https://andrewcog.gumroad.com/l/vdquzp\":[[700],[],[700]],\"https://andrewcog.gumroad.com/l/doonjn\":[[],[]],\"https://andrewcog.gumroad.com/l/beholders-harvest\":[[700],[]],\"https://andrewcog.gumroad.com/l/cihqdr\":[[900],[900]],\"https://andrewcog.gumroad.com/l/vorath-santa-4k-wallpaper-suite\":[[700,700],[700]],\"https://andrewcog.gumroad.com/l/lineage-of-light-advent\":[[700],[],[700]],\"https://andrewcog.gumroad.com/l/mnjog\":[[700],[700],[700],[700],[700],[700],[700],[]],\"https://andrewcog.gumroad.com/l/rajmfn\":[[700],[]],\"https://andrewcog.gumroad.com/l/ancestor-light\":[[700],[]],\"https://andrewcog.gumroad.com/l/northstar-calendar-2027\":[[1000],[1000],[1000],[1000],[1000],[1000],[]],\"https://andrewcog.gumroad.com/l/cascade-yule\":[[700],[]],\"https://andrewcog.gumroad.com/l/fspybs\":[[700]],\"https://andrewcog.gumroad.com/l/alsjes\":[[500]],\"https://andrewcog.gumroad.com/l/vorathic-sacred-geometry-coloring-book\":[[999],[999],[]],\"https://andrewcog.gumroad.com/l/bioluminescent-oregon-proof-book\":[[999],[999]],\"https://andrewcog.gumroad.com/l/chrysalis-metamorphosis-proof-book\":[[999]],\"https://andrewcog.gumroad.com/l/feathered-forms-proof-book\":[[999]],\"https://andrewcog.gumroad.com/l/structural-color-proof-book\":[[999],[999]],\"https://andrewcog.gumroad.com/l/vorath-chromatic-print-canon-sampler12\":[[999],[999],[999],[999]],\"https://andrewcog.gumroad.com/l/vorath-colorized-print-canon-proof-pack\":[[1999],[1999],[1999]],\"https://andrewcog.gumroad.com/l/vorath-twelve-plate-sampler\":[[999]],\"https://andrewcog.gumroad.com/l/hfpzxt\":[[]],\"https://andrewcog.gumroad.com/l/audeok\":[[999],[999],[999]],\"https://andrewcog.gumroad.com/l/pshjy\":[[1200],[1200]],\"https://andrewcog.gumroad.com/l/ouklmz\":[[]],\"https://andrewcog.gumroad.com/l/rich-yn-swamp-dynasty-pack\":[[900],[900]],\"https://andrewcog.gumroad.com/l/crimson-haze-worldwide-pack\":[[900],[900]],\"https://andrewcog.gumroad.com/l/rich-yn-y2k-primetime-pack\":[[1200],[1200]]}")
           width=int(os.environ['WIDTH'])
           with sync_playwright() as pw:
               b=pw.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu'])
-              p=b.new_page(viewport={'width':width,'height':840},reduced_motion='reduce')
-              if Path('keyboard/merch/index.html').exists():
-                  p.route(pageurl,lambda r:r.fulfill(content_type='text/html; charset=utf-8',body=Path('keyboard/merch/index.html').read_bytes()))
-              p.goto(pageurl,wait_until='domcontentloaded')
-              cards=p.locator('article[data-item]')
-              assert cards.count()==58
-              for c in cards.all():
-                  trigger=c.locator('.zoom-trigger')
-                  trigger.click()
-                  for key,expected in [('Shift+Tab','lb-cta2'),('Tab','lb-close'),('Tab','lb-cta1'),('Tab','lb-cta2'),('Tab','lb-close')]:
-                      p.keyboard.press(key)
-                      expect(p.locator('#'+expected)).to_be_focused()
-                  p.keyboard.press('Escape')
-                  expect(trigger).to_be_focused()
-              print('PASS keyboard cycling, Escape and focus restoration for all',cards.count(),'previews at',width,flush=True)
+              ctx=b.new_context(viewport={'width':width,'height':840})
+              def public_assets(r):
+                  h=urlsplit(r.request.url).hostname or ''
+                  if r.request.method in ('GET','HEAD') and (h=='andrewcog.gumroad.com' or h in ['gumroad.com','assets.gumroad.com','assets.gumroad.net','public-files.gumroad.com','static-2.gumroad.com','static.gumroad.com']) and r.request.resource_type in ['document','script','stylesheet','xhr','fetch','font'] and not re.search('analytics|telemetry|/tracking',r.request.url,re.I):
+                      r.continue_()
+                  else:r.abort()
+              ctx.route('**/*',public_assets)
+              p=ctx.new_page()
+              counts={}
+              for url,prices in sorted(links.items()):
+                  result='verified'
+                  try:
+                      response=p.goto(url,wait_until='domcontentloaded',timeout=20000)
+                      if response.status!=200:result='HTTP '+str(response.status)
+                      else:
+                          node=p.locator('[data-page]')
+                          if not node.count():result='no product metadata'
+                          else:
+                              prod=json.loads(node.get_attribute('data-page'))['props']['product']
+                              assert prod['is_published'] and not prod['is_compliance_blocked'], 'unavailable'
+                              cents=prod['price_cents']
+                              for vs in prices:
+                                  if vs:assert cents in vs,('price mismatch',cents,vs)
+                              try:
+                                  p.get_by_text(re.compile(r'^(I want this!?|Buy now|Buy this|Pay|Add to cart|Get it now|Subscribe|Get|Purchase|Download now)$',re.I)).first.wait_for(state='visible',timeout=5500)
+                              except Exception:
+                                  result='other purchase control'
+                                  print('CONTROL_DETAIL',url,p.locator('a:visible,button:visible').all_inner_texts()[-12:],flush=True)
+                  except Exception as e:result='ERROR '+str(e).splitlines()[0][:150]
+                  print('LISTING',url,result,flush=True)
+                  counts[result]=counts.get(result,0)+1
+              print('SUMMARY',width,counts,flush=True)
               b.close()

@@ -59,6 +59,15 @@ CABINETS = [
     ("system1-arena", "System 1 Arena", "/static/games/marquees_aaa/system1-arena.webp", True),
     ("container-yard", "Vorath Stackward", "/static/games/marquees_aaa/vorath-stackward.webp", True),
     ("super-arcade-archive", "Super Arcade Archive", "/static/games/marquees_aaa/super-arcade-archive.webp", True),
+    # Wave 7 Finale (remaining 8 dir cabinets -> 59 dir cabinets + cascade-salmon-run.html = 60/60 = 100%!)
+    ("vorathic-reef-tank", "Vorathic Reef Tank", "/static/games/marquees_aaa/vorathic-reef-tank.webp", False),
+    ("tai-chi-flow", "Tai Chi Flow", "/static/games/marquees_aaa/tai-chi-flow.webp", False),
+    ("rose-window", "Rose Window", "/static/games/marquees_aaa/rose-window.webp", False),
+    ("vorath-census", "VORATH Census: Living Choir", "/static/games/marquees_aaa/vorath-census.webp", False),
+    ("digital-terrarium-3d", "Digital Terrarium 3D", "/static/games/marquees_aaa/digital-terrarium-3d.webp", False),
+    ("digital-terrarium-v2", "Digital Terrarium V2", "/static/games/marquees_aaa/digital-terrarium.webp", False),
+    ("digital-terrarium-v1", "Digital Terrarium V1", "/static/games/marquees_aaa/digital-terrarium.webp", False),
+    ("digital-terrarium", "Digital Terrarium", "/static/games/marquees_aaa/digital-terrarium.webp", False),
 ]
 
 
@@ -110,3 +119,19 @@ def test_house_site_handle_unified():
     assert "inaucinihilipilification" not in lnk_html.lower()
     assert "all in one app" not in idx_html.lower()
     assert "https://www.instagram.com/northstarprimenet/" in idx_html
+
+
+def test_100_percent_arcade_hub_and_salmon_run_covered():
+    import re
+    salmon = (REPO / "arcade" / "custom" / "cascade-salmon-run.html").read_text(encoding="utf-8")
+    assert "/static/games/nsp_aaa_cabinet_shell.css" in salmon
+    assert 'data-nsp-marquee="/static/games/marquees_aaa/cascade-salmon-run.webp"' in salmon
+    assert 'data-nsp-real-sfx="true"' in salmon
+    assert (REPO / "static" / "games" / "marquees_aaa" / "cascade-salmon-run.webp").is_file()
+
+    hub_html = (REPO / "arcade" / "index.html").read_text(encoding="utf-8")
+    articles = re.findall(r"<article\b[^>]*>.*?</article>", hub_html, re.S)
+    custom_articles = [a for a in articles if "/arcade/custom/" in a]
+    assert len(custom_articles) >= 60
+    for a in custom_articles:
+        assert "marquees_aaa/" in a, f"Hub card missing AAA hand-painted marquee: {a[:120]}"

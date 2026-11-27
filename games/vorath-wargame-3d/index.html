@@ -229,8 +229,8 @@
         display: none;
       }
       #right-drawer.mobile-open {
-        display: flex; position: fixed; top: 58px; right: 6px; left: 6px;
-        max-height: 56vh; z-index: 30;
+        display: flex; position: absolute; grid-column: 1; grid-row: 2 / 4;
+        inset: 0 0 auto; max-height: min(100%, 56vh); z-index: 30;
       }
       #bottom-command {
         grid-column: 1; grid-row: 4; padding: 6px 8px;
@@ -1374,7 +1374,7 @@
           m: arch.m + (saveState.relic === 'seventh_thurible' ? 2 : 0),
           rng: arch.rng + (saveState.relic === 'prism_lens' ? 3 : 0),
           atk: arch.atk + (vetRank >= 2 ? 1 : 0),
-          def: Math.max(2, arch.def - (saveState.relic === 'zero_kelvin_shard' && covId === 5 ? 1 : 0)),
+          def: arch.def + (saveState.relic === 'zero_kelvin_shard' && covId === 5 ? 1 : 0),
           maxW: arch.w + (vetRank >= 1 ? 1 : 0),
           w: arch.w + (vetRank >= 1 ? 1 : 0),
           pts: arch.pts,
@@ -1499,6 +1499,10 @@
       return hits;
     }
 
+    function defenseThreshold(unit) {
+      return unit.def + (unit.covId === 5 && !unit.quantumSpark ? 1 : 0);
+    }
+
     function executeAttack(attacker, target, isMelee) {
       const dist = Math.hypot(target.x - attacker.x, target.z - attacker.z);
       const maxR = isMelee ? attacker.m + 2.2 : attacker.rng;
@@ -1532,8 +1536,7 @@
       const chargeRelic = (isMelee && attacker.team === 'player' && saveState.relic === 'sovereign_crest') ? 1 : 0;
 
       const diceCount = attacker.atk + highGround + flanked + sparkBonus + chargeRelic;
-      let hitTarget = target.def + (los.inCover && !isMelee ? 1 : 0) - (attacker.covId === 5 && attacker.quantumSpark ? 1 : 0);
-      if (target.covId === 5 && !target.quantumSpark) hitTarget += 1; // 15 mK Coherence +1 Defense!
+      let hitTarget = defenseThreshold(target) + (los.inCover && !isMelee ? 1 : 0) - (attacker.covId === 5 && attacker.quantumSpark ? 1 : 0);
       hitTarget = Math.max(2, Math.min(6, hitTarget));
       const critAt = (attacker.team === 'player' && saveState.relic === 'prism_lens') ? 5 : 6;
 
@@ -1924,7 +1927,7 @@
         document.getElementById('st-r').textContent = selectedUnit.rng + '"';
         const atkDice = selectedUnit.atk + (selectedUnit.covId === 5 && selectedUnit.quantumSpark ? 3 : 0);
         document.getElementById('st-a').textContent = atkDice + 'D6';
-        const defVal = Math.max(2, selectedUnit.def + (selectedUnit.covId === 5 && !selectedUnit.quantumSpark ? -1 : 0));
+        const defVal = defenseThreshold(selectedUnit);
         document.getElementById('st-d').textContent = defVal + '+';
         document.getElementById('st-w').textContent = `${selectedUnit.w}/${selectedUnit.maxW}`;
 

@@ -1,0 +1,5 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {cameraOutsideSolids} from '../arcade/custom/kosher-lines/camera-rig.mjs';
+const station={id:'south-station',minX:3.1,maxX:21.1,minY:0,maxY:8.2,minZ:16.85,maxZ:23.35};
+test('Actual station regression: chase camera stays outside facade',()=>{const actual=cameraOutsideSolids({x:7,y:1.2,z:12},{x:7,y:3.56,z:18.2},[station]);assert(actual.blocked);assert.equal(actual.obstacle,'south-station');assert(actual.z<station.minZ-.22&&actual.z>15);assert.equal(actual.x,7);});
+test('Open plaza retains intended camera position',()=>{const wanted={x:4,y:4,z:11};const actual=cameraOutsideSolids({x:0,y:1.2,z:5},wanted,[station]);assert(!actual.blocked);for(const k of ['x','y','z'])assert.equal(actual[k],wanted[k]);});
+test('Parallel side-wall segment clips before the real building',()=>{const wall={id:'east-block',minX:23,maxX:29,minY:0,maxY:13,minZ:-42,maxZ:24};const actual=cameraOutsideSolids({x:21,y:1.2,z:-10},{x:27,y:3.56,z:-10},[wall]);assert(actual.blocked);assert(actual.x<22.78&&actual.x>22);assert.equal(actual.z,-10);});

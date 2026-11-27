@@ -11,27 +11,57 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: 645bbf5760a5eae0a1cd4312976099c246a4eea6
+          ref: 3da8a799bbbd3eb90d9188496f3b8a6f0a344a07
           sparse-checkout: |
-            arcade/custom/northstar-chrono-defender
+            arcade/custom/kosher-lines
+            arcade/custom/crib-recovered-assets
+            static/vendor/three
+            static/fonts
+            tests
           persist-credentials: false
       - run: python -m pip -q install playwright beautifulsoup4 pillow pytest requests
-      - name: Run real Chrono mechanics and live CDP journeys
-        env:
-          NSP_PLAYWRIGHT_PATH: ${{ runner.temp }}/chrono/node_modules/playwright
-          NSP_PLAYTEST_OUT: ${{ runner.temp }}/chrono-live
-        run: |
-          node --test arcade/custom/northstar-chrono-defender/tests/controls.test.cjs arcade/custom/northstar-chrono-defender/tests/contact-fairness.test.cjs arcade/custom/northstar-chrono-defender/tests/weapon_atlas.test.cjs
-          npm install --prefix "$RUNNER_TEMP/chrono" --no-save --package-lock=false --ignore-scripts playwright@1.55.1
-          "$RUNNER_TEMP/chrono/node_modules/.bin/playwright" install chromium
-          node arcade/custom/northstar-chrono-defender/tests/live_visual_smoke.cjs
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        if: always()
-        with:
-          name: chrono-cdp
-          path: ${{ runner.temp }}/chrono-live
-          retention-days: 7
+      - name: Run Kosher mechanics tests
+        run: node --test tests/kosher-*.test.mjs
       - name: Browser verification
         shell: python
         run: |
-          print('Chrono production CDP completed')
+          import http.server,threading,json,time,base64,io
+          from playwright.sync_api import sync_playwright
+          from PIL import Image,ImageDraw
+          class Quiet(http.server.SimpleHTTPRequestHandler):
+              def log_message(self,*args): pass
+          h=http.server.ThreadingHTTPServer(('127.0.0.1',0),Quiet)
+          threading.Thread(target=h.serve_forever,daemon=True).start()
+          sheet=Image.new('RGB',(640,490),'#171717')
+          with sync_playwright() as p:
+              b=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'])
+              for width,height,mobile in [(1280,800,False),(390,844,True)]:
+                  page=b.new_page(viewport={'width':width,'height':height},is_mobile=mobile,has_touch=mobile)
+                  errors=[];failed=[]
+                  page.on('pageerror',lambda e:errors.append(str(e)))
+                  page.on('response',lambda r:failed.append([r.status,r.url.split('/')[-1]]) if r.status>=400 else None)
+                  page.goto(f'http://127.0.0.1:{h.server_port}/arcade/custom/kosher-lines/?mode=rival')
+                  page.wait_for_function('()=>{let s=window.__KOSHER_LINES__?.snapshot();return s?.renderer.modelLoaded&&s.renderer.city.npcRigs.loaded&&s.action.enabled}',timeout=90000)
+                  d=page.locator('summary',has_text='Your deck & graphics')
+                  (d.tap if mobile else d.click)()
+                  page.select_option('#quality','low')
+                  (d.tap if mobile else d.click)()
+                  start=page.locator('#start')
+                  (start.tap if mobile else start.click)()
+                  canvas=page.locator('#plaza')
+                  canvas.evaluate("c=>c.scrollIntoView({block:'center'})")
+                  assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
+                  if not mobile:
+                      page.keyboard.down('ArrowUp');page.wait_for_timeout(1200);page.keyboard.up('ArrowUp')
+                  frame=Image.open(io.BytesIO(canvas.screenshot(timeout=45000))).convert('RGB')
+                  frame.thumbnail((400,270) if not mobile else (235,360))
+                  assert len(frame.resize((60,45)).getcolors(2701))>30
+                  sheet.paste(frame,(0,20) if not mobile else (403,20))
+                  print('KOSHER',width,frame.size,errors,failed,flush=True)
+                  assert not errors and not failed
+                  page.close()
+              b.close()
+          buf=io.BytesIO();sheet.crop((0,0,640,300)).save(buf,format='JPEG',quality=70)
+          data=base64.b64encode(buf.getvalue()).decode()
+          for i in range(0,len(data),2500):print('FRAME '+data[i:i+2500])
+          h.shutdown()

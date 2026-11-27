@@ -15,11 +15,17 @@ jobs:
           sparse-checkout: |
             store
             holidays
+            links
+            rich-yn
+            comics
+            tests/test_wave8_gumroad_vaults_wire_20261125.py
             static/front
             static/front-door.css
       - run: |
-          python -m pip install 'playwright==1.55.0' 'Pillow==11.3.0'
+          python -m pip install 'playwright==1.55.0' 'pytest==8.4.2'
           python -m playwright install --with-deps chromium
+      - name: Check the Wave 8 product records against the project regression test
+        run: python -m pytest -q tests/test_wave8_gumroad_vaults_wire_20261125.py -k covers_copy_and_jsonld
       - name: Inspect the real store and holiday cards
         shell: python
         run: |
@@ -50,6 +56,9 @@ jobs:
                                   assert result["width"]>70 and result["height"]>40 and result["left"]>=-1 and result["right"]<=width+1
                                   assert result["fit"]=="contain" or abs(result["width"]/result["height"] - result["natural"][0]/result["natural"][1])<0.04,(src,result)
                                   card=item.locator("xpath=ancestor::*[self::article or self::a][1]")
+                                  cta=card.locator(".go") if route=="store" else card.locator(f'a[href="{url}"]')
+                                  cta.click(trial=True,timeout=5000)
+                                  print("CTA reachable",width,route,url,flush=True)
                                   card.screenshot(path=out/f"{route}-{width}-{Path(src).stem}.png",timeout=15000,animations="disabled")
                       finally:
                           page.close()
@@ -57,25 +66,6 @@ jobs:
                   browser.close()
                   srv.shutdown()
           print("PASS 24 buyer-facing cover placements, decoded dimensions, destinations and crop geometry")
-      - name: Assemble the eight rendered cards at each width for visual review
-        shell: python
-        run: |
-          from pathlib import Path
-          from PIL import Image, ImageOps, ImageDraw
-          import base64, io
-          for width in (390,768,1280):
-              cards=sorted(Path("screens").glob(f"*-{width}-*.png"))
-              assert len(cards)==8
-              sheet=Image.new("RGB",(960,620),"#17171b")
-              for i,card in enumerate(cards):
-                  with Image.open(card) as im:
-                      tile=ImageOps.contain(im.convert("RGB"),(230,300))
-                      sheet.paste(tile,((i%4)*240+(240-tile.width)//2,(i//4)*310))
-              out=io.BytesIO()
-              sheet.save(out,format="JPEG",quality=72)
-              data=base64.b64encode(out.getvalue()).decode()
-              for index in range(0,len(data),2048):
-                  print(f"SHEET-{width}-{index:06}-{data[index:index+2048]}")
       - if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:

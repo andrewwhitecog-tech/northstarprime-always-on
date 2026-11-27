@@ -137,7 +137,8 @@
         ".nsp-aaa-crt-glass{position:fixed;inset:0;z-index:99970;pointer-events:none}" +
         ".nsp-aaa-crt-glass.nsp-crt-off{opacity:0}" +
         ".nsp-aaa-dock{position:fixed;right:10px;bottom:10px;z-index:99980;display:flex;gap:6px;align-items:center}" +
-        ".nsp-aaa-dock button,.nsp-aaa-dock a,.nsp-aaa-sub-btn{font-size:14px}";
+        ".nsp-aaa-dock button,.nsp-aaa-dock a,.nsp-aaa-sub-btn{font-size:14px}" +
+        "@media (max-width:1024px),(max-height:580px){.nsp-aaa-dock{display:none!important}}";
       document.head.appendChild(st);
     }
 

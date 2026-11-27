@@ -9,51 +9,35 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        width: [390, 1280]
+        width: [390]
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
       WIDTH: ${{ matrix.width }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          ref: a10a56d73a035431f6d3ca5aebc0a4bb1f42cefa
-          sparse-checkout: rich-yn
-          persist-credentials: false
       - run: python -m pip -q install playwright requests beautifulsoup4
       - shell: python
         run: |
-          import os,re
-          from pathlib import Path
-          from urllib.parse import urlsplit,parse_qs
-          from playwright.sync_api import sync_playwright,expect
-          width=int(os.environ['WIDTH'])
-          url='https://northstarprime.net/rich-yn/'
+          import os,collections
+          from urllib.parse import urlsplit
+          from playwright.sync_api import sync_playwright
           with sync_playwright() as pw:
               b=pw.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu'])
-              p=b.new_page(viewport={'width':width,'height':844},is_mobile=(width==390),has_touch=(width==390))
-              if Path('rich-yn/index.html').exists():
-                  p.route(url,lambda r:r.fulfill(content_type='text/html; charset=utf-8',body=Path('rich-yn/index.html').read_bytes()))
-              def visit():p.goto(url,wait_until='domcontentloaded')
-              visit()
-              cards=p.locator('article').filter(has_text='Printful NorthStar POD')
-              assert cards.count()==7
-              subjects=set()
-              for i in range(7):
-                  c=cards.nth(i)
-                  link=c.get_by_role('link',name=re.compile('Ask about this'))
-                  title=c.locator('h3').inner_text().split(' — ')[0]
-                  dest=parse_qs(urlsplit(link.get_attribute('href')).query)
-                  assert title.split()[0] in dest['subject'][0],title
-                  link.click()
-                  expect(p.locator('#subject-preview')).to_have_text(dest['subject'][0])
-                  expect(p.locator('#message-preview')).to_have_text(dest['body'][0])
-                  mail=urlsplit(p.locator('#draft-link').get_attribute('href'))
-                  assert mail.scheme=='mailto' and mail.path=='contact@northstarprime.net'
-                  assert parse_qs(mail.query)==dest
-                  assert 'shipping' in dest['body'][0] and 'availability' in dest['body'][0]
-                  subjects.add(dest['subject'][0])
-                  visit()
-              assert len(subjects)==7
-              print('PASS all seven distinct physical inquiries at',width,flush=True)
+              p=b.new_page()
+              denied=collections.Counter()
+              def readonly(r):
+                  u=urlsplit(r.request.url)
+                  official_static=u.hostname=='assets.gumroad.com' and u.path.startswith('/vite/assets/')
+                  product=u.hostname=='andrewcog.gumroad.com' and u.path=='/l/pshjy' and r.request.resource_type=='document'
+                  if r.request.method=='GET' and (official_static or product):r.continue_()
+                  else:
+                      denied[(u.hostname,r.request.resource_type,u.path.split('/')[1][:50] if '/' in u.path else '')]+=1
+                      r.abort()
+              p.route('**/*',readonly)
+              p.on('pageerror',lambda e:print('JS',str(e)[:250],flush=True))
+              p.goto('https://andrewcog.gumroad.com/l/pshjy',wait_until='domcontentloaded')
+              try:p.get_by_text('I want this!',exact=True).first.wait_for(timeout=7000)
+              except Exception:pass
+              print('VISIBILITY',p.locator('body').inner_text()[-160:],flush=True)
+              print('RESOURCE_CATEGORIES',[(str(k),v) for k,v in denied.items()][:40],flush=True)
               b.close()

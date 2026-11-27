@@ -9,86 +9,45 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          ref: 42b11a38d53d04bcda55da18fc332736d36c672a
-          sparse-checkout: |
-            music
-            realm
-            .github/hq_audio_review
-            static/games
-            store
-            play
-            links
-            merch
-            chromatic
-            stickerforge
-            parody-drop
-            community
-            idc-programming
-            tools
-            tests
-            static/front
-            static/cards
-            warband/art
-          persist-credentials: false
-      - run: python -m pip -q install playwright beautifulsoup4 pillow pytest requests
-
-      - name: Browser verification
+      - run: python -m pip -q install playwright requests
+      - name: Verify deployed showroom controls
         shell: python
         run: |
-          from pathlib import Path
-          from urllib.parse import urlsplit,parse_qs
-          from bs4 import BeautifulSoup
+          import time
+          from urllib.parse import urljoin,urlsplit
+          import requests
           from playwright.sync_api import sync_playwright
-          import json,requests
-          preview=False
-          origin='https://northstarprime.net'
-          store=origin+'/merch/'
-          dest='/3d-prints/#wb-reveler-75'
-          if preview: html=Path('merch/index.html').read_text(encoding='utf-8')
-          else:
-              import time
-              for attempt in range(45):
-                  res=requests.get(store,params={'verify':'reveler-409','attempt':attempt},timeout=20)
-                  res.raise_for_status()
-                  html=res.text
-                  if dest in html and '/3d-prints/#nsp-wb-rev75' not in html: break
-                  time.sleep(8)
-              else: raise AssertionError('Production is still serving the older Reveler link')
-          doc=BeautifulSoup(html,'html.parser')
-          spec=BeautifulSoup(requests.get(origin+'/3d-prints/',timeout=20).content,'html.parser')
-          cards=doc.select('article[data-item]')
-          lookbook=[a for card in cards for a in card.select('a[href^="/3d-prints/#"]')]
-          assert len(lookbook)==6
-          for a in lookbook: assert spec.find(id=urlsplit(a['href']).fragment) is not None,a['href']
-          assert dest in json.dumps(json.loads(doc.select_one('script[type="application/ld+json"]').string))
+          site = 'https://northstarprime.net/games/flagship-3d-suite/'
+          for attempt in range(60):
+              response = requests.get(site,params={'release':'410','attempt':attempt},timeout=20)
+              if response.ok and "getElementById('cards-dock').before(box)" in response.text:
+                  break
+              time.sleep(8)
+          else: raise AssertionError('production has not served #410')
           with sync_playwright() as p:
-              b=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu'])
-              for width,modal in [(390,True),(1280,False)]:
-                  page=b.new_page(viewport={'width':width,'height':840},reduced_motion='reduce')
-                  if preview: page.route(store,lambda r:r.fulfill(content_type='text/html',body=html))
-                  page.goto(store,wait_until='domcontentloaded')
-                  card=page.locator('[id="3dp-warband-reveler"]')
-                  if modal:
-                      card.locator('.zoom-trigger').click()
-                      link=page.locator('#lb-cta1')
-                  else: link=card.locator('a[href^="/3d-prints/#"]')
-                  assert link.get_attribute('href')==dest
-                  link.click()
-                  page.wait_for_url(origin+dest)
-                  model=page.locator(':target')
-                  assert model.count()==1 and model.is_visible()
-                  assert 'Vorath Reveler' in model.inner_text()
-                  assert model.evaluate("e=>e.getBoundingClientRect().top < innerHeight && e.getBoundingClientRect().bottom>0")
-                  quote=model.locator('a[href^="/contact/?"]')
-                  query=parse_qs(urlsplit(quote.get_attribute('href')).query)
-                  assert 'WB-MINI-01' in query['subject'][0]
-                  quote.click()
-                  page.wait_for_function("() => document.querySelector('#subject-preview')?.textContent?.includes('WB-MINI-01')")
-                  draft=urlsplit(page.locator('#draft-link').get_attribute('href'))
-                  assert draft.scheme=='mailto' and draft.path=='contact@northstarprime.net'
-                  assert 'WB-MINI-01' in parse_qs(draft.query)['subject'][0]
-                  print('REVELER',width,'modal' if modal else 'card','model specs to populated quote passed',flush=True)
-                  page.close()
-              b.close()
+              for mode,flags in [('fallback',['--disable-webgl','--disable-gpu']),('software',['--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'])]:
+                  browser=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=flags)
+                  for w,h in [(390,844),(1280,720)]:
+                      page=browser.new_page(viewport={'width':w,'height':h})
+                      page.set_default_timeout(45000)
+                      page.goto(site+'?release=410',wait_until='domcontentloaded')
+                      cards=page.locator('#cards-dock .game-card')
+                      cards.last.wait_for()
+                      assert cards.count()==4
+                      if mode=='fallback':
+                          page.locator('.nsp-webgl-fallback').wait_for()
+                      else:
+                          assert not page.locator('.nsp-webgl-fallback').count()
+                      for card in cards.all():
+                          dest=urljoin(page.url,card.locator('a').get_attribute('href'))
+                          button=card.get_by_role('button')
+                          with page.expect_response(lambda r:r.request.resource_type=='document' and urlsplit(r.url).path==urlsplit(dest).path) as nav:
+                              button.click()
+                          assert nav.value.status==200,(dest,nav.value.status)
+                          assert page.locator('#cabinet-runner').is_visible()
+                          assert urljoin(page.url,page.locator('#cabinet-iframe').get_attribute('src'))==dest
+                          page.keyboard.press('Escape')
+                          page.locator('#cabinet-runner').wait_for(state='hidden')
+                      print('LIVE CABINETS',mode,w,'4/4 games opened and exited',flush=True)
+                      page.close()
+                  browser.close()

@@ -381,8 +381,8 @@
           </div>
         </div>
 
-        <audio id="lounge-audio" crossorigin="anonymous" preload="metadata"></audio>
-        <audio id="lounge-audio-r2" preload="metadata"></audio>
+        <audio id="lounge-audio" crossorigin="anonymous" preload="none"></audio>
+        <audio id="lounge-audio-r2" preload="none"></audio>
 
         <div class="scrub-row">
           <span class="time-readout" id="time-cur">0:00</span>
@@ -628,10 +628,17 @@
       var useCors = !!(t.cors || t.src.indexOf("raw.githubusercontent.com") !== -1 || t.src.charAt(0) === "/");
       audio = useCors ? audioCors : audioR2;
       audio.volume = Math.max(0, Math.min(1, parseFloat(vol.value) / 100));
-      audio.src = t.src;
-      audio.load();
+      var reuseSource = audio.getAttribute("src") === t.src && !audio.error;
+      if (audio.getAttribute("src") !== t.src) {
+        audio.src = t.src;
+      } else if (audio.error) {
+        audio.load();
+      } else if (audio.currentTime > 0) {
+        audio.currentTime = 0;
+      }
       timeCur.textContent = "0:00";
-      timeDur.textContent = t.duration ? fmtTime(t.duration) : "--:--";
+      var duration = reuseSource && isFinite(audio.duration) && audio.duration > 0 ? audio.duration : t.duration;
+      timeDur.textContent = duration ? fmtTime(duration) : "--:--";
       scrub.value = "0";
 
       if (autoplay) {

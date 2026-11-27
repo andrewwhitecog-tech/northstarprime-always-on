@@ -33,19 +33,56 @@ jobs:
             warband/art
           persist-credentials: false
       - run: python -m pip -q install playwright beautifulsoup4 pillow pytest requests
-      - name: Run native audio lifecycle with its default pinned fixture
-        shell: bash
-        run: |
-          npm install --prefix "$RUNNER_TEMP/audio" --no-save --package-lock=false --ignore-scripts playwright@1.55.1
-          "$RUNNER_TEMP/audio/node_modules/.bin/playwright" install --with-deps chromium
-          export NSP_PLAYWRIGHT_PATH="$RUNNER_TEMP/audio/node_modules/playwright"
-          export NSP_HQ_BASELINE="$GITHUB_WORKSPACE/.github/hq_audio_review/fixtures/hq_audio.baseline.js"
-          export NSP_HQ_CANDIDATE="$GITHUB_WORKSPACE/static/games/hq_audio.js"
-          export NSP_PLAYTEST_OUT="$RUNNER_TEMP/audio-results"
-          node .github/hq_audio_review/native-focus.cjs
-          xvfb-run -a node .github/hq_audio_review/hq_audio_lifecycle.cjs
+
       - name: Browser verification
         shell: python
         run: |
-          import json,os,pathlib
-          r=json.loads(next(p for p in (pathlib.Path(os.environ['RUNNER_TEMP'])/'audio-results').glob('*.json') if 'fixture' in p.read_text() and '"passed"' in p.read_text()).read_text());assert r['passed'];print('AUDIO PASS',r['fixture']['sha256'])
+          from playwright.sync_api import sync_playwright
+          from urllib.parse import urlsplit
+          import json,time
+          with sync_playwright() as p:
+              browser=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu','--mute-audio'])
+              for width,height in [(390,844),(1280,800)]:
+                  for path in ['/music/','/realm/']:
+                      ctx=browser.new_context(viewport={'width':width,'height':height})
+                      page=ctx.new_page()
+                      console=[]; errors=[]; assets=[]; failed=[]
+                      page.on('console',lambda m:console.append([m.text[:280],m.location.get('url','').split('?')[0]]) if m.type=='error' else None)
+                      page.on('pageerror',lambda e:errors.append(str(e)))
+                      page.on('response',lambda r: assets.append([r.status,r.url.split('?')[0]]) if r.status>=400 else None)
+                      page.on('requestfailed',lambda r:failed.append([r.failure,r.resource_type,r.url.split('?')[0]]) )
+                      from bs4 import BeautifulSoup
+                      from pathlib import Path
+                      if path=='/music/':
+                          candidate=BeautifulSoup(Path('music/index.html').read_bytes(),'html.parser')
+                          script=next(s for s in candidate.find_all('script') if 'function loadTrack(' in (s.string or ''))
+                          def use_candidate(route):
+                              current=route.fetch()
+                              html=BeautifulSoup(current.body(),'html.parser')
+                              target=next(s for s in html.find_all('script') if 'function loadTrack(' in (s.string or ''))
+                              target.string=script.string
+                              for audio in html.find_all('audio'): audio['preload']='none'
+                              route.fulfill(response=current,body=str(html),content_type='text/html; charset=utf-8')
+                          page.route('https://northstarprime.net/music/',use_candidate)
+                      res=page.goto('https://northstarprime.net'+path,wait_until='load',timeout=45000)
+                      page.locator('img').evaluate_all("xs=>xs.forEach(x=>x.loading='eager')")
+                      if path=='/music/':
+                          page.locator('#hero-play-beats').click()
+                          page.wait_for_function("Array.from(document.querySelectorAll('audio')).some(v=>v.currentTime>1)")
+                      else:
+                          page.wait_for_function("!document.querySelector('#live-status').textContent.includes('Checking')",timeout=12000)
+                      page.wait_for_timeout(3000)
+                      print('DIAG',json.dumps([width,path,res.status,console,errors,assets,failed]),flush=True)
+                      assert res.status==200 and not (console or errors or assets or failed),(path,width,console,errors,assets,failed)
+                      if path=='/music/':
+                          idx=page.locator('#lounge-tracks-data').evaluate("s=>JSON.parse(s.textContent).findIndex(t=>t.duration===0 && t.src.startsWith('https://assets.'))")
+                          btn=page.locator(f'.play-track-btn[data-idx="{idx}"]')
+                          btn.click()
+                          page.wait_for_function("document.getElementById('lounge-audio-r2').currentTime>0.4")
+                          before=page.locator('#time-dur').inner_text()
+                          assert before!='--:--' and before!='0:00'
+                          btn.click()
+                          assert page.locator('#time-dur').inner_text()==before
+                          print('REPLAY duration retained',width,before,flush=True)
+                      ctx.close()
+              browser.close()

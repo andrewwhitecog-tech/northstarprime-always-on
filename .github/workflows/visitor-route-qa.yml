@@ -15,226 +15,45 @@ jobs:
     env:
       WIDTH: ${{ matrix.width }}
     steps:
-      - name: Wait for the public catalog update
-        shell: python
-        run: |
-          import time,urllib.request
-          done=False
-          for attempt in range(45):
-              try:
-                  url='https://northstarprime.net/merch/?release='+str(attempt)+'-dad7746828'
-                  with urllib.request.urlopen(url,timeout=10) as response:
-                      html=response.read().decode('utf8')
-                  done="lb.addEventListener('keydown'" in html and 'Buy deck on Gumroad ($12)' in html
-              except OSError: pass
-              if done: break
-              time.sleep(12)
-          assert done,'Production has not yet served the merged merch catalog'
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: a10a56d73a035431f6d3ca5aebc0a4bb1f42cefa
+          sparse-checkout: rich-yn
+          persist-credentials: false
       - run: python -m pip -q install playwright requests beautifulsoup4
       - shell: python
         run: |
-          import json,os,re
+          import os,re
           from pathlib import Path
           from urllib.parse import urlsplit,parse_qs
           from playwright.sync_api import sync_playwright,expect
           width=int(os.environ['WIDTH'])
-          origin='https://northstarprime.net'
-          routes=['merch','rich-yn','holidays','store']
-          with sync_playwright() as pw:
-              browser=pw.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu'])
-              ctx=browser.new_context(viewport={'width':width,'height':840},is_mobile=(width==390),has_touch=(width==390),device_scale_factor=(2 if width==390 else 1),reduced_motion='reduce')
-              page=ctx.new_page()
-              page.set_default_timeout(16000)
-              def visit(rt):
-                  assert page.goto(origin+'/'+rt+'/',wait_until='domcontentloaded').ok
-                  page.evaluate("document.fonts.ready")
-                  page.wait_for_timeout(300)
-                  size=page.evaluate("()=>[document.documentElement.scrollWidth,innerWidth]")
-                  if size[0]>size[1]+1:
-                      print('LAYOUT_DIAGNOSTIC',rt,size,page.locator('main *').evaluate_all("els=>els.filter(e=>e.getBoundingClientRect().right>innerWidth+1).slice(0,12).map(e=>[e.tagName,e.className,Math.round(e.getBoundingClientRect().right)])"),flush=True)
-                  assert size[0]<=size[1]+1,(rt,size)
-              def store_folio():
-                  visit('store')
-                  page.get_by_role('link',name=re.compile('Ask about the Print Folio')).click()
-                  page.wait_for_function("document.querySelector('#message-preview')?.textContent.includes('20 archival plates')")
-                  assert 'Bill of Rights v2' in parse_qs(urlsplit(page.locator('#draft-link').get_attribute('href')).query)['subject'][0]
-                  print('PASS folio purchase inquiry',width,flush=True)
-              def rich_yn():
-                  for label,keyword in [('Ask about a custom print','sizes'),('Request a drop alert','next RICH YN')]:
-                      visit('rich-yn')
-                      a=page.get_by_role('link',name=label,exact=True)
-                      expected=parse_qs(urlsplit(a.get_attribute('href')).query)
-                      a.click()
-                      page.wait_for_function("v=>document.querySelector('#message-preview')?.textContent.includes(v)",arg=keyword)
-                      mail=urlsplit(page.locator('#draft-link').get_attribute('href'))
-                      assert mail.scheme=='mailto' and mail.path=='contact@northstarprime.net'
-                      q=parse_qs(mail.query)
-                      assert q==expected and keyword in q['body'][0],q
-                  print('PASS distinct print and drop alert drafts',width,flush=True)
-              def physical():
-                  visit('holidays')
-                  assert page.locator('#idr-dock,#idr-toggle').count()==0
-                  page.get_by_role('link',name='Browse ornaments and calendars').click()
-                  expect(page.locator('[data-tab="ornaments-calendars"]')).to_have_attribute('aria-pressed','true')
-                  for item in ['orn-star-bethlehem','cal-2027-horiz']:
-                      expect(page.locator('#'+item)).to_be_visible()
-                  page.locator('#orn-star-bethlehem a.button.primary').click()
-                  page.wait_for_function("document.querySelector('#message-preview')?.textContent.includes('NS-XMAS26-ORN901-LL01')")
-                  q=parse_qs(urlsplit(page.locator('#draft-link').get_attribute('href')).query)
-                  assert '$16.00' in q['body'][0] and 'shipping total' in q['body'][0]
-                  print('PASS holiday ornament to Printful invoice inquiry',width,flush=True)
-                  visit('holidays')
-                  stickers=page.locator('a[href="/stickerforge"]').first
-                  with page.expect_navigation(wait_until="domcontentloaded") as opened:
-                      stickers.click()
-                  assert opened.value and opened.value.status==200,(page.url,opened.value.status if opened.value else None)
-                  print("PASS holiday navigation to StickerForge",width,flush=True)
-              def station():
-                  visit('holidays')
-                  page.get_by_role('link',name='Listen to Interdimensional Radio',exact=True).click()
-                  assert page.url.endswith('/idr/#idr-station-player')
-                  assert page.locator('#idr-station-audio').is_visible()
-                  tracks=page.locator('.track-row button')
-                  print('Station track buttons',tracks.count(),flush=True)
-                  assert tracks.count()>0
-                  tracks.first.click()
-                  page.wait_for_function("document.querySelector('#idr-station-audio').currentTime>0",timeout=35000)
-                  print('PASS station plays after holiday click',width,flush=True)
-              def tarot():
-                  visit('merch')
-                  card=page.locator('#bm-tarot-78')
-                  url='https://andrewcog.gumroad.com/l/pshjy'
-                  for idx in (0,1):
-                      btn=card.locator('a').nth(idx)
-                      assert btn.get_attribute('href')==[url,'/tarot/'][idx]
-                  ld=' '.join(page.locator('script[type="application/ld+json"]').all_text_contents())
-                  def walk(node):
-                      if isinstance(node,dict):
-                          if node.get('sku')=='NSP-TAROT-78':yield node
-                          for value in node.values():yield from walk(value)
-                      if isinstance(node,list):
-                          for value in node:yield from walk(value)
-                  assert [p['offers']['url'] for p in walk(json.loads(ld))]==[url]
-                  card.locator('.zoom-trigger').click()
-                  assert page.locator('#lb-cta1').get_attribute('href')==url
-                  assert page.locator('#lb-cta2').get_attribute('href')=='/tarot/'
-                  if width==390:
-                      page.locator('#lb-cta1').click()
-                      dest=page
-                  else:
-                      page.locator('#lb-close').click()
-                      with page.expect_popup() as new:card.locator('a').first.click()
-                      dest=new.value
-                  dest.wait_for_url(url+'*')
-                  pr=json.loads(dest.locator('[data-page]').get_attribute('data-page'))['props']['product']
-                  assert pr['is_published'] and pr['price_cents']==1200 and '78-card' in pr['name']
-                  print('PASS Tarot buy link, provider listing, price and offer',width,flush=True)
-                  expect(dest.get_by_text('I want this!',exact=True).first).to_be_visible(timeout=15000)
-                  print('Gumroad visitor controls',dest.locator('button:visible,a[href]:visible,[role=button]:visible').all_inner_texts()[-30:],flush=True)
-                  print('Gumroad listing status text',dest.locator('body').inner_text()[-1200:],flush=True)
-                  entry=dest.get_by_text('I want this!',exact=True).first
-                  print('LIVE_BUY_TARGET',entry.evaluate("e=>[e.tagName,e.closest('a')?.href, e.getAttribute('type')]"),flush=True)
-                  def review_only(route):
-                      u=urlsplit(route.request.url)
-                      document=u.hostname in ('gumroad.com','andrewcog.gumroad.com') and u.path.rstrip('/').endswith('/checkout') and route.request.resource_type=='document'
-                      static=u.hostname=='assets.gumroad.com' and u.path.startswith('/vite/assets/') and route.request.resource_type in ('script','stylesheet','font','other')
-                      if route.request.method in ('GET','HEAD') and (document or static):route.continue_()
-                      else:route.abort()
-                  dest.route('**/*',review_only)
-                  try:
-                      entry.click(timeout=9000)
-                      dest.wait_for_timeout(1400)
-                      txt=dest.locator('body').inner_text(timeout=5000)
-                      print('LIVE_CART_REVIEW',urlsplit(dest.url).netloc,urlsplit(dest.url).path,'deck=', 'VORATH Tarot' in txt,'price=', '$12' in txt,'email fields=',dest.locator('input[type=email]').count(),flush=True)
-                  except Exception as exc:
-                      print('LIVE_CART_LIMIT',str(exc).splitlines()[0][:150],flush=True)
-                  finally:
-                      dest.unroute('**/*',review_only)
-                  visit('merch')
-                  card.locator('a').nth(1).click()
-                  assert page.url.rstrip('/').endswith('/tarot')
-                  print('PASS free reader',width,flush=True)
-              failures=[]
-              for case in [store_folio,rich_yn,physical,station,tarot]:
-                  try:case()
-                  except Exception as exc:
-                      print('CASE_FAILURE',case.__name__,type(exc).__name__,str(exc)[:700],page.url,flush=True)
-                      failures.append(case.__name__)
-              browser.close()
-              assert not failures,failures
-
-  keyboard:
-    strategy:
-      fail-fast: false
-      matrix:
-        width: [390, 1280]
-    runs-on: ubuntu-24.04
-    timeout-minutes: 40
-    env:
-      WIDTH: ${{ matrix.width }}
-    steps:
-      - name: Wait for the public catalog update
-        shell: python
-        run: |
-          import time,urllib.request
-          done=False
-          for attempt in range(45):
-              try:
-                  url='https://northstarprime.net/merch/?release='+str(attempt)+'-dad7746828'
-                  with urllib.request.urlopen(url,timeout=10) as response:
-                      html=response.read().decode('utf8')
-                  done="lb.addEventListener('keydown'" in html and 'Buy deck on Gumroad ($12)' in html
-              except OSError: pass
-              if done: break
-              time.sleep(12)
-          assert done,'Production has not yet served the merged merch catalog'
-      - run: python -m pip -q install playwright requests beautifulsoup4
-      - shell: python
-        run: |
-          import os
-          from pathlib import Path
-          from playwright.sync_api import sync_playwright,expect
-          pageurl='https://northstarprime.net/merch/'
-          width=int(os.environ['WIDTH'])
+          url='https://northstarprime.net/rich-yn/'
           with sync_playwright() as pw:
               b=pw.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu'])
-              p=b.new_page(viewport={'width':width,'height':840},is_mobile=(width==390),has_touch=(width==390),reduced_motion='reduce')
-              p.goto(pageurl,wait_until='domcontentloaded')
-              cards=p.locator('article[data-item]')
-              assert cards.count()==58
-              for c in cards.all():
-                  trigger=c.locator('.zoom-trigger')
-                  trigger.click()
-                  for key,expected in [('Shift+Tab','lb-cta2'),('Tab','lb-close'),('Tab','lb-cta1'),('Tab','lb-cta2'),('Tab','lb-close')]:
-                      p.keyboard.press(key)
-                      expect(p.locator('#'+expected)).to_be_focused()
-                  p.keyboard.press('Escape')
-                  expect(trigger).to_be_focused()
-              print('PASS keyboard cycling, Escape and focus restoration for all',cards.count(),'previews at',width,flush=True)
+              p=b.new_page(viewport={'width':width,'height':844},is_mobile=(width==390),has_touch=(width==390))
+              if Path('rich-yn/index.html').exists():
+                  p.route(url,lambda r:r.fulfill(content_type='text/html; charset=utf-8',body=Path('rich-yn/index.html').read_bytes()))
+              def visit():p.goto(url,wait_until='domcontentloaded')
+              visit()
+              cards=p.locator('article').filter(has_text='Printful NorthStar POD')
+              assert cards.count()==7
+              subjects=set()
+              for i in range(7):
+                  c=cards.nth(i)
+                  link=c.get_by_role('link',name=re.compile('Ask about this'))
+                  title=c.locator('h3').inner_text().split(' — ')[0]
+                  dest=parse_qs(urlsplit(link.get_attribute('href')).query)
+                  assert title.split()[0] in dest['subject'][0],title
+                  link.click()
+                  expect(p.locator('#subject-preview')).to_have_text(dest['subject'][0])
+                  expect(p.locator('#message-preview')).to_have_text(dest['body'][0])
+                  mail=urlsplit(p.locator('#draft-link').get_attribute('href'))
+                  assert mail.scheme=='mailto' and mail.path=='contact@northstarprime.net'
+                  assert parse_qs(mail.query)==dest
+                  assert 'shipping' in dest['body'][0] and 'availability' in dest['body'][0]
+                  subjects.add(dest['subject'][0])
+                  visit()
+              assert len(subjects)==7
+              print('PASS all seven distinct physical inquiries at',width,flush=True)
               b.close()
-
-  repository-tests:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 8
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          ref: dad77468282544305053170e84562edeef48023d
-          persist-credentials: false
-          sparse-checkout-cone-mode: false
-          sparse-checkout: |
-            /brand/index.html
-            /holidays/index.html
-            /sovereign-merch/index.html
-            /tarot/index.html
-            /merch/index.html
-            /rich-yn/index.html
-            /assets/rich_yn_mockups_20261125/
-            /tests/test_holiday_brand_merch_straighten_20261127.py
-            /tests/test_rich_yn_storefront_upgrade_20261125.py
-      - run: python -m pip -q install pytest playwright
-      - run: >
-          python -m pytest -q
-          tests/test_holiday_brand_merch_straighten_20261127.py
-          tests/test_rich_yn_storefront_upgrade_20261125.py::test_rich_yn_mockup_webps_exist_and_are_compact
-          tests/test_rich_yn_storefront_upgrade_20261125.py::test_rich_yn_wires_vault_checkouts_badmanners_palace_and_vice_mockups

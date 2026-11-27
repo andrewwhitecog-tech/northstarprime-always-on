@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: 9e1a756f72a457bd8d411708bee3f6720766a3df
+          ref: 0848cbef8fca76f6fb806c65d35351015ece01f3
           sparse-checkout: |
             arcade/custom
           persist-credentials: false
@@ -20,13 +20,20 @@ jobs:
       - name: Browser verification
         shell: python
         run: |
+          import requests,time
+          target='https://northstarprime.net/arcade/custom/xbla_blades_dashboard_omniverse.html'
+          for i in range(48):
+              r=requests.get(target+'?catalog_release='+str(int(time.time())),timeout=20)
+              if r.ok and 'data-unreleased-game=' in r.text: break
+              time.sleep(12)
+          else: raise AssertionError('Dashboard deployment did not propagate')
           from pathlib import Path
           from urllib.parse import urljoin,urlsplit
           from bs4 import BeautifulSoup
           from playwright.sync_api import sync_playwright
           from concurrent.futures import ThreadPoolExecutor
           import requests
-          preview=True
+          preview=False
           path='arcade/custom/xbla_blades_dashboard_omniverse.html'
           url='https://northstarprime.net/'+path
           html=Path(path).read_bytes() if preview else requests.get(url,timeout=20).content

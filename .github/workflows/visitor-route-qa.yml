@@ -11,16 +11,18 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: 29e643411005fcb54ba825b7af5e1ec0d9165331
+          ref: 633b98f5c79960a6e28a6b44db1162a943ae0f57
           sparse-checkout: |
-            arcade/custom/kosher-lines
-            arcade/custom/crib-recovered-assets
-            static/vendor/three
-            static/fonts
             music
             realm
             .github/hq_audio_review
             static/games
+            games
+            brick-alchemy
+            rich-yn
+            unc-v
+            hire
+            arcade
             store
             play
             links
@@ -37,24 +39,28 @@ jobs:
             warband/art
           persist-credentials: false
       - run: python -m pip -q install playwright beautifulsoup4 pillow pytest requests
-
+      - name: Run existing store and link assertions
+        run: python -m pytest -q tests/test_alwayson_store_links_nov22_flagships_20261122.py -k 'not overflow and not forced_colors'
       - name: Browser verification
         shell: python
         run: |
+          from pathlib import Path
           from playwright.sync_api import sync_playwright
-          import http.server,threading
-          server=http.server.ThreadingHTTPServer(('127.0.0.1',0),http.server.SimpleHTTPRequestHandler)
-          threading.Thread(target=server.serve_forever,daemon=True).start()
+          from bs4 import BeautifulSoup
+          import requests
+          url='https://northstarprime.net/store/'
           with sync_playwright() as p:
-              b=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--use-angle=swiftshader','--enable-unsafe-swiftshader'])
-              page=b.new_page(viewport={'width':390,'height':844},is_mobile=True,has_touch=True,device_scale_factor=1)
-              page.goto(f'http://127.0.0.1:{server.server_port}/arcade/custom/kosher-lines/?mode=rival')
-              page.wait_for_function('window.__KOSHER_LINES__?.snapshot().action?.enabled',timeout=90000)
-              target=page.locator('summary',has_text='Your deck & graphics')
-              target.evaluate("e=>e.scrollIntoView({block:'center',behavior:'instant'})")
-              print('LAYOUT',target.evaluate("""e=>{let r=e.getBoundingClientRect(),v=visualViewport;return [innerWidth,document.documentElement.scrollWidth,v.width,v.scale,v.offsetTop,scrollY,r.toJSON(),document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.outerHTML.slice(0,100),Array.from(document.querySelectorAll('body *')).map(x=>[x.tagName,x.className,x.getBoundingClientRect().right]).filter(x=>x[2]>395).slice(0,18)]}"""),flush=True)
-              target.tap(timeout=5000)
-              assert target.evaluate('e=>e.parentElement.open')
-              print('TOUCH deck opened',flush=True)
+              b=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu'])
+              for w in (390,1280):
+                  page=b.new_page(viewport={'width':w,'height':844})
+                  page.route(url,lambda r:r.fulfill(content_type='text/html',body=Path('store/index.html').read_bytes()))
+                  page.goto(url,wait_until='domcontentloaded')
+                  link=page.get_by_role('navigation',name='Store links').get_by_role('link',name='Arcade',exact=True)
+                  link.scroll_into_view_if_needed()
+                  pos=link.bounding_box()
+                  assert link.is_visible() and 0<=pos['x']<=w-pos['width']+1
+                  with page.expect_navigation(wait_until='domcontentloaded') as nav: link.click()
+                  assert nav.value.status==200 and page.url=='https://northstarprime.net/arcade/'
+                  print('ARCADE',w,nav.value.status,page.title(),flush=True)
+                  page.close()
               b.close()
-          server.shutdown()

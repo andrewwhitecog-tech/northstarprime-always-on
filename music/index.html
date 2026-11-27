@@ -628,8 +628,12 @@
       var useCors = !!(t.cors || t.src.indexOf("raw.githubusercontent.com") !== -1 || t.src.charAt(0) === "/");
       audio = useCors ? audioCors : audioR2;
       audio.volume = Math.max(0, Math.min(1, parseFloat(vol.value) / 100));
-      audio.src = t.src;
-      audio.load();
+      if (audio.getAttribute("src") !== t.src || audio.error) {
+        audio.src = t.src;
+        audio.load();
+      } else if (audio.currentTime > 0) {
+        audio.currentTime = 0;
+      }
       timeCur.textContent = "0:00";
       timeDur.textContent = t.duration ? fmtTime(t.duration) : "--:--";
       scrub.value = "0";

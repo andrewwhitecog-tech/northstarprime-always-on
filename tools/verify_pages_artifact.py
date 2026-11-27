@@ -156,6 +156,10 @@ def verify(artifact: Path, network: bool) -> dict:
         relative = path.relative_to(artifact).as_posix()
         if "/static/idc_video/" in RAW_VIDEO_RE.sub("", text):
             local_video_refs.append(relative)
+        if path.suffix.lower() in {".html", ".js", ".css"} and re.search(
+            r"(?<![\w.-])app\.northstarprime\.net(?![\w.-])", text, re.IGNORECASE
+        ):
+            failures.append(f"Retired application host in visitor asset: {relative}")
         if path.suffix.lower() == ".html" and re.search(
             r"(?:href|src|poster)\s*=\s*[\"'](?:file://|[A-Z]:\\)", text, re.IGNORECASE
         ):

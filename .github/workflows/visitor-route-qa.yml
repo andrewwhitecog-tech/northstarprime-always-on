@@ -11,68 +11,80 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: 3da8a799bbbd3eb90d9188496f3b8a6f0a344a07
+          ref: 5ea94cc9a0d68ab7cb7d3bafe364f8ebf46e1bba
           sparse-checkout: |
-            arcade/custom/kosher-lines
-            arcade/custom/crib-recovered-assets
-            static/vendor/three
-            static/fonts
-            tests
+            music
+            realm
+            .github/hq_audio_review
+            static/games
+            store
+            play
+            links
+            merch
+            chromatic
+            stickerforge
+            parody-drop
+            community
+            idc-programming
             tools
+            tests
+            static/front
+            static/cards
+            warband/art
           persist-credentials: false
       - run: python -m pip -q install playwright beautifulsoup4 pillow pytest requests
-      - name: Exercise gameplay and mechanics
-        run: node --test tests/kosher-*.test.mjs
+      - run: git sparse-checkout add pnw-lost-tables-2020 raven-and-rose-1883
       - name: Browser verification
         shell: python
         run: |
           from pathlib import Path
-          import sys
-          sys.path.insert(0,'tools')
-          import build_pages_artifact as build
-          eligible=list(build.iter_source_files())
-          for root in ['arcade/custom/kosher-lines','arcade/custom/crib-recovered-assets']:
-              tracked=list(Path(root).rglob('*'))
-              assert any(p.is_file() for p in tracked)
-              assert not any(rel.is_relative_to(root) for _,rel in eligible)
-              print('PAGES EXCLUSION',root,flush=True)
-          import http.server,threading,json,time,base64,io
+          from urllib.parse import urljoin,urlsplit,parse_qs
+          from bs4 import BeautifulSoup
           from playwright.sync_api import sync_playwright
-          from PIL import Image,ImageDraw
-          class Quiet(http.server.SimpleHTTPRequestHandler):
-              def log_message(self,*args): pass
-          h=http.server.ThreadingHTTPServer(('127.0.0.1',0),Quiet)
-          threading.Thread(target=h.serve_forever,daemon=True).start()
-          sheet=Image.new('RGB',(640,490),'#171717')
+          import requests
+          base='https://northstarprime.net'
+          preview=True
+          routes={'pnw-lost-tables-2020':20,'raven-and-rose-1883':4}
           with sync_playwright() as p:
-              b=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'])
-              for width,height,mobile in [(1280,800,False),(390,844,True)]:
-                  page=b.new_page(viewport={'width':width,'height':height},is_mobile=mobile,has_touch=mobile)
-                  errors=[];failed=[]
-                  page.on('pageerror',lambda e:errors.append(str(e)))
-                  page.on('response',lambda r:failed.append([r.status,r.url.split('/')[-1]]) if r.status>=400 else None)
-                  page.goto(f'http://127.0.0.1:{h.server_port}/arcade/custom/kosher-lines/?mode=rival')
-                  page.wait_for_function('()=>{let s=window.__KOSHER_LINES__?.snapshot();return s?.renderer.modelLoaded&&s.renderer.city.npcRigs.loaded&&s.action.enabled}',timeout=90000)
-                  d=page.locator('summary',has_text='Your deck & graphics')
-                  (d.tap if mobile else d.click)()
-                  page.select_option('#quality','low')
-                  (d.tap if mobile else d.click)()
-                  start=page.locator('#start')
-                  (start.tap if mobile else start.click)()
-                  canvas=page.locator('#plaza')
-                  canvas.evaluate("c=>c.scrollIntoView({block:'center'})")
-                  assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
-                  if not mobile:
-                      page.keyboard.down('ArrowUp');page.wait_for_timeout(1200);page.keyboard.up('ArrowUp')
-                  frame=Image.open(io.BytesIO(canvas.screenshot(timeout=45000))).convert('RGB')
-                  frame.thumbnail((400,270) if not mobile else (235,360))
-                  assert len(frame.resize((60,45)).getcolors(2701))>30
-                  sheet.paste(frame,(0,20) if not mobile else (403,20))
-                  print('KOSHER',width,frame.size,errors,failed,flush=True)
-                  assert not errors and not failed
+              browser=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu'])
+              for width in (390,1280):
+                  page=browser.new_page(viewport={'width':width,'height':850},reduced_motion='reduce')
+                  errors=[]
+                  page.on('pageerror',lambda err:errors.append(str(err)))
+                  if preview:
+                      for route in [*routes,'store']:
+                          page.route(base+'/'+route+'/',lambda r,route=route:r.fulfill(content_type='text/html',body=Path(route+'/index.html').read_bytes()))
+                  page.goto(base+'/store/',wait_until='domcontentloaded')
+                  shelf=page.locator('a[href="/pnw-lost-tables-2020/"]').filter(has_text='Physical order inquiries').first
+                  assert shelf.count()==1
+                  shelf.click()
+                  for route,expected in routes.items():
+                      page.goto(base+'/'+route+'/',wait_until='domcontentloaded')
+                      cards=page.locator('article[data-wave]')
+                      assert cards.count()==expected
+                      assert page.locator('a[download]').count()>0
+                      offers=[]
+                      for card in cards.all():
+                          link=card.get_by_role('link',name='Ask about a physical order',exact=False)
+                          assert link.is_visible()
+                          link.scroll_into_view_if_needed()
+                          pos=link.bounding_box()
+                          assert pos and pos['x']>=0 and pos['x']+pos['width']<=width+1,pos
+                          src=link.get_attribute('href')
+                          import re
+                          sku=re.search(r'PNW-\d+',card.locator('.eyebrow').inner_text())[0]
+                          query=parse_qs(urlsplit(src).query)
+                          assert sku in query['subject'][0] and card.locator('h3').inner_text() in query['body'][0]
+                          offers.append(src)
+                      for index,src in enumerate(offers):
+                          if index==0:
+                              cards.first.get_by_role('link',name='Ask about a physical order',exact=False).click()
+                          else:
+                              page.goto(urljoin(base,src),wait_until='domcontentloaded')
+                          draft=urlsplit(page.locator('#draft-link').get_attribute('href'))
+                          assert draft.scheme=='mailto' and draft.path=='contact@northstarprime.net'
+                          assert parse_qs(draft.query)==parse_qs(urlsplit(src).query)
+                      print('GALLERY',route,width,len(offers),'physical product drafts and free PDF link verified',flush=True)
+                  assert not errors,errors
                   page.close()
-              b.close()
-          buf=io.BytesIO();sheet.crop((0,0,640,300)).save(buf,format='JPEG',quality=70)
-          data=base64.b64encode(buf.getvalue()).decode()
-          for i in range(0,len(data),2500):print('FRAME '+data[i:i+2500])
-          h.shutdown()
+              browser.close()

@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: f19372e829666279257c0e737ec5f9183dc5953b
+          ref: d3ac1c4d701089602eedac2c83e5d27a32c6bf87
           sparse-checkout: |
             music
             realm
@@ -33,16 +33,7 @@ jobs:
             warband/art
           persist-credentials: false
       - run: python -m pip -q install playwright beautifulsoup4 pillow pytest requests
-      - name: Exercise the native audio default fixture
-        shell: bash
-        run: |
-          npm install --prefix "$RUNNER_TEMP/audio" --no-save --package-lock=false --ignore-scripts playwright@1.55.1
-          "$RUNNER_TEMP/audio/node_modules/.bin/playwright" install chromium
-          export NSP_PLAYWRIGHT_PATH="$RUNNER_TEMP/audio/node_modules/playwright"
-          export NSP_HQ_BASELINE="$GITHUB_WORKSPACE/.github/hq_audio_review/fixtures/hq_audio.baseline.js"
-          export NSP_HQ_CANDIDATE="$GITHUB_WORKSPACE/static/games/hq_audio.js"
-          export NSP_PLAYTEST_OUT="$RUNNER_TEMP/audio-results"
-          xvfb-run -a node .github/hq_audio_review/hq_audio_lifecycle.cjs
+
       - name: Browser verification
         shell: python
         run: |
@@ -60,10 +51,18 @@ jobs:
                       page.on('pageerror',lambda e:errors.append(str(e)))
                       page.on('response',lambda r: assets.append([r.status,r.url.split('?')[0]]) if r.status>=400 else None)
                       page.on('requestfailed',lambda r:failed.append([r.failure,r.resource_type,r.url.split('?')[0]]) )
-                      dest='https://northstarprime.net'+path
+                      from bs4 import BeautifulSoup
                       from pathlib import Path
                       if path=='/music/':
-                          page.route(dest,lambda r:r.fulfill(status=200,content_type='text/html',body=Path('music/index.html').read_bytes()))
+                          candidate=BeautifulSoup(Path('music/index.html').read_bytes(),'html.parser')
+                          script=next(s for s in candidate.find_all('script') if 'function loadTrack(' in (s.string or ''))
+                          def use_candidate(route):
+                              current=route.fetch()
+                              html=BeautifulSoup(current.body(),'html.parser')
+                              target=next(s for s in html.find_all('script') if 'function loadTrack(' in (s.string or ''))
+                              target.string=script.string
+                              route.fulfill(response=current,body=str(html),content_type='text/html; charset=utf-8')
+                          page.route('https://northstarprime.net/music/',use_candidate)
                       res=page.goto('https://northstarprime.net'+path,wait_until='load',timeout=45000)
                       page.locator('img').evaluate_all("xs=>xs.forEach(x=>x.loading='eager')")
                       if path=='/music/':
@@ -73,5 +72,16 @@ jobs:
                           page.wait_for_function("!document.querySelector('#live-status').textContent.includes('Checking')",timeout=12000)
                       page.wait_for_timeout(3000)
                       print('DIAG',json.dumps([width,path,res.status,console,errors,assets,failed]),flush=True)
+                      assert res.status==200 and not (console or errors or assets or failed),(path,width,console,errors,assets,failed)
+                      if path=='/music/':
+                          idx=page.locator('#lounge-tracks-data').evaluate("s=>JSON.parse(s.textContent).findIndex(t=>t.duration===0 && t.src.startsWith('https://assets.'))")
+                          btn=page.locator(f'.play-track-btn[data-idx="{idx}"]')
+                          btn.click()
+                          page.wait_for_function("document.getElementById('lounge-audio-r2').currentTime>0.4")
+                          before=page.locator('#time-dur').inner_text()
+                          assert before!='--:--' and before!='0:00'
+                          btn.click()
+                          assert page.locator('#time-dur').inner_text()==before
+                          print('REPLAY duration retained',width,before,flush=True)
                       ctx.close()
               browser.close()

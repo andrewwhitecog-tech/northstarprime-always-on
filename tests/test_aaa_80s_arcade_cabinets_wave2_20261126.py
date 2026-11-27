@@ -48,6 +48,17 @@ CABINETS = [
     ("precinct-404", "Precinct 404: Dispatch Queue", "/static/games/marquees_aaa/precinct-404.webp", False),
     ("precinct-404-signal", "Precinct 404: Signal Board", "/static/games/marquees_aaa/precinct-404-signal.webp", False),
     ("subject-000999", "Subject 000-999", "/static/games/marquees_aaa/subject-000999.webp", True),
+    # Wave 6 (10 more iconic cabinets -> 51 total!)
+    ("paperclip-resistance", "Paperclip Resistance", "/static/games/marquees_aaa/paperclip-resistance.webp", False),
+    ("prediction-arena", "Prediction Arena", "/static/games/marquees_aaa/prediction-arena.webp", True),
+    ("static-house", "Static House", "/static/games/marquees_aaa/static-house.webp", False),
+    ("the-melting-hour", "The Melting Hour", "/static/games/marquees_aaa/the-melting-hour.webp", False),
+    ("the-dark-below", "The Dark Below", "/static/games/marquees_aaa/the-dark-below.webp", False),
+    ("signal-cartographer-prime", "Signal Cartographer Prime", "/static/games/marquees_aaa/signal-cartographer-prime.webp", False),
+    ("signal-gallery", "Signal Gallery", "/static/games/marquees_aaa/signal-gallery.webp", False),
+    ("system1-arena", "System 1 Arena", "/static/games/marquees_aaa/system1-arena.webp", True),
+    ("container-yard", "Vorath Stackward", "/static/games/marquees_aaa/vorath-stackward.webp", True),
+    ("super-arcade-archive", "Super Arcade Archive", "/static/games/marquees_aaa/super-arcade-archive.webp", True),
 ]
 
 

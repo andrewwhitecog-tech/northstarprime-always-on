@@ -11,12 +11,8 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: 3da8a799bbbd3eb90d9188496f3b8a6f0a344a07
+          ref: 51cb19306618af34fa0cdcfdadbcccd0e2550135
           sparse-checkout: |
-            arcade/custom/kosher-lines
-            arcade/custom/crib-recovered-assets
-            static/vendor/three
-            static/fonts
             music
             realm
             .github/hq_audio_review
@@ -41,21 +37,78 @@ jobs:
       - name: Browser verification
         shell: python
         run: |
+          import requests,time
+          for i in range(50):
+              r=requests.get('https://northstarprime.net/music/?release_check='+str(int(time.time())),timeout=15)
+              if r.ok and 'var reuseSource =' in r.text and 'preload="none"></audio>' in r.text: break
+              time.sleep(15)
+          else: raise AssertionError('Production lounge revision did not appear')
+          print('Production revision confirmed',flush=True)
           from playwright.sync_api import sync_playwright
-          import http.server,threading
-          server=http.server.ThreadingHTTPServer(('127.0.0.1',0),http.server.SimpleHTTPRequestHandler)
-          threading.Thread(target=server.serve_forever,daemon=True).start()
+          from urllib.parse import urlsplit
+          import json,time
           with sync_playwright() as p:
-              b=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--use-angle=swiftshader','--enable-unsafe-swiftshader'])
-              page=b.new_page(viewport={'width':390,'height':844},is_mobile=True,has_touch=True,device_scale_factor=1)
-              page.goto(f'http://127.0.0.1:{server.server_port}/arcade/custom/kosher-lines/?mode=rival')
-              page.wait_for_function('window.__KOSHER_LINES__?.snapshot().action?.enabled',timeout=90000)
-              target=page.locator('summary',has_text='Your deck & graphics')
-              target.evaluate("e=>e.scrollIntoView({block:'center',behavior:'instant'})")
-              print('LAYOUT',target.evaluate("""e=>{let r=e.getBoundingClientRect(),v=visualViewport;return [innerWidth,document.documentElement.scrollWidth,v.width,v.scale,v.offsetTop,scrollY,r.toJSON(),document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.outerHTML.slice(0,100),Array.from(document.querySelectorAll('body *')).map(x=>[x.tagName,x.className,x.getBoundingClientRect().right]).filter(x=>x[2]>395).slice(0,18)]}"""),flush=True)
-              assert page.evaluate('document.documentElement.scrollWidth<=390')
-              target.tap(timeout=5000)
-              assert target.evaluate('e=>e.parentElement.open')
-              print('TOUCH deck opened',flush=True)
+              browser=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu','--mute-audio'])
+              for width,height in [(390,844),(1280,800)]:
+                  for path in ['/music/','/realm/']:
+                      ctx=browser.new_context(viewport={'width':width,'height':height})
+                      page=ctx.new_page()
+                      console=[]; errors=[]; assets=[]; failed=[]
+                      page.on('console',lambda m:console.append([m.text[:280],m.location.get('url','').split('?')[0]]) if m.type=='error' else None)
+                      page.on('pageerror',lambda e:errors.append(str(e)))
+                      page.on('response',lambda r: assets.append([r.status,r.url.split('?')[0]]) if r.status>=400 else None)
+                      page.on('requestfailed',lambda r:failed.append([r.failure,r.resource_type,r.url.split('?')[0]]) )
+                      res=page.goto('https://northstarprime.net'+path,wait_until='load',timeout=45000)
+                      page.locator('img').evaluate_all("xs=>xs.forEach(x=>x.loading='eager')")
+                      if path=='/music/':
+                          page.locator('#hero-play-beats').click()
+                          page.wait_for_function("Array.from(document.querySelectorAll('audio')).some(v=>v.currentTime>1)")
+                      else:
+                          page.wait_for_function("!document.querySelector('#live-status').textContent.includes('Checking')",timeout=12000)
+                      page.wait_for_timeout(3000)
+                      print('DIAG',json.dumps([width,path,res.status,console,errors,assets,failed]),flush=True)
+                      assert res.status==200 and not any((console,errors,assets,failed)),(width,path,console,errors,assets,failed)
+                      if path=='/music/':
+                          assert page.locator('#lounge-audio').get_attribute('preload')=='none'
+                      ctx.close()
+              browser.close()
+          from pathlib import Path
+          from urllib.parse import urlsplit
+          from playwright.sync_api import sync_playwright
+          from PIL import Image,ImageDraw
+          from io import BytesIO
+          import base64,json,os
+          base='https://northstarprime.net'
+          routes=['store','play','links','merch','chromatic','stickerforge/comedy-vault','parody-drop']
+          mode='live'
+          images=[]
+          sam='https://andrewcog.gumroad.com/l/northstar-2026-free-mega-sampler'
+          with sync_playwright() as p:
+              b=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--disable-gpu','--mute-audio'])
+              for width in [390,1280]:
+                  page=b.new_page(viewport={'width':width,'height':840},reduced_motion='reduce')
+                  for path in routes:
+                      url=f'{base}/{path}/'
+                      if mode=='preview':
+                          data=Path(path,'index.html').read_text()
+                          page.route(url,lambda r:r.fulfill(status=200,content_type='text/html; charset=utf-8',body=data))
+                      resp=page.goto(url,wait_until='domcontentloaded')
+                      assert resp.status==200
+                      for target in ['/community/',sam]:
+                          loc=page.locator('a[href="'+target+'"]:visible').first
+                          loc.wait_for(state='visible')
+                          loc.evaluate("a=>a.scrollIntoView({block:'center',behavior:'instant'})")
+                          loc.focus()
+                          rect=loc.bounding_box()
+                          assert rect['width']>0 and rect['x']>=-1 and rect['x']+rect['width']<=width+1,(path,width,target,rect)
+                          assert loc.inner_text().strip()
+                      if width==390:
+                          loc.evaluate("a=>a.scrollIntoView({block:'center',behavior:'instant'})")
+                          shot=Image.open(BytesIO(page.screenshot(animations='disabled'))).convert('RGB')
+                          y=round(rect['y']+rect['height']/2)
+                          images.append((path,shot.crop((0,max(0,y-105),390,min(840,y+105)))))
+                      print('CTA',path,width,flush=True)
+                      if mode=='preview':page.unroute(url)
+                  page.close()
               b.close()
-          server.shutdown()
+          

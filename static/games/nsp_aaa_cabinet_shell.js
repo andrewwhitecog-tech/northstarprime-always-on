@@ -223,7 +223,9 @@
       if (!dialog && !dialogKeys.has(keyId)) return;
 
       ev.stopImmediatePropagation();
-      if (ev.repeat && dialogKeys.has(keyId)) {
+      if (ev.repeat) {
+        // Holding a gameplay key across a mouse-opened dialog must not
+        // transfer its eventual keyup away from the game.
         if (ev.key !== "Tab") ev.preventDefault();
         return;
       }

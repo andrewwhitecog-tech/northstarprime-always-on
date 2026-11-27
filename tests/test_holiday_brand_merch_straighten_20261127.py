@@ -9,12 +9,16 @@ def test_holidays_winter_lead_and_lookbook():
     html = (ROOT / "holidays" / "index.html").read_text(encoding="utf-8")
     assert "Sun Nov 29" in html
     assert "Fri Dec 4" in html
-    assert "Wed Dec 9" in html
+    assert "Early Dec" in html
     assert "Thu Dec 10" in html
+    assert 'id="winter-showcase"' in html
     assert 'id="winter-knit-lookbook"' in html
+    assert "Yule Dynasty Wave-Knit Concept Study" in html
+    assert "Not On Sale" in html
     assert 'id="holiday-tarot-relic-gifts"' in html
     assert "/assets/holiday_coogi_20261127/H01_Yule_Dynasty_Wave_Knit_Pullover.webp" in html
     assert "H04_Cranberry_Evergreen_COOGI_Atelier_Crewneck.webp" not in html
+    assert "COOGI" not in html.split('id="holiday-printables"')[0]
     assert "/assets/merch_gallery/optb_ornament_snowy_owl.webp" in html
     assert "/static/front/store/vorath-tarot-deluxe-bundle-cover.webp" in html
     assert "256163556991245466" in html

@@ -1328,6 +1328,18 @@ function loadTrailer(src, poster, title, sub) {
   </h2>
   <p style="color:#8b8ba0;font-size:.85rem;line-height:1.55;margin:.35rem 0 .9rem">Every broadcast reel below has passed NorthStar Motion Gate v2 verification for genuine continuous camera and scene motion—zero static slideshows or still-frame filler.</p>
   <script>
+  // The screening room and cinema queue share one soundtrack at a time.
+  document.addEventListener('play', function(event) {
+    var current = event.target;
+    var selector = '#idc-theater-player, video.idc-bv';
+    if (!(current instanceof HTMLVideoElement) || !current.matches(selector) || current.paused) return;
+    document.querySelectorAll(selector).forEach(function(video) {
+      if (video === current) return;
+      video.onended = null;
+      if (!video.paused) video.pause();
+    });
+  }, true);
+
   function idcPlayAll() {
     var vids = Array.prototype.slice.call(document.querySelectorAll('.idc-bv'));
     if (!vids.length) return;

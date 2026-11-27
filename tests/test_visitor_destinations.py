@@ -17,8 +17,9 @@ class Links(HTMLParser):
             self.destinations.add(dict(attrs).get("href"))
 
 
-@pytest.mark.parametrize("route", ["store", "play", "links", "merch", "chromatic", "stickerforge/comedy-vault", "parody-drop"])
+@pytest.mark.parametrize("route", [".", "store", "play", "links", "merch", "chromatic", "stickerforge/comedy-vault", "parody-drop"])
 def test_visitor_can_reach_community_and_free_sampler(route):
     links = Links()
-    links.feed((ROOT / route / "index.html").read_text(encoding="utf-8"))
+    target = ROOT / "index.html" if route == "." else ROOT / route / "index.html"
+    links.feed(target.read_text(encoding="utf-8"))
     assert {"/community/", SAMPLER} <= links.destinations

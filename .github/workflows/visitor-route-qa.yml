@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: 29e643411005fcb54ba825b7af5e1ec0d9165331
+          ref: 3da8a799bbbd3eb90d9188496f3b8a6f0a344a07
           sparse-checkout: |
             arcade/custom/kosher-lines
             arcade/custom/crib-recovered-assets
@@ -48,12 +48,12 @@ jobs:
           with sync_playwright() as p:
               b=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--use-angle=swiftshader','--enable-unsafe-swiftshader'])
               page=b.new_page(viewport={'width':390,'height':844},is_mobile=True,has_touch=True,device_scale_factor=1)
-              page.route('**/game.js',lambda r:r.fulfill(content_type='application/javascript',body=''))
               page.goto(f'http://127.0.0.1:{server.server_port}/arcade/custom/kosher-lines/?mode=rival')
-              page.locator('.action-controls,.action-brief').evaluate_all('xs=>xs.forEach(x=>x.hidden=false)')
+              page.wait_for_function('window.__KOSHER_LINES__?.snapshot().action?.enabled',timeout=90000)
               target=page.locator('summary',has_text='Your deck & graphics')
               target.evaluate("e=>e.scrollIntoView({block:'center',behavior:'instant'})")
               print('LAYOUT',target.evaluate("""e=>{let r=e.getBoundingClientRect(),v=visualViewport;return [innerWidth,document.documentElement.scrollWidth,v.width,v.scale,v.offsetTop,scrollY,r.toJSON(),document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.outerHTML.slice(0,100),Array.from(document.querySelectorAll('body *')).map(x=>[x.tagName,x.className,x.getBoundingClientRect().right]).filter(x=>x[2]>395).slice(0,18)]}"""),flush=True)
+              assert page.evaluate('document.documentElement.scrollWidth<=390')
               target.tap(timeout=5000)
               assert target.evaluate('e=>e.parentElement.open')
               print('TOUCH deck opened',flush=True)

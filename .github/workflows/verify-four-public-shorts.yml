@@ -1,0 +1,58 @@
+name: Verify the four public IDC music shorts
+on:
+  push:
+    branches: [qa/live-idc-four-shorts-20261127]
+permissions: {}
+jobs:
+  playback:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Install browser test client
+        run: python -m pip install --disable-pip-version-check selenium==4.27.1
+      - name: Select each short and verify real playback after three seeks
+        shell: python
+        run: |
+          from selenium import webdriver
+          from selenium.webdriver.common.by import By
+          from selenium.webdriver.support.ui import WebDriverWait
+          from urllib.parse import urlsplit
+          import json
+          import shutil
+          from selenium.webdriver.chrome.service import Service
+          
+          options = webdriver.ChromeOptions()
+          options.binary_location = shutil.which("google-chrome")
+          options.add_argument("--headless=new")
+          options.add_argument("--disable-gpu")
+          options.add_argument("--mute-audio")
+          options.add_argument("--autoplay-policy=no-user-gesture-required")
+          titles = {
+              "Honky Tonk Acid Cyber": "honky_tonk_acid_cyber",
+              "Sugar Fuzz Monolith": "sugar_fuzz_monolith",
+              "Velvet Hellfire Lounge": "velvet_hellfire_lounge",
+              "Babylon Dub Warehouse": "babylon_dub_warehouse",
+          }
+          with webdriver.Chrome(service=Service(shutil.which("chromedriver")), options=options) as driver:
+              driver.set_page_load_timeout(60)
+              driver.get("https://northstarprime.net/idc-programming/")
+              wait = WebDriverWait(driver, 25)
+              for title, slug in titles.items():
+                  button = driver.find_element(By.XPATH, f'//button[contains(@onclick,"loadTrailer")][contains(., "{title}")]')
+                  button.click()
+                  player = driver.find_element(By.ID, "idc-theater-player")
+                  def read(expression, *args):
+                      return driver.execute_script("const v = arguments[0]; return " + expression, player, *args)
+                  target = "idc_" + slug + "_720p.mp4"
+                  wait.until(lambda _: read("v.currentSrc.endsWith('/'+arguments[1]) && v.readyState>=2", target))
+                  assert player.is_displayed() and read("v.controls")
+                  assert title in driver.find_element(By.ID, "idc-theater-title").text
+                  assert driver.find_element(By.ID,"idc-theater-download").get_attribute("href") == read("v.currentSrc")
+                  duration = read("v.duration")
+                  assert abs(duration - 40) < 0.2 and read("v.videoWidth===1280 && v.videoHeight===720")
+                  samples = []
+                  for t in (2, 20, 34):
+                      driver.execute_script("const v=arguments[0]; v.currentTime=arguments[1]; v.play();", player, t)
+                      wait.until(lambda _: read("!v.paused && !v.seeking && !v.error && v.readyState>=2 && v.currentTime>=arguments[1]+1 && v.currentTime<arguments[1]+6", t))
+                      samples.append(round(read("v.currentTime"),2))
+                  print(json.dumps(dict(title=title, url=read("v.currentSrc"), duration=duration, resumed_at=samples)),flush=True)

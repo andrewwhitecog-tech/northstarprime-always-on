@@ -9,12 +9,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 18
     env:
-      TEST_MODE: arcade
-      TEST_BASE: http://127.0.0.1:8127
+      TEST_MODE: store-check
+      TEST_BASE: https://northstarprime.net
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: e42175542c2b5aa2b649471799c77799402746ea
+          ref: a8087fc07d8935c518961426695ef181322f7a7a
           persist-credentials: false
           sparse-checkout: |
             music
@@ -120,8 +120,29 @@ jobs:
                           assert len(results)>=(65 if route=='/arcade/' else 8) and all(results),(route,len(results),results.count(False))
                           print('decoded card art',route,len(results),width,flush=True)
                           picture(route)
+                  elif mode=='store-check':
+                      visit('/store/')
+                      slugs={'northstar-7icon-parody-vault':24,'northstar-12pack-watertight-stl-vault':29,'northstar-idg-5game-html5-webgl-arcade-pack':9,'northstar-godot4-6game-core-bundle':12,'northstar-godot4-9game-clean-vault':15,'anodized-empires-and-anomalies-collector-vault':19}
+                      links={s:page.locator('a[href*="/l/'+s+'"]').first.get_attribute('href') for s in slugs}
+                      for slug,price in slugs.items():
+                          res=page.goto(links[slug],wait_until='domcontentloaded')
+                          assert res.status==200
+                          cta=page.get_by_role('button',name=re.compile(r'I want this|buy (this|now)|add to cart|purchase',re.I)).or_(page.get_by_role('link',name=re.compile(r'I want this|buy (this|now)|add to cart|purchase',re.I))).first
+                          try:
+                              cta.wait_for(state='visible',timeout=14000)
+                          except Exception:
+                              print('Buttons',page.get_by_role('button').all_text_contents()[:16],flush=True)
+                              raise
+                          assert cta.is_enabled()
+                          offers=page.locator('script[type="application/ld+json"]').evaluate_all("ss=>ss.map(s=>JSON.parse(s.textContent)).find(v=>v['@type']==='Product').offers")
+                          assert int(float(offers['price']))==price and offers['priceCurrency']=='USD'
+                          print('Verified buyer entry',slug,price,cta.inner_text(),flush=True)
+                      break
                   page.close()
               browser.close()
+          if mode=='store-check':
+              print('Verified six public purchase controls without submitting an order')
+              raise SystemExit(0)
           sheet=Image.new('RGB',(max(im.width for _,im in shots),sum(im.height+20 for _,im in shots)),(25,25,25))
           draw=ImageDraw.Draw(sheet)
           y=0

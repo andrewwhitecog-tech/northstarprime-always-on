@@ -126,6 +126,20 @@
       '<button type="button" data-act="crt" title="Toggle CRT Glass Sheen">CRT</button>';
     document.body.appendChild(dock);
 
+    if (window.getComputedStyle(dock).position !== "fixed" && !document.getElementById("nsp-aaa-shell-fallback")) {
+      var st = document.createElement("style");
+      st.id = "nsp-aaa-shell-fallback";
+      st.textContent =
+        ".nsp-aaa-attract,.nsp-aaa-credits{position:fixed;inset:0;z-index:99990;background:#07060c;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}" +
+        ".nsp-aaa-attract.nsp-hidden{opacity:0;visibility:hidden;pointer-events:none}" +
+        ".nsp-aaa-credits{z-index:99995;opacity:0;visibility:hidden;pointer-events:none}" +
+        ".nsp-aaa-credits.nsp-open{opacity:1;visibility:visible;pointer-events:auto}" +
+        ".nsp-aaa-crt-glass{position:fixed;inset:0;z-index:99970;pointer-events:none}" +
+        ".nsp-aaa-crt-glass.nsp-crt-off{opacity:0}" +
+        ".nsp-aaa-dock{position:fixed;right:10px;bottom:10px;z-index:99980;display:flex;gap:6px;align-items:center}";
+      document.head.appendChild(st);
+    }
+
     // Studio Credits modal
     var credits = document.createElement("div");
     credits.className = "nsp-aaa-credits";

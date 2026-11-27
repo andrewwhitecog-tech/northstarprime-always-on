@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 18
     env:
-      TEST_MODE: arcade
+      TEST_MODE: music-audio
       TEST_BASE: https://northstarprime.net
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -112,6 +112,18 @@ jobs:
                       assert page.evaluate('window.retries')>=2
                       page.locator('#track-search').fill('unmatched-name-zzzzzz')
                       assert page.locator('#btn-next').is_disabled() and page.locator('#btn-prev').is_disabled()
+                  elif mode=='music-audio':
+                      visit('/music/')
+                      for idx,selector in [(0,'#lounge-audio'),(10,'#lounge-audio-r2')]:
+                          page.locator('.play-track-btn[data-idx="'+str(idx)+'"]').click()
+                          player=page.locator(selector)
+                          try:
+                              page.wait_for_function('(sel)=>{const a=document.querySelector(sel);return !a.paused && !a.error && a.currentTime>=1}',arg=selector,timeout=20000)
+                          except Exception:
+                              print('Playback detail',idx,player.evaluate("a=>[a.readyState,a.error?.code,a.currentSrc]"),page.locator('#playback-status').inner_text(),flush=True)
+                              raise
+                          print('Audio advanced',width,idx,player.evaluate('a=>[Math.round(a.duration),a.currentTime.toFixed(2)]'),flush=True)
+                          player.evaluate('a=>a.pause()')
                   elif mode=='sugar':
                       visit('/idc-programming/')
                       btn=page.get_by_role('button',name=re.compile('Sugar Fuzz Monolith'))
@@ -171,8 +183,8 @@ jobs:
                       break
                   page.close()
               browser.close()
-          if mode=='store-check':
-              print('Verified six public purchase controls without submitting an order')
+          if mode in ('store-check','music-audio'):
+              print('Verified',mode)
               raise SystemExit(0)
           sheet=Image.new('RGB',(max(im.width for _,im in shots),sum(im.height+20 for _,im in shots)),(25,25,25))
           draw=ImageDraw.Draw(sheet)

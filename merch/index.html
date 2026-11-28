@@ -1472,17 +1472,22 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   <script>
   (() => {
     const tabs = Array.from(document.querySelectorAll('.filter-btn[data-tab]'));
-    const cards = Array.from(document.querySelectorAll('.merch-card'));
+    const cards = Array.from(document.querySelectorAll('.merch-card'), card => {
+      const item = JSON.parse(card.dataset.item);
+      const searchText = [card.dataset.search, item.title, item.sku, item.material, item.dims]
+        .join(' ').toLowerCase();
+      return { card, searchText };
+    });
     const searchInput = document.getElementById('merch-search');
     const countEl = document.getElementById('merch-count');
     let activeTab = 'all';
 
     function applyFilter() {
-      const q = (searchInput.value || '').trim().toLowerCase();
+      const terms = searchInput.value.toLowerCase().split(/\s+/).filter(Boolean);
       let shown = 0;
-      for (const card of cards) {
+      for (const { card, searchText } of cards) {
         const catMatch = (activeTab === 'all') || (card.dataset.cat === activeTab);
-        const qMatch = !q || (card.dataset.search || '').includes(q);
+        const qMatch = terms.every(term => searchText.includes(term));
         const visible = catMatch && qMatch;
         card.hidden = !visible;
         if (visible) shown++;

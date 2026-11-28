@@ -799,13 +799,19 @@
     let currentItem = null;
     let lastFocus = null;
 
-    function openLightbox(card) {
-      currentItem = JSON.parse(card.dataset.item);
-      lastFocus = document.activeElement;
-      lbImg.src = currentItem.image;
-      lbImg.alt = currentItem.title;
-      btnRender.classList.add('primary');
-      btnMesh.classList.remove('primary');
+    function selectView(companion) {
+      lbImg.src = companion ? currentItem.mesh_image : currentItem.image;
+      lbImg.alt = currentItem.title + (companion ? ' — companion mesh or reference view' : ' — studio view');
+      btnRender.classList.toggle('primary', !companion);
+      btnMesh.classList.toggle('primary', companion);
+      btnRender.setAttribute('aria-pressed', String(!companion));
+      btnMesh.setAttribute('aria-pressed', String(companion));
+    }
+
+    function openLightbox(trigger) {
+      currentItem = JSON.parse(trigger.closest('.merch-card').dataset.item);
+      lastFocus = trigger;
+      selectView(false);
       lbSku.textContent = 'SKU · ' + currentItem.sku + ' · ' + currentItem.note;
       lbTitle.textContent = currentItem.title;
       lbPrice.textContent = currentItem.price;
@@ -821,16 +827,10 @@
     }
 
     btnRender.addEventListener('click', () => {
-      if (!currentItem) return;
-      lbImg.src = currentItem.image;
-      btnRender.classList.add('primary');
-      btnMesh.classList.remove('primary');
+      selectView(false);
     });
     btnMesh.addEventListener('click', () => {
-      if (!currentItem) return;
-      lbImg.src = currentItem.mesh_image;
-      btnMesh.classList.add('primary');
-      btnRender.classList.remove('primary');
+      selectView(true);
     });
 
     function closeLightbox() {
@@ -839,11 +839,23 @@
     }
 
     document.querySelectorAll('.zoom-trigger').forEach(btn => {
-      btn.addEventListener('click', () => openLightbox(btn.closest('.merch-card')));
+      btn.addEventListener('click', () => openLightbox(btn));
     });
     lbClose.addEventListener('click', closeLightbox);
     lb.addEventListener('click', (e) => { if (e.target === lb) closeLightbox(); });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !lb.hidden) closeLightbox(); });
+    lb.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        closeLightbox();
+      } else if (event.key === 'Tab') {
+        if (event.shiftKey && document.activeElement === btnRender) {
+          event.preventDefault();
+          lbCta2.focus();
+        } else if (!event.shiftKey && document.activeElement === lbCta2) {
+          event.preventDefault();
+          btnRender.focus();
+        }
+      }
+    });
   })();
   </script>
 </body>

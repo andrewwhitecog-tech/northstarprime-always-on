@@ -953,13 +953,14 @@
         <div class="panel-header">
           <h2 id="h-blueprints">3. Part Matrix, CAD Exports &amp; Blueprints</h2>
           <div class="cad-export-row">
-            <button type="button" class="btn-small" id="btn-export-ldr" onclick="cadExportLDraw()" title="Download LDraw .ldr for BrickLink Studio / LeoCAD">Export .LDR</button>
-            <button type="button" class="btn-small" id="btn-export-xml" onclick="cadExportBrickLink()" title="Download BrickLink Wanted List XML">BrickLink .XML</button>
-            <button type="button" class="btn-small" id="btn-export-csv" onclick="cadExportCSV()" title="Download Rebrickable CSV BOM">BOM .CSV</button>
+            <button type="button" class="btn-small" id="btn-export-ldr" disabled onclick="cadExportLDraw()" title="Download LDraw .ldr for BrickLink Studio / LeoCAD">Export .LDR</button>
+            <button type="button" class="btn-small" id="btn-export-xml" disabled onclick="cadExportBrickLink()" title="Download BrickLink Wanted List XML">BrickLink .XML</button>
+            <button type="button" class="btn-small" id="btn-export-csv" disabled onclick="cadExportCSV()" title="Download Rebrickable CSV BOM">BOM .CSV</button>
             <button type="button" class="btn-small" onclick="exportBlueprintJSON()">JSON</button>
           </div>
         </div>
         <div class="panel-body">
+          <p id="cad-export-help" hidden>Model and parts-list downloads require the 3D viewport. You can still download the blueprint summary as JSON.</p>
           <div class="parts-grid">
             <div class="stat-tile highlight">
               <div class="s-label">Total Parts</div>
@@ -1703,7 +1704,11 @@
       const canvas = document.getElementById("webgl-canvas");
       const fbCanvas = document.getElementById("fallback-canvas");
 
-      if (!window.BrickCAD) return;
+      const exportHelp = document.getElementById("cad-export-help");
+      if (!window.BrickCAD) {
+        exportHelp.hidden = false;
+        return;
+      }
       populateBuilderTray();
 
       cadEngine = window.BrickCAD.createEngine({
@@ -1799,6 +1804,11 @@
 
       window.studioCadEngine = cadEngine;
       cadEngine.init();
+      const previewOnly = cadEngine.getState().useFallback2D;
+      exportHelp.hidden = !previewOnly;
+      document.querySelectorAll(".cad-export-row [id^='btn-export-']").forEach(button => {
+        button.disabled = previewOnly;
+      });
       cadEngine.setAutoOrbit(autoOrbit);
       syncControlsToCAD();
     }

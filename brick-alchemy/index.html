@@ -276,7 +276,7 @@
             <em id="out-gbc">2.00 rev/sec (2.0 balls/sec @ 1 ball/rev)</em>
           </div>
           <div class="stat-box">
-            <small>Net Torque Multiplier (η = 0.92/stage)</small>
+            <small>Net Torque Multiplier (η = <span id="stage-efficiency">0.92</span>/stage)</small>
             <strong id="out-torque">2.76× Torque</strong>
             <em id="out-lock">Backdrivable spur/bevel train</em>
           </div>
@@ -501,14 +501,16 @@
         const n1 = parseFloat(driverEl.value) || 8;
         const n2 = parseFloat(drivenEl.value) || 24;
         const stages = parseInt(stagesEl.value, 10) || 1;
-        const rpmIn = parseFloat(rpmEl.value) || 360;
+        const rpmIn = rpmEl.valueAsNumber;
+        const validSpeed = Number.isFinite(rpmIn) && rpmEl.validity.valid;
 
         const stageRatio = n2 / n1;
         const totalRatio = Math.pow(stageRatio, stages);
         const rpmOut = rpmIn / totalRatio;
         const revPerSec = rpmOut / 60.0;
-        const eta = n1 === 1 ? Math.pow(0.72, stages) : Math.pow(0.92, stages);
-        const torqueMult = totalRatio * eta;
+        const stageEfficiency = n1 === 1 ? 0.72 : 0.92;
+        const torqueMult = totalRatio * Math.pow(stageEfficiency, stages);
+        document.getElementById('stage-efficiency').textContent = stageEfficiency.toFixed(2);
 
         outRatio.textContent = totalRatio.toFixed(2) + ' : 1';
         outMode.textContent = totalRatio > 1.01
@@ -535,8 +537,10 @@
           outLock.textContent = 'Backdrivable spur / bevel gear train';
         }
 
-        outRpm.textContent = rpmOut.toFixed(1) + ' RPM';
-        outGbc.textContent = revPerSec.toFixed(2) + ' rev/s (' + revPerSec.toFixed(2) + ' balls/s @ 1 ball/rev)';
+        outRpm.textContent = validSpeed ? rpmOut.toFixed(1) + ' RPM' : '—';
+        outGbc.textContent = validSpeed
+          ? revPerSec.toFixed(2) + ' rev/s (' + revPerSec.toFixed(2) + ' balls/s @ 1 ball/rev)'
+          : 'Enter 10–2000 RPM in steps of 10.';
         outTorque.textContent = torqueMult.toFixed(2) + '× Torque';
       }
 

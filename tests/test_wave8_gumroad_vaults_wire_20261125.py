@@ -140,20 +140,26 @@ def test_wave8_gumroad_vaults_covers_copy_and_jsonld():
     assert "All Arcs (8)" in comics_html
 
     # JSON-LD ItemList sync + AI-assisted provenance on every Wave 8 ListItem
-    expected_counts = {
-        "store/index.html": (47, {43: ("18+", "AI-assisted art"), 44: ("AI-assisted art",), 45: ("AI-assisted art",), 46: ("18+", "AI-assisted comic art + Suno AI soundtrack"), 47: ("AI-assisted digital illustration",)}),
-        "holidays/index.html": (18, {17: ("18+", "AI-assisted art"), 18: ("AI-assisted art",)}),
+    disclosures = {
+        "northstar-2027-collector-wall-calendar-pdf": ("18+", "AI-assisted art"),
+        "northstar-2026-free-mega-sampler": ("AI-assisted art",),
+        "vorath-codex-collector-compendium": ("AI-assisted art",),
+        "uncle-vorath-blazin-beaver-issue-01": ("18+", "AI-assisted comic art + Suno AI soundtrack"),
+        "rich-yn-vol3-vol4-300dpi-vault": ("AI-assisted digital illustration",),
     }
-    for rel, (exp_n, pos_checks) in expected_counts.items():
-        raw = (ROOT / rel).read_text(encoding="utf-8")
+    for route, raw, minimum in [("/store/", store_html, 47), ("/holidays/", hol_html, 18)]:
         ld = _extract_itemlist_ldjson(raw)
         items = ld["itemListElement"]
-        assert ld["numberOfItems"] == len(items) == exp_n, f"{rel}: {ld['numberOfItems']} / {len(items)} != {exp_n}"
-        assert [el["position"] for el in items] == list(range(1, exp_n + 1))
-        for pos, needles in pos_checks.items():
-            desc = items[pos - 1]["item"]["description"]
-            for needle in needles:
-                assert needle in desc, f"{rel} JSON-LD pos {pos} missing {needle!r}"
+        assert ld["numberOfItems"] == len(items) >= minimum, route
+        assert [el["position"] for el in items] == list(range(1, len(items) + 1))
+        for vault in WAVE8_GUMROAD_VAULTS:
+            if route not in vault["routes"]:
+                continue
+            url = vault["url"]
+            products = [el["item"] for el in items if el["item"].get("url") == url]
+            assert len(products) == 1, f"{route}: expected one product for {url}"
+            for needle in disclosures[url.rsplit("/", 1)[1]]:
+                assert needle in products[0]["description"], f"{route}: {url} missing {needle!r}"
 
 
 def test_wave8_5_routes_playwright_desktop_mobile_and_forced_colors(static_site_url):

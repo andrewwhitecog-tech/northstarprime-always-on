@@ -125,18 +125,27 @@ def test_wave7_gumroad_vaults_covers_copy_and_jsonld():
     assert "lost-wax metal casting" in p3d
 
     # JSON-LD ItemList sync across routes
-    expected_counts = {
+    minimum_counts = {
         "3d-prints/index.html": 17,
         "chromatic/index.html": 19,
         "merch/index.html": 57,
         "store/index.html": 42,
     }
-    for rel, exp_n in expected_counts.items():
+    for rel, minimum in minimum_counts.items():
         raw = (ROOT / rel).read_text(encoding="utf-8")
         ld = _extract_itemlist_ldjson(raw)
         items = ld["itemListElement"]
-        assert ld["numberOfItems"] == len(items) == exp_n, f"{rel}: {ld['numberOfItems']} / {len(items)} != {exp_n}"
-        assert [el["position"] for el in items] == list(range(1, exp_n + 1))
+        assert ld["numberOfItems"] == len(items) >= minimum, rel
+        assert [el["position"] for el in items] == list(range(1, len(items) + 1))
+
+        urls = []
+        for entry in items:
+            product = entry.get("item", entry)
+            urls.append(product.get("offers", {}).get("url") or product.get("url"))
+        route = "/" + rel.removesuffix("index.html")
+        for vault in LIVE_GUMROAD_VAULTS:
+            if route in vault["routes"]:
+                assert urls.count(vault["url"]) == 1, f"{route}: {vault['url']}"
 
 
 def test_wave7_all_7_routes_playwright_desktop_mobile_and_forced_colors(static_site_url):

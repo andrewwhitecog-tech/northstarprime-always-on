@@ -488,6 +488,8 @@
     var currentIndex = 0;
     var activeShelf = "all";
     var visibleTrackIndices = [];
+    var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    var vizFrame = 0;
     var vizMode = "bars"; // "bars" | "wave"
     var audioCtx = null;
     var analyser = null;
@@ -696,6 +698,7 @@
 
     btnViz.addEventListener("click", function () {
       vizMode = vizMode === "bars" ? "wave" : "bars";
+      if (reducedMotion.matches) drawViz(0);
       btnViz.textContent = vizMode === "bars" ? "Visualizer: Spectrum Bars" : "Visualizer: Oscilloscope Wave";
     });
 
@@ -779,7 +782,7 @@
 
     // 60 FPS Spectrum / Waveform Renderer
     function drawViz(now) {
-      requestAnimationFrame(drawViz);
+      if (!reducedMotion.matches) vizFrame = requestAnimationFrame(drawViz);
       var W = canvas.width, H = canvas.height;
       ctx.fillStyle = "#050510";
       ctx.fillRect(0, 0, W, H);
@@ -847,7 +850,11 @@
 
     renderGrid();
     loadTrack(0, false);
-    requestAnimationFrame(drawViz);
+    reducedMotion.addEventListener("change", function () {
+      cancelAnimationFrame(vizFrame);
+      drawViz(0);
+    });
+    drawViz(0);
   })();
   </script>
 </body>

@@ -561,7 +561,11 @@
       Array.prototype.slice.call(grid.querySelectorAll(".play-track-btn")).forEach(function (btn) {
         btn.addEventListener("click", function () {
           var i = parseInt(btn.getAttribute("data-idx"), 10);
-          loadTrack(i, true);
+          if (i === currentIndex) {
+            togglePlayback();
+          } else {
+            loadTrack(i, true);
+          }
         });
       });
       applyFilters();
@@ -576,7 +580,7 @@
           cards[i].classList.add("is-playing");
           if (pbtn) {
             pbtn.textContent = playbackStatus.textContent ? "Retry track" :
-              audio.paused ? "▶ Selected" : "❚❚ Playing";
+              audio.paused ? "▶ Play Track" : "❚❚ Pause";
           }
         } else {
           cards[i].classList.remove("is-playing");
@@ -653,7 +657,7 @@
       syncHighlight();
     }
 
-    btnPlay.addEventListener("click", function () {
+    function togglePlayback() {
       if (!audio.src || audio.error) {
         loadTrack(currentIndex, true);
         return;
@@ -671,7 +675,9 @@
         ++playAttempt;
         audio.pause();
       }
-    });
+    }
+
+    btnPlay.addEventListener("click", togglePlayback);
 
     document.getElementById("hero-play-beats").addEventListener("click", function () {
       loadTrack(0, true);
